@@ -29,11 +29,11 @@
 #if ENABLE(MEDIA_RECORDER)
 
 #include "Blob.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(BlobEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BlobEvent);
 
 Ref<BlobEvent> BlobEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
@@ -41,15 +41,10 @@ Ref<BlobEvent> BlobEvent::create(const AtomString& type, Init&& init, IsTrusted 
 }
 
 BlobEvent::BlobEvent(const AtomString& type, Init&& init, IsTrusted isTrusted)
-    : Event(type, init, isTrusted)
+    : Event(EventInterfaceType::BlobEvent, type, init, isTrusted)
     , m_blob(init.data.releaseNonNull())
     , m_timecode(init.timecode)
 {
-}
-
-EventInterface BlobEvent::eventInterface() const
-{
-    return BlobEventInterfaceType;
 }
 
 } // namespace WebCore

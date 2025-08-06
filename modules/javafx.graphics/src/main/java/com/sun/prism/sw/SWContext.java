@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,7 +150,7 @@ final class SWContext {
         @Override
         public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
             if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
-                // RT-27427
+                // JDK-8090672
                 // TODO: Optimize the combinatorial strokes for simple
                 // shapes and/or teach the rasterizer to be able to
                 // do a "differential fill" between two shapes.

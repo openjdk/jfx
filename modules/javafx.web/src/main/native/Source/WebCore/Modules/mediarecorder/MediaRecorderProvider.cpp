@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-RefPtr<MediaRecorderPrivate> MediaRecorderProvider::createMediaRecorderPrivate(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
+std::unique_ptr<MediaRecorderPrivate> MediaRecorderProvider::createMediaRecorderPrivate(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
 {
 #if PLATFORM(COCOA) && USE(AVFOUNDATION)
     return MediaRecorderPrivateAVFImpl::create(stream, options);

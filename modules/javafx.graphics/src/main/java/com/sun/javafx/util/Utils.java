@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.javafx.util;
 
-import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
-
 import javafx.application.Platform;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -38,6 +36,9 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Paint;
+import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -45,8 +46,6 @@ import javafx.stage.Window;
 import java.math.BigDecimal;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 
@@ -219,10 +218,35 @@ public class Utils {
      **************************************************************************/
 
     /**
-     * Calculates a perceptual brightness for a color between 0.0 black and 1.0 while
+     * Calculates a perceptual brightness for a color between 0.0 (black) and 1.0 (white).
      */
     public static double calculateBrightness(Color color) {
           return  (0.3*color.getRed()) + (0.59*color.getGreen()) + (0.11*color.getBlue());
+    }
+
+    /**
+     * Calculates an average perceptual brightness for a paint between 0.0 (black) and 1.0 (white).
+     * <p>
+     * The average brightness of gradient paints only takes into account the colors of gradient stops,
+     * but not the distribution of the gradient stops across the paint area.
+     * <p>
+     * The brightness of {@code ImagePattern} paints is 1.0 by convention.
+     */
+    public static double calculateAverageBrightness(Paint paint) {
+        return switch (paint) {
+            case Color color -> calculateBrightness(color);
+            case LinearGradient gradient -> calculateAverageGradientBrightness(gradient.getStops());
+            case RadialGradient gradient -> calculateAverageGradientBrightness(gradient.getStops());
+            default -> 1.0;
+        };
+    }
+
+    private static double calculateAverageGradientBrightness(List<Stop> stops) {
+        return stops.stream()
+            .map(Stop::getColor)
+            .mapToDouble(Utils::calculateBrightness)
+            .average()
+            .orElse(1.0);
     }
 
     /**
@@ -682,11 +706,7 @@ public class Utils {
     }
 
     public static boolean hasFullScreenStage(final Screen screen) {
-        @SuppressWarnings("removal")
-        final List<Window> allWindows = AccessController.doPrivileged(
-                (PrivilegedAction<List<Window>>) () -> Window.getWindows(),
-                null,
-                ACCESS_WINDOW_LIST_PERMISSION);
+        final List<Window> allWindows = Window.getWindows();
 
         for (final Window window : allWindows) {
             if (window instanceof Stage) {
@@ -995,20 +1015,16 @@ public class Utils {
         return new String(dst, 0, dstIndex);
     }
 
-    @SuppressWarnings("removal")
     public static synchronized void loadNativeSwingLibrary() {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            String libName = "prism_common";
+        String libName = "prism_common";
 
-            if (PrismSettings.verbose) {
-                System.out.println("Loading Prism common native library ...");
-            }
-            NativeLibLoader.loadLibrary(libName);
-            if (PrismSettings.verbose) {
-                System.out.println("\tsucceeded.");
-            }
-            return null;
-        });
+        if (PrismSettings.verbose) {
+            System.out.println("Loading Prism common native library ...");
+        }
+        NativeLibLoader.loadLibrary(libName);
+        if (PrismSettings.verbose) {
+            System.out.println("\tsucceeded.");
+        }
     }
 
     /**

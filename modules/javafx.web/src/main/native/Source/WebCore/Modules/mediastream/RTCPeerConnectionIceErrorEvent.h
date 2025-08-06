@@ -34,7 +34,7 @@ namespace WebCore {
 class RTCIceCandidate;
 
 class RTCPeerConnectionIceErrorEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(RTCPeerConnectionIceErrorEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCPeerConnectionIceErrorEvent);
 public:
     virtual ~RTCPeerConnectionIceErrorEvent();
 
@@ -54,8 +54,6 @@ public:
     const String& url() const { return m_url; }
     uint16_t errorCode() const { return m_errorCode; }
     const String& errorText() const { return m_errorText; }
-
-    virtual EventInterface eventInterface() const;
 
 private:
     RTCPeerConnectionIceErrorEvent(const AtomString& type, CanBubble, IsCancelable, String&& address, std::optional<uint16_t> port, String&& url, uint16_t errorCode, String&& errorText);

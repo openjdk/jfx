@@ -805,7 +805,7 @@ output_special_case (gchar *out_buffer,
          int    which)
 {
   const gchar *p = special_case_table + offset;
-  gint len;
+  size_t len;
 
   if (type != G_UNICODE_TITLECASE_LETTER)
     p = g_utf8_next_char (p);
@@ -1543,6 +1543,15 @@ static const guint32 iso15924_tags[] =
     /* Unicode 15.0 additions */
     PACK ('K', 'a', 'w', 'i'), /* G_UNICODE_SCRIPT_KAWI */
     PACK ('N', 'a', 'g', 'm'), /* G_UNICODE_SCRIPT_NAG_MUNDARI */
+
+    /* Unicode 16.0 additions */
+    PACK ('T', 'o', 'd', 'r'), /* G_UNICODE_SCRIPT_TODHRI */
+    PACK ('G', 'a', 'r', 'a'), /* G_UNICODE_SCRIPT_GARAY */
+    PACK ('T', 'u', 't', 'g'), /* G_UNICODE_SCRIPT_TULU_TIGALARI */
+    PACK ('S', 'u', 'n', 'u'), /* G_UNICODE_SCRIPT_SUNUWAR */
+    PACK ('G', 'u', 'k', 'h'), /* G_UNICODE_SCRIPT_GURUNG_KHEMA */
+    PACK ('K', 'r', 'a', 'i'), /* G_UNICODE_SCRIPT_KIRAT_RAI */
+    PACK ('O', 'n', 'a', 'o'), /* G_UNICODE_SCRIPT_OL_ONAL */
 
 #undef PACK
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -238,7 +238,7 @@ void GraphicsContextJava::fillRect(const FloatRect& rect, const Color& color)
     << r << g << b << a;
 }
 
-void GraphicsContextJava::fillRect(const FloatRect& rect)
+void GraphicsContextJava::fillRect(const FloatRect& rect, RequiresClipToRect requiresClip)
 {
     if (paintingDisabled())
         return;
@@ -267,10 +267,12 @@ void GraphicsContextJava::fillRect(const FloatRect& rect)
         << rect.width() << rect.height();
     }
 }
-void GraphicsContextJava::fillRect(const FloatRect&, Gradient&, const AffineTransform&)
+
+void GraphicsContextJava::fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect RequiresClipToRect)
 {
     notImplemented();
 }
+
 void GraphicsContextJava::resetClip()
 {
     notImplemented();
@@ -598,11 +600,13 @@ void GraphicsContextJava::setPlatformShadow(const FloatSize& s, float blur, cons
 
     float width = s.width();
     float height = s.height();
+#if USE(CG)
     if (shadowsIgnoreTransforms()) {
         // Meaning that this graphics context is associated with a CanvasRenderingContext
         // We flip the height since JavaFX Prism and HTML5 Canvas have opposite Y axis
         height = -height;
     }
+#endif
 
     auto [r, g, b, a] = color.toColorTypeLossy<SRGBA<float>>().resolved();
     platformContext()->rq().freeSpace(32)

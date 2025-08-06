@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,11 @@ package com.sun.javafx.embed;
 import java.nio.IntBuffer;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
+import javafx.scene.TraversalDirection;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
-import javafx.scene.traversal.TraversalDirection;
 
 /**
  * An interface for embedded FX scene peer. It is used by HostInterface

@@ -30,6 +30,7 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/Ref.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/ThreadSafeRefCounted.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
@@ -43,11 +44,12 @@ class Buffer;
 class CommandBuffer;
 class Device;
 class Texture;
+class TextureView;
 
 // https://gpuweb.github.io/gpuweb/#gpuqueue
 // A device owns its default queue, not the other way around.
 class Queue : public WGPUQueueImpl, public ThreadSafeRefCounted<Queue> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Queue);
 public:
     static Ref<Queue> create(id<MTLCommandQueue> commandQueue, Device& device)
     {
@@ -62,23 +64,25 @@ public:
 
     void onSubmittedWorkDone(CompletionHandler<void(WGPUQueueWorkDoneStatus)>&& callback);
     void submit(Vector<std::reference_wrapper<CommandBuffer>>&& commands);
-    void writeBuffer(const Buffer&, uint64_t bufferOffset, void* data, size_t);
-    void writeBuffer(id<MTLBuffer>, uint64_t bufferOffset, void* data, size_t);
-    void writeTexture(const WGPUImageCopyTexture& destination, void* data, size_t dataSize, const WGPUTextureDataLayout&, const WGPUExtent3D& writeSize);
+    void writeBuffer(Buffer&, uint64_t bufferOffset, std::span<uint8_t> data);
+    void writeBuffer(id<MTLBuffer>, uint64_t bufferOffset, std::span<uint8_t> data);
+    void writeTexture(const WGPUImageCopyTexture& destination, std::span<uint8_t> data, const WGPUTextureDataLayout&, const WGPUExtent3D& writeSize, bool skipValidation = false);
     void setLabel(String&&);
 
-    void onSubmittedWorkScheduled(CompletionHandler<void()>&&);
+    void onSubmittedWorkScheduled(Function<void()>&&);
 
     bool isValid() const { return m_commandQueue; }
-    void makeInvalid() { m_commandQueue = nil; }
+    void makeInvalid();
 
     const Device& device() const;
-    void waitUntilIdle();
-    void clearTexture(const WGPUImageCopyTexture&, NSUInteger);
-    id<MTLCommandBuffer> commandBufferWithDescriptor(MTLCommandBufferDescriptor*);
+    void clearTextureIfNeeded(const WGPUImageCopyTexture&, NSUInteger);
+    std::pair<id<MTLCommandBuffer>, id<MTLSharedEvent>> commandBufferWithDescriptor(MTLCommandBufferDescriptor*);
     void commitMTLCommandBuffer(id<MTLCommandBuffer>);
     void setEncoderForBuffer(id<MTLCommandBuffer>, id<MTLCommandEncoder>);
     id<MTLCommandEncoder> encoderForBuffer(id<MTLCommandBuffer>) const;
+    void clearTextureViewIfNeeded(TextureView&);
+    static bool writeWillCompletelyClear(WGPUTextureDimension, uint32_t widthForMetal, uint32_t logicalSizeWidth, uint32_t heightForMetal, uint32_t logicalSizeHeight, uint32_t depthForMetal, uint32_t logicalSizeDepthOrArrayLayers);
+    void endEncoding(id<MTLCommandEncoder>, id<MTLCommandBuffer>) const;
 
 private:
     Queue(id<MTLCommandQueue>, Device&);
@@ -99,6 +103,7 @@ private:
 
     id<MTLCommandQueue> m_commandQueue { nil };
     id<MTLCommandBuffer> m_commandBuffer { nil };
+    id<MTLSharedEvent> m_commandBufferEvent { nil };
     id<MTLBlitCommandEncoder> m_blitCommandEncoder { nil };
     ThreadSafeWeakPtr<Device> m_device; // The only kind of queues that exist right now are default queues, which are owned by Devices.
 
@@ -109,7 +114,6 @@ private:
     HashMap<uint64_t, OnSubmittedWorkScheduledCallbacks, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_onSubmittedWorkScheduledCallbacks;
     using OnSubmittedWorkDoneCallbacks = Vector<WTF::Function<void(WGPUQueueWorkDoneStatus)>>;
     HashMap<uint64_t, OnSubmittedWorkDoneCallbacks, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> m_onSubmittedWorkDoneCallbacks;
-    NSMutableSet<id<MTLCommandBuffer>> *m_pendingCommandBuffers { nil };
     NSMutableOrderedSet<id<MTLCommandBuffer>> *m_createdNotCommittedBuffers { nil };
     NSMapTable<id<MTLCommandBuffer>, id<MTLCommandEncoder>> *m_openCommandEncoders;
 };

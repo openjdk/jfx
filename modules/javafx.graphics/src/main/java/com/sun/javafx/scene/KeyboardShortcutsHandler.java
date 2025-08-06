@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,12 +37,12 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
 import javafx.scene.Node;
+import javafx.scene.TraversalDirection;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.traversal.FocusTraversal;
-import javafx.scene.traversal.TraversalDirection;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;

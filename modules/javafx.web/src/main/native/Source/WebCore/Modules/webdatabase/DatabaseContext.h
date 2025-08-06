@@ -47,6 +47,10 @@ class SecurityOriginData;
 
 class DatabaseContext final : public ThreadSafeRefCounted<DatabaseContext>, private ActiveDOMObject {
 public:
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
+
     virtual ~DatabaseContext();
 
     DatabaseThread* existingDatabaseThread() const { return m_databaseThread.get(); }
@@ -72,8 +76,9 @@ private:
     void stopDatabases() { stopDatabases(nullptr); }
 
     void contextDestroyed() override;
+
+    // ActiveDOMObject.
     void stop() override;
-    const char* activeDOMObjectName() const override { return "DatabaseContext"; }
 
     RefPtr<DatabaseThread> m_databaseThread;
     bool m_hasOpenDatabases { false }; // This never changes back to false, even after the database thread is closed.

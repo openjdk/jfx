@@ -59,7 +59,8 @@ CPP_SOURCES = dshowwrapper/Allocator.cpp \
               dshowwrapper/dshowwrapper.cpp \
               dshowwrapper/Sink.cpp \
               dshowwrapper/Src.cpp \
-              mfwrapper/mfwrapper.cpp
+              mfwrapper/mfwrapper.cpp \
+              mfwrapper/mfgstbuffer.cpp
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise \
                  -Zc:wchar_t -Zc:forScope- -analyze- -errorReport:queue -Gm-
@@ -77,6 +78,7 @@ INCLUDES =  $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \
+           -D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR \
            -D_USRDLL \
            -DENABLE_PULL_MODE=1 \
            -DENABLE_SOURCE_SEEKING=1 \

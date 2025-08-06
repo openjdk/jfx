@@ -43,6 +43,7 @@ using namespace HTMLNames;
 
 class FormAttributeTargetObserver final : private IdTargetObserver {
     WTF_MAKE_FAST_ALLOCATED;
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FormAttributeTargetObserver);
 public:
     FormAttributeTargetObserver(const AtomString& id, FormListedElement&);
 
@@ -188,7 +189,7 @@ void FormListedElement::parseFormAttribute(const AtomString& value)
         setForm(HTMLFormElement::findClosestFormAncestor(element));
         auto* newForm = form();
         if (newForm && newForm != originalForm && newForm->isConnected())
-            element.document().didAssociateFormControl(element);
+            element.protectedDocument()->didAssociateFormControl(element);
         m_formAttributeTargetObserver = nullptr;
     } else {
         resetFormOwner();

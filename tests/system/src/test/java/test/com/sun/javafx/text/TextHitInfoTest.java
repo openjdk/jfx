@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,17 +27,19 @@ package test.com.sun.javafx.text;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayout.Hit;
 import com.sun.javafx.scene.text.TextSpan;
-import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.text.PrismTextLayoutFactory;
 
 public class TextHitInfoTest {
-    private final PrismTextLayout layout = new PrismTextLayout();
+    private final TextLayout layout = PrismTextLayoutFactory.getFactory().createLayout();
     private final PGFont arialFont = (PGFont) FontHelper.getNativeFont(Font.font("Arial", 12));
 
     record TestSpan(String text, Object font) implements TextSpan {
@@ -53,6 +55,11 @@ public class TextHitInfoTest {
 
         @Override
         public RectBounds getBounds() {
+            return null;
+        }
+
+        @Override
+        public Region getLayoutRootRegion() {
             return null;
         }
     }

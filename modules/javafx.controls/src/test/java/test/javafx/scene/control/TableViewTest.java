@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -99,6 +99,7 @@ import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.ChoiceBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableCellSkin;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
@@ -862,7 +863,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt16019() {
-        // RT-16019: NodeMemory TableView tests fail with
+        // JDK-8128207: NodeMemory TableView tests fail with
         // IndexOutOfBoundsException (ObservableListWrapper.java:336)
         TableView table = new TableView();
         for (int i = 0; i < 1000; i++) {
@@ -1070,6 +1071,8 @@ public class TableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 5); // rows 0 - 5 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 5, -1); // rows 5+ should be empty
 
@@ -1078,6 +1081,7 @@ public class TableViewTest {
         table.setItems(FXCollections.observableArrayList(
             new Person("*_*Emma", "Jones", "emma.jones@example.com"),
             new Person("_Michael", "Brown", "michael.brown@example.com")));
+        Toolkit.getToolkit().firePulse();
 
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
@@ -1350,7 +1354,7 @@ public class TableViewTest {
 
         // now (0,0), (1,0) and (1,1) should be selected, but selected indices
         // should remain as [0, 1], as we don't want selected indices to become
-        // [0,1,1] (which is what RT-29313 is about)
+        // [0,1,1] (which is what JDK-8102348 is about)
         sm.select(1, lastNameCol);
         assertEquals(2, sm.getSelectedIndices().size());
         assertEquals(0, sm.getSelectedIndices().get(0));
@@ -1394,7 +1398,7 @@ public class TableViewTest {
 
         // now (0,0), (1,0) and (1,1) should be selected, but selected items
         // should remain as [p0, p1], as we don't want selected items to become
-        // [p0,p1,p1] (which is what RT-29313 is about)
+        // [p0,p1,p1] (which is what JDK-8102348 is about)
         sm.select(1, lastNameCol);
         assertEquals(2, sm.getSelectedItems().size());
         assertEquals(p0, sm.getSelectedItems().get(0));
@@ -1417,6 +1421,8 @@ public class TableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         // test the state before we hide and re-add a column
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
@@ -1426,6 +1432,7 @@ public class TableViewTest {
 
         // hide the last name column, and test cells again
         table.getColumns().remove(lastNameCol);
+        Toolkit.getToolkit().firePulse();
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
@@ -1438,6 +1445,7 @@ public class TableViewTest {
         // some of the last name values will not be where we expect them to be.
         // This is clearly not ideal!
         table.getColumns().add(1, lastNameCol);
+        Toolkit.getToolkit().firePulse();
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
@@ -1473,6 +1481,8 @@ public class TableViewTest {
 
         tableView.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(tableView);
+
         // we want the vertical scrollbar
         VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
 
@@ -1500,6 +1510,8 @@ public class TableViewTest {
         firstNameCol.setCellFactory(CheckBoxTableCell.forTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(tableView);
+
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
         VirtualFlowTestUtils.assertRowsNotEmpty(tableView, 0, 1);
@@ -1525,6 +1537,8 @@ public class TableViewTest {
         firstNameCol.setEditable(true);
 
         tableView.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(tableView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 1, 0);
         assertEquals("Jim", cell.getText());
@@ -1557,6 +1571,8 @@ public class TableViewTest {
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         tableView.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(tableView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
         assertEquals(jacobSmith, cell.getItem());
@@ -1719,6 +1735,8 @@ public class TableViewTest {
                 ccc = new Person("CCC", "Giles", "jim.bob@example.com")
         ));
 
+        stageLoader = new StageLoader(table);
+
         final TableView.TableViewSelectionModel sm = table.getSelectionModel();
 
         // test pre-conditions
@@ -1812,6 +1830,8 @@ public class TableViewTest {
             }
         });
 
+        stageLoader = new StageLoader(table);
+
         // First two rows have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
 
@@ -1853,6 +1873,8 @@ public class TableViewTest {
                 };
             }
         });
+
+        stageLoader = new StageLoader(table);
 
         // First two rows have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
@@ -1958,6 +1980,8 @@ public class TableViewTest {
         table.setItems(FXCollections.observableArrayList(
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
+
+        stageLoader = new StageLoader(table);
 
         TableRow<Person> rowCell = (TableRow<Person>)VirtualFlowTestUtils.getCell(table, 0);
         final double initialWidth = ControlShim.computePrefWidth(rowCell, -1);
@@ -2110,7 +2134,7 @@ public class TableViewTest {
 
     /**
      * JDK-8093986
-     * @ Ignore("Test started intermittently failing, most probably due to RT-36855/JDK-8096512 changeset")
+     * @ Ignore("Test started intermittently failing, most probably due to JDK-8096512/JDK-8096512 changeset")
      */
     @Test
     public void noAutoresizeOnColumnRemoval() {
@@ -2195,9 +2219,8 @@ public class TableViewTest {
         table.getColumns().addAll(first);
 
         // get the cell at (0,0)
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = true;
+        stageLoader = new StageLoader(table);
         TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
-        VirtualFlowTestUtils.BLOCK_STAGE_LOADER_DISPOSE = false;
         assertTrue(cell.getSkin() instanceof TableCellSkin);
         assertNull(cell.getGraphic());
         assertEquals("John", cell.getText());
@@ -3015,7 +3038,7 @@ public class TableViewTest {
         selectedCellsSeq.subList(from, to);
     }
 
-  //--------- regression testing of JDK-8093144 (was: RT-35857)
+  //--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {
@@ -3077,7 +3100,7 @@ public class TableViewTest {
         assertEquals("C", fxList.get(1));
     }
 
-//--------- end regression testing of JDK-8093144 (was: RT-35857)
+//--------- end regression testing of JDK-8093144 (was: JDK-8093144)
 
     @Test public void test_getColumnHeaderForColumn() {
         TableView<Person> table = new TableView<>();
@@ -3222,7 +3245,7 @@ public class TableViewTest {
 
     // This test ensures that we reuse column headers when the columns still
     // exist after a change to the columns list - rather than recreating new
-    // column headers. The issue in RT-36290 was that we were creating new column
+    // column headers. The issue in JDK-8096568 was that we were creating new column
     // headers that were then in their initial states, allowing them to call
     // TableColumnHeader#updateScene(), which would resize the column based on the
     // data within it.
@@ -3502,7 +3525,7 @@ public class TableViewTest {
         Toolkit.getToolkit().firePulse();
 
         // only the Michael row should have changed state - but the bug
-        // identified in RT-36670 shows that row 0 is also selected
+        // identified in JDK-8096643 shows that row 0 is also selected
         assertFalse(row0CheckBox.isSelected());
         assertTrue(row1CheckBox.isSelected());
         assertTrue(row2CheckBox.isSelected());
@@ -3625,10 +3648,10 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per first instructions in RT-37057. Note that the moveColumn
+        // move as per first instructions in JDK-8095341. Note that the moveColumn
         // positions seem counter-intuitive. I got these numbers by printing
         // the positions when in a manual test run (using the test script in
-        // RT-37057).
+        // JDK-8095341).
 
         // Drag column 1 to slot 1. As expected, the column position doesn't change.
         TableColumnHeaderUtil.moveColumn(column1, 0);
@@ -3688,9 +3711,9 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per first instructions in RT-37057. The dragOffset and sceneX
+        // move as per first instructions in JDK-8095341. The dragOffset and sceneX
         // values passed into moveColumn have been derived from a manual run of
-        // the test application attached to RT-37057 with debug output printed
+        // the test application attached to JDK-8095341 with debug output printed
         // in TableColumnHeader
 
         // Drag column 1 to slot 1. As expected, the column position doesn't change.
@@ -3751,10 +3774,10 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per second instructions in RT-37057. Note that the moveColumn
+        // move as per second instructions in JDK-8095341. Note that the moveColumn
         // positions seem counter-intuitive. I got these numbers by printing
         // the positions when in a manual test run (using the test script in
-        // RT-37057).
+        // JDK-8095341).
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
         TableColumnHeaderUtil.moveColumn(column1, 1);
@@ -3811,9 +3834,9 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderShim.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderShim.getColumnIndex(header2));
 
-        // move as per second instructions in RT-37057. The dragOffset and sceneX
+        // move as per second instructions in JDK-8095341. The dragOffset and sceneX
         // values passed into moveColumn have been derived from a manual run of
-        // the test application attached to RT-37057 with debug output printed
+        // the test application attached to JDK-8095341 with debug output printed
         // in TableColumnHeader
 
         // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
@@ -4481,7 +4504,7 @@ public class TableViewTest {
 
     /**************************************************************************
      *
-     * Tests (and related code) for RT-38892
+     * Tests (and related code) for JDK-8096633
      *
      *************************************************************************/
 
@@ -4826,7 +4849,7 @@ public class TableViewTest {
 
         TableView.TableViewFocusModel fm = stringTableView.getFocusModel();
 
-        StageLoader sl = new StageLoader(stringTableView);
+        stageLoader = new StageLoader(stringTableView);
 
         // click on row 0
         sm.select(0, column);
@@ -4865,8 +4888,6 @@ public class TableViewTest {
         assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
         assertEquals(1, anchor.getRow());
         assertEquals(column, anchor.getTableColumn());
-
-        sl.dispose();
     }
 
     private final ObservableList<String> rt_39256_list = FXCollections.observableArrayList();
@@ -5518,6 +5539,8 @@ public class TableViewTest {
         c2.setCellValueFactory(new PropertyValueFactory<>("lastName"));
         t.getColumns().addAll(c1, c2);
 
+        stageLoader = new StageLoader(t);
+
         final int startIndex = toRight ? 0 : 2;
         final int endIndex = toRight ? 2 : 0;
         final TableColumn<Person,String> startColumn = toBottom ? c1 : c2;
@@ -5821,7 +5844,7 @@ public class TableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        StageLoader sl = new StageLoader(table);
+        stageLoader = new StageLoader(table);
         KeyEventFirer keyboard = new KeyEventFirer(table);
 
         assertEquals(0, sm.getSelectedItems().size());
@@ -5849,8 +5872,6 @@ public class TableViewTest {
         sm.clearAndSelect(0, firstNameCol);
         assertEquals(1, sm.getSelectedCells().size());
         assertEquals(1, sm.getSelectedItems().size());
-
-        sl.dispose();
     }
 
     @Test
@@ -5916,6 +5937,8 @@ public class TableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
+        stageLoader = new StageLoader(table);
+
         // Call change::toString
         table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<Person>) Object::toString);
 
@@ -5949,6 +5972,8 @@ public class TableViewTest {
 
         TableSelectionModel<String> sm = stringTableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        stageLoader = new StageLoader(stringTableView);
 
         // click on row 1
         Cell startCell = VirtualFlowTestUtils.getCell(stringTableView, 1, 0);
@@ -6328,5 +6353,78 @@ public class TableViewTest {
         table.edit(0, col);
 
         assertEquals(1, startEditCounter.get());
+    }
+
+    @Test
+    void testReSetItemsWithSameItemShouldUpdateCellIndices() {
+        table.setFixedCellSize(24);
+
+        final TableColumn<String, String> c = new TableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+        table.getColumns().add(c);
+
+        for (int i = 0; i < 60; i++) {
+            table.getItems().add(String.valueOf(i));
+        }
+        String lastItem = "UniqueLastItem";
+        table.getItems().add(lastItem);
+
+        stageLoader = new StageLoader(table);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        // Scroll to the bottom.
+        VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        scrollBar.setValue(1);
+
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<String> row = VirtualFlowTestUtils.getCell(table, 60);
+        assertEquals(lastItem, row.getItem());
+
+        List<TableCell<String, String>> cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+
+        for (TableCell<String, String> cell : cells) {
+            assertEquals(60, cell.getIndex());
+        }
+
+        // Re-set the items, but reuse one item from the previous items list.
+        table.setItems(FXCollections.observableArrayList(lastItem));
+
+        Toolkit.getToolkit().firePulse();
+
+        row = VirtualFlowTestUtils.getCell(table, 0);
+        assertEquals(lastItem, row.getItem());
+
+        cells = row.getChildrenUnmodifiable().stream()
+                .filter(TableCell.class::isInstance).map(e -> (TableCell<String, String>) e).toList();
+
+        for (TableCell<String, String> cell : cells) {
+            assertEquals(0, cell.getIndex());
+        }
+    }
+
+    @Test
+    public void testScrollingXIsSnapped() {
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList(new Person("VeryLongStringVeryLongString")));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+
+        Toolkit.getToolkit().firePulse();
+
+        NestedTableColumnHeader rootHeader = VirtualFlowTestUtils.getTableHeaderRow(table).getRootHeader();
+        VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+
+        double newValue = 25.125476811;
+        double snappedNewValue = table.snapPositionX(newValue);
+        scrollBar.setValue(newValue);
+
+        assertEquals(-snappedNewValue, rootHeader.getLayoutX(), 0);
     }
 }

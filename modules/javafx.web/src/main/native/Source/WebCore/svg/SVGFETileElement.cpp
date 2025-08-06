@@ -24,11 +24,11 @@
 
 #include "FETile.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFETileElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFETileElement);
 
 inline SVGFETileElement::SVGFETileElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -49,7 +49,7 @@ Ref<SVGFETileElement> SVGFETileElement::create(const QualifiedName& tagName, Doc
 void SVGFETileElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::inAttr)
-        m_in1->setBaseValInternal(newValue);
+        Ref { m_in1 }->setBaseValInternal(newValue);
 
     SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }

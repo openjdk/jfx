@@ -45,12 +45,12 @@
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
 #include "Settings.h"
-#include <wtf/IsoMallocInlines.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <JavaScriptCore/ObjectConstructor.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PDFDocument);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PDFDocument);
 
 using namespace HTMLNames;
 
@@ -71,7 +71,7 @@ private:
 
     PDFDocument& document() const;
 
-    void appendBytes(DocumentWriter&, const uint8_t*, size_t) override;
+    void appendBytes(DocumentWriter&, std::span<const uint8_t>) override;
     void finish() override;
 };
 
@@ -82,7 +82,7 @@ inline PDFDocument& PDFDocumentParser::document() const
     return downcast<PDFDocument>(*RawDataDocumentParser::document());
 }
 
-void PDFDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
+void PDFDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
 {
     document().updateDuringParsing();
 }
@@ -136,6 +136,8 @@ PDFDocument::PDFDocument(LocalFrame& frame, const URL& url)
 {
 }
 
+PDFDocument::~PDFDocument() = default;
+
 Ref<DocumentParser> PDFDocument::createParser()
 {
     return PDFDocumentParser::create(*this);
@@ -148,7 +150,6 @@ void PDFDocument::createDocumentStructure()
     auto viewerURL = "webkit-pdfjs-viewer://pdfjs/web/viewer.html?file="_s;
     auto rootElement = HTMLHtmlElement::create(*this);
     appendChild(rootElement);
-    rootElement->insertedByParser();
 
     frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 

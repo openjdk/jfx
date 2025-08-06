@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,11 +79,12 @@ import com.sun.javafx.tk.Toolkit;
  */
 public class Utils {
 
-    static final Text helper = new Text();
-    static final double DEFAULT_WRAPPING_WIDTH = helper.getWrappingWidth();
-    static final double DEFAULT_LINE_SPACING = helper.getLineSpacing();
-    static final String DEFAULT_TEXT = helper.getText();
-    static final TextBoundsType DEFAULT_BOUNDS_TYPE = helper.getBoundsType();
+    private static final Text textInstance = new Text();
+    private static final double DEFAULT_WRAPPING_WIDTH = textInstance.getWrappingWidth();
+    private static final double DEFAULT_LINE_SPACING = textInstance.getLineSpacing();
+    private static final String DEFAULT_TEXT = textInstance.getText();
+    private static final TextBoundsType DEFAULT_BOUNDS_TYPE = textInstance.getBoundsType();
+    private static final AtomicBoolean helperGuard = new AtomicBoolean(false);
 
     /* Using TextLayout directly for simple text measurement.
      * Instead of restoring the TextLayout attributes to default values
@@ -94,38 +95,82 @@ public class Utils {
      *
      * Note: This code assumes that TextBoundsType#VISUAL is never used by controls.
      * */
-    static final TextLayout layout = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
+    private static final TextLayout layoutInstance = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
+    private static final AtomicBoolean layoutGuard = new AtomicBoolean(false);
+
+    private static Text helper() {
+        if (helperGuard.compareAndSet(false, true)) {
+            return textInstance;
+        } else {
+            return new Text();
+        }
+    }
+
+    private static void release(Text t) {
+        if (t == textInstance) {
+            helperGuard.set(false);
+        }
+    }
+
+    private static TextLayout layout() {
+        if (layoutGuard.compareAndSet(false, true)) {
+            return layoutInstance;
+        } else {
+            return Toolkit.getToolkit().getTextLayoutFactory().createLayout();
+        }
+    }
+
+    private static void release(TextLayout t) {
+        if (t == layoutInstance) {
+            layoutGuard.set(false);
+        }
+    }
 
     public static double getAscent(Font font, TextBoundsType boundsType) {
-        layout.setContent("", FontHelper.getNativeFont(font));
-        layout.setWrapWidth(0);
-        layout.setLineSpacing(0);
-        if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
-            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
-        } else {
-            layout.setBoundsType(0);
+        TextLayout layout = layout();
+        try {
+            layout.setContent("", FontHelper.getNativeFont(font));
+            layout.setWrapWidth(0);
+            layout.setLineSpacing(0);
+            if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
+                layout.setBoundsType(TextLayout.BOUNDS_CENTER);
+            } else {
+                layout.setBoundsType(0);
+            }
+            return -layout.getBounds().getMinY();
+        } finally {
+            release(layout);
         }
-        return -layout.getBounds().getMinY();
     }
 
     public static double getLineHeight(Font font, TextBoundsType boundsType) {
-        layout.setContent("", FontHelper.getNativeFont(font));
-        layout.setWrapWidth(0);
-        layout.setLineSpacing(0);
-        if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
-            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
-        } else {
-            layout.setBoundsType(0);
-        }
+        TextLayout layout = layout();
+        try {
+            layout.setContent("", FontHelper.getNativeFont(font));
+            layout.setWrapWidth(0);
+            layout.setLineSpacing(0);
+            if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
+                layout.setBoundsType(TextLayout.BOUNDS_CENTER);
+            } else {
+                layout.setBoundsType(0);
+            }
 
-        // RT-37092: Use the line bounds specifically, to include font leading.
-        return layout.getLines()[0].getBounds().getHeight();
+            // JDK-8093957: Use the line bounds specifically, to include font leading.
+            return layout.getLines()[0].getBounds().getHeight();
+        } finally {
+            release(layout);
+        }
     }
 
     public static double computeTextWidth(Font font, String text, double wrappingWidth) {
-        layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
-        layout.setWrapWidth((float)wrappingWidth);
-        return layout.getBounds().getWidth();
+        TextLayout layout = layout();
+        try {
+            layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
+            layout.setWrapWidth((float)wrappingWidth);
+            return layout.getBounds().getWidth();
+        } finally {
+            release(layout);
+        }
     }
 
     public static double computeTextHeight(Font font, String text, double wrappingWidth, TextBoundsType boundsType) {
@@ -133,15 +178,20 @@ public class Utils {
     }
 
     public static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
-        layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
-        layout.setWrapWidth((float)wrappingWidth);
-        layout.setLineSpacing((float)lineSpacing);
-        if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
-            layout.setBoundsType(TextLayout.BOUNDS_CENTER);
-        } else {
-            layout.setBoundsType(0);
+        TextLayout layout = layout();
+        try {
+            layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
+            layout.setWrapWidth((float)wrappingWidth);
+            layout.setLineSpacing((float)lineSpacing);
+            if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
+                layout.setBoundsType(TextLayout.BOUNDS_CENTER);
+            } else {
+                layout.setBoundsType(0);
+            }
+            return layout.getBounds().getHeight();
+        } finally {
+            release(layout);
         }
-        return layout.getBounds().getHeight();
     }
 
     public static Point2D computeMnemonicPosition(Font font, String text, int mnemonicIndex, double wrappingWidth,
@@ -152,33 +202,42 @@ public class Utils {
             return null;
         }
 
-        // Layout the text with given font, wrapping width and line spacing
-        layout.setContent(text, FontHelper.getNativeFont(font));
-        layout.setWrapWidth((float)wrappingWidth);
-        layout.setLineSpacing((float)lineSpacing);
-
-        // The text could be spread over multiple lines
-        // We need to find out on which line the mnemonic character lies
         int start = 0;
         int i = 0;
-        int totalLines = layout.getLines().length;
         int lineLength = 0;
-        while (i < totalLines) {
-            lineLength = layout.getLines()[i].getLength();
+        int totalLines;
+        double lineHeight;
 
-            if ((mnemonicIndex >= start) &&
-                (mnemonicIndex < (start + lineLength))) {
-                // mnemonic lies on line 'i'
-                break;
+        // Layout the text with given font, wrapping width and line spacing
+        TextLayout layout = layout();
+        try {
+            layout.setContent(text, FontHelper.getNativeFont(font));
+            layout.setWrapWidth((float)wrappingWidth);
+            layout.setLineSpacing((float)lineSpacing);
+
+            // The text could be spread over multiple lines
+            // We need to find out on which line the mnemonic character lies
+            totalLines = layout.getLines().length;
+            while (i < totalLines) {
+                lineLength = layout.getLines()[i].getLength();
+
+                if ((mnemonicIndex >= start) &&
+                    (mnemonicIndex < (start + lineLength))) {
+                    // mnemonic lies on line 'i'
+                    break;
+                }
+
+                start += lineLength;
+                i++;
             }
 
-            start += lineLength;
-            i++;
+            // Find x and y offsets of mnemonic character position
+            // in line numbered 'i'
+            lineHeight = layout.getBounds().getHeight() / totalLines;
+        } finally {
+            release(layout);
         }
 
-        // Find x and y offsets of mnemonic character position
-        // in line numbered 'i'
-        double lineHeight = layout.getBounds().getHeight() / totalLines;
         double x = Utils.computeTextWidth(font, text.substring(start, mnemonicIndex), 0);
         if (isRTL) {
             double lineWidth = Utils.computeTextWidth(font, text.substring(start, (start + lineLength - 1)), 0);
@@ -195,21 +254,26 @@ public class Utils {
     }
 
     public static int computeTruncationIndex(Font font, String text, double width) {
-        helper.setText(text);
-        helper.setFont(font);
-        helper.setWrappingWidth(0);
-        helper.setLineSpacing(0);
-        // The -2 is a fudge to make sure the result more often matches
-        // what we get from using computeTextWidth instead. It's not yet
-        // clear what causes the small discrepancies.
-        Bounds bounds = helper.getLayoutBounds();
-        Point2D endPoint = new Point2D(width - 2, bounds.getMinY() + bounds.getHeight() / 2);
-        final int index = helper.hitTest(endPoint).getCharIndex();
-        // RESTORE STATE
-        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
-        helper.setLineSpacing(DEFAULT_LINE_SPACING);
-        helper.setText(DEFAULT_TEXT);
-        return index;
+        Text helper = helper();
+        try {
+            helper.setText(text);
+            helper.setFont(font);
+            helper.setWrappingWidth(0);
+            helper.setLineSpacing(0);
+            // The -2 is a fudge to make sure the result more often matches
+            // what we get from using computeTextWidth instead. It's not yet
+            // clear what causes the small discrepancies.
+            Bounds bounds = helper.getLayoutBounds();
+            Point2D endPoint = new Point2D(width - 2, bounds.getMinY() + bounds.getHeight() / 2);
+            final int index = helper.hitTest(endPoint).getCharIndex();
+            // RESTORE STATE
+            helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
+            helper.setLineSpacing(DEFAULT_LINE_SPACING);
+            helper.setText(DEFAULT_TEXT);
+            return index;
+        } finally {
+            release(helper);
+        }
     }
 
     /**
@@ -295,7 +359,7 @@ public class Utils {
             //            LineBreakMeasurer m = new LineBreakMeasurer(a.getIterator(), frc);
             //            substring = text.substring(0, m.nextOffset((double)availableWidth));
             } else {
-                // RT-23458: Use a faster algorithm for the most common case
+                // JDK-8101897: Use a faster algorithm for the most common case
                 // where truncation happens at the end, i.e. for ELLIPSIS and
                 // CLIP, but not for other cases such as WORD_ELLIPSIS, etc.
                 if (style == ELLIPSIS && !new Bidi(text, Bidi.DIRECTION_LEFT_TO_RIGHT).isMixed()) {
@@ -492,56 +556,87 @@ public class Utils {
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
             textTruncated.set(true);
-            return text; // JDK-8092895 (RT-30868) - return text, not empty string.
+            return text; // JDK-8092895 (JDK-8092895) - return text, not empty string.
         }
 
-        helper.setText(text);
-        helper.setFont(font);
-        helper.setWrappingWidth((int)Math.ceil(width));
-        helper.setBoundsType(boundsType);
-        helper.setLineSpacing(lineSpacing);
+        Text helper = helper();
+        try {
+            helper.setText(text);
+            helper.setFont(font);
+            helper.setWrappingWidth((int)Math.ceil(width));
+            helper.setBoundsType(boundsType);
+            helper.setLineSpacing(lineSpacing);
 
-        boolean leading =  (truncationStyle == LEADING_ELLIPSIS ||
-                            truncationStyle == LEADING_WORD_ELLIPSIS);
-        boolean center =   (truncationStyle == CENTER_ELLIPSIS ||
-                            truncationStyle == CENTER_WORD_ELLIPSIS);
-        boolean trailing = !(leading || center);
-        boolean wordTrim = (truncationStyle == WORD_ELLIPSIS ||
-                            truncationStyle == LEADING_WORD_ELLIPSIS ||
-                            truncationStyle == CENTER_WORD_ELLIPSIS);
+            boolean leading =  (truncationStyle == LEADING_ELLIPSIS ||
+                                truncationStyle == LEADING_WORD_ELLIPSIS);
+            boolean center =   (truncationStyle == CENTER_ELLIPSIS ||
+                                truncationStyle == CENTER_WORD_ELLIPSIS);
+            boolean trailing = !(leading || center);
+            boolean wordTrim = (truncationStyle == WORD_ELLIPSIS ||
+                                truncationStyle == LEADING_WORD_ELLIPSIS ||
+                                truncationStyle == CENTER_WORD_ELLIPSIS);
 
-        String result = text;
-        boolean truncated = false;
-        int len = (result != null) ? result.length() : 0;
-        int centerLen = -1;
+            String result = text;
+            boolean truncated = false;
+            int len = (result != null) ? result.length() : 0;
+            int centerLen = -1;
 
-        Point2D centerPoint = null;
-        if (center) {
-            // Find index of character in the middle of the visual text area
-            centerPoint = new Point2D((width - eWidth) / 2, height / 2 - helper.getBaselineOffset());
-        }
+            Point2D centerPoint = null;
+            if (center) {
+                // Find index of character in the middle of the visual text area
+                centerPoint = new Point2D((width - eWidth) / 2, height / 2 - helper.getBaselineOffset());
+            }
 
-        // Find index of character at the bottom left of the text area.
-        // This should be the first character of a line that would be clipped.
-        Point2D endPoint = new Point2D(0, height - helper.getBaselineOffset());
+            // Find index of character at the bottom left of the text area.
+            // This should be the first character of a line that would be clipped.
+            Point2D endPoint = new Point2D(0, height - helper.getBaselineOffset());
 
-        int hit = helper.hitTest(endPoint).getCharIndex();
-        if (hit >= len) {
-            helper.setBoundsType(TextBoundsType.LOGICAL); // restore
-            return text;
-        }
-        if (center) {
-            hit = helper.hitTest(centerPoint).getCharIndex();
-        }
+            int hit = helper.hitTest(endPoint).getCharIndex();
+            if (hit >= len) {
+                helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+                return text;
+            }
+            if (center) {
+                hit = helper.hitTest(centerPoint).getCharIndex();
+            }
 
-        if (hit > 0 && hit < len) {
-            // Step one, make a truncation estimate.
+            if (hit > 0 && hit < len) {
+                // Step one, make a truncation estimate.
 
-            if (center || trailing) {
-                int ind = hit;
-                if (center) {
-                    // This is for the first part, i.e. beginning of text up to ellipsis.
-                    if (wordTrim) {
+                if (center || trailing) {
+                    int ind = hit;
+                    if (center) {
+                        // This is for the first part, i.e. beginning of text up to ellipsis.
+                        if (wordTrim) {
+                            int brInd = lastBreakCharIndex(text, ind + 1);
+                            if (brInd >= 0) {
+                                ind = brInd + 1;
+                            } else {
+                                brInd = firstBreakCharIndex(text, ind);
+                                if (brInd >= 0) {
+                                    ind = brInd + 1;
+                                }
+                            }
+                        }
+                        centerLen = ind + eLen;
+                    } // else: text node wraps at words, so wordTrim is not needed here.
+                    result = result.substring(0, ind) + ellipsis;
+                    truncated = true;
+                }
+
+                if (leading || center) {
+                    // The hit is an index counted from the beginning, but we need
+                    // the opposite, i.e. an index counted from the end.  However,
+                    // the Text node does not support wrapped line layout in the
+                    // reverse direction, starting at the bottom right corner.
+
+                    // We'll simulate by assuming the index will be a similar
+                    // number, then back up 10 characters just to add some slop.
+                    // For example, the ending lines might pack tighter than the
+                    // beginning lines, and therefore fit a higher number of
+                    // characters.
+                    int ind = Math.max(0, len - hit - 10);
+                    if (ind > 0 && wordTrim) {
                         int brInd = lastBreakCharIndex(text, ind + 1);
                         if (brInd >= 0) {
                             ind = brInd + 1;
@@ -552,104 +647,77 @@ public class Utils {
                             }
                         }
                     }
-                    centerLen = ind + eLen;
-                } // else: text node wraps at words, so wordTrim is not needed here.
-                result = result.substring(0, ind) + ellipsis;
-                truncated = true;
-            }
-
-            if (leading || center) {
-                // The hit is an index counted from the beginning, but we need
-                // the opposite, i.e. an index counted from the end.  However,
-                // the Text node does not support wrapped line layout in the
-                // reverse direction, starting at the bottom right corner.
-
-                // We'll simulate by assuming the index will be a similar
-                // number, then back up 10 characters just to add some slop.
-                // For example, the ending lines might pack tighter than the
-                // beginning lines, and therefore fit a higher number of
-                // characters.
-                int ind = Math.max(0, len - hit - 10);
-                if (ind > 0 && wordTrim) {
-                    int brInd = lastBreakCharIndex(text, ind + 1);
-                    if (brInd >= 0) {
-                        ind = brInd + 1;
+                    if (center) {
+                        // This is for the second part, i.e. from ellipsis to end of text.
+                        result = result + text.substring(ind);
                     } else {
-                        brInd = firstBreakCharIndex(text, ind);
-                        if (brInd >= 0) {
-                            ind = brInd + 1;
-                        }
-                    }
-                }
-                if (center) {
-                    // This is for the second part, i.e. from ellipsis to end of text.
-                    result = result + text.substring(ind);
-                } else {
-                    result = ellipsis + text.substring(ind);
-                    truncated = true;
-                }
-            }
-
-            // Step two, check if text still overflows after we added the ellipsis.
-            // If so, remove one char or word at a time.
-            while (true) {
-                helper.setText(result);
-                int hit2 = helper.hitTest(endPoint).getCharIndex();
-                if (center && hit2 < centerLen) {
-                    // No room for text after ellipsis. Maybe there is a newline
-                    // here, and the next line falls outside the view.
-                    if (hit2 > 0 && result.charAt(hit2-1) == '\n') {
-                        hit2--;
-                    }
-                    // should have used StringBuilder
-                    result = text.substring(0, hit2) + ellipsis;
-                    truncated = true;
-                    break;
-                } else if (hit2 > 0 && hit2 < result.length()) {
-                    if (leading) {
-                        int ind = eLen + 1; // Past ellipsis and first char.
-                        if (wordTrim) {
-                            int brInd = firstBreakCharIndex(result, ind);
-                            if (brInd >= 0) {
-                                ind = brInd + 1;
-                            }
-                        }
-                        result = ellipsis + result.substring(ind);
-                        truncated = true;
-                    } else if (center) {
-                        int ind = centerLen + 1; // Past ellipsis and first char.
-                        if (wordTrim) {
-                            int brInd = firstBreakCharIndex(result, ind);
-                            if (brInd >= 0) {
-                                ind = brInd + 1;
-                            }
-                        }
-                        result = result.substring(0, centerLen) + result.substring(ind);
-                    } else {
-                        int ind = result.length() - eLen - 1; // Before last char and ellipsis.
-                        if (wordTrim) {
-                            int brInd = lastBreakCharIndex(result, ind);
-                            if (brInd >= 0) {
-                                ind = brInd;
-                            }
-                        }
-                        result = result.substring(0, ind) + ellipsis;
+                        result = ellipsis + text.substring(ind);
                         truncated = true;
                     }
-                } else {
-                    break;
+                }
+
+                // Step two, check if text still overflows after we added the ellipsis.
+                // If so, remove one char or word at a time.
+                while (true) {
+                    helper.setText(result);
+                    int hit2 = helper.hitTest(endPoint).getCharIndex();
+                    if (center && hit2 < centerLen) {
+                        // No room for text after ellipsis. Maybe there is a newline
+                        // here, and the next line falls outside the view.
+                        if (hit2 > 0 && result.charAt(hit2-1) == '\n') {
+                            hit2--;
+                        }
+                        // should have used StringBuilder
+                        result = text.substring(0, hit2) + ellipsis;
+                        truncated = true;
+                        break;
+                    } else if (hit2 > 0 && hit2 < result.length()) {
+                        if (leading) {
+                            int ind = eLen + 1; // Past ellipsis and first char.
+                            if (wordTrim) {
+                                int brInd = firstBreakCharIndex(result, ind);
+                                if (brInd >= 0) {
+                                    ind = brInd + 1;
+                                }
+                            }
+                            result = ellipsis + result.substring(ind);
+                            truncated = true;
+                        } else if (center) {
+                            int ind = centerLen + 1; // Past ellipsis and first char.
+                            if (wordTrim) {
+                                int brInd = firstBreakCharIndex(result, ind);
+                                if (brInd >= 0) {
+                                    ind = brInd + 1;
+                                }
+                            }
+                            result = result.substring(0, centerLen) + result.substring(ind);
+                        } else {
+                            int ind = result.length() - eLen - 1; // Before last char and ellipsis.
+                            if (wordTrim) {
+                                int brInd = lastBreakCharIndex(result, ind);
+                                if (brInd >= 0) {
+                                    ind = brInd;
+                                }
+                            }
+                            result = result.substring(0, ind) + ellipsis;
+                            truncated = true;
+                        }
+                    } else {
+                        break;
+                    }
                 }
             }
+            // RESTORE STATE
+            helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
+            helper.setLineSpacing(DEFAULT_LINE_SPACING);
+            helper.setText(DEFAULT_TEXT);
+            helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
+            textTruncated.set(truncated);
+            return result;
+        } finally {
+            release(helper);
         }
-        // RESTORE STATE
-        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
-        helper.setLineSpacing(DEFAULT_LINE_SPACING);
-        helper.setText(DEFAULT_TEXT);
-        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
-        textTruncated.set(truncated);
-        return result;
     }
-
 
     private static int firstBreakCharIndex(String str, int start) {
         char[] chars = str.toCharArray();
@@ -921,5 +989,4 @@ public class Utils {
     public static URL getResource(String str) {
         return Utils.class.getResource(str);
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -233,6 +233,8 @@ public class TableColumnHeader extends Region {
     private final WeakListChangeListener<String> weakStyleClassListener =
             new WeakListChangeListener<>(styleClassListener);
 
+    private static boolean popupTriggeredOnMousePressed;
+
     private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
         TableColumnBase tableColumn = header.getTableColumn();
@@ -243,6 +245,7 @@ public class TableColumnHeader extends Region {
         }
 
         if (me.isConsumed()) return;
+        popupTriggeredOnMousePressed = me.isPopupTrigger();
         me.consume();
 
         header.getTableHeaderRow().columnDragLock = true;
@@ -251,13 +254,13 @@ public class TableColumnHeader extends Region {
         // the focus rectangle around the table control.
         header.getTableSkin().getSkinnable().requestFocus();
 
-        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
+        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled() && !popupTriggeredOnMousePressed) {
             header.columnReorderingStarted(me.getX());
         }
     };
 
     private static final EventHandler<MouseEvent> mouseDraggedHandler = me -> {
-        if (me.isConsumed()) return;
+        if (me.isConsumed() || popupTriggeredOnMousePressed) return;
         me.consume();
 
         TableColumnHeader header = (TableColumnHeader) me.getSource();
@@ -271,7 +274,10 @@ public class TableColumnHeader extends Region {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
         header.getTableHeaderRow().columnDragLock = false;
 
-        if (me.isPopupTrigger()) return;
+        if (popupTriggeredOnMousePressed || me.isPopupTrigger()) {
+            popupTriggeredOnMousePressed = false;
+            return;
+        }
         if (me.isConsumed()) return;
         me.consume();
 
@@ -518,7 +524,7 @@ public class TableColumnHeader extends Region {
     NestedTableColumnHeader getParentHeader() { return parentHeader; }
     void setParentHeader(NestedTableColumnHeader ph) { parentHeader = ph; }
 
-    // RT-29682: When the sortable property of a TableColumnBase changes this
+    // JDK-8124703: When the sortable property of a TableColumnBase changes this
     // may impact other TableColumnHeaders, as they may need to change their
     // sort order representation. Rather than install listeners across all
     // TableColumn in the sortOrder list for their sortable property, we simply
@@ -536,7 +542,7 @@ public class TableColumnHeader extends Region {
     }
 
     private void updateScene() {
-        // RT-17684: If the TableColumn widths are all currently the default,
+        // JDK-8100647: If the TableColumn widths are all currently the default,
         // we attempt to 'auto-size' based on the preferred width of the first
         // n rows (we can't do all rows, as that could conceivably be an unlimited
         // number of rows retrieved from a very slow (e.g. remote) data source.
@@ -675,18 +681,18 @@ public class TableColumnHeader extends Region {
         }
         tableSkin.getChildren().remove(tableRow);
 
-        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see JDK-8122968)
         tableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
-        // RT-36855 - take into account the column header text / graphic widths.
+        // JDK-8096512 - take into account the column header text / graphic widths.
         // Magic 10 is to allow for sort arrow to appear without text truncation.
         TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
         header.applyCss();
         double headerWidth = header.snappedLeftInset() + header.snappedRightInset() + header.label.prefWidth(-1) + 10;
         maxWidth = Math.max(maxWidth, headerWidth);
 
-        // RT-23486
+        // JDK-8126253
         maxWidth += padding;
         if (TableSkinUtils.isConstrainedResizePolicy(tv.getColumnResizePolicy()) && tv.getWidth() > 0) {
             if (maxWidth > tc.getMaxWidth()) {
@@ -771,18 +777,18 @@ public class TableColumnHeader extends Region {
         }
         tableSkin.getChildren().remove(treeTableRow);
 
-        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see JDK-8122968)
         treeTableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
-        // RT-36855 - take into account the column header text / graphic widths.
+        // JDK-8096512 - take into account the column header text / graphic widths.
         // Magic 10 is to allow for sort arrow to appear without text truncation.
         TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
         header.applyCss();
         double headerWidth = header.snappedLeftInset() + header.snappedRightInset() + header.label.prefWidth(-1) + 10;
         maxWidth = Math.max(maxWidth, headerWidth);
 
-        // RT-23486
+        // JDK-8126253
         maxWidth += padding;
         if (TableSkinUtils.isConstrainedResizePolicy(ttv.getColumnResizePolicy()) && ttv.getWidth() > 0) {
 
@@ -827,7 +833,7 @@ public class TableColumnHeader extends Region {
     }
 
     private void updateSortGrid() {
-        // Fix for RT-14488
+        // Fix for JDK-8114510
         if (this instanceof NestedTableColumnHeader) return;
 
         getChildren().clear();
@@ -844,7 +850,7 @@ public class TableColumnHeader extends Region {
             return;
         }
 
-        // RT-28016: if the tablecolumn is not a visible leaf column, we should ignore this
+        // JDK-8124443: if the tablecolumn is not a visible leaf column, we should ignore this
         int visibleLeafIndex = TableSkinUtils.getVisibleLeafIndex(getTableSkin(), getTableColumn());
         if (visibleLeafIndex == -1) return;
 
@@ -942,7 +948,7 @@ public class TableColumnHeader extends Region {
 
             sortOrderDots.getChildren().add(r);
 
-            // RT-34914: fine tuning the placement of the sort dots. We could have gone to a custom layout, but for now
+            // JDK-8122488: fine tuning the placement of the sort dots. We could have gone to a custom layout, but for now
             // this works fine.
             if (i < sortPos) {
                 Region spacer = new Region();
@@ -967,7 +973,7 @@ public class TableColumnHeader extends Region {
 
         int actualNewColumnPos = newColumnPos;
 
-        // Fix for RT-35141: We need to account for hidden columns.
+        // Fix for JDK-8096167: We need to account for hidden columns.
         // We keep iterating until we see 'requiredVisibleColumns' number of visible columns
         final int requiredVisibleColumns = actualNewColumnPos;
         int visibleColumnsSeen = 0;
@@ -982,7 +988,7 @@ public class TableColumnHeader extends Region {
                 actualNewColumnPos++;
             }
         }
-        // --- end of RT-35141 fix
+        // --- end of JDK-8096167 fix
 
         if (actualNewColumnPos >= columnsCount) {
             actualNewColumnPos = columnsCount - 1;

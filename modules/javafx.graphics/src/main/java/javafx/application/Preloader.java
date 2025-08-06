@@ -25,9 +25,6 @@
 
 package javafx.application;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * Class that is extended to define an optional preloader for a
  * JavaFX Application.
@@ -106,14 +103,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class Preloader extends Application {
 
-    // Too bad this isn't already available in a Java core class
-    private static final String lineSeparator;
-
-    static {
-        @SuppressWarnings("removal")
-        String prop = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("line.separator"));
-        lineSeparator = prop != null ? prop : "\n";
-    }
+    private static final String lineSeparator = System.lineSeparator();
 
     /**
      * Constructor for subclasses to call.
@@ -202,7 +192,7 @@ public abstract class Preloader extends Application {
 //     * @param info the UI notification
 //     */
 //    public void handleUINotification(UINotification info) {
-//        // TODO RT-19601: not used for now pending completion of JRE work
+//        // TODO JDK-8091711: not used for now pending completion of JRE work
 //--        System.err.println("Preloader: handleUINotification = " + info);
 //    }
 
@@ -431,7 +421,7 @@ public abstract class Preloader extends Application {
 //     * application launch. In particular proxy and security dialogs
 //     */
 //    public static class UINotification implements PreloaderNotification {
-//       //TODO RT-19601: implementation pending JRE work
+//       //TODO JDK-8091711: implementation pending JRE work
 //    }
 
 }

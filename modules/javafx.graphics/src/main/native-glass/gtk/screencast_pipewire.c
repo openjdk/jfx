@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,73 @@
 #endif
 
 #include <dlfcn.h>
+#include <X11/Xlib.h>
 #include "screencast_pipewire.h"
-#include "fp_pipewire.h"
+#include "glass_key.h"
+
+#define JNU_CHECK_EXCEPTION_RETURN(env, y)      \
+    do {                                        \
+        if ((*env)->ExceptionCheck(env)) {      \
+            return (y);                         \
+        }                                       \
+    } while (0)
+
+struct pw_buffer *(*fp_pw_stream_dequeue_buffer)(struct pw_stream *stream);
+const char * (*fp_pw_stream_state_as_string)(enum pw_stream_state state);
+int (*fp_pw_stream_queue_buffer)(struct pw_stream *stream,
+                                 struct pw_buffer *buffer);
+int (*fp_pw_stream_set_active)(struct pw_stream *stream, bool active);
+
+int (*fp_pw_stream_connect)(
+        struct pw_stream *stream,
+        enum pw_direction direction,
+        uint32_t target_id,
+        enum pw_stream_flags flags,
+        const struct spa_pod **params,
+        uint32_t n_params);
+
+struct pw_stream *(*fp_pw_stream_new)(
+        struct pw_core *core,
+        const char *name,
+        struct pw_properties *props
+);
+void (*fp_pw_stream_add_listener)(struct pw_stream *stream,
+                            struct spa_hook *listener,
+                            const struct pw_stream_events *events,
+                            void *data);
+int (*fp_pw_stream_disconnect)(struct pw_stream *stream);
+void (*fp_pw_stream_destroy)(struct pw_stream *stream);
+
+
+void (*fp_pw_init)(int *argc, char **argv[]);
+
+struct pw_core *
+(*fp_pw_context_connect_fd)(struct pw_context *context,
+                      int fd,
+                      struct pw_properties *properties,
+                      size_t user_data_size);
+
+int (*fp_pw_core_disconnect)(struct pw_core *core);
+
+struct pw_context * (*fp_pw_context_new)(struct pw_loop *main_loop,
+                                   struct pw_properties *props,
+                                   size_t user_data_size);
+
+struct pw_thread_loop *
+(*fp_pw_thread_loop_new)(const char *name, const struct spa_dict *props);
+struct pw_loop * (*fp_pw_thread_loop_get_loop)(struct pw_thread_loop *loop);
+void (*fp_pw_thread_loop_signal)(struct pw_thread_loop *loop,
+                                 bool wait_for_accept);
+void (*fp_pw_thread_loop_wait)(struct pw_thread_loop *loop);
+void (*fp_pw_thread_loop_accept)(struct pw_thread_loop *loop);
+int (*fp_pw_thread_loop_start)(struct pw_thread_loop *loop);
+void (*fp_pw_thread_loop_stop)(struct pw_thread_loop *loop);
+void (*fp_pw_thread_loop_destroy)(struct pw_thread_loop *loop);
+void (*fp_pw_thread_loop_lock)(struct pw_thread_loop *loop);
+void (*fp_pw_thread_loop_unlock)(struct pw_thread_loop *loop);
+
+struct pw_properties * (*fp_pw_properties_new)(const char *key, ...);
+
 #include <stdio.h>
 
 extern JNIEnv* mainEnv;
@@ -46,14 +111,10 @@ static GString *activeSessionToken;
 
 struct ScreenSpace screenSpace = {0};
 static struct PwLoopData pw = {0};
+gboolean isRemoteDesktop = FALSE;
 
 jclass tokenStorageClass = NULL;
 jmethodID storeTokenMethodID = NULL;
-
-#if defined(AIX) && defined(__open_xl_version__) && __open_xl_version__ >= 17
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-#endif
 
 inline void debug_screencast(
         const char *__restrict fmt,
@@ -129,10 +190,6 @@ static void doCleanup() {
         screenSpace.screenCount = 0;
     }
 
-    if (!sessionClosed) {
-        fp_pw_deinit();
-    }
-
     g_string_set_size(activeSessionToken, 0);
     sessionClosed = TRUE;
 }
@@ -140,7 +197,7 @@ static void doCleanup() {
 /**
  * @return TRUE on success
  */
-static gboolean initScreencast(const gchar *token,
+static gboolean initPortal(const gchar *token,
                                GdkRectangle *affectedBounds,
                                gint affectedBoundsLength) {
     gboolean isSameToken = !token
@@ -167,8 +224,8 @@ static gboolean initScreencast(const gchar *token,
 
     if (!initScreenSpace()
         || !initXdgDesktopPortal()
-        || (pw.pwFd = getPipewireFd(token,
-                                    affectedBounds,
+        || !initAndStartSession(token, &pw.pwFd)
+        || (pw.pwFd = getPipewireFd(affectedBounds,
                                     affectedBoundsLength)) < 0) {
         doCleanup();
         return FALSE;
@@ -579,6 +636,13 @@ static gboolean doLoop(GdkRectangle requestedArea) {
         pw.loop = fp_pw_thread_loop_new("JFX Pipewire Thread", NULL);
 
         if (!pw.loop) {
+            // in case someone called the pw_deinit before
+            DEBUG_SCREENCAST("pw_init\n", NULL);
+            fp_pw_init(NULL, NULL);
+            pw.loop = fp_pw_thread_loop_new("JFX Pipewire Thread", NULL);
+        }
+
+        if (!pw.loop) {
             DEBUG_SCREENCAST("!!! Could not create a loop\n", NULL);
             doCleanup();
             return FALSE;
@@ -702,7 +766,6 @@ static gboolean loadSymbols() {
     LOAD_SYMBOL(fp_pw_stream_disconnect, "pw_stream_disconnect");
     LOAD_SYMBOL(fp_pw_stream_destroy, "pw_stream_destroy");
     LOAD_SYMBOL(fp_pw_init, "pw_init");
-    LOAD_SYMBOL(fp_pw_deinit, "pw_deinit");
     LOAD_SYMBOL(fp_pw_context_connect_fd, "pw_context_connect_fd");
     LOAD_SYMBOL(fp_pw_core_disconnect, "pw_core_disconnect");
     LOAD_SYMBOL(fp_pw_context_new, "pw_context_new");
@@ -786,12 +849,21 @@ void storeRestoreToken(const gchar* oldToken, const gchar* newToken) {
 /*
  * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
  * Method:    loadPipewire
- * Signature: (Z)Z
+ * Signature: (IZ)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_loadPipewire(
-        JNIEnv *env, jclass cls, jboolean screencastDebug
+        JNIEnv *env, jclass cls, jint method, jboolean screencastDebug
 ) {
     DEBUG_SCREENCAST_ENABLED = screencastDebug;
+
+    if (method != XDG_METHOD_SCREENCAST
+        && method != XDG_METHOD_REMOTE_DESKTOP) {
+        return JNI_FALSE;
+    }
+
+    isRemoteDesktop = method == XDG_METHOD_REMOTE_DESKTOP;
+
+    DEBUG_SCREENCAST("method %d\n", method)
 
     if (!loadSymbols()) {
         return JNI_FALSE;
@@ -865,7 +937,7 @@ static int makeScreencast(
         GdkRectangle *affectedScreenBounds,
         gint affectedBoundsLength
 ) {
-    if (!initScreencast(token, affectedScreenBounds, affectedBoundsLength)) {
+    if (!initPortal(token, affectedScreenBounds, affectedBoundsLength)) {
         return pw.pwFd;
     }
 
@@ -935,9 +1007,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
     const gchar *token = jtoken
                          ? (*env)->GetStringUTFChars(env, jtoken, NULL)
                          : NULL;
+    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
 
     DEBUG_SCREENCAST(
-            "taking screenshot at \n\tx: %5i y %5i w %5i h %5i with token |%s|\n",
+            "taking screenshot at \n\tx: %5i y %5i w %5i h %5i\n\twith token |%s|\n",
             jx, jy, jwidth, jheight, token
     );
 
@@ -1025,4 +1098,170 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
 
     releaseToken(env, jtoken, token);
     return 0;
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
+ * Method:    remoteDesktopMouseMove
+ * Signature: (IILjava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopMouseMoveImpl
+        (JNIEnv *env, jclass cls, jint jx, jint jy, jstring jtoken) {
+
+
+    const gchar *token = jtoken
+                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
+                         : NULL;
+    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
+
+    DEBUG_SCREENCAST("moving mouse to\n\t%d %d\n\twith token |%s|\n", jx, jy, token);
+
+    gboolean result = initPortal(token, NULL, 0);
+    DEBUG_SCREENCAST("init result %b, moving to %d %d\n", result, jx, jy)
+
+    if (result) {
+        if (!remoteDesktopMouseMove(jx, jy)) {
+            releaseToken(env, jtoken, token);
+            return RESULT_DENIED;
+        }
+    }
+
+    releaseToken(env, jtoken, token);
+
+    return result ? RESULT_OK : pw.pwFd;
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
+ * Method:    remoteDesktopMouseButtonImpl
+ * Signature: (ZILjava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopMouseButtonImpl
+        (JNIEnv *env, jclass cls, jboolean isPress, jint buttons, jstring jtoken) {
+
+    const gchar *token = jtoken
+                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
+                         : NULL;
+    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
+
+    gboolean result = initPortal(token, NULL, 0);
+    DEBUG_SCREENCAST("init result %b, mouse pressing %d, buttons %d\n", result, isPress, buttons)
+
+    if (result) {
+        if (!remoteDesktopMouse(isPress, buttons)) {
+            releaseToken(env, jtoken, token);
+            return RESULT_DENIED;
+        }
+    }
+
+    releaseToken(env, jtoken, token);
+
+    return result ? RESULT_OK : pw.pwFd;
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
+ * Method:    remoteDesktopMouseWheelImpl
+ * Signature: (ILjava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopMouseWheelImpl
+        (JNIEnv *env, jclass cls, jint jWheelAmt, jstring jtoken) {
+
+    const gchar *token = jtoken
+                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
+                         : NULL;
+    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
+
+    gboolean result = initPortal(token, NULL, 0);
+    DEBUG_SCREENCAST("init result %b, mouse wheel %d\n", result, jWheelAmt)
+
+    if (result) {
+        if (!remoteDesktopMouseWheel(jWheelAmt)) {
+            releaseToken(env, jtoken, token);
+            return RESULT_DENIED;
+        }
+    }
+
+    releaseToken(env, jtoken, token);
+
+    return result ? RESULT_OK : pw.pwFd;
+}
+
+
+static int getLettersScancode(gint gdk_keyval) {
+    int keycode = find_gdk_keycode_for_keyval(gdk_keyval);
+    if (keycode == -1) {
+        return -1;
+    }
+
+    // Gdk keyval and Xlib keysym shares the same value for variables
+    // This find_gdk_keycode_for_keyval > XKeycodeToKeysym trick
+    // allows us to map the actual keyboard layout to QWERTY
+    // and get its scancode later on.
+    // (e.g. QWERTZ Z-Y swap)
+    KeySym ks = XKeycodeToKeysym(gdk_x11_get_default_xdisplay(), keycode, 0);
+
+    if (ks == NoSymbol) {
+        return -1;
+    }
+
+    return find_scancode_for_gdk_keyval(ks);
+}
+
+static int keyButton(jint jkey, gboolean *isKeyval) {
+    int keyval = find_gdk_keyval_for_glass_keycode(jkey);
+    keyval = gdk_keyval_to_lower(keyval);
+
+    if (keyval >= GDK_KEY_a && keyval <= GDK_KEY_z) {
+        // In most cases, simply calling NotifyKeyboardKeysym with the keyval would suffice.
+        // However, for non-Latin layout letters, it does not work (e.g., Cyrillic).
+        // But we can try pressing the key by its scancode.
+
+        int keyCode = getLettersScancode(keyval);
+        if (keyCode > 0) {
+            *isKeyval = FALSE;
+            return keyCode;
+        }
+    }
+
+    *isKeyval = TRUE;
+    return keyval;
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
+ * Method:    remoteDesktopKeyImpl
+ * Signature: (ZILjava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopKeyImpl
+        (JNIEnv *env, jclass cls, jboolean isPress, jint jkey, jstring jtoken) {
+
+    gboolean isKeyval = TRUE;
+    int key = keyButton(jkey, &isKeyval);
+
+    if (key < 0 || (*env)->ExceptionCheck(env)) {
+        DEBUG_SCREENCAST("failed to find a key: jkey %d -> %d isPress %b\n",
+                         jkey, key, isPress)
+        return RESULT_ERROR;
+    }
+
+    const gchar *token = jtoken
+                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
+                         : NULL;
+    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
+
+    gboolean result = initPortal(token, NULL, 0);
+    DEBUG_SCREENCAST("init result %b, jkey %d -> %d isKeyval %d isPress %b\n",
+                     result, isKeyval, jkey, key, isPress)
+
+    if (result) {
+        if (!remoteDesktopKey(isPress, isKeyval, key)) {
+            releaseToken(env, jtoken, token);
+            return RESULT_DENIED;
+        }
+    }
+
+    releaseToken(env, jtoken, token);
+
+    return result ? RESULT_OK : pw.pwFd;
 }

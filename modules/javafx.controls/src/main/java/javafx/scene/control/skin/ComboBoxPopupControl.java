@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.traversal.TraversalUtils;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * An abstract class that extends the functionality of {@link ComboBoxBaseSkin}
@@ -125,7 +126,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         // editable input node
         this.textField = getEditor() != null ? getEditableInputNode() : null;
 
-        // Fix for RT-29565. Without this the textField does not have a correct
+        // Fix for JDK-8115309. Without this the textField does not have a correct
         // pref width at startup, as it is not part of the scenegraph (and therefore
         // has no pref width until after the first measurements have been taken).
         if (this.textField != null) {
@@ -137,7 +138,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         // move fake focus in to the textfield if the comboBox is editable
         lh.addChangeListener(comboBoxBase.focusedProperty(), (ov, t, hasFocus) -> {
             if (getEditor() != null) {
-                // Fix for the regression noted in a comment in RT-29885.
+                // Fix for the regression noted in a comment in JDK-8115009.
                 ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
             }
         });
@@ -162,7 +163,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     break;
 
                   default:
-                    // Fix for the regression noted in a comment in RT-29885.
+                    // Fix for the regression noted in a comment in JDK-8115009.
                     // This forwards the event down into the TextField when
                     // the key event is actually received by the ComboBox.
                     textField.fireEvent(ke.copyFor(textField, textField));
@@ -174,7 +175,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
     @Override
     public void install() {
-        // RT-38978: Forward input method events to TextField if editable.
+        // JDK-8096136: Forward input method events to TextField if editable.
         if (comboBoxBase.getOnInputMethodTextChanged() == null) {
             inputMethodTextChangedHandler = event -> {
                 if (textField != null && getEditor() != null && comboBoxBase.getScene().getFocusOwner() == comboBoxBase) {
@@ -240,7 +241,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     protected abstract StringConverter<T> getConverter();
 
     /** {@inheritDoc} */
-    @Override public void show() {
+    @Override
+    public void show() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (getSkinnable() == null) {
             throw new IllegalStateException("ComboBox is null");
         }
@@ -256,7 +259,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
 
     /** {@inheritDoc} */
-    @Override public void hide() {
+    @Override
+    public void hide() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (popup != null && popup.isShowing()) {
             popup.hide();
         }
@@ -289,7 +294,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             // ComboBox, resulting in stack overflows.
             textField.getProperties().put(TextInputControlBehavior.DISABLE_FORWARD_TO_PARENT, true);
 
-            // Fix for RT-21406: ComboBox do not show initial text value
+            // Fix for JDK-8126553: ComboBox do not show initial text value
             initialTextFieldValue = textField.getText();
             // End of fix (see updateDisplayNode below for the related code)
         }
@@ -305,7 +310,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 T value = oldValue;
                 String text = textField.getText();
 
-                // conditional check here added due to RT-28245
+                // conditional check here added due to JDK-8124287
                 if (oldValue == null && (text == null || text.isEmpty())) {
                     value = null;
                 } else {
@@ -332,7 +337,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             StringConverter<T> c = getConverter();
 
             if (initialTextFieldValue != null && ! initialTextFieldValue.isEmpty()) {
-                // Remainder of fix for RT-21406: ComboBox do not show initial text value
+                // Remainder of fix for JDK-8126553: ComboBox do not show initial text value
                 textField.setText(initialTextFieldValue);
                 initialTextFieldValue = null;
                 // end of fix
@@ -365,12 +370,12 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         } else if (newTextField != null) {
             // add event filters
 
-            // Fix for RT-31093 - drag events from the textfield were not surfacing
+            // Fix for JDK-8115604 - drag events from the textfield were not surfacing
             // properly for the ComboBox.
             newTextField.addEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
             newTextField.addEventFilter(DragEvent.ANY, textFieldDragEventHandler);
 
-            // RT-38978: Forward input method requests to TextField.
+            // JDK-8096136: Forward input method requests to TextField.
             comboBoxBase.setInputMethodRequests(new ExtendedInputMethodRequests() {
                 @Override public Point2D getTextLocation(int offset) {
                     return newTextField.getInputMethodRequests().getTextLocation(offset);
@@ -434,7 +439,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popupContent.requestFocus();
 
         // second call to sizePopup here to enable proper sizing _after_ the popup
-        // has been displayed. See RT-37622 for more detail.
+        // has been displayed. See JDK-8095352 for more detail.
         sizePopup();
     }
 
@@ -445,7 +450,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             // snap to pixel
             final Region r = (Region) popupContent;
 
-            // 0 is used here for the width due to RT-46097
+            // 0 is used here for the width due to JDK-8095712
             double prefHeight = snapSizeY(r.prefHeight(0));
             double minHeight = snapSizeY(r.minHeight(0));
             double maxHeight = snapSizeY(r.maxHeight(0));
@@ -484,7 +489,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         ListenerHelper lh = ListenerHelper.get(this);
         lh.addEventHandler(popup, MouseEvent.MOUSE_CLICKED, t -> {
-            // RT-18529: We listen to mouse input that is received by the popup
+            // JDK-8117556: We listen to mouse input that is received by the popup
             // but that is not consumed, and assume that this is due to the mouse
             // clicking outside of the node, but in areas such as the
             // dropshadow.
@@ -496,7 +501,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         });
 
-        // Fix for RT-21207
+        // Fix for JDK-8115587
         lh.addInvalidationListener(() -> {
                 popupNeedsReconfiguring = true;
                 reconfigurePopup();
@@ -507,7 +512,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             getSkinnable().heightProperty()
         );
 
-        // RT-36966 - if skinnable's scene becomes null, ensure popup is closed
+        // JDK-8094950 - if skinnable's scene becomes null, ensure popup is closed
         // FIX npe
         lh.addInvalidationListener(getSkinnable().sceneProperty(), (obs) -> {
             if (((ObservableValue)obs).getValue() == null) {
@@ -519,9 +524,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
 
     void reconfigurePopup() {
-        // RT-26861. Don't call getPopup() here because it may cause the popup
+        // JDK-8125934. Don't call getPopup() here because it may cause the popup
         // to be created too early, which leads to memory leaks like those noted
-        // in RT-32827.
+        // in JDK-8123109.
         if (popup == null) return;
 
         final boolean isShowing = popup.isShowing();
@@ -548,8 +553,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final double newHeight = currentHeight < minHeight ? minHeight : currentHeight;
 
         if (newWidth != currentWidth || newHeight != currentHeight) {
-            // Resizing content to resolve issues such as RT-32582 and RT-33700
-            // (where RT-33700 was introduced due to a previous fix for RT-32582)
+            // Resizing content to resolve issues such as JDK-8116801 and JDK-8123876
+            // (where JDK-8123876 was introduced due to a previous fix for JDK-8116801)
             popupContent.resize(newWidth, newHeight);
             if (popupContent instanceof Region) {
                 ((Region)popupContent).setMinSize(newWidth, newHeight);
@@ -573,7 +578,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 textField.fireEvent(ke);
             }
         } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-            // RT-23275: The TextField fires F10 and ESCAPE key events
+            // JDK-8115456: The TextField fires F10 and ESCAPE key events
             // up to the parent, which are then fired back at the
             // TextField, and this ends up in an infinite loop until
             // the stack overflows. So, here we consume these two

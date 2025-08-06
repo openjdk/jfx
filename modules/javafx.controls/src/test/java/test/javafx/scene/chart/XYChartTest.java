@@ -79,7 +79,7 @@ public class XYChartTest extends ChartTestBase {
         yaxis.getTickMarks().toString();
     }
 
-    // RT-22166
+    // JDK-8126166
     @Test
     public void testTickLabelFont() {
         createChart();

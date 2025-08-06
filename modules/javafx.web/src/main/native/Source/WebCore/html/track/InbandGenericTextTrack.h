@@ -51,13 +51,13 @@ private:
 };
 
 class InbandGenericTextTrack final : public InbandTextTrack, private WebVTTParserClient {
-    WTF_MAKE_ISO_ALLOCATED(InbandGenericTextTrack);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InbandGenericTextTrack);
 public:
-    static Ref<InbandGenericTextTrack> create(Document&, InbandTextTrackPrivate&);
+    static Ref<InbandGenericTextTrack> create(ScriptExecutionContext&, InbandTextTrackPrivate&);
     virtual ~InbandGenericTextTrack();
 
 private:
-    InbandGenericTextTrack(Document&, InbandTextTrackPrivate&);
+    InbandGenericTextTrack(ScriptExecutionContext&, InbandTextTrackPrivate&);
 
     void addGenericCue(InbandGenericCue&) final;
     void updateGenericCue(InbandGenericCue&) final;
@@ -80,7 +80,7 @@ private:
     bool shouldPurgeCuesFromUnbufferedRanges() const final { return true; }
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "InbandGenericTextTrack"; }
+    ASCIILiteral logClassName() const final { return "InbandGenericTextTrack"_s; }
 #endif
 
     GenericTextTrackCueMap m_cueMap;

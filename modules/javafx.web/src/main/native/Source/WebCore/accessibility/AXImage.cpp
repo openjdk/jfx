@@ -37,12 +37,12 @@
 
 namespace WebCore {
 
-AXImage::AXImage(RenderImage* renderer)
+AXImage::AXImage(RenderImage& renderer)
     : AccessibilityRenderObject(renderer)
 {
 }
 
-Ref<AXImage> AXImage::create(RenderImage* renderer)
+Ref<AXImage> AXImage::create(RenderImage& renderer)
 {
     return adoptRef(*new AXImage(renderer));
 }
@@ -75,7 +75,7 @@ std::optional<AXCoreObject::AccessibilityChildrenVector> AXImage::imageOverlayEl
         if (!imageOverlayHost)
             return;
 
-        if (auto* axObjectCache = imageOverlayHost->document().existingAXObjectCache())
+        if (CheckedPtr axObjectCache = imageOverlayHost->document().existingAXObjectCache())
             axObjectCache->postNotification(imageOverlayHost.get(), AXObjectCache::AXImageOverlayChanged);
     });
 #endif

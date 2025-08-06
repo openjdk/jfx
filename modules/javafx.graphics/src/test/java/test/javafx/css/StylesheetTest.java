@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,11 @@
 
 package test.javafx.css;
 
+import com.sun.javafx.css.RuleHelper;
 import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.expression.FunctionExpression;
+import javafx.application.ColorScheme;
 import javafx.css.StyleConverter.StringStore;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.StringConverter;
@@ -40,6 +43,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -62,6 +66,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -73,10 +78,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StylesheetTest {
 
@@ -295,11 +297,11 @@ public class StylesheetTest {
             stage.setScene(scene);
             stage.show();
         } catch (NullPointerException e) {
-            // RT-23140 is supposed to fix the NPE. Did it?
+            // JDK-8126949 is supposed to fix the NPE. Did it?
             fail("Test purpose failed: " + e.toString());
         } catch (Exception e) {
             // Something other than an NPE should still raise a red flag,
-            // but the exception is not what RT-23140 fixed.
+            // but the exception is not what JDK-8126949 fixed.
 
             fail("Exception not expected: " + e.toString());
         }
@@ -492,7 +494,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_45() {
 
-        // RT-30953-2.2.4bss was generated with javafx version 2.2.45 from 7u??
+        // RT-30953-2.2.45.bss was generated with javafx version 2.2.45 from 7u??
         Stylesheet ss = deserialize("RT-30953-2.2.45.bss");
         checkConvert(ss);
     }
@@ -500,7 +502,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_4() {
 
-        // RT-30953-2.2.4bss was generated with javafx version 2.2.4 from 7u10
+        // RT-30953-2.2.4.bss was generated with javafx version 2.2.4 from 7u10
         Stylesheet ss = deserialize("RT-30953-2.2.4.bss");
         checkConvert(ss);
     }
@@ -778,4 +780,40 @@ public class StylesheetTest {
         assertEquals(Color.BLUE, rect.getFill());
     }
 
+    @Test
+    public void testRootPseudoClassSelectsRootNode() {
+        var root = new StackPane();
+        var _ = new Scene(root);
+
+        root.applyCss();
+        assertNotEquals(Background.fill(Color.RED), root.getBackground());
+
+        root.getStylesheets().add("data:base64," + Base64.getEncoder().encodeToString("""
+            :root {
+                -fx-background-color: red;
+            }
+            """.getBytes(StandardCharsets.UTF_8)));
+
+        root.applyCss();
+        assertEquals(Background.fill(Color.RED), root.getBackground());
+    }
+
+    @Test
+    void serializeStylesheetWithMediaRule() throws IOException {
+        byte[] data = convertCssTextToBinary("""
+            .rect { -fx-fill: blue; }
+            @media (prefers-color-scheme: dark) {
+                .rect { -fx-fill: red; }
+            }
+            """);
+
+        var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+        assertEquals(2, stylesheet.getRules().size());
+        assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0)));
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
+        assertEquals(
+            new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+            mediaRule.getQueries().getFirst());
+    }
 }

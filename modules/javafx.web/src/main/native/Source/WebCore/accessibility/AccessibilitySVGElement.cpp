@@ -44,37 +44,36 @@
 
 namespace WebCore {
 
-AccessibilitySVGElement::AccessibilitySVGElement(RenderObject* renderer, AXObjectCache* cache)
+AccessibilitySVGElement::AccessibilitySVGElement(RenderObject& renderer, AXObjectCache* cache)
     : AccessibilityRenderObject(renderer)
     , m_axObjectCache(cache)
 {
-    ASSERT(renderer);
     ASSERT(cache);
 }
 
 AccessibilitySVGElement::~AccessibilitySVGElement() = default;
 
-Ref<AccessibilitySVGElement> AccessibilitySVGElement::create(RenderObject* renderer, AXObjectCache* cache)
+Ref<AccessibilitySVGElement> AccessibilitySVGElement::create(RenderObject& renderer, AXObjectCache* cache)
 {
     return adoptRef(*new AccessibilitySVGElement(renderer, cache));
 }
 
 AccessibilityObject* AccessibilitySVGElement::targetForUseElement() const
 {
-    if (!is<SVGUseElement>(element()))
+    auto* use = dynamicDowncast<SVGUseElement>(element());
+    if (!use)
         return nullptr;
 
-    SVGUseElement& use = downcast<SVGUseElement>(*element());
-    String href = use.href();
+    auto href = use->href();
     if (href.isEmpty())
         href = getAttribute(HTMLNames::hrefAttr);
 
-    auto target = SVGURIReference::targetElementFromIRIString(href, use.treeScopeForSVGReferences());
+    auto target = SVGURIReference::targetElementFromIRIString(href, use->treeScopeForSVGReferences());
     if (!target.element)
         return nullptr;
 
     if (auto* cache = axObjectCache())
-        return cache->getOrCreate(target.element.get());
+        return cache->getOrCreate(*target.element);
     return nullptr;
 }
 
@@ -138,17 +137,20 @@ String AccessibilitySVGElement::description() const
     if (!ariaDescription.isEmpty())
         return ariaDescription;
 
-    auto titleElements = childrenOfType<SVGTitleElement>(*element());
-    if (auto titleChild = childElementWithMatchingLanguage(titleElements))
+    RefPtr element = this->element();
+    if (element) {
+        auto titleElements = childrenOfType<SVGTitleElement>(*element);
+        if (auto* titleChild = childElementWithMatchingLanguage(titleElements))
         return titleChild->textContent();
+    }
 
-    if (is<SVGAElement>(element())) {
-        auto& xlinkTitle = element()->attributeWithoutSynchronization(XLinkNames::titleAttr);
+    if (is<SVGAElement>(element.get())) {
+        const auto& xlinkTitle = element->attributeWithoutSynchronization(XLinkNames::titleAttr);
         if (!xlinkTitle.isEmpty())
             return xlinkTitle;
     }
 
-    if (is<SVGUseElement>(element())) {
+    if (is<SVGUseElement>(element.get())) {
         if (auto* target = targetForUseElement())
             return target->description();
     }
@@ -156,8 +158,8 @@ String AccessibilitySVGElement::description() const
     // FIXME: This is here to not break the svg-image.html test. But 'alt' is not
     // listed as a supported attribute of the 'image' element in the SVG spec:
     // https://www.w3.org/TR/SVG/struct.html#ImageElement
-    if (m_renderer->isRenderOrLegacyRenderSVGImage()) {
-        const AtomString& alt = getAttribute(HTMLNames::altAttr);
+    if (m_renderer && m_renderer->isRenderOrLegacyRenderSVGImage()) {
+        const auto& alt = getAttribute(HTMLNames::altAttr);
         if (!alt.isNull())
             return alt;
     }
@@ -197,6 +199,19 @@ String AccessibilitySVGElement::helpText() const
     return String();
 }
 
+bool AccessibilitySVGElement::hasTitleOrDescriptionChild() const
+{
+    RefPtr element = this->element();
+    if (!element)
+        return false;
+
+    for (const auto& child : childrenOfType<SVGElement>(*element)) {
+        if (is<SVGTitleElement>(child) || is<SVGDescElement>(child))
+            return true;
+    }
+    return false;
+}
+
 bool AccessibilitySVGElement::computeAccessibilityIsIgnored() const
 {
     // According to the SVG Accessibility API Mappings spec, items should be excluded if:
@@ -215,10 +230,8 @@ bool AccessibilitySVGElement::computeAccessibilityIsIgnored() const
 
     // The SVG AAM states objects with at least one 'title' or 'desc' element MUST be included.
     // At this time, the presence of a matching 'lang' attribute is not mentioned in the spec.
-    for (const auto& child : childrenOfType<SVGElement>(*element())) {
-        if ((is<SVGTitleElement>(child) || is<SVGDescElement>(child)))
+    if (hasTitleOrDescriptionChild())
             return false;
-    }
 
     if (ignoredFromPresentationalRole())
         return true;
@@ -268,19 +281,14 @@ bool AccessibilitySVGElement::inheritsPresentationalRole() const
 
 AccessibilityRole AccessibilitySVGElement::determineAriaRoleAttribute() const
 {
-    AccessibilityRole role = AccessibilityRenderObject::determineAriaRoleAttribute();
+    auto role = AccessibilityRenderObject::determineAriaRoleAttribute();
     if (role != AccessibilityRole::Presentational)
         return role;
 
     // The presence of a 'title' or 'desc' child element trumps PresentationalRole.
     // https://lists.w3.org/Archives/Public/public-svg-a11y/2016Apr/0016.html
     // At this time, the presence of a matching 'lang' attribute is not mentioned.
-    for (const auto& child : childrenOfType<SVGElement>(*element())) {
-        if ((is<SVGTitleElement>(child) || is<SVGDescElement>(child)))
-            return AccessibilityRole::Unknown;
-    }
-
-    return role;
+    return hasTitleOrDescriptionChild() ? AccessibilityRole::Unknown : role;
 }
 
 AccessibilityRole AccessibilitySVGElement::determineAccessibilityRole()
@@ -291,19 +299,25 @@ AccessibilityRole AccessibilitySVGElement::determineAccessibilityRole()
     if (!m_renderer)
         return AccessibilityRole::Unknown;
 
-    Element* svgElement = element();
-
-    if (m_renderer->isRenderOrLegacyRenderSVGShape() || m_renderer->isRenderOrLegacyRenderSVGPath() || m_renderer->isRenderOrLegacyRenderSVGImage() || is<SVGUseElement>(svgElement))
+    RefPtr element = this->element();
+    if (m_renderer->isRenderOrLegacyRenderSVGShape() || m_renderer->isRenderOrLegacyRenderSVGPath() || m_renderer->isRenderOrLegacyRenderSVGImage() || is<SVGUseElement>(element))
         return AccessibilityRole::Image;
-    if (m_renderer->isRenderOrLegacyRenderSVGForeignObject() || is<SVGGElement>(svgElement))
+    if (m_renderer->isRenderOrLegacyRenderSVGForeignObject())
+        return AccessibilityRole::Generic;
+    if (is<SVGGElement>(element)) {
+        // https://w3c.github.io/svg-aam/#include_elements
+        // g elements are generic (like a div) unless they have a name or is focusable.
+        if (WebCore::hasAccNameAttribute(*element) || hasTitleOrDescriptionChild() || canSetFocusAttribute())
         return AccessibilityRole::Group;
+        return AccessibilityRole::Generic;
+    }
     if (m_renderer->isRenderSVGText())
         return AccessibilityRole::SVGText;
     if (m_renderer->isRenderSVGTextPath())
         return AccessibilityRole::SVGTextPath;
     if (m_renderer->isRenderSVGTSpan())
         return AccessibilityRole::SVGTSpan;
-    if (is<SVGAElement>(svgElement))
+    if (is<SVGAElement>(element))
         return AccessibilityRole::WebCoreLink;
 
     return AccessibilityRenderObject::determineAccessibilityRole();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,14 @@
 
 package javafx.concurrent;
 
-import java.security.AccessController;
-import java.security.Permission;
-import java.security.PrivilegedAction;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_CANCELLED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_FAILED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_RUNNING;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SCHEDULED;
+import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -46,14 +51,6 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.atomic.AtomicReference;
-import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_CANCELLED;
-import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_FAILED;
-import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_RUNNING;
-import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SCHEDULED;
-import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
 
 /**
  * <p>
@@ -1001,20 +998,11 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         return cancel(true);
     }
 
-    // Need to assert the modifyThread permission so an app can cancel
-    // a task that it created (the default executor for the service runs in
-    // its own thread group)
-    // Note that this is needed when running with a security manager.
-    private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
-
-    @Override public boolean cancel(boolean mayInterruptIfRunning) {
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
         // Delegate to the super implementation to actually attempt to cancel this thing
         // Assert the modifyThread permission
-        @SuppressWarnings("removal")
-        boolean flag = AccessController.doPrivileged(
-            (PrivilegedAction<Boolean>) () -> super.cancel(mayInterruptIfRunning),
-            null,
-            modifyThreadPerm);
+        boolean flag = super.cancel(mayInterruptIfRunning);
 
         // If cancel succeeded (according to the semantics of the Future cancel method),
         // then we need to make sure the State flag is set appropriately
@@ -1027,12 +1015,30 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // state flag will not be readable immediately after this call. However,
             // that would be the case anyway since these properties are not thread-safe.
             if (isFxApplicationThread()) {
+                switch (getState()) {
+                case FAILED:
+                case SUCCEEDED:
+                    // a finished or failed task retains its state
+                    return false;
+                }
+
                 setState(Worker.State.CANCELLED);
             } else {
-                runLater(() -> setState(Worker.State.CANCELLED));
+                runLater(() -> {
+                    // the state must be accessed only in the fx application thread
+                    switch (getState()) {
+                    case FAILED:
+                    case SUCCEEDED:
+                        // a finished or failed task retains its state
+                        break;
+                    default:
+                        setState(Worker.State.CANCELLED);
+                        break;
+                    }
+                });
+                return flag;
             }
         }
-        // return the flag
         return flag;
     }
 

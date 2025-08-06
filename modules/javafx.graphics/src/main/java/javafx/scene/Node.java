@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.scene;
 
 
-import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -94,8 +93,10 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
@@ -113,6 +114,7 @@ import javafx.scene.input.SwipeEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.input.ZoomEvent;
+import javafx.scene.shape.Shape;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.text.Font;
 import javafx.scene.transform.Rotate;
@@ -130,6 +132,7 @@ import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
@@ -144,6 +147,7 @@ import com.sun.javafx.geometry.BoundsUtils;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.perf.PerformanceTracker;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.CssFlags;
@@ -157,6 +161,7 @@ import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.scene.transform.TransformUtils;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Logging;
@@ -220,11 +225,6 @@ import com.sun.scenario.effect.EffectHelper;
  * The JavaFX Application Thread is created as part of the startup process for
  * the JavaFX runtime. See the {@link javafx.application.Application} class and
  * the {@link Platform#startup(Runnable)} method for more information.
- * </p>
- *
- * <p>
- * An application should not extend the Node class directly. Doing so may lead to
- * an UnsupportedOperationException being thrown.
  * </p>
  *
  * <h2><a id="StringID">String ID</a></h2>
@@ -407,7 +407,9 @@ import com.sun.scenario.effect.EffectHelper;
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget, Styleable {
+public abstract sealed class Node
+        implements EventTarget, Styleable
+        permits AbstractNode, Camera, LightBase, Parent, SubScene, Canvas, ImageView, Shape, Shape3D {
 
     /*
      * Store the singleton instance of the NodeHelper subclass corresponding
@@ -491,6 +493,21 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public boolean isDirtyEmpty(Node node) {
                 return node.isDirtyEmpty();
+            }
+
+            @Override
+            public void setScenes(Node node, Scene newScene, SubScene newSubScene) {
+                node.setScenes(newScene, newSubScene);
+            }
+
+            @Override
+            public void setParent(Node node, Parent parent) {
+                node.setParent(parent);
+            }
+
+            @Override
+            public void updateBounds(Node node) {
+                node.updateBounds();
             }
 
             @Override
@@ -586,6 +603,11 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public boolean isInitialCssState(Node node) {
+                return node.initialCssState;
+            }
+
+            @Override
             public void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
                 node.recalculateRelativeSizeProperties(fontForRelativeSizes);
             }
@@ -660,6 +682,11 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public TransitionTimer findTransitionTimer(Node node, String propertyName) {
                 return node.findTransitionTimer(propertyName);
+            }
+
+            @Override
+            public MediaQueryContext getMediaQueryContext(Node node) {
+                return node.getMediaQueryContext();
             }
         });
     }
@@ -1000,6 +1027,8 @@ public abstract class Node implements EventTarget, Styleable {
                     }
                     updateDisabled();
                     computeDerivedDepthTest();
+                    resetInitialCssStateFlag();
+
                     final Parent newParent = get();
 
                     // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
@@ -1018,7 +1047,7 @@ public abstract class Node implements EventTarget, Styleable {
                         //
                         reapplyCSS();
                     } else {
-                        // RT-31168: reset CssFlag to clean so css will be reapplied if the node is added back later.
+                        // JDK-8123224: reset CssFlag to clean so css will be reapplied if the node is added back later.
                         // If flag is REAPPLY, then reapplyCSS() will just return and the call to
                         // notifyParentsOfInvalidatedCSS() will be skipped thus leaving the node un-styled.
                         cssFlag = CssFlags.CLEAN;
@@ -1094,8 +1123,14 @@ public abstract class Node implements EventTarget, Styleable {
             getClip().setScenes(newScene, newSubScene);
         }
         if (sceneChanged) {
+            if (oldScene != null) {
+                oldScene.unregisterClearInitialCssStageFlag(this);
+            }
+
             if (newScene == null) {
                 completeTransitionTimers();
+            } else {
+                resetInitialCssStateFlag();
             }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
@@ -2673,8 +2708,8 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
     /**
-     * Defines whether or not this node's layout will be managed by it's parent.
-     * If the node is managed, it's parent will factor the node's geometry
+     * Defines whether or not this node's layout will be managed by its parent.
+     * If the node is managed, its parent will factor the node's geometry
      * into its own preferred size and {@link #layoutBoundsProperty layoutBounds}
      * calculations and will lay it
      * out during the scene's layout pass.  If a managed node's layoutBounds
@@ -3904,7 +3939,7 @@ public abstract class Node implements EventTarget, Styleable {
         // actually be TEMP_BOUNDS, so we save off state
         if (getClip() != null
                 // FIXME: All 3D picking is currently ignored by rendering.
-                // Until this is fixed or defined differently (RT-28510),
+                // Until this is fixed or defined differently (JDK-8090485),
                 // we follow this behavior.
                 && !(this instanceof Shape3D) && !(getClip() instanceof Shape3D)) {
             double x1 = bounds.getMinX();
@@ -5449,7 +5484,7 @@ public abstract class Node implements EventTarget, Styleable {
         Node clip = getClip();
         if (clip != null
                 // FIXME: All 3D picking is currently ignored by rendering.
-                // Until this is fixed or defined differently (RT-28510),
+                // Until this is fixed or defined differently (JDK-8090485),
                 // we follow this behavior.
                 && !(this instanceof Shape3D) && !(clip instanceof Shape3D)) {
             final double dirX = dir.x;
@@ -8508,6 +8543,45 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    /**
+     * Requests to move the focus from this {@code Node} in the specified direction.
+     * The {@code Node} serves as a reference point and does not have to be focused or focusable.
+     * A successful traversal results in a new {@code Node} being focused.
+     * <p>
+     * This method is expected to be called in response to a {@code KeyEvent}; therefore the {@code Node}
+     * receiving focus will have the {@link #focusVisibleProperty() focusVisible} property set.
+     *
+     * @param direction the direction of focus traversal, non-null
+     * @return {@code true} if traversal was successful
+     * @since 25
+     */
+    public final boolean requestFocusTraversal(TraversalDirection direction) {
+        return traverse(this, direction, true);
+    }
+    // from FocusTraversal, now defunct
+    // TODO hide, replace with something
+    /**
+     * TODO remove
+     * @param node
+     * @param dir
+     * @param focusVisible
+     * @return
+     */
+    public static boolean traverse(Node node, TraversalDirection dir, boolean focusVisible) {
+        if (node != null) {
+            SubScene ss = NodeHelper.getSubScene(node);
+            if (ss != null) {
+                return TopMostTraversalEngine.trav(ss.getRoot(), node, dir, focusVisible) != null;
+            }
+
+            Scene sc = node.getScene();
+            if (sc != null) {
+                return TopMostTraversalEngine.trav(sc.getRoot(), node, dir, focusVisible) != null;
+            }
+        }
+        return false;
+    }
+
     //--------------------------
     //  Private Implementation
     //--------------------------
@@ -9026,6 +9100,7 @@ public abstract class Node implements EventTarget, Styleable {
      * a running {@link TransitionTimer} with this {@code Node}. This allows the node
      * to keep track of running timers that are targeting its properties.
      *
+     * @param propertyName the CSS name of the targeted property
      * @param timer the transition timer
      */
     private void addTransitionTimer(String propertyName, TransitionTimer timer) {
@@ -9043,7 +9118,7 @@ public abstract class Node implements EventTarget, Styleable {
      * This method is called by animatable {@link StyleableProperty} implementations
      * when their {@link TransitionTimer} has completed.
      *
-     * @param timer the transition timer
+     * @param propertyName the CSS name of the targeted property
      */
     private void removeTransitionTimer(String propertyName) {
         var transitionTimers = miscProperties != null ? miscProperties.transitionTimers : null;
@@ -9629,7 +9704,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return  The Styles that match this CSS property for the given Node. The
      * list is sorted by descending specificity.
      */
-    // SB-dependency: RT-21096 has been filed to track this
+    // SB-dependency: JDK-8092096 has been filed to track this
     static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
          return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
     }
@@ -9646,9 +9721,9 @@ public abstract class Node implements EventTarget, Styleable {
      }
 
      /*
-      * RT-17293
+      * JDK-8091202
       */
-     // SB-dependency: RT-21096 has been filed to track this
+     // SB-dependency: JDK-8092096 has been filed to track this
      final void setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
          if (styleMap != null) getProperties().put("STYLEMAP", styleMap);
          else getProperties().remove("STYLEMAP");
@@ -9663,7 +9738,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
      * @return The Map populated with matching styles.
      */
-    // SB-dependency: RT-21096 has been filed to track this
+    // SB-dependency: JDK-8092096 has been filed to track this
     Map<StyleableProperty<?>,List<Style>> findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
 
         Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(styleMap, this);
@@ -9804,7 +9879,7 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // RT-36838 - don't reapply CSS in the middle of an update
+        // JDK-8095580 - don't reapply CSS in the middle of an update
         if (cssFlag == CssFlags.UPDATE) {
             cssFlag = CssFlags.REAPPLY;
             notifyParentsOfInvalidatedCSS();
@@ -9977,7 +10052,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (cssFlag != CssFlags.REAPPLY) cssFlag = CssFlags.UPDATE;
 
         //
-        // RT-28394 - need to see if any ancestor has a flag UPDATE
+        // JDK-8115093 - need to see if any ancestor has a flag UPDATE
         // If so, process css from the top-most CssFlags.UPDATE node
         // since my ancestor's styles may affect mine.
         //
@@ -10043,6 +10118,30 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    /**
+     * A node is considered to be in its initial CSS state if it wasn't shown in a scene graph before.
+     * This flag is cleared after CSS processing was completed in a Scene pulse event. Note that manual
+     * calls to {@link #applyCss()} or similar methods will not clear this flag, since we consider all
+     * CSS processing before the Scene pulse to be part of the node's initial state.
+     */
+    private boolean initialCssState = true;
+
+    private void resetInitialCssStateFlag() {
+        initialCssState = true;
+        Scene scene = getScene();
+        if (scene != null) {
+            scene.registerClearInitialCssStateFlag(this);
+        }
+    }
+
+    void clearInitialCssStateFlag() {
+        initialCssState = false;
+    }
+
+    private MediaQueryContext getMediaQueryContext() {
+        Scene scene = getScene();
+        return scene != null ? scene.preferences : null;
+    }
 
     /**
      * A StyleHelper for this node.
@@ -10393,26 +10492,6 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @SuppressWarnings("removal")
-                @Override public AccessControlContext getAccessControlContext() {
-                    Scene scene = getScene();
-                    if (scene == null) {
-                        /* This can happen during the release process of an accessible object. */
-                        throw new RuntimeException("Accessbility requested for node not on a scene");
-                    }
-                    if (scene.getPeer() != null) {
-                        return scene.getPeer().getAccessControlContext();
-                    } else {
-                        /* In some rare cases the accessible for a Node is needed
-                         * before its scene is made visible. For example, the screen reader
-                         * might ask a Menu for its ContextMenu before the ContextMenu
-                         * is made visible. That is a problem because the Window for the
-                         * ContextMenu is only created immediately before the first time
-                         * it is shown.
-                         */
-                        return scene.acc;
-                    }
-                }
                 @Override public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
                     return queryAccessibleAttribute(attribute, parameters);
                 }

@@ -95,6 +95,8 @@ def isUnary(op):
 def isBinary(op):
     return isNormal(op) and len(op["parameter"]) == 2
 
+def isCompare(op):
+    return op["category"] == "comparison"
 
 def isAtomic(op):
     return op["category"].startswith("atomic")

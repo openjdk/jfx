@@ -46,9 +46,9 @@ import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
- * RT-23603: WebView does not display in JFXPanel on initialization
+ * JDK-8117363: WebView does not display in JFXPanel on initialization
  */
-@Disabled("RT-29515")
+@Disabled("JDK-8089433")
 public class RT23603Test {
     volatile JFrame frame;
     final CountDownLatch l1 = new CountDownLatch(2);

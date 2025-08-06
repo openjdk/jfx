@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 #include <glib.h>
+#include <sstream>
 
 #include <cstdlib>
 #include <com_sun_glass_ui_gtk_GtkApplication.h>
@@ -52,6 +53,24 @@ PlatformSupport* platformSupport = NULL;
 
 extern gboolean disableGrab;
 
+void checkGtkVersion(JNIEnv* env, jint reqMajor) {
+    // Major version is checked before loading
+    // GTK_3_MIN_MINOR_VERSION and GTK_3_MIN_MICRO_VERSION comes from the build system
+    if (reqMajor == 3
+        && gtk_check_version(reqMajor, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
+
+        std::ostringstream oss;
+        oss << "Minimum GTK version required is " << reqMajor << "." << GTK_3_MIN_MINOR_VERSION
+            << "." << GTK_3_MIN_MICRO_VERSION << ". System has " << gtk_major_version << "."
+            << gtk_minor_version << "." << gtk_micro_version << ".";
+
+        jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
+        if (uoe != nullptr) {
+            env->ThrowNew(uoe, oss.str().c_str());
+        }
+    }
+}
+
 static gboolean call_runnable (gpointer data)
 {
     RunnableContext* context = reinterpret_cast<RunnableContext*>(data);
@@ -72,13 +91,6 @@ static gboolean call_runnable (gpointer data)
     }
 
     return FALSE;
-}
-
-static void call_update_preferences()
-{
-    if (platformSupport) {
-        platformSupport->updatePreferences();
-    }
 }
 
 extern "C" {
@@ -121,20 +133,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
-    // Major version is checked before loading
-    if (version == 3
-        && gtk_check_version(version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION)) {
-        char message[100];
-        snprintf(message, sizeof(message),
-                 "Minimum GTK version required is %d.%d.%d. System has %d.%d.%d.",
-                 version, GTK_3_MIN_MINOR_VERSION, GTK_3_MIN_MICRO_VERSION,
-                 gtk_major_version, gtk_minor_version, gtk_micro_version);
-
-        jclass uoe = env->FindClass("java/lang/UnsupportedOperationException");
-        env->ThrowNew(uoe, message);
-
-        return;
-    }
+    checkGtkVersion(env, version);
 }
 
 /*
@@ -198,11 +197,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
 
     platformSupport = new PlatformSupport(env, obj);
 
-    GtkSettings* settings = gtk_settings_get_default();
-    if (settings != NULL) {
-        g_signal_connect(G_OBJECT(settings), "notify::gtk-theme-name",
-                         G_CALLBACK(call_update_preferences), NULL);
-    }
+    // Set ibus to sync mode
+    setenv("IBUS_ENABLE_SYNC_MODE", "1", 1);
 }
 
 /*
@@ -241,7 +237,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
     // event loop and should be restored when the event loop exits. Unfortunately,
     // this is too early. The fix is to never restore X errors.
     //
-    // See RT-21408 & RT-20756
+    // See JDK-8126059 & JDK-8118745
 
     // Restore X error handling
     // #ifndef VERBOSE
@@ -482,7 +478,7 @@ static void process_events(GdkEvent* event, gpointer data)
 
     EventsCounterHelper helper(ctx);
 
-    if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
+    if ((event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE) && ctx != NULL && ctx->filterIME(event)) {
         return;
     }
 
@@ -520,6 +516,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     gtk_main_do_event(event);
                     break;
                 case GDK_BUTTON_PRESS:
+                case GDK_2BUTTON_PRESS:
                 case GDK_BUTTON_RELEASE:
                     ctx->process_mouse_button(&event->button);
                     break;

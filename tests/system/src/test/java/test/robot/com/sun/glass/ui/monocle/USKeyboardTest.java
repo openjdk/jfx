@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,7 +114,7 @@ public class USKeyboardTest {
             ui.processLine("EV_SYN");
             TestLogShim.waitForLog("Key released: SHIFT");
         }
-        TestLogShim.waitForLog("Key typed: %0$c", new Object[] { c });
+        TestLogShim.waitForLog("Key typed: %1$c", new Object[] { c });
     }
 
     /**
@@ -171,7 +171,7 @@ public class USKeyboardTest {
         TestLogShim.waitForLog("Key released: CAPS");
     }
 
-    /** Key presses and releases are allowed to overlap. RT-37425. */
+    /** Key presses and releases are allowed to overlap. JDK-8090306. */
     @Test
     public void testPressReleaseOrder() throws Exception {
         TestApplication.showFullScreenScene();

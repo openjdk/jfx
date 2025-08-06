@@ -32,7 +32,7 @@ class AudioBuffer;
 struct OfflineAudioCompletionEventInit;
 
 class OfflineAudioCompletionEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(OfflineAudioCompletionEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(OfflineAudioCompletionEvent);
 public:
     static Ref<OfflineAudioCompletionEvent> create(Ref<AudioBuffer>&& renderedBuffer);
     static Ref<OfflineAudioCompletionEvent> create(const AtomString& eventType, OfflineAudioCompletionEventInit&&);
@@ -40,8 +40,6 @@ public:
     virtual ~OfflineAudioCompletionEvent();
 
     AudioBuffer& renderedBuffer() { return m_renderedBuffer.get(); }
-
-    EventInterface eventInterface() const override;
 
 private:
     explicit OfflineAudioCompletionEvent(Ref<AudioBuffer>&& renderedBuffer);

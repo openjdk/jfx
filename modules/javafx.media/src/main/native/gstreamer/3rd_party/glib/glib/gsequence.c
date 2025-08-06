@@ -53,7 +53,7 @@ typedef struct _GSequenceNode GSequenceNode;
  * GSequence:
  *
  * The #GSequence struct is an opaque data type representing a
- * [sequence][glib-Sequences] data type.
+ * [sequence](data-structures.html#scalable-lists) data type.
  */
 struct _GSequence
 {
@@ -1732,6 +1732,7 @@ node_get_by_pos (GSequenceNode *node,
         {
           node = node->left;
         }
+      g_assert (node != NULL);
     }
 
   return node;

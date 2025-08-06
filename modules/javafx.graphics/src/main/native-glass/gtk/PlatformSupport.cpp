@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,12 +60,58 @@ namespace
         env->CallObjectMethod(preferences, jMapPut, prefKey, prefValue);
         CHECK_JNI_EXCEPTION(env);
     }
+
+    void putBoolean(JNIEnv* env, jobject preferences, const char* name, bool value) {
+        jobject prefKey = env->NewStringUTF(name);
+        if (EXCEPTION_OCCURED(env) || prefKey == NULL) return;
+
+        jobject prefValue = env->GetStaticObjectField(jBooleanCls, value ? jBooleanTRUE : jBooleanFALSE);
+        if (EXCEPTION_OCCURED(env) || prefValue == NULL) return;
+
+        env->CallObjectMethod(preferences, jMapPut, prefKey, prefValue);
+        CHECK_JNI_EXCEPTION(env);
+    }
+
+    void notifySettingChanged(GObject*, GParamSpec*, PlatformSupport* instance) {
+        instance->updatePreferences();
+    }
+
+    void notifyNetworkChanged(GNetworkMonitor*, gboolean, PlatformSupport* instance) {
+        instance->updatePreferences();
+    }
 }
 
+constexpr const char* PlatformSupport::OBSERVED_SETTINGS[];
+
 PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
-    : env(env), application(env->NewGlobalRef(application)), preferences(NULL) {}
+        : env(env), application(env->NewGlobalRef(application)), preferences(NULL) {
+    GtkSettings* settings = gtk_settings_get_default();
+    if (settings != NULL) {
+        for (int i = 0; i < NUM_OBSERVED_SETTINGS; ++i) {
+            settingChangedHandlers[i] = g_signal_connect_data(
+                G_OBJECT(settings), OBSERVED_SETTINGS[i],
+                G_CALLBACK(notifySettingChanged), this,
+                NULL, G_CONNECT_AFTER);
+        }
+    }
+
+    networkChangedHandler = g_signal_connect_data(
+        G_OBJECT(g_network_monitor_get_default()), "network-changed",
+        G_CALLBACK(notifyNetworkChanged), this,
+        NULL, G_CONNECT_AFTER);
+}
 
 PlatformSupport::~PlatformSupport() {
+    GtkSettings* settings = gtk_settings_get_default();
+
+    for (int i = 0; i < NUM_OBSERVED_SETTINGS; ++i) {
+        if (settingChangedHandlers[i] != 0) {
+            g_signal_handler_disconnect(G_OBJECT(settings), settingChangedHandlers[i]);
+        }
+    }
+
+    g_signal_handler_disconnect(G_OBJECT(g_network_monitor_get_default()), networkChangedHandler);
+
     env->DeleteGlobalRef(application);
 
     if (preferences) {
@@ -105,7 +151,22 @@ jobject PlatformSupport::collectPreferences() const {
         gchar* themeName;
         g_object_get(settings, "gtk-theme-name", &themeName, NULL);
         putString(env, prefs, "GTK.theme_name", themeName);
+        g_free(themeName);
+
+        gboolean enableAnimations = true;
+        g_object_get(settings, "gtk-enable-animations", &enableAnimations, NULL);
+        putBoolean(env, prefs, "GTK.enable_animations", enableAnimations);
+
+        if (g_object_class_find_property(G_OBJECT_GET_CLASS(settings), "gtk-overlay-scrolling")) {
+            gboolean overlayScrolling = true;
+            g_object_get(settings, "gtk-overlay-scrolling", &overlayScrolling, NULL);
+            putBoolean(env, prefs, "GTK.overlay_scrolling", overlayScrolling);
+        }
     }
+
+    GNetworkMonitor* networkMonitor = g_network_monitor_get_default();
+    bool metered = g_network_monitor_get_network_metered(networkMonitor);
+    putBoolean(env, prefs, "GTK.network_metered", metered);
 
     return prefs;
 }

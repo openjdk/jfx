@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class WebKitMediaKeyNeededEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(WebKitMediaKeyNeededEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebKitMediaKeyNeededEvent);
 public:
     virtual ~WebKitMediaKeyNeededEvent();
 
@@ -50,8 +50,6 @@ public:
     {
         return adoptRef(*new WebKitMediaKeyNeededEvent(type, initializer, isTrusted));
     }
-
-    EventInterface eventInterface() const override;
 
     Uint8Array* initData() const { return m_initData.get(); }
 

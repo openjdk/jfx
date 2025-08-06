@@ -39,13 +39,13 @@
 #include "RenderElement.h"
 #include "RenderIterator.h"
 #include "RenderStyleInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLToken);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLToken);
 
 RenderMathMLToken::RenderMathMLToken(Type type, MathMLTokenElement& element, RenderStyle&& style)
     : RenderMathMLBlock(type, element, WTFMove(style))
@@ -56,6 +56,8 @@ RenderMathMLToken::RenderMathMLToken(Type type, Document& document, RenderStyle&
     : RenderMathMLBlock(type, document, WTFMove(style))
 {
 }
+
+RenderMathMLToken::~RenderMathMLToken() = default;
 
 MathMLTokenElement& RenderMathMLToken::element()
 {
@@ -509,7 +511,7 @@ void RenderMathMLToken::computePreferredLogicalWidths()
     if (m_mathVariantCodePoint) {
         auto mathVariantGlyph = style().fontCascade().glyphDataForCharacter(m_mathVariantCodePoint.value(), m_mathVariantIsMirrored);
         if (mathVariantGlyph.font) {
-            m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph);
+            m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph) + borderAndPaddingLogicalWidth();
             setPreferredLogicalWidthsDirty(false);
             return;
         }
@@ -532,11 +534,11 @@ void RenderMathMLToken::updateMathVariantGlyph()
             return;
     }
 
-    const auto& tokenElement = element();
+    const Ref tokenElement = element();
     if (auto codePoint = MathMLTokenElement::convertToSingleCodePoint(element().textContent())) {
         MathMLElement::MathVariant mathvariant = mathMLStyle().mathVariant();
         if (mathvariant == MathMLElement::MathVariant::None)
-            mathvariant = tokenElement.hasTagName(MathMLNames::miTag) ? MathMLElement::MathVariant::Italic : MathMLElement::MathVariant::Normal;
+            mathvariant = tokenElement->hasTagName(MathMLNames::miTag) ? MathMLElement::MathVariant::Italic : MathMLElement::MathVariant::Normal;
         char32_t transformedCodePoint = mathVariant(codePoint.value(), mathvariant);
         if (transformedCodePoint != codePoint.value()) {
             m_mathVariantCodePoint = mathVariant(codePoint.value(), mathvariant);
@@ -562,7 +564,7 @@ std::optional<LayoutUnit> RenderMathMLToken::firstLineBaseline() const
     if (m_mathVariantCodePoint) {
         auto mathVariantGlyph = style().fontCascade().glyphDataForCharacter(m_mathVariantCodePoint.value(), m_mathVariantIsMirrored);
         if (mathVariantGlyph.font)
-            return LayoutUnit { static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y())) };
+            return LayoutUnit { static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y())) } + borderAndPaddingBefore();
     }
     return RenderMathMLBlock::firstLineBaseline();
 }
@@ -588,11 +590,11 @@ void RenderMathMLToken::layoutBlock(bool relayoutChildren, LayoutUnit pageLogica
         return;
     }
 
+    recomputeLogicalWidth();
     for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
         child->layoutIfNeeded();
-
-    setLogicalWidth(LayoutUnit(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph)));
-    setLogicalHeight(LayoutUnit(mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).height()));
+    setLogicalWidth(LayoutUnit(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph)) + borderAndPaddingLogicalWidth());
+    setLogicalHeight(LayoutUnit(mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).height()) + borderAndPaddingLogicalHeight());
 
     layoutPositionedObjects(relayoutChildren);
 
@@ -606,7 +608,7 @@ void RenderMathMLToken::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     RenderMathMLBlock::paint(info, paintOffset);
 
     // FIXME: Instead of using DrawGlyph, we may consider using the more general TextPainter so that we can apply mathvariant to strings with an arbitrary number of characters and preserve advanced CSS effects (text-shadow, etc).
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible || !m_mathVariantCodePoint)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible || !m_mathVariantCodePoint)
         return;
 
     auto mathVariantGlyph = style().fontCascade().glyphDataForCharacter(m_mathVariantCodePoint.value(), m_mathVariantIsMirrored);
@@ -619,7 +621,7 @@ void RenderMathMLToken::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     LayoutUnit glyphAscent = static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y()));
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph));
-    info.context().drawGlyphs(*mathVariantGlyph.font, &mathVariantGlyph.glyph, &advance, 1, paintOffset + location() + LayoutPoint(0_lu, glyphAscent), style().fontCascade().fontDescription().usedFontSmoothing());
+    info.context().drawGlyphs(*mathVariantGlyph.font, &mathVariantGlyph.glyph, &advance, 1, paintOffset + location() + LayoutPoint(borderLeft() + paddingLeft(), glyphAscent + borderAndPaddingBefore()), style().fontCascade().fontDescription().usedFontSmoothing());
 }
 
 void RenderMathMLToken::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect)

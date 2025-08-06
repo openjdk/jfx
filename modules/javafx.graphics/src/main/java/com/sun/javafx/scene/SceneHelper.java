@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,14 @@ public final class SceneHelper {
 
     public static void enableInputMethodEvents(Scene scene, boolean enable) {
         sceneAccessor.enableInputMethodEvents(scene, enable);
+    }
+
+    public static InputMethodStateManager getInputMethodStateManager(Scene scene) {
+        return sceneAccessor.getInputMethodStateManager(scene);
+    }
+
+    public static void finishInputMethodComposition(Scene scene) {
+        sceneAccessor.finishInputMethodComposition(scene);
     }
 
     public static boolean processKeyEvent(Scene scene, KeyEvent e) {
@@ -117,6 +125,10 @@ public final class SceneHelper {
 
     public interface SceneAccessor {
         void enableInputMethodEvents(Scene scene, boolean enable);
+
+        InputMethodStateManager getInputMethodStateManager(Scene scene);
+
+        void finishInputMethodComposition(Scene scene);
 
         boolean processKeyEvent(Scene scene, KeyEvent e);
 

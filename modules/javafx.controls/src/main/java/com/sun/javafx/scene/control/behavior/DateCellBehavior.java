@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,20 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.geometry.NodeOrientation;
-import javafx.scene.Node;
-import javafx.scene.control.DateCell;
-import javafx.scene.traversal.TraversalDirection;
-import com.sun.javafx.scene.control.DatePickerContent;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-
-import java.time.temporal.ChronoUnit;
-
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.LEFT;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.*;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
+import java.time.temporal.ChronoUnit;
+import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
+import javafx.scene.TraversalDirection;
+import javafx.scene.control.DateCell;
+import com.sun.javafx.scene.control.DatePickerContent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 
 /**
  * Behaviors for LocalDate based cells types. Simply defines methods

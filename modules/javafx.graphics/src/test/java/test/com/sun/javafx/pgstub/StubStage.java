@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.com.sun.javafx.pgstub;
 
-import java.security.AccessControlContext;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -48,7 +47,7 @@ public class StubStage implements TKStage {
     }
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKScene createTKScene(boolean depthBuffer, boolean msaa) {
         return new StubScene();
     }
 
@@ -218,6 +217,10 @@ public class StubStage implements TKStage {
     @Override
     public void setFullScreen(boolean fullScreen) {
         notificationSender.changedFullscreen(fullScreen);
+    }
+
+    @Override
+    public void setPrefHeaderButtonHeight(double height) {
     }
 
     @Override

@@ -69,7 +69,7 @@ public class MenuBarSkinTest {
         menubar.setUseSystemMenuBar(false);
         menubar.getMenus().addAll(new Menu("File"), new Menu("Edit"));
 
-        // Pending RT-37118, MenuBar needs to be in a scene in order to set the skin.
+        // Pending JDK-8095650, MenuBar needs to be in a scene in order to set the skin.
         scene = new Scene(new Group(menubar));
         skin = new MenuBarSkinMock(menubar);
         menubar.setSkin(skin);
@@ -95,7 +95,7 @@ public class MenuBarSkinTest {
     @Test public void testDispose() {
 
         if (tk.getSystemMenu().isSupported()) {
-            // setting system menu bar true should create a sceneProperty listener for RT-36554
+            // setting system menu bar true should create a sceneProperty listener for JDK-8094110
             menubar.setUseSystemMenuBar(true);
             assertEquals(menubar.getMenus().size(), getSystemMenus().size());
         }

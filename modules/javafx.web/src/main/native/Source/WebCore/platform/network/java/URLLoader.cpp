@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -183,7 +183,7 @@ JLObject URLLoader::load(bool asynchronous,
 
     String headerString;
     for (const auto& header : request.httpHeaderFields()) {
-        headerString = makeString(headerString, header.key, ": ", header.value, "\n");
+        headerString = makeString(headerString, header.key, WTF::String::fromUTF8(": "), header.value, WTF::String::fromUTF8("\n"));
        /* headerString.append(header.key);
         headerString.append(": ");
         headerString.append(header.value);
@@ -365,7 +365,7 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
 
 void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
-    m_data.append(data->data(), (size_t)length);
+    m_data.append(data->span());
 }
 
 void URLLoader::SynchronousTarget::didFinishLoading()
@@ -395,7 +395,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
         response.setHTTPStatusCode(status);
     }
 
-    // Fix for RT-13802: If the mime type is not specified,
+    // Fix for JDK-8113134: If the mime type is not specified,
     // set the mime type to "text/html" as e.g. the CF port
     // does
     String contentTypeString(env, contentType);
@@ -507,7 +507,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveDa
     ASSERT(target);
     const uint8_t* address =
             static_cast<const uint8_t*>(env->GetDirectBufferAddress(byteBuffer));
-    Ref<FragmentedSharedBuffer> tmp_buf = FragmentedSharedBuffer::create(address,remaining);
+    Ref<FragmentedSharedBuffer> tmp_buf = FragmentedSharedBuffer::create(std::span<const uint8_t>(address, remaining));
     target->didReceiveData(tmp_buf->makeContiguous().ptr() + position, remaining);
     //target->didReceiveData((SharedBuffer*)(address) + position, remaining);
 }

@@ -25,6 +25,16 @@
 #include "gstdioprivate.h"
 #include "gdatasetprivate.h"
 
+/*
+ * G_SIGNEDNESS_OF:
+ * @T: a numeric type such as `unsigned int`
+ *
+ * An integer constant expression indicating whether @T is a signed type.
+ *
+ * Returns: 1 if @T is signed, 0 if it is unsigned
+ */
+#define G_SIGNEDNESS_OF(T) (((T) -1) <= 0)
+
 /* gcc defines __SANITIZE_ADDRESS__, clang sets the address_sanitizer
  * feature flag.
  *
@@ -47,14 +57,15 @@
 /* If GLib itself is not compiled with ASAN sanitizer we may still want to
  * control it in case it's linked by the loading application, so we need to
  * do this check dynamically.
- * However MinGW doesn't support weak attribute properly (even if it advertises
+ * However MinGW/Cygwin doesn't support weak attribute properly (even if it advertises
  * it), so we ignore it in such case since it's not convenient to go through
  * dlsym().
  * Under MSVC we could use alternatename, but it doesn't seem to be as reliable
  * as we'd like: https://stackoverflow.com/a/11529277/210151 and
  * https://devblogs.microsoft.com/oldnewthing/20200731-00/?p=104024
  */
-#elif defined (G_OS_UNIX) && !defined (__APPLE__) && g_macro__has_attribute (weak)
+#elif defined (G_OS_UNIX) && !defined (__APPLE__) && !defined(__CYGWIN__) && !defined(_AIX) && \
+      g_macro__has_attribute (weak)
 
 #define HAS_DYNAMIC_ASAN_LOADING
 
@@ -89,7 +100,7 @@ g_leak_sanitizer_is_supported (void)
 #if defined (_GLIB_ADDRESS_SANITIZER)
   return TRUE;
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  return __lsan_enable != NULL && __lsan_ignore_object != NULL;
+  return G_UNLIKELY (__lsan_enable != NULL && __lsan_ignore_object != NULL);
 #else
   return FALSE;
 #endif
@@ -111,7 +122,7 @@ g_ignore_leak (gconstpointer p)
   if (p != NULL)
     __lsan_ignore_object (p);
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  if (p != NULL && __lsan_ignore_object != NULL)
+  if (G_LIKELY (p != NULL) && G_UNLIKELY (__lsan_ignore_object != NULL))
     __lsan_ignore_object (p);
 #endif
 }
@@ -155,7 +166,7 @@ g_begin_ignore_leaks (void)
 #if defined (_GLIB_ADDRESS_SANITIZER)
   __lsan_disable ();
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  if (__lsan_disable != NULL)
+  if (G_UNLIKELY (__lsan_disable != NULL))
     __lsan_disable ();
 #endif
 }
@@ -172,7 +183,7 @@ g_end_ignore_leaks (void)
 #if defined (_GLIB_ADDRESS_SANITIZER)
   __lsan_enable ();
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  if (__lsan_enable != NULL)
+  if (G_UNLIKELY (__lsan_enable != NULL))
     __lsan_enable ();
 #endif
 }

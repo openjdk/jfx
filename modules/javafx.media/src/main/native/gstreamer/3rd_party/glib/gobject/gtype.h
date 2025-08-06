@@ -759,6 +759,8 @@ gboolean              g_type_is_a                    (GType            type,
 /* Hoist exact GType comparisons into the caller */
 #define g_type_is_a(a,b) ((a) == (b) || (g_type_is_a) ((a), (b)))
 
+GOBJECT_AVAILABLE_IN_2_84
+gpointer              g_type_class_get               (GType            type);
 GOBJECT_AVAILABLE_IN_ALL
 gpointer              g_type_class_ref               (GType            type);
 GOBJECT_AVAILABLE_IN_ALL
@@ -775,6 +777,8 @@ gpointer              g_type_interface_peek          (gpointer         instance_
 GOBJECT_AVAILABLE_IN_ALL
 gpointer              g_type_interface_peek_parent   (gpointer         g_iface);
 
+GOBJECT_AVAILABLE_IN_2_84
+gpointer              g_type_default_interface_get   (GType            g_type);
 GOBJECT_AVAILABLE_IN_ALL
 gpointer              g_type_default_interface_ref   (GType            g_type);
 GOBJECT_AVAILABLE_IN_ALL
@@ -1095,7 +1099,7 @@ typedef enum    /*< skip >*/
  * @base_finalize: Location of the base finalization function (optional)
  * @class_init: Location of the class initialization function for
  *  classed and instantiatable types. Location of the default vtable
- *  inititalization function for interface types. (optional) This function
+ *  initialization function for interface types. (optional) This function
  *  is used both to fill in virtual functions in the class or default vtable,
  *  and to do type-specific setup such as registering signals and object
  *  properties.
@@ -1416,10 +1420,12 @@ typedef gchar * (* GTypeValueLCopyFunc) (const GValue *value,
  *   this value bit-by-bit. Each character in the format represents
  *   an argument to be collected, and the characters themselves indicate
  *   the type of the argument. Currently supported arguments are:
+ *
  *    - ''i'': Integers, passed as 'collect_values[].v_int'
  *    - ''l'': Longs, passed as 'collect_values[].v_long'
  *    - ''d'': Doubles, passed as 'collect_values[].v_double'
  *    - ''p'': Pointers, passed as 'collect_values[].v_pointer'
+ *
  *   It should be noted that for variable argument list construction,
  *   ANSI C promotes every type smaller than an integer to an int, and
  *   floats to doubles. So for collection of short int or char, ''i''
@@ -2278,7 +2284,7 @@ static void     type_name##_class_intern_init (gpointer klass) \
 #endif  /* GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_80 */
 
 /* Added for _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE */
-#define _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT) \
+#define _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name) \
 \
 static void     type_name##_init              (TypeName        *self); \
 static void     type_name##_class_init        (TypeName##Class *klass); \
@@ -2330,12 +2336,12 @@ type_name##_get_type_once (void) \
   return g_define_type_id; \
 } /* closes type_name##_get_type_once() */
 
-/* This was defined before we had G_DEFINE_TYPE_WITH_CODE_AND_PRELUDE, it's simplest
- * to keep it.
+/* This was defined before we had _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE in
+ * gtype-private.h, it's simplest to keep it.
  */
 #define _G_DEFINE_TYPE_EXTENDED_BEGIN(TypeName, type_name, TYPE_PARENT, flags) \
-  _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE(TypeName, type_name, TYPE_PARENT) \
-  _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER(TypeName, type_name, TYPE_PARENT, flags) \
+  _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TypeName, type_name)                      \
+  _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TypeName, type_name, TYPE_PARENT, flags)
 
 /* Intentionally using (GTypeFlags) 0 instead of G_TYPE_FLAG_NONE here,
  * to avoid deprecation warnings with older GLIB_VERSION_MAX_ALLOWED */
@@ -2363,7 +2369,7 @@ type_name##_get_type (void) \
 #define _G_DEFINE_INTERFACE_EXTENDED_END()      \
         /* following custom code */             \
       }                                         \
-      g_once_init_leave (&static_g_define_type_id, g_define_type_id); \
+      _g_type_once_init_leave (&static_g_define_type_id, g_define_type_id); \
     }                                           \
   return static_g_define_type_id; \
 } /* closes type_name##_get_type() */

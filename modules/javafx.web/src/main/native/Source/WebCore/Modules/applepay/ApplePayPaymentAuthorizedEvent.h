@@ -35,7 +35,7 @@ namespace WebCore {
 class Payment;
 
 class ApplePayPaymentAuthorizedEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(ApplePayPaymentAuthorizedEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ApplePayPaymentAuthorizedEvent);
 public:
     static Ref<ApplePayPaymentAuthorizedEvent> create(const AtomString& type, unsigned version, const Payment& payment)
     {
@@ -48,9 +48,6 @@ public:
 
 private:
     ApplePayPaymentAuthorizedEvent(const AtomString& type, unsigned version, const Payment&);
-
-    // Event.
-    EventInterface eventInterface() const override;
 
     const ApplePayPayment m_payment;
 };

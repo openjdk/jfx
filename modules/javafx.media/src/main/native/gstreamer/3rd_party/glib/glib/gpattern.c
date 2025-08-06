@@ -33,15 +33,15 @@
 /**
  * GPatternSpec:
  *
- * A `GPatternSpec` struct is the 'compiled' form of a glob-style pattern.
+ * A `GPatternSpec` struct is the ‘compiled’ form of a glob-style pattern.
  *
  * The [func@GLib.pattern_match_simple] and [method@GLib.PatternSpec.match] functions
- * match a string against a pattern containing '*' and '?' wildcards with similar
- * semantics as the standard `glob()` function: '*' matches an arbitrary,
- * possibly empty, string, '?' matches an arbitrary character.
+ * match a string against a pattern containing `*` and `?` wildcards with similar
+ * semantics as the standard `glob()` function: `*` matches an arbitrary,
+ * possibly empty, string, `?` matches an arbitrary character.
  *
- * Note that in contrast to `glob()`, the '/' character can be matched by
- * the wildcards, there are no '[...]' character ranges and '*' and '?'
+ * Note that in contrast to [`glob()`](man:glob(3)), the `/` character can be
+ * matched by the wildcards, there are no `[…]` character ranges and `*` and `?`
  * can not be escaped to include them literally in a pattern.
  *
  * When multiple strings must be matched against the same pattern, it is better
@@ -65,9 +65,9 @@ typedef enum
 struct _GPatternSpec
 {
   GMatchType match_type;
-  guint      pattern_length;
-  guint      min_length;
-  guint      max_length;
+  size_t     pattern_length;
+  size_t     min_length;
+  size_t     max_length;
   gchar     *pattern;
 };
 
@@ -154,28 +154,30 @@ g_pattern_ph_match (const gchar *match_pattern,
 /**
  * g_pattern_spec_match:
  * @pspec: a #GPatternSpec
- * @string_length: the length of @string (in bytes, i.e. strlen(),
- *     not g_utf8_strlen())
+ * @string_length: the length of @string (in bytes, i.e. `strlen()`,
+ *    not [func@GLib.utf8_strlen])
  * @string: the UTF-8 encoded string to match
- * @string_reversed: (nullable): the reverse of @string or %NULL
+ * @string_reversed: (nullable): the reverse of @string
  *
- * Matches a string against a compiled pattern. Passing the correct
+ * Matches a string against a compiled pattern.
+ *
+ * Passing the correct
  * length of the string given is mandatory. The reversed string can be
- * omitted by passing %NULL, this is more efficient if the reversed
+ * omitted by passing `NULL`, this is more efficient if the reversed
  * version of the string to be matched is not at hand, as
- * g_pattern_match() will only construct it if the compiled pattern
+ * [method@GLib.PatternSpec.match] will only construct it if the compiled pattern
  * requires reverse matches.
  *
  * Note that, if the user code will (possibly) match a string against a
  * multitude of patterns containing wildcards, chances are high that
- * some patterns will require a reversed string. In this case, it's
+ * some patterns will require a reversed string. In this case, it’s
  * more efficient to provide the reversed string to avoid multiple
- * constructions thereof in the various calls to g_pattern_match().
+ * constructions thereof in the various calls to [method@GLib.PatternSpec.match].
  *
  * Note also that the reverse of a UTF-8 encoded string can in general
- * not be obtained by g_strreverse(). This works only if the string
+ * not be obtained by [func@GLib.strreverse]. This works only if the string
  * does not contain any multibyte characters. GLib offers the
- * g_utf8_strreverse() function to reverse UTF-8 encoded strings.
+ * [func@GLib.utf8_strreverse] function to reverse UTF-8 encoded strings.
  *
  * Returns: %TRUE if @string matches @pspec
  *
@@ -237,31 +239,33 @@ g_pattern_spec_match (GPatternSpec *pspec,
 /**
  * g_pattern_match: (skip)
  * @pspec: a #GPatternSpec
- * @string_length: the length of @string (in bytes, i.e. strlen(),
- *     not g_utf8_strlen())
+ * @string_length: the length of @string (in bytes, i.e. `strlen()`,
+ *    not [func@GLib.utf8_strlen])
  * @string: the UTF-8 encoded string to match
- * @string_reversed: (nullable): the reverse of @string or %NULL
+ * @string_reversed: (nullable): the reverse of @string
  *
- * Matches a string against a compiled pattern. Passing the correct
+ * Matches a string against a compiled pattern.
+ *
+ * Passing the correct
  * length of the string given is mandatory. The reversed string can be
- * omitted by passing %NULL, this is more efficient if the reversed
+ * omitted by passing `NULL`, this is more efficient if the reversed
  * version of the string to be matched is not at hand, as
- * g_pattern_match() will only construct it if the compiled pattern
+ * `g_pattern_match()` will only construct it if the compiled pattern
  * requires reverse matches.
  *
  * Note that, if the user code will (possibly) match a string against a
  * multitude of patterns containing wildcards, chances are high that
- * some patterns will require a reversed string. In this case, it's
+ * some patterns will require a reversed string. In this case, it’s
  * more efficient to provide the reversed string to avoid multiple
- * constructions thereof in the various calls to g_pattern_match().
+ * constructions thereof in the various calls to `g_pattern_match()`.
  *
  * Note also that the reverse of a UTF-8 encoded string can in general
- * not be obtained by g_strreverse(). This works only if the string
+ * not be obtained by [func@GLib.strreverse]. This works only if the string
  * does not contain any multibyte characters. GLib offers the
- * g_utf8_strreverse() function to reverse UTF-8 encoded strings.
+ * [func@GLib.utf8_strreverse] function to reverse UTF-8 encoded strings.
  *
  * Returns: %TRUE if @string matches @pspec
- * Deprecated: 2.70: Use g_pattern_spec_match() instead
+ * Deprecated: 2.70: Use [method@GLib.PatternSpec.match] instead
  **/
 gboolean
 g_pattern_match (GPatternSpec *pspec,
@@ -276,9 +280,9 @@ g_pattern_match (GPatternSpec *pspec,
  * g_pattern_spec_new:
  * @pattern: a zero-terminated UTF-8 encoded string
  *
- * Compiles a pattern to a #GPatternSpec.
+ * Compiles a pattern to a [type@GLib.PatternSpec].
  *
- * Returns: a newly-allocated #GPatternSpec
+ * Returns: (transfer full): a newly-allocated [type@GLib.PatternSpec]
  **/
 GPatternSpec*
 g_pattern_spec_new (const gchar *pattern)
@@ -392,7 +396,7 @@ g_pattern_spec_new (const gchar *pattern)
  * g_pattern_spec_copy:
  * @pspec: a #GPatternSpec
  *
- * Copies @pspec in a new #GPatternSpec.
+ * Copies @pspec in a new [type@GLib.PatternSpec].
  *
  * Returns: (transfer full): a copy of @pspec.
  *
@@ -416,7 +420,7 @@ g_pattern_spec_copy (GPatternSpec *pspec)
  * g_pattern_spec_free:
  * @pspec: a #GPatternSpec
  *
- * Frees the memory allocated for the #GPatternSpec.
+ * Frees the memory allocated for the [type@GLib.PatternSpec].
  **/
 void
 g_pattern_spec_free (GPatternSpec *pspec)
@@ -454,9 +458,11 @@ g_pattern_spec_equal (GPatternSpec *pspec1,
  * @pspec: a #GPatternSpec
  * @string: the UTF-8 encoded string to match
  *
- * Matches a string against a compiled pattern. If the string is to be
+ * Matches a string against a compiled pattern.
+ *
+ * If the string is to be
  * matched against more than one pattern, consider using
- * g_pattern_match() instead while supplying the reversed string.
+ * [method@GLib.PatternSpec.match] instead while supplying the reversed string.
  *
  * Returns: %TRUE if @string matches @pspec
  *
@@ -477,12 +483,14 @@ g_pattern_spec_match_string (GPatternSpec *pspec,
  * @pspec: a #GPatternSpec
  * @string: the UTF-8 encoded string to match
  *
- * Matches a string against a compiled pattern. If the string is to be
+ * Matches a string against a compiled pattern.
+ *
+ * If the string is to be
  * matched against more than one pattern, consider using
- * g_pattern_match() instead while supplying the reversed string.
+ * [method@GLib.PatternSpec.match] instead while supplying the reversed string.
  *
  * Returns: %TRUE if @string matches @pspec
- * Deprecated: 2.70: Use g_pattern_spec_match_string() instead
+ * Deprecated: 2.70: Use [method@GLib.PatternSpec.match_string] instead
  **/
 gboolean
 g_pattern_match_string (GPatternSpec *pspec,
@@ -496,10 +504,12 @@ g_pattern_match_string (GPatternSpec *pspec,
  * @pattern: the UTF-8 encoded pattern
  * @string: the UTF-8 encoded string to match
  *
- * Matches a string against a pattern given as a string. If this
- * function is to be called in a loop, it's more efficient to compile
- * the pattern once with g_pattern_spec_new() and call
- * g_pattern_match_string() repeatedly.
+ * Matches a string against a pattern given as a string.
+ *
+ * If this
+ * function is to be called in a loop, it’s more efficient to compile
+ * the pattern once with [ctor@GLib.PatternSpec.new] and call
+ * [method@GLib.PatternSpec.match_string] repeatedly.
  *
  * Returns: %TRUE if @string matches @pspec
  **/

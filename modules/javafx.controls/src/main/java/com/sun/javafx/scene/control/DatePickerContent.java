@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,7 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.Button;
 import javafx.scene.control.DateCell;
 import javafx.scene.control.DatePicker;
@@ -66,7 +67,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.traversal.FocusTraversal;
-import javafx.scene.traversal.TraversalDirection;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
@@ -140,7 +140,7 @@ public class DatePickerContent extends VBox {
             @Override protected double computePrefWidth(double height) {
                 final double width = super.computePrefWidth(height);
 
-                // RT-30903: Make sure width snaps to pixel when divided by
+                // JDK-8123555: Make sure width snaps to pixel when divided by
                 // number of columns. GridPane doesn't do this with percentage
                 // width constraints. See GridPane.adjustColumnWidths().
                 final int nCols = daysPerWeek + (datePicker.isShowWeekNumbers() ? 1 : 0);
@@ -219,7 +219,7 @@ public class DatePickerContent extends VBox {
 
         refresh();
 
-        // RT-30511: This prevents key events from reaching the popup's owner.
+        // JDK-8118350: This prevents key events from reaching the popup's owner.
         addEventHandler(KeyEvent.ANY, e -> {
             Node node = getScene().getFocusOwner();
             if (node instanceof DateCell) {
@@ -463,7 +463,7 @@ public class DatePickerContent extends VBox {
         int firstOfMonthIdx = determineFirstOfMonthDayOfWeek();
         YearMonth curMonth = displayedYearMonth.get();
 
-        // RT-31075: The following are now set in the try-catch block.
+        // JDK-8096176: The following are now set in the try-catch block.
         YearMonth prevMonth = null;
         YearMonth nextMonth = null;
         int daysInCurMonth = -1;
@@ -717,7 +717,7 @@ public class DatePickerContent extends VBox {
             backMonthButton.requestFocus();
         }
 
-        // RT-31857
+        // JDK-8123621
         if (backMonthButton.getWidth() == 0) {
             backMonthButton.requestLayout();
             forwardMonthButton.requestLayout();

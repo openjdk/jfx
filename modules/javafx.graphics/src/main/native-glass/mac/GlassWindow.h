@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
     NSRect              preZoomedRect;
-    NSWindow            *fullscreenWindow;
 
     BOOL                isFocusable;
     BOOL                isEnabled;
@@ -51,6 +50,7 @@
     BOOL                isTransparent;
     BOOL                isDecorated;
     BOOL                isResizable;
+    BOOL                isStandardButtonsVisible;
     BOOL                suppressWindowMoveEvent;
     BOOL                suppressWindowResizeEvent;
 
@@ -67,8 +67,6 @@
 @private
     BOOL                isWindowResizable;
 }
-
-- (void)setFullscreenWindow:(NSWindow *)fsWindow;
 
 // NSWindow overrides delegate methods
 - (void)close;

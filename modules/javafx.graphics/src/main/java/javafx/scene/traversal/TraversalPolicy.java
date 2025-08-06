@@ -27,6 +27,7 @@ package javafx.scene.traversal;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.TraversalDirection;
 import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**

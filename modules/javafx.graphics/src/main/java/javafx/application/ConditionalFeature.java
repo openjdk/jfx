@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package javafx.application;
+
+import javafx.stage.StageStyle;
 
 /**
  * Defines a set of conditional (optional) features. These features
@@ -133,22 +135,13 @@ public enum ConditionalFeature {
      * except Linux systems without the XComposite extension. The
      * XShape extension is used in that case, so the window edges are aliased.
      * </p>
-     * <p>
-     * If a security manager is present, the application must have
-     * the {@link javafx.util.FXPermission} "createTransparentWindow"
-     * in order to create a transparent window.
-     * If the application doesn't have the required permission, it
-     * won't be able to use this feature; it will appear as if the the platform
-     * doesn't support transparent windows, and
-     * {@code Platform.isSupported(TRANSPARENT_WINDOW)} will return {@code false}.
-     * </p>
      *
      * @since JavaFX 2.2
      */
     TRANSPARENT_WINDOW,
 
     /**
-     *  Indicates that a system supports {@link javafx.stage.StageStyle#UNIFIED}
+     *  Indicates that a system supports {@link StageStyle#UNIFIED}
      *  <p>
      *  NOTE: Currently, supported on:
      *  <ul>
@@ -158,6 +151,17 @@ public enum ConditionalFeature {
      * @since JavaFX 8.0
      */
     UNIFIED_WINDOW,
+
+    /**
+     * Indicates that a system supports {@link StageStyle#EXTENDED}.
+     * <p>
+     * This feature is currently supported on Windows, Linux, and macOS.
+     *
+     * @since 25
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     */
+    @Deprecated(since = "25")
+    EXTENDED_WINDOW,
 
     /**
      * Indicates whether or not controls should use two-level focus. Two-level

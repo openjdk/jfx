@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -58,6 +60,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
@@ -71,8 +74,10 @@ import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.control.skin.TreeCellSkin;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -747,6 +752,8 @@ public class TreeViewTest {
 
         TreeView<Person> tree = new TreeView<>(root);
 
+        stageLoader = new StageLoader(tree);
+
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 6); // rows 0 - 6 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 6, -1); // rows 6+ should be empty
 
@@ -755,6 +762,7 @@ public class TreeViewTest {
         root.getChildren().setAll(
                 new TreeItem(new Person("*_*Emma", "Jones", "emma.jones@example.com")),
                 new TreeItem(new Person("_Michael", "Brown", "michael.brown@example.com")));
+        Toolkit.getToolkit().firePulse();
 
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 3); // rows 0 - 3 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
@@ -784,6 +792,8 @@ public class TreeViewTest {
         rootNode.getChildren().setAll(nodeList);
 
         TreeView<String> treeView = new TreeView<>(rootNode);
+
+        stageLoader = new StageLoader(treeView);
 
         final double indent = PlatformImpl.isCaspian() ? 31 :
                         PlatformImpl.isModena()  ? 35 :
@@ -985,6 +995,7 @@ public class TreeViewTest {
         treeView.setShowRoot(false);
         root.getChildren().setAll(persons);
 
+        stageLoader = new StageLoader(treeView);
         Toolkit.getToolkit().firePulse();
 
         // we want the vertical scrollbar
@@ -998,7 +1009,7 @@ public class TreeViewTest {
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
-        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() > 0.10);
         assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
@@ -1121,6 +1132,8 @@ public class TreeViewTest {
                 CheckBoxTreeCell.forTreeView(
                         param -> new ReadOnlyBooleanWrapper(true)));
 
+        stageLoader = new StageLoader(treeView);
+
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
         VirtualFlowTestUtils.assertRowsNotEmpty(treeView, 0, 1);
@@ -1134,6 +1147,8 @@ public class TreeViewTest {
         installChildren();
         treeView.setEditable(true);
         treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+
+        stageLoader = new StageLoader(treeView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 1);
         assertEquals(child1.getValue(), cell.getText());
@@ -1154,6 +1169,8 @@ public class TreeViewTest {
     @Test public void test_rt31404() {
         installChildren();
 
+        stageLoader = new StageLoader(treeView);
+
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals("Root", cell.getText());
 
@@ -1164,6 +1181,8 @@ public class TreeViewTest {
 
     @Test public void test_rt31471() {
         installChildren();
+
+        stageLoader = new StageLoader(treeView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals("Root", cell.getItem());
@@ -1206,14 +1225,14 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(24, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         sl.dispose();
     }
@@ -1239,6 +1258,8 @@ public class TreeViewTest {
                 };
             }
         });
+
+        stageLoader = new StageLoader(treeView);
 
         // First two four have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
@@ -1742,7 +1763,7 @@ public class TreeViewTest {
         sl.dispose();
     }
 
-    //--------- regression testing of JDK-8093144 (was: RT-35857)
+    //--------- regression testing of JDK-8093144 (was: JDK-8093144)
 
     /**
      * Note: 8093144 is not an issue for the current implementation of TreeView/SelectionModel
@@ -1825,7 +1846,7 @@ public class TreeViewTest {
         assertEquals("B", root.getChildren().get(0).getValue());
         assertEquals("C", root.getChildren().get(1).getValue());
     }
-  //--------- end regression testing of JDK-8093144 (was: RT-35857)
+  //--------- end regression testing of JDK-8093144 (was: JDK-8093144)
 
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
@@ -1841,6 +1862,8 @@ public class TreeViewTest {
         textFieldTreeView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
         });
+
+        stageLoader = new StageLoader(textFieldTreeView);
 
         TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);
         assertNull(cell0.getGraphic());
@@ -2781,7 +2804,7 @@ public class TreeViewTest {
 
         FocusModel<TreeItem<String>> fm = stringTreeView.getFocusModel();
 
-        StageLoader sl = new StageLoader(stringTreeView);
+        stageLoader = new StageLoader(stringTreeView);
 
         // test pre-conditions
         assertTrue(sm.isEmpty());
@@ -2821,8 +2844,6 @@ public class TreeViewTest {
         assertNotNull(anchor);
         assertTrue(TreeCellBehavior.hasNonDefaultAnchor(stringTreeView));
         assertEquals(1, (int)anchor);
-
-        sl.dispose();
     }
 
     private final ObservableList<TreeItem<String>> rt_39256_list = FXCollections.observableArrayList();
@@ -3475,7 +3496,7 @@ public class TreeViewTest {
         sl.dispose();
     }
 
-    @Disabled("RT-39674 not yet fixed")
+    @Disabled("JDK-8090273 not yet fixed")
     @Test public void test_rt_39674_dynamicChildren() {
         TreeItem<Integer> root = createTreeItem(0);
         root.setExpanded(true);
@@ -4072,6 +4093,50 @@ public class TreeViewTest {
         assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
     }
 
+    // JDK-8340344
+    @Test
+    public void testTreeItemsAlignment() {
+        root = new TreeItem<>("Root");
+        child1 = new TreeItem<>("Child 1");
+        child2 = new TreeItem<>("Child 2");
+        child3 = new TreeItem<>("Child 3");
+
+        TreeItem<String> child4 = new TreeItem<>("Child 4");
+        child3.getChildren().add(child4);
+        root.getChildren().addAll(child1, child2, child3);
+        root.setExpanded(true);
+
+        treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+
+        Map<String, Double> layoutXMap = new LinkedHashMap<>();
+
+        treeView.setCellFactory(tv -> new TreeCell<>() {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+                if (getItem() != null && !isEmpty()) {
+                    Node container = lookup(".tree-cell > *");
+                    if (container != null) {
+                        layoutXMap.put(getItem(), container.getLayoutX());
+                    }
+                }
+            }
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        List<Double> values = new ArrayList<>(layoutXMap.values());
+        assertFalse(values.isEmpty(), "Expected layoutX values to be collected");
+
+        double first = values.get(0);
+        for (Map.Entry<String, Double> entry : layoutXMap.entrySet()) {
+            double x = entry.getValue();
+            assertEquals(first, x, 1e-6, "Alignment mismatch for item: " + entry.getKey());
+        }
+    }
+
     private List<TreeItem<String>> generateChildren(int lvl) {
         List<TreeItem<String>> children = new ArrayList<>();
         for (int idx = 0; idx < 10; idx++) {
@@ -4093,12 +4158,85 @@ public class TreeViewTest {
         rootNode.getChildren().addAll(generateChildren(1));
         TreeView<String> treeView = new TreeView<>(rootNode);
         treeView.scrollTo(100);
-        IndexedCell expandedCell = VirtualFlowTestUtils.getCell(treeView, 100);
+
+        stageLoader = new StageLoader(treeView);
+
         Toolkit.getToolkit().firePulse();
         rootNode.getChildren().get(1).setExpanded(false);
         Toolkit.getToolkit().firePulse();
         IndexedCell scrolledCell = VirtualFlowTestUtils.getCell(treeView, 100);
         assertTrue(scrolledCell.isVisible());
+    }
+
+    /**
+     * When the height is changed and a TreeItem is collapsed, the graphics of the cells below that TreeItem
+     * should still be visible and not disappear.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8346824">JDK-8346824</a>
+     */
+    @Test
+    void testGraphicShouldNotDisappear() {
+        treeView.setShowRoot(false);
+        treeView.setRoot(new TreeItem<>(""));
+        treeView.setFixedCellSize(24);
+
+        for (int rootIndex = 0; rootIndex < 3; rootIndex++) {
+            TreeItem<String> child = new TreeItem<>("root: " + rootIndex);
+            child.setExpanded(true);
+            for (int childIndex = 0; childIndex < 5; childIndex++) {
+                TreeItem<String> treeItem = new TreeItem<>();
+                treeItem.setValue("text: " + rootIndex + "-" + childIndex);
+                treeItem.setGraphic(new Label("graphic: " + rootIndex + "-" + childIndex));
+                child.getChildren().add(treeItem);
+            }
+            treeView.getRoot().getChildren().add(child);
+        }
+
+        stageLoader = new StageLoader(new Scene(new StackPane(treeView), 500, 500));
+        VirtualFlow<IndexedCell<String>> virtualFlow =
+                (VirtualFlow<IndexedCell<String>>) VirtualFlowTestUtils.getVirtualFlow(treeView);
+        IndexedCell<String> cell;
+
+        // Check children of first root [1..5]
+        for (int cellIndex = 1; cellIndex < 6; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+
+        // Check children of second root [7..11]
+        for (int cellIndex = 1; cellIndex < 6; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+
+        // Check children of third root [13..17]
+        for (int cellIndex = 13; cellIndex < 18; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+
+        stageLoader.getStage().getScene().getRoot().resize(500, 300);
+        Toolkit.getToolkit().firePulse();
+
+        treeView.getRoot().getChildren().get(1).setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+
+        // Check children of first root [1..5]
+        for (int cellIndex = 1; cellIndex < 6; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
+        // Second root is collapsed [6]
+        // Check children of third root [8..12]
+        for (int cellIndex = 8; cellIndex < 12; cellIndex++) {
+            cell = virtualFlow.getCell(cellIndex);
+            assertTrue(cell.getChildrenUnmodifiable().contains(cell.getGraphic()),
+                    "Cell does not contain graphic for index: " + cellIndex);
+        }
     }
 
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {

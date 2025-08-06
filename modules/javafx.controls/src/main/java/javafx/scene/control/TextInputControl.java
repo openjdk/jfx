@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -249,7 +249,7 @@ public abstract class TextInputControl extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
+                    // JDK-8127428 - if CSS is setting the font, then make sure invalidate doesn't call NodeHelper.reapplyCSS
                     //
                     try {
                         // super.applyStyle calls set which might throw if value is bound.
@@ -276,7 +276,7 @@ public abstract class TextInputControl extends Control {
 
                 @Override
                 protected void invalidated() {
-                    // RT-20727 - if font is changed by calling setFont, then
+                    // JDK-8127428 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
@@ -314,19 +314,15 @@ public abstract class TextInputControl extends Control {
      * @defaultValue An empty String
      * @since JavaFX 2.2
      */
-    private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
-        @Override protected void invalidated() {
-            // Strip out newlines
-            String txt = get();
-            if (txt != null && txt.contains("\n")) {
-                txt = txt.replace("\n", "");
-                set(txt);
-            }
+    private StringProperty promptText;
+    public final StringProperty promptTextProperty() {
+        if (promptText == null) {
+            promptText = new SimpleStringProperty(this, "promptText", "");
         }
-    };
-    public final StringProperty promptTextProperty() { return promptText; }
-    public final String getPromptText() { return promptText.get(); }
-    public final void setPromptText(String value) { promptText.set(value); }
+        return promptText;
+    }
+    public final String getPromptText() { return promptText == null ? "" : promptText.get();  }
+    public final void setPromptText(String value) { promptTextProperty().set(value); }
 
 
     /**
@@ -1286,7 +1282,7 @@ public abstract class TextInputControl extends Control {
      *         new lines by the TextField)
      */
     private int replaceText(int start, int end, String value, int anchor, int caretPosition) {
-        // RT-16566: Need to take into account stripping of chars into the
+        // JDK-8120290: Need to take into account stripping of chars into the
         // final anchor & caret position
         blockSelectedTextUpdate = true;
         try {
@@ -1331,7 +1327,7 @@ public abstract class TextInputControl extends Control {
     }
 
     /**
-     * If the field is currently being edited, this call will set text to the last commited value.
+     * If the field is currently being edited, this call will set text to the last committed value.
      * @since JavaFX 8u40
      */
     public final void cancelEdit() {

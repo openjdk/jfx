@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,11 +33,9 @@ import com.sun.glass.ui.Window.Level;
 
 import com.sun.javafx.tk.FocusCause;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.util.function.Supplier;
 
-class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedAction<Void> {
+class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Void> {
 
     private final WindowStage stage;
 
@@ -49,7 +47,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
     }
 
     @Override
-    public Void run() {
+    public Void get() {
         if (stage == null || stage.stageListener == null) {
             return null;
         }
@@ -60,10 +58,12 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
             case WindowEvent.MAXIMIZE:
                 stage.stageListener.changedIconified(false);
                 stage.stageListener.changedMaximized(true);
+                forceRepaint();
                 break;
             case WindowEvent.RESTORE:
                 stage.stageListener.changedIconified(false);
                 stage.stageListener.changedMaximized(false);
+                forceRepaint();
                 break;
             case WindowEvent.MOVE: {
                 float wx = window.getX();
@@ -107,15 +107,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 float outScaleX = window.getOutputScaleX();
                 float outScaleY = window.getOutputScaleY();
                 stage.stageListener.changedScale(outScaleX, outScaleY);
-                // We need to sync the new scales for painting
-                QuantumToolkit.runWithRenderLock(() -> {
-                    GlassScene scene = stage.getScene();
-                    if (scene != null) {
-                        scene.entireSceneNeedsRepaint();
-                        scene.updateSceneState();
-                    }
-                    return null;
-                });
+                forceRepaint();
                 break;
             }
             case WindowEvent.FOCUS_GAINED:
@@ -155,31 +147,36 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         return null;
     }
 
-    @SuppressWarnings("removal")
-    @Override
-    public void handleLevelEvent(int level) {
-        QuantumToolkit.runWithoutRenderLock(() -> {
-            AccessControlContext acc = stage.getAccessControlContext();
-            return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
-                stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
-                return null;
-            } , acc);
+    /**
+     * Used to trigger a repaint after a window leaves an iconified state.
+     */
+    private void forceRepaint() {
+        QuantumToolkit.runWithRenderLock(() -> {
+            GlassScene scene = stage.getScene();
+            if (scene != null) {
+                scene.entireSceneNeedsRepaint();
+                scene.updateSceneState();
+            }
+            return null;
         });
     }
 
-    @SuppressWarnings("removal")
+    @Override
+    public void handleLevelEvent(int level) {
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+            return null;
+        });
+    }
+
     @Override
     public void handleWindowEvent(final Window window, final long time, final int type) {
         this.window = window;
         this.type = type;
 
-        QuantumToolkit.runWithoutRenderLock(() -> {
-            AccessControlContext acc = stage.getAccessControlContext();
-            return AccessController.doPrivileged(this, acc);
-        });
+        QuantumToolkit.runWithoutRenderLock(this);
     }
 
-    @SuppressWarnings("removal")
     @Override
     public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
         GlassScene scene = stage.getScene();
@@ -192,11 +189,8 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         }
 
         QuantumToolkit.runWithoutRenderLock(() -> {
-            AccessControlContext acc = stage.getAccessControlContext();
-            return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
-                stage.stageListener.changedScreen(oldScreen, newScreen);
-                return null;
-            } , acc);
+            stage.stageListener.changedScreen(oldScreen, newScreen);
+            return null;
         });
     }
 }

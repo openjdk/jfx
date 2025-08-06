@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.input.MouseButton;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
@@ -171,16 +172,14 @@ public class Util {
 
     public static ArrayList<String> createApplicationLaunchCommand(
             String testAppName,
-            String testPldrName,
-            String testPolicy) throws IOException {
+            String testPldrName) throws IOException {
 
-        return createApplicationLaunchCommand(testAppName, testPldrName, testPolicy, null);
+        return createApplicationLaunchCommand(testAppName, testPldrName, null);
     }
 
     public static ArrayList<String> createApplicationLaunchCommand(
             String testAppName,
             String testPldrName,
-            String testPolicy,
             String[] jvmArgs) throws IOException {
 
         final boolean isJar = testAppName.endsWith(".jar");
@@ -190,7 +189,6 @@ public class Util {
          */
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
         final String workerPatchModuleFile = System.getProperty("worker.patchmodule.file");
-        final String workerPatchPolicy = System.getProperty("worker.patch.policy");
         final String workerClassPath = System.getProperty("worker.classpath.file");
         final Boolean workerDebug = Boolean.getBoolean("worker.debug");
 
@@ -218,64 +216,6 @@ public class Util {
 
         if (testPldrName != null) {
             cmd.add("-Djavafx.preloader=" + testPldrName);
-        }
-
-        if (testPolicy != null) {
-
-            cmd.add("-Djava.security.manager");
-
-            try {
-                if (workerPatchPolicy != null) {
-                    // with Jigsaw, we need to create a merged java.policy
-                    // file that contains the permissions for the patchmodule classes
-                    // as well as the permissions needed for this test
-
-                    File wpp = new File(workerPatchPolicy);
-                    if (!wpp.exists()) {
-                        throw new RuntimeException("Missing workerPatchPolicy");
-                    }
-
-                    File tempFile = null;
-                    if (workerDebug) {
-                        String baseAppName = isJar
-                                ? testAppName.substring(0, testAppName.length() - 4)
-                                : testAppName;
-                        final int lastSlashIdx = baseAppName.lastIndexOf("/");
-                        if (lastSlashIdx >= 0) {
-                            baseAppName = baseAppName.substring(lastSlashIdx + 1);
-                        }
-                        tempFile = new File(workerPatchPolicy +
-                                "_" + baseAppName);
-                    } else {
-                        tempFile = File.createTempFile("java", "policy");
-                        tempFile.deleteOnExit();
-                    }
-
-                    BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
-
-                    BufferedReader reader1 = new BufferedReader(new FileReader(wpp));
-                    URL url = new URL(testPolicy);
-                    BufferedReader reader2 = new BufferedReader(new FileReader(url.getFile()));
-
-                    String line = null;
-                    while ((line = reader1.readLine()) != null) {
-                        writer.write(line);
-                        writer.newLine();
-                    }
-                    while ((line = reader2.readLine()) != null) {
-                        writer.write(line);
-                        writer.newLine();
-                    }
-                    writer.close();
-                    cmd.add("-Djava.security.policy=" +
-                        tempFile.getAbsolutePath().replaceAll("\\\\","/"));
-                } else {
-                    cmd.add("-Djava.security.policy=" + testPolicy);
-                }
-            } catch (IOException e) {
-                throw e;
-            }
-
         }
 
         if (jvmArgs != null) {
@@ -395,6 +335,19 @@ public class Util {
     }
 
     /**
+     * Makes double click of the mouse left button.
+     */
+    public static void doubleClick(Robot robot) {
+        runAndWait(() -> {
+            robot.mouseClick(MouseButton.PRIMARY);
+        });
+        sleep(50);
+        runAndWait(() -> {
+            robot.mouseClick(MouseButton.PRIMARY);
+        });
+    }
+
+    /**
      * Moves the cursor outside of the Stage to avoid it interfering with Robot tests.
      * The cursor is moved to a point close to the lower right corner of the primary screen,
      * avoiding any areas occupied by dock, tray, or Active Corners.
@@ -463,7 +416,8 @@ public class Util {
      * Returns the tolerance which should be used when comparing values,
      * when {@link Region#isSnapToPixel()} returns true and the scale can
      * be determined from the region's parent {@code Window}.
-     * When scale cannot be determined it is assumed to be 1.0.
+     * This amount equals to half of screen pixel converted to logical coordinates.
+     * When scale cannot be determined it is assumed to be 0.5.
      * Otherwise, returns 0.0.
      *
      * @param r the region in question
@@ -478,11 +432,11 @@ public class Util {
                     // x and y usually have the same scale, so we'll use x
                     double scale = win.getRenderScaleX();
                     // distance between pixels in the local (unscaled) coordinates is (1 / scale)
-                    return 1.0 / scale;
+                    return 0.5 / scale;
                 }
             }
-            // default to 1 when the scale cannot be determited
-            return 1.0;
+            // when the scale cannot be determited
+            return 0.5;
         }
         return 0.0;
     }

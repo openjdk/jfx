@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Hyperlink;
@@ -58,11 +59,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
-import javafx.scene.traversal.TraversalDirection;
 import javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.CustomColorDialog;
 import com.sun.javafx.scene.control.skin.Utils;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 // Not public API - this is (presently) an implementation detail only
 class ColorPalette extends Region {
@@ -335,7 +336,7 @@ class ColorPalette extends Region {
                 }
 
                 // Adjust the direction according to color picker orientation
-                dir = dir.getDirectionForNodeOrientation(colorPicker.getEffectiveNodeOrientation());
+                dir = TraversalUtils.getDirectionForNodeOrientation(dir, colorPicker.getEffectiveNodeOrientation());
                 // This returns true for all the cases which we need to override
                 if (isAtBorder(dir, row, column, (owner.colorType == ColorType.CUSTOM))) {
                     // There's no other node in the direction from the square, so we need to continue on some other row

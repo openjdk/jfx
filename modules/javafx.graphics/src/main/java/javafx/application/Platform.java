@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -288,6 +288,12 @@ public final class Platform {
      * It must not be called during animation or layout processing.
      * </p>
      *
+     * There is a finite limit on the depth of the nested event loop stack. An
+     * exception will be thrown if this limit is exceeded. Applications that
+     * want to avoid an exception can call
+     * {@link #canStartNestedEventLoop canStartNestedEventLoop} to check
+     * whether it is possible to start one.
+     *
      * @param key the Object that identifies the nested event loop, which
      * must not be null
      *
@@ -301,6 +307,9 @@ public final class Platform {
      *
      * @throws IllegalStateException if this method is called on a thread
      * other than the JavaFX Application Thread.
+     *
+     * @throws IllegalStateException if this call would exceed the maximum
+     * number of nested event loops.
      *
      * @return the value passed into the corresponding call to exitEventLoop
      *
@@ -413,6 +422,7 @@ public final class Platform {
     private static ReadOnlyBooleanWrapper accessibilityActiveProperty;
 
     public static boolean isAccessibilityActive() {
+        Toolkit.getToolkit().checkFxUserThread();
         return accessibilityActiveProperty == null ? false : accessibilityActiveProperty.get();
     }
 
@@ -421,14 +431,17 @@ public final class Platform {
      * This property is typically set to true the first time an
      * assistive technology, such as a screen reader, requests
      * information about any JavaFX window or its children.
-     *
-     * <p>This method may be called from any thread.</p>
+     * <p>
+     * This property can be accessed only from the JavaFX Application Thread.
      *
      * @return the read-only boolean property indicating if accessibility is active
      *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @since JavaFX 8u40
      */
     public static ReadOnlyBooleanProperty accessibilityActiveProperty() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (accessibilityActiveProperty == null) {
             accessibilityActiveProperty = new ReadOnlyBooleanWrapper(Platform.class, "accessibilityActive");
             accessibilityActiveProperty.bind(PlatformImpl.accessibilityActiveProperty());
@@ -445,18 +458,21 @@ public final class Platform {
      * by JavaFX when the operating system reports that a platform preference has changed.
      *
      * @return the {@code Preferences} instance
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      * @see <a href="Platform.Preferences.html#preferences-table-windows">Windows preferences</a>
      * @see <a href="Platform.Preferences.html#preferences-table-macos">macOS preferences</a>
      * @see <a href="Platform.Preferences.html#preferences-table-linux">Linux preferences</a>
      * @since 22
      */
     public static Preferences getPreferences() {
+        Toolkit.getToolkit().checkFxUserThread();
         PlatformImpl.checkPreferencesSupport();
         return PlatformImpl.getPlatformPreferences();
     }
 
     /**
-     * Contains UI preferences of the current platform.
+     * Contains preferences of the current platform.
      * <p>
      * {@code Preferences} extends {@link ObservableMap} to expose platform preferences as key-value pairs.
      * The map is unmodifiable, which means that keys and values cannot be added, removed, or updated.
@@ -478,6 +494,7 @@ public final class Platform {
      *     <tbody>
      *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code Windows.SPI.HighContrastColorScheme}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code Windows.SPI.ClientAreaAnimation}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code Windows.SysColor.COLOR_3DFACE}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code Windows.SysColor.COLOR_BTNTEXT}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code Windows.SysColor.COLOR_GRAYTEXT}</td><td>{@link Color}</td></tr>
@@ -495,6 +512,9 @@ public final class Platform {
      *         <tr><td>{@code Windows.UIColor.AccentLight1}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code Windows.UIColor.AccentLight2}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code Windows.UIColor.AccentLight3}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code Windows.UISettings.AdvancedEffectsEnabled}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.UISettings.AutoHideScrollBars}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code Windows.NetworkInformation.InternetCostType}</td><td>{@link String}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
@@ -547,6 +567,11 @@ public final class Platform {
      *         <tr><td>{@code macOS.NSColor.systemRedColor}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code macOS.NSColor.systemTealColor}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code macOS.NSColor.systemYellowColor}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceMotion}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NSWorkspace.accessibilityDisplayShouldReduceTransparency}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NSScroller.preferredScrollerStyle}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathConstrained}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code macOS.NWPathMonitor.currentPathExpensive}</td><td>{@link Boolean}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
@@ -572,19 +597,84 @@ public final class Platform {
      *         <tr><td>{@code GTK.warning_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.error_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.success_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.enable_animations}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code GTK.overlay_scrolling}</td><td>{@link Boolean}</td></tr>
+     *         <tr><td>{@code GTK.network_metered}</td><td>{@link Boolean}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
      *
      * @since 22
      */
-    public interface Preferences extends ObservableMap<String, Object> {
+    public sealed interface Preferences extends ObservableMap<String, Object>
+            permits com.sun.javafx.application.preferences.PlatformPreferences {
+
+        /**
+         * Specifies whether applications should always show scroll bars. If not set, an application may
+         * choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code -fx-prefers-persistent-scrollbars}</a> media feature.
+         *
+         * @return the {@code persistentScrollBars} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty persistentScrollBarsProperty();
+
+        boolean isPersistentScrollBars();
+
+        /**
+         * Specifies whether applications should minimize the amount of non-essential animations,
+         * reducing discomfort for users who experience motion sickness or vertigo.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-motion}</a> media feature.
+         *
+         * @return the {@code reducedMotion} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedMotionProperty();
+
+        boolean isReducedMotion();
+
+        /**
+         * Specifies whether applications should minimize the amount of transparent or translucent
+         * layer effects, which can help to increase contrast and readability for some users.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-transparency}</a> media feature.
+         *
+         * @return the {@code reducedTransparency} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedTransparencyProperty();
+
+        boolean isReducedTransparency();
+
+        /**
+         * Specifies whether applications should minimize the amount of internet traffic, which users
+         * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-data}</a> media feature.
+         *
+         * @return the {@code reducedData} property
+         * @defaultValue {@code false}
+         * @since 24
+         */
+        ReadOnlyBooleanProperty reducedDataProperty();
+
+        boolean isReducedData();
 
         /**
          * The platform color scheme, which specifies whether applications should prefer light text on
          * dark backgrounds, or dark text on light backgrounds.
          * <p>
-         * If the platform does not report color preferences, this property defaults to {@code LIGHT}.
+         * This property corresponds to the <a href="../scene/doc-files/cssref.html#mediafeatures">
+         * {@code prefers-color-scheme}</a> media feature.
          *
          * @return the {@code colorScheme} property
          * @defaultValue {@link ColorScheme#LIGHT}
@@ -595,8 +685,6 @@ public final class Platform {
 
         /**
          * The color used for background regions.
-         * <p>
-         * If the platform does not report a background color, this property defaults to {@code WHITE}.
          *
          * @return the {@code backgroundColor} property
          * @defaultValue {@link Color#WHITE}
@@ -607,8 +695,6 @@ public final class Platform {
 
         /**
          * The color used for foreground elements like text.
-         * <p>
-         * If the platform does not report a foreground color, this property defaults to {@code BLACK}.
          *
          * @return the {@code foregroundColor} property
          * @defaultValue {@link Color#BLACK}
@@ -621,9 +707,6 @@ public final class Platform {
          * The accent color, which can be used to highlight the active or important part of a
          * control and make it stand out from the rest of the user interface. It is usually a
          * vivid color that contrasts with the foreground and background colors.
-         * <p>
-         * If the platform does not report an accent color, this property defaults to vivid blue
-         * (corresponding to the hex color value {@code #157EFB}).
          *
          * @return the {@code accentColor} property
          * @defaultValue {@code #157EFB}

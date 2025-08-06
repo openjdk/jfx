@@ -32,13 +32,15 @@ namespace WTF {
 
 template<typename IntegerType> IntegerType cryptographicallyRandomNumber() = delete;
 
+template<> WTF_EXPORT_PRIVATE uint8_t cryptographicallyRandomNumber<uint8_t>();
+
 // Returns a cryptographically secure pseudo-random number in the range [0, UINT_MAX].
 template<> WTF_EXPORT_PRIVATE unsigned cryptographicallyRandomNumber<unsigned>();
 
 // Returns a cryptographically secure pseudo-random number in the range [0, UINT64_MAX].
 template<> WTF_EXPORT_PRIVATE uint64_t cryptographicallyRandomNumber<uint64_t>();
 
-WTF_EXPORT_PRIVATE void cryptographicallyRandomValues(void* buffer, size_t length);
+WTF_EXPORT_PRIVATE void cryptographicallyRandomValues(std::span<uint8_t>);
 
 // Returns a cryptographically secure pseudo-random number in the range [0, 1), with 32 bits of randomness.
 WTF_EXPORT_PRIVATE double cryptographicallyRandomUnitInterval();

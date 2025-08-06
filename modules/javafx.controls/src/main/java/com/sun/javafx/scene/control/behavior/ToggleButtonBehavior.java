@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,12 +32,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.traversal.TraversalDirection;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;

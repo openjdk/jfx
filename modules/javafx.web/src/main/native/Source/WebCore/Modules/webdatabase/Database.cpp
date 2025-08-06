@@ -39,7 +39,6 @@
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
-#include "JSLocalDOMWindow.h"
 #include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "SQLError.h"
@@ -59,6 +58,7 @@
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -91,7 +91,7 @@ namespace WebCore {
 // The ref counting mechanims will automatically destruct the un-added
 // (and un-returned) databases instances.
 
-static const char versionKey[] = "WebKitDatabaseVersionKey";
+static constexpr auto versionKey = "WebKitDatabaseVersionKey"_s;
 static constexpr auto unqualifiedInfoTableName = "__WebKitDatabaseInfoTable__"_s;
 const unsigned long long quotaIncreaseSize = 5 * 1024 * 1024;
 
@@ -105,9 +105,9 @@ static const String& fullyQualifiedInfoTableName()
     return qualifiedName;
 }
 
-static String formatErrorMessage(const char* message, int sqliteErrorCode, const char* sqliteErrorMessage)
+static String formatErrorMessage(ASCIILiteral message, int sqliteErrorCode, const char* sqliteErrorMessage)
 {
-    return makeString(message, " (", sqliteErrorCode, ' ', sqliteErrorMessage, ')');
+    return makeString(message, " ("_s, sqliteErrorCode, ' ', span(sqliteErrorMessage), ')');
 }
 
 static bool setTextValueInDatabase(SQLiteDatabase& db, StringView query, const String& value)
@@ -338,7 +338,7 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
     SQLiteTransactionInProgressAutoCounter transactionCounter;
 
     if (!m_sqliteDatabase.open(m_filename))
-        return Exception { ExceptionCode::InvalidStateError, formatErrorMessage("unable to open database", m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg()) };
+        return Exception { ExceptionCode::InvalidStateError, formatErrorMessage("unable to open database"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg()) };
     if (!m_sqliteDatabase.turnOnIncrementalAutoVacuum())
         LOG_ERROR("Unable to turn on incremental auto-vacuum (%d %s)", m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
 
@@ -359,7 +359,7 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
             SQLiteTransaction transaction(m_sqliteDatabase);
             transaction.begin();
             if (!transaction.inProgress()) {
-                String message = formatErrorMessage("unable to open database, failed to start transaction", m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+                String message = formatErrorMessage("unable to open database, failed to start transaction"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
                 m_sqliteDatabase.close();
                 return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
             }
@@ -367,14 +367,14 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
             if (!m_sqliteDatabase.tableExists(unqualifiedInfoTableName)) {
                 m_new = true;
 
-                if (!m_sqliteDatabase.executeCommandSlow(makeString("CREATE TABLE ", unqualifiedInfoTableName, " (key TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE,value TEXT NOT NULL ON CONFLICT FAIL);"))) {
-                    String message = formatErrorMessage("unable to open database, failed to create 'info' table", m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+                if (!m_sqliteDatabase.executeCommandSlow(makeString("CREATE TABLE "_s, unqualifiedInfoTableName, " (key TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE,value TEXT NOT NULL ON CONFLICT FAIL);"_s))) {
+                    String message = formatErrorMessage("unable to open database, failed to create 'info' table"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
                     transaction.rollback();
                     m_sqliteDatabase.close();
                 return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
                 }
             } else if (!getVersionFromDatabase(currentVersion, false)) {
-                String message = formatErrorMessage("unable to open database, failed to read current version", m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+                String message = formatErrorMessage("unable to open database, failed to read current version"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
                 transaction.rollback();
                 m_sqliteDatabase.close();
                 return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
@@ -385,7 +385,7 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
             } else if (!m_new || shouldSetVersionInNewDatabase) {
                 LOG(StorageAPI, "Setting version %s in database %s that was just created", m_expectedVersion.ascii().data(), databaseDebugName().ascii().data());
                 if (!setVersionInDatabase(m_expectedVersion, false)) {
-                    String message = formatErrorMessage("unable to open database, failed to write current version", m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
+                    String message = formatErrorMessage("unable to open database, failed to write current version"_s, m_sqliteDatabase.lastError(), m_sqliteDatabase.lastErrorMsg());
                     transaction.rollback();
                     m_sqliteDatabase.close();
                     return Exception { ExceptionCode::InvalidStateError, WTFMove(message) };
@@ -406,7 +406,7 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
     // If the expected version is the empty string, then we always return with whatever version of the database we have.
     if ((!m_new || shouldSetVersionInNewDatabase) && m_expectedVersion.length() && m_expectedVersion != currentVersion) {
         m_sqliteDatabase.close();
-        return Exception { ExceptionCode::InvalidStateError, "unable to open database, version mismatch, '" + m_expectedVersion + "' does not match the currentVersion of '" + currentVersion + "'" };
+        return Exception { ExceptionCode::InvalidStateError, makeString("unable to open database, version mismatch, '"_s, m_expectedVersion, "' does not match the currentVersion of '"_s, currentVersion, '\'') };
     }
 
     m_sqliteDatabase.setAuthorizer(m_databaseAuthorizer.get());
@@ -449,7 +449,7 @@ void Database::closeDatabase()
 
 bool Database::getVersionFromDatabase(String& version, bool shouldCacheVersion)
 {
-    auto query = makeString("SELECT value FROM ", fullyQualifiedInfoTableName(),  " WHERE key = '", versionKey, "';");
+    auto query = makeString("SELECT value FROM "_s, fullyQualifiedInfoTableName(),  " WHERE key = '"_s, versionKey, "';"_s);
 
     m_databaseAuthorizer->disable();
 
@@ -469,7 +469,7 @@ bool Database::setVersionInDatabase(const String& version, bool shouldCacheVersi
 {
     // The INSERT will replace an existing entry for the database with the new version number, due to the UNIQUE ON CONFLICT REPLACE
     // clause in the CREATE statement (see Database::performOpenAndVerify()).
-    auto query = makeString("INSERT INTO ", fullyQualifiedInfoTableName(),  " (key, value) VALUES ('", versionKey, "', ?);");
+    auto query = makeString("INSERT INTO "_s, fullyQualifiedInfoTableName(),  " (key, value) VALUES ('"_s, versionKey, "', ?);"_s);
 
     m_databaseAuthorizer->disable();
 
@@ -584,13 +584,13 @@ void Database::changeVersion(String&& oldVersion, String&& newVersion, RefPtr<SQ
     runTransaction(WTFMove(callback), WTFMove(errorCallback), WTFMove(successCallback), ChangeVersionWrapper::create(WTFMove(oldVersion), WTFMove(newVersion)), false);
 }
 
-void Database::transaction(RefPtr<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback)
+void Database::transaction(Ref<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback)
 {
     RELEASE_LOG_FAULT(SQLDatabase, "Database::transaction: Web SQL is deprecated.");
     runTransaction(WTFMove(callback), WTFMove(errorCallback), WTFMove(successCallback), nullptr, false);
 }
 
-void Database::readTransaction(RefPtr<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback)
+void Database::readTransaction(Ref<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback)
 {
     RELEASE_LOG_FAULT(SQLDatabase, "Database::readTransaction: Web SQL is deprecated.");
     runTransaction(WTFMove(callback), WTFMove(errorCallback), WTFMove(successCallback), nullptr, true);
@@ -742,7 +742,7 @@ void Database::incrementalVacuumIfNeeded()
     if (totalSize <= 10 * freeSpaceSize) {
         int result = m_sqliteDatabase.runIncrementalVacuumCommand();
         if (result != SQLITE_OK)
-            logErrorMessage(formatErrorMessage("error vacuuming database", result, m_sqliteDatabase.lastErrorMsg()));
+            logErrorMessage(formatErrorMessage("error vacuuming database"_s, result, m_sqliteDatabase.lastErrorMsg()));
     }
 }
 
@@ -805,7 +805,7 @@ bool Database::didExceedQuota()
 
 String Database::databaseDebugName() const
 {
-    return m_contextThreadSecurityOrigin->toString() + "::" + m_name;
+    return makeString(m_contextThreadSecurityOrigin->toString(), "::"_s, m_name);
 }
 
 #endif

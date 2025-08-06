@@ -30,7 +30,7 @@
 #include "IDBConnectionToServer.h"
 #include "IDBRequest.h"
 #include <wtf/MainThread.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -88,7 +88,7 @@ IDBResourceIdentifier IDBResourceIdentifier::emptyValue()
 
 String IDBResourceIdentifier::loggingString() const
 {
-    return makeString('<', m_idbConnectionIdentifier.toUInt64(), ", ", m_resourceNumber, '>');
+    return makeString('<', m_idbConnectionIdentifier.toUInt64(), ", "_s, m_resourceNumber, '>');
 }
 
 #endif

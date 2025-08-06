@@ -73,10 +73,11 @@ void Safepoint::add(Scannable* scannable)
     m_scannables.append(scannable);
 }
 
-void Safepoint::begin() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
+void Safepoint::begin(bool keepDependenciesLive) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
     RELEASE_ASSERT(!m_didCallBegin);
     m_didCallBegin = true;
+    m_keepDependenciesLive = keepDependenciesLive;
     if (JITWorklistThread* data = m_plan.thread()) {
         RELEASE_ASSERT(!data->m_safepoint);
         data->m_safepoint = this;
@@ -134,6 +135,11 @@ void Safepoint::cancel()
     RELEASE_ASSERT(m_plan.stage() == JITPlanStage::Canceled);
     m_result.m_didGetCancelled = true;
     m_vm = nullptr;
+}
+
+bool Safepoint::keepDependenciesLive() const
+{
+    return m_keepDependenciesLive;
 }
 
 VM* Safepoint::vm() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,6 @@
 #import "GlassHelper.h"
 #import "GlassStatics.h"
 #import "GlassPasteboard.h"
-#import "GlassTouches.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -195,13 +194,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     [self->parentWindow release];
     self->parentWindow = nil;
 
-    [self->fullscreenWindow release];
-    self->fullscreenWindow = nil;
-
     [self->nativeFullScreenModeWindow release];
     self->nativeFullScreenModeWindow = nil;
-
-    [GlassTouches stopTracking:self];
 
     GET_MAIN_JENV_NOWARN;
 
@@ -419,13 +413,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         case NSMouseEntered:
             type = com_sun_glass_events_MouseEvent_ENTER;
-            [GlassTouches startTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
         case NSMouseExited:
             type = com_sun_glass_events_MouseEvent_EXIT;
-            [GlassTouches stopTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
@@ -493,7 +485,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     BOOL block = NO;
     {
-        // RT-5892
+        // JDK-8107811
         if ((type == com_sun_glass_events_MouseEvent_ENTER) || (type == com_sun_glass_events_MouseEvent_EXIT))
         {
             // userData indicates if this is a synthesized EXIT event that MUST pass through
@@ -618,7 +610,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // Can be inertia from scroll gesture,
             // scroll gesture or mouse wheel itself
             //
-            // RT-22388, RT-25269
+            // JDK-8126339, JDK-8115029
             jint sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_WHEEL;
             if (isInertialScroll(theEvent))
             {
@@ -672,20 +664,30 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     }
 }
 
-// RT-11707: zero out the keycode for TYPED events
+// JDK-8112726: zero out the keycode for TYPED events
 #define SEND_KEY_EVENT(type) \
     jboolean thisEventWasConsumed = (*env)->CallBooleanMethod(env, self->jView, jViewNotifyKeyAndReturnConsumed, (type), \
             (type) == com_sun_glass_events_KeyEvent_TYPED ? 0 : jKeyCode, \
             jKeyChars, jModifiers); \
     GLASS_CHECK_EXCEPTION(env);
 
-- (BOOL)sendJavaKeyEvent:(NSEvent *)theEvent isDown:(BOOL)isDown
+- (BOOL)sendJavaKeyEvent:(NSEvent *)theEvent isDown:(BOOL)isDown character:(unichar)textChar
 {
     GET_MAIN_JENV;
 
     jint jKeyCode = GetJavaKeyCode(theEvent);
-    jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
     jint jModifiers = GetJavaModifiers(theEvent);
+    jcharArray jKeyChars;
+    if (textChar != 0) {
+        jchar jc[1] = { textChar };
+        jKeyChars = (*env)->NewCharArray(env, 1);
+        if (jKeyChars == NULL) {
+            return YES;
+        }
+        (*env)->SetCharArrayRegion(env, jKeyChars, 0, 1, jc);
+    } else {
+        jKeyChars = GetJavaKeyChars(env, theEvent);
+    }
 
     // This routine returns YES if the PRESS event was consumed. This is
     // used to ensure that performKeyEquivalent doesn't allow an event
@@ -910,7 +912,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     int y = (int)draggingLocation.y;
 
     int xAbs = (int)([info draggingLocation].x + [self->nsView window].frame.origin.x);
-    int yAbs = (int)([[self->nsView window] screen].frame.size.height - [self->nsView window].frame.origin.y
+    int yAbs = (int)([[NSScreen screens] objectAtIndex: 0].frame.size.height - [self->nsView window].frame.origin.y
                      - [info draggingLocation].y);
 
     int mask;
@@ -1132,7 +1134,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd, mask);
     GLASS_CHECK_EXCEPTION(env);
 
-    // RT-36038: OS X won't send mouseUp after DnD is complete, so we synthesize them
+    // JDK-8095312: OS X won't send mouseUp after DnD is complete, so we synthesize them
     if (self->mouseDownMask & 1 << 0) [self synthesizeMouseUp:NSLeftMouseUp];
     if (self->mouseDownMask & 1 << 1) [self synthesizeMouseUp:NSRightMouseUp];
     if (self->mouseDownMask & 1 << 2) [self synthesizeMouseUp:NSOtherMouseUp];
@@ -1141,6 +1143,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (BOOL)suppressMouseEnterExitOnMouseDown
 {
     return YES;
+}
+
+- (void)performWindowDrag
+{
+    [[nsView window] performWindowDragWithEvent:[NSApp currentEvent]];
 }
 
 static jstring convertNSStringToJString(id aString, int length)
@@ -1237,15 +1244,13 @@ static jstring convertNSStringToJString(id aString, int length)
 - (void)setResizableForFullscreen:(BOOL)resizable
 {
     NSWindow* window =  [self->nsView window];
-    if (!((GlassWindow*) window)->isResizable) {
-        NSUInteger mask = [window styleMask];
-        if (resizable) {
-            mask |= NSResizableWindowMask;
-        } else {
-            mask &= ~(NSUInteger)NSResizableWindowMask;
-        }
-        [window setStyleMask: mask];
+    NSUInteger mask = [window styleMask];
+    if (resizable) {
+        mask |= NSWindowStyleMaskResizable;
+    } else {
+        mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
     }
+    [window setStyleMask: mask];
 }
 
 /*
@@ -1282,40 +1287,6 @@ static jstring convertNSStringToJString(id aString, int length)
             [GlassApplication enterFullScreenExitingLoop];
             return;
         }
-
-        [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
-
-        NSRect frame = [self->parentHost bounds];
-        frame.origin = [self->fullscreenWindow point];
-        [self->fullscreenWindow setFrame:frame display:YES animate:animate];
-
-        [self->fullscreenWindow disableFlushWindow];
-        {
-            [self->nsView retain];
-            {
-                [self->nsView removeFromSuperviewWithoutNeedingDisplay];
-                [self->parentHost addSubview:self->nsView];
-            }
-            [self->nsView release];
-
-            [self->parentWindow setInitialFirstResponder:self->nsView];
-            [self->parentWindow makeFirstResponder:self->nsView];
-
-            if ([[self->parentWindow delegate] isKindOfClass:[GlassWindow class]])
-            {
-                GlassWindow *window = (GlassWindow*)[self->parentWindow delegate];
-                [window setFullscreenWindow: nil];
-            }
-        }
-        [self->fullscreenWindow enableFlushWindow];
-        [self->parentWindow enableFlushWindow];
-
-        [self->fullscreenWindow orderOut:nil];
-        [self->fullscreenWindow close];
-        self->fullscreenWindow = nil;
-
-        // It was retained upon entering the FS mode
-        [self->nsView release];
     }
     @catch (NSException *e)
     {

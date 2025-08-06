@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@
 #import "GlassKey.h"
 #import "GlassScreen.h"
 #import "GlassWindow.h"
-#import "GlassTouches.h"
 #import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
@@ -78,6 +77,11 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
+// Custom event that is provided by AWT to allow libraries like
+// JavaFX to forward native events to AWT even if AWT runs in
+// embedded mode.
+static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
+
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
@@ -99,9 +103,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 }
 
 - (id)initWithRunnable:(jobject)runnable;
+- (void)maybeRun;
 - (void)run;
 
 @end
+
+static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 
 @implementation GlassRunnable
 
@@ -132,6 +139,27 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
 }
 
+- (void)maybeRun
+{
+    if (isFullScreenExitingLoop) {
+        if (deferredRunnables == nil) {
+            deferredRunnables = [[NSMutableArray alloc] initWithCapacity: 2];
+        }
+        [deferredRunnables addObject: self];
+    } else {
+        [self run];
+    }
+}
+
++ (void)rescheduleDeferredRunnables
+{
+    if (deferredRunnables != nil) {
+        for (GlassRunnable *runnable in deferredRunnables) {
+            [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        }
+        [deferredRunnables removeAllObjects];
+    }
+}
 @end
 
 @implementation NSApplicationFX
@@ -139,7 +167,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 #pragma mark --- GlassApplication
 
-@implementation GlassApplication
+@implementation GlassApplication {
+    PlatformSupport* platformSupport;
+}
 
 - (id)initWithEnv:(JNIEnv*)env application:(jobject)application launchable:(jobject)launchable taskbarApplication:(jboolean)isTaskbarApplication classLoader:(jobject)classLoader
 {
@@ -163,6 +193,15 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return self;
 }
 
+- (void)dealloc {
+    if (platformSupport) {
+        [platformSupport stopEventProcessing];
+        [platformSupport release];
+    }
+
+    [super dealloc];
+}
+
 #pragma mark --- delegate methods
 
 - (void)GlassApplicationDidChangeScreenParameters
@@ -177,25 +216,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
 }
 
-- (void)platformPreferencesDidChange {
-    // Some dynamic colors like NSColor.controlAccentColor don't seem to be reliably updated
-    // at the exact moment AppleColorPreferencesChangedNotification is received.
-    // As a workaround, we wait for a short period of time (one second seems sufficient) before
-    // we query the updated platform preferences.
-
-    [NSObject cancelPreviousPerformRequestsWithTarget:self
-              selector:@selector(updatePlatformPreferences)
-              object:nil];
-
-    [self performSelector:@selector(updatePlatformPreferences)
-          withObject:nil
-          afterDelay:1.0];
-}
-
-- (void)updatePlatformPreferences {
-    [PlatformSupport updatePreferences:self->jApplication];
-}
-
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
 {
     LOG("GlassApplication:applicationWillFinishLaunching");
@@ -204,6 +224,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
         // unblock main thread. Glass is started at this point.
+        self->platformSupport = [[PlatformSupport alloc] initWithEnv:env application:jApplication];
         self->started = YES;
 
         if (self->jLaunchable != NULL)
@@ -234,16 +255,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                  selector:@selector(GlassApplicationDidChangeScreenParameters)
                                                                      name:NSApplicationDidChangeScreenParametersNotification
                                                                    object:nil];
-
-                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                                         selector:@selector(platformPreferencesDidChange)
-                                                                         name:@"AppleInterfaceThemeChangedNotification"
-                                                                         object:nil];
-
-                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                                         selector:@selector(platformPreferencesDidChange)
-                                                                         name:@"AppleColorPreferencesChangedNotification"
-                                                                         object:nil];
 
                         // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
                         //                                                      handler:^(NSEvent *incomingEvent) {
@@ -300,11 +311,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         // but it doesn't get activated, so this is needed:
         LOG("-> need to active application");
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSApp performSelector: @selector(activate)];
+            [NSApp activateIgnoringOtherApps:YES];
         });
-        // TODO: performSelector is used only to avoid a compiler
-        // warning with the 13.3 SDK. After updating to SDK 14
-        // this can be converted to a standard call.
     }
 }
 
@@ -492,6 +500,21 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     // NOP
 
     return YES;
+}
+
+- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+{
+    for (NSURL* url in urls) {
+         NSDictionary *userInfo = @{
+            @"name": @"openURL",
+            @"url": url.absoluteString
+        };
+
+        [[NSNotificationCenter defaultCenter]
+                postNotificationName:awtEmbeddedEvent
+                object:nil
+                userInfo:userInfo];
+    }
 }
 
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender
@@ -727,9 +750,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             // enter runloop, this will not return until terminated
             [NSApp run];
 
-            // Abort listerning to global touch input events
-            [GlassTouches terminate];
-
             GLASS_CHECK_EXCEPTION(jEnv);
 
             (*jEnv)->CallVoidMethod(jEnv, self->jApplication, javaIDs.MacApplication.notifyApplicationDidTerminate);
@@ -766,6 +786,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 - (BOOL)started
 {
     return self->started;
+}
+
+- (jobject)getPlatformPreferences
+{
+    return platformSupport != nil ? [platformSupport collectPreferences] : nil;
 }
 
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env
@@ -820,6 +845,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         (*env)->ExceptionClear(env);
     }
     isFullScreenExitingLoop = NO;
+    [GlassRunnable rescheduleDeferredRunnables];
 }
 
 + (void)leaveFullScreenExitingLoopIfNeeded
@@ -973,12 +999,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _runLoop
- * Signature: (Ljava/lang/ClassLoader;Ljava/lang/Runnable;Z)V
+ * Method:    _initDelegate
+ * Signature: (Ljava/lang/ClassLoader;Ljava/lang/Runnable;Z)J
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initDelegate
 (JNIEnv *env, jobject japplication, jobject classLoader,
  jobject jlaunchable, jboolean isTaskbarApplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1initDelegate");
+
+    return (jlong)[[GlassApplication alloc] initWithEnv:env
+                                            application:japplication
+                                            launchable:jlaunchable
+                                            taskbarApplication:isTaskbarApplication
+                                            classLoader:classLoader];
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _runLoop
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
+(JNIEnv *env, jobject japplication, jlong appDelegate)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1runLoop");
 
@@ -996,7 +1039,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
             }
         }
 
-        GlassApplication *glass = [[GlassApplication alloc] initWithEnv:env application:japplication launchable:jlaunchable taskbarApplication:isTaskbarApplication classLoader:classLoader];
+        GlassApplication* glass = (GlassApplication*)appDelegate;
         if ([NSThread isMainThread] == YES) {
             [glass runLoop: glass];
         } else {
@@ -1019,12 +1062,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1runLoop
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _finishTerminating
- * Signature: ()V
+ * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1finishTerminating
-(JNIEnv *env, jobject japplication)
+(JNIEnv *env, jobject japplication, jlong appDelegate)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1finishTerminating");
+
+    if (appDelegate) {
+        [(GlassApplication*)appDelegate release];
+    }
 
     if (isEmbedded) {
         return;
@@ -1107,7 +1154,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1submitForLater
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
     }
 }
 
@@ -1282,11 +1329,13 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getApplicat
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    getPlatformPreferences
- * Signature: ()Ljava/util/Map;
+ * Method:    _getPlatformPreferences
+ * Signature: (J)Ljava/util/Map;
  */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences
-(JNIEnv *env, jobject self)
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getPlatformPreferences
+(JNIEnv *env, jobject self, jlong appDelegate)
 {
-    return [PlatformSupport collectPreferences];
+    return appDelegate
+        ? [(GlassApplication*)appDelegate getPlatformPreferences]
+        : nil;
 }

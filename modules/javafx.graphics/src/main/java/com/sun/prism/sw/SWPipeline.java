@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,19 +30,13 @@ import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.HashMap;
 
 public final class SWPipeline extends GraphicsPipeline {
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            NativeLibLoader.loadLibrary("prism_sw");
-            return null;
-        });
+        NativeLibLoader.loadLibrary("prism_sw");
     }
 
     @Override public boolean init() {
@@ -103,7 +97,7 @@ public final class SWPipeline extends GraphicsPipeline {
     }
 
     @Override public void dispose() {
-        // TODO: implement (RT-27375)
+        // TODO: implement (JDK-8092378)
         super.dispose();
     }
 

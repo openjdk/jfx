@@ -31,11 +31,11 @@
 #include "Exception.h"
 #include "JSDOMPromiseDeferred.h"
 #include "WakeLockManager.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WakeLockSentinel);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WakeLockSentinel);
 
 WakeLockSentinel::WakeLockSentinel(Document& document, WakeLockType type)
     : ActiveDOMObject(&document)
@@ -61,11 +61,6 @@ void WakeLockSentinel::release(WakeLockManager& manager)
 
     if (scriptExecutionContext() && !scriptExecutionContext()->activeDOMObjectsAreStopped())
         dispatchEvent(Event::create(eventNames().releaseEvent, Event::CanBubble::No, Event::IsCancelable::No));
-}
-
-const char* WakeLockSentinel::activeDOMObjectName() const
-{
-    return "WakeLockSentinel";
 }
 
 // https://www.w3.org/TR/screen-wake-lock/#garbage-collection

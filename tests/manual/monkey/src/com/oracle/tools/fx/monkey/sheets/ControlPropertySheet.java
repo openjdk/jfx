@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.StdoutMouseListener;
 
 /**
  * Control Property Sheet.
@@ -75,32 +76,40 @@ public class ControlPropertySheet {
         ObjectProperty<ContextMenu> p = c.contextMenuProperty();
         c.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, picker);
         ObjectOption<ContextMenu> op = new ObjectOption<>(name, p);
-        op.addChoiceSupplier("Standard Context Menu", () -> createStandardContextMenu(picker));
+        op.addChoiceSupplier("Standard Context Menu", () -> createStandardContextMenu(c, picker));
         op.addChoice("<null>", null);
         op.selectInitialValue();
         return op;
     }
 
-    private static ContextMenu createStandardContextMenu(Picker picker) {
+    private static ContextMenu createStandardContextMenu(Control c, Picker picker) {
         return new ContextMenu() {
             @Override
             public void show(Node anchor, double screenX, double screenY) {
                 PickResult pick = picker.getPickResult();
                 getItems().clear();
-                populate(this, pick);
+                populate(this, c, pick);
                 super.show(anchor, screenX, screenY);
             }
         };
     }
 
-    private static void populate(ContextMenu m, PickResult pick) {
+    private static void populate(ContextMenu m, Control c, PickResult pick) {
         Node source = pick.getIntersectedNode();
         TypeSpecificContextMenu.populate(m, source);
         if (m.getItems().size() > 0) {
             FX.separator(m);
         }
-        FX.item(m, "Show Properties Monitor...", () -> PropertiesMonitor.open(source));
-        FX.item(m, "Accessibility Attributes...", () -> AccessibilityPropertyViewer.open(pick));
+        FX.item(m, "Show Properties Monitor...", () -> {
+            PropertiesMonitor.open(source);
+        });
+        FX.item(m, "Accessibility Attributes...", () -> {
+            AccessibilityPropertyViewer.open(pick);
+        });
+        StdoutMouseListener.attach(m, c);
+        if (c != source) {
+            StdoutMouseListener.attach(m, source);
+        }
     }
 
     static class Picker implements EventHandler<ContextMenuEvent> {

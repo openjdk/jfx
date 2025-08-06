@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -58,8 +58,9 @@ struct InputElementClickState {
 
 enum class WasSetByJavaScript : bool { No, Yes };
 
-class HTMLInputElement : public HTMLTextFormControlElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLInputElement);
+class HTMLInputElement final : public HTMLTextFormControlElement {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLInputElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLInputElement);
 public:
     static Ref<HTMLInputElement> create(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
     virtual ~HTMLInputElement();
@@ -90,6 +91,7 @@ public:
     #if PLATFORM(JAVA)
     WEBCORE_EXPORT ExceptionOr<void> setValueAsDate(double value);
     #endif
+    WallTime accessibilityValueAsDate() const;
     WEBCORE_EXPORT double valueAsNumber() const;
     WEBCORE_EXPORT ExceptionOr<void> setValueAsNumber(double, TextFieldEventBehavior = DispatchNoEvent);
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
@@ -141,7 +143,7 @@ public:
     bool isPresentingAttachedView() const;
 
     bool isSteppable() const; // stepUp()/stepDown() for user-interaction.
-    bool isTextButton() const;
+    WEBCORE_EXPORT bool isTextButton() const;
     bool isRadioButton() const;
     WEBCORE_EXPORT bool isTextField() const final;
     WEBCORE_EXPORT bool isSearchField() const;
@@ -160,11 +162,12 @@ public:
     // isTextField && !isPasswordField.
     WEBCORE_EXPORT bool isText() const;
     bool isTextType() const;
+    bool supportsWritingSuggestions() const;
     WEBCORE_EXPORT bool isEmailField() const;
     WEBCORE_EXPORT bool isFileUpload() const;
     bool isImageButton() const;
     WEBCORE_EXPORT bool isNumberField() const;
-    bool isSubmitButton() const final;
+    WEBCORE_EXPORT bool isSubmitButton() const final;
     WEBCORE_EXPORT bool isTelephoneField() const;
     WEBCORE_EXPORT bool isURLField() const;
     WEBCORE_EXPORT bool isDateField() const;
@@ -212,7 +215,7 @@ public:
     String localizeValue(const String&) const;
 
     // The value which is drawn by a renderer.
-    String visibleValue() const;
+    WEBCORE_EXPORT String visibleValue() const;
 
     String valueWithDefault() const;
 
@@ -345,14 +348,19 @@ public:
 
     float switchAnimationVisuallyOnProgress() const;
     bool isSwitchVisuallyOn() const;
-    float switchAnimationPressedProgress() const;
+    float switchAnimationHeldProgress() const;
+    bool isSwitchHeld() const;
 
-protected:
-    HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
+    void initializeInputTypeAfterParsingOrCloning();
+
+private:
+    enum class CreationType : uint8_t { Normal, ByParser, ByCloning };
+    HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, CreationType);
 
     void defaultEventHandler(Event&) final;
 
-private:
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
+
     enum AutoCompleteSetting : uint8_t { Uninitialized, On, Off };
     static constexpr int defaultSize = 20;
 
@@ -392,7 +400,6 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = AttributeModificationReason::Directly) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
-    void parserDidSetAttributes() final;
 
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
@@ -435,7 +442,6 @@ private:
     bool computeWillValidate() const final;
     void requiredStateChanged() final;
 
-    void initializeInputType();
     void updateType(const AtomString& typeAttributeValue);
     void runPostTypeUpdateTasks();
 

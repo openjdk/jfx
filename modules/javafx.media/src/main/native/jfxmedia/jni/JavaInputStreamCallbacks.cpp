@@ -75,7 +75,7 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jConnectionHolder)
     {
         // Get the parent abstract class. It's wrong to get method ids from the concrete implementation
         // because it crashes jvm when it tries to call virtual methods.
-        // See https://javafx-jira.kenai.com/browse/RT-37115
+        // See JDK-8093889
         jclass klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder");
         hasException = (javaEnv.reportException() || (NULL == klass));
 

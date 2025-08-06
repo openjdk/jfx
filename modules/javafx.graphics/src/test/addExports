@@ -1,6 +1,7 @@
 --add-exports javafx.base/com.sun.javafx.collections=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.property=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx=ALL-UNNAMED
+--add-exports javafx.base/com.sun.javafx.binding=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.event=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.logging=ALL-UNNAMED
 #
@@ -8,7 +9,10 @@
 --add-exports javafx.graphics/com.sun.javafx.animation=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.application.preferences=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.beans.property=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.css=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.css.media=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.css.media.expression=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.css.parser=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.embed=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.font=ALL-UNNAMED
@@ -19,6 +23,7 @@
 --add-exports javafx.graphics/com.sun.javafx.iio.gif=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.iio=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.iio.png=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.iio.java2d=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.image.impl=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.image=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED
@@ -53,6 +58,8 @@
 --add-opens javafx.graphics/javafx.scene.robot=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.layout=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.paint=ALL-UNNAMED
+--add-opens javafx.graphics/javafx.stage=ALL-UNNAMED
+--add-opens java.desktop/javax.imageio=ALL-UNNAMED
 #
 # compile time additions
 --add-exports=javafx.base/com.sun.javafx.runtime=ALL-UNNAMED

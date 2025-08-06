@@ -44,6 +44,7 @@
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "PluginViewBase.h"
+#include "RemoteFrame.h"
 #include "RenderImage.h"
 #include "RenderTreeUpdater.h"
 #include "ScriptController.h"
@@ -57,11 +58,11 @@
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/JSGlobalObjectInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPlugInImageElement);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLPlugInImageElement);
 
 HTMLPlugInImageElement::HTMLPlugInImageElement(const QualifiedName& tagName, Document& document)
     : HTMLPlugInElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)
@@ -96,12 +97,13 @@ bool HTMLPlugInImageElement::canLoadURL(const String& relativeURL) const
     return canLoadURL(document().completeURL(relativeURL));
 }
 
-// Note that unlike HTMLFrameElementBase::canLoadURL this uses SecurityOrigin::canAccess.
 bool HTMLPlugInImageElement::canLoadURL(const URL& completeURL) const
 {
     if (completeURL.protocolIsJavaScript()) {
+        if (is<RemoteFrame>(contentFrame()))
+            return false;
         RefPtr<Document> contentDocument = this->contentDocument();
-        if (contentDocument && !document().securityOrigin().isSameOriginDomain(contentDocument->securityOrigin()))
+        if (contentDocument && !document().protectedSecurityOrigin()->isSameOriginDomain(contentDocument->securityOrigin()))
             return false;
     }
 
@@ -176,7 +178,7 @@ void HTMLPlugInImageElement::didAttachRenderers()
         if (auto* renderImage = dynamicDowncast<RenderImage>(renderer())) {
             auto& renderImageResource = renderImage->imageResource();
         if (!renderImageResource.cachedImage())
-            renderImageResource.setCachedImage(m_imageLoader->image());
+                renderImageResource.setCachedImage(m_imageLoader->protectedImage());
     }
     }
 
@@ -272,13 +274,6 @@ void HTMLPlugInImageElement::resumeFromDocumentSuspension()
 bool HTMLPlugInImageElement::shouldBypassCSPForPDFPlugin(const String& contentType) const
 {
 #if ENABLE(PDF_PLUGIN)
-    // We only consider bypassing this CSP check if plugins are disabled. In that case we know that
-    // any plugin used is a browser implementation detail. It is not safe to skip this check
-    // if plugins are enabled in case an external plugin is used to load PDF content.
-    // FIXME: Check for alternative PDF plugins here so we can bypass this CSP check for PDFPlugin even when plugins are enabled.
-    if (document().frame()->arePluginsEnabled())
-        return false;
-
     return document().frame()->loader().client().shouldUsePDFPlugin(contentType, document().url().path());
 #else
     UNUSED_PARAM(contentType);

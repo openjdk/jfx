@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -828,7 +828,7 @@ public class TreeViewKeyInputTest {
 
 
     /***************************************************************************
-     * Tests for discontinuous multiple selection (RT-18952)
+     * Tests for discontinuous multiple selection (JDK-8127476)
      **************************************************************************/
 
     // Test 1
@@ -2025,9 +2025,9 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         final int leadSelectedIndex = sm.getSelectedIndex();
         final int selectedIndicesCount = sm.getSelectedIndices().size();
-        assertEquals(6, leadSelectedIndex);
-        assertEquals(6, fm.getFocusedIndex());
-        assertEquals(7, selectedIndicesCount);
+        assertEquals(4, leadSelectedIndex);
+        assertEquals(4, fm.getFocusedIndex());
+        assertEquals(5, selectedIndicesCount);
 
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         assertEquals(leadSelectedIndex * 2, sm.getSelectedIndex());
@@ -2068,10 +2068,10 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
         final int leadSelectedIndex = sm.getSelectedIndex();
         final int selectedIndicesCount = sm.getSelectedIndices().size();
-        final int diff = 4;//99 - leadSelectedIndex;
+        final int diff = 2;//99 - leadSelectedIndex;
         assertEquals(99 - diff, leadSelectedIndex);
         assertEquals(99 - diff, fm.getFocusedIndex());
-        assertEquals(5, selectedIndicesCount);
+        assertEquals(3, selectedIndicesCount);
 
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
         assertEquals(99 - diff * 2 - 1, sm.getSelectedIndex());

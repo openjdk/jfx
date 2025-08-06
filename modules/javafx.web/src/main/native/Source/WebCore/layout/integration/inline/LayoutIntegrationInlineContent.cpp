@@ -90,11 +90,6 @@ IteratorRange<const InlineDisplay::Box*> InlineContent::boxesForRect(const Layou
     return { &boxes[firstBox], &boxes[lastBox] + 1 };
 }
 
-const RenderObject& InlineContent::rendererForLayoutBox(const Layout::Box& layoutBox) const
-{
-    return lineLayout().rendererForLayoutBox(layoutBox);
-}
-
 const RenderBlockFlow& InlineContent::formattingContextRoot() const
 {
     return lineLayout().flow();

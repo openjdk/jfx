@@ -180,7 +180,7 @@ public final class TouchButtonTest extends ParameterizedTestBase {
     }
 
     /**
-     * RT-34625 - we should get a click when tapping on a control, dragging the
+     * JDK-8097082 - we should get a click when tapping on a control, dragging the
      * finger and release the finger inside the control
      */
     @ParameterizedTest
@@ -213,7 +213,7 @@ public final class TouchButtonTest extends ParameterizedTestBase {
     }
 
     /**
-     * RT-34625 - Currently a control will not generate a click when tapping on
+     * JDK-8097082 - Currently a control will not generate a click when tapping on
      * it, drag the finger outside the control and release the finger.
      * This might be a desired behavior, but sometime there are small
      * unintentional drags that resulting in a finger release outside the
@@ -222,7 +222,7 @@ public final class TouchButtonTest extends ParameterizedTestBase {
      * This test should fail and throw RuntimeException
      *
      */
-    @Disabled("RT-34625")
+    @Disabled("JDK-8097082")
     @ParameterizedTest
     @MethodSource("parameters")
     public void tapAndDrag_fail(TestTouchDevice device) throws Exception {

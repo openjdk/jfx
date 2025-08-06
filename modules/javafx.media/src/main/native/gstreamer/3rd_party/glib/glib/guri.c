@@ -103,7 +103,7 @@
  * references’ (sometimes referred to as ‘relative URIs’) or ‘URIs’ (for
  * clarity, ‘URIs’ are referred to in this documentation as
  * ‘absolute URIs’ — although
- * [in constrast to RFC 3986](https://tools.ietf.org/html/rfc3986#section-4.3),
+ * [in contrast to RFC 3986](https://tools.ietf.org/html/rfc3986#section-4.3),
  * fragment identifiers are always allowed).
  *
  * Relative references have one or more components of the URI missing. In
@@ -1535,6 +1535,18 @@ g_uri_parse_relative (GUri         *base_uri,
       remove_dot_segments (uri->path);
     }
 
+  /* Fix up the invalid cases from
+   * https://datatracker.ietf.org/doc/html/rfc3986#section-3, as otherwise
+   * calling g_uri_to_string() on this URI will fail. These can be caused by
+   * remove_dot_segments(), e.g. `data:/.//` gets normalised to `data://` whose
+   * path is invalid given the lack of an authority. */
+  if (uri->host == NULL && uri->path[0] == '/' && uri->path[1] == '/')
+    {
+      char *new_path = g_strconcat ("/.", uri->path, NULL);
+      g_free (uri->path);
+      uri->path = g_steal_pointer (&new_path);
+    }
+
   return g_steal_pointer (&uri);
 }
 
@@ -2703,7 +2715,7 @@ g_uri_escape_string (const gchar *unescaped,
 
   g_return_val_if_fail (unescaped != NULL, NULL);
 
-  s = g_string_sized_new (strlen (unescaped) * 1.25);
+  s = g_string_sized_new ((size_t) (strlen (unescaped) * 1.25));
 
   g_string_append_uri_escaped (s, unescaped, reserved_chars_allowed, allow_utf8);
 
@@ -2797,7 +2809,7 @@ g_uri_escape_bytes (const guint8 *unescaped,
 
   g_return_val_if_fail (unescaped != NULL, NULL);
 
-  string = g_string_sized_new (length * 1.25);
+  string = g_string_sized_new ((size_t) (length * 1.25));
 
   _uri_encoder (string, unescaped, length,
                reserved_chars_allowed, FALSE);

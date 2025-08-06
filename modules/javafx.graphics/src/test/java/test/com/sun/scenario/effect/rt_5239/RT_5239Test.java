@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Fix to verify RT-5239
+ * Fix to verify JDK-8108480
  * InnerShadow pads the bounds despite not padding the image
  */
 public class RT_5239Test {

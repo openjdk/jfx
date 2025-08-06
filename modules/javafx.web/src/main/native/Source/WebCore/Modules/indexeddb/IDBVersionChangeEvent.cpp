@@ -26,14 +26,14 @@
 #include "config.h"
 #include "IDBVersionChangeEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(IDBVersionChangeEvent);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBVersionChangeEvent);
 
 IDBVersionChangeEvent::IDBVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion, const AtomString& name)
-    : Event(name, CanBubble::No, IsCancelable::No)
+    : Event(EventInterfaceType::IDBVersionChangeEvent, name, CanBubble::No, IsCancelable::No)
     , m_requestIdentifier(requestIdentifier)
     , m_oldVersion(oldVersion)
 {
@@ -44,15 +44,10 @@ IDBVersionChangeEvent::IDBVersionChangeEvent(const IDBResourceIdentifier& reques
 }
 
 IDBVersionChangeEvent::IDBVersionChangeEvent(const AtomString& name, const Init& init, IsTrusted isTrusted)
-    : Event(name, init, isTrusted)
+    : Event(EventInterfaceType::IDBVersionChangeEvent, name, init, isTrusted)
     , m_oldVersion(init.oldVersion)
     , m_newVersion(init.newVersion)
 {
-}
-
-EventInterface IDBVersionChangeEvent::eventInterface() const
-{
-    return IDBVersionChangeEventInterfaceType;
 }
 
 } // namespace WebCore

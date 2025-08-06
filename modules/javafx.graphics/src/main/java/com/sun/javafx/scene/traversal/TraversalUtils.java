@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,10 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.traversal.TraversalDirection;
+import javafx.scene.TraversalDirection;
 import javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.NodeHelper;
@@ -125,5 +126,38 @@ public final class TraversalUtils {
 
     public static Node findPreviousFocusableNode(Parent root, Node node) {
         return TabOrderHelper.findPreviousFocusablePeer(node, root);
+    }
+
+    /**
+     * Returns true if the traversal is considered a forward movement.
+     * @return true if forward
+     */
+    public static boolean isForward(TraversalDirection d) {
+        switch (d) {
+        case UP:
+        case LEFT:
+        case PREVIOUS:
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Returns the direction with respect to the node's orientation. It affect's only arrow keys however, so it's not
+     * an error to ignore this call if handling only next/previous traversal.
+     *
+     * @param orientation the node orientation
+     * @return the traverse direction
+     */
+    public static TraversalDirection getDirectionForNodeOrientation(TraversalDirection d, NodeOrientation orientation) {
+        if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+            switch (d) {
+            case LEFT:
+                return TraversalDirection.RIGHT;
+            case RIGHT:
+                return TraversalDirection.LEFT;
+            }
+        }
+        return d;
     }
 }

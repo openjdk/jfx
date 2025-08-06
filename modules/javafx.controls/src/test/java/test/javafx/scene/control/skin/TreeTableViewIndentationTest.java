@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -141,7 +141,7 @@ public class TreeTableViewIndentationTest {
         Toolkit.getToolkit().firePulse();
 
         TreeTableRow<String> row = (TreeTableRow<String>) VirtualFlowTestUtils.getCell(treeTableView, 0);
-        TreeTableCell<String, String> cell = (TreeTableCell<String, String>) row.getChildrenUnmodifiable().get(1);
+        TreeTableCell<String, String> cell = (TreeTableCell<String, String>) row.getChildrenUnmodifiable().get(0);
 
         Node graphic = cell.getGraphic();
         double x;

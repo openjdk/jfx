@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,13 @@
 
 package test.javafx.concurrent;
 
-import test.javafx.concurrent.mocks.MythicalEvent;
-import test.javafx.concurrent.mocks.SimpleTask;
-import javafx.event.EventHandler;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -40,17 +44,13 @@ import javafx.concurrent.Task;
 import javafx.concurrent.TaskShim;
 import javafx.concurrent.Worker;
 import javafx.concurrent.WorkerStateEvent;
-
+import javafx.event.EventHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import test.javafx.concurrent.mocks.MythicalEvent;
+import test.javafx.concurrent.mocks.SimpleTask;
 
 /**
  * Tests various rules regarding the lifecycle of a Service.
@@ -242,7 +242,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      * a task which is not marked as CANCELLED, such as when it is already run
      * or cancelled). In such a case, the bindings have not fired yet and the
      * state of the service is off. At least, that is what is happening with
-     * RT-20880. The fix allows this test to pass.
+     * JDK-8127414. The fix allows this test to pass.
      */
     @Test
     public void callingRestartInScheduledStateShouldCancelAndReschedule_RT_20880() {
@@ -1278,7 +1278,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         task.complete();
     }
 
-    @Test
+    @RepeatedTest(50)
     public void cancelCalledFromOnSucceeded() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> {
@@ -1422,7 +1422,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         assertEquals(1, cancelNotificationCount.get());
     }
 
-    @Test
+    @RepeatedTest(50)
     public void cancelCalledFromOnFailed() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> {

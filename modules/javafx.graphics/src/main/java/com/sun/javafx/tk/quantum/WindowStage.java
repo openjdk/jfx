@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,6 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.Permission;
-import java.security.PrivilegedAction;
-import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -46,14 +42,16 @@ import com.sun.glass.ui.Window.Level;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
+import com.sun.javafx.stage.HeaderButtonMetrics;
+import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.TKStageListener;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
-import static com.sun.javafx.FXPermissions.*;
 
 public class WindowStage extends GlassStage {
 
@@ -64,7 +62,6 @@ public class WindowStage extends GlassStage {
     private StageStyle style;
     private GlassStage owner = null;
     private Modality modality = Modality.NONE;
-    private final boolean securityDialog;
 
     private OverlayWarning warning = null;
     private boolean rtl = false;
@@ -73,10 +70,6 @@ public class WindowStage extends GlassStage {
     private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
     private boolean isAlwaysOnTop = false;
-
-    // A flag to indicate whether a call was generated from
-    // an allowed input event handler.
-    private boolean inAllowedEventHandler = false;
 
     // An active window is visible && enabled && focusable.
     // The list is maintained in the z-order, so that the last element
@@ -93,11 +86,10 @@ public class WindowStage extends GlassStage {
                                  ".QuantumMessagesBundle", LOCALE);
 
 
-    public WindowStage(javafx.stage.Window peerWindow, boolean securityDialog, final StageStyle stageStyle, Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
-        this.securityDialog = securityDialog;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -121,10 +113,6 @@ public class WindowStage extends GlassStage {
         isPopupStage = true;
     }
 
-    final boolean isSecurityDialog() {
-        return securityDialog;
-    }
-
     // Called by QuantumToolkit, so we can override initPlatformWindow in subclasses
     public final WindowStage init(GlassSystemMenu sysmenu) {
         initPlatformWindow();
@@ -144,7 +132,7 @@ public class WindowStage extends GlassStage {
             if (owner instanceof WindowStage) {
                 ownerWindow = ((WindowStage)owner).platformWindow;
             }
-            boolean resizable = false;
+            boolean resizable = fxStage != null && fxStage.isResizable();
             boolean focusable = true;
             int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
             if (isPopupStage) { // TODO: make it a stage style?
@@ -153,42 +141,57 @@ public class WindowStage extends GlassStage {
                     windowMask |= Window.TRANSPARENT;
                 }
                 focusable = false;
+                resizable = false;
             } else {
+                // Downgrade conditional stage styles if not supported
+                if (style == StageStyle.UNIFIED && !app.supportsUnifiedWindows()) {
+                    style = StageStyle.DECORATED;
+                } else if (style == StageStyle.EXTENDED && !app.supportsExtendedWindows()) {
+                    style = StageStyle.DECORATED;
+                }
+
                 switch (style) {
                     case UNIFIED:
-                        if (app.supportsUnifiedWindows()) {
-                            windowMask |= Window.UNIFIED;
-                        }
+                        windowMask |= Window.UNIFIED;
                         // fall through
                     case DECORATED:
-                        windowMask |=
-                            Window.TITLED | Window.CLOSABLE |
-                            Window.MINIMIZABLE | Window.MAXIMIZABLE;
-                        if (ownerWindow != null || modality != Modality.NONE) {
-                            windowMask &=
-                                ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
-                        }
-                        resizable = true;
+                        windowMask |= Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                        break;
+                    case EXTENDED:
+                        windowMask |= Window.EXTENDED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
                         break;
                     case UTILITY:
                         windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
                         break;
                     default:
-                        windowMask |=
-                                (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
+                        windowMask |= (transparent ? Window.TRANSPARENT : Window.UNTITLED) | Window.CLOSABLE;
                         break;
                 }
+
+                if (ownerWindow != null || modality != Modality.NONE) {
+                    windowMask &= ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
+                }
             }
+
             if (modality != Modality.NONE) {
                 windowMask |= Window.MODAL;
             }
-            platformWindow =
-                    app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+
+            platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
             platformWindow.setResizable(resizable);
             platformWindow.setFocusable(focusable);
-            if (securityDialog) {
-                platformWindow.setLevel(Window.Level.FLOATING);
+
+            if (platformWindow.isExtendedWindow()) {
+                platformWindow.headerButtonOverlayProperty().subscribe(overlay -> {
+                    ViewScene scene = getViewScene();
+                    if (scene != null) {
+                        scene.setOverlay(isInFullScreen ? null : overlay);
+                    }
+                });
+
+                platformWindow.headerButtonMetricsProperty().subscribe(this::notifyHeaderButtonMetricsChanged);
             }
+
             if (fxStage != null && fxStage.getScene() != null) {
                 javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
                 if (paint instanceof javafx.scene.paint.Color) {
@@ -223,6 +226,14 @@ public class WindowStage extends GlassStage {
         }
     }
 
+    private void notifyHeaderButtonMetricsChanged() {
+        if (stageListener instanceof StagePeerListener listener && platformWindow != null) {
+            var metrics = platformWindow.headerButtonMetricsProperty().get();
+            listener.changedHeaderButtonMetrics(
+                new HeaderButtonMetrics(metrics.leftInset(), metrics.rightInset(), metrics.minHeight()));
+        }
+    }
+
     public final Window getPlatformWindow() {
         return platformWindow;
     }
@@ -243,9 +254,20 @@ public class WindowStage extends GlassStage {
         return style;
     }
 
-    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
-        ViewScene scene = new ViewScene(depthBuffer, msaa);
-        scene.setSecurityContext(acc);
+    @Override
+    public void setTKStageListener(TKStageListener listener) {
+        super.setTKStageListener(listener);
+        notifyHeaderButtonMetricsChanged();
+    }
+
+    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa) {
+        ViewScene scene = new ViewScene(fxStage != null ? fxStage.getScene() : null, depthBuffer, msaa);
+
+        // The window-provided overlay is not visible in full-screen mode.
+        if (!isInFullScreen) {
+            scene.setOverlay(platformWindow.headerButtonOverlayProperty().get());
+        }
+
         return scene;
     }
 
@@ -260,7 +282,7 @@ public class WindowStage extends GlassStage {
             // Nothing to do
             return;
         }
-        // RT-21465, RT-28490
+        // JDK-8126842, JDK-8124937
         // We don't support scene changes in full-screen mode.
         exitFullScreen();
         super.setScene(scene);
@@ -501,7 +523,7 @@ public class WindowStage extends GlassStage {
                 windowsSetEnabled(true);
             }
             // Note: This method is required to workaround a glass issue
-            // mentioned in RT-12607
+            // mentioned in JDK-8112637
             // If the hiding stage is unfocusable (i.e. it's a PopupStage),
             // then we don't do this to avoid stealing the focus.
             // JDK-8210973: APPLICATION_MODAL window can have owner.
@@ -566,22 +588,12 @@ public class WindowStage extends GlassStage {
 
     @Override
     public void setAlwaysOnTop(boolean alwaysOnTop) {
-        // The securityDialog flag takes precedence over alwaysOnTop
-        if (securityDialog) return;
-
         if (isAlwaysOnTop == alwaysOnTop) {
             return;
         }
 
         if (alwaysOnTop) {
-            if (hasPermission(SET_WINDOW_ALWAYS_ON_TOP_PERMISSION)) {
-                platformWindow.setLevel(Level.FLOATING);
-            } else {
-                alwaysOnTop = false;
-                if (stageListener != null) {
-                    stageListener.changedAlwaysOnTop(alwaysOnTop);
-                }
-            }
+            platformWindow.setLevel(Level.FLOATING);
         } else {
             platformWindow.setLevel(Level.NORMAL);
         }
@@ -593,32 +605,10 @@ public class WindowStage extends GlassStage {
         // note: for child windows this is ignored and we fail silently
     }
 
-    // Return true if this stage is trusted for full screen - doesn't have a
-    // security manager, or a permission check doesn't result in a security
-    // exeception.
-    boolean isTrustedFullScreen() {
-        return hasPermission(UNRESTRICTED_FULL_SCREEN_PERMISSION);
-    }
-
     // Safely exit full screen
     void exitFullScreen() {
         setFullScreen(false);
     }
-
-    private boolean hasPermission(Permission perm) {
-        try {
-            @SuppressWarnings("removal")
-            final SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(perm, getAccessControlContext());
-            }
-            return true;
-        } catch (SecurityException se) {
-            return false;
-        }
-    }
-
-    private boolean fullScreenFromUserEvent = false;
 
     private KeyCombination savedFullScreenExitKey = null;
 
@@ -635,73 +625,62 @@ public class WindowStage extends GlassStage {
         View v = platformWindow.getView();
         if (isVisible() && v != null && v.isInFullscreen() != isInFullScreen) {
             if (isInFullScreen) {
-                // Check whether app is full screen trusted or flag is set
-                // indicating that the fullscreen request came from an input
-                // event handler.
-                // If not notify the stageListener to reset fullscreen to false.
-                final boolean isTrusted = isTrustedFullScreen();
-                if (!isTrusted && !fullScreenFromUserEvent) {
-                    exitFullScreen();
-                    fullscreenChanged(false);
+                v.enterFullscreen(false, false, false);
+                if (warning != null && warning.inWarningTransition()) {
+                    warning.setView(getViewScene());
                 } else {
-                    v.enterFullscreen(false, false, false);
-                    if (warning != null && warning.inWarningTransition()) {
-                        warning.setView(getViewScene());
-                    } else {
-                        boolean showWarning = true;
+                    boolean showWarning = true;
 
-                        KeyCombination key = null;
-                        String exitMessage = null;
+                    KeyCombination key = null;
+                    String exitMessage = null;
 
-                        if (isTrusted && (fxStage != null)) {
-                            // copy the user set definitions for later use.
-                            key = fxStage.getFullScreenExitKeyCombination();
+                    if (fxStage != null) {
+                        // copy the user set definitions for later use.
+                        key = fxStage.getFullScreenExitKeyCombination();
 
-                            exitMessage = fxStage.getFullScreenExitHint();
+                        exitMessage = fxStage.getFullScreenExitHint();
+                    }
+
+                    savedFullScreenExitKey =
+                            key == null
+                            ? defaultFullScreenExitKeycombo
+                            : key;
+
+                    if (
+                        // the hint is ""
+                        "".equals(exitMessage) ||
+                        // if the key is NO_MATCH
+                        (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH))
+                            ) {
+                        showWarning = false;
+                    }
+
+                    // the hint is not set, use the key for the message
+                    if (showWarning && exitMessage == null) {
+                        if (key == null) {
+                            exitMessage = RESOURCES.getString("OverlayWarningESC");
+                        } else {
+                            String f = RESOURCES.getString("OverlayWarningKey");
+                            exitMessage = f.format(f, savedFullScreenExitKey.toString());
                         }
+                    }
 
-                        savedFullScreenExitKey =
-                                key == null
-                                ? defaultFullScreenExitKeycombo
-                                : key;
+                    if (showWarning && warning == null) {
+                        setWarning(new OverlayWarning(getViewScene()));
+                    }
 
-                        if (
-                            // the hint is ""
-                            "".equals(exitMessage) ||
-                            // if the key is NO_MATCH
-                            (savedFullScreenExitKey.equals(KeyCombination.NO_MATCH))
-                                ) {
-                            showWarning = false;
-                        }
-
-                        // the hint is not set, use the key for the message
-                        if (showWarning && exitMessage == null) {
-                            if (key == null) {
-                                exitMessage = RESOURCES.getString("OverlayWarningESC");
-                            } else {
-                                String f = RESOURCES.getString("OverlayWarningKey");
-                                exitMessage = f.format(f, savedFullScreenExitKey.toString());
-                            }
-                        }
-
-                        if (showWarning && warning == null) {
-                            setWarning(new OverlayWarning(getViewScene()));
-                        }
-
-                        if (showWarning && warning != null) {
-                            warning.warn(exitMessage);
-                        }
+                    if (showWarning && warning != null) {
+                        warning.warn(exitMessage);
                     }
                 }
             } else {
                 if (warning != null) {
                     warning.cancel();
-                    setWarning(null);
                 }
+
+                setWarning(null);
                 v.exitFullscreen(false);
             }
-            // Reset flag once we are done process fullscreen
-            fullScreenFromUserEvent = false;
         } else if (!isVisible() && warning != null) {
             // if the window is closed - re-open with fresh warning
             warning.cancel();
@@ -711,22 +690,16 @@ public class WindowStage extends GlassStage {
 
     void setWarning(OverlayWarning newWarning) {
         this.warning = newWarning;
-        getViewScene().synchroniseOverlayWarning();
-    }
-
-    OverlayWarning getWarning() {
-        return warning;
+        if (newWarning != null) {
+            getViewScene().setOverlay(newWarning);
+        } else if (!isInFullScreen) {
+            getViewScene().setOverlay(platformWindow.headerButtonOverlayProperty().get());
+        }
     }
 
     @Override public void setFullScreen(boolean fullScreen) {
         if (isInFullScreen == fullScreen) {
             return;
-        }
-
-       // Set a flag indicating whether this method was called from
-        // an allowed input event handler.
-        if (isInAllowedEventHandler()) {
-            fullScreenFromUserEvent = true;
         }
 
         GlassStage fsWindow = activeFSWindow.get();
@@ -740,7 +713,6 @@ public class WindowStage extends GlassStage {
         }
     }
 
-    @SuppressWarnings("removal")
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
             if (activeFSWindow.compareAndSet(this, null)) {
@@ -750,12 +722,9 @@ public class WindowStage extends GlassStage {
             isInFullScreen = true;
             activeFSWindow.set(this);
         }
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (stageListener != null) {
-                stageListener.changedFullscreen(fs);
-            }
-            return null;
-        }, getAccessControlContext());
+        if (stageListener != null) {
+            stageListener.changedFullscreen(fs);
+        }
     }
 
     @Override public void toBack() {
@@ -763,7 +732,7 @@ public class WindowStage extends GlassStage {
     }
 
     @Override public void toFront() {
-        platformWindow.requestFocus(); // RT-17836
+        platformWindow.requestFocus(); // JDK-8128222
         platformWindow.toFront();
     }
 
@@ -886,7 +855,7 @@ public class WindowStage extends GlassStage {
             ((WindowStage) owner).setEnabled(enabled);
         }
         /*
-         * RT-17588 - exit if stage is closed from under us as
+         * JDK-8128168 - exit if stage is closed from under us as
          *            any further access to the Glass layer
          *            will throw an exception
          */
@@ -901,20 +870,12 @@ public class WindowStage extends GlassStage {
        return platformWindow.getRawHandle();
     }
 
-    // Note: This method is required to workaround a glass issue mentioned in RT-12607
+    // Note: This method is required to workaround a glass issue mentioned in JDK-8112637
     protected void requestToFront() {
         if (platformWindow != null) {
             platformWindow.toFront();
             platformWindow.requestFocus();
         }
-    }
-
-    public void setInAllowedEventHandler(boolean inAllowedEventHandler) {
-        this.inAllowedEventHandler = inAllowedEventHandler;
-    }
-
-    private boolean isInAllowedEventHandler() {
-        return inAllowedEventHandler;
     }
 
     @Override
@@ -937,4 +898,10 @@ public class WindowStage extends GlassStage {
         rtl = b;
     }
 
+    @Override
+    public void setPrefHeaderButtonHeight(double height) {
+        if (platformWindow != null) {
+            platformWindow.setPrefHeaderButtonHeight(height);
+        }
+    }
 }

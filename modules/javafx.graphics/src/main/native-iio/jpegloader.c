@@ -49,7 +49,7 @@
 
 #include <TargetConditionals.h>
 
-/* RT-37125: use setjmp/longjmp versions that do not save/restore the signal mask */
+/* JDK-8097189: use setjmp/longjmp versions that do not save/restore the signal mask */
 #define longjmp _longjmp
 #define setjmp _setjmp
 

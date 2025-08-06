@@ -437,7 +437,7 @@ public class RegionTest {
         assertEquals(40, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableCenterLeft() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -468,7 +468,7 @@ public class RegionTest {
         assertEquals(40, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableCenter() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -514,7 +514,7 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBottomLeft() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -544,7 +544,7 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBottomCenter() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -574,7 +574,7 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBottomRight() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -604,7 +604,7 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBaselineLeft() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -634,7 +634,7 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBaselineCenter() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -664,7 +664,7 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-//    // See RT-19282
+//    // See JDK-8127910
 //    @Test
 //    public void testPositionInAreaForNONResizableBaselineRight() {
 //        Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -1009,7 +1009,631 @@ public class RegionTest {
     }
 
     @Test
-    public void testChildMinAreaWidth() {
+    public void testChildMinAreaWidthExtensively() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.VERTICAL, 100, 200);
+        Region c2 = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        /*
+         * Ensure that no fillHeight/height combinations have effect on controls that are not vertically biased:
+         */
+
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c2, -1, new Insets(1), 50000, true), 1e-100);
+
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaWidth(pane, c3, -1, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * Tests biased control with no available height provided:
+         *
+         * Note: MockBiased returns a minimum height based on its preferred width.
+         *
+         * Expect 102 == insets + minWidth(-1)
+         * - insets are 1 + 1 = 2
+         * - minWidth(-1) returns 100 as MockBiased will base the minimum width on a
+         *   reasonable height (in this case the result of prefHeight(-1) which is 200).
+         *   When the MockBiased is 200 high, it becomes 100 wide.
+         */
+        assertEquals(2 + 100, RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), -1, false), 1e-100);
+
+        /*
+         * Ensure that fillHeight has no effect when there is no available height provided:
+         */
+
+        assertEquals(2 + 100, RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), -1, true), 1e-100);
+
+        /*
+         * When the given available height is less than a vertically biased control's preferred height, then
+         * fillHeight should not have any effect as in both cases the height to use for determine the width
+         * is capped at the smallest of the two height values; expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), 50, false), 1e-100);
+
+        // with baseline
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2 - 10)), RegionShim.computeChildMinAreaWidth(pane, c1, 10, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2 - 10)), RegionShim.computeChildMinAreaWidth(pane, c1, 10, new Insets(1), 50, false), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's preferred height, then
+         * fillHeight decides which of the two is used; when fillHeight is true, expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2 - 10)), RegionShim.computeChildMinAreaWidth(pane, c1, 10, new Insets(1), 500, true), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's preferred height, then
+         * fillHeight decides which of the two is used; when fillHeight is false, expect the control to be resized to the
+         * its preferred height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(102, RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildMinAreaWidth(pane, c1, 10, new Insets(1), 500, false), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's maximum height, then
+         * fillHeight decides which of the two is used; when fillHeight is true, expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + 1, RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), 50000, true), 1e-100);
+        assertEquals(2 + 1, RegionShim.computeChildMinAreaWidth(pane, c1, 10, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's maximum height, then
+         * fillHeight decides which of the two is used; when fillHeight is false, expect the control to be resized to the
+         * its maximum height, and that its width will be derived from this height as it is vertically biased:
+         *
+         * Note: MockBiased returns a maximum height based on its preferred width.
+         */
+
+        assertEquals(2 + 100, RegionShim.computeChildMinAreaWidth(pane, c1, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(2 + 100, RegionShim.computeChildMinAreaWidth(pane, c1, 10, new Insets(1), 50000, false), 1e-100);
+    }
+
+    @Test
+    public void testChildMinAreaHeightExtensively() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 200);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        /*
+         * Ensure that no fillWidth/width combinations have effect on controls that are not horizontally biased:
+         */
+
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 50000, true), 1e-100);
+
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * Tests biased control with no available width provided:
+         *
+         * Note: MockBiased returns a minimum width based on its preferred height.
+         *
+         * Expect 202 == insets + minHeight(-1)
+         * - insets are 1 + 1 = 2
+         * - minHeight(-1) returns 200 as MockBiased will base the minimum height on a
+         *   reasonable width (in this case the result of prefWidth(-1) which is 100).
+         *   When the MockBiased is 100 wide, it becomes 200 high.
+         */
+        assertEquals(2 + 200, RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), -1, false), 1e-100);
+
+        /*
+         * Ensure that fillWidth has no effect when there is no available width provided:
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), -1, true), 1e-100);
+
+        /*
+         * When the given available width is less than a horizontally biased control's preferred width, then
+         * fillWidth should not have any effect as in both cases the width to use for determine the height
+         * is capped at the smallest of the two width values; expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 50, false), 1e-100);
+
+        // with baseline
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 50, false), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's preferred width, then
+         * fillWidth decides which of the two is used; when fillWidth is true, expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 500, true), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's preferred width, then
+         * fillWidth decides which of the two is used; when fillWidth is false, expect the control to be resized to the
+         * its preferred width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(2 + 10 + 200, RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 500, false), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's maximum width, then
+         * fillWidth decides which of the two is used; when fillWidth is true, expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + 1, RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 50000, true), 1e-100);
+        assertEquals(2 + 10 + 1, RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's maximum width, then
+         * fillWidth decides which of the two is used; when fillWidth is false, expect the control to be resized to the
+         * its maximum width, and that its height will be derived from this width as it is horizontally biased:
+         *
+         * Note: MockBiased returns a maximum width based on its preferred height.
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(2 + 10 + 200, RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 50000, false), 1e-100);
+    }
+
+    @Test
+    public void testChilPrefAreaWidthExtensively() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.VERTICAL, 100, 200);
+        Region c2 = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        /*
+         * Ensure that no fillHeight/height combinations have effect on controls that are not vertically biased:
+         */
+
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c2, -1, new Insets(1), 50000, true), 1e-100);
+
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c3, -1, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * Tests biased control with no available height provided:
+         *
+         * Note: MockBiased returns a minimum height based on its preferred width.
+         *
+         * Expect 102 == insets + minWidth(-1)
+         * - insets are 1 + 1 = 2
+         * - maxWidth(-1) returns 100 as MockBiased will base the maximum width on a
+         *   reasonable height (in this case the result of prefHeight(-1) which is 200).
+         *   When the MockBiased is 200 high, it becomes 100 wide.
+         */
+        assertEquals(2 + 100, RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), -1, false), 1e-100);
+
+        /*
+         * Ensure that fillHeight has no effect when there is no available height provided:
+         */
+
+        assertEquals(2 + 100, RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), -1, true), 1e-100);
+
+        /*
+         * When the given available height is less than a vertically biased control's preferred height, then
+         * fillHeight should not have any effect as in both cases the height to use for determine the width
+         * is capped at the smallest of the two height values; expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), 50, false), 1e-100);
+
+        // with baseline
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2 - 10)), RegionShim.computeChildPrefAreaWidth(pane, c1, 10, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2 - 10)), RegionShim.computeChildPrefAreaWidth(pane, c1, 10, new Insets(1), 50, false), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's preferred height, then
+         * fillHeight decides which of the two is used; when fillHeight is true, expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2 - 10)), RegionShim.computeChildPrefAreaWidth(pane, c1, 10, new Insets(1), 500, true), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's preferred height, then
+         * fillHeight decides which of the two is used; when fillHeight is false, expect the control to be resized to the
+         * its preferred height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaWidth(pane, c1, 10, new Insets(1), 500, false), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's maximum height, then
+         * fillHeight decides which of the two is used; when fillHeight is true, expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + 1, RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), 50000, true), 1e-100);
+        assertEquals(2 + 1, RegionShim.computeChildPrefAreaWidth(pane, c1, 10, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's maximum height, then
+         * fillHeight decides which of the two is used; when fillHeight is false, expect the control to be resized to the
+         * its maximum height, and that its width will be derived from this height as it is vertically biased:
+         *
+         * Note: MockBiased returns a maximum height based on its preferred width.
+         */
+
+        assertEquals(2 + 100, RegionShim.computeChildPrefAreaWidth(pane, c1, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(2 + 100, RegionShim.computeChildPrefAreaWidth(pane, c1, 10, new Insets(1), 50000, false), 1e-100);
+    }
+
+    @Test
+    public void testChildPrefAreaHeightExtensively() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 200);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        /*
+         * Ensure that no fillWidth/width combinations have effect on controls that are not horizontally biased:
+         */
+
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(202, RegionShim.computeChildPrefAreaHeight(pane, c2, -1, new Insets(1), 50000, true), 1e-100);
+
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildPrefAreaHeight(pane, c3, -1, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * Tests biased control with no available width provided:
+         *
+         * Note: MockBiased returns a maximum width based on its preferred height.
+         *
+         * Expect 202 == insets + maxHeight(-1)
+         * - insets are 1 + 1 = 2
+         * - maxHeight(-1) returns 200 as MockBiased will base the maximum height on a
+         *   reasonable width (in this case the result of prefWidth(-1) which is 100).
+         *   When the MockBiased is 100 wide, it becomes 200 high.
+         */
+        assertEquals(2 + 200, RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), -1, false), 1e-100);
+
+        /*
+         * Ensure that fillWidth has no effect when there is no available width provided:
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), -1, true), 1e-100);
+
+        /*
+         * When the given available width is less than a horizontally biased control's preferred width, then
+         * fillWidth should not have any effect as in both cases the width to use for determine the height
+         * is capped at the smallest of the two width values; expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), 50, false), 1e-100);
+
+        // with baseline
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildPrefAreaHeight(pane, c1, 10, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildPrefAreaHeight(pane, c1, 10, new Insets(1), 50, false), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's preferred width, then
+         * fillWidth decides which of the two is used; when fillWidth is true, expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildPrefAreaHeight(pane, c1, 10, new Insets(1), 500, true), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's preferred width, then
+         * fillWidth decides which of the two is used; when fillWidth is false, expect the control to be resized to the
+         * its preferred width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(2 + 10 + 200, RegionShim.computeChildPrefAreaHeight(pane, c1, 10, new Insets(1), 500, false), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's maximum width, then
+         * fillWidth decides which of the two is used; when fillWidth is true, expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + 1, RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), 50000, true), 1e-100);
+        assertEquals(2 + 10 + 1, RegionShim.computeChildPrefAreaHeight(pane, c1, 10, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's maximum width, then
+         * fillWidth decides which of the two is used; when fillWidth is false, expect the control to be resized to the
+         * its maximum width, and that its height will be derived from this width as it is horizontally biased:
+         *
+         * Note: MockBiased returns a maximum width based on its preferred height.
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildPrefAreaHeight(pane, c1, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(2 + 10 + 200, RegionShim.computeChildPrefAreaHeight(pane, c1, 10, new Insets(1), 50000, false), 1e-100);
+    }
+
+    @Test
+    public void testChildMaxAreaWidthExtensively() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.VERTICAL, 100, 200);
+        Region c2 = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        /*
+         * Ensure that no fillHeight/height combinations have effect on controls that are not vertically biased:
+         */
+
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaWidth(pane, c2, -1, new Insets(1), 50000, true), 1e-100);
+
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaWidth(pane, c3, -1, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * Tests biased control with no available height provided:
+         *
+         * Note: MockBiased returns a minimum height based on its preferred width.
+         *
+         * Expect 102 == insets + minWidth(-1)
+         * - insets are 1 + 1 = 2
+         * - maxWidth(-1) returns 100 as MockBiased will base the maximum width on a
+         *   reasonable height (in this case the result of prefHeight(-1) which is 200).
+         *   When the MockBiased is 200 high, it becomes 100 wide.
+         */
+        assertEquals(2 + 100, RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), -1, false), 1e-100);
+
+        /*
+         * Ensure that fillHeight has no effect when there is no available height provided:
+         */
+
+        assertEquals(2 + 100, RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), -1, true), 1e-100);
+
+        /*
+         * When the given available height is less than a vertically biased control's preferred height, then
+         * fillHeight should not have any effect as in both cases the height to use for determine the width
+         * is capped at the smallest of the two height values; expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), 50, false), 1e-100);
+
+        // with baseline
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2 - 10)), RegionShim.computeChildMaxAreaWidth(pane, c1, 10, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2 - 10)), RegionShim.computeChildMaxAreaWidth(pane, c1, 10, new Insets(1), 50, false), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's preferred height, then
+         * fillHeight decides which of the two is used; when fillHeight is true, expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2 - 10)), RegionShim.computeChildMaxAreaWidth(pane, c1, 10, new Insets(1), 500, true), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's preferred height, then
+         * fillHeight decides which of the two is used; when fillHeight is false, expect the control to be resized to the
+         * its preferred height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(102, RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(102, RegionShim.computeChildMaxAreaWidth(pane, c1, 10, new Insets(1), 500, false), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's maximum height, then
+         * fillHeight decides which of the two is used; when fillHeight is true, expect the control to be resized to the
+         * available height, and that its width will be derived from this height as it is vertically biased:
+         */
+
+        assertEquals(2 + 1, RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), 50000, true), 1e-100);
+        assertEquals(2 + 1, RegionShim.computeChildMaxAreaWidth(pane, c1, 10, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * When the given available height is greater than a vertically biased control's maximum height, then
+         * fillHeight decides which of the two is used; when fillHeight is false, expect the control to be resized to the
+         * its maximum height, and that its width will be derived from this height as it is vertically biased:
+         *
+         * Note: MockBiased returns a maximum height based on its preferred width.
+         */
+
+        assertEquals(2 + 100, RegionShim.computeChildMaxAreaWidth(pane, c1, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(2 + 100, RegionShim.computeChildMaxAreaWidth(pane, c1, 10, new Insets(1), 50000, false), 1e-100);
+    }
+
+    @Test
+    public void testChildMaxAreaHeightExtensively() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 200);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        /*
+         * Ensure that no fillWidth/width combinations have effect on controls that are not horizontally biased:
+         */
+
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(20002, RegionShim.computeChildMaxAreaHeight(pane, c2, -1, new Insets(1), 50000, true), 1e-100);
+
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), -1, true), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane, c3, -1, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * Tests biased control with no available width provided:
+         *
+         * Note: MockBiased returns a maximum width based on its preferred height.
+         *
+         * Expect 202 == insets + maxHeight(-1)
+         * - insets are 1 + 1 = 2
+         * - maxHeight(-1) returns 200 as MockBiased will base the maximum height on a
+         *   reasonable width (in this case the result of prefWidth(-1) which is 100).
+         *   When the MockBiased is 100 wide, it becomes 200 high.
+         */
+        assertEquals(2 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), -1, false), 1e-100);
+
+        /*
+         * Ensure that fillWidth has no effect when there is no available width provided:
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), -1, true), 1e-100);
+
+        /*
+         * When the given available width is less than a horizontally biased control's preferred width, then
+         * fillWidth should not have any effect as in both cases the width to use for determine the height
+         * is capped at the smallest of the two width values; expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), 50, false), 1e-100);
+
+        // with baseline
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMaxAreaHeight(pane, c1, 10, new Insets(1), 50, true), 1e-100);
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (50.0 - 2)), RegionShim.computeChildMaxAreaHeight(pane, c1, 10, new Insets(1), 50, false), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's preferred width, then
+         * fillWidth decides which of the two is used; when fillWidth is true, expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), 500, true), 1e-100);
+        assertEquals(2 + 10 + Math.ceil(100 * 200 / (500.0 - 2)), RegionShim.computeChildMaxAreaHeight(pane, c1, 10, new Insets(1), 500, true), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's preferred width, then
+         * fillWidth decides which of the two is used; when fillWidth is false, expect the control to be resized to the
+         * its preferred width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), 500, false), 1e-100);
+        assertEquals(2 + 10 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, 10, new Insets(1), 500, false), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's maximum width, then
+         * fillWidth decides which of the two is used; when fillWidth is true, expect the control to be resized to the
+         * available width, and that its height will be derived from this width as it is horizontally biased:
+         */
+
+        assertEquals(2 + 1, RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), 50000, true), 1e-100);
+        assertEquals(2 + 10 + 1, RegionShim.computeChildMaxAreaHeight(pane, c1, 10, new Insets(1), 50000, true), 1e-100);
+
+        /*
+         * When the given available width is greater than a horizontally biased control's maximum width, then
+         * fillWidth decides which of the two is used; when fillWidth is false, expect the control to be resized to the
+         * its maximum width, and that its height will be derived from this width as it is horizontally biased:
+         *
+         * Note: MockBiased returns a maximum width based on its preferred height.
+         */
+
+        assertEquals(2 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), 50000, false), 1e-100);
+        assertEquals(2 + 10 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, 10, new Insets(1), 50000, false), 1e-100);
+    }
+
+    @Test
+    public void testChildMinAreaWidth() {  // See improved version of this test above
         Pane pane = new Pane();
 
         Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
@@ -1029,7 +1653,7 @@ public class RegionTest {
     }
 
     @Test
-    public void testChildMinAreaHeight() {
+    public void testChildMinAreaHeight() {  // See improved version of this test above
         Pane pane = new Pane();
 
         Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
@@ -1038,17 +1662,22 @@ public class RegionTest {
 
         pane.getChildren().addAll(c1, c2, c3);
 
-        assertEquals(3, RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), -1), 1e-100); /*Insets + minimal for biased is 1 */
-        assertEquals(2 + Math.ceil(100*100/48.0), RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 50), 1e-100);
-        assertEquals(12 + Math.ceil(100*100/48.0), RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 50), 1e-100);
-        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), -1), 1e-100);
-        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 50), 1e-100);
-        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), -1), 1e-100);
-        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 50), 1e-100);
+        // This used to assert 3, but this is incorrect. The control involved is biased
+        // and its minWidth(-1) will never return 1 (see MockBiased code). Instead,
+        // minWidth(-1) returns 100 as it assumes a reasonable height (in this case
+        // the result of prefHeight(-1) which is 100).
+        assertEquals(102, RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), -1, false), 1e-100);
+
+        assertEquals(2 + Math.ceil(100*100/48.0), RegionShim.computeChildMinAreaHeight(pane, c1, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(12 + Math.ceil(100*100/48.0), RegionShim.computeChildMinAreaHeight(pane, c1, 10, new Insets(1), 50, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(12, RegionShim.computeChildMinAreaHeight(pane, c3, -1, new Insets(1), 50, false), 1e-100);
     }
 
     @Test
-    public void testChildMaxAreaWidth() {
+    public void testChildMaxAreaWidth() {  // See improved version of this test above
         Pane pane = new Pane();
 
         Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
@@ -1067,7 +1696,7 @@ public class RegionTest {
     }
 
     @Test
-    public void testChildMaxAreaHeight() {
+    public void testChildMaxAreaHeight() {  // See improved version of this test above
         Pane pane = new Pane();
 
         Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
@@ -1076,13 +1705,33 @@ public class RegionTest {
 
         pane.getChildren().addAll(c1, c2, c3);
 
-        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane,c1, -1, new Insets(1), -1), 1e-100);
-        assertEquals(2 + Math.ceil(100*100/48.0), RegionShim.computeChildMaxAreaHeight(pane,c1, -1, new Insets(1), 50), 1e-100);
-        assertEquals(12 + Math.ceil(100*100/48.0), RegionShim.computeChildMaxAreaHeight(pane,c1, 10, new Insets(1), 50), 1e-100);
-        assertEquals(10002, RegionShim.computeChildMaxAreaHeight(pane,c2, -1, new Insets(1), -1), 1e-100);
-        assertEquals(10002, RegionShim.computeChildMaxAreaHeight(pane,c2, -1, new Insets(1), 50), 1e-100);
-        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane,c3, -1, new Insets(1), -1), 1e-100);
-        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane,c3, -1, new Insets(1), 50), 1e-100);
+        // This used to assert 1002, but this is incorrect.
+        //
+        // This control is horizontally biased, but no available width
+        // is provided (it is set to -1). This means that no bias should be used
+        // and the result should simply be the result of maxHeight(-1). The
+        // MockBiased instance will then return 100 (see MockBiased#maxHeight
+        // implementation).
+        //
+        // How did the old code arrive at 1002?
+        //
+        // There was a bug in computeChildMaxAreaHeight where the bias logic was
+        // still partially executed. It would call "child.minWidth(-1)" which
+        // is 10 for a horizontal MockBiased instance. Even though the bias logic
+        // should be skipped, it would still use this value to do its call to maxHeight
+        // instead of using -1. A call of child.maxHeight(10) is basically asking
+        // what should the height be if the width is 10? As MockBiased tries to
+        // always display exactly prefWidth*prefHeight pixels (100 * 100 in this
+        // case) the answer is (100 * 100) / 10 = 1000. Adding the insets gets
+        // us 1002.
+        assertEquals(102, RegionShim.computeChildMaxAreaHeight(pane,c1, -1, new Insets(1), -1, false), 1e-100);
+
+        assertEquals(2 + Math.ceil(100*100/48.0), RegionShim.computeChildMaxAreaHeight(pane,c1, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(12 + Math.ceil(100*100/48.0), RegionShim.computeChildMaxAreaHeight(pane,c1, 10, new Insets(1), 50, false), 1e-100);
+        assertEquals(10002, RegionShim.computeChildMaxAreaHeight(pane,c2, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(10002, RegionShim.computeChildMaxAreaHeight(pane,c2, -1, new Insets(1), 50, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane,c3, -1, new Insets(1), -1, false), 1e-100);
+        assertEquals(1002, RegionShim.computeChildMaxAreaHeight(pane,c3, -1, new Insets(1), 50, false), 1e-100);
     }
 
     /**************************************************************************
@@ -1320,7 +1969,7 @@ public class RegionTest {
         }
     }
 
-    // Test for RT-13820
+    // Test for JDK-8112908
     @Test
     public void changingShapeElementsShouldResultInRender() {
         Region r = new Region();

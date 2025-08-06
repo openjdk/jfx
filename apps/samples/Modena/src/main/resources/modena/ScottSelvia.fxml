@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+Copyright (c) 2010, 2024, Oracle and/or its affiliates.
 All rights reserved. Use is subject to license terms.
 
 This file is available and licensed under the following license:
@@ -39,7 +39,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<!-- Customer test case from bug http://javafx-jira.kenai.com/browse/DTL-5561 -->
 <AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="768.0" prefWidth="1024.0" xmlns:fx="http://javafx.com/fxml">
   <children>
     <TabPane fx:id="tabPane" prefHeight="712.0" prefWidth="996.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0">

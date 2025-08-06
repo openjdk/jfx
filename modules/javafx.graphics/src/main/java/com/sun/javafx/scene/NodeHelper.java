@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,13 +35,14 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.SubScene;
-import javafx.scene.shape.Shape;
-import javafx.scene.shape.Shape3D;
 import javafx.scene.text.Font;
 import com.sun.glass.ui.Accessible;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -63,23 +64,7 @@ public abstract class NodeHelper {
     }
 
     protected static NodeHelper getHelper(Node node) {
-
-        NodeHelper helper = nodeAccessor.getHelper(node);
-        if (helper == null) {
-            String nodeType;
-            if (node instanceof Shape) {
-                nodeType = "Shape";
-            } else if (node instanceof Shape3D) {
-                nodeType = "Shape3D";
-            } else {
-                nodeType = "Node";
-            }
-
-            throw new UnsupportedOperationException(
-                    "Applications should not extend the "
-                    + nodeType + " class directly.");
-        }
-        return helper;
+        return nodeAccessor.getHelper(node);
     }
 
     protected static void setHelper(Node node, NodeHelper nodeHelper) {
@@ -206,6 +191,18 @@ public abstract class NodeHelper {
         return nodeAccessor.isDirtyEmpty(node);
     }
 
+    public static void setScenes(Node node, Scene newScene, SubScene newSubScene) {
+        nodeAccessor.setScenes(node, newScene, newSubScene);
+    }
+
+    public static void setParent(Node node, Parent parent) {
+        nodeAccessor.setParent(node, parent);
+    }
+
+    public static void updateBounds(Node node) {
+        nodeAccessor.updateBounds(node);
+    }
+
     public static void syncPeer(Node node) {
         nodeAccessor.syncPeer(node);
     }
@@ -280,6 +277,10 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
+    public static boolean isInitialCssState(Node node) {
+        return nodeAccessor.isInitialCssState(node);
+    }
+
     public static void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
         nodeAccessor.recalculateRelativeSizeProperties(node, fontForRelativeSizes);
     }
@@ -333,6 +334,10 @@ public abstract class NodeHelper {
         return nodeAccessor.findTransitionTimer(node, propertyName);
     }
 
+    public static MediaQueryContext getMediaQueryContext(Node node) {
+        return nodeAccessor.getMediaQueryContext(node);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -366,6 +371,9 @@ public abstract class NodeHelper {
         void doProcessCSS(Node node);
         boolean isDirty(Node node, DirtyBits dirtyBit);
         boolean isDirtyEmpty(Node node);
+        void setScenes(Node node, Scene newScene, SubScene newSubScene);
+        void setParent(Node node, Parent parent);
+        void updateBounds(Node node);
         void syncPeer(Node node);
         <P extends NGNode> P getPeer(Node node);
         void layoutBoundsChanged(Node node);
@@ -384,6 +392,7 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
+        boolean isInitialCssState(Node node);
         void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);
         BooleanExpression treeVisibleProperty(Node node);
@@ -399,6 +408,7 @@ public abstract class NodeHelper {
         void addTransitionTimer(Node node, String propertyName, TransitionTimer timer);
         void removeTransitionTimer(Node node, String propertyName);
         TransitionTimer findTransitionTimer(Node node, String propertyName);
+        MediaQueryContext getMediaQueryContext(Node node);
     }
 
 }

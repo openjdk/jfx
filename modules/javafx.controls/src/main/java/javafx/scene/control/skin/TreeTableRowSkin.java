@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private boolean disclosureNodeDirty = true;
     private Node graphic;
     private final BehaviorBase<TreeTableRow<T>> behavior;
-    private boolean childrenDirty = false;
 
     /* *************************************************************************
      *                                                                         *
@@ -97,10 +96,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         ListenerHelper lh = ListenerHelper.get(this);
 
-        lh.addChangeListener(control.indexProperty(), (ev) -> {
-            updateCells = true;
-        });
-
         lh.addChangeListener(control.treeItemProperty(), (ev) -> {
             updateTreeItem();
             // There used to be an isDirty = true statement here, but this was
@@ -111,7 +106,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         setupTreeTableViewListeners();
     }
 
-    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
@@ -121,46 +115,25 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             });
         } else {
             registerChangeListener(treeTableView.treeColumnProperty(), (x) -> {
-                // Fix for RT-27782: Need to set isDirty to true, rather than the
-                // cheaper updateCells, as otherwise the text indentation will not
-                // be recalculated in TreeTableCellSkin.calculateIndentation()
-                isDirty = true;
-                if (getSkinnable() != null) {
-                    getSkinnable().requestLayout();
-                }
+                updateLeafColumns();
             });
 
-            DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
-            if (fixedCellSizeProperty != null) {
-                registerChangeListener(fixedCellSizeProperty, (x) -> {
-                    updateCachedFixedSize();
-                });
-                updateCachedFixedSize();
-
-                // JDK-8144500:
-                // When in fixed cell size mode, we must listen to the width of the virtual flow, so
-                // that when it changes, we can appropriately add / remove cells that may or may not
-                // be required (because we remove all cells that are not visible).
-                VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
-                if (virtualFlow != null) {
-                    registerChangeListener(getVirtualFlow().widthProperty(), (x) -> {
-                        if (getSkinnable() != null) {
-                            TreeTableView<T> t = getSkinnable().getTreeTableView();
-                            t.requestLayout();
-                        }
-                    });
-                }
+            VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
+            if (virtualFlow != null) {
+                registerChangeListener(virtualFlow.widthProperty(), _ -> requestLayoutWhenFixedCellSizeSet());
             }
         }
     }
 
-    private void updateCachedFixedSize() {
-        if (getSkinnable() != null) {
-            TreeTableView<T> t = getSkinnable().getTreeTableView();
-            if (t != null) {
-                fixedCellSize = t.getFixedCellSize();
-                fixedCellSizeEnabled = fixedCellSize > 0.0;
-            }
+    /**
+     * When we have a fixed cell size set, we must request layout when the width of the virtual flow changed,
+     * because we might need to add or remove cells that are now visible or not anymore.
+     * <br>
+     * See also: JDK-8144500 and JDK-8185887.
+     */
+    private void requestLayoutWhenFixedCellSizeSet() {
+        if (getFixedCellSize() > 0) {
+            getSkinnable().requestLayout();
         }
     }
 
@@ -229,29 +202,16 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         super.updateChildren();
 
         updateDisclosureNodeAndGraphic();
-
-        if (childrenDirty) {
-            childrenDirty = false;
-            if (cells.isEmpty()) {
-                getChildren().clear();
-            } else {
-                // TODO we can optimise this by only showing cells that are
-                // visible based on the table width and the amount of horizontal
-                // scrolling.
-                getChildren().addAll(cells);
-            }
-        }
     }
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren(double x, double y, double w, double h) {
-        if (disclosureNodeDirty) {
-            updateDisclosureNodeAndGraphic();
-            disclosureNodeDirty = false;
+        Node disclosureNode = getDisclosureNode();
+        if (disclosureNode != null && disclosureNode.getParent() == null) {
+            disclosureNodeDirty = true;
         }
 
-        Node disclosureNode = getDisclosureNode();
-        if (disclosureNode != null && disclosureNode.getScene() == null) {
+        if (disclosureNodeDirty) {
             updateDisclosureNodeAndGraphic();
         }
 
@@ -277,13 +237,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     /** {@inheritDoc} */
-    @Override void updateCells(boolean resetChildren) {
-        super.updateCells(resetChildren);
+    @Override void updateCells() {
+        super.updateCells();
 
-        if (resetChildren) {
-            childrenDirty = true;
-            updateChildren();
-        }
+        updateDisclosureNodeAndGraphic();
     }
 
     /** {@inheritDoc} */
@@ -351,7 +308,15 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         return getSkinnable().getTreeTableView();
     }
 
+    @Override
+    double getFixedCellSize() {
+        TreeTableView<T> treeTableView = getTreeTableView();
+        return treeTableView != null ? treeTableView.getFixedCellSize() : super.getFixedCellSize();
+    }
+
     private void updateDisclosureNodeAndGraphic() {
+        disclosureNodeDirty = false;
+
         if (getSkinnable().isEmpty()) {
             getChildren().remove(graphic);
             return;
@@ -361,7 +326,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         ObjectProperty<Node> graphicProperty = graphicProperty();
         Node newGraphic = graphicProperty == null ? null : graphicProperty.get();
         if (newGraphic != null) {
-            // RT-30466: remove the old graphic
+            // JDK-8118024: remove the old graphic
             if (newGraphic != graphic) {
                 getChildren().remove(graphic);
             }
@@ -375,20 +340,19 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         // check disclosure node
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode != null) {
-            boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
+            boolean disclosureVisible = isDisclosureNodeVisible();
             disclosureNode.setVisible(disclosureVisible);
 
-            if (! disclosureVisible) {
+            if (!disclosureVisible) {
                 getChildren().remove(disclosureNode);
             } else if (disclosureNode.getParent() == null) {
                 getChildren().add(disclosureNode);
-                disclosureNode.toFront();
             } else {
                 disclosureNode.toBack();
             }
 
-            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
-            // RT-28668: Ensemble tree arrow disappears
+            // JDK-8125162: [TreeView, TreeTableView] can lose arrows while scrolling
+            // JDK-8124825: Ensemble tree arrow disappears
             if (disclosureNode.getScene() != null) {
                 disclosureNode.applyCss();
             }

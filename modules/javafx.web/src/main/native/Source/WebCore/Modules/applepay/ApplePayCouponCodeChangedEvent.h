@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class ApplePayCouponCodeChangedEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(ApplePayCouponCodeChangedEvent);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ApplePayCouponCodeChangedEvent);
 public:
     static Ref<ApplePayCouponCodeChangedEvent> create(const AtomString& type, String&& couponCode)
     {
@@ -46,9 +46,6 @@ public:
 
 private:
     ApplePayCouponCodeChangedEvent(const AtomString& type, String&&);
-
-    // Event
-    EventInterface eventInterface() const override;
 
     const String m_couponCode;
 };

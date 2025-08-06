@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,15 +39,17 @@ import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HeaderBar;
 
+import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -190,10 +192,6 @@ public class Stage extends Window {
                 ((Stage) window).doVisibleChanged(visible);
             }
 
-            @Override public void initSecurityDialog(Stage stage, boolean securityDialog) {
-                stage.initSecurityDialog(securityDialog);
-            }
-
             @Override
             public void setPrimary(Stage stage, boolean primary) {
                 stage.setPrimary(primary);
@@ -202,6 +200,21 @@ public class Stage extends Window {
             @Override
             public void setImportant(Stage stage, boolean important) {
                 stage.setImportant(important);
+            }
+
+            @Override
+            public void setPrefHeaderButtonHeight(Stage stage, double height) {
+                stage.setPrefHeaderButtonHeight(height);
+            }
+
+            @Override
+            public double getPrefHeaderButtonHeight(Stage stage) {
+                return stage.getPrefHeaderButtonHeight();
+            }
+
+            @Override
+            public ObservableValue<HeaderButtonMetrics> getHeaderButtonMetrics(Stage stage) {
+                return stage.headerButtonMetricsProperty();
             }
         });
     }
@@ -231,6 +244,11 @@ public class Stage extends Window {
         @Override
         public void setAlwaysOnTop(Stage stage, boolean aot) {
             stage.alwaysOnTopPropertyImpl().set(aot);
+        }
+
+        @Override
+        public void setHeaderButtonMetrics(Stage stage, HeaderButtonMetrics metrics) {
+            stage.headerButtonMetricsProperty().set(metrics);
         }
     };
 
@@ -280,41 +298,6 @@ public class Stage extends Window {
     private boolean primary = false;
 
     //------------------------------------------------------------------
-
-    // Flag indicating that this stage is being used to show a security dialog
-    private boolean securityDialog = false;
-
-    /**
-     * Sets a flag indicating that this stage is used for a security dialog and
-     * must always be on top. If set, this will cause the window to be always
-     * on top, regardless of the setting of the alwaysOnTop property, and
-     * whether or not permissions are granted when the dialog is shown.
-     * NOTE: this flag must be set prior to showing the stage the first time.
-     *
-     * @param securityDialog flag indicating that this Stage is being used to
-     * show a security dialog that should be always-on-top
-     *
-     * @throws IllegalStateException if this property is set after the stage
-     * has ever been made visible.
-     *
-     * @defaultValue false
-     */
-    final void initSecurityDialog(boolean securityDialog) {
-        if (hasBeenVisible) {
-            throw new IllegalStateException("Cannot set securityDialog once stage has been set visible");
-        }
-
-        this.securityDialog = securityDialog;
-    }
-
-    /**
-     * Returns the state of the securityDialog flag.
-     *
-     * @return a flag indicating whether or not this is a security dialog
-     */
-    final boolean isSecurityDialog() {
-        return securityDialog;
-    }
 
     /*
      * Sets this stage to be the primary stage.
@@ -438,6 +421,8 @@ public class Stage extends Window {
      *     other than the JavaFX Application Thread.
      * @throws IllegalStateException if this method is called during
      *     animation or layout processing.
+     * @throws IllegalStateException if this call would exceed the maximum
+     *      number of nested event loops.
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.
@@ -472,9 +457,7 @@ public class Stage extends Window {
     private StageStyle style; // default is set in constructor
 
     /**
-     * Specifies the style for this stage. This must be done prior to making
-     * the stage visible. The style is one of: StageStyle.DECORATED,
-     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, or StageStyle.UTILITY.
+     * Specifies the style for this stage. This must be done prior to making the stage visible.
      *
      * @param style the style for this stage.
      *
@@ -483,7 +466,11 @@ public class Stage extends Window {
      *
      * @defaultValue StageStyle.DECORATED
      */
+    @SuppressWarnings("deprecation")
     public final void initStyle(StageStyle style) {
+        if (style == StageStyle.EXTENDED) {
+            PreviewFeature.STAGE_STYLE_EXTENDED.checkEnabled();
+        }
         if (hasBeenVisible) {
             throw new IllegalStateException("Cannot set style once stage has been set visible");
         }
@@ -623,35 +610,10 @@ public class Stage extends Window {
      * Further, setting this property might be ignored on some platforms.
      * </p>
      *
+     * <p>
      * The user can unconditionally exit full-screen mode
      * at any time by pressing {@code ESC}.
-     * <p>
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" in order
-     * to enter full-screen mode with no restrictions. Applications without
-     * permission will have the following restrictions:
-     * </p>
-     * <ul>
-     *  <li>Applications can only enter full-screen mode in response
-     *   to user input. More specifically, entering is allowed from mouse
-     *   ({@code Node.mousePressed/mouseReleased/mouseClicked}) or keyboard
-     *   ({@code Node.keyPressed/keyReleased/keyTyped}) event handlers. It is
-     *   not allowed to enter full-screen mode in response to {@code ESC}
-     *   key. Attempting to enter full-screen mode from any other context will
-     *   be ignored.
-     *   <p>
-     *   If {@code Stage} was constructed as full-screen but not visible
-     *   it will enter full-screen mode upon becoming visible, with the same
-     *   limitations to when this is allowed to happen as when setting
-     *   {@code fullScreen} to {@code true}.
-     *   </p>
-     *  </li>
-     *  <li> If the application was allowed to enter full-screen mode
-     *   it will have limited keyboard input. It will only receive KEY_PRESSED
-     *   and KEY_RELEASED events from the following keys:
-     *   {@code UP, DOWN, LEFT, RIGHT, SPACE, TAB, PAGE_UP, PAGE_DOWN, HOME, END, ENTER}
-     *  </li>
-     * </ul>
+     *
      * @defaultValue false
      */
     private ReadOnlyBooleanWrapper fullScreen;
@@ -854,13 +816,6 @@ public class Stage extends Window {
      * If some other window is already always-on-top then the
      * relative order between these windows is unspecified (depends on
      * platform).
-     * </p>
-     * <p>
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "setWindowAlwaysOnTop" in order for
-     * this property to have any effect. If the application does not have
-     * permission, attempting to set this property will be ignored
-     * and the property value will be restored to {@code false}.
      * </p>
      * <p>
      * This property is read-only because it can be changed externally
@@ -1158,24 +1113,13 @@ public class Stage extends Window {
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
             StageStyle stageStyle = getStyle();
-            if (stageStyle == StageStyle.TRANSPARENT) {
-                @SuppressWarnings("removal")
-                final SecurityManager securityManager =
-                        System.getSecurityManager();
-                if (securityManager != null) {
-                    try {
-                        securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                    } catch (final SecurityException e) {
-                        stageStyle = StageStyle.UNDECORATED;
-                    }
-                }
-            }
-            setPeer(toolkit.createTKStage(this, isSecurityDialog(),
-                    stageStyle, isPrimary(), getModality(), tkStage, rtl, acc));
+            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
+                    getModality(), tkStage, rtl));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
+            getPeer().setPrefHeaderButtonHeight(getPrefHeaderButtonHeight());
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
@@ -1267,6 +1211,9 @@ public class Stage extends Window {
     /**
      * Closes this {@code Stage}.
      * This call is equivalent to {@code hide()}.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void close() {
         hide();
@@ -1290,11 +1237,6 @@ public class Stage extends Window {
      * <p>
      * An internal copy of this value is made when entering full-screen mode and will be
      * used to trigger the exit from the mode.
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" to modify the
-     * exit key combination. If the application does not have permission, the
-     * value of this property will be ignored, in which case the
-     * default key combination will be used.
      * </p>
      * @param keyCombination the key combination to exit on
      * @since JavaFX 8.0
@@ -1327,13 +1269,6 @@ public class Stage extends Window {
      * screen mode. A value of null will result in the default per-locale
      * message being displayed.
      * If set to the empty string, then no message will be displayed.
-     * <p>
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" to modify the
-     * exit hint. If the application does not have permission, the
-     * value of this property will be ignored, in which case the
-     * default message will be displayed.
-     * </p>
      * @since JavaFX 8.0
      */
     private final ObjectProperty<String> fullScreenExitHint =
@@ -1349,5 +1284,30 @@ public class Stage extends Window {
 
     public final ObjectProperty<String> fullScreenExitHintProperty() {
         return fullScreenExitHint;
+    }
+
+    private ObjectProperty<HeaderButtonMetrics> headerButtonMetrics;
+
+    private ObjectProperty<HeaderButtonMetrics> headerButtonMetricsProperty() {
+        if (headerButtonMetrics == null) {
+            headerButtonMetrics = new SimpleObjectProperty<>(this, "headerButtonMetrics");
+        }
+
+        return headerButtonMetrics;
+    }
+
+    private double prefHeaderButtonHeight = HeaderBar.USE_DEFAULT_SIZE;
+
+    private double getPrefHeaderButtonHeight() {
+        return prefHeaderButtonHeight;
+    }
+
+    private void setPrefHeaderButtonHeight(double height) {
+        prefHeaderButtonHeight = height;
+
+        TKStage peer = getPeer();
+        if (peer != null) {
+            peer.setPrefHeaderButtonHeight(height);
+        }
     }
 }

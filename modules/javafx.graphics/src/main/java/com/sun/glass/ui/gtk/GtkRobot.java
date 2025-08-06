@@ -25,6 +25,7 @@
 package com.sun.glass.ui.gtk;
 
 import com.sun.glass.ui.gtk.screencast.ScreencastHelper;
+import com.sun.glass.ui.gtk.screencast.XdgDesktopPortal;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
@@ -33,31 +34,7 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.ui.Screen;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 final class GtkRobot extends GlassRobot {
-
-    private static final String screenshotMethod;
-    private static final String METHOD_GTK = "gtk";
-    private static final String METHOD_SCREENCAST = "dbusScreencast";
-
-    static {
-        @SuppressWarnings("removal")
-        boolean isOnWayland = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
-            return waylandDisplay != null && !waylandDisplay.isBlank();
-        });
-
-        @SuppressWarnings("removal")
-        String method = AccessController
-                .doPrivileged((PrivilegedAction<String>) () ->
-                        System.getProperty(
-                                "javafx.robot.screenshotMethod",
-                                isOnWayland ? METHOD_SCREENCAST : METHOD_GTK
-                        ));
-        screenshotMethod = method;
-    }
 
     @Override
     public void create() {
@@ -72,7 +49,11 @@ final class GtkRobot extends GlassRobot {
     @Override
     public void keyPress(KeyCode code) {
         Application.checkEventThread();
-        _keyPress(code.getCode());
+        if (XdgDesktopPortal.isRemoteDesktop() && ScreencastHelper.isAvailable()) {
+            ScreencastHelper.remoteDesktopKey(true, code.getCode());
+        } else {
+            _keyPress(code.getCode());
+        }
     }
 
     protected native void _keyPress(int code);
@@ -80,7 +61,11 @@ final class GtkRobot extends GlassRobot {
     @Override
     public void keyRelease(KeyCode code) {
         Application.checkEventThread();
-        _keyRelease(code.getCode());
+        if (XdgDesktopPortal.isRemoteDesktop() && ScreencastHelper.isAvailable()) {
+            ScreencastHelper.remoteDesktopKey(false, code.getCode());
+        } else {
+            _keyRelease(code.getCode());
+        }
     }
 
     protected native void _keyRelease(int code);
@@ -91,12 +76,21 @@ final class GtkRobot extends GlassRobot {
     public void mouseMove(double x, double y) {
         Application.checkEventThread();
         _mouseMove((int) x, (int) y);
+        if (XdgDesktopPortal.isRemoteDesktop() && ScreencastHelper.isAvailable()) {
+            // We still call _mouseMove on purpose to change the mouse position
+            // within the XWayland server so that we can retrieve it later.
+            ScreencastHelper.remoteDesktopMouseMove((int) x, (int) y);
+        }
     }
 
     @Override
     public void mousePress(MouseButton... buttons) {
         Application.checkEventThread();
-        _mousePress(GlassRobot.convertToRobotMouseButton(buttons));
+        if (XdgDesktopPortal.isRemoteDesktop() && ScreencastHelper.isAvailable()) {
+            ScreencastHelper.remoteDesktopMouseButton(true, GlassRobot.convertToRobotMouseButton(buttons));
+        } else {
+            _mousePress(GlassRobot.convertToRobotMouseButton(buttons));
+        }
     }
 
     protected native void _mousePress(int button);
@@ -104,7 +98,11 @@ final class GtkRobot extends GlassRobot {
     @Override
     public void mouseRelease(MouseButton... buttons) {
         Application.checkEventThread();
-        _mouseRelease(GlassRobot.convertToRobotMouseButton(buttons));
+        if (XdgDesktopPortal.isRemoteDesktop() && ScreencastHelper.isAvailable()) {
+            ScreencastHelper.remoteDesktopMouseButton(false, GlassRobot.convertToRobotMouseButton(buttons));
+        } else {
+            _mouseRelease(GlassRobot.convertToRobotMouseButton(buttons));
+        }
     }
 
     protected native void _mouseRelease(int buttons);
@@ -112,7 +110,11 @@ final class GtkRobot extends GlassRobot {
     @Override
     public void mouseWheel(int wheelAmt) {
         Application.checkEventThread();
-        _mouseWheel(wheelAmt);
+        if (XdgDesktopPortal.isRemoteDesktop() && ScreencastHelper.isAvailable()) {
+            ScreencastHelper.remoteDesktopMouseWheel(wheelAmt);
+        } else {
+            _mouseWheel(wheelAmt);
+        }
     }
 
     protected native void _mouseWheel(int wheelAmt);
@@ -140,7 +142,8 @@ final class GtkRobot extends GlassRobot {
         x = (int) Math.floor((x + 0.5) * mainScreen.getPlatformScaleX());
         y = (int) Math.floor((y + 0.5) * mainScreen.getPlatformScaleY());
         int[] result = new int[1];
-        if (METHOD_SCREENCAST.equals(screenshotMethod)) {
+        if ((XdgDesktopPortal.isScreencast()
+                || XdgDesktopPortal.isRemoteDesktop()) && ScreencastHelper.isAvailable()) {
             ScreencastHelper.getRGBPixels((int) x, (int) y, 1, 1, result);
         } else {
             _getScreenCapture((int) x, (int) y, 1, 1, result);
@@ -153,7 +156,8 @@ final class GtkRobot extends GlassRobot {
     @Override
     public void getScreenCapture(int x, int y, int width, int height, int[] data, boolean scaleToFit) {
         Application.checkEventThread();
-        if (METHOD_SCREENCAST.equals(screenshotMethod)) {
+        if ((XdgDesktopPortal.isScreencast()
+                || XdgDesktopPortal.isRemoteDesktop()) && ScreencastHelper.isAvailable()) {
             ScreencastHelper.getRGBPixels(x, y, width, height, data);
         } else {
             _getScreenCapture(x, y, width, height, data);

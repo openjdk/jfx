@@ -24,6 +24,7 @@
 accessibility/atspi/AccessibilityAtspi.cpp
 accessibility/atspi/AccessibilityObjectAtspi.cpp
 accessibility/atspi/AccessibilityObjectActionAtspi.cpp
+accessibility/atspi/AccessibilityObjectActiveDescendantAtspi.cpp
 accessibility/atspi/AccessibilityObjectCollectionAtspi.cpp
 accessibility/atspi/AccessibilityObjectComponentAtspi.cpp
 accessibility/atspi/AccessibilityObjectDocumentAtspi.cpp
@@ -50,17 +51,6 @@ page/gtk/DragControllerGtk.cpp
 page/linux/ResourceUsageOverlayLinux.cpp
 page/linux/ResourceUsageThreadLinux.cpp
 
-page/scrolling/nicosia/ScrollingCoordinatorNicosia.cpp
-page/scrolling/nicosia/ScrollingStateNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeFixedNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeFrameScrollingNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreePositionedNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.cpp
-
 platform/gamepad/manette/ManetteGamepad.cpp
 platform/gamepad/manette/ManetteGamepadProvider.cpp
 
@@ -71,23 +61,28 @@ platform/graphics/PlatformDisplay.cpp @no-unify
 platform/graphics/angle/PlatformDisplayANGLE.cpp @no-unify
 
 platform/graphics/egl/GLContext.cpp @no-unify
+platform/graphics/egl/GLContextWrapper.cpp @no-unify
+platform/graphics/egl/GLDisplay.cpp @no-unify
+platform/graphics/egl/GLFence.cpp @no-unify
+platform/graphics/egl/GLFenceEGL.cpp @no-unify
+platform/graphics/egl/GLFenceGL.cpp @no-unify
+platform/graphics/egl/PlatformDisplayDefault.cpp @no-unify
 platform/graphics/egl/PlatformDisplaySurfaceless.cpp @no-unify
 
+platform/graphics/gbm/DRMDeviceManager.cpp
+platform/graphics/gbm/DRMDeviceNode.cpp
 platform/graphics/gbm/GBMBufferSwapchain.cpp
-platform/graphics/gbm/GBMDevice.cpp
 platform/graphics/gbm/GraphicsContextGLGBM.cpp @no-unify
 platform/graphics/gbm/PlatformDisplayGBM.cpp @no-unify
 
 platform/graphics/gtk/ColorGtk.cpp
 platform/graphics/gtk/GdkCairoUtilities.cpp
+platform/graphics/gtk/GdkSkiaUtilities.cpp
 platform/graphics/gtk/ImageAdapterGtk.cpp
 platform/graphics/gtk/SystemFontDatabaseGTK.cpp
 
 platform/graphics/opentype/OpenTypeVerticalData.cpp
 
-platform/graphics/wayland/PlatformDisplayWayland.cpp
-
-platform/graphics/x11/PlatformDisplayX11.cpp @no-unify
 platform/graphics/x11/XErrorTrapper.cpp @no-unify
 
 platform/gtk/CursorGtk.cpp

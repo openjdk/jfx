@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import java.io.RandomAccessFile;
 import static java.lang.String.format;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
-import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,7 +50,6 @@ import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebErrorEvent;
 import static javafx.scene.web.WebErrorEvent.USER_DATA_DIRECTORY_ALREADY_IN_USE;
 import static javafx.scene.web.WebErrorEvent.USER_DATA_DIRECTORY_IO_ERROR;
-import static javafx.scene.web.WebErrorEvent.USER_DATA_DIRECTORY_SECURITY_ERROR;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -400,69 +398,6 @@ public class UserDataDirectoryTest extends TestBase {
         }
     }
 
-    @SuppressWarnings("removal")
-    @Test
-    public void testSecurityError() {
-        String url = new File("src/test/resources/test/html/ipsum.html")
-                .toURI().toASCIIString();
-        SecurityManager oldSecurityManager = System.getSecurityManager();
-        System.setSecurityManager(new CustomSecurityManager(FOO));
-        try {
-            webEngine.setUserDataDirectory(FOO);
-            load(webEngine, url);
-        } finally {
-            System.setSecurityManager(oldSecurityManager);
-        }
-        assertSame(FOO, webEngine.getUserDataDirectory());
-        assertNotLocked(FOO);
-        assertHasNoLocalStorage(webEngine);
-    }
-
-    @SuppressWarnings("removal")
-    @Test
-    public void testSecurityErrorWithPassiveHandler() {
-        String url = new File("src/test/resources/test/html/ipsum.html")
-                .toURI().toASCIIString();
-        SecurityManager oldSecurityManager = System.getSecurityManager();
-        System.setSecurityManager(new CustomSecurityManager(FOO));
-        ErrorHandler handler = new ErrorHandler();
-        try {
-            System.err.println("The following error is expected");
-            webEngine.setUserDataDirectory(FOO);
-            webEngine.setOnError(handler);
-            load(webEngine, url);
-        } finally {
-            System.setSecurityManager(oldSecurityManager);
-        }
-        assertSame(FOO, webEngine.getUserDataDirectory());
-        assertNotLocked(FOO);
-        assertHasNoLocalStorage(webEngine);
-        assertOccurred(USER_DATA_DIRECTORY_SECURITY_ERROR, handler);
-    }
-
-    @SuppressWarnings("removal")
-    @Test
-    public void testSecurityErrorWithRecoveringHandler() {
-        String url = new File("src/test/resources/test/html/ipsum.html")
-                .toURI().toASCIIString();
-        SecurityManager oldSecurityManager = System.getSecurityManager();
-        System.setSecurityManager(new CustomSecurityManager(FOO));
-        try {
-            webEngine.setUserDataDirectory(FOO);
-            EventHandler<WebErrorEvent> h = event -> {
-                webEngine.setUserDataDirectory(BAR);
-            };
-            webEngine.setOnError(h);
-            assertSame(FOO, webEngine.getUserDataDirectory());
-            load(webEngine, url);
-        } finally {
-            System.setSecurityManager(oldSecurityManager);
-        }
-        assertSame(BAR, webEngine.getUserDataDirectory());
-        assertLocked(BAR);
-        assertHasLocalStorage(webEngine);
-    }
-
     @Test
     public void testDisposal() {
         webEngine.setUserDataDirectory(FOO);
@@ -718,27 +653,6 @@ public class UserDataDirectoryTest extends TestBase {
         @Override public void handle(WebErrorEvent event) {
             errors.add(event);
             System.err.println("onError: " + event);
-        }
-    }
-
-    @SuppressWarnings("removal")
-    private static final class CustomSecurityManager extends SecurityManager {
-        private final String path;
-
-        private CustomSecurityManager(File path) {
-            try {
-                this.path = path.getCanonicalPath();
-            } catch (IOException ex) {
-                throw new AssertionError(ex);
-            }
-        }
-
-        @Override public void checkPermission(Permission perm) {
-            if (perm instanceof FilePermission
-                    && perm.getName().startsWith(path))
-            {
-                super.checkPermission(perm);
-            }
         }
     }
 }

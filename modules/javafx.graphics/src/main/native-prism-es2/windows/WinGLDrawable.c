@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLDrawable_nCreateDrawable
         fprintf(stderr, "nCreateHdc: Invalid hwnd");
         return 0;
     }
-    // TODO: Need to get the screen info in pfInfo to handle multi-monitor case. (RT-27445)
+    // TODO: Need to get the screen info in pfInfo to handle multi-monitor case. (JDK-8092267)
     hdc = GetDC(hwnd);
 
     if (!SetPixelFormat(hdc, pfInfo->pixelFormat, NULL)) {

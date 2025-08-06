@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,6 +73,7 @@ import java.util.concurrent.Future
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
+import java.lang.Runtime.Version
 
 /******************************************************************************
  *                              Utility methods                               *
@@ -234,29 +235,6 @@ void setupTools(String name, Closure loader, Closure processor) {
     }
 }
 
-String[] parseJavaVersion(String jRuntimeVersion) {
-    def jVersion = jRuntimeVersion.split("[-\\+]")[0]
-    def tmpBuildNumber = "0"
-    if (jVersion.startsWith("1.")) {
-        // This is a pre-JEP-223 version string
-        def dashbIdx = jRuntimeVersion.lastIndexOf("-b")
-        if (dashbIdx != -1) {
-            tmpBuildNumber = jRuntimeVersion.substring(dashbIdx + 2)
-        }
-    } else {
-        // This is a post-JEP-223 version string
-        def plusIdx = jRuntimeVersion.indexOf("+")
-        if (plusIdx != -1) {
-            tmpBuildNumber = jRuntimeVersion.substring(plusIdx + 1)
-        }
-    }
-    def jBuildNumber = tmpBuildNumber.split("[-\\+]")[0]
-    def versionInfo = new String[2];
-    versionInfo[0] = jVersion
-    versionInfo[1] = jBuildNumber
-    return versionInfo
-}
-
 /**
  * Fails the build with the specified error message
  *
@@ -325,6 +303,8 @@ void setFileTimestamps(Provider<RegularFile> archive, Instant instant) {
  *                                                                            *
  *****************************************************************************/
 
+loadProperties("$projectDir/build.properties")
+
 // If the ../rt-closed directory exists, then we are doing a closed build.
 // In this case, build and property files will be read from
 // ../rt-closed/closed-build.gradle and ../rt-closed/closed-properties.gradle
@@ -336,11 +316,9 @@ ext.BUILD_CLOSED = buildClosed
 
 ext.RUNARGSFILE = "run.args"
 ext.COMPILEARGSFILE = "compile.args"
-ext.RUNJAVAPOLICYFILE = 'run.java.policy'
 
 ext.TESTCOMPILEARGSFILE = "testcompile.args"
 ext.TESTRUNARGSFILE = "testrun.args"
-ext.TESTJAVAPOLICYFILE = 'test.java.policy'
 
 // the file containing "extra" --add-exports
 ext.EXTRAADDEXPORTS = 'buildSrc/addExports'
@@ -417,21 +395,12 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/${jdkDocsVersion}/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
-
-defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
-def javaVersionInfo = parseJavaVersion(javaRuntimeVersion)
-defineProperty("javaVersion", javaVersionInfo[0])
-defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
-
-defineProperty("icuVersion", "74.2")
-
-loadProperties("$projectDir/build.properties")
 
 def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
 def supplementalBuildFile = file("$closedDir/closed-build.gradle");
@@ -502,11 +471,11 @@ defineProperty("BUILD_TOOLS_DOWNLOAD_SCRIPT", "")
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
 ext.SWT_FILE_NAME =
-    IS_MAC && IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.aarch64_3.124.200.v20231113-1355" :
-    IS_MAC && !IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.x86_64_3.124.200.v20231113-1355" :
-    IS_WINDOWS ? "org.eclipse.swt.win32.win32.x86_64_3.124.200.v20231113-1355" :
-    IS_LINUX && IS_AARCH64 ? "org.eclipse.swt.gtk.linux.aarch64_3.124.200.v20231113-1355" :
-    IS_LINUX && !IS_AARCH64 ? "org.eclipse.swt.gtk.linux.x86_64_3.124.200.v20231113-1355" : ""
+    IS_MAC && IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.aarch64_${swtVersion}" :
+    IS_MAC && !IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.x86_64_${swtVersion}" :
+    IS_WINDOWS ? "org.eclipse.swt.win32.win32.x86_64_${swtVersion}" :
+    IS_LINUX && IS_AARCH64 ? "org.eclipse.swt.gtk.linux.aarch64_${swtVersion}" :
+    IS_LINUX && !IS_AARCH64 ? "org.eclipse.swt.gtk.linux.x86_64_${swtVersion}" : ""
 
 // Specifies whether to run full tests (true) or smoke tests (false)
 defineProperty("FULL_TEST", "false")
@@ -528,7 +497,8 @@ defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
 // Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-defineProperty("SWT_TEST", "true")
+// JDK-8356687 and JDK-8356688 track the disablement of the SWT tests on both platforms.
+defineProperty("SWT_TEST", (IS_MAC || IS_LINUX) ? "false" : "true")
 ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
 
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
@@ -629,6 +599,12 @@ ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 defineProperty("USE_CYGWIN", "true")
 ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
 
+// Specifies whether to run "chmod -R artifacts/sdk" as the last step of
+// copying the sdk to the artifacts dir. This is only done on Windows;
+// the flag is ignored on other platforms.
+defineProperty("CHMOD_ARTIFACTS", "true")
+ext.IS_CHMOD_ARTIFACTS = Boolean.parseBoolean(CHMOD_ARTIFACTS)
+
 // Define the number of threads to use when compiling (specifically for native compilation, including webkit)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
@@ -643,6 +619,9 @@ defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "0")
 defineProperty("MILESTONE_FCS", "false")
 ext.IS_MILESTONE_FCS = Boolean.parseBoolean(MILESTONE_FCS)
+
+// The following property used to define WebView Browser Version
+defineProperty("WEBVIEW_VERSION", "18.4")
 
 // The following properties define the product name for Oracle JDK and OpenJDK
 // for VersionInfo and the DLL manifest.
@@ -697,7 +676,19 @@ if (HUDSON_JOB_NAME == "not_hudson") {
     relSuffix = "-internal"
     relOpt = "-${buildTimestamp}"
 } else {
-    relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
+    if (IS_MILESTONE_FCS) {
+        if (jfxExperimentalFeatureName != "") {
+            fail("An experimental feature branch should not be used for FCS build")
+        }
+        relSuffix = ""
+    } else {
+        if (jfxExperimentalFeatureName != "") {
+            relSuffix = "-${jfxExperimentalFeatureName}"
+            relOpt = "-${buildTimestamp}"
+        } else {
+            relSuffix = jfxReleaseSuffix
+        }
+    }
 }
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
@@ -735,13 +726,16 @@ defineProperty("TEST_ONLY", "false")
 ext.IS_TEST_ONLY = Boolean.parseBoolean(TEST_ONLY) || !buildSdkForTest
 
 ext.IS_TEST_SDK = false
+ext.TEST_SDK_DIR = ""
+
 if (hasProperty("TEST_SDK_PATH")) {
     if (!IS_TEST_ONLY) {
         fail("TEST_ONLY must be set to true when using an external TEST_SDK_PATH for running tests: include -PTEST_ONLY=true")
     }
-    def sdkShimsPath = file("${TEST_SDK_PATH}")
-    def sdkPath = file("${TEST_SDK_PATH}/sdk")
-    def shimsPath = file("${TEST_SDK_PATH}/shims")
+    ext.TEST_SDK_DIR = file("${TEST_SDK_PATH}").absolutePath
+    def sdkShimsPath = file("${TEST_SDK_DIR}")
+    def sdkPath = file("${TEST_SDK_DIR}/sdk")
+    def shimsPath = file("${TEST_SDK_DIR}/shims")
     if (!sdkShimsPath.exists() || !sdkShimsPath.isDirectory() ||
              !sdkPath.exists() || !sdkPath.isDirectory() ||
            !shimsPath.exists() || !shimsPath.isDirectory()) {
@@ -749,7 +743,7 @@ if (hasProperty("TEST_SDK_PATH")) {
     }
     ext.IS_TEST_SDK = true
 } else {
-    defineProperty("TEST_SDK_PATH", "${rootProject.buildDir}")
+    ext.TEST_SDK_DIR = "${rootProject.buildDir}"
 }
 
 // Make sure JDK_HOME/bin/java exists
@@ -765,34 +759,37 @@ if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to '
 // Java HotSpot(TM) 64-Bit Server VM (build 24.45-b08, mixed mode)
 //
 // We need to parse the second line
-def inStream = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()));
-try {
+Version jdkVersionInfo;
+try (BufferedReader inStream = new java.io.BufferedReader(new java.io.InputStreamReader(
+        new java.lang.ProcessBuilder(JAVA, "-fullversion").start().getErrorStream()))) {
     String v = inStream.readLine().trim();
     if (v != null) {
         int ib = v.indexOf("full version \"");
         if (ib != -1) {
             String str = v.substring(ib);
             String ver = str.substring(str.indexOf("\"") + 1, str.size() - 1);
-
-            defineProperty("jdkRuntimeVersion", ver)
-            def jdkVersionInfo = parseJavaVersion(ver)
-            defineProperty("jdkVersion", jdkVersionInfo[0])
-            defineProperty("jdkBuildNumber", jdkVersionInfo[1])
+            jdkVersionInfo = Version.parse(ver);
 
             // Define global properties based on the version of Java
             // For example, we could define a "jdk18OrLater" property as
             // follows that could then be used to implement conditional build
             // logic based on whether we were running on JDK 18 or later,
             // should the need arise.
-//            def status = compareJdkVersion(jdkVersion, "18")
-//            ext.jdk18OrLater = (status >= 0)
+//            ext.jdk18OrLater = jdkVersionInfo.feature() >= 18
+
+            ext.jdk24OrLater = jdkVersionInfo.feature() >= 24
         }
     }
-} finally {
-    inStream.close();
 }
-if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
+if (jdkVersionInfo == null) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
 
+// Use --upgrade-module-path instead of --module-path when compiling and
+// running tests if we are using a JDK that includes an upgradable
+// jdk.jsobject module.  Currently, this is JDK 24 or later. Once
+// jdk.jsobject is removed from the JDK, we can stop doing it. For example,
+// if jdk.jsobject is removed from the JDK in JDK 26, the logic will then be
+// changed to: "jdk24OrLater && !jdk26OrLater"
+ext.USE_UPGRADE_MODULE_PATH = jdk24OrLater
 
 // Determine whether the javafx.* modules are present in the JDK. To do this,
 // we will execute "java --list-modules" and search for javafx.base.
@@ -1005,7 +1002,7 @@ List<String> computeLibraryPath(boolean working) {
     } else {
         def platformPrefix = ""
         def standaloneSdkDirName = "${platformPrefix}sdk"
-        def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
+        def standaloneSdkDir = "${TEST_SDK_DIR}/${standaloneSdkDirName}"
         def modulesLibName = IS_WINDOWS ? "bin" : "lib"
         def modulesLibsDir = "${standaloneSdkDir}/${modulesLibName}"
         lp << cygpath("${modulesLibsDir}")
@@ -1014,8 +1011,9 @@ List<String> computeLibraryPath(boolean working) {
     return lp
 }
 
-// Return list with the arguments needed for --patch-module or --module-path
-// for the provided projects. Used with Java executables ie. tests
+// Return list with the arguments needed for --patch-module, --module-path,
+// or --upgrade-module-path for the provided projects.
+// Used with Java executables ie. tests
 List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean includeJLP) {
     List<String> pma = []
 
@@ -1042,9 +1040,9 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
                 String moduleName = proj.ext.moduleName
                 File dir;
                 if (test && proj.sourceSets.hasProperty('shims')) {
-                    dir = file("${TEST_SDK_PATH}/shims/${moduleName}")
+                    dir = file("${TEST_SDK_DIR}/shims/${moduleName}")
                 } else {
-                    dir = file("${TEST_SDK_PATH}/sdk/lib/${moduleName}.jar")
+                    dir = file("${TEST_SDK_DIR}/sdk/lib/${moduleName}.jar")
                 }
                 if (mp == null) {
                     mp = dir.path
@@ -1060,7 +1058,7 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
             return null
         }
 
-        pma += '--module-path'
+        pma += (test && USE_UPGRADE_MODULE_PATH) ? '--upgrade-module-path' : '--module-path'
         pma += mp
 
         String addm = null
@@ -1089,7 +1087,7 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean inc
 // Return a list containing the --upgrade-module-path or --module-path
 // used with Javac
 List<String> computeModulePathArgs(String  pname, List<String> deps, boolean test) {
-    List<String> mpa = HAS_JAVAFX_MODULES ? [ '--upgrade-module-path' ] : [ '--module-path' ]
+    List<String> mpa = (HAS_JAVAFX_MODULES || (test && USE_UPGRADE_MODULE_PATH)) ? [ '--upgrade-module-path' ] : [ '--module-path' ]
     String mp = null
     deps.each { String projname ->
         def proj = project(projname)
@@ -1173,12 +1171,14 @@ void writeArgsFile(boolean isCompile, File dest, List<String> libpath, List<Stri
             dest << "\"\n"
         }
     } else {
+        def modulePathArgName = USE_UPGRADE_MODULE_PATH ? '--upgrade-module-path' : '--module-path'
+
         if (modpath.size() == 1) {
-            dest <<  "--module-path=\""
+            dest <<  "${modulePathArgName}=\""
             dest << modpath[0]
             dest << "\"\n"
         } else {
-            dest <<  "--module-path=\"\\\n"
+            dest <<  "${modulePathArgName}=\"\\\n"
             modpath.each() { e->
                 dest << "  "
                 dest << e
@@ -1500,12 +1500,18 @@ logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
-logger.quiet("java.runtime.version: ${javaRuntimeVersion}")
-logger.quiet("java version: ${javaVersion}")
-logger.quiet("java build number: ${javaBuildNumber}")
-logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
-logger.quiet("jdk version: ${jdkVersion}")
-logger.quiet("jdk build number: ${jdkBuildNumber}")
+if (IS_TEST_SDK) {
+    logger.quiet("TEST_SDK_PATH: ${TEST_SDK_DIR}")
+}
+
+Version javaVersionInfo = Runtime.version()
+logger.quiet("java.runtime.version: " + javaVersionInfo)
+logger.quiet("java version: " + javaVersionInfo.feature())
+logger.quiet("java build number: " + javaVersionInfo.build().orElse(0))
+
+logger.quiet("jdk.runtime.version: " + jdkVersionInfo)
+logger.quiet("jdk version: " + jdkVersionInfo.feature())
+logger.quiet("jdk build: " + javaVersionInfo.build().orElse(0))
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("Java target version: ${JAVA_TARGET_VERSION}")
@@ -1939,41 +1945,6 @@ void addValidateSourceSets(Project project, Collection<SourceSet> sourceSets) {
     addValidateSourceSets(project, sourceSets, []);
 }
 
-
-/**
- * Parses a JDK version string. The string must be in one of the following
- * two formats:
- *
- *     major.minor.subminor
- * or
- *     major.minor.subminor_update
- *
- * In both cases a list of 4 integers is returned, with element 3 set to
- * 0 in the former case.
- */
-List parseJdkVersion(String version) {
-    def arr = version.split("[_\\.]");
-    def intArr = [];
-    arr.each { s -> intArr += Integer.parseInt(s); }
-    while (intArr.size() < 4) intArr += 0;
-    return intArr;
-}
-
-/**
- * Returns -1, 0, or 1 depending on whether JDK version "a" is less than,
- * equal to, or grater than version "b".
- */
-int compareJdkVersion(String a, String b) {
-    def aIntArr = parseJdkVersion(a);
-    def bIntArr = parseJdkVersion(b);
-
-    for (int i = 0; i < 4; i++) {
-        if (aIntArr[i] < bIntArr[i]) return -1;
-        if (aIntArr[i] > bIntArr[i]) return  1;
-    }
-    return 0;
-}
-
 /**
  * Returns true if the name of task or name of task's project contains word test/Test.
  */
@@ -1985,15 +1956,9 @@ boolean isTestTask(Task task) {
 // Task to verify the minimum level of Java needed to build JavaFX
 task verifyJava() {
     doLast {
-        def status = compareJdkVersion(jdkVersion, jfxBuildJdkVersionMin);
-        if (status < 0) {
-            fail("java version mismatch: JDK version (${jdkVersion}) < minimum version (${jfxBuildJdkVersionMin})")
-        } else if (status == 0) {
-            def buildNum = Integer.parseInt(jdkBuildNumber)
-            def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
-            if (buildNum != 0 && buildNum < minBuildNum) {
-                fail("JDK build number ($buildNum) < minimum build number ($minBuildNum)")
-            }
+        Version minVersionInfo = Version.parse("${jfxBuildJdkVersionMin}+${jfxBuildJdkBuildnumMin}") // from build.properties
+        if (jdkVersionInfo.compareTo(minVersionInfo) < 0) {
+            fail("java version mismatch: JDK version (${jdkVersionInfo}) < minimum version (${minVersionInfo})")
         }
     }
 }
@@ -2085,7 +2050,7 @@ allprojects {
         repositories {
             mavenCentral()
             ivy {
-                url "https://download.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110/plugins/"
+                url "https://download.eclipse.org/eclipse/updates/${eclipseUpdatesiteVersion}/plugins/"
                 metadataSources {
                     artifact()
                 }
@@ -2120,7 +2085,7 @@ allprojects {
     }
 
     if (JFX_DEPS_URL == "" && IS_COMPILE_WEBKIT) {
-        def icuReleaseVersion = icuVersion.replaceAll('\\.', '-')
+        def icuReleaseVersion = "${icuVersion}".replaceAll('\\.', '-')
         repositories {
             ivy {
                 url icuRepositoryURL
@@ -2159,18 +2124,15 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testImplementation group: "junit", name: "junit", version: "4.13.2"
-        testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "1.3"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
-        testImplementation group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
-        testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
-        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "1.8.1"
-        testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "${junitJupiterVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "${junitJupiterVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "${junitJupiterVersion}"
+        testImplementation group: "org.opentest4j", name: "opentest4j", version: "${opentest4jVersion}"
+        testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "${apiguardianVersion}"
+        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "${junitJupiterVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "${junitPlatformVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "${junitPlatformVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "${junitPlatformVersion}"
 
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
@@ -2201,8 +2163,7 @@ allprojects {
         }
 
         if (IS_HEADLESS_TEST) {
-            systemProperty 'glass.platform', 'Monocle'
-            systemProperty 'monocle.platform', 'Headless'
+            systemProperty 'glass.platform', 'Headless'
             systemProperty 'prism.order', 'sw'
             systemProperty 'com.sun.javafx.gestures.zoom', 'true'
             systemProperty 'com.sun.javafx.gestures.rotate', 'true'
@@ -2212,6 +2173,8 @@ allprojects {
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
         systemProperty 'junit.jupiter.execution.timeout.test.method.default', JUNIT_TEST_TIMEOUT
         systemProperty 'junit.jupiter.execution.timeout.lifecycle.method.default', JUNIT_LIFECYCLE_TIMEOUT
+        systemProperty 'javafx.enablePreview', 'true'
+        systemProperty 'javafx.suppressPreviewWarning', 'true'
     }
 
     compileTestJava {
@@ -2331,10 +2294,6 @@ project(":graphics") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
 
-    // FIXME: Remove this setting when JDK-8334137 is fixed
-    // Disable javac -Werror until we stop using sun.misc.Unsafe
-    project.ext.disableJavacWerror = true
-
     getConfigurations().create("antlr");
 
     sourceSets {
@@ -2357,7 +2316,7 @@ project(":graphics") {
     }
 
     dependencies {
-        antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
+        antlr group: "org.antlr", name: "antlr4", version: "${antlr4Version}", classifier: "complete"
         testImplementation project(":base").sourceSets.test.output
         implementation project(':base')
     }
@@ -2729,7 +2688,7 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -2760,7 +2719,7 @@ project(":graphics") {
             libsDir.mkdirs();
 
             def allLibsPresent = true
-            def libNames = [ "antlr4-4.7.2-complete.jar" ]
+            def libNames = [ "antlr4-${antlr4Version}-complete.jar" ]
             libNames.each { name ->
                 File f = new File(libsDir, name)
                 if (!f.exists()) allLibsPresent = false
@@ -2771,7 +2730,7 @@ project(":graphics") {
                 copy {
                     into libsDir
                     from f.getParentFile()
-                    include "**/antlr4-4.7.2-complete.jar"
+                    include "**/antlr4-${antlr4Version}-complete.jar"
                     includeEmptyDirs = false
                 }
             }
@@ -2818,7 +2777,7 @@ project(":controls") {
     }
 
     test {
-        def cssDir = file("${TEST_SDK_PATH}/shims/${moduleName}/javafx")
+        def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
         jvmArgs enableNativeGraphics
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
@@ -2857,6 +2816,135 @@ project(":controls") {
     processShimsResources.dependsOn(copyShimBssTask)
 
     addMavenPublication(project, [ 'graphics' ])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
+// Add a project declaration for each incubator module here, leaving the
+// incubator placeholder lines as an example.
+// See CSR JDK-8344644 for more information.
+// BEGIN: incubator placeholder
+//project(":incubator.mymod") {
+//    project.ext.buildModule = true
+//    project.ext.includeSources = true
+//    project.ext.moduleRuntime = true
+//    project.ext.moduleName = "jfx.incubator.mymod"
+//    project.ext.incubating = true
+//    ...
+//}
+// END: incubator placeholder
+
+project(":incubator.input") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.input"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.input'
+    ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    addMavenPublication(project, [ 'controls' ])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
+project(":incubator.richtext") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jfx.incubator.richtext"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [
+        'base',
+        'graphics',
+        'controls',
+        'incubator.input',
+        'incubator.richtext'
+    ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":incubator.input").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+        implementation project(':incubator.input')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    addMavenPublication(project, [ 'controls', 'incubator.input' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -2974,16 +3062,10 @@ project(":swt") {
     }
 
     test {
-        //enabled = IS_FULL_TEST && IS_SWT_TEST
-        enabled = false // FIXME: JIGSAW -- support this with modules
-        logger.info("JIGSAW Testing disabled for swt")
+        enabled = IS_FULL_TEST && IS_SWT_TEST
 
         jvmArgs enableNativeGraphics
 
-        if (IS_MAC) {
-            enabled = false
-            logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
-        }
     }
 
     addValidateSourceSets(project, sourceSets)
@@ -3647,6 +3729,30 @@ project(":media") {
     addValidateSourceSets(project, sourceSets)
 }
 
+project(":jsobject") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "jdk.jsobject"
+
+    sourceSets {
+        main
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [ 'jsobject' ])
+
+
+    dependencies {
+    }
+
+    addMavenPublication(project, [])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
 project(":web") {
     configurations {
         webkit
@@ -3677,11 +3783,11 @@ project(":web") {
     project.ext.moduleSourcePath = defaultModuleSourcePath
     project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
-    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web' ])
+    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'jsobject', 'web' ])
 
     dependencies {
         if (IS_COMPILE_WEBKIT) {
-            def icuFileVersion = icuVersion.replaceAll('\\.', '_')
+            def icuFileVersion = "${icuVersion}".replaceAll('\\.', '_')
             icu name: "icu4c-${icuFileVersion}-data-bin-l", ext: "zip"
         }
         implementation project(":base")
@@ -3748,13 +3854,11 @@ project(":web") {
         jvmArgs enableNativeAll
 
         // Run web tests in headless mode
-        systemProperty 'glass.platform', 'Monocle'
-        systemProperty 'monocle.platform', 'Headless'
+        systemProperty 'glass.platform', 'Headless'
         systemProperty 'prism.order', 'sw'
         dependsOn testWebArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
-        systemProperty 'java.security.manager', 'allow'
     }
 
     task compileJavaDOMBinding()
@@ -3798,11 +3902,27 @@ project(":web") {
                     if (t.name == "win") {
                         // To enable ninja build on Windows
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        // Adds compiler and linker flags if present
-                        def cFlags = webkitProperties.ccFlags?.join(' ') ?: ''
-                        def lFlags = webkitProperties.linkFlags?.join(' ') ?: ''
+                        // Ensure the Clang environment is set up properly
+                        // Set the Clang compiler and linker as webkit has dropped MSVC compiler support
+                        def clangCompiler = "clang-cl.exe"  // Set to the path of clang-cl
+                        def msvcLinker = "link.exe"  // Set to the path of clang-cl
+                        // Define the flags for Clang compilation and MSVC linking
+                        def cFlags = "-shared"
+                        def lFlags = "-shared"
+                        if (!IS_64) {
+                            cFlags += " /clang:-m32"
+                            lFlags += " /machine:x86"
+                        }
+                        // Pass Clang-specific flags
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_FLAGS='${cFlags}' -DCMAKE_CXX_FLAGS='${cFlags}'"
                         cmakeArgs = "$cmakeArgs -DCMAKE_SHARED_LINKER_FLAGS='${lFlags}'"
+
+                        // Specify Clang-CL as the compiler for C and C++
+                        cmakeArgs = "$cmakeArgs -DCMAKE_C_COMPILER=${clangCompiler} -DCMAKE_CXX_COMPILER=${clangCompiler}"
+                        // pass the MSVC bin dir for icu Third party lib
+                        cmakeArgs = "$cmakeArgs -DCMAKE_LINKER=${msvcLinker} -DMSVC_BIN_DIR='${WIN.MSVC_BIN_DIR}'"
+
+
                     } else if (t.name == "mac") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
@@ -3858,6 +3978,7 @@ project(":web") {
                     } else {
                         targetCpuBitDepthSwitch = "--32-bit"
                     }
+                    cmakeArgs += " -DWEBVIEW_BROWSER_VERSION=${WEBVIEW_VERSION}"
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
@@ -3931,7 +4052,7 @@ project(":web") {
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 
-    addMavenPublication(project, [ 'controls', 'media' ])
+    addMavenPublication(project, [ 'controls', 'media', 'jsobject' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3993,10 +4114,25 @@ project(":systemTests") {
         testImplementation project(":swing").sourceSets.test.output
     }
 
-    def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ]
+    def dependentProjects = [
+        'base',
+        'graphics',
+        'controls',
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //'incubator.mymod',
+        // END: incubator placeholder
+        'incubator.input',
+        'incubator.richtext',
+        'media',
+        'jsobject',
+        'web',
+        'swing',
+        'fxml'
+    ]
     commonModuleSetup(project, dependentProjects)
 
-    File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
 
     File stRunArgsFile = new File(project.buildDir,"st.run.args");
@@ -4122,14 +4258,16 @@ project(":systemTests") {
         // enable native access for all modules with native code
         jvmArgs enableNativeAll
 
-        // Parse testPatchModuleArgs looking for "--module-path".
+        maxHeapSize = "1000m"
+
+        // Parse testPatchModuleArgs looking for "*module-path".
         // Save path if found so we can pass it to the module launcher tests
         def pendingModulePath = false
         testPatchModuleArgs.each { str ->
             if (pendingModulePath) {
                 project.ext.launcherModulePath = str;
                 pendingModulePath = false
-            } else if (str == "--module-path") {
+            } else if (str.endsWith("module-path")) {
                 pendingModulePath = true
             }
         }
@@ -4147,14 +4285,11 @@ project(":systemTests") {
         if (project.hasProperty("launcherModulePath")) {
             systemProperties 'worker.module.path': launcherModulePath
         }
-        systemProperties 'worker.patch.policy': cygpath(testJavaPolicyFile.path)
         systemProperties 'worker.java.cmd': JAVA
 
         if (rootProject.hasProperty("ClipShapeTest.numTests")) {
             systemProperty "ClipShapeTest.numTests", rootProject.getProperty("ClipShapeTest.numTests")
         }
-
-        systemProperty 'java.security.manager', 'allow'
 
         if (!IS_USE_ROBOT) {
             // Disable all robot-based visual tests
@@ -4204,12 +4339,15 @@ allprojects {
             compile.options.incremental = IS_INCREMENTAL
         }
 
-        if (project.hasProperty('skipJavaCompilerOptionRelease') &&
-                project.ext.skipJavaCompilerOptionRelease) {
+        def isCompileTestTask = compile.name.startsWith("compileTest")
+        if (!isCompileTestTask) {
+            if (project.hasProperty('skipJavaCompilerOptionRelease') &&
+                    project.ext.skipJavaCompilerOptionRelease) {
 
-            logger.info "Using 'javac -source/-target' for ${compile}"
-        } else {
-            compile.options.release = JAVA_TARGET_VERSION
+                logger.info "Using 'javac -source/-target' for ${compile}"
+            } else {
+                compile.options.release = JAVA_TARGET_VERSION
+            }
         }
 
         compile.options.debug = true // we always generate debugging info in the class files
@@ -4431,13 +4569,48 @@ task createMSPfile() {
     }
 }
 
-task javadoc(type: Javadoc, dependsOn: createMSPfile) {
+task createOverviewFile() {
+    def srcDir = rootProject.projectDir
+    def dstDir = rootProject.buildDir
+    def fileName = "overview.html"
+
+    inputs.file(new File(srcDir, fileName))
+    outputs.file(new File(dstDir, fileName))
+
+    doLast {
+        copy {
+            from "$srcDir/$fileName"
+            into dstDir
+
+            filter { line ->
+                line.replaceAll("@JAVADOC_VERSION@", jfxReleaseMajorVersion)
+            }
+        }
+    }
+}
+
+task javadoc(type: Javadoc, dependsOn: [createMSPfile, createOverviewFile]) {
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":media"),
-            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
+        project(":base"),
+        project(":graphics"),
+        project(":controls"),
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //project(":incubator.mymod"),
+        // END: incubator placeholder
+        project(":incubator.input"),
+        project(":incubator.richtext"),
+        project(":media"),
+        project(":swing"),
+        /*project(":swt"),*/
+        project(":fxml"),
+        project(":jsobject"),
+        project(":web")
+    ]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
@@ -4449,6 +4622,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.tags("implSpec:a:Implementation Requirements:")
     options.tags("implNote:a:Implementation Note:")
     options.tags("interpolationType:a:Interpolation Type:")
+    options.tags("mediaFeature:a:Media Feature:")
     options.tags("param")
     options.tags("return")
     options.tags("throws")
@@ -4463,6 +4637,9 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.addStringOption("-since-label").setValue("New API since JavaFX 9")
     options.addStringOption("Xmaxwarns").setValue("1000")
     options.addStringOption("Xmaxerrs").setValue("1000")
+
+    String overviewFile = "$buildDir/overview.html"
+    options.addStringOption("overview").setValue(overviewFile)
 
     String draftMsg = IS_MILESTONE_FCS ? "" : "<br><b>DRAFT ${RELEASE_VERSION_LONG}</b>"
     String javadocTitleImpl = javadocTitle
@@ -4668,12 +4845,11 @@ project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
     // Download the Lucene libraries needed for the Ensemble8 app
-    def luceneVersion = "7.7.3"
     getConfigurations().create("lucene");
     dependencies {
-        lucene group: "org.apache.lucene", name: "lucene-core", version: luceneVersion
-        lucene group: "org.apache.lucene", name: "lucene-grouping", version: luceneVersion
-        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: luceneVersion
+        lucene group: "org.apache.lucene", name: "lucene-core", version: "${luceneVersion}"
+        lucene group: "org.apache.lucene", name: "lucene-grouping", version: "${luceneVersion}"
+        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: "${luceneVersion}"
     }
 
     // Copy Lucene libraries into the Ensemble8/lib directory
@@ -4778,9 +4954,13 @@ compileTargets { t ->
         def chmodArtifactsSdkTask = task("chmodArtifactsSdk$t.capital", dependsOn: copyArtifactsSdkTask) {
             if (IS_WINDOWS && IS_USE_CYGWIN) {
                 doLast {
-                    exec {
-                        workingDir(sdkArtifactsDir)
-                        commandLine("chmod", "-R", "755", ".")
+                    if (IS_CHMOD_ARTIFACTS) {
+                        exec {
+                            workingDir(sdkArtifactsDir)
+                            commandLine("chmod", "-R", "755", ".")
+                        }
+                    } else {
+                        println "Skipping 'chmod -R', CHMOD_ARTIFACTS=$CHMOD_ARTIFACTS"
                     }
                 }
             }
@@ -4936,18 +5116,6 @@ compileTargets { t ->
                 outputs.file(f)
         }
 
-        def outputPolicyDir = "${modulesConfDir}/java.base/security"
-        def outputPolicyFile = file("${outputPolicyDir}/java.policy.extra")
-
-        outputs.file(outputPolicyFile)
-        moduleProjList.each { project ->
-            def policyDir = "${project.projectDir}/src/main/conf/security"
-            def policyFile = file("${policyDir}/java.policy")
-            if (policyFile.exists()) {
-                inputs.file(policyFile)
-            }
-        }
-
         doLast {
             Map extras = [:]
 
@@ -4990,16 +5158,6 @@ compileTargets { t ->
                     f << l
                     f << "\n"
                 }
-            }
-
-            // concatecate java.policy files into a single file
-            //
-            mkdir outputPolicyDir
-            outputPolicyFile.delete()
-            moduleProjList.each { project ->
-                def policyDir = "${project.projectDir}/src/main/conf/security"
-                def policyFile = file("${policyDir}/java.policy")
-                if (policyFile.exists()) outputPolicyFile << policyFile.text
             }
         }
     }
@@ -5108,7 +5266,7 @@ compileTargets { t ->
     // ============================================================
 
     def standaloneSdkDirName = "${platformPrefix}sdk"
-    def standaloneSdkDir = "${TEST_SDK_PATH}/${standaloneSdkDirName}"
+    def standaloneSdkDir = "${TEST_SDK_DIR}/${standaloneSdkDirName}"
     def standaloneLibDir = "${standaloneSdkDir}/lib"
     def libDest=targetProperties.libDest
     def standaloneNativeDir = "${standaloneSdkDir}/${libDest}"
@@ -5737,15 +5895,9 @@ compileTargets { t ->
         File testRunArgsFile = new File(rootProject.buildDir, TESTRUNARGSFILE)
         //test (shimed) version
         File testCompileArgsFile = new File(rootProject.buildDir, TESTCOMPILEARGSFILE)
-        // And a test java.policy file
-        File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE)
-        // and the non-test version to go with run.args
-        File runJavaPolicyFile = new File(rootProject.buildDir, RUNJAVAPOLICYFILE);
 
         outputs.file(testRunArgsFile)
         outputs.file(testCompileArgsFile)
-        outputs.file(testJavaPolicyFile)
-        outputs.file(runJavaPolicyFile)
         inputs.file(EXTRAADDEXPORTS);
 
         doLast() {
@@ -5760,9 +5912,6 @@ compileTargets { t ->
 
             testRunArgsFile.delete()
             testCompileArgsFile.delete()
-
-            testJavaPolicyFile.delete()
-            runJavaPolicyFile.delete()
 
             List<String> modpath = []
 
@@ -5779,16 +5928,6 @@ compileTargets { t ->
                         def dstModuleDir = cygpath(dir.path)
                         modpath << "${project.ext.moduleName}=${dstModuleDir}"
 
-                        String themod = dir.toURI()
-                        testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
-
-                        dir = new File(rootProject.buildDir, "modular-sdk/modules/${project.ext.moduleName}")
-                        themod = dir.toURI()
-                        runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
                     }
                 }
 
@@ -5806,24 +5945,13 @@ compileTargets { t ->
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
-                           dir = new File(TEST_SDK_PATH, "shims/${project.ext.moduleName}")
+                           dir = new File(TEST_SDK_DIR, "shims/${project.ext.moduleName}")
                         } else {
-                           dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
+                           dir = new File(TEST_SDK_DIR, "sdk/lib/${project.ext.moduleName}.jar")
                         }
 
                         def dstModuleDir = cygpath(dir.path)
                         modpath << "${dstModuleDir}"
-
-                        String themod = dir.toURI()
-                        testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
-
-                        dir = new File(TEST_SDK_PATH, "sdk/lib/${project.ext.moduleName}.jar")
-                        themod = dir.toURI()
-                        runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
                     }
                 }
 
@@ -5869,6 +5997,8 @@ compileTargets { t ->
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
 
+            def incubating = project.hasProperty("incubating") && project.ext.incubating
+
             // On Windows, copy the native libraries in the jmod image
             // to a "javafx" subdir to avoid conflicting with the Microsoft
             // DLLs that are shipped with the JDK
@@ -5909,6 +6039,10 @@ compileTargets { t ->
                         args(srcLegalDir)
                         if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
+                        }
+                        if (incubating) {
+                            args("--do-not-resolve-by-default")
+                            args("--warn-if-resolved=incubating")
                         }
                         args(jmodFile)
                     }

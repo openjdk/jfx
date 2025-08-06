@@ -38,6 +38,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 #if OS(LINUX)
@@ -93,7 +94,7 @@ String NavigatorBase::platform() const
     static std::once_flag onceKey;
     std::call_once(onceKey, [] {
         struct utsname osname;
-        platformName.construct(uname(&osname) >= 0 ? makeString(osname.sysname, " ", osname.machine) : emptyString());
+        platformName.construct(uname(&osname) >= 0 ? makeString(span(osname.sysname), " "_s, span(osname.machine)) : emptyString());
     });
     return platformName->isolatedCopy();
 #elif PLATFORM(IOS_FAMILY)

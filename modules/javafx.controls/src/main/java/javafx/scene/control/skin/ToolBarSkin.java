@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.CustomMenuItem;
@@ -67,12 +68,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.traversal.TraversalDirection;
 import javafx.scene.traversal.TraversalPolicy;
 import javafx.stage.WindowEvent;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
  * Default skin implementation for the {@link ToolBar} control.
@@ -164,11 +165,11 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             @Override
             public Node select(Parent root, Node owner, TraversalDirection dir) {
 
-                dir = dir.getDirectionForNodeOrientation(control.getEffectiveNodeOrientation());
+                dir = TraversalUtils.getDirectionForNodeOrientation(dir, control.getEffectiveNodeOrientation());
 
                 final ObservableList<Node> boxChildren = box.getChildren();
                 if (owner == overflowMenu) {
-                    if (dir.isForward()) {
+                    if (TraversalUtils.isForward(dir)) {
                         return null;
                     } else {
                         Node selected = selectPrev(boxChildren.size() - 1, root);
@@ -182,6 +183,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     // The current focus owner is a child of some Toolbar's item
                     Parent item = owner.getParent();
                     while (!boxChildren.contains(item)) {
+                        if (item == null) {
+                            return null;
+                        }
                         item = item.getParent();
                     }
                     Node selected = TraversalPolicy.getDefault().select(item, owner, dir);
@@ -193,7 +197,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 }
 
                 if (idx >= 0) {
-                    if (dir.isForward()) {
+                    if (TraversalUtils.isForward(dir)) {
                         Node selected = selectNext(idx + 1, root);
                         if (selected != null) return selected;
                         if (overflow) {
@@ -665,13 +669,11 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     }
 
     private double getToolbarLength(ToolBar toolbar) {
-        double length;
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            length = snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing();
+            return snapSizeY(snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing());
         } else {
-            length = snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing();
+            return snapSizeX(snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing());
         }
-        return length;
     }
 
     /**
@@ -786,7 +788,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 } else {
                     CustomMenuItem customMenuItem = new CustomMenuItem(node);
 
-                    // RT-36455 (JDK-8096292):
+                    // JDK-8096292 (JDK-8096292):
                     // We can't be totally certain of all nodes, but for the
                     // most common nodes we can check to see whether we should
                     // hide the menu when the node is clicked on. The common

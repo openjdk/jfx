@@ -26,11 +26,13 @@
 #include "config.h"
 #include "CSSFontPaletteValuesOverrideColorsValue.h"
 
+#include <wtf/text/MakeString.h>
+
 namespace WebCore {
 
 String CSSFontPaletteValuesOverrideColorsValue::customCSSText() const
 {
-    return makeString(m_key->cssText(), " ", m_color->cssText());
+    return makeString(m_key->cssText(), ' ', m_color->cssText());
 }
 
 bool CSSFontPaletteValuesOverrideColorsValue::equals(const CSSFontPaletteValuesOverrideColorsValue& other) const

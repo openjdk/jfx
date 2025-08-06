@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,12 +28,12 @@ package test.com.sun.javafx.scene.traversal;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.TraversalDirection;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.FocusTraversal;
-import javafx.scene.traversal.TraversalDirection;
 import javafx.scene.traversal.TraversalPolicy;
 import javafx.stage.Stage;
 import org.junit.AfterClass;
@@ -149,7 +149,7 @@ public final class TraversalPolicyTest {
         checkFocused(from);
 
         for (Node n : nodes) {
-            boolean success = FocusTraversal.traverse(from, dir, false);
+            boolean success = Node.traverse(from, dir, false);
             Assertions.assertTrue(success, "failed to traverse from node: " + from);
             firePulse();
             checkFocused(n);

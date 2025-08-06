@@ -33,6 +33,7 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/DateMath.h>
 #include <wtf/WallTime.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -59,12 +60,12 @@ std::optional<TimeZoneID> parseTimeZoneName(StringView string)
 }
 
 template<typename CharType>
-static int32_t parseDecimalInt32(const CharType* characters, unsigned length)
+static int32_t parseDecimalInt32(std::span<const CharType> characters)
 {
     int32_t result = 0;
-    for (unsigned index = 0; index < length; ++index) {
-        ASSERT(isASCIIDigit(characters[index]));
-        result = (result * 10) + characters[index] - '0';
+    for (auto character : characters) {
+        ASSERT(isASCIIDigit(character));
+        result = (result * 10) + character - '0';
     }
     return result;
 }
@@ -81,7 +82,7 @@ static void handleFraction(Duration& duration, int factor, StringView fractionSt
     for (unsigned i = 0; i < fractionLength; i++)
         padded[i] = fractionString[i];
 
-    int64_t fraction = static_cast<int64_t>(factor) * parseDecimalInt32(padded.data(), 9);
+    int64_t fraction = static_cast<int64_t>(factor) * parseDecimalInt32(padded.span());
     if (!fraction)
         return;
 
@@ -114,7 +115,7 @@ static std::optional<Duration> parseDuration(StringParsingBuffer<CharacterType>&
 {
     // ISO 8601 duration strings are like "-P1Y2M3W4DT5H6M7.123456789S". Notes:
     // - case insensitive
-    // - sign: + - −(U+2212)
+    // - sign: + -
     // - separator: . ,
     // - T is present iff there is a time part
     // - integral parts can have any number of digits but fractional parts have at most 9
@@ -127,7 +128,7 @@ static std::optional<Duration> parseDuration(StringParsingBuffer<CharacterType>&
     int factor = 1;
     if (*buffer == '+')
         buffer.advance();
-    else if (*buffer == '-' || *buffer == minusSign) {
+    else if (*buffer == '-') {
         factor = -1;
         buffer.advance();
     }
@@ -141,7 +142,7 @@ static std::optional<Duration> parseDuration(StringParsingBuffer<CharacterType>&
         while (digits < buffer.lengthRemaining() && isASCIIDigit(buffer[digits]))
             digits++;
 
-        double integer = factor * parseInt({ buffer.position(), digits }, 10);
+        double integer = factor * parseInt(buffer.span().first(digits), 10);
         buffer.advanceBy(digits);
         if (buffer.atEnd())
             return std::nullopt;
@@ -186,7 +187,7 @@ static std::optional<Duration> parseDuration(StringParsingBuffer<CharacterType>&
         while (digits < buffer.lengthRemaining() && isASCIIDigit(buffer[digits]))
             digits++;
 
-        double integer = factor * parseInt({ buffer.position(), digits }, 10);
+        double integer = factor * parseInt(buffer.span().first(digits), 10);
         buffer.advanceBy(digits);
         if (buffer.atEnd())
             return std::nullopt;
@@ -200,7 +201,7 @@ static std::optional<Duration> parseDuration(StringParsingBuffer<CharacterType>&
             if (!digits || digits > 9)
                 return std::nullopt;
 
-            fractionalPart = { buffer.position(), digits };
+            fractionalPart = buffer.span().first(digits);
             buffer.advanceBy(digits);
             if (buffer.atEnd())
                 return std::nullopt;
@@ -348,8 +349,8 @@ static std::optional<PlainTime> parseTimeSpec(StringParsingBuffer<CharacterType>
         return PlainTime(hour, minute, second, 0, 0, 0);
     buffer.advance();
 
-    unsigned digits = 0;
-    unsigned maxCount = std::min(buffer.lengthRemaining(), 9u);
+    size_t digits = 0;
+    size_t maxCount = std::min<size_t>(buffer.lengthRemaining(), 9);
     for (; digits < maxCount; ++digits) {
         if (!isASCIIDigit(buffer[digits]))
             break;
@@ -358,13 +359,13 @@ static std::optional<PlainTime> parseTimeSpec(StringParsingBuffer<CharacterType>
         return std::nullopt;
 
     Vector<LChar, 9> padded(9, '0');
-    for (unsigned i = 0; i < digits; ++i)
+    for (size_t i = 0; i < digits; ++i)
         padded[i] = buffer[i];
     buffer.advanceBy(digits);
 
-    unsigned millisecond = parseDecimalInt32(padded.data(), 3);
-    unsigned microsecond = parseDecimalInt32(padded.data() + 3, 3);
-    unsigned nanosecond = parseDecimalInt32(padded.data() + 6, 3);
+    unsigned millisecond = parseDecimalInt32(padded.span().first(3));
+    unsigned microsecond = parseDecimalInt32(padded.subspan(3, 3));
+    unsigned nanosecond = parseDecimalInt32(padded.subspan(6, 3));
 
     return PlainTime(hour, minute, second, millisecond, microsecond, nanosecond);
 }
@@ -391,7 +392,7 @@ static std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringParsingBuffer<
     int64_t factor = 1;
     if (*buffer == '+')
         buffer.advance();
-    else if (*buffer == '-' || *buffer == minusSign) {
+    else if (*buffer == '-') {
         factor = -1;
         buffer.advance();
     } else
@@ -466,7 +467,7 @@ static std::optional<int64_t> parseUTCOffsetInMinutes(StringParsingBuffer<Charac
     int64_t factor = 1;
     if (*buffer == '+')
         buffer.advance();
-    else if (*buffer == '-' || *buffer == minusSign) {
+    else if (*buffer == '-') {
         factor = -1;
         buffer.advance();
     } else
@@ -542,7 +543,6 @@ static bool canBeTimeZone(const StringParsingBuffer<CharacterType>& buffer, Char
     // https://tc39.es/proposal-temporal/#prod-TimeZoneUTCOffsetSign
     case '+':
     case '-':
-    case minusSign:
         return true;
     // TimeZoneBracketedAnnotation
     // https://tc39.es/proposal-temporal/#prod-TimeZoneBracketedAnnotation
@@ -579,10 +579,12 @@ static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneBrackete
         return std::nullopt;
     buffer.advance();
 
+    if (*buffer == '!')
+        buffer.advance();
+
     switch (static_cast<UChar>(*buffer)) {
     case '+':
-    case '-':
-    case minusSign: {
+    case '-': {
         // TimeZoneUTCOffsetName is the same to TimeZoneNumericUTCOffset.
         auto offset = parseTimeZoneNumericUTCOffset(buffer);
         if (!offset)
@@ -696,8 +698,7 @@ static std::optional<std::variant<Vector<LChar>, int64_t>> parseTimeZoneBrackete
         if (!isValidComponent(currentNameComponentStartIndex, nameLength))
             return std::nullopt;
 
-        Vector<LChar> result(buffer.position(), nameLength);
-        buffer.advanceBy(nameLength);
+        Vector<LChar> result(buffer.consume(nameLength));
 
         if (buffer.atEnd())
             return std::nullopt;
@@ -731,8 +732,7 @@ static std::optional<TimeZoneRecord> parseTimeZone(StringParsingBuffer<Character
     // TimeZoneUTCOffsetSign
     // https://tc39.es/proposal-temporal/#prod-TimeZoneUTCOffsetSign
     case '+':
-    case '-':
-    case minusSign: {
+    case '-': {
         auto offset = parseTimeZoneNumericUTCOffset(buffer);
         if (!offset)
             return std::nullopt;
@@ -834,8 +834,7 @@ static std::optional<CalendarRecord> parseCalendar(StringParsingBuffer<Character
     if (!isValidComponent(currentNameComponentStartIndex, nameLength))
         return std::nullopt;
 
-    Vector<LChar, maxCalendarLength> result(buffer.position(), nameLength);
-    buffer.advanceBy(nameLength);
+    Vector<LChar, maxCalendarLength> result(buffer.consume(nameLength));
 
     if (buffer.atEnd())
         return std::nullopt;
@@ -904,7 +903,7 @@ static std::optional<PlainDate> parseDate(StringParsingBuffer<CharacterType>& bu
     if (*buffer == '+') {
         buffer.advance();
         sixDigitsYear = true;
-    } else if (*buffer == '-' || *buffer == minusSign) {
+    } else if (*buffer == '-') {
         yearFactor = -1;
         buffer.advance();
         sixDigitsYear = true;
@@ -919,7 +918,7 @@ static std::optional<PlainDate> parseDate(StringParsingBuffer<CharacterType>& bu
             if (!isASCIIDigit(buffer[index]))
                 return std::nullopt;
         }
-        year = parseDecimalInt32(buffer.position(), 6) * yearFactor;
+        year = parseDecimalInt32(std::span { buffer.position(), 6 }) * yearFactor;
         if (!year && yearFactor < 0)
             return std::nullopt;
         buffer.advanceBy(6);
@@ -930,7 +929,7 @@ static std::optional<PlainDate> parseDate(StringParsingBuffer<CharacterType>& bu
             if (!isASCIIDigit(buffer[index]))
                 return std::nullopt;
         }
-        year = parseDecimalInt32(buffer.position(), 4);
+        year = parseDecimalInt32(std::span { buffer.position(), 4 });
         buffer.advanceBy(4);
     }
 
@@ -1011,12 +1010,8 @@ static std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::option
         return std::tuple { WTFMove(plainDate.value()), WTFMove(plainTime), WTFMove(timeZone) };
     }
 
-    if (canBeTimeZone(buffer, *buffer)) {
-        auto timeZone = parseTimeZone(buffer);
-        if (!timeZone)
+    if (canBeTimeZone(buffer, *buffer))
             return std::nullopt;
-        return std::tuple { WTFMove(plainDate.value()), std::nullopt, WTFMove(timeZone) };
-    }
 
     return std::tuple { WTFMove(plainDate.value()), std::nullopt, std::nullopt };
 }

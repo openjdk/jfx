@@ -37,17 +37,17 @@ class DOMMatrix;
 template<typename> class ExceptionOr;
 
 class CSSTransformValue final : public CSSStyleValue {
-    WTF_MAKE_ISO_ALLOCATED(CSSTransformValue);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSTransformValue);
 public:
     static ExceptionOr<Ref<CSSTransformValue>> create(const CSSTransformListValue&);
-    static ExceptionOr<Ref<CSSTransformValue>> create(Vector<RefPtr<CSSTransformComponent>>&&);
+    static ExceptionOr<Ref<CSSTransformValue>> create(Vector<Ref<CSSTransformComponent>>&&);
 
     virtual ~CSSTransformValue();
 
     size_t length() const { return m_components.size(); }
     bool isSupportedPropertyIndex(unsigned index) const { return index < m_components.size(); }
     RefPtr<CSSTransformComponent> item(size_t);
-    ExceptionOr<RefPtr<CSSTransformComponent>> setItem(size_t, Ref<CSSTransformComponent>&&);
+    ExceptionOr<Ref<CSSTransformComponent>> setItem(size_t, Ref<CSSTransformComponent>&&);
 
     bool is2D() const;
 
@@ -58,10 +58,10 @@ public:
     RefPtr<CSSValue> toCSSValue() const final;
 
 private:
-    CSSTransformValue(Vector<RefPtr<CSSTransformComponent>>&&);
+    CSSTransformValue(Vector<Ref<CSSTransformComponent>>&&);
     void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
 
-    Vector<RefPtr<CSSTransformComponent>> m_components;
+    Vector<Ref<CSSTransformComponent>> m_components;
 };
 
 } // namespace WebCore

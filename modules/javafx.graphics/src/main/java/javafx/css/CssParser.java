@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package javafx.css;
 
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.media.MediaRule;
+import com.sun.javafx.css.parser.CssLexer;
 import com.sun.javafx.css.FontFaceImpl;
 import com.sun.javafx.css.InterpolatorConverter;
 import com.sun.javafx.css.ParsedValueImpl;
@@ -34,6 +36,7 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
+import com.sun.javafx.css.media.MediaQueryParser;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
@@ -261,7 +264,7 @@ final public class CssParser {
             // Sometimes bad syntax causes an exception. The code should be
             // fixed to handle the bad syntax, but the fallback is
             // to handle the exception here. Uncaught, the exception can cause
-            // problems like RT-20311
+            // problems like JDK-8127922
             reportException(ex);
         }
 
@@ -288,6 +291,7 @@ final public class CssParser {
                 if (declarations != null && !declarations.isEmpty()) {
                     final Selector selector = Selector.getUniversalSelector();
                     final Rule rule = new Rule(
+                        null, // inline styles don't have media rules
                         Collections.singletonList(selector),
                         declarations
                     );
@@ -298,7 +302,7 @@ final public class CssParser {
                 // Sometimes bad syntax causes an exception. The code should be
                 // fixed to handle the bad syntax, but the fallback is
                 // to handle the exception here. Uncaught, the exception can cause
-                // problems like RT-20311
+                // problems like JDK-8127922
                 reportException(ex);
             }
             stylesheet.getRules().addAll(rules);
@@ -341,7 +345,7 @@ final public class CssParser {
             // Sometimes bad syntax causes an exception. The code should be
             // fixed to handle the bad syntax, but the fallback is
             // to handle the exception here. Uncaught, the exception can cause
-            // problems like RT-20311
+            // problems like JDK-8127922
             reportException(ex);
         }
         return value;
@@ -763,7 +767,7 @@ final public class CssParser {
              ParsedValueImpl pv = parse(root);
             if (pv.getConverter() == StyleConverter.getUrlConverter()) {
                 // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
-                // Pending RT-33574
+                // Pending JDK-8090988
                 pv = new ParsedValueImpl(new ParsedValue[] {pv},PaintConverter.ImagePatternConverter.getInstance());
             }
             return pv;
@@ -957,7 +961,7 @@ final public class CssParser {
                     // in the Declaration. If the value is not a lookup, then use str since the value might
                     // be a string which could have some case sensitive meaning
                     //
-                    // TODO: isIdent is needed here because of RT-38345. This effectively undoes RT-38201
+                    // TODO: isIdent is needed here because of JDK-8096053. This effectively undoes JDK-8095368
                     value = new ParsedValueImpl<String,String>(needsLookup ? text : str, null, isIdent || needsLookup);
                 }
             }
@@ -4152,6 +4156,8 @@ final public class CssParser {
     private static Stack<String> imports;
 
     private void parse(Stylesheet stylesheet, CssLexer lexer) {
+        MediaRule mediaRule = null;
+        int expectedRBraces = 0;
 
         // need to read the first token
         currentToken = nextToken(lexer);
@@ -4235,11 +4241,45 @@ final public class CssParser {
 
                 continue;
 
+            } else if ("media".equals(keyword)) {
+                mediaRule = mediaRule(lexer, mediaRule);
+
+                if (currentToken != null) {
+                    if (currentToken.getType() == CssLexer.LBRACE) {
+                        expectedRBraces++;
+                    }
+
+                    currentToken = nextToken(lexer);
+                    break; // break out of the loop here, as we might encounter a selector next
+                }
+            } else {
+                // Skip the unexpected at-rule.
+                skipAtRule(lexer);
             }
         }
 
         while ((currentToken != null) &&
                (currentToken.getType() != Token.EOF)) {
+
+            if (currentToken.getType() == CssLexer.AT_KEYWORD) {
+                currentToken = lexer.nextToken();
+                String keyword = currentToken.getText().toLowerCase(Locale.ROOT);
+                if ("media".equals(keyword)) {
+                    mediaRule = mediaRule(lexer, mediaRule);
+
+                    if (currentToken != null) {
+                        if (currentToken.getType() == CssLexer.LBRACE) {
+                            expectedRBraces++;
+                        }
+
+                        currentToken = nextToken(lexer);
+                        continue;
+                    }
+                } else {
+                    // Skip the unexpected at-rule.
+                    skipAtRule(lexer);
+                }
+            }
 
             List<Selector> selectors = selectors(lexer);
             if (selectors == null) return;
@@ -4282,12 +4322,92 @@ final public class CssParser {
                 return;
             }
 
-            stylesheet.getRules().add(new Rule(selectors, declarations));
+            stylesheet.getRules().add(new Rule(mediaRule, selectors, declarations));
 
             currentToken = nextToken(lexer);
 
+            while (expectedRBraces > 0) {
+                if (!consumeRBrace(lexer)) {
+                    return;
+                }
+
+                if (mediaRule != null) {
+                    mediaRule = mediaRule.getParent();
+                }
+
+                currentToken = nextToken(lexer);
+                expectedRBraces--;
+            }
         }
+
         currentToken = null;
+    }
+
+    private void skipAtRule(CssLexer lexer) {
+        String msg = MessageFormat.format(
+            "Unexpected at-rule [{0,number,#},{1,number,#}]",
+            currentToken.getLine(), currentToken.getOffset());
+
+        ParseError error = createError(msg);
+        if (LOGGER.isLoggable(Level.WARNING)) {
+            LOGGER.warning(error.toString());
+        }
+
+        reportError(error);
+
+        while ((currentToken = lexer.nextToken()) != null
+                && currentToken.getType() != CssLexer.SEMI
+                && currentToken.getType() != CssLexer.RBRACE) {
+            // Skip forward to the next SEMI or RBRACE.
+        }
+    }
+
+    private boolean consumeRBrace(CssLexer lexer) {
+        if (currentToken == null || currentToken.getType() != CssLexer.RBRACE) {
+            int line = currentToken != null ? currentToken.getLine() : -1;
+            int pos = currentToken != null ? currentToken.getOffset() : -1;
+            String msg = String.format("Expected RBRACE at [%d,%d]", line, pos);
+            ParseError error = createError(msg);
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning(error.toString());
+            }
+
+            reportError(error);
+            currentToken = null;
+            return false;
+        }
+
+        currentToken = lexer.nextToken();
+        return true;
+    }
+
+    private MediaRule mediaRule(CssLexer lexer, MediaRule mediaRule) {
+        // The media query expression contains all tokens (except for WS and NL) up to the
+        // next SEMI or LBRACE. We collect all of these tokens and hand them over to the
+        // special-purpose MediaQueryParser.
+        List<Token> mediaQueryTokens = new ArrayList<>();
+        while ((currentToken = lexer.nextToken()) != null
+                && currentToken.getType() != CssLexer.SEMI
+                && currentToken.getType() != CssLexer.LBRACE) {
+            if (currentToken.getType() != CssLexer.WS && currentToken.getType() != CssLexer.NL) {
+                mediaQueryTokens.add(currentToken);
+            }
+        }
+
+        var mediaQueryParser = new MediaQueryParser((token, errorMsg) -> {
+            String formattedErrorMsg = token != null
+                ? String.format("%s at [%d,%d]", errorMsg, token.getLine(), token.getOffset())
+                : errorMsg;
+
+            ParseError error = createError(formattedErrorMsg);
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning(error.toString());
+            }
+
+            reportError(error);
+        });
+
+        return new MediaRule(mediaQueryParser.parseMediaQueryList(mediaQueryTokens), mediaRule);
     }
 
     private FontFace fontFace(CssLexer lexer) {
@@ -4480,7 +4600,7 @@ final public class CssParser {
             // When we load an imported stylesheet, the sourceOfStylesheet field
             // gets set to the new stylesheet. Once it is done loading we must reset
             // this field back to the previous value, otherwise we will potentially
-            // run into problems (for example, see RT-40346).
+            // run into problems (for example, see JDK-8093583).
             sourceOfStylesheet = _sourceOfStylesheet;
         }
         if (importedStylesheet == null) {
@@ -4566,7 +4686,7 @@ final public class CssParser {
             }
         }
 
-        // RT-15473
+        // JDK-8114387
         // We might return from selector with a NL token instead of an
         // LBRACE, so skip past the NL here.
         if (currentToken != null && currentToken.getType() == CssLexer.NL) {
@@ -4775,7 +4895,7 @@ final public class CssParser {
             }
 
             // declaration; declaration; ???
-            // RT-17830 - allow declaration;;
+            // JDK-8128890 - allow declaration;;
             while ((currentToken != null) &&
                     (currentToken.getType() == CssLexer.SEMI)) {
                 currentToken = nextToken(lexer);
@@ -4802,7 +4922,7 @@ final public class CssParser {
         if ((currentToken == null) ||
             (currentToken.getType() != CssLexer.IDENT)) {
 //
-//            RT-16547: this warning was misleading because an empty rule
+//            JDK-8128013: this warning was misleading because an empty rule
 //            not invalid. Some people put in empty rules just as placeholders.
 //
 //            if (LOGGER.isLoggable(PlatformLogger.WARNING)) {

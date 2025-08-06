@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,6 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Collection;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
@@ -56,6 +51,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  */

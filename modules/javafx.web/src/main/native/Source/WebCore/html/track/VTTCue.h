@@ -90,7 +90,8 @@ enum class VTTAlignSetting : uint8_t {
 // ----------------------------
 
 class VTTCueBox : public TextTrackCueBox {
-    WTF_MAKE_ISO_ALLOCATED(VTTCueBox);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(VTTCueBox);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(VTTCueBox);
 public:
     static Ref<VTTCueBox> create(Document&, VTTCue&);
 
@@ -114,7 +115,7 @@ class VTTCue
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_ISO_ALLOCATED(VTTCue);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(VTTCue);
 public:
     static Ref<VTTCue> create(Document&, double start, double end, String&& content);
     static Ref<VTTCue> create(Document&, const WebVTTCueData&);
@@ -262,7 +263,7 @@ private:
     const Logger& logger() const final { return *m_logger; }
     const void* logIdentifier() const final;
     WTFLogChannel& logChannel() const final;
-    const char* logClassName() const final { return "VTTCue"; }
+    ASCIILiteral logClassName() const final { return "VTTCue"_s; }
 #endif
 
     String m_content;

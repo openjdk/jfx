@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CRYPTO)
 #include "CryptoAlgorithmHmacKeyParams.h"
 #include "CryptoKeyHMAC.h"
+#include "ScriptExecutionContext.h"
 #include <variant>
 
 namespace WebCore {
@@ -58,17 +59,19 @@ CryptoAlgorithmIdentifier CryptoAlgorithmHMAC::identifier() const
 
 void CryptoAlgorithmHMAC::sign(const CryptoAlgorithmParameters&, Ref<CryptoKey>&& key, Vector<uint8_t>&& data, VectorCallback&& callback, ExceptionCallback&& exceptionCallback, ScriptExecutionContext& context, WorkQueue& workQueue)
 {
+    UseCryptoKit useCryptoKit = context.settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
     dispatchOperationInWorkQueue(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
-        [key = WTFMove(key), data = WTFMove(data)] {
-            return platformSign(downcast<CryptoKeyHMAC>(key.get()), data);
+        [key = WTFMove(key), data = WTFMove(data), useCryptoKit] {
+            return platformSign(downcast<CryptoKeyHMAC>(key.get()), data, useCryptoKit);
         });
 }
 
 void CryptoAlgorithmHMAC::verify(const CryptoAlgorithmParameters&, Ref<CryptoKey>&& key, Vector<uint8_t>&& signature, Vector<uint8_t>&& data, BoolCallback&& callback, ExceptionCallback&& exceptionCallback, ScriptExecutionContext& context, WorkQueue& workQueue)
 {
+    UseCryptoKit useCryptoKit = context.settingsValues().cryptoKitEnabled ? UseCryptoKit::Yes : UseCryptoKit::No;
     dispatchOperationInWorkQueue(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
-        [key = WTFMove(key), signature = WTFMove(signature), data = WTFMove(data)] {
-            return platformVerify(downcast<CryptoKeyHMAC>(key.get()), signature, data);
+        [key = WTFMove(key), signature = WTFMove(signature), data = WTFMove(data), useCryptoKit] {
+            return platformVerify(downcast<CryptoKeyHMAC>(key.get()), signature, data, useCryptoKit);
         });
 }
 
@@ -95,7 +98,7 @@ void CryptoAlgorithmHMAC::generateKey(const CryptoAlgorithmParameters& parameter
     callback(WTFMove(result));
 }
 
-void CryptoAlgorithmHMAC::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmHMAC::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
 {
     using namespace CryptoAlgorithmHMACInternal;
 
@@ -144,7 +147,7 @@ void CryptoAlgorithmHMAC::importKey(CryptoKeyFormat format, KeyData&& data, cons
     callback(*result);
 }
 
-void CryptoAlgorithmHMAC::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmHMAC::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
 {
     using namespace CryptoAlgorithmHMACInternal;
     const auto& hmacKey = downcast<CryptoKeyHMAC>(key.get());

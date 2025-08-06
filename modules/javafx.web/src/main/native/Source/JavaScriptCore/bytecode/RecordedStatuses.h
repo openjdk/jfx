@@ -36,15 +36,9 @@
 namespace JSC {
 
 struct RecordedStatuses {
-    RecordedStatuses() { }
+    WTF_MAKE_STRUCT_FAST_ALLOCATED(RecordedStatuses);
 
-    RecordedStatuses& operator=(const RecordedStatuses& other) = delete;
-
-    RecordedStatuses& operator=(RecordedStatuses&& other);
-
-    RecordedStatuses(const RecordedStatuses& other) = delete;
-
-    RecordedStatuses(RecordedStatuses&& other);
+    RecordedStatuses() = default;
 
     CallLinkStatus* addCallLinkStatus(const CodeOrigin&, const CallLinkStatus&);
     GetByStatus* addGetByStatus(const CodeOrigin&, const GetByStatus&);

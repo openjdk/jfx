@@ -43,6 +43,7 @@
 #include "HostWindow.h"
 #include "Icon.h"
 #include "ImageBuffer.h"
+#include "ImageBufferResourceLimits.h"
 #include "InputMode.h"
 #include "MediaControlsContextMenuItem.h"
 #include "MediaProducer.h"
@@ -126,6 +127,7 @@ class Node;
 class Page;
 class PopupMenuClient;
 class SecurityOrigin;
+class SecurityOriginData;
 class ViewportConstraints;
 class Widget;
 
@@ -143,7 +145,6 @@ struct DateTimeChooserParameters;
 struct FocusOptions;
 struct GraphicsDeviceAdapter;
 struct MockWebAuthenticationConfiguration;
-class SecurityOriginData;
 struct ShareDataWithParsedURL;
 struct TextIndicatorData;
 struct TextRecognitionOptions;
@@ -151,11 +152,17 @@ struct ViewportArguments;
 struct WindowFeatures;
 
 enum class CookieConsentDecisionResult : uint8_t;
+enum class IsLoggedIn : uint8_t;
 enum class ModalContainerControlType : uint8_t;
 enum class ModalContainerDecision : uint8_t;
+enum class TextAnimationRunMode : uint8_t;
 enum class RouteSharingPolicy : uint8_t;
 
 enum class DidFilterLinkDecoration : bool { No, Yes };
+
+namespace WritingTools {
+using SessionID = WTF::UUID;
+}
 
 class ChromeClient {
 public:
@@ -251,6 +258,7 @@ public:
     virtual FloatSize screenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
     virtual FloatSize availableScreenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
     virtual FloatSize overrideScreenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
+    virtual FloatSize overrideAvailableScreenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
 
     virtual void dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>&) const { }
     virtual void dispatchViewportPropertiesDidChange(const ViewportArguments&) const { }
@@ -284,7 +292,7 @@ public:
     // size or past the amount of free space on the device.
     // The chrome client would need to take some action such as evicting some
     // old caches.
-    virtual void reachedMaxAppCacheSize(int64_t spaceNeeded) = 0;
+    virtual void reachedMaxAppCacheSize(int64_t) { }
 
     // Callback invoked when the application cache origin quota is reached. This
     // means that the resources attempting to be cached via the manifest are
@@ -294,7 +302,7 @@ public:
     // storage, in bytes, needed to store the new cache along with all of the
     // other existing caches for the origin that would not be replaced by
     // the new cache.
-    virtual void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t totalSpaceNeeded) = 0;
+    virtual void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t) { }
 
     virtual std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&) { return nullptr; }
 
@@ -353,10 +361,6 @@ public:
     virtual std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) = 0;
 #endif
 
-#if ENABLE(APP_HIGHLIGHTS)
-    virtual void storeAppHighlight(WebCore::AppHighlight&&) const = 0;
-#endif
-
     virtual void setTextIndicator(const TextIndicatorData&) const = 0;
 
     virtual void runOpenPanel(LocalFrame&, FileChooser&) = 0;
@@ -381,7 +385,7 @@ public:
 
     virtual DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const { return nullptr; }
 
-    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingPurpose, float, const DestinationColorSpace&, PixelFormat, OptionSet<ImageBufferOptions>) const { return nullptr; }
+    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingPurpose, float, const DestinationColorSpace&, ImageBufferPixelFormat, OptionSet<ImageBufferOptions>) const { return nullptr; }
     WEBCORE_EXPORT virtual RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>);
 
 #if ENABLE(WEBGL)
@@ -394,6 +398,8 @@ public:
     virtual void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&& completionHandler) const { completionHandler({ }); }
     virtual RefPtr<ShapeDetection::FaceDetector> createFaceDetector(const ShapeDetection::FaceDetectorOptions&) const { return nullptr; }
     virtual RefPtr<ShapeDetection::TextDetector> createTextDetector() const { return nullptr; }
+
+    virtual void registerBlobPathForTesting(const String&, CompletionHandler<void()>&&) { }
 
     // Pass nullptr as the GraphicsLayer to detatch the root layer.
     virtual void attachRootGraphicsLayer(LocalFrame&, GraphicsLayer*) = 0;
@@ -435,7 +441,7 @@ public:
     virtual bool layerTreeStateIsFrozen() const { return false; }
 
     virtual RefPtr<ScrollingCoordinator> createScrollingCoordinator(Page&) const { return nullptr; }
-    WEBCORE_EXPORT virtual std::unique_ptr<ScrollbarsController> createScrollbarsController(Page&, ScrollableArea&) const;
+    WEBCORE_EXPORT virtual void ensureScrollbarsController(Page&, ScrollableArea&, bool update = false) const;
 
     virtual bool canEnterVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) const { return false; }
     virtual bool supportsVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) { return false; }
@@ -449,7 +455,7 @@ public:
     virtual void enterVideoFullscreenForVideoElement(HTMLVideoElement&, HTMLMediaElementEnums::VideoFullscreenMode, bool standby) { UNUSED_PARAM(standby); }
     virtual void setUpPlaybackControlsManager(HTMLMediaElement&) { }
     virtual void clearPlaybackControlsManager() { }
-    virtual void playbackControlsMediaEngineChanged() { }
+    virtual void mediaEngineChanged(HTMLMediaElement&) { }
 #endif
 
 #if ENABLE(MEDIA_USAGE)
@@ -551,11 +557,6 @@ public:
     virtual void isPlayingMediaDidChange(MediaProducerMediaStateFlags) { }
     virtual void handleAutoplayEvent(AutoplayEvent, OptionSet<AutoplayEventFlags>) { }
 
-#if ENABLE(WEB_CRYPTO)
-    virtual bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const { return false; }
-    virtual bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) const { return false; }
-#endif
-
 #if ENABLE(TELEPHONE_NUMBER_DETECTION) && PLATFORM(MAC)
     virtual void handleTelephoneNumberClick(const String&, const IntPoint&, const IntRect&) { }
 #endif
@@ -603,6 +604,9 @@ public:
     virtual void hasStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, LocalFrame&, CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
     virtual void requestStorageAccess(RegistrableDomain&& subFrameDomain, RegistrableDomain&& topFrameDomain, LocalFrame&, StorageAccessScope scope, CompletionHandler<void(RequestStorageAccessResult)>&& completionHandler) { completionHandler({ StorageAccessWasGranted::No, StorageAccessPromptWasShown::No, scope, WTFMove(topFrameDomain), WTFMove(subFrameDomain) }); }
     virtual bool hasPageLevelStorageAccess(const RegistrableDomain& /*topLevelDomain*/, const RegistrableDomain& /*resourceDomain*/) const { return false; }
+
+    virtual void setLoginStatus(RegistrableDomain&&, IsLoggedIn, CompletionHandler<void()>&&) { }
+    virtual void isLoggedIn(RegistrableDomain&&, CompletionHandler<void(bool)>&&) { }
 
 #if ENABLE(DEVICE_ORIENTATION)
     virtual void shouldAllowDeviceOrientationAndMotionAccess(LocalFrame&, bool /* mayPrompt */, CompletionHandler<void(DeviceOrientationOrMotionPermissionState)>&& callback) { callback(DeviceOrientationOrMotionPermissionState::Denied); }
@@ -654,6 +658,8 @@ public:
     virtual void beginSystemPreview(const URL&, const SecurityOriginData&, const SystemPreviewInfo&, CompletionHandler<void()>&&) { }
 #endif
 
+    virtual void didAddOrRemoveViewportConstrainedObjects() { }
+
     virtual void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) = 0;
 
     virtual bool isUsingUISideCompositing() const { return false; }
@@ -661,6 +667,38 @@ public:
     virtual bool isInStableState() const { return true; }
 
     virtual FloatSize screenSizeForFingerprintingProtections(const LocalFrame&, FloatSize defaultSize) const { return defaultSize; }
+
+    virtual void didAdjustVisibilityWithSelectors(Vector<String>&&) { }
+
+#if ENABLE(GAMEPAD)
+    virtual void gamepadsRecentlyAccessed() { }
+#endif
+
+    virtual double baseViewportLayoutSizeScaleFactor() const { return 1; }
+
+#if ENABLE(WRITING_TOOLS)
+    virtual void proofreadingSessionShowDetailsForSuggestionWithIDRelativeToRect(const WritingTools::TextSuggestionID&, IntRect) { }
+
+    virtual void proofreadingSessionUpdateStateForSuggestionWithID(WritingTools::TextSuggestionState, const WritingTools::TextSuggestionID&) { }
+
+    virtual void removeTextAnimationForAnimationID(const WTF::UUID&) { }
+
+    virtual void removeTransparentMarkersForActiveWritingToolsSession() { }
+
+    virtual void removeInitialTextAnimationForActiveWritingToolsSession() { }
+
+    virtual void addInitialTextAnimationForActiveWritingToolsSession() { }
+
+    virtual void addSourceTextAnimationForActiveWritingToolsSession(const CharacterRange&, const String&, CompletionHandler<void(TextAnimationRunMode)>&&) { }
+
+    virtual void addDestinationTextAnimationForActiveWritingToolsSession(const std::optional<CharacterRange>&, const String&) { }
+
+    virtual void clearAnimationsForActiveWritingToolsSession() { };
+#endif
+
+    virtual void hasActiveNowPlayingSessionChanged(bool) { }
+
+    virtual void getImageBufferResourceLimitsForTesting(CompletionHandler<void(std::optional<ImageBufferResourceLimits>)>&& callback) const { callback(std::nullopt); }
 
     WEBCORE_EXPORT virtual ~ChromeClient();
 

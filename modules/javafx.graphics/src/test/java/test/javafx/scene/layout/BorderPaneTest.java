@@ -343,12 +343,25 @@ public class BorderPaneTest {
         MockBiased bottom = new MockBiased(Orientation.HORIZONTAL, 200, 20); // 300 x 13.333
         borderpane.setBottom(bottom);
 
+        /*
+         * Note: there is a mix of horizontal and vertical biased children. The BorderPane
+         * will favor the bias of the center node above all (see its implementation). This
+         * means the VERTICAL biased controls will have their bias ignored as they differ
+         * from the center's bias.
+         */
+
         assertEquals(40/*l*/ + 60/*r*/ + 200/*c*/, borderpane.prefWidth(-1), 1e-100);
         assertEquals(240 /* l + r + c*/, borderpane.prefHeight(-1), 1e-10);
         assertEquals(110, borderpane.minWidth(-1), 1e-100); /* min center + 2x pref width (l, r) */
-        assertEquals(50, borderpane.minHeight(-1), 1e-10);
+        assertEquals(20 /*t*/ + 200 /*c*/ + 20 /*b*/, borderpane.minHeight(-1), 1e-10);
         assertEquals(110, borderpane.minWidth(240), 1e-100);
-        assertEquals(221, borderpane.minHeight(300), 1e-10);
+
+        // Top: at a width of 300, the biased control becomes 7 high (6.666)
+        // Bottom: at a width of 300, the biased control becomes 14 high (13.333)
+        // Center: At a width of 300, the biased control becomes 134 high (200 * 200 / 300)
+        // Left/Right: bias differs from center, so the simple height value is used (100 for left, 200 for right)
+
+        assertEquals(7 /*t*/ + Math.max(134 /*c*/, Math.max(100 /*l*/, 200 /*r*/)) + 14 /*b*/, borderpane.minHeight(300), 1e-10);
 
         borderpane.resize(300, 240);
         borderpane.layout();
@@ -454,9 +467,50 @@ public class BorderPaneTest {
         MockResizable bottom = new MockResizable(400, 100);
         borderpane.setBottom(bottom);
 
+        /*
+         * Preferred height calculation is always top + bottom + max(left, center, right).
+         * It proceeds as follows:
+         * - Top is biased, and with a width of 500, the top height is 40 ( = 200 * 100 / 500)
+         * - Bottom is unbiased, and has a preferred height of 100
+         * - Left and Right are unbiased, and have a preferred height of 100
+         * - Center is biased. The width for the bias calculation is 500 minus the preferred widths
+         *   of the left and right controls: 500 - 100 - 100 = 300
+         * - With a width of 300 for the biased calculation, the center height becomes 67 ( = 200 * 100 / 300)
+         *
+         * Adding those together: top(40) + bottom(100) + max(left(100), right(100), center(67)) = 240
+         *
+         * The center's height is ignored in this as for the width available it would be lower than
+         * the preferred height of either the left or right control.
+         */
+
         assertEquals(240, borderpane.prefHeight(500), 1e-200);
-        borderpane.resize(500, 240);
+        borderpane.resize(500, 300);
         borderpane.layout();
+
+        // Resize to 500x240
+        // +-------------------------------------------------------+
+        // | top: 500 wide means 200 * 100 / 500 high (500 x 40)   |
+        // +-------------------------------------------------------+
+        // | left: height   | center: it is given   | right: see   |
+        // | left over is   | a width of 500 - 200. | left for     |
+        // | 300 - 40 - 100 | With a width of 300   | calculation. |
+        // | so it becomes  | it becomes 67 high:   |              |
+        // |   100 x 160    |       300 x 67        |   100 x 160  |
+        // +-------------------------------------------------------+
+        // | bottom: 500 x 100                                     |
+        // +-------------------------------------------------------+
+        //
+        // The widths of the middle area is determined as follows:
+        // The total width available is 500. Subtracting the preferred widths
+        // of left and right leaves 300 pixels, which are all allocated to the
+        // center.
+        //
+        // The height of the middle area is determined by taken the
+        // total height (300) subtracting the final heights of the
+        // top and bottom areas which are laid out first. The top becomes
+        // 500 x 40 (due to bias, 200 * 100 / 500 = 40). The bottom just
+        // takes the preferred height (100).  This leaves 160 pixels for
+        // the middle area.
 
         assertEquals(0, top.getLayoutX(), 1e-200);
         assertEquals(0, top.getLayoutY(), 1e-200);
@@ -466,21 +520,25 @@ public class BorderPaneTest {
         assertEquals(0, left.getLayoutX(), 1e-200);
         assertEquals(40, left.getLayoutY(), 1e-200);
         assertEquals(100, left.getLayoutBounds().getWidth(), 1e-200);
-        assertEquals(100, left.getLayoutBounds().getHeight(), 1e-200);
+        assertEquals(160, left.getLayoutBounds().getHeight(), 1e-200);
 
         assertEquals(100, center.getLayoutX(), 1e-200);
-        // 57 because the default alignment is Pos.CENTER
-        assertEquals(57, center.getLayoutY(), 1e-200);
+        // At 300 wide, the biased control in the center area only needs
+        // a height of 200 * 100 / 300 = 66.7; The height available is
+        // 160, and so it will be vertically centered (the default for the
+        // center area in a BorderPane). The expected Y position then
+        // becomes 40 (height of top) + (160 - 66.7) / 2 = 87 (with snap)
+        assertEquals(87, center.getLayoutY(), 1e-200);
         assertEquals(300, center.getLayoutBounds().getWidth(), 1e-200);
         assertEquals(67, center.getLayoutBounds().getHeight(), 1e-200);
 
         assertEquals(400, right.getLayoutX(), 1e-200);
         assertEquals(40, right.getLayoutY(), 1e-200);
         assertEquals(100, right.getLayoutBounds().getWidth(), 1e-200);
-        assertEquals(100, right.getLayoutBounds().getHeight(), 1e-200);
+        assertEquals(160, right.getLayoutBounds().getHeight(), 1e-200);
 
         assertEquals(0, bottom.getLayoutX(), 1e-200);
-        assertEquals(140, bottom.getLayoutY(), 1e-200);
+        assertEquals(200, bottom.getLayoutY(), 1e-200);
         assertEquals(500, bottom.getLayoutBounds().getWidth(), 1e-200);
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }
@@ -502,9 +560,50 @@ public class BorderPaneTest {
         MockResizable bottom = new MockResizable(400, 100);
         borderpane.setBottom(bottom);
 
+        /*
+         * Preferred height calculation is always top + bottom + max(left, center, right).
+         * It proceeds as follows:
+         * - Top is biased, and with a width of 300, the top height is 67 ( = 200 * 100 / 300)
+         * - Bottom is unbiased, and has a preferred height of 100
+         * - Left and Right are unbiased, and have a preferred height of 100
+         * - Center is biased. The width for the bias calculation is 300 minus the preferred widths
+         *   of the left and right controls: 300 - 100 - 100 = 100
+         * - With a width of 100 for the biased calculation, the center height becomes 200 ( = 200 * 100 / 100)
+         *
+         * Adding those together: top(67) + bottom(100) + max(left(100), right(100), center(200)) = 367
+         *
+         * The center's height is now overriding the height of the left and right controls as
+         * with the low amount of width available, it needs to become higher.
+         */
+
         assertEquals(367, borderpane.prefHeight(300), 1e-200);
-        borderpane.resize(300, 367);
+        borderpane.resize(300, 400);
         borderpane.layout();
+
+        // Resize to 300x400
+        // +-------------------------------------------------------+
+        // | top: 300 wide means 200 * 100 / 300 high (300 x 67)   |
+        // +-------------------------------------------------------+
+        // | left: height   | center: it is given   | right: see   |
+        // | left over is   | a width of 300 - 200. | left for     |
+        // | 400 - 67 - 100 | With a width of 100   | calculation. |
+        // | so it becomes  | it becomes 200 high:  |              |
+        // |   100 x 233    |       100 x 200       |   100 x 233  |
+        // +-------------------------------------------------------+
+        // | bottom: 300 x 100                                     |
+        // +-------------------------------------------------------+
+        //
+        // The widths of the middle area is determined as follows:
+        // The total width available is 300. Subtracting the preferred widths
+        // of left and right leaves 100 pixels which are all allocated to the
+        // center.
+        //
+        // The height of the middle area is determined by taken the
+        // total height (400) subtracting the final heights of the
+        // top and bottom areas which are laid out first. The top becomes
+        // 300 x 67 (due to bias, 200 * 100 / 300 = 67). The bottom just
+        // takes the preferred height (100).  This leaves 233 pixels for
+        // the middle area.
 
         assertEquals(0, top.getLayoutX(), 1e-200);
         assertEquals(0, top.getLayoutY(), 1e-200);
@@ -514,20 +613,20 @@ public class BorderPaneTest {
         assertEquals(0, left.getLayoutX(), 1e-200);
         assertEquals(67, left.getLayoutY(), 1e-200);
         assertEquals(100, left.getLayoutBounds().getWidth(), 1e-200);
-        assertEquals(200, left.getLayoutBounds().getHeight(), 1e-200);
+        assertEquals(233, left.getLayoutBounds().getHeight(), 1e-200);
 
         assertEquals(100, center.getLayoutX(), 1e-200);
-        assertEquals(67, center.getLayoutY(), 1e-200);
+        assertEquals(84, center.getLayoutY(), 1e-200);
         assertEquals(100, center.getLayoutBounds().getWidth(), 1e-200);
         assertEquals(200, center.getLayoutBounds().getHeight(), 1e-200);
 
         assertEquals(200, right.getLayoutX(), 1e-200);
         assertEquals(67, right.getLayoutY(), 1e-200);
         assertEquals(100, right.getLayoutBounds().getWidth(), 1e-200);
-        assertEquals(200, right.getLayoutBounds().getHeight(), 1e-200);
+        assertEquals(233, right.getLayoutBounds().getHeight(), 1e-200);
 
         assertEquals(0, bottom.getLayoutX(), 1e-200);
-        assertEquals(267, bottom.getLayoutY(), 1e-200);
+        assertEquals(300, bottom.getLayoutY(), 1e-200);
         assertEquals(300, bottom.getLayoutBounds().getWidth(), 1e-200);
         assertEquals(100, bottom.getLayoutBounds().getHeight(), 1e-200);
     }

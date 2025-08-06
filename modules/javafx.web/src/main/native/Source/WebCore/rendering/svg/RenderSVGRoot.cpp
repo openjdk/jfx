@@ -25,7 +25,6 @@
 #include "config.h"
 #include "RenderSVGRoot.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
@@ -49,13 +48,13 @@
 #include "SVGSVGElement.h"
 #include "SVGViewSpec.h"
 #include "TransformState.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGRoot);
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGRoot);
 
 const int defaultWidth = 300;
 const int defaultHeight = 150;
@@ -85,6 +84,11 @@ RenderSVGViewportContainer* RenderSVGRoot::viewportContainer() const
     if (!child || !child->isAnonymous())
         return nullptr;
     return dynamicDowncast<RenderSVGViewportContainer>(child);
+}
+
+CheckedPtr<RenderSVGViewportContainer> RenderSVGRoot::checkedViewportContainer() const
+{
+    return viewportContainer();
 }
 
 bool RenderSVGRoot::hasIntrinsicAspectRatio() const
@@ -156,7 +160,7 @@ LayoutUnit RenderSVGRoot::computeReplacedLogicalWidth(ShouldComputePreferred sho
 
     // Percentage units are not scaled, Length(100, %) resolves to 100% of the unzoomed RenderView content size.
     // However for SVGs purposes we need to always include zoom in the RenderSVGRoot boundaries.
-    result *= style().effectiveZoom();
+    result *= style().usedZoom();
     return result;
 }
 
@@ -176,7 +180,7 @@ LayoutUnit RenderSVGRoot::computeReplacedLogicalHeight(std::optional<LayoutUnit>
 
     // Percentage units are not scaled, Length(100, %) resolves to 100% of the unzoomed RenderView content size.
     // However for SVGs purposes we need to always include zoom in the RenderSVGRoot boundaries.
-    result *= style().effectiveZoom();
+    result *= style().usedZoom();
     return result;
 }
 
@@ -197,7 +201,7 @@ void RenderSVGRoot::layout()
     // Arbitrary affine transforms are incompatible with RenderLayoutState.
     LayoutStateDisabler layoutStateDisabler(view().frameView().layoutContext());
 
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
+    LayoutRepainter repainter(*this);
 
     // Update layer transform before laying out children (SVG needs access to the transform matrices during layout for on-screen text font-size calculations).
     // Eventually re-update if the transform reference box, relevant for transform-origin, has changed during layout.
@@ -214,10 +218,9 @@ void RenderSVGRoot::layout()
     }
 
     clearOverflow();
-    if (!shouldApplyViewportClip()) {
+    if (!shouldApplyViewportClip())
         addVisualOverflow(visualOverflowRectEquivalent());
         addVisualEffectOverflow();
-    }
 
     invalidateBackgroundObscurationStatus();
 
@@ -294,24 +297,24 @@ void RenderSVGRoot::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     // z-index. We paint after we painted the background/border, so that the scrollbars will
     // sit above the background/border.
     if ((paintInfo.phase == PaintPhase::BlockBackground || paintInfo.phase == PaintPhase::ChildBlockBackground) && hasNonVisibleOverflow() && layer() && layer()->scrollableArea()
-        && style().visibility() == Visibility::Visible && paintInfo.shouldPaintWithinRoot(*this) && !paintInfo.paintRootBackgroundOnly())
+        && style().usedVisibility() == Visibility::Visible && paintInfo.shouldPaintWithinRoot(*this) && !paintInfo.paintRootBackgroundOnly())
         layer()->scrollableArea()->paintOverflowControls(paintInfo.context(), roundedIntPoint(adjustedPaintOffset), snappedIntRect(paintInfo.rect));
 }
 
 void RenderSVGRoot::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if ((paintInfo.phase == PaintPhase::BlockBackground || paintInfo.phase == PaintPhase::ChildBlockBackground) && style().visibility() == Visibility::Visible) {
+    if ((paintInfo.phase == PaintPhase::BlockBackground || paintInfo.phase == PaintPhase::ChildBlockBackground) && style().usedVisibility() == Visibility::Visible) {
         if (hasVisibleBoxDecorations())
             paintBoxDecorations(paintInfo, paintOffset);
     }
 
     auto adjustedPaintOffset = paintOffset + location();
-    if (paintInfo.phase == PaintPhase::Mask && style().visibility() == Visibility::Visible) {
+    if (paintInfo.phase == PaintPhase::Mask && style().usedVisibility() == Visibility::Visible) {
         paintSVGMask(paintInfo, adjustedPaintOffset);
         return;
     }
 
-    if (paintInfo.phase == PaintPhase::ClippingMask && style().visibility() == Visibility::Visible) {
+    if (paintInfo.phase == PaintPhase::ClippingMask && style().usedVisibility() == Visibility::Visible) {
         paintSVGClippingMask(paintInfo, objectBoundingBox());
         return;
     }
@@ -347,7 +350,7 @@ void RenderSVGRoot::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOf
     if (paintInfo.phase != PaintPhase::SelfOutline)
         paintContents(paintInfo, scrolledOffset);
 
-    if ((paintInfo.phase == PaintPhase::Outline || paintInfo.phase == PaintPhase::SelfOutline) && hasOutline() && style().visibility() == Visibility::Visible)
+    if ((paintInfo.phase == PaintPhase::Outline || paintInfo.phase == PaintPhase::SelfOutline) && hasOutline() && style().usedVisibility() == Visibility::Visible)
         paintOutline(paintInfo, LayoutRect(adjustedPaintOffset, size()));
 }
 
@@ -412,7 +415,7 @@ void RenderSVGRoot::updateFromStyle()
 
     // Additionally update style of the anonymous RenderSVGViewportContainer,
     // which handles zoom / pan / viewBox transformations.
-    if (auto* viewportContainer = this->viewportContainer())
+    if (CheckedPtr viewportContainer = this->viewportContainer())
         viewportContainer->updateFromStyle();
 
     if (shouldApplyViewportClip())
@@ -435,8 +438,6 @@ bool RenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
 {
     auto adjustedLocation = accumulatedOffset + location();
 
-    ASSERT(SVGHitTestCycleDetectionScope::isEmpty());
-
     auto visualOverflowRect = this->visualOverflowRect();
     visualOverflowRect.moveBy(adjustedLocation);
 
@@ -446,7 +447,6 @@ bool RenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
         for (auto* child = lastChild(); child; child = child->previousSibling()) {
             if (!child->hasLayer() && child->nodeAtPoint(request, result, locationInContainer, adjustedLocation, hitTestAction)) {
                 updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-                ASSERT(SVGHitTestCycleDetectionScope::isEmpty());
                 return true;
             }
         }
@@ -457,12 +457,10 @@ bool RenderSVGRoot::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
         LayoutRect boundsRect(adjustedLocation, size());
         if (locationInContainer.intersects(boundsRect)) {
             updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(adjustedLocation)));
-            if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)
                 return true;
         }
     }
-
-    ASSERT(SVGHitTestCycleDetectionScope::isEmpty());
 
     return false;
 }
@@ -488,7 +486,7 @@ void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* repaintCon
         return;
 
     bool containerSkipped;
-    auto* container = this->container(repaintContainer, containerSkipped);
+    CheckedPtr container = this->container(repaintContainer, containerSkipped);
     if (!container)
         return;
 
@@ -505,10 +503,10 @@ void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* repaintCon
 
     auto containerOffset = offsetFromContainer(*container, LayoutPoint(transformState.mappedPoint()));
 
-    bool preserve3D = mode & UseTransforms && participatesInPreserve3D(container);
-    if (mode & UseTransforms && shouldUseTransformFromContainer(container)) {
+    bool preserve3D = mode & UseTransforms && participatesInPreserve3D();
+    if (mode & UseTransforms && shouldUseTransformFromContainer(container.get())) {
         TransformationMatrix t;
-        getTransformFromContainer(container, containerOffset, t);
+        getTransformFromContainer(containerOffset, t);
 
         // For getCTM() computations we have to stay within the SVG subtree. However when the outermost <svg>
         // is transformed itself, we need to call mapLocalToContainer() at least up to the parent of the
@@ -550,11 +548,11 @@ void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* repaintCon
         // For getCTM/getScreenCTM computations the result must be independent of the page zoom factor.
         // To compute these matrices within a non-SVG context (e.g. SVG embedded in HTML -- inline SVG)
         // the scaling needs to be removed from the CSS transform state.
-    TransformState transformStateAboveSVGFragment(settings().css3DTransformInteroperabilityEnabled(), transformState.direction(), transformState.mappedPoint());
+    TransformState transformStateAboveSVGFragment(transformState.direction(), transformState.mappedPoint());
     transformStateAboveSVGFragment.setTransformMatrixTracking(transformState.transformMatrixTracking());
         container->mapLocalToContainer(repaintContainer, transformStateAboveSVGFragment, mode, wasFixed);
 
-            auto scale = 1.0 / style().effectiveZoom();
+    auto scale = 1.0 / style().usedZoom();
             if (auto transformAboveSVGFragment = transformStateAboveSVGFragment.releaseTrackedTransform()) {
                 FloatPoint location(transformAboveSVGFragment->e(), transformAboveSVGFragment->f());
                 location.scale(scale);
@@ -599,5 +597,3 @@ void RenderSVGRoot::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) cons
 }
 
 }
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

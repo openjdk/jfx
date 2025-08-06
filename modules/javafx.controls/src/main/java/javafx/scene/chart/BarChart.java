@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,13 @@
 
 package javafx.scene.chart;
 
-import java.util.*;
-
-import javafx.scene.AccessibleRole;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -35,27 +39,23 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ParallelTransition;
 import javafx.animation.Timeline;
-import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.SizeConverter;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend.LegendItem;
-
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-
-import javafx.css.converter.SizeConverter;
-import javafx.collections.ListChangeListener;
-
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 
 /**
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on
@@ -243,7 +243,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             // note: cat axis categories can be updated only when autoranging is true.
             categoryAxis.getCategories().add(categoryIndex, category);
         } else if (categoryMap.containsKey(category)){
-            // RT-21162 : replacing the previous data, first remove the node from scenegraph.
+            // JDK-8115821 : replacing the previous data, first remove the node from scenegraph.
             Data<X,Y> data = categoryMap.get(category);
             getPlotChildren().remove(data.getNode());
             removeDataItemFromDisplay(series, data);
@@ -296,7 +296,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             item.getNode().getStyleClass().add(NEGATIVE_STYLE);
         } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
             // remove style class negative
-            // RT-21164 upside down bars: was adding NEGATIVE_STYLE styleclass
+            // JDK-8115074 upside down bars: was adding NEGATIVE_STYLE styleclass
             // instead of removing it; when going from negative to positive
             item.getNode().getStyleClass().remove(NEGATIVE_STYLE);
         }
@@ -369,7 +369,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
         final double zeroPos = (valueAxis.getLowerBound() > 0) ?
                 valueAxis.getDisplayPosition(valueAxis.getLowerBound()) : valueAxis.getZeroPosition();
-        // RT-24813 : if the data in a series gets too large, barWidth can get negative.
+        // JDK-8125812 : if the data in a series gets too large, barWidth can get negative.
         if (barWidth <= 0) barWidth = 1;
         // update bar positions and sizes
         int catIndex = 0;
@@ -559,7 +559,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             bar = new StackPane();
             bar.setAccessibleRole(AccessibleRole.TEXT);
             bar.setAccessibleRoleDescription("Bar");
-            bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            bar.setFocusTraversable(isAccessibilityActive());
             item.setNode(bar);
         }
         bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex, series.defaultColorStyleClass);

@@ -27,6 +27,7 @@ package javafx.scene.traversal;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
+import javafx.scene.TraversalDirection;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 
@@ -40,6 +41,7 @@ import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
  *
  * @since 24
  */
+@Deprecated // FIX remove
 public final class FocusTraversal {
     /**
      * Traverses focus to the adjacent node as specified by the direction.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
 
 package test.com.sun.webkit;
 
-import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -58,14 +58,16 @@ public class MainThreadTest {
         final String javaLibraryPath = System.getProperty("java.library.path");
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
 
-        final List<String> cmd = asList(
-            workerJavaCmd,
+        final List<String> cmd = new ArrayList<>();
+        cmd.add(workerJavaCmd);
+
+        cmd.addAll(List.of(
             "--enable-native-access=ALL-UNNAMED",
             "-cp", appModulePath + "/mymod",
             "-Djava.library.path=" + javaLibraryPath,
             "-Dmodule.path=" + appModulePath + "/mymod" + File.pathSeparator + workerModulePath,
             "myapp7.DataUrlWithModuleLayerLauncher"
-        );
+        ));
 
         final ProcessBuilder builder = new ProcessBuilder(cmd);
 

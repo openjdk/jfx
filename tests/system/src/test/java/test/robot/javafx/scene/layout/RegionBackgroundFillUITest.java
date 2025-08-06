@@ -622,7 +622,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
-    @Disabled("RT-33446")
+    @Disabled("JDK-8087813")
     @Test
     public void testHalfPixelTopInset() {
         setStyle(
@@ -652,7 +652,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
-    @Disabled("RT-33446")
+    @Disabled("JDK-8087813")
     @Test
     public void testHalfPixelRightInset() {
         setStyle(
@@ -682,7 +682,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, Color.YELLOW, SCENE_FILL, 0, .2);
     }
 
-    @Disabled("RT-33446")
+    @Disabled("JDK-8087813")
     @Test
     public void testHalfPixelBottomInset() {
         setStyle(
@@ -712,7 +712,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, blended, SCENE_FILL, 0, .2);
     }
 
-    @Disabled("RT-33446")
+    @Disabled("JDK-8087813")
     @Test
     public void testHalfPixelLeftInset() {
         setStyle(
@@ -742,7 +742,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
         checkRegionBottomLeftCorner(yellow, blended, SCENE_FILL, 0, .2);
     }
 
-    @Disabled("RT-33446")
+    @Disabled("JDK-8087813")
     @Test
     public void testHalfPixelTopLeftInset() {
         setStyle(

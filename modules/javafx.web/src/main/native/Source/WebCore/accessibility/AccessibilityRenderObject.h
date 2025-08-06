@@ -54,8 +54,11 @@ class VisibleSelection;
 
 class AccessibilityRenderObject : public AccessibilityNodeObject {
 public:
-    static Ref<AccessibilityRenderObject> create(RenderObject*);
+    static Ref<AccessibilityRenderObject> create(RenderObject&);
     virtual ~AccessibilityRenderObject();
+
+    FloatRect frameRect() const final;
+    bool isNonLayerSVGObject() const override;
 
     bool isAttachment() const override;
     bool isOffScreen() const override;
@@ -73,8 +76,8 @@ public:
 
     AccessibilityObject* firstChild() const override;
     AccessibilityObject* lastChild() const override;
-    AccessibilityObject* previousSibling() const override;
-    AccessibilityObject* nextSibling() const override;
+    AccessibilityObject* previousSibling() const final;
+    AccessibilityObject* nextSibling() const final;
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override;
     AccessibilityObject* observableObject() const override;
@@ -97,7 +100,7 @@ public:
     int insertionPointLineNumber() const override;
     String stringValue() const override;
     String helpText() const override;
-    String textUnderElement(AccessibilityTextUnderElementMode = AccessibilityTextUnderElementMode()) const override;
+    String textUnderElement(TextUnderElementMode = TextUnderElementMode()) const override;
     String selectedText() const override;
 #if ENABLE(AX_THREAD_TEXT_APIS)
     AXTextRuns textRuns() final;
@@ -136,7 +139,7 @@ public:
     void labelText(Vector<AccessibilityText>&) const override;
 
 protected:
-    explicit AccessibilityRenderObject(RenderObject*);
+    explicit AccessibilityRenderObject(RenderObject&);
     explicit AccessibilityRenderObject(Node&);
     void detachRemoteParts(AccessibilityDetachmentType) override;
     ScrollableArea* getScrollableAreaIfScrollable() const override;
@@ -159,11 +162,11 @@ private:
     bool isAllowedChildOfTree() const;
     CharacterRange documentBasedSelectedTextRange() const;
     RefPtr<Element> rootEditableElementForPosition(const Position&) const;
-    bool nodeIsTextControl(const Node*) const;
+    bool nodeIsTextControl(const Node&) const;
     Path elementPath() const override;
 
-    AccessibilityObject* accessibilityImageMapHitTest(HTMLAreaElement*, const IntPoint&) const;
-    AccessibilityObject* accessibilityParentForImageMap(HTMLMapElement*) const;
+    AccessibilityObject* accessibilityImageMapHitTest(HTMLAreaElement&, const IntPoint&) const;
+    AccessibilityObject* associatedAXImage(HTMLMapElement&) const;
     AccessibilityObject* elementAccessibilityHitTest(const IntPoint&) const override;
 
     bool renderObjectIsObservable(RenderObject&) const;
@@ -198,7 +201,7 @@ private:
 
     bool inheritsPresentationalRole() const override;
 
-    bool shouldGetTextFromNode(AccessibilityTextUnderElementMode) const;
+    bool shouldGetTextFromNode(TextUnderElementMode) const;
 
 #if ENABLE(APPLE_PAY)
     bool isApplePayButton() const;
