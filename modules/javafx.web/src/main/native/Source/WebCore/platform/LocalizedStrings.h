@@ -40,6 +40,7 @@
 namespace WebCore {
 
     class IntSize;
+    class DateComponents;
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT String truncatedStringForMenuItem(const String&);
@@ -62,7 +63,7 @@ namespace WebCore {
     WEBCORE_EXPORT String contextMenuItemTagAddHighlightToCurrentQuickNote();
     WEBCORE_EXPORT String contextMenuItemTagAddHighlightToNewQuickNote();
 #endif
-    WEBCORE_EXPORT String contextMenuItemTagCopyLinkToHighlight();
+    WEBCORE_EXPORT String contextMenuItemTagCopyLinkWithHighlight();
 
 #if ENABLE(CONTEXT_MENUS)
     WEBCORE_EXPORT String contextMenuItemTagOpenLinkInNewWindow();
@@ -152,19 +153,19 @@ namespace WebCore {
     String contextMenuItemTagCopyVideoLinkToClipboard();
     String contextMenuItemTagCopyAudioLinkToClipboard();
     String contextMenuItemTagToggleMediaControls();
-    String contextMenuItemTagShowMediaControls();
+    WEBCORE_EXPORT String contextMenuItemTagShowMediaControls();
     String contextMenuItemTagHideMediaControls();
     String contextMenuItemTagToggleMediaLoop();
     String contextMenuItemTagEnterVideoFullscreen();
-    String contextMenuItemTagExitVideoFullscreen();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoFullscreen();
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
     String contextMenuItemTagEnterVideoEnhancedFullscreen();
-    String contextMenuItemTagExitVideoEnhancedFullscreen();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoEnhancedFullscreen();
     String contextMenuItemTagEnterVideoViewer();
-    String contextMenuItemTagExitVideoViewer();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoViewer();
 #endif
     String contextMenuItemTagMediaPlay();
-    String contextMenuItemTagMediaPause();
+    WEBCORE_EXPORT String contextMenuItemTagMediaPause();
     String contextMenuItemTagMediaMute();
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     String contextMenuItemTagPlayAllAnimations();
@@ -403,7 +404,7 @@ namespace WebCore {
 #endif
 
 #if ENABLE(INPUT_TYPE_WEEK_PICKER)
-    WEBCORE_EXPORT String inputWeekLabel();
+    WEBCORE_EXPORT String inputWeekLabel(const DateComponents&);
 #endif
 
 #if ENABLE(WEB_AUTHN)
@@ -424,6 +425,11 @@ namespace WebCore {
     WEBCORE_EXPORT String pdfPasswordFormTitle();
     WEBCORE_EXPORT String pdfPasswordFormSubtitle();
     WEBCORE_EXPORT String pdfPasswordFormInvalidPasswordSubtitle();
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    WEBCORE_EXPORT String fullscreenControllerViewSpatial();
+    WEBCORE_EXPORT String fullscreenControllerViewImmersive();
+#endif
 
 #if PLATFORM(COCOA)
 #define WEB_UI_STRING(string, description) WebCore::localizedString(CFSTR(string))

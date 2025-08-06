@@ -74,7 +74,7 @@ static bool isCharsetSpecifyingNode(const HTMLMetaElement& element)
     if (!element.hasAttributes())
         return false;
     Vector<std::pair<StringView, StringView>> attributes;
-    for (auto& attribute : element.attributesIterator()) {
+    for (auto& attribute : element.attributes()) {
         if (attribute.name().hasPrefix())
             continue;
         attributes.append({ StringView { attribute.name().localName() }, StringView { attribute.value() } });
@@ -173,8 +173,8 @@ PageSerializer::PageSerializer(Vector<PageSerializer::Resource>& resources)
 
 void PageSerializer::serialize(Page& page)
 {
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame()))
-        serializeFrame(localMainFrame);
+    if (RefPtr localMainFrame = page.localMainFrame())
+        serializeFrame(localMainFrame.get());
 }
 
 void PageSerializer::serializeFrame(LocalFrame* frame)
@@ -229,8 +229,8 @@ void PageSerializer::serializeFrame(LocalFrame* frame)
         }
     }
 
-    for (auto* childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(childFrame);
+    for (RefPtr childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(childFrame.get());
         if (!localFrame)
             continue;
         serializeFrame(localFrame);

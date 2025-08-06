@@ -40,10 +40,14 @@ DrawGlyphsRecorder::DrawGlyphsRecorder(GraphicsContext& owner, float scaleFactor
     UNUSED_PARAM(scaleFactor);
 }
 
-void DrawGlyphsRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& startPoint, FontSmoothingMode smoothingMode)
+void DrawGlyphsRecorder::drawGlyphs(const Font& font,
+                                    std::span<const GlyphBufferGlyph> glyphs,
+                                    std::span<const GlyphBufferAdvance> advances,
+                                    const FloatPoint& startPoint,
+                                    FontSmoothingMode smoothingMode)
 {
 
-    m_owner.drawGlyphsAndCacheResources(font, glyphs, advances, numGlyphs, startPoint, smoothingMode);
+    m_owner.drawGlyphsAndCacheResources(font, glyphs, advances, startPoint, smoothingMode);
 }
 
 } // namespace WebCore

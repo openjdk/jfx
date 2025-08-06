@@ -24,43 +24,107 @@
 
 #pragma once
 
-#include "CSSAnchorValue.h"
+#include "CSSValueKeywords.h"
 #include "EventTarget.h"
-#include <memory>
+#include "LayoutUnit.h"
+#include "ScopedName.h"
+#include "WritingMode.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/WeakHashSet.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
+class Document;
 class Element;
+class LayoutRect;
+class RenderBlock;
+class RenderBox;
+class RenderBoxModelObject;
+class RenderStyle;
+struct PositionTryFallback;
+
+enum CSSPropertyID : uint16_t;
 
 namespace Style {
 
 class BuilderState;
 
 enum class AnchorPositionResolutionStage : uint8_t {
-    Initial,
-    FinishedCollectingAnchorNames,
-    FoundAnchors,
+    FindAnchors,
+    ResolveAnchorFunctions,
     Resolved,
+    Positioned,
 };
+
+using AnchorElements = HashMap<AtomString, WeakPtr<Element, WeakPtrImplWithEventTargetData>>;
 
 struct AnchorPositionedState {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AnchorPositionedState);
 public:
-    HashMap<String, WeakRef<Element, WeakPtrImplWithEventTargetData>> anchorElements;
-    HashSet<String> anchorNames;
-    AnchorPositionResolutionStage stage;
+    AnchorElements anchorElements;
+    UncheckedKeyHashSet<AtomString> anchorNames;
+    AnchorPositionResolutionStage stage { AnchorPositionResolutionStage::FindAnchors };
+    bool hasAnchorFunctions { false };
 };
 
-using AnchorsForAnchorName = HashMap<String, Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>>;
+using AnchorsForAnchorName = HashMap<AtomString, Vector<SingleThreadWeakRef<const RenderBoxModelObject>>>;
+
+// https://drafts.csswg.org/css-anchor-position-1/#typedef-anchor-size
+enum class AnchorSizeDimension : uint8_t {
+    Width,
+    Height,
+    Block,
+    Inline,
+    SelfBlock,
+    SelfInline
+};
+
 using AnchorPositionedStates = WeakHashMap<Element, std::unique_ptr<AnchorPositionedState>, WeakPtrImplWithEventTargetData>;
+
+// https://drafts.csswg.org/css-anchor-position-1/#position-try-order-property
+enum class PositionTryOrder : uint8_t {
+    Normal,
+    MostWidth,
+    MostHeight,
+    MostBlockSize,
+    MostInlineSize
+};
+
+WTF::TextStream& operator<<(WTF::TextStream&, PositionTryOrder);
 
 class AnchorPositionEvaluator {
 public:
-    static Length resolveAnchorValue(const BuilderState&, const CSSAnchorValue&);
-    static void findAnchorsForAnchorPositionedElement(Ref<const Element> anchorPositionedElement);
+    // Find the anchor element indicated by `elementName` and update the associated anchor resolution data.
+    // Returns nullptr if the anchor element can't be found.
+    static RefPtr<Element> findAnchorForAnchorFunctionAndAttemptResolution(const BuilderState&, std::optional<ScopedName> elementName);
+
+    using Side = std::variant<CSSValueID, double>;
+    static bool propertyAllowsAnchorFunction(CSSPropertyID);
+    static std::optional<double> evaluate(const BuilderState&, std::optional<ScopedName> elementName, Side);
+
+    static bool propertyAllowsAnchorSizeFunction(CSSPropertyID);
+    static std::optional<double> evaluateSize(const BuilderState&, std::optional<ScopedName> elementName, std::optional<AnchorSizeDimension>);
+
+    static void updateAnchorPositioningStatesAfterInterleavedLayout(const Document&);
+    static void cleanupAnchorPositionedState(Element&);
+    static void updateSnapshottedScrollOffsets(Document&);
+    static void updateAnchorPositionedStateForLayoutTimePositioned(Element&, const RenderStyle&);
+
+    static LayoutRect computeAnchorRectRelativeToContainingBlock(CheckedRef<const RenderBoxModelObject> anchorBox, const RenderBlock& containingBlock);
+
+    using AnchorToAnchorPositionedMap = SingleThreadWeakHashMap<const RenderBoxModelObject, Vector<Ref<Element>>>;
+    static AnchorToAnchorPositionedMap makeAnchorPositionedForAnchorMap(Document&);
+
+    static bool isLayoutTimeAnchorPositioned(const RenderStyle&);
+    static CSSPropertyID resolvePositionTryFallbackProperty(CSSPropertyID, WritingMode, const PositionTryFallback&);
+
+    static bool overflowsContainingBlock(const RenderBox& anchoredBox);
+
+private:
+    static AnchorElements findAnchorsForAnchorPositionedElement(const Element&, const UncheckedKeyHashSet<AtomString>& anchorNames, const AnchorsForAnchorName&);
 };
 
 } // namespace Style

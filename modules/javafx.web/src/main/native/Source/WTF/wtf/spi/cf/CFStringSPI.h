@@ -53,4 +53,3 @@ CFRange CFStringGetRangeOfCharacterClusterAtIndex(CFStringRef, CFIndex charIndex
 void _CFStringGetUserDefaultEncoding(UInt32* scriptValue, UInt32* regionValue);
 
 }
-

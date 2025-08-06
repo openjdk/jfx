@@ -109,7 +109,7 @@ CachedImage::~CachedImage()
 void CachedImage::load(CachedResourceLoader& loader)
 {
     m_skippingRevalidationDocument = loader.document();
-    m_layerBasedSVGEngineEnabled = loader.document() ? loader.document()->settings().layerBasedSVGEngineEnabled() : false;
+    m_settings = loader.document() ? &loader.document()->settings() : nullptr;
 
     if (loader.shouldPerformImageLoad(url()))
         CachedResource::load(loader);
@@ -319,7 +319,7 @@ FloatSize CachedImage::imageSizeForRenderer(const RenderElement* renderer, SizeT
 
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
     if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer); renderImage && renderImage->isMultiRepresentationHEIC()) {
-        auto metrics = renderImage->style().fontCascade().primaryFont().metricsForMultiRepresentationHEIC();
+        auto metrics = renderImage->style().fontCascade().primaryFont()->metricsForMultiRepresentationHEIC();
         return metrics.size();
     }
 #endif
@@ -363,6 +363,13 @@ void CachedImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length& int
         image->computeIntrinsicDimensions(intrinsicWidth, intrinsicHeight, intrinsicRatio);
 }
 
+Headroom CachedImage::headroom() const
+{
+    if (RefPtr image = m_image)
+        return image->headroom();
+    return Headroom::None;
+}
+
 void CachedImage::notifyObservers(const IntRect* changeRect)
 {
     CachedResourceClientWalker<CachedImageClient> walker(*this);
@@ -372,15 +379,10 @@ void CachedImage::notifyObservers(const IntRect* changeRect)
 
 void CachedImage::checkShouldPaintBrokenImage()
 {
-    if (!m_loader || m_loader->reachedTerminalState())
+    if (!m_loader || m_loader->reachedTerminalState() || !m_loader->frameLoader())
         return;
 
     m_shouldPaintBrokenImage = m_loader->frameLoader()->client().shouldPaintBrokenImage(url());
-}
-
-bool CachedImage::isPDFResource() const
-{
-    return Image::isPDFResource(response().mimeType(), url());
 }
 
 void CachedImage::clear()
@@ -540,7 +542,7 @@ void CachedImage::updateBufferInternal(const FragmentedSharedBuffer& data)
 
 bool CachedImage::shouldDeferUpdateImageData() const
 {
-    static const double updateImageDataBackoffIntervals[] = { 0, 1, 3, 6, 15 };
+    static constexpr std::array<double, 5> updateImageDataBackoffIntervals { 0, 1, 3, 6, 15 };
     unsigned interval = m_updateImageDataCount;
 
     // The first time through, the chunk time will be 0 and the image will get an update.

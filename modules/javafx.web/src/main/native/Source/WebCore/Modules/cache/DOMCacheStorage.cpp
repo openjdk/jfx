@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "MultiCacheQueryOptions.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -151,7 +152,7 @@ Ref<DOMCache> DOMCacheStorage::findCacheOrCreate(DOMCacheEngine::CacheInfo&& inf
 }
 
 class ConnectionStorageLock {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ConnectionStorageLock);
 
 public:
     ConnectionStorageLock(Ref<CacheStorageConnection>&& connection, const ClientOrigin& origin)
@@ -170,6 +171,8 @@ private:
     Ref<CacheStorageConnection> m_connection;
     ClientOrigin m_origin;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ConnectionStorageLock);
 
 void DOMCacheStorage::retrieveCaches(CompletionHandler<void(std::optional<Exception>&&)>&& callback)
 {

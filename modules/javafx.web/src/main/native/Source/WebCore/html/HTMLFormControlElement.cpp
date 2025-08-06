@@ -27,7 +27,6 @@
 
 #include "AXObjectCache.h"
 #include "Autofill.h"
-#include "CommandEvent.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
@@ -61,7 +60,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFormControlElement);
 using namespace HTMLNames;
 
 HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
-    : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument } )
+    : HTMLElement(tagName, document, { TypeFlag::IsFormControlElement, TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument } )
     , ValidatedFormListedElement(form)
     , m_isRequired(false)
     , m_valueMatchesRenderer(false)
@@ -275,8 +274,12 @@ void HTMLFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedEleme
 
 bool HTMLFormControlElement::shouldAutocorrect() const
 {
+    if (RefPtr input = dynamicDowncast<HTMLInputElement>(*this); input
+        && (input->isPasswordField() || input->isEmailField() || input->isURLField())) {
+        return false;
+    }
     const AtomString& autocorrectValue = attributeWithoutSynchronization(autocorrectAttr);
-    if (!autocorrectValue.isEmpty())
+    if (!autocorrectValue.isNull())
         return !equalLettersIgnoringASCIICase(autocorrectValue, "off"_s);
     if (RefPtr<HTMLFormElement> form = this->form())
         return form->shouldAutocorrect();
@@ -367,7 +370,7 @@ RefPtr<HTMLElement> HTMLFormControlElement::popoverTargetElement() const
     if (form() && isSubmitButton())
         return nullptr;
 
-    RefPtr element = dynamicDowncast<HTMLElement>(getElementAttribute(popovertargetAttr));
+    RefPtr element = dynamicDowncast<HTMLElement>(elementForAttributeInternal(popovertargetAttr));
     if (element && element->popoverState() != PopoverState::None)
         return element;
     return nullptr;
@@ -391,102 +394,29 @@ void HTMLFormControlElement::setPopoverTargetAction(const AtomString& value)
 }
 
 // https://html.spec.whatwg.org/#popover-target-attribute-activation-behavior
-void HTMLFormControlElement::handlePopoverTargetAction() const
+void HTMLFormControlElement::handlePopoverTargetAction(const EventTarget* eventTarget) const
 {
-    RefPtr target = popoverTargetElement();
-    if (!target)
+    RefPtr popover = popoverTargetElement();
+    if (!popover)
         return;
 
-    ASSERT(target->popoverData());
+    ASSERT(popover->popoverData());
+
+    if (RefPtr eventTargetNode = dynamicDowncast<Node>(eventTarget)) {
+        if (popover->containsIncludingShadowDOM(eventTargetNode.get()) && popover->isDescendantOrShadowDescendantOf(this))
+            return;
+    }
 
     auto action = popoverTargetAction();
     bool canHide = action == hideAtom() || action == toggleAtom();
-    bool shouldHide = canHide && target->popoverData()->visibilityState() == PopoverVisibilityState::Showing;
+    bool shouldHide = canHide && popover->popoverData()->visibilityState() == PopoverVisibilityState::Showing;
     bool canShow = action == showAtom() || action == toggleAtom();
-    bool shouldShow = canShow && target->popoverData()->visibilityState() == PopoverVisibilityState::Hidden;
+    bool shouldShow = canShow && popover->popoverData()->visibilityState() == PopoverVisibilityState::Hidden;
 
     if (shouldHide)
-        target->hidePopover();
+        popover->hidePopover();
     else if (shouldShow)
-        target->showPopover(this);
-}
-
-RefPtr<Element> HTMLFormControlElement::commandForElement() const
-{
-    auto canInvoke = [](const HTMLFormControlElement& element) -> bool {
-        if (!element.document().settings().invokerAttributesEnabled())
-            return false;
-        if (auto* inputElement = dynamicDowncast<HTMLInputElement>(element))
-            return inputElement->isTextButton() || inputElement->isImageButton();
-        return is<HTMLButtonElement>(element);
-    };
-
-    if (!canInvoke(*this))
-        return nullptr;
-
-    return getElementAttribute(commandforAttr);
-}
-
-constexpr ASCIILiteral togglePopoverLiteral = "togglepopover"_s;
-constexpr ASCIILiteral showPopoverLiteral = "showpopover"_s;
-constexpr ASCIILiteral hidePopoverLiteral = "hidepopover"_s;
-constexpr ASCIILiteral showModalLiteral = "showmodal"_s;
-constexpr ASCIILiteral closeLiteral = "close"_s;
-CommandType HTMLFormControlElement::commandType() const
-{
-    auto action = attributeWithoutSynchronization(HTMLNames::commandAttr);
-    if (action.isNull() || action.isEmpty())
-        return CommandType::Invalid;
-
-    if (equalLettersIgnoringASCIICase(action, togglePopoverLiteral))
-        return CommandType::TogglePopover;
-
-    if (equalLettersIgnoringASCIICase(action, showPopoverLiteral))
-        return CommandType::ShowPopover;
-
-    if (equalLettersIgnoringASCIICase(action, hidePopoverLiteral))
-        return CommandType::HidePopover;
-
-    if (equalLettersIgnoringASCIICase(action, showModalLiteral))
-        return CommandType::ShowModal;
-
-    if (equalLettersIgnoringASCIICase(action, closeLiteral))
-        return CommandType::Close;
-
-    if (action.contains('-'))
-        return CommandType::Custom;
-
-    return CommandType::Invalid;
-}
-
-void HTMLFormControlElement::handleCommand()
-{
-    RefPtr invokee = commandForElement();
-    if (!invokee)
-        return;
-
-    auto commandRaw = attributeWithoutSynchronization(HTMLNames::commandAttr);
-    auto command = commandType();
-
-    if (command == CommandType::Invalid)
-        return;
-
-    if (command != CommandType::Custom && !invokee->isValidCommandType(command))
-        return;
-
-    CommandEvent::Init init;
-    init.bubbles = false;
-    init.cancelable = true;
-    init.composed = true;
-    init.invoker = this;
-    init.command = commandRaw.isNull() ? emptyAtom() : commandRaw;
-
-    Ref<CommandEvent> event = CommandEvent::create(eventNames().commandEvent, init,
-        CommandEvent::IsTrusted::Yes);
-    invokee->dispatchEvent(event);
-
-    if (!event->defaultPrevented() && command != CommandType::Custom)
-        invokee->handleCommandInternal(*this, command);
+        popover->showPopoverInternal(this);
 }
 
 } // namespace Webcore

@@ -20,6 +20,10 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #include <initializer_list>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
@@ -27,7 +31,7 @@
 
 namespace WTF {
 
-template<typename ValueArg, typename HashArg, typename TraitsArg, typename TableTraitsArg>
+template<typename ValueArg, typename HashArg, typename TraitsArg, typename TableTraitsArg, ShouldValidateKey shouldValidateKey>
 class HashSet final {
     WTF_MAKE_FAST_ALLOCATED;
 private:
@@ -39,7 +43,7 @@ public:
     using ValueType = typename ValueTraits::TraitType;
 
 private:
-    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits>;
+    using HashTableType = typename TableTraitsArg::template TableType<ValueType, ValueType, IdentityExtractor, HashFunctions, ValueTraits, ValueTraits, shouldValidateKey>;
 
 public:
     // HashSet iterators have the following structure:
@@ -113,7 +117,7 @@ public:
     // function members:
     //   static unsigned hash(const T&);
     //   static bool equal(const ValueType&, const T&);
-    template<typename HashTranslator> AddResult ensure(auto&&, const Invocable<ValueType()> auto&);
+    template<typename HashTranslator> AddResult ensure(auto&&, NOESCAPE const Invocable<ValueType()> auto&);
 
     // Attempts to add a list of things to the set. Returns true if any of
     // them are new to the set. Returns false if the set is unchanged.
@@ -124,12 +128,15 @@ public:
 
     bool remove(const ValueType&);
     bool remove(iterator);
-    bool removeIf(const Invocable<bool(const ValueType&)> auto&);
+    bool removeIf(NOESCAPE const Invocable<bool(const ValueType&)> auto&);
     void clear();
 
     TakeType take(const ValueType&);
     TakeType take(iterator);
     TakeType takeAny();
+
+    template<size_t inlineCapacity = 0>
+    Vector<TakeType, inlineCapacity> takeIf(NOESCAPE const Invocable<bool(const ValueType&)> auto& functor) { return m_impl.template takeIf<inlineCapacity>(functor); }
 
     // Returns a new set with the elements of both this and the given
     // collection (a.k.a. OR).
@@ -143,6 +150,13 @@ public:
     template<typename OtherCollection>
     HashSet intersectionWith(const OtherCollection&) const;
 
+    // Returns a new set with the elements of this set that are not in
+    // the given collection (a.k.a. A - B).
+    //
+    // NOTE: OtherCollection is required to implement `bool contains(Value)`.
+    template<typename OtherCollection>
+    HashSet differenceWith(const OtherCollection&) const;
+
     // Returns a new set with the elements that are either in this set or
     // in the given collection, but not in both. (a.k.a. XOR).
     template<typename OtherCollection>
@@ -151,6 +165,12 @@ public:
     // Adds the elements of the given collection to the set (a.k.a. OR).
     template<typename OtherCollection>
     void formUnion(const OtherCollection&);
+
+    // Removes the elements of this set that are in the given collection (a.k.a. A - B).
+    //
+    // NOTE: OtherCollection is required to implement `bool contains(Value)`.
+    template<typename OtherCollection>
+    void formDifference(const OtherCollection&);
 
     // Removes the elements of this set that aren't also in the given
     // collection (a.k.a. AND).
@@ -200,7 +220,7 @@ template<typename ValueTraits, typename HashFunctions>
 struct HashSetTranslator {
     static unsigned hash(const auto& key) { return HashFunctions::hash(key); }
     static bool equal(const auto& a, const auto& b) { return HashFunctions::equal(a, b); }
-    static void translate(auto& location, auto&&, const Invocable<typename ValueTraits::TraitType()> auto& functor)
+    static void translate(auto& location, auto&&, NOESCAPE const Invocable<typename ValueTraits::TraitType()> auto& functor)
     {
         ValueTraits::assignToEmpty(location, functor());
     }
@@ -220,121 +240,121 @@ template<typename ValueTraits, typename Translator>
 struct HashSetEnsureTranslatorAdaptor {
     static unsigned hash(const auto& key) { return Translator::hash(key); }
     static bool equal(const auto& a, const auto& b) { return Translator::equal(a, b); }
-    static void translate(auto& location, auto&&, const Invocable<typename ValueTraits::TraitType()> auto& functor)
+    static void translate(auto& location, auto&&, NOESCAPE const Invocable<typename ValueTraits::TraitType()> auto& functor)
     {
         ValueTraits::assignToEmpty(location, functor());
     }
 };
 
-template<typename T, typename U, typename V, typename W>
-inline void HashSet<T, U, V, W>::swap(HashSet& other)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline void HashSet<T, U, V, W, shouldValidateKey>::swap(HashSet& other)
 {
     m_impl.swap(other.m_impl);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline unsigned HashSet<T, U, V, W>::size() const
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline unsigned HashSet<T, U, V, W, shouldValidateKey>::size() const
 {
     return m_impl.size();
 }
 
-template<typename T, typename U, typename V, typename W>
-inline unsigned HashSet<T, U, V, W>::capacity() const
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline unsigned HashSet<T, U, V, W, shouldValidateKey>::capacity() const
 {
     return m_impl.capacity();
 }
 
-template<typename T, typename U, typename V, typename W>
-inline unsigned HashSet<T, U, V, W>::memoryUse() const
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline unsigned HashSet<T, U, V, W, shouldValidateKey>::memoryUse() const
 {
     return capacity() * sizeof(T);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool HashSet<T, U, V, W>::isEmpty() const
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::isEmpty() const
 {
     return m_impl.isEmpty();
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::begin() const -> iterator
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::begin() const -> iterator
 {
     return m_impl.begin();
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::end() const -> iterator
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::end() const -> iterator
 {
     return m_impl.end();
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::find(const ValueType& value) const -> iterator
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::find(const ValueType& value) const -> iterator
 {
     return m_impl.find(value);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool HashSet<T, U, V, W>::contains(const ValueType& value) const
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::contains(const ValueType& value) const
 {
     return m_impl.contains(value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::find(const T& value) const -> iterator
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(const T& value) const -> iterator
 {
     return m_impl.template find<HashSetTranslatorAdapter<HashTranslator>>(value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
-inline bool HashSet<Value, HashFunctions, Traits, TableTraits>::contains(const T& value) const
+inline bool HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(const T& value) const
 {
     return m_impl.template contains<HashSetTranslatorAdapter<HashTranslator>>(value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator, typename T>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::ensure(T&& key, const Invocable<ValueType()> auto& functor) -> AddResult
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::ensure(T&& key, NOESCAPE const Invocable<ValueType()> auto& functor) -> AddResult
 {
     return m_impl.template add<HashSetEnsureTranslatorAdaptor<Traits, HashTranslator>>(std::forward<T>(key), functor);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::add(const ValueType& value) -> AddResult
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::add(const ValueType& value) -> AddResult
 {
     return m_impl.add(value);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::add(ValueType&& value) -> AddResult
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::add(ValueType&& value) -> AddResult
 {
     return m_impl.add(WTFMove(value));
 }
 
-template<typename T, typename U, typename V, typename W>
-inline void HashSet<T, U, V, W>::addVoid(const ValueType& value)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline void HashSet<T, U, V, W, shouldValidateKey>::addVoid(const ValueType& value)
 {
     m_impl.add(value);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline void HashSet<T, U, V, W>::addVoid(ValueType&& value)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline void HashSet<T, U, V, W, shouldValidateKey>::addVoid(ValueType&& value)
 {
     m_impl.add(WTFMove(value));
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename HashTranslator>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::add(const auto& value) -> AddResult
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::add(const auto& value) -> AddResult
 {
     return m_impl.template addPassingHashCode<HashSetTranslatorAdapter<HashTranslator>>(value, [&]() ALWAYS_INLINE_LAMBDA { return value; });
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename IteratorType>
-inline bool HashSet<T, U, V, W>::add(IteratorType begin, IteratorType end)
+inline bool HashSet<T, U, V, W, shouldValidateKey>::add(IteratorType begin, IteratorType end)
 {
     bool changed = false;
     for (IteratorType iter = begin; iter != end; ++iter)
@@ -342,9 +362,9 @@ inline bool HashSet<T, U, V, W>::add(IteratorType begin, IteratorType end)
     return changed;
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename IteratorType>
-inline bool HashSet<T, U, V, W>::remove(IteratorType begin, IteratorType end)
+inline bool HashSet<T, U, V, W, shouldValidateKey>::remove(IteratorType begin, IteratorType end)
 {
     bool changed = false;
     for (IteratorType iter = begin; iter != end; ++iter)
@@ -352,8 +372,8 @@ inline bool HashSet<T, U, V, W>::remove(IteratorType begin, IteratorType end)
     return changed;
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool HashSet<T, U, V, W>::remove(iterator it)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::remove(iterator it)
 {
     if (it.m_impl == m_impl.end())
         return false;
@@ -362,26 +382,26 @@ inline bool HashSet<T, U, V, W>::remove(iterator it)
     return true;
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool HashSet<T, U, V, W>::remove(const ValueType& value)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::remove(const ValueType& value)
 {
     return remove(find(value));
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool HashSet<T, U, V, W>::removeIf(const Invocable<bool(const ValueType&)> auto& functor)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::removeIf(NOESCAPE const Invocable<bool(const ValueType&)> auto& functor)
 {
     return m_impl.removeIf(functor);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline void HashSet<T, U, V, W>::clear()
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline void HashSet<T, U, V, W, shouldValidateKey>::clear()
 {
     m_impl.clear();
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::take(iterator it) -> TakeType
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::take(iterator it) -> TakeType
 {
     if (it == end())
         return ValueTraits::take(ValueTraits::emptyValue());
@@ -391,30 +411,30 @@ inline auto HashSet<T, U, V, W>::take(iterator it) -> TakeType
     return result;
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::take(const ValueType& value) -> TakeType
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::take(const ValueType& value) -> TakeType
 {
     return take(find(value));
 }
 
-template<typename T, typename U, typename V, typename W>
-inline auto HashSet<T, U, V, W>::takeAny() -> TakeType
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::takeAny() -> TakeType
 {
     return take(begin());
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline auto HashSet<T, U, V, W>::unionWith(const OtherCollection& other) const -> HashSet<T, U, V, W>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::unionWith(const OtherCollection& other) const -> HashSet<T, U, V, W, shouldValidateKey>
 {
     auto copy = *this;
     copy.add(other.begin(), other.end());
     return copy;
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline auto HashSet<T, U, V, W>::intersectionWith(const OtherCollection& other) const -> HashSet<T, U, V, W>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::intersectionWith(const OtherCollection& other) const -> HashSet<T, U, V, W, shouldValidateKey>
 {
     HashSet result;
     for (auto& value : *this) {
@@ -424,32 +444,51 @@ inline auto HashSet<T, U, V, W>::intersectionWith(const OtherCollection& other) 
     return result;
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline auto HashSet<T, U, V, W>::symmetricDifferenceWith(const OtherCollection& other) const -> HashSet<T, U, V, W>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::differenceWith(const OtherCollection& other) const -> HashSet<T, U, V, W, shouldValidateKey>
+{
+    HashSet result;
+    for (const auto& value : *this) {
+        if (!other.contains(value))
+            result.add(value);
+    }
+    return result;
+}
+
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+template<typename OtherCollection>
+inline auto HashSet<T, U, V, W, shouldValidateKey>::symmetricDifferenceWith(const OtherCollection& other) const -> HashSet<T, U, V, W, shouldValidateKey>
 {
     auto copy = *this;
     copy.formSymmetricDifference(other);
     return copy;
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline void HashSet<T, U, V, W>::formUnion(const OtherCollection& other)
+inline void HashSet<T, U, V, W, shouldValidateKey>::formUnion(const OtherCollection& other)
 {
     add(other.begin(), other.end());
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline void HashSet<T, U, V, W>::formIntersection(const OtherCollection& other)
+inline void HashSet<T, U, V, W, shouldValidateKey>::formIntersection(const OtherCollection& other)
 {
     *this = intersectionWith(other);
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline void HashSet<T, U, V, W>::formSymmetricDifference(const OtherCollection& other)
+inline void HashSet<T, U, V, W, shouldValidateKey>::formDifference(const OtherCollection& other)
+{
+    *this = differenceWith(other);
+}
+
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+template<typename OtherCollection>
+inline void HashSet<T, U, V, W, shouldValidateKey>::formSymmetricDifference(const OtherCollection& other)
 {
     for (auto& value : other) {
         if (!remove(value))
@@ -457,71 +496,71 @@ inline void HashSet<T, U, V, W>::formSymmetricDifference(const OtherCollection& 
     }
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline bool HashSet<T, U, V, W>::isSubset(const OtherCollection& other)
+inline bool HashSet<T, U, V, W, shouldValidateKey>::isSubset(const OtherCollection& other)
 {
     return intersectionWith(other).size() == size();
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, iterator>::type
 {
     return m_impl.template find<HashSetTranslator<Traits, HashFunctions>>(value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) const -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
 {
     return m_impl.template contains<HashSetTranslator<Traits, HashFunctions>>(value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, bool>::type
 {
     return remove(find(value));
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, TakeType>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>* value) -> typename std::enable_if<IsSmartPtr<V>::value, TakeType>::type
 {
     return take(find(value));
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, iterator>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::find(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, iterator>::type
 {
     return find(&value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::contains(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) const -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
 {
     return contains(&value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::remove(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, bool>::type
 {
     return remove(&value);
 }
 
-template<typename Value, typename HashFunctions, typename Traits, typename TableTraits>
+template<typename Value, typename HashFunctions, typename Traits, typename TableTraits, ShouldValidateKey shouldValidateKey>
 template<typename V>
-inline auto HashSet<Value, HashFunctions, Traits, TableTraits>::take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, TakeType>::type
+inline auto HashSet<Value, HashFunctions, Traits, TableTraits, shouldValidateKey>::take(std::add_const_t<typename GetPtrHelper<V>::UnderlyingType>& value) -> typename std::enable_if<IsSmartPtr<V>::value && !IsSmartPtr<V>::isNullable, TakeType>::type
 {
     return take(&value);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool HashSet<T, U, V, W>::isValidValue(const ValueType& value)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline bool HashSet<T, U, V, W, shouldValidateKey>::isValidValue(const ValueType& value)
 {
     if (ValueTraits::isDeletedValue(value))
         return false;
@@ -537,9 +576,9 @@ inline bool HashSet<T, U, V, W>::isValidValue(const ValueType& value)
     return true;
 }
 
-template<typename T, typename U, typename V, typename W>
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
 template<typename OtherCollection>
-inline bool HashSet<T, U, V, W>::operator==(const OtherCollection& otherCollection) const
+inline bool HashSet<T, U, V, W, shouldValidateKey>::operator==(const OtherCollection& otherCollection) const
 {
     if (size() != otherCollection.size())
         return false;
@@ -550,15 +589,15 @@ inline bool HashSet<T, U, V, W>::operator==(const OtherCollection& otherCollecti
     return true;
 }
 
-template<typename T, typename U, typename V, typename W>
-void HashSet<T, U, V, W>::add(std::initializer_list<std::reference_wrapper<const ValueType>> list)
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+void HashSet<T, U, V, W, shouldValidateKey>::add(std::initializer_list<std::reference_wrapper<const ValueType>> list)
 {
     for (auto& value : list)
         add(value);
 }
 
-template<typename T, typename U, typename V, typename W>
-inline void HashSet<T, U, V, W>::checkConsistency() const
+template<typename T, typename U, typename V, typename W, ShouldValidateKey shouldValidateKey>
+inline void HashSet<T, U, V, W, shouldValidateKey>::checkConsistency() const
 {
     m_impl.checkTableConsistency();
 }
@@ -566,3 +605,5 @@ inline void HashSet<T, U, V, W>::checkConsistency() const
 } // namespace WTF
 
 using WTF::HashSet;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

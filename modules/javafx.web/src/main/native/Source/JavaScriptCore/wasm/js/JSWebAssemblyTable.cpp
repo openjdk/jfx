@@ -29,6 +29,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "JSCInlines.h"
+#include "JSWebAssemblyHelpers.h"
 #include "JSWebAssemblyInstance.h"
 #include "ObjectConstructor.h"
 
@@ -36,15 +37,8 @@ namespace JSC {
 
 const ClassInfo JSWebAssemblyTable::s_info = { "WebAssembly.Table"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyTable) };
 
-JSWebAssemblyTable* JSWebAssemblyTable::tryCreate(JSGlobalObject* globalObject, VM& vm, Structure* structure, Ref<Wasm::Table>&& table)
+JSWebAssemblyTable* JSWebAssemblyTable::create(VM& vm, Structure* structure, Ref<Wasm::Table>&& table)
 {
-    auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-    if (!globalObject->webAssemblyEnabled()) {
-        throwException(globalObject, throwScope, createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
-        return nullptr;
-    }
-
     auto* instance = new (NotNull, allocateCell<JSWebAssemblyTable>(vm)) JSWebAssemblyTable(vm, structure, WTFMove(table));
     instance->table()->setOwner(instance);
     instance->finishCreation(vm);
@@ -79,37 +73,66 @@ void JSWebAssemblyTable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(JSWebAssemblyTable);
 
-bool JSWebAssemblyTable::grow(uint32_t delta, JSValue defaultValue)
+std::optional<uint32_t> JSWebAssemblyTable::grow(JSGlobalObject* globalObject, uint32_t delta, JSValue defaultValue)
 {
-    if (delta == 0)
-        return true;
-    return !!m_table->grow(delta, defaultValue);
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    uint64_t wasmValue = 0;
+    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+        if (!defaultValue.isNull()) {
+            throwTypeError(globalObject, scope, "Table.grow cannot handle exnref table"_s);
+            return { };
+        }
+        wasmValue = JSValue::encode(defaultValue);
+    } else {
+        wasmValue = toWebAssemblyValue(globalObject, m_table->wasmType(), defaultValue);
+        RETURN_IF_EXCEPTION(scope, false);
+    }
+
+    return m_table->grow(delta, JSValue::decode(wasmValue));
 }
 
-JSValue JSWebAssemblyTable::get(uint32_t index)
+JSValue JSWebAssemblyTable::get(JSGlobalObject* globalObject, uint32_t index)
 {
-    RELEASE_ASSERT(index < length());
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+        throwTypeError(globalObject, scope, "Table.get cannot handle exnref table"_s);
+        return { };
+    }
+
     return m_table->get(index);
+}
+
+void JSWebAssemblyTable::set(JSGlobalObject* globalObject, uint32_t index, JSValue value)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+        throwTypeError(globalObject, scope, "Table.set cannot handle exnref table"_s);
+        return;
+    }
+
+    uint64_t wasmValue = toWebAssemblyValue(globalObject, m_table->wasmType(), value);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    if (index < length())
+        return m_table->set(index, JSValue::decode(wasmValue));
+
+    throwRangeError(globalObject, scope, "Table.set expects an index less than the length of the table"_s);
 }
 
 void JSWebAssemblyTable::set(uint32_t index, JSValue value)
 {
-    RELEASE_ASSERT(index < length());
-    RELEASE_ASSERT(m_table->isExternrefTable());
     m_table->set(index, value);
-}
-
-void JSWebAssemblyTable::set(uint32_t index, WebAssemblyFunctionBase* function)
-{
-    RELEASE_ASSERT(index < length());
-    RELEASE_ASSERT(m_table->asFuncrefTable());
-    auto& subThis = *static_cast<Wasm::FuncRefTable*>(&m_table.get());
-    subThis.setFunction(index, function, function->importableFunction(), function->instance());
 }
 
 void JSWebAssemblyTable::clear(uint32_t index)
 {
-    RELEASE_ASSERT(index < length());
+    ASSERT(index < length());
     m_table->clear(index);
 }
 

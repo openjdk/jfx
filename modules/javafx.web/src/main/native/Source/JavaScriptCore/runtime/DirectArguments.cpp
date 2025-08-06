@@ -27,7 +27,9 @@
 #include "DirectArguments.h"
 
 #include "CodeBlock.h"
-#include "GenericArgumentsInlines.h"
+#include "GenericArgumentsImplInlines.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -36,7 +38,7 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(DirectArguments);
 const ClassInfo DirectArguments::s_info = { "Arguments"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DirectArguments) };
 
 DirectArguments::DirectArguments(VM& vm, Structure* structure, unsigned length, unsigned capacity)
-    : GenericArguments(vm, structure)
+    : GenericArgumentsImpl(vm, structure)
     , m_length(length)
     , m_minCapacity(capacity)
 {
@@ -95,14 +97,13 @@ void DirectArguments::visitChildrenImpl(JSCell* thisCell, Visitor& visitor)
 {
     DirectArguments* thisObject = static_cast<DirectArguments*>(thisCell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
-    Base::visitChildren(thisObject, visitor);
+    GenericArgumentsImpl::visitChildren(thisCell, visitor); // Including Base::visitChildren.
 
     visitor.appendValues(thisObject->storage(), std::max(thisObject->m_length, thisObject->m_minCapacity));
     visitor.append(thisObject->m_callee);
 
     if (thisObject->m_mappedArguments)
         visitor.markAuxiliary(thisObject->m_mappedArguments.get());
-    GenericArguments<DirectArguments>::visitChildren(thisCell, visitor);
 }
 
 DEFINE_VISIT_CHILDREN(DirectArguments);
@@ -163,7 +164,7 @@ void DirectArguments::copyToArguments(JSGlobalObject* globalObject, JSValue* fir
         return;
     }
 
-    GenericArguments::copyToArguments(globalObject, firstElementDest, offset, length);
+    GenericArgumentsImpl::copyToArguments(globalObject, firstElementDest, offset, length);
 }
 
 unsigned DirectArguments::mappedArgumentsSize()
@@ -219,3 +220,4 @@ JSArray* DirectArguments::fastSlice(JSGlobalObject* globalObject, DirectArgument
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

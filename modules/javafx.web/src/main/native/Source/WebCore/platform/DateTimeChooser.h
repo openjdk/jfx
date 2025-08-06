@@ -30,24 +30,16 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class DateTimeChooser;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DateTimeChooser> : std::true_type { };
-}
 
 namespace WebCore {
 
 struct DateTimeChooserParameters;
 
-class DateTimeChooser : public CanMakeWeakPtr<DateTimeChooser> {
-    WTF_MAKE_FAST_ALLOCATED;
+class DateTimeChooser : public AbstractRefCountedAndCanMakeWeakPtr<DateTimeChooser> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DateTimeChooser);
 public:
     virtual ~DateTimeChooser() = default;
 
@@ -56,4 +48,3 @@ public:
 };
 
 } // namespace WebCore
-#endif

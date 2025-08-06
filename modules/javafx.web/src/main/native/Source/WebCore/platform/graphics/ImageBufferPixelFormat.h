@@ -35,8 +35,15 @@ namespace WebCore {
 enum class ImageBufferPixelFormat : uint8_t {
     BGRX8,
     BGRA8,
+#if ENABLE(PIXEL_FORMAT_RGB10)
     RGB10,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
     RGB10A8,
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    RGBA16F,
+#endif
 };
 
 constexpr PixelFormat convertToPixelFormat(ImageBufferPixelFormat format)
@@ -46,10 +53,18 @@ constexpr PixelFormat convertToPixelFormat(ImageBufferPixelFormat format)
         return PixelFormat::BGRX8;
     case ImageBufferPixelFormat::BGRA8:
         return PixelFormat::BGRA8;
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case ImageBufferPixelFormat::RGB10:
         return PixelFormat::RGB10;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
     case ImageBufferPixelFormat::RGB10A8:
         return PixelFormat::RGB10A8;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    case ImageBufferPixelFormat::RGBA16F:
+        return PixelFormat::RGBA16F;
+#endif
     }
 
     ASSERT_NOT_REACHED();
@@ -64,11 +79,17 @@ constexpr IOSurface::Format convertToIOSurfaceFormat(ImageBufferPixelFormat form
         return IOSurface::Format::BGRX;
     case ImageBufferPixelFormat::BGRA8:
         return IOSurface::Format::BGRA;
-#if HAVE(IOSURFACE_RGB10)
+#if ENABLE(PIXEL_FORMAT_RGB10)
     case ImageBufferPixelFormat::RGB10:
         return IOSurface::Format::RGB10;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGB10A8)
     case ImageBufferPixelFormat::RGB10A8:
         return IOSurface::Format::RGB10A8;
+#endif
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    case ImageBufferPixelFormat::RGBA16F:
+        return IOSurface::Format::RGBA16F;
 #endif
     default:
         RELEASE_ASSERT_NOT_REACHED();

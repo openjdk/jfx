@@ -28,6 +28,7 @@
 
 #include "CommonVM.h"
 #include "GCController.h"
+#include "IdleCallbackController.h"
 #include "Page.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSGlobalObject.h>
@@ -53,7 +54,10 @@ void OpportunisticTaskScheduler::rescheduleIfNeeded(MonotonicTime deadline)
     if (page->isWaitingForLoadToFinish() || !page->isVisibleAndActive())
         return;
 
-    if (!m_mayHavePendingIdleCallbacks && !page->settings().opportunisticSweepingAndGarbageCollectionEnabled())
+    auto hasIdleCallbacks = page->findMatchingLocalDocument([](const Document& document) {
+        return document.hasPendingIdleCallback();
+    });
+    if (!hasIdleCallbacks && !page->settings().opportunisticSweepingAndGarbageCollectionEnabled())
         return;
 
     m_runloopCountAfterBeingScheduled = 0;
@@ -98,10 +102,7 @@ void OpportunisticTaskScheduler::runLoopObserverFired()
     m_runloopCountAfterBeingScheduled++;
 
     bool shouldRunTask = [&] {
-        if (!hasImminentlyScheduledWork())
-            return true;
-
-        static constexpr auto fractionOfRenderingIntervalWhenScheduledWorkIsImminent = 0.72;
+        static constexpr auto fractionOfRenderingIntervalWhenScheduledWorkIsImminent = 0.95;
         if (remainingTime > fractionOfRenderingIntervalWhenScheduledWorkIsImminent * page->preferredRenderingUpdateInterval())
             return true;
 
@@ -127,14 +128,7 @@ void OpportunisticTaskScheduler::runLoopObserverFired()
     };
 
     auto deadline = std::exchange(m_currentDeadline, MonotonicTime { });
-    if (std::exchange(m_mayHavePendingIdleCallbacks, false)) {
-        auto weakPage = m_page;
-        page->opportunisticallyRunIdleCallbacks();
-        if (UNLIKELY(!weakPage)) {
-            dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: page gets destroyed", " signpost:(", JSC::activeJSGlobalObjectSignpostIntervalCount.load(), ")");
-        return;
-        }
-    }
+    page->opportunisticallyRunIdleCallbacks(deadline);
 
     if (!page->settings().opportunisticSweepingAndGarbageCollectionEnabled()) {
         dataLogLnIf(verbose, "[OPPORTUNISTIC TASK] GaveUp: opportunistic sweep and GC is not enabled", " signpost:(", JSC::activeJSGlobalObjectSignpostIntervalCount.load(), ")");

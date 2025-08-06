@@ -450,14 +450,14 @@ static bool appendEncodedHostname(Vector<UChar, 512>& buffer, StringView string)
         return true;
     }
 
-    UChar hostnameBuffer[URLParser::hostnameBufferLength];
+    std::array<UChar, URLParser::hostnameBufferLength> hostnameBuffer;
     UErrorCode error = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
     int32_t numCharactersConverted = uidna_nameToASCII(&URLParser::internationalDomainNameTranscoder(),
-        string.upconvertedCharacters(), string.length(), hostnameBuffer, URLParser::hostnameBufferLength, &processingDetails, &error);
+        string.upconvertedCharacters(), string.length(), hostnameBuffer.data(), hostnameBuffer.size(), &processingDetails, &error);
 
     if (U_SUCCESS(error) && !(processingDetails.errors & ~URLParser::allowedNameToASCIIErrors) && numCharactersConverted) {
-        buffer.append(std::span(hostnameBuffer, numCharactersConverted));
+        buffer.append(std::span { hostnameBuffer }.first(numCharactersConverted));
         return true;
     }
     return false;
@@ -864,10 +864,10 @@ String percentEncodeFragmentDirectiveSpecialCharacters(const String& input)
     return percentEncodeCharacters(input, URLParser::isSpecialCharacterForFragmentDirective);
 }
 
-static bool protocolIsInternal(StringView string, ASCIILiteral protocolLiteral)
+static bool protocolIsInternal(StringView string, ASCIILiteral protocol)
 {
-    assertProtocolIsGood(protocolLiteral);
-    auto* protocol = protocolLiteral.characters();
+    assertProtocolIsGood(protocol);
+    size_t protocolIndex = 0;
     bool isLeading = true;
     for (auto codeUnit : string.codeUnits()) {
         if (isLeading) {
@@ -881,9 +881,10 @@ static bool protocolIsInternal(StringView string, ASCIILiteral protocolLiteral)
             continue;
         }
 
-        char expectedCharacter = *protocol++;
-        if (!expectedCharacter)
+
+        if (protocolIndex == protocol.length())
             return codeUnit == ':';
+        char expectedCharacter = protocol[protocolIndex++];
         if (!isASCIIAlphaCaselessEqual(codeUnit, expectedCharacter))
             return false;
     }
@@ -899,7 +900,7 @@ bool protocolIs(StringView string, ASCIILiteral protocol)
 
 void URL::print() const
 {
-    printf("%s\n", m_string.utf8().data());
+    SAFE_PRINTF("%s\n", m_string.utf8());
 }
 
 #endif
@@ -1004,9 +1005,10 @@ bool portAllowed(const URL& url)
     if (!port)
         return true;
 
-    // This blocked port list matches the port blocking that Mozilla implements.
-    // See http://www.mozilla.org/projects/netlib/PortBanning.html for more information.
+    // This blocked port list is defined by the Fetch spec, with the addition of port 0.
+    // See https://fetch.spec.whatwg.org/#port-blocking for more information.
     static const uint16_t blockedPortList[] = {
+        0,    // reserved
         1,    // tcpmux
         7,    // echo
         9,    // discard
@@ -1181,8 +1183,6 @@ TextStream& operator<<(TextStream& ts, const URL& url)
     return ts;
 }
 
-#if !PLATFORM(COCOA) && !USE(SOUP)
-
 static bool isIPv4Address(StringView string)
 {
     auto count = 0;
@@ -1215,7 +1215,7 @@ static bool isIPv4Address(StringView string)
     return (count == 4);
 }
 
-static bool isIPv6Address(StringView string)
+bool URL::isIPv6Address(StringView string)
 {
     enum SkipState { None, WillSkip, Skipping, Skipped, Final };
     auto skipState = None;
@@ -1266,6 +1266,8 @@ static bool isIPv6Address(StringView string)
 
     return (count == 8 && skipState == None) || skipState == Skipped || skipState == Final;
 }
+
+#if !PLATFORM(COCOA) && !USE(SOUP)
 
 bool URL::hostIsIPAddress(StringView host)
 {
@@ -1334,7 +1336,7 @@ Vector<KeyValuePair<String, String>> differingQueryParameters(const URL& firstUR
     return differingQueryParameters;
 }
 
-static StringView substringIgnoringQueryAndFragments(const URL& url)
+static StringView substringIgnoringQueryAndFragments(const URL& url LIFETIME_BOUND)
 {
     if (!url.isValid())
         return StringView(url.string());
@@ -1347,7 +1349,7 @@ bool isEqualIgnoringQueryAndFragments(const URL& a, const URL& b)
     return substringIgnoringQueryAndFragments(a) == substringIgnoringQueryAndFragments(b);
 }
 
-Vector<String> removeQueryParameters(URL& url, const HashSet<String>& keysToRemove)
+Vector<String> removeQueryParameters(URL& url, const UncheckedKeyHashSet<String>& keysToRemove)
 {
     if (keysToRemove.isEmpty())
         return { };
@@ -1357,7 +1359,7 @@ Vector<String> removeQueryParameters(URL& url, const HashSet<String>& keysToRemo
     });
 }
 
-Vector<String> removeQueryParameters(URL& url, Function<bool(const String&)>&& shouldRemove)
+Vector<String> removeQueryParameters(URL& url, NOESCAPE const Function<bool(const String&)>& shouldRemove)
 {
     if (!url.hasQuery())
         return { };

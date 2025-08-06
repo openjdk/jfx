@@ -31,6 +31,7 @@
 #include "ContextMenuItem.h"
 #include "HitTestRequest.h"
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakRef.h>
 
@@ -43,7 +44,7 @@ class HitTestResult;
 class Page;
 
 class ContextMenuController {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ContextMenuController);
 public:
     ContextMenuController(Page&, UniqueRef<ContextMenuClient>&&);
     ~ContextMenuController();
@@ -64,7 +65,6 @@ public:
 
     WEBCORE_EXPORT void checkOrEnableIfNeeded(ContextMenuItem&) const;
 
-    void setContextMenuContext(const ContextMenuContext& context) { m_context = context; }
     const ContextMenuContext& context() const { return m_context; }
     const HitTestResult& hitTestResult() const { return m_context.hitTestResult(); }
 
@@ -90,7 +90,7 @@ private:
     void createAndAppendTextDirectionSubMenu(ContextMenuItem&);
     void createAndAppendSubstitutionsSubMenu(ContextMenuItem&);
     void createAndAppendTransformationsSubMenu(ContextMenuItem&);
-    bool shouldEnableCopyLinkToHighlight() const;
+    bool shouldEnableCopyLinkWithHighlight() const;
 #if PLATFORM(GTK)
     void createAndAppendUnicodeSubMenu(ContextMenuItem&);
 #endif

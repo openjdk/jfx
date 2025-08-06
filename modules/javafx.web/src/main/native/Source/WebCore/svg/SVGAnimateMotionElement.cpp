@@ -289,8 +289,7 @@ std::optional<float> SVGAnimateMotionElement::calculateDistance(const String& fr
     auto to = parsePoint(toString);
     if (!to)
         return { };
-    auto diff = *to - *from;
-    return std::hypot(diff.width(), diff.height());
+    return (*to - *from).diagonalLength();
 }
 
 void SVGAnimateMotionElement::updateAnimationMode()

@@ -137,6 +137,13 @@ public:
         m_storage.set(vm, this, storage);
     }
 
+    ALWAYS_INLINE JSCell* storage(JSGlobalObject* globalObject)
+    {
+        materializeIfNeeded(globalObject);
+        ASSERT(m_storage);
+        return m_storage.get();
+    }
+
     ALWAYS_INLINE JSCell* storageOrSentinel(VM& vm)
     {
         if (m_storage)
@@ -197,6 +204,40 @@ public:
     {
         ASSERT(m_storage);
         return Helper::get(storageRef(), keyIndex + 1);
+    }
+
+    template<typename GetValueFunctor>
+    ALWAYS_INLINE JSValue getOrInsert(JSGlobalObject* globalObject, JSValue key, const GetValueFunctor& getValueFunctor)
+    {
+        VM& vm = getVM(globalObject);
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        materializeIfNeeded(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        Storage& storage = storageRef();
+
+        JSValue value;
+
+        auto result = Helper::find(globalObject, storage, key);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (Helper::isValidTableIndex(result.entryKeyIndex))
+            value = Helper::get(storage, result.entryKeyIndex + 1);
+        else {
+            value = getValueFunctor();
+            RETURN_IF_EXCEPTION(scope, { });
+
+            if (Helper::isObsolete(storage)) {
+                // Call to getValueFunctor can modify our state, so we need to re-check the index
+                result = Helper::find(globalObject, storageRef(), key);
+                RETURN_IF_EXCEPTION(scope, { });
+            }
+            Helper::addImpl(globalObject, this, storageRef(), key, value, result);
+            RETURN_IF_EXCEPTION(scope, { });
+        }
+
+        return value;
     }
 
     static JSCell* createSentinel(VM& vm) { return Helper::tryCreate(vm, 0); }

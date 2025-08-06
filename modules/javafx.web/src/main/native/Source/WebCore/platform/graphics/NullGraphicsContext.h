@@ -26,6 +26,7 @@
 #pragma once
 
 #include "GraphicsContext.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -37,6 +38,7 @@ enum class NullGraphicsContextPaintInvalidationReasons : uint8_t {
 };
 
 class NullGraphicsContext : public GraphicsContext {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(NullGraphicsContext);
 public:
     using PaintInvalidationReasons = NullGraphicsContextPaintInvalidationReasons;
 
@@ -85,7 +87,7 @@ private:
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final { }
     void strokeRect(const FloatRect&, float) final { }
     void clipPath(const Path&, WindRule = WindRule::EvenOdd) final { }
-    void drawLinesForText(const FloatPoint&, float, const DashArray&, bool, bool = false, StrokeStyle = StrokeStyle::SolidStroke) final { }
+    void drawLinesForText(const FloatPoint&, float, std::span<const FloatSegment>, bool, bool, StrokeStyle) final { }
     void setLineCap(LineCap) final { }
     void setLineDash(const DashArray&, float) final { }
     void setLineJoin(LineJoin) final { }
@@ -108,7 +110,7 @@ private:
 
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned = 0, std::optional<unsigned> = std::nullopt) final { return { }; }
 
-    void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned, const FloatPoint&, FontSmoothingMode) final { }
+    void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode) final { }
     void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final { }
 
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString&, const FloatPoint&, unsigned = 0, std::optional<unsigned> = std::nullopt) final { }
@@ -137,7 +139,7 @@ private:
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect&, const Color&) final { }
 
 #if ENABLE(VIDEO)
-    void paintFrameForMedia(MediaPlayer&, const FloatRect&) final { }
+    void drawVideoFrame(VideoFrame&, const FloatRect&, ImageOrientation, bool) final { }
 #endif
 
 private:

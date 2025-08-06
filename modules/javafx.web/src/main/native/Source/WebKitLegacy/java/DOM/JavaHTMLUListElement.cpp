@@ -25,7 +25,7 @@
 
 #undef IMPL
 
-
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLUListElement.h>
 #include <WebCore/JSExecState.h>

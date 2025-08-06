@@ -30,6 +30,8 @@
 #include "PropertyNameArray.h"
 #include "Symbol.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 static JSC_DECLARE_HOST_FUNCTION(objectConstructorAssign);
@@ -219,7 +221,6 @@ JSValue objectConstructorGetOwnPropertyDescriptors(JSGlobalObject* globalObject,
 
         PutPropertySlot slot(descriptors);
         descriptors->putOwnDataPropertyMayBeIndex(globalObject, propertyName, fromDescriptor, slot);
-        scope.assertNoExceptionExceptTermination();
         RETURN_IF_EXCEPTION(scope, { });
     }
 
@@ -338,7 +339,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
                 break;
             }
             JSObject* source = asObject(sourceValue);
-            if (!source->staticPropertiesReified() || !source->structure()->canPerformFastPropertyEnumerationCommon() || source->canHaveExistingOwnIndexedProperties()) {
+            if (!source->staticPropertiesReified() || !source->structure()->canPerformFastPropertyEnumerationCommon() || source->canHaveExistingOwnIndexedProperties() || source == target) {
                 willBatch = false;
                 break;
             }
@@ -1274,7 +1275,11 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
         if (structure->canCacheOwnPropertyNames()) {
             auto* cachedButterfly = structure->cachedPropertyNamesIgnoringSentinel(kind);
             if (cachedButterfly == StructureRareData::cachedPropertyNamesSentinel()) {
-                auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
+                auto* newButterfly = JSImmutableButterfly::tryCreate(vm, CopyOnWriteArrayWithContiguous, numProperties);
+                if (UNLIKELY(!newButterfly)) {
+                    throwOutOfMemoryError(globalObject, scope);
+                    return { };
+                }
                 copyPropertiesToBuffer(newButterfly->toButterfly()->contiguous().data(), newButterfly);
 
                 structure->setCachedPropertyNames(vm, kind, newButterfly);
@@ -1286,9 +1291,11 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
                 structure->setCachedPropertyNames(vm, kind, StructureRareData::cachedPropertyNamesSentinel());
                 }
 
-                // FIXME: We should probably be calling tryCreate here:
-                // https://bugs.webkit.org/show_bug.cgi?id=221984
-                JSArray* keys = JSArray::create(vm, globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous), numProperties);
+        JSArray* keys = JSArray::tryCreate(vm, globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous), numProperties);
+        if (UNLIKELY(!keys)) {
+            throwOutOfMemoryError(globalObject, scope);
+            return { };
+        }
         copyPropertiesToBuffer(keys->butterfly()->contiguous().data(), keys);
 
                 return keys;
@@ -1375,3 +1382,5 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorHasOwn, (JSGlobalObject* globalObject,
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

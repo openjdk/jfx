@@ -82,11 +82,14 @@ inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node& node)
 struct WeakBoundaryPoint {
     WeakPtr<Node, Node::WeakPtrImplType> container;
     unsigned offset { 0 };
+
     WeakBoundaryPoint(WeakPtr<Node, Node::WeakPtrImplType>&&, unsigned);
 };
+
 inline WeakBoundaryPoint::WeakBoundaryPoint(WeakPtr<Node, Node::WeakPtrImplType>&& container, unsigned offset)
     : container(WTFMove(container))
     , offset(offset)
 {
 }
+
 }

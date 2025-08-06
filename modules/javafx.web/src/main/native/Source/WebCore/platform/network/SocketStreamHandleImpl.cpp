@@ -23,14 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "SocketStreamHandleImpl.h"
 
 #if PLATFORM(JAVA)
 
+#include "SocketStreamHandleClient.h"
 #include "CookieRequestHeaderFieldProxy.h"
 #include "NetworkStorageSession.h"
-#include "SocketStreamHandleClient.h"
 #include "StorageSessionProvider.h"
 #include <wtf/Function.h>
 
@@ -49,7 +48,7 @@ void SocketStreamHandleImpl::platformSend(std::span<const uint8_t> data, Functio
     }
     size_t bytesWritten = 0;
     if (m_state == Open) {
-        if (auto result = platformSendInternal(data.data(), data.size()))
+        if (auto result = platformSendInternal(data.data(),data.size()))
             bytesWritten = result.value();
         else
             return completionHandler(false);
@@ -59,25 +58,24 @@ void SocketStreamHandleImpl::platformSend(std::span<const uint8_t> data, Functio
         return completionHandler(false);
     }
     if (bytesWritten < data.size()) {
-        std::span<const uint8_t> createSpan(data.data() + bytesWritten, data.size() - bytesWritten);
-        m_buffer.append(createSpan);
+        m_buffer.append(data.subspan(bytesWritten));
         m_client.didUpdateBufferedAmount(static_cast<SocketStreamHandle&>(*this), bufferedAmount());
     }
     return completionHandler(true);
 }
 
-static size_t removeTerminationCharacters(const uint8_t* data, size_t dataLength)
+static std::span<const uint8_t> removeTerminationCharacters(std::span<const uint8_t> data)
 {
 #ifndef NDEBUG
-    ASSERT(dataLength > 2);
-    ASSERT(data[dataLength - 2] == '\r');
-    ASSERT(data[dataLength - 1] == '\n');
+    ASSERT(data.size() > 2);
+    ASSERT(data[data.size() - 2] == '\r');
+    ASSERT(data[data.size() - 1] == '\n');
 #else
     UNUSED_PARAM(data);
 #endif
 
     // Remove the terminating '\r\n'
-    return dataLength - 2;
+    return data.first(data.size() - 2);
 }
 
 static std::optional<std::pair<Vector<uint8_t>, bool>> cookieDataForHandshake(const NetworkStorageSession* networkStorageSession, const CookieRequestHeaderFieldProxy& headerFieldProxy)
@@ -89,11 +87,9 @@ static std::optional<std::pair<Vector<uint8_t>, bool>> cookieDataForHandshake(co
     if (cookieDataString.isEmpty())
         return std::pair<Vector<uint8_t>, bool> { { }, secureCookiesAccessed };
 
-    CString cookieData = cookieDataString.utf8();
-
     Vector<uint8_t> data = { 'C', 'o', 'o', 'k', 'i', 'e', ':', ' ' };
-    data.append(cookieData.span());
-    data.appendVector(Vector<uint8_t>({ '\r', '\n', '\r', '\n' }));
+    data.append(cookieDataString.utf8().span());
+    data.append("\r\n\r\n"_span);
 
     return std::pair<Vector<uint8_t>, bool> { data, secureCookiesAccessed };
 }
@@ -102,6 +98,7 @@ void SocketStreamHandleImpl::platformSendHandshake(std::span<const uint8_t> data
 {
     Vector<uint8_t> cookieData;
     bool secureCookiesAccessed = false;
+
     if (headerFieldProxy) {
         auto cookieDataFromNetworkSession = cookieDataForHandshake(m_storageSessionProvider ? m_storageSessionProvider->storageSession() : nullptr, *headerFieldProxy);
         if (!cookieDataFromNetworkSession) {
@@ -110,8 +107,8 @@ void SocketStreamHandleImpl::platformSendHandshake(std::span<const uint8_t> data
         }
 
         std::tie(cookieData, secureCookiesAccessed) = *cookieDataFromNetworkSession;
-        //if (cookieData.size())         //revisit
-           // tmpLength = removeTerminationCharacters(data.data(), data.size());
+        if (cookieData.size())
+            data = removeTerminationCharacters(data);
     }
 
     if (!m_buffer.isEmpty()) {
@@ -130,10 +127,9 @@ void SocketStreamHandleImpl::platformSendHandshake(std::span<const uint8_t> data
         Vector<uint8_t> sendData;
         sendData.reserveInitialCapacity(data.size() + cookieData.size());
         sendData.append(data);
-        std::span<uint8_t> span(cookieData.data(), cookieData.size());
-        sendData.append(span);
+        sendData.appendVector(cookieData);
 
-        if (auto result = platformSendInternal(sendData.data(), sendData.size()))
+        if (auto result = platformSendInternal(sendData.span().data(),sendData.span().size()))
             bytesWritten = result.value();
         else
             return completionHandler(false, secureCookiesAccessed);
@@ -145,7 +141,7 @@ void SocketStreamHandleImpl::platformSendHandshake(std::span<const uint8_t> data
     if (bytesWritten < data.size() + cookieData.size()) {
         size_t cookieBytesWritten = 0;
         if (bytesWritten < data.size())
-            m_buffer.append(data.data() + bytesWritten, data.size() - bytesWritten);
+            m_buffer.append(data.subspan(bytesWritten));
         else
             cookieBytesWritten = bytesWritten - data.size();
         m_buffer.append(cookieData.data() + cookieBytesWritten, cookieData.size() - cookieBytesWritten);
@@ -168,7 +164,7 @@ bool SocketStreamHandleImpl::sendPendingData()
     }
     bool pending;
     do {
-        auto result = platformSendInternal(m_buffer.firstBlockData(), m_buffer.firstBlockSize());
+        auto result = platformSendInternal(m_buffer.firstBlockSpan().data(),m_buffer.firstBlockSpan().size());
         if (!result)
             return false;
         size_t bytesWritten = result.value();
@@ -189,4 +185,4 @@ size_t SocketStreamHandleImpl::bufferedAmount()
 
 } // namespace WebCore
 
-#endif // #if PLATFORM(JAVA)
+#endif // PLATFORM(JAVA)

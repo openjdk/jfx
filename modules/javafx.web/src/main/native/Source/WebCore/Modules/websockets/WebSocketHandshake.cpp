@@ -51,10 +51,12 @@
 #include <wtf/SHA1.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -98,6 +100,8 @@ static String generateSecWebSocketKey()
     cryptographicallyRandomValues(key);
     return base64EncodeToString(key);
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebSocketHandshake);
 
 String WebSocketHandshake::getExpectedWebSocketAccept(const String& secWebSocketKey)
 {
@@ -185,7 +189,7 @@ CString WebSocketHandshake::clientHandshakeMessage() const
         "\r\n"_s).utf8();
 }
 
-ResourceRequest WebSocketHandshake::clientHandshakeRequest(const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
+ResourceRequest WebSocketHandshake::clientHandshakeRequest(NOESCAPE const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
 {
     // Keep the following consistent with clientHandshakeMessage just above.
 
@@ -242,7 +246,7 @@ int WebSocketHandshake::readServerHandshake(std::span<const uint8_t> header)
         return header.size();
     }
     m_mode = Normal;
-    if (!memmem(header.data(), header.size(), "\r\n\r\n", 4)) {
+    if (!WTF::contains(header, "\r\n\r\n"_span8)) {
         // Just hasn't been received fully yet.
         m_mode = Incomplete;
         return -1;
@@ -441,7 +445,7 @@ std::span<const uint8_t> WebSocketHandshake::readHTTPHeaders(std::span<const uin
         size_t consumedLength = parseHTTPHeader(data, m_failureReason, name, value);
         if (!consumedLength)
             return { };
-        data = data.subspan(consumedLength);
+        skip(data, consumedLength);
 
         // Stop once we consumed an empty line.
         if (name.isEmpty())

@@ -672,6 +672,7 @@ namespace JSC {
 
         const Identifier& identifier() const { return m_ident; }
         bool isArguments(VM& vm) const final { return m_ident == vm.propertyNames->arguments; }
+        bool getFromScopeCanThrow(BytecodeGenerator&) const;
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
@@ -2127,7 +2128,11 @@ namespace JSC {
 
     class ImportDeclarationNode final : public ModuleDeclarationNode {
     public:
-        ImportDeclarationNode(const JSTokenLocation&, ImportSpecifierListNode*, ModuleNameNode*, ImportAttributesListNode*);
+        enum class ImportType : uint8_t {
+            Normal,
+            Deferred
+        };
+        ImportDeclarationNode(const JSTokenLocation&, ImportType, ImportSpecifierListNode*, ModuleNameNode*, ImportAttributesListNode*);
 
         ImportSpecifierListNode* specifierList() const { return m_specifierList; }
         ModuleNameNode* moduleName() const { return m_moduleName; }
@@ -2140,6 +2145,7 @@ namespace JSC {
         ImportSpecifierListNode* m_specifierList;
         ModuleNameNode* m_moduleName;
         ImportAttributesListNode* m_attributesList;
+        ImportType m_type;
     };
 
     class ExportAllDeclarationNode final : public ModuleDeclarationNode {
@@ -2478,6 +2484,7 @@ namespace JSC {
         virtual bool isAssignmentElementNode() const { return false; }
         virtual bool isRestParameter() const { return false; }
 
+        virtual bool bindValueCanThrow(BytecodeGenerator&) const { return true; }
         virtual RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const { return nullptr; }
         virtual void finishDirectBindingAssignment(BytecodeGenerator&) const { }
 
@@ -2566,6 +2573,7 @@ namespace JSC {
         const JSTextPosition& divotStart() const { return m_divotStart; }
         const JSTextPosition& divotEnd() const { return m_divotEnd; }
 
+        bool bindValueCanThrow(BytecodeGenerator&) const final;
         RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const final;
         void finishDirectBindingAssignment(BytecodeGenerator&) const;
 
@@ -2607,6 +2615,7 @@ namespace JSC {
         const JSTextPosition& divotStart() const { return m_divotStart; }
         const JSTextPosition& divotEnd() const { return m_divotEnd; }
 
+        bool bindValueCanThrow(BytecodeGenerator&) const final;
         RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const final;
         void finishDirectBindingAssignment(BytecodeGenerator&) const;
 

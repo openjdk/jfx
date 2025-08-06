@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2008 Rob Buis <buis@kde.org>
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Google Inc. All rights reserved.
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -30,6 +31,7 @@
 #include "CSSPropertyParser.h"
 #include "ComputedStyleExtractor.h"
 #include "Document.h"
+#include "DocumentClasses.h"
 #include "ElementChildIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -92,7 +94,7 @@ SVGElement::~SVGElement()
         m_svgRareData = nullptr;
     }
 
-    RefAllowingPartiallyDestroyed<Document> document = this->document();
+    Ref<Document> document = this->document();
     document->checkedSVGExtensions()->removeElementToRebuild(*this);
 
     if (hasPendingResources()) {
@@ -187,7 +189,7 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
         treeScopeForSVGReferences().removeElementFromPendingSVGResources(*this);
 
     if (removalType.disconnectedFromDocument) {
-        RefAllowingPartiallyDestroyed<Document> document = this->document();
+        Ref<Document> document = this->document();
         CheckedRef extensions = document->svgExtensions();
         if (m_svgRareData) {
             for (Ref element : m_svgRareData->takeReferencingElements()) {
@@ -206,6 +208,9 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
 
 SVGSVGElement* SVGElement::ownerSVGElement() const
 {
+    if (isOutermostSVGSVGElement())
+        return nullptr;
+
     SUPPRESS_UNCOUNTED_LOCAL auto* node = parentNode();
     while (node) {
         if (auto* svg = dynamicDowncast<SVGSVGElement>(*node))
@@ -245,7 +250,7 @@ std::optional<FloatRect> SVGElement::getBoundingBox() const
 {
     // FIXME: should retrieve the value from the associated RenderObject.
     if (is<SVGGraphicsElement>(*this)) {
-        if (auto renderer = this->renderer())
+        if (CheckedPtr renderer = this->renderer())
             return renderer->objectBoundingBox();
     }
     return std::nullopt;
@@ -820,10 +825,14 @@ bool SVGElement::filterOutAnimatableAttribute(const QualifiedName&) const
 
 String SVGElement::title() const
 {
+    RefPtr page = document().protectedPage();
+    if (!page)
+        return String();
+
     // According to spec, for stand-alone SVG documents we should not return a title when
     // hovering over the rootmost SVG element (the first <title> element is the title of
     // the document, not a tooltip) so we instantly return.
-    if (isOutermostSVGSVGElement() && document().topDocument().isSVGDocument())
+    if (isOutermostSVGSVGElement() && page->topDocumentHasDocumentClass(DocumentClass::SVG))
         return String();
     RefPtr firstTitle = childrenOfType<SVGTitleElement>(*this).first();
     return firstTitle ? const_cast<SVGTitleElement&>(*firstTitle).innerText() : String();
@@ -901,7 +910,8 @@ CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& 
     case AttributeNames::font_size_adjustAttr:
         return CSSPropertyFontSizeAdjust;
     case AttributeNames::font_stretchAttr:
-        return CSSPropertyFontStretch;
+    case AttributeNames::font_widthAttr:
+        return CSSPropertyFontWidth;
     case AttributeNames::font_styleAttr:
         return CSSPropertyFontStyle;
     case AttributeNames::font_variantAttr:
@@ -916,8 +926,6 @@ CSSPropertyID SVGElement::cssPropertyIdForSVGAttributeName(const QualifiedName& 
         return CSSPropertyImageRendering;
     case AttributeNames::heightAttr:
         return CSSPropertyHeight;
-    case AttributeNames::kerningAttr:
-        return CSSPropertyKerning;
     case AttributeNames::letter_spacingAttr:
         return CSSPropertyLetterSpacing;
     case AttributeNames::lighting_colorAttr:
@@ -1015,7 +1023,7 @@ void SVGElement::collectPresentationalHintsForAttribute(const QualifiedName& nam
 
 void SVGElement::updateSVGRendererForElementChange()
 {
-    RefAllowingPartiallyDestroyed<Document> document = this->document();
+    Ref<Document> document = this->document();
     document->updateSVGRenderer(*this);
 }
 
