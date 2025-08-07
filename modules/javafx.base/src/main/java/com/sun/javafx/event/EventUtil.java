@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package com.sun.javafx.event;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventTarget;
@@ -39,19 +39,37 @@ public final class EventUtil {
             new AtomicBoolean();
 
     public static Event fireEvent(EventTarget eventTarget, Event event) {
+        return fireEvent(eventTarget, null, event);
+    }
+
+    /**
+     * Dispatches an event to the specified {@code eventTarget}, optionally extending the event
+     * dispatch chain up to the {@code delegateTarget}. The delegate target must be a descendant
+     * of the {@code eventTarget}.
+     *
+     * @param eventTarget    the event target, not {@code null}
+     * @param delegateTarget the delegate event target, may be {@code null}
+     * @param event          the event
+     * @return the event after processing, or {@code null}
+     */
+    public static Event fireEvent(EventTarget eventTarget, EventTarget delegateTarget, Event event) {
+        Objects.requireNonNull(eventTarget, "Event target cannot be null");
+        Objects.requireNonNull(event, "Event cannot be null");
+
         if (event.getTarget() != eventTarget) {
             event = event.copyFor(event.getSource(), eventTarget);
         }
 
+        EventTarget actualTarget = delegateTarget != null ? delegateTarget : eventTarget;
+
         if (eventDispatchChainInUse.getAndSet(true)) {
             // the member event dispatch chain is in use currently, we need to
             // create a new instance for this call
-            return fireEventImpl(new EventDispatchChainImpl(),
-                                 eventTarget, event);
+            return fireEventImpl(new EventDispatchChainImpl(), actualTarget, event);
         }
 
         try {
-            return fireEventImpl(eventDispatchChain, eventTarget, event);
+            return fireEventImpl(eventDispatchChain, actualTarget, event);
         } finally {
             // need to do reset after use to remove references to event
             // dispatchers from the chain
