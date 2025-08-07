@@ -105,7 +105,7 @@ public class MenuDoubleShortcutTest {
 
     // On platforms other than Mac the menu bar should process the event
     // and the scene should not.
-    @Disabled("JDK-8364825")
+    @Disabled("JDK-8364405")
     @Test
     void nonMacMenuBarComesBeforeScene() {
         Assumptions.assumeFalse(PlatformUtil.isMac());
