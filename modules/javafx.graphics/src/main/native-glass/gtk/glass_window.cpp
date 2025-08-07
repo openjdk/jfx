@@ -182,6 +182,7 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     });
 
     view_position.setOnChange([this](const Point& point) {
+        LOG("view_position: %d, %d\n", point.x, point.y);
         notify_view_move();
     });
 
@@ -700,7 +701,6 @@ bool WindowContext::set_view(jobject view) {
     if (view) {
         jview = mainEnv->NewGlobalRef(view);
         view_size.reset({-1, -1});
-        view_position.reset({-1, -1});
     } else {
         jview = nullptr;
     }
@@ -1110,6 +1110,7 @@ void WindowContext::process_configure(GdkEventConfigure *event) {
 
         view_position.set({view_x, view_y});
     } else {
+        view_position.set({0, 0});
         x = event->x;
         y = event->y;
     }
@@ -1694,29 +1695,17 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
         WindowContext::process_mouse_motion(event);
         return;
     }
-
-    static const struct Cursors {
-        GdkCursor* NORTH = gdk_cursor_new(GDK_TOP_SIDE);
-        GdkCursor* NORTH_EAST = gdk_cursor_new(GDK_TOP_RIGHT_CORNER);
-        GdkCursor* EAST = gdk_cursor_new(GDK_RIGHT_SIDE);
-        GdkCursor* SOUTH_EAST = gdk_cursor_new(GDK_BOTTOM_RIGHT_CORNER);
-        GdkCursor* SOUTH = gdk_cursor_new(GDK_BOTTOM_SIDE);
-        GdkCursor* SOUTH_WEST = gdk_cursor_new(GDK_BOTTOM_LEFT_CORNER);
-        GdkCursor* WEST = gdk_cursor_new(GDK_LEFT_SIDE);
-        GdkCursor* NORTH_WEST = gdk_cursor_new(GDK_TOP_LEFT_CORNER);
-    } cursors;
-
     GdkCursor* cursor = nullptr;
 
     switch (edge) {
-        case GDK_WINDOW_EDGE_NORTH: cursor = cursors.NORTH; break;
-        case GDK_WINDOW_EDGE_NORTH_EAST: cursor = cursors.NORTH_EAST; break;
-        case GDK_WINDOW_EDGE_EAST: cursor = cursors.EAST; break;
-        case GDK_WINDOW_EDGE_SOUTH_EAST: cursor = cursors.SOUTH_EAST; break;
-        case GDK_WINDOW_EDGE_SOUTH: cursor = cursors.SOUTH; break;
-        case GDK_WINDOW_EDGE_SOUTH_WEST: cursor = cursors.SOUTH_WEST; break;
-        case GDK_WINDOW_EDGE_WEST: cursor = cursors.WEST; break;
-        case GDK_WINDOW_EDGE_NORTH_WEST: cursor = cursors.NORTH_WEST; break;
+        case GDK_WINDOW_EDGE_NORTH: cursor = EdgeCursors::instance().NORTH; break;
+        case GDK_WINDOW_EDGE_NORTH_EAST: cursor = EdgeCursors::instance().NORTH_EAST; break;
+        case GDK_WINDOW_EDGE_EAST: cursor = EdgeCursors::instance().EAST; break;
+        case GDK_WINDOW_EDGE_SOUTH_EAST: cursor = EdgeCursors::instance().SOUTH_EAST; break;
+        case GDK_WINDOW_EDGE_SOUTH: cursor = EdgeCursors::instance().SOUTH; break;
+        case GDK_WINDOW_EDGE_SOUTH_WEST: cursor = EdgeCursors::instance().SOUTH_WEST; break;
+        case GDK_WINDOW_EDGE_WEST: cursor = EdgeCursors::instance().WEST; break;
+        case GDK_WINDOW_EDGE_NORTH_WEST: cursor = EdgeCursors::instance().NORTH_WEST; break;
     }
 
     set_cursor_override(cursor);
@@ -1757,3 +1746,4 @@ bool WindowContextExtended::get_window_edge(int x, int y, GdkWindowEdge* window_
 
     return true;
 }
+

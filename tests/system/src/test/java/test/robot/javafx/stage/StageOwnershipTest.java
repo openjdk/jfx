@@ -168,7 +168,7 @@ class StageOwnershipTest extends VisualTestBase {
         assertColorEquals(expected, color, TOLERANCE);
     }
 
-    private void assertColorDoesNotEqual(Color notExpected, Stage stage) {
+    private void assertColorNotEquals(Color notExpected, Stage stage) {
         Color color = getColor((int) stage.getX() + X_DELTA, (int) stage.getY() + Y_DELTA);
         assertColorDoesNotEqual(notExpected, color, TOLERANCE);
     }
@@ -181,7 +181,7 @@ class StageOwnershipTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
-    void openingModalChildStageWhileMaximizedShouldHaveFocus(StageStyle stageStyle, Modality modality)
+    void openingModalChildStageWhileMaximizedShouldNotUnmaximize(StageStyle stageStyle, Modality modality)
             throws InterruptedException {
         setupBottomStage();
         setupTopStage(bottomStage, stageStyle, modality);
@@ -201,6 +201,7 @@ class StageOwnershipTest extends VisualTestBase {
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
+    // This test causes BEEP on macOS
     void openingModalChildStageWhileFullScreenShouldHaveFocus(StageStyle stageStyle, Modality modality)
             throws InterruptedException {
         setupBottomStage();
@@ -284,9 +285,9 @@ class StageOwnershipTest extends VisualTestBase {
                 () -> stage0.setIconified(true),
                 () -> {
                     assertTrue(stage0.isIconified());
-                    assertColorDoesNotEqual(COLOR0, stage0);
-                    assertColorDoesNotEqual(COLOR1, stage1);
-                    assertColorDoesNotEqual(COLOR2, stage2);
+                    assertColorNotEquals(COLOR0, stage0);
+                    assertColorNotEquals(COLOR1, stage1);
+                    assertColorNotEquals(COLOR2, stage2);
                 },
                 () -> stage0.setIconified(false),
                 () -> {

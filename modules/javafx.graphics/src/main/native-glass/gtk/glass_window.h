@@ -158,6 +158,43 @@ enum BoundsType {
     BOUNDSTYPE_WINDOW
 };
 
+struct EdgeCursors {
+    GdkCursor* NORTH;
+    GdkCursor* NORTH_EAST;
+    GdkCursor* EAST;
+    GdkCursor* SOUTH_EAST;
+    GdkCursor* SOUTH;
+    GdkCursor* SOUTH_WEST;
+    GdkCursor* WEST;
+    GdkCursor* NORTH_WEST;
+
+    EdgeCursors()
+        : NORTH(gdk_cursor_new(GDK_TOP_SIDE)),
+          NORTH_EAST(gdk_cursor_new(GDK_TOP_RIGHT_CORNER)),
+          EAST(gdk_cursor_new(GDK_RIGHT_SIDE)),
+          SOUTH_EAST(gdk_cursor_new(GDK_BOTTOM_RIGHT_CORNER)),
+          SOUTH(gdk_cursor_new(GDK_BOTTOM_SIDE)),
+          SOUTH_WEST(gdk_cursor_new(GDK_BOTTOM_LEFT_CORNER)),
+          WEST(gdk_cursor_new(GDK_LEFT_SIDE)),
+          NORTH_WEST(gdk_cursor_new(GDK_TOP_LEFT_CORNER)) {}
+
+    ~EdgeCursors() {
+        g_object_unref(NORTH);
+        g_object_unref(NORTH_EAST);
+        g_object_unref(EAST);
+        g_object_unref(SOUTH_EAST);
+        g_object_unref(SOUTH);
+        g_object_unref(SOUTH_WEST);
+        g_object_unref(WEST);
+        g_object_unref(NORTH_WEST);
+    }
+
+    static EdgeCursors& instance() {
+        static EdgeCursors cursors;
+        return cursors;
+    }
+};
+
 static const guint MOUSE_BUTTONS_MASK = (guint) (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
 
 
@@ -210,7 +247,7 @@ private:
     Observable<Size> maximum_size = Size{G_MAXINT, G_MAXINT};
     Observable<Size> sys_min_size = Size{1, 1};
     Observable<bool> resizable{true};
-    Observable<Point> view_position = Point{-1, -1};
+    Observable<Point> view_position = Point{0, 0}; //Default for non-titled windows
     Observable<Size> view_size = Size{-1, -1};
     Observable<Size> window_size = Size{-1, -1};
     Observable<Point> window_location = Point{-1, -1};
