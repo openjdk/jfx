@@ -1037,32 +1037,50 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
+
+        NSRect oldFrame = window->nsWindow.frame;
+        int eventType = com_sun_glass_events_WindowEvent_RESTORE;
+
         window->suppressWindowResizeEvent = YES;
+        window->suppressWindowMoveEvent = YES;
 
         if ((maximize == JNI_TRUE) && (isZoomed == JNI_FALSE))
         {
-            window->preZoomedRect = [window->nsWindow frame];
+            window->preZoomedRect = oldFrame;
+            eventType = com_sun_glass_events_WindowEvent_MAXIMIZE;
 
             if ([window->nsWindow styleMask] != NSWindowStyleMaskBorderless)
             {
                 [window->nsWindow zoom:nil];
-                // windowShouldZoom will be called automatically in this case
             }
             else
             {
                 NSRect visibleRect = [[window _getScreen] visibleFrame];
-                [window _setWindowFrameWithRect:NSMakeRect(visibleRect.origin.x, visibleRect.origin.y, visibleRect.size.width, visibleRect.size.height) withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
-
-                // calling windowShouldZoom will send Java maximize event
-                [window windowShouldZoom:window->nsWindow toFrame:[window->nsWindow frame]];
+                [window->nsWindow setFrame:visibleRect display:YES animate:YES];
             }
         }
         else if ((maximize == JNI_FALSE) && (isZoomed == JNI_TRUE))
         {
-            [window _restorePreZoomedRect];
+            // Platform unzooming only works reliably for titled windows. For
+            // untitled windows the unzoom location can be wildly off. We want
+            // to use platform unzoom when we can since it uses the platform's
+            // user state which may be more up-to-date than the preZoomedRect.
+            if (window->nsWindow.styleMask & NSWindowStyleMaskTitled) {
+                [window->nsWindow zoom:nil];
+            } else {
+                [window->nsWindow setFrame:window->preZoomedRect display:YES animate:YES];
+            }
         }
 
         window->suppressWindowResizeEvent = NO;
+        window->suppressWindowMoveEvent = NO;
+
+        NSRect newFrame = window->nsWindow.frame;
+        if (!NSEqualRects(newFrame, oldFrame)) {
+            NSRect flipFrame = [window _flipFrame];
+            [window _sendJavaWindowMoveEventForFrame:flipFrame];
+            [window _sendJavaWindowResizeEvent:eventType forFrame:flipFrame];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
