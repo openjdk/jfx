@@ -45,6 +45,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.PlatformUtil;
@@ -104,6 +105,7 @@ public class MenuDoubleShortcutTest {
 
     // On platforms other than Mac the menu bar should process the event
     // and the scene should not.
+    @Disabled("JDK-8364825")
     @Test
     void nonMacMenuBarComesBeforeScene() {
         Assumptions.assumeFalse(PlatformUtil.isMac());
