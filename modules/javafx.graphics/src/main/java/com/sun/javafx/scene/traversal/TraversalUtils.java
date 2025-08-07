@@ -34,7 +34,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.TraversalDirection;
-import javafx.scene.traversal.TraversalPolicy;
+import javafx.scene.TraversalPolicy;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.NodeHelper;
 

@@ -84,7 +84,7 @@ public class FocusTraversalInputMap {
      *
      * @param node The node to traverse on
      * @param dir The direction to traverse
-     * @param focusVisible whether the focused Node should visible indicate focus
+     * @param focusVisible whether the focused Node should visibly indicate focus
      */
     public static void traverse(final Node node, final TraversalDirection dir, boolean focusVisible) {
         if (node == null) {

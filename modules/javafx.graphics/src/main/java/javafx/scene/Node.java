@@ -8552,7 +8552,7 @@ public abstract sealed class Node
      *
      * @param direction the direction of focus traversal, non-null
      * @return {@code true} if traversal was successful
-     * @since 25
+     * @since 999 TODO
      */
     public final boolean requestFocusTraversal(TraversalDirection direction) {
         return TraversalUtils.traverse(this, direction, true);

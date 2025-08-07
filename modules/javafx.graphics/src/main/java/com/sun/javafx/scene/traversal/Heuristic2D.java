@@ -41,7 +41,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.TraversalDirection;
-import javafx.scene.traversal.TraversalPolicy;
+import javafx.scene.TraversalPolicy;
 
 public class Heuristic2D extends TraversalPolicy {
 
