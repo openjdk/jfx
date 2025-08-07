@@ -37,6 +37,10 @@ class MTLMeshView extends BaseMeshView {
     private final MTLContext context;
     private final long nativeHandle;
 
+    // A mesh could be shared among similar MTLMeshView's.
+    // The native side of mesh holds necessary data required for rendering.
+    // TODO: 3D - Need a mechanism to "decRefCount" Mesh and Material
+    //            if we need to do eager clean up
     final private MTLMesh mesh;
     private MTLPhongMaterial material;
 

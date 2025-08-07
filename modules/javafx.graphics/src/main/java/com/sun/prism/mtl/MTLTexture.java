@@ -84,7 +84,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
 
     @Override
     protected Texture createSharedTexture(WrapMode newMode) {
-        return new MTLTexture<T>(this, newMode);
+        return new MTLTexture<>(this, newMode);
     }
 
     private void updateTextureInt(Buffer buffer, PixelFormat format,
