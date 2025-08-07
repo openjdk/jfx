@@ -33,7 +33,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.traversal.FocusTraversal;
 import javafx.scene.traversal.TraversalPolicy;
 import javafx.stage.Stage;
 import org.junit.AfterClass;
@@ -41,6 +40,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 
@@ -149,7 +149,7 @@ public final class TraversalPolicyTest {
         checkFocused(from);
 
         for (Node n : nodes) {
-            boolean success = Node.traverse(from, dir, false);
+            boolean success = TraversalUtils.traverse(from, dir, false);
             Assertions.assertTrue(success, "failed to traverse from node: " + from);
             firePulse();
             checkFocused(n);

@@ -914,8 +914,7 @@ public abstract non-sealed class Parent extends Node {
      * {@code Parent}'s children as well as traversal outside of this {@code Parent}.
      *
      * @defaultValue null
-     * @see javafx.scene.traversal.FocusTraversal
-     * @since 24
+     * @since 999 TODO
      */
     private ObjectProperty<TraversalPolicy> traversalPolicy;
 

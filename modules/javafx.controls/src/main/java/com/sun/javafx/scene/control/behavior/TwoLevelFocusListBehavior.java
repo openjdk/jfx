@@ -32,10 +32,11 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.TraversalDirection;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.traversal.FocusTraversal;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
 
@@ -87,26 +88,26 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                     switch (((KeyEvent)event).getCode()) {
                     case TAB:
                         if (ev.isShiftDown()) {
-                            FocusTraversal.traversePrevious((Node)obj);
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.PREVIOUS, true);
                         } else {
-                            FocusTraversal.traverseNext((Node)obj);
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.NEXT, true);
                         }
                         event.consume();
                         break;
                     case UP:
-                        FocusTraversal.traverseUp((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.UP, true);
                         event.consume();
                         break;
                     case DOWN:
-                        FocusTraversal.traverseDown((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.DOWN, true);
                         event.consume();
                         break;
                     case LEFT:
-                        FocusTraversal.traverseLeft((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.LEFT, true);
                         event.consume();
                         break;
                     case RIGHT:
-                        FocusTraversal.traverseRight((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.RIGHT, true);
                         event.consume();
                         break;
                     case ENTER:

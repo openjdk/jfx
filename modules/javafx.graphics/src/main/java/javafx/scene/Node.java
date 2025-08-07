@@ -25,7 +25,6 @@
 
 package javafx.scene;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -161,7 +160,7 @@ import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.scene.transform.TransformUtils;
-import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Logging;
@@ -8556,30 +8555,7 @@ public abstract sealed class Node
      * @since 25
      */
     public final boolean requestFocusTraversal(TraversalDirection direction) {
-        return traverse(this, direction, true);
-    }
-    // from FocusTraversal, now defunct
-    // TODO hide, replace with something
-    /**
-     * TODO remove
-     * @param node
-     * @param dir
-     * @param focusVisible
-     * @return
-     */
-    public static boolean traverse(Node node, TraversalDirection dir, boolean focusVisible) {
-        if (node != null) {
-            SubScene ss = NodeHelper.getSubScene(node);
-            if (ss != null) {
-                return TopMostTraversalEngine.trav(ss.getRoot(), node, dir, focusVisible) != null;
-            }
-
-            Scene sc = node.getScene();
-            if (sc != null) {
-                return TopMostTraversalEngine.trav(sc.getRoot(), node, dir, focusVisible) != null;
-            }
-        }
-        return false;
+        return TraversalUtils.traverse(this, direction, true);
     }
 
     //--------------------------

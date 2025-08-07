@@ -32,10 +32,10 @@ import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.TraversalDirection;
 import javafx.scene.control.Tooltip;
-import javafx.scene.traversal.FocusTraversal;
 import javafx.scene.web.WebView;
 import javafx.stage.Screen;
 import javafx.stage.Window;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.util.Utils;
 import com.sun.webkit.CursorManager;
 import com.sun.webkit.WebPageClient;
@@ -106,7 +106,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
 
     @Override
     public void transferFocus(boolean forward) {
-        FocusTraversal.traverse(accessor.getView(), forward ? TraversalDirection.NEXT : TraversalDirection.PREVIOUS, false);
+        TraversalUtils.traverse(accessor.getView(), forward ? TraversalDirection.NEXT : TraversalDirection.PREVIOUS, false);
     }
 
     @Override public WCRectangle getScreenBounds(boolean available) {

@@ -66,9 +66,9 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.traversal.FocusTraversal;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
  * The full content for the DatePicker popup. This class could
@@ -170,7 +170,7 @@ public class DatePickerContent extends VBox {
                 if (newFocusOwner == gridPane) {
                     if (oldFocusOwner instanceof DateCell) {
                         // Backwards traversal, skip gridPane.
-                        FocusTraversal.traverse(gridPane, TraversalDirection.PREVIOUS, false);
+                        TraversalUtils.traverse(gridPane, TraversalDirection.PREVIOUS, false);
                     } else {
                         // Forwards traversal, pass focus to day cell.
                         if (lastFocusedDayCell != null) {

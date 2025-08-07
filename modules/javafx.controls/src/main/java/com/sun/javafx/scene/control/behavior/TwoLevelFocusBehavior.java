@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,12 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.control.PopupControl;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.traversal.FocusTraversal;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
  * A two level focus handler allows a Control to behave as if it
@@ -105,26 +106,26 @@ public class TwoLevelFocusBehavior {
                     switch (ev.getCode()) {
                     case TAB:
                         if (ev.isShiftDown()) {
-                            FocusTraversal.traversePrevious((Node)obj);
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.PREVIOUS, true);
                         } else {
-                            FocusTraversal.traverseNext((Node)obj);
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.NEXT, true);
                         }
                         event.consume();
                         break;
                     case UP:
-                        FocusTraversal.traverseUp((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.UP, true);
                         event.consume();
                         break;
                     case DOWN:
-                        FocusTraversal.traverseDown((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.DOWN, true);
                         event.consume();
                         break;
                     case LEFT:
-                        FocusTraversal.traverseLeft((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.LEFT, true);
                         event.consume();
                         break;
                     case RIGHT:
-                        FocusTraversal.traverseRight((Node)obj);
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.RIGHT, true);
                         event.consume();
                         break;
                     case ENTER:

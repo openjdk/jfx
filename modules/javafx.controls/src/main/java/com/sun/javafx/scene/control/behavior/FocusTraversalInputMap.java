@@ -34,10 +34,10 @@ import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.TraversalDirection;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.traversal.FocusTraversal;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 public class FocusTraversalInputMap {
 
@@ -91,7 +91,7 @@ public class FocusTraversalInputMap {
             throw new IllegalArgumentException("Attempting to traverse on a null Node. " +
                     "Most probably a KeyEvent has been fired with a null target specified.");
         }
-        FocusTraversal.traverse(node, dir, focusVisible);
+        TraversalUtils.traverse(node, dir, focusVisible);
     }
 
     /**

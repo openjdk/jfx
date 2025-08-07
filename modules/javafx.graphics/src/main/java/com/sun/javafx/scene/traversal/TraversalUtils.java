@@ -31,6 +31,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.TraversalDirection;
 import javafx.scene.traversal.TraversalPolicy;
 import com.sun.javafx.application.PlatformImpl;
@@ -159,5 +161,27 @@ public final class TraversalUtils {
             }
         }
         return d;
+    }
+
+    /**
+     * Focus traversal.
+     * @param node
+     * @param dir
+     * @param focusVisible
+     * @return
+     */
+    public static boolean traverse(Node node, TraversalDirection dir, boolean focusVisible) {
+        if (node != null) {
+            SubScene ss = NodeHelper.getSubScene(node);
+            if (ss != null) {
+                return TopMostTraversalEngine.trav(ss.getRoot(), node, dir, focusVisible) != null;
+            }
+
+            Scene sc = node.getScene();
+            if (sc != null) {
+                return TopMostTraversalEngine.trav(sc.getRoot(), node, dir, focusVisible) != null;
+            }
+        }
+        return false;
     }
 }

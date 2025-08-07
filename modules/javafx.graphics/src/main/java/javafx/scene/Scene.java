@@ -107,7 +107,6 @@ import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.scene.traversal.FocusTraversal;
 import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -143,6 +142,7 @@ import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.input.TouchPointHelper;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.stage.EmbeddedWindow;
@@ -2277,7 +2277,7 @@ public class Scene implements EventTarget {
      * function assumes that it is still a member of the same scene.
      */
     private void focusIneligible(Node node) {
-        FocusTraversal.traverse(node, TraversalDirection.NEXT, false);
+        TraversalUtils.traverse(node, TraversalDirection.NEXT, false);
     }
 
     boolean processKeyEvent(KeyEvent e) {

@@ -42,11 +42,11 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
-import javafx.scene.traversal.FocusTraversal;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.event.BasicEventDispatcher;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     private ObservableMap<KeyCombination, Runnable> accelerators;
@@ -98,7 +98,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     private void traverse(Event event, Node node, TraversalDirection dir) {
-        if (FocusTraversal.traverse(node, dir, true)) {
+        if (TraversalUtils.traverse(node, dir, true)) {
             event.consume();
         }
     }
