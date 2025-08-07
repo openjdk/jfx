@@ -35,7 +35,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.traversal.TraversalPolicy;
 import javafx.stage.Stage;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -135,8 +135,8 @@ public final class TraversalPolicyTest {
         scene = null;
     }
 
-    @AfterClass
-    static void afterClass() {
+    @AfterAll
+    static void afterAll() {
         if (stage != null) {
             stage.hide();
             stage = null;
