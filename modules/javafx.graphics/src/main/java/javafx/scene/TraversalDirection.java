@@ -37,6 +37,8 @@ public enum TraversalDirection {
     LEFT,
     /** Indicates a focus change to the next focusable node. */
     NEXT,
+    /** Indicates a focus change to the next focusable node, possibly traversing outside of the current parent. */
+    NEXT_IN_LINE,
     /** Indicates a focus change to the previous focusable node. */
     PREVIOUS,
     /** Indicates a focus change to the node to the right of the currently focused node. */
