@@ -75,6 +75,7 @@
 #include "StyleSheetList.h"
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
@@ -82,6 +83,8 @@
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorCSSAgent);
 
 class InspectorCSSAgent::StyleSheetAction : public InspectorHistory::Action {
     WTF_MAKE_NONCOPYABLE(StyleSheetAction);
@@ -503,8 +506,11 @@ Inspector::Protocol::ErrorStringOr<std::tuple<RefPtr<JSON::ArrayOf<Inspector::Pr
 
                 if (pseudoId == PseudoId::ViewTransition && (!element->document().activeViewTransition() || element != element->document().documentElement()))
                     continue;
+
+                // FIXME: Add named view transition pseudo-element support to Web Inspector. (webkit.org/b/283951)
                 if (isNamedViewTransitionPseudoElement(Style::PseudoElementIdentifier { pseudoId }))
                     continue;
+
                 if (auto protocolPseudoId = protocolValueForPseudoId(pseudoId)) {
                     auto matchedRules = styleResolver.pseudoStyleRulesForElement(element, pseudoId, Style::Resolver::AllCSSRules);
                     if (!matchedRules.isEmpty()) {
@@ -877,7 +883,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::CSS::C
     auto cssProperties = JSON::ArrayOf<Inspector::Protocol::CSS::CSSPropertyInfo>::create();
 
     for (auto propertyID : allCSSProperties()) {
-        if (!isExposed(propertyID, &m_inspectedPage.settings()))
+        if (!isExposed(propertyID, &m_inspectedPage->settings()))
             continue;
 
         auto property = Inspector::Protocol::CSS::CSSPropertyInfo::create()
@@ -896,7 +902,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::CSS::C
         if (shorthand.length()) {
             auto longhands = JSON::ArrayOf<String>::create();
             for (auto longhand : shorthand) {
-                if (isExposed(longhand, &m_inspectedPage.settings()))
+                if (isExposed(longhand, &m_inspectedPage->settings()))
                     longhands->addItem(nameString(longhand));
             }
             if (longhands->length())

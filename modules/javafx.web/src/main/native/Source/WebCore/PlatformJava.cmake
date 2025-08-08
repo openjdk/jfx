@@ -20,6 +20,7 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/linux"
     "${WEBCORE_DIR}/platform/network"
     "${WEBCORE_DIR}/platform/network/java"
+    "${WEBCORE_DIR}/platform/video-codecs"
     "${WEBCORE_DIR}/bindings/java"
     "${WEBCORE_DIR}/page/java"
     "${WEBCORE_DIR}/bridge/jni"

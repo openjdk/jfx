@@ -87,7 +87,7 @@ ImageFrameAnimator* BitmapImageSource::frameAnimator() const
     if (!isAnimated())
         return nullptr;
 
-    m_frameAnimator = ImageFrameAnimator::create(const_cast<BitmapImageSource&>(*this));
+    m_frameAnimator = makeUniqueWithoutRefCountedCheck<ImageFrameAnimator>(const_cast<BitmapImageSource&>(*this));
     return m_frameAnimator.get();
 }
 
@@ -267,12 +267,9 @@ void BitmapImageSource::startAnimation()
 
 bool BitmapImageSource::startAnimation(SubsamplingLevel subsamplingLevel, const DecodingOptions& options)
 {
-    auto frameAnimator = this->frameAnimator();
+    RefPtr frameAnimator = this->frameAnimator();
     if (!frameAnimator)
         return false;
-
-    // Handle the case where the current frame has to be decoded synchronously
-    // but the next frame can be decoded asynchronously.
 
     return frameAnimator->startAnimation(subsamplingLevel, options);
 }
@@ -366,7 +363,7 @@ void BitmapImageSource::decode(Function<void(DecodingStatus)>&& decodeCallback)
     }
 
     bool isCompatibleNativeImage = isCompatibleWithOptionsAtIndex(index, SubsamplingLevel::Default, DecodingMode::Asynchronous);
-    auto frameAnimator = this->frameAnimator();
+    RefPtr frameAnimator = this->frameAnimator();
 
     if (frameAnimator && (frameAnimator->hasEverAnimated() || isCompatibleNativeImage)) {
         // startAnimation() always decodes the nextFrame which is currentFrameIndex + 1.
@@ -433,8 +430,10 @@ void BitmapImageSource::imageFrameDecodeAtIndexHasFinished(unsigned index, Subsa
         LOG(Images, "BitmapImageSource::%s - %p - url: %s. Frame at index = %d has been decoded.", __FUNCTION__, this, sourceUTF8().data(), index);
 
         cacheNativeImageAtIndex(index, subsamplingLevel, options, nativeImage.releaseNonNull());
+
         if (frameAtIndex(index).isComplete())
             ++m_decodeCountForTesting;
+
         imageFrameDecodeAtIndexHasFinished(index, animatingState, frameDecodingStatusAtIndex(index));
     }
 
@@ -466,6 +465,7 @@ void BitmapImageSource::cacheMetadataAtIndex(unsigned index, SubsamplingLevel su
 void BitmapImageSource::cacheNativeImageAtIndex(unsigned index, SubsamplingLevel subsamplingLevel, const DecodingOptions& options, Ref<NativeImage>&& nativeImage)
 {
     ASSERT(m_decoder);
+
     if (index >= m_frames.size())
         return;
 
@@ -481,7 +481,6 @@ void BitmapImageSource::cacheNativeImageAtIndex(unsigned index, SubsamplingLevel
 
     cacheMetadataAtIndex(index, subsamplingLevel, options);
     decodedSizeIncreased(frame.frameBytes());
-
 }
 
 const ImageFrame& BitmapImageSource::frameAtIndex(unsigned index) const
@@ -608,9 +607,14 @@ Expected<Ref<NativeImage>, DecodingStatus> BitmapImageSource::nativeImageAtIndex
 Expected<Ref<NativeImage>, DecodingStatus> BitmapImageSource::currentNativeImageForDrawing(SubsamplingLevel subsamplingLevel, const DecodingOptions& options)
 {
     startAnimation(subsamplingLevel, options);
+
     auto effectiveOptions = options;
+
+    // If frame0 is displayed for the first time, startAnimation() has to request decoding frame1
+    // asynchronously. A flicker will occur if we request decoding frame0 also asynchronously.
     if (options.decodingMode() == DecodingMode::Asynchronous && isAnimated() && !hasEverAnimated())
         effectiveOptions = { DecodingMode::Synchronous, options.sizeForDrawing() };
+
     return nativeImageAtIndexForDrawing(currentFrameIndex(), subsamplingLevel, effectiveOptions);
 }
 
@@ -637,7 +641,7 @@ RefPtr<NativeImage> BitmapImageSource::preTransformedNativeImageAtIndex(unsigned
     if (orientation == ImageOrientation::Orientation::None && size == sourceSize)
         return nativeImage;
 
-    RefPtr buffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    RefPtr buffer = ImageBuffer::create(size, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!buffer)
         return nativeImage;
 
@@ -685,8 +689,7 @@ long long BitmapImageSource::expectedContentLength() const
 
 CString BitmapImageSource::sourceUTF8() const
 {
-    constexpr const char* emptyString = "";
-    return m_bitmapImage ? m_bitmapImage->sourceUTF8() : emptyString;
+    return m_bitmapImage ? m_bitmapImage->sourceUTF8() : ""_s;
 }
 
 void BitmapImageSource::setMinimumDecodingDurationForTesting(Seconds duration)

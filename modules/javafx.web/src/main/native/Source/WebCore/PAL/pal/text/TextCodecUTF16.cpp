@@ -26,12 +26,15 @@
 #include "config.h"
 #include "TextCodecUTF16.h"
 
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace PAL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecUTF16);
 
 inline TextCodecUTF16::TextCodecUTF16(bool littleEndian)
     : m_littleEndian(littleEndian)
@@ -66,9 +69,8 @@ void TextCodecUTF16::registerCodecs(TextCodecRegistrar registrar)
 // https://encoding.spec.whatwg.org/#shared-utf-16-decoder
 String TextCodecUTF16::decode(std::span<const uint8_t> bytes, bool flush, bool, bool& sawError)
 {
-    const auto* p = bytes.data();
-    const auto* const end = p + bytes.size();
-    const auto* const endMinusOneOrNull = end ? end - 1 : nullptr;
+    size_t index = 0;
+    size_t lengthMinusOne = bytes.size() - 1;
 
     StringBuilder result;
     result.reserveCapacity(bytes.size() / 2);
@@ -104,32 +106,29 @@ String TextCodecUTF16::decode(std::span<const uint8_t> bytes, bool flush, bool, 
         processCodeUnit((first << 8) | second);
     };
 
-    if (m_leadByte && p < end) {
+    if (!bytes.empty()) {
+        if (m_leadByte && index < bytes.size()) {
         auto leadByte = *std::exchange(m_leadByte, std::nullopt);
+            auto trailByte = bytes[index++];
         if (m_littleEndian)
-            processBytesLE(leadByte, p[0]);
+                processBytesLE(leadByte, trailByte);
         else
-            processBytesBE(leadByte, p[0]);
-        p++;
+                processBytesBE(leadByte, trailByte);
     }
-
     if (m_littleEndian) {
-        while (p < endMinusOneOrNull) {
-            processBytesLE(p[0], p[1]);
-            p += 2;
-        }
+            for (; index < lengthMinusOne; index += 2)
+                processBytesLE(bytes[index], bytes[index + 1]);
     } else {
-        while (p < endMinusOneOrNull) {
-            processBytesBE(p[0], p[1]);
-            p += 2;
-        }
+            for (; index < lengthMinusOne; index += 2)
+                processBytesBE(bytes[index], bytes[index + 1]);
     }
 
-    if (p && p == endMinusOneOrNull) {
+        if (index == lengthMinusOne) {
         ASSERT(!m_leadByte);
-        m_leadByte = p[0];
+            m_leadByte = bytes[index];
     } else
-        ASSERT(!p || p == end);
+            ASSERT(index == bytes.size());
+    }
 
     if (flush) {
         m_shouldStripByteOrderMark = false;
@@ -147,17 +146,17 @@ String TextCodecUTF16::decode(std::span<const uint8_t> bytes, bool flush, bool, 
 Vector<uint8_t> TextCodecUTF16::encode(StringView string, UnencodableHandling) const
 {
     Vector<uint8_t> result(WTF::checkedProduct<size_t>(string.length(), 2));
-    auto* bytes = result.data();
+    size_t index = 0;
 
     if (m_littleEndian) {
         for (auto character : string.codeUnits()) {
-            *bytes++ = character;
-            *bytes++ = character >> 8;
+            result[index++] = character;
+            result[index++] = character >> 8;
         }
     } else {
         for (auto character : string.codeUnits()) {
-            *bytes++ = character >> 8;
-            *bytes++ = character;
+            result[index++] = character >> 8;
+            result[index++] = character;
         }
     }
 

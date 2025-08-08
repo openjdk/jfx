@@ -205,7 +205,8 @@ public:
     JS_EXPORT_PRIVATE static RegisterSet dfgCalleeSaveRegisters(); // Registers saved and used by the DFG JIT.
     JS_EXPORT_PRIVATE static RegisterSet ftlCalleeSaveRegisters(); // Registers that might be saved and used by the FTL JIT.
     JS_EXPORT_PRIVATE static RegisterSet stubUnavailableRegisters(); // The union of callee saves and special registers.
-    JS_EXPORT_PRIVATE static RegisterSet argumentGPRS();
+    JS_EXPORT_PRIVATE static RegisterSet argumentGPRs();
+    JS_EXPORT_PRIVATE static RegisterSet argumentFPRs();
 #if ENABLE(WEBASSEMBLY)
     JS_EXPORT_PRIVATE static RegisterSet wasmPinnedRegisters();
 #endif
@@ -471,7 +472,7 @@ public:
     constexpr ScalarRegisterSet() { }
 
     inline constexpr unsigned hash() const { return m_bits.hash(); }
-    inline uint64_t bitsForDebugging() const { return *m_bits.storage(); }
+    inline uint64_t bitsForDebugging() const { return m_bits.storage()[0]; }
     friend constexpr bool operator==(const ScalarRegisterSet&, const ScalarRegisterSet&) = default;
 
     inline constexpr RegisterSet toRegisterSet() const WARN_UNUSED_RETURN

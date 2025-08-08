@@ -59,9 +59,6 @@ public:
     WEBCORE_EXPORT static void setAudioSessionCategoryOverride(unsigned);
     static unsigned audioSessionCategoryOverride();
 
-    WEBCORE_EXPORT static void setNetworkDataUsageTrackingEnabled(bool);
-    static bool networkDataUsageTrackingEnabled() { return shared().m_networkDataUsageTrackingEnabled; }
-
     WEBCORE_EXPORT static void setNetworkInterfaceName(const String&);
     static const String& networkInterfaceName() { return shared().m_networkInterfaceName; }
 
@@ -82,9 +79,6 @@ public:
 
     static void setCustomPasteboardDataEnabled(bool isEnabled) { shared().m_isCustomPasteboardDataEnabled = isEnabled; }
     static bool customPasteboardDataEnabled() { return shared().m_isCustomPasteboardDataEnabled; }
-
-    static void setRestrictedHTTPResponseAccess(bool isEnabled) { shared().m_isRestrictedHTTPResponseAccess = isEnabled; }
-    static bool restrictedHTTPResponseAccess() { return shared().m_isRestrictedHTTPResponseAccess; }
 
     static void setAttrStyleEnabled(bool isEnabled) { shared().m_attrStyleEnabled = isEnabled; }
     static bool attrStyleEnabled() { return shared().m_attrStyleEnabled; }
@@ -108,33 +102,13 @@ public:
     static bool isAccessibilityIsolatedTreeEnabled() { return shared().m_accessibilityIsolatedTree; }
 #endif
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    static void setAccessibilityThreadTextApisEnabled(bool isEnabled) { shared().m_accessibilityThreadTextApis = isEnabled; }
+    static bool accessibilityThreadTextApisEnabled() { return shared().m_accessibilityThreadTextApis; }
+#endif
+
     static void setArePDFImagesEnabled(bool isEnabled) { shared().m_arePDFImagesEnabled = isEnabled; }
     static bool arePDFImagesEnabled() { return shared().m_arePDFImagesEnabled; }
-
-#if ENABLE(WEBM_FORMAT_READER)
-    static void setWebMFormatReaderEnabled(bool isEnabled) { shared().m_webMFormatReaderEnabled = isEnabled; }
-    static bool webMFormatReaderEnabled() { return shared().m_webMFormatReaderEnabled; }
-#endif
-
-#if ENABLE(MEDIA_SOURCE)
-    static void setWebMParserEnabled(bool isEnabled) { shared().m_webMParserEnabled = isEnabled; }
-    static bool webMParserEnabled() { return shared().m_webMParserEnabled; }
-#endif
-
-#if ENABLE(VORBIS)
-    WEBCORE_EXPORT static void setVorbisDecoderEnabled(bool);
-    static bool vorbisDecoderEnabled() { return shared().m_vorbisDecoderEnabled; }
-#endif
-
-#if ENABLE(OPUS)
-    WEBCORE_EXPORT static void setOpusDecoderEnabled(bool);
-    static bool opusDecoderEnabled() { return shared().m_opusDecoderEnabled; }
-#endif
-
-#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-    WEBCORE_EXPORT static void setMediaSourceInlinePaintingEnabled(bool);
-    static bool mediaSourceInlinePaintingEnabled() { return shared().m_mediaSourceInlinePaintingEnabled; }
-#endif
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     static void setBuiltInNotificationsEnabled(bool isEnabled) { shared().m_builtInNotificationsEnabled = isEnabled; }
@@ -164,7 +138,6 @@ private:
     bool m_usesOverlayScrollbars { false };
 
 #if PLATFORM(IOS_FAMILY)
-    bool m_networkDataUsageTrackingEnabled { false };
     String m_networkInterfaceName;
     bool m_shouldOptOutOfNetworkStateObservation { false };
     bool m_disableScreenSizeOverride { false };
@@ -175,7 +148,6 @@ private:
     bool m_allowsAnySSLCertificate { false };
 
     bool m_isCustomPasteboardDataEnabled { false };
-    bool m_isRestrictedHTTPResponseAccess { true };
     bool m_attrStyleEnabled { false };
     bool m_webSQLEnabled { false };
 
@@ -191,27 +163,11 @@ private:
     bool m_accessibilityIsolatedTree { false };
 #endif
 
+#if ENABLE(AX_THREAD_TEXT_APIS)
+    bool m_accessibilityThreadTextApis { false };
+#endif
+
     bool m_arePDFImagesEnabled { true };
-
-#if ENABLE(WEBM_FORMAT_READER)
-    bool m_webMFormatReaderEnabled { false };
-#endif
-
-#if ENABLE(MEDIA_SOURCE)
-    bool m_webMParserEnabled { false };
-#endif
-
-#if ENABLE(VORBIS)
-    bool m_vorbisDecoderEnabled { false };
-#endif
-
-#if ENABLE(OPUS)
-    bool m_opusDecoderEnabled { false };
-#endif
-
-#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-    bool m_mediaSourceInlinePaintingEnabled { false };
-#endif
 
 #if ENABLE(WEB_PUSH_NOTIFICATIONS)
     bool m_builtInNotificationsEnabled { false };

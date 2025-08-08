@@ -48,7 +48,7 @@ struct ControlStyle {
         Presenting          = 1 << 9,
         FormSemanticContext = 1 << 10,
         DarkAppearance      = 1 << 11,
-        RightToLeft         = 1 << 12,
+        InlineFlippedWritingMode = 1 << 12,
         LargeControls       = 1 << 13,
         ReadOnly            = 1 << 14,
         ListButton          = 1 << 15,

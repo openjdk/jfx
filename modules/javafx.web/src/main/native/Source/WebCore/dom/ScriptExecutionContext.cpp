@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
  * Copyright (C) 2012 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 #include "CSSValuePool.h"
 #include "CachedScript.h"
 #include "CommonVM.h"
+#include "ContentSecurityPolicy.h"
 #include "CrossOriginOpenerPolicy.h"
 #include "DOMTimer.h"
 #include "DatabaseContext.h"
@@ -58,6 +59,7 @@
 #include "SWContextManager.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
+#include "ScriptTelemetryCategory.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerProvider.h"
@@ -78,6 +80,7 @@
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSPromise.h>
 #include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/SourceTaintedOrigin.h>
 #include <JavaScriptCore/StackVisitor.h>
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/VM.h>
@@ -85,6 +88,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -93,15 +97,15 @@ using namespace Inspector;
 static std::atomic<CrossOriginMode> globalCrossOriginMode { CrossOriginMode::Shared };
 
 static Lock allScriptExecutionContextsMapLock;
-static HashMap<ScriptExecutionContextIdentifier, ScriptExecutionContext*>& allScriptExecutionContextsMap() WTF_REQUIRES_LOCK(allScriptExecutionContextsMapLock)
+static UncheckedKeyHashMap<ScriptExecutionContextIdentifier, ScriptExecutionContext*>& allScriptExecutionContextsMap() WTF_REQUIRES_LOCK(allScriptExecutionContextsMapLock)
 {
-    static NeverDestroyed<HashMap<ScriptExecutionContextIdentifier, ScriptExecutionContext*>> contexts;
+    static NeverDestroyed<UncheckedKeyHashMap<ScriptExecutionContextIdentifier, ScriptExecutionContext*>> contexts;
     ASSERT(allScriptExecutionContextsMapLock.isLocked());
     return contexts;
 }
 
 struct ScriptExecutionContext::PendingException {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PendingException);
 public:
     PendingException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, RefPtr<ScriptCallStack>&& callStack)
         : m_errorMessage(errorMessage)
@@ -118,8 +122,11 @@ public:
     RefPtr<ScriptCallStack> m_callStack;
 };
 
-ScriptExecutionContext::ScriptExecutionContext(Type type, ScriptExecutionContextIdentifier contextIdentifier)
-    : m_identifier(contextIdentifier ? contextIdentifier : ScriptExecutionContextIdentifier::generate())
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptExecutionContext::PendingException);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptExecutionContext::Task);
+
+ScriptExecutionContext::ScriptExecutionContext(Type type, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
+    : m_identifier(contextIdentifier ? *contextIdentifier : ScriptExecutionContextIdentifier::generate())
     , m_type(type)
 {
 }
@@ -279,7 +286,7 @@ std::unique_ptr<FontLoadRequest> ScriptExecutionContext::fontLoadRequest(const S
     return nullptr;
 }
 
-void ScriptExecutionContext::forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>& apply) const
+void ScriptExecutionContext::forEachActiveDOMObject(NOESCAPE const Function<ShouldContinue(ActiveDOMObject&)>& apply) const
 {
     // It is not allowed to run arbitrary script or construct new ActiveDOMObjects while we are iterating over ActiveDOMObjects.
     // An ASSERT_WITH_SECURITY_IMPLICATION or RELEASE_ASSERT will fire if this happens, but it's important to code
@@ -312,7 +319,7 @@ JSC::ScriptExecutionStatus ScriptExecutionContext::jscScriptExecutionStatus() co
     return JSC::ScriptExecutionStatus::Running;
 }
 
-URL ScriptExecutionContext::currentSourceURL() const
+URL ScriptExecutionContext::currentSourceURL(CallStackPosition position) const
 {
     auto* globalObject = this->globalObject();
     if (!globalObject)
@@ -324,7 +331,7 @@ URL ScriptExecutionContext::currentSourceURL() const
         return { };
 
     URL sourceURL;
-    JSC::StackVisitor::visit(topCallFrame, vm, [&sourceURL](auto& visitor) {
+    JSC::StackVisitor::visit(topCallFrame, vm, [&sourceURL, position](auto& visitor) {
         if (visitor->isNativeFrame())
             return IterationStatus::Continue;
 
@@ -332,11 +339,12 @@ URL ScriptExecutionContext::currentSourceURL() const
         if (urlString.isEmpty())
             return IterationStatus::Continue;
 
-        sourceURL = URL { WTFMove(urlString) };
-        if (sourceURL.isValid())
+        auto newSourceURL = URL { WTFMove(urlString) };
+        if (!newSourceURL.isValid())
             return IterationStatus::Continue;
 
-        return IterationStatus::Done;
+        sourceURL = WTFMove(newSourceURL);
+        return position == CallStackPosition::BottomMost ? IterationStatus::Continue : IterationStatus::Done;
     });
     return sourceURL;
 }
@@ -396,7 +404,6 @@ void ScriptExecutionContext::stopActiveDOMObjects()
         activeDOMObject.stop();
         return ShouldContinue::Yes;
     });
-    m_deferredPromises.clear();
 
     m_nativePromiseRequests.forEach([] (auto& request) {
         request.disconnect();
@@ -639,7 +646,7 @@ JSC::JSGlobalObject* ScriptExecutionContext::globalObject() const
 {
     if (auto* document = dynamicDowncast<Document>(*this)) {
         auto frame = document->frame();
-        return frame ? frame->script().globalObject(mainThreadNormalWorld()) : nullptr;
+        return frame ? frame->script().globalObject(mainThreadNormalWorldSingleton()) : nullptr;
     }
 
     if (auto* globalScope = dynamicDowncast<WorkerOrWorkletGlobalScope>(*this)) {
@@ -751,6 +758,13 @@ bool ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(ScriptExecutionCon
     return true;
 }
 
+bool ScriptExecutionContext::isContextThread(ScriptExecutionContextIdentifier identifier)
+{
+    Locker locker { allScriptExecutionContextsMapLock };
+    auto* context = allScriptExecutionContextsMap().get(identifier);
+    return context && context->isContextThread();
+}
+
 bool ScriptExecutionContext::ensureOnContextThread(ScriptExecutionContextIdentifier identifier, Task&& task)
 {
     ScriptExecutionContext* context = nullptr;
@@ -776,8 +790,10 @@ bool ScriptExecutionContext::ensureOnContextThreadForCrossThreadTask(ScriptExecu
     {
         Locker locker { allScriptExecutionContextsMapLock };
         auto context = allScriptExecutionContextsMap().get(identifier);
+
         if (!context)
             return false;
+
         if (!context->isContextThread()) {
             context->postTask([crossThreadTask = WTFMove(crossThreadTask)](ScriptExecutionContext&) mutable {
                 crossThreadTask.performTask();
@@ -785,9 +801,11 @@ bool ScriptExecutionContext::ensureOnContextThreadForCrossThreadTask(ScriptExecu
             return true;
         }
     }
+
     crossThreadTask.performTask();
     return true;
 }
+
 void ScriptExecutionContext::postTaskToResponsibleDocument(Function<void(Document&)>&& callback)
 {
     if (auto* document = dynamicDowncast<Document>(*this)) {
@@ -859,16 +877,6 @@ CompletionHandler<void()> ScriptExecutionContext::takeNotificationCallback(Notif
     return m_notificationCallbacks.take(identifier);
 }
 
-void ScriptExecutionContext::addDeferredPromise(Ref<DeferredPromise>&& promise)
-{
-    m_deferredPromises.add(WTFMove(promise));
-}
-
-RefPtr<DeferredPromise> ScriptExecutionContext::takeDeferredPromise(DeferredPromise* promise)
-{
-    return m_deferredPromises.take(promise);
-}
-
 CheckedRef<EventLoopTaskGroup> ScriptExecutionContext::checkedEventLoop()
 {
     return eventLoop();
@@ -904,45 +912,13 @@ void ScriptExecutionContext::deref()
     }
 }
 
-void ScriptExecutionContext::refAllowingPartiallyDestroyed()
-{
-    switch (m_type) {
-    case Type::Document:
-        uncheckedDowncast<Document>(*this).refAllowingPartiallyDestroyed();
-        break;
-    case Type::WorkerOrWorkletGlobalScope:
-        uncheckedDowncast<WorkerOrWorkletGlobalScope>(*this).refAllowingPartiallyDestroyed();
-        break;
-    case Type::EmptyScriptExecutionContext:
-        uncheckedDowncast<EmptyScriptExecutionContext>(*this).refAllowingPartiallyDestroyed();
-        break;
-    }
-}
-
-void ScriptExecutionContext::derefAllowingPartiallyDestroyed()
-{
-    switch (m_type) {
-    case Type::Document:
-        uncheckedDowncast<Document>(*this).derefAllowingPartiallyDestroyed();
-        break;
-    case Type::WorkerOrWorkletGlobalScope:
-        uncheckedDowncast<WorkerOrWorkletGlobalScope>(*this).derefAllowingPartiallyDestroyed();
-        break;
-    case Type::EmptyScriptExecutionContext:
-        uncheckedDowncast<EmptyScriptExecutionContext>(*this).derefAllowingPartiallyDestroyed();
-        break;
-    }
-}
-
+// ScriptExecutionContextDispatcher is not guaranteeing dispatching on its own for workers.
+// Together with ScriptExecutionContext::enqueueTaskWhenSettled, it meets NativePromise dispatcher contract.
+// FIXME: We should investigate how to guarantee task dispatching to workers.
 class ScriptExecutionContextDispatcher final
-    : public ThreadSafeRefCounted<ScriptExecutionContextDispatcher>
-    , public RefCountedSerialFunctionDispatcher {
+    : public GuaranteedSerialFunctionDispatcher {
 public:
     static Ref<ScriptExecutionContextDispatcher> create(ScriptExecutionContext& context) { return adoptRef(*new ScriptExecutionContextDispatcher(context)); }
-
-    // RefCountedSerialFunctionDispatcher
-    void ref() const final { ThreadSafeRefCounted::ref(); }
-    void deref() const final { ThreadSafeRefCounted::deref(); }
 
 private:
     explicit ScriptExecutionContextDispatcher(ScriptExecutionContext& context)
@@ -951,7 +927,7 @@ private:
     {
     }
 
-    // RefCountedSerialFunctionDispatcher
+    // GuaranteedSerialFunctionDispatcher
     void dispatch(Function<void()>&& callback) final
     {
         if (m_threadId == 1) {
@@ -966,11 +942,57 @@ private:
     const uint32_t m_threadId { 1 };
 };
 
-RefCountedSerialFunctionDispatcher& ScriptExecutionContext::nativePromiseDispatcher()
+GuaranteedSerialFunctionDispatcher& ScriptExecutionContext::nativePromiseDispatcher()
 {
     if (!m_nativePromiseDispatcher)
         m_nativePromiseDispatcher = ScriptExecutionContextDispatcher::create(*this);
     return *m_nativePromiseDispatcher;
+}
+
+bool ScriptExecutionContext::requiresScriptExecutionTelemetry(ScriptTelemetryCategory category)
+{
+    RefPtr vm = vmIfExists();
+    if (!vm)
+        return false;
+
+    if (!vm->topCallFrame)
+        return false;
+
+    auto [taintedness, taintedURL] = JSC::sourceTaintedOriginFromStack(*vm, vm->topCallFrame);
+    switch (taintedness) {
+    case JSC::SourceTaintedOrigin::Untainted:
+    case JSC::SourceTaintedOrigin::IndirectlyTaintedByHistory:
+        return false;
+    case JSC::SourceTaintedOrigin::IndirectlyTainted:
+    case JSC::SourceTaintedOrigin::KnownTainted:
+        break;
+    }
+
+    RefPtr document = dynamicDowncast<Document>(*this);
+    if (!document)
+        return true;
+
+    RefPtr page = document->page();
+    if (!page)
+        return true;
+
+    if (!page->settings().scriptTelemetryLoggingEnabled())
+        return true;
+
+    if (!page->reportScriptTelemetry(taintedURL, category))
+        return true;
+
+    addConsoleMessage(MessageSource::JS, MessageLevel::Info, makeLogMessage(taintedURL, category));
+    return true;
+}
+
+bool ScriptExecutionContext::isAlwaysOnLoggingAllowed() const
+{
+    auto sessionID = this->sessionID();
+    if (!sessionID)
+        return false;
+
+    return sessionID->isAlwaysOnLoggingAllowed() || settingsValues().allowPrivacySensitiveOperationsInNonPersistentDataStores;
 }
 
 WebCoreOpaqueRoot root(ScriptExecutionContext* context)

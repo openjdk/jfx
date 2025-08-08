@@ -42,13 +42,13 @@
 #include "InlineTextBoxStyle.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include "PaintInfo.h"
 #include "RenderBlock.h"
 #include "RenderCombineText.h"
 #include "RenderElementInlines.h"
 #include "RenderHighlight.h"
 #include "RenderLineBreak.h"
 #include "RenderStyleInlines.h"
+#include "RenderSVGInlineText.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
@@ -57,12 +57,11 @@
 #include "Text.h"
 #include "TextBoxPainter.h"
 #include "TextBoxSelectableRange.h"
-#include "TextDecorationPainter.h"
-#include "TextPaintStyle.h"
 #include <stdio.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/TextStream.h>
+
 
 namespace WebCore {
 
@@ -75,8 +74,13 @@ struct SameSizeAsLegacyInlineTextBox : public LegacyInlineBox {
 
 static_assert(sizeof(LegacyInlineTextBox) == sizeof(SameSizeAsLegacyInlineTextBox), "LegacyInlineTextBox should stay small");
 
-typedef HashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
+typedef UncheckedKeyHashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
 static LegacyInlineTextBoxOverflowMap* gTextBoxesWithOverflow;
+
+LegacyInlineTextBox::LegacyInlineTextBox(RenderSVGInlineText& renderer)
+    : LegacyInlineBox(renderer)
+{
+}
 
 LegacyInlineTextBox::~LegacyInlineTextBox()
 {
@@ -84,6 +88,16 @@ LegacyInlineTextBox::~LegacyInlineTextBox()
         gTextBoxesWithOverflow->remove(this);
     if (isInGlyphDisplayListCache())
         removeBoxFromGlyphDisplayListCache(*this);
+}
+
+RenderSVGInlineText& LegacyInlineTextBox::renderer() const
+{
+    return downcast<RenderSVGInlineText>(LegacyInlineBox::renderer());
+}
+
+const RenderStyle& LegacyInlineTextBox::lineStyle() const
+{
+    return isFirstLine() ? renderer().firstLineStyle() : renderer().style();
 }
 
 bool LegacyInlineTextBox::hasTextContent() const
@@ -98,13 +112,6 @@ void LegacyInlineTextBox::markDirty(bool dirty)
         m_start = 0;
     }
     LegacyInlineBox::markDirty(dirty);
-}
-
-LayoutRect LegacyInlineTextBox::logicalOverflowRect() const
-{
-    if (knownToHaveNoOverflow() || !gTextBoxesWithOverflow)
-        return enclosingIntRect(logicalFrameRect());
-    return gTextBoxesWithOverflow->get(this);
 }
 
 void LegacyInlineTextBox::setLogicalOverflowRect(const LayoutRect& rect)
@@ -158,7 +165,7 @@ const FontCascade& LegacyInlineTextBox::lineFont() const
     return lineStyle().fontCascade();
 }
 
-LayoutRect snappedSelectionRect(const LayoutRect& selectionRect, float logicalRight, float selectionTop, float selectionHeight, bool isHorizontal)
+LayoutRect snappedSelectionRect(const LayoutRect& selectionRect, float logicalRight, WritingMode writingMode)
 {
     auto snappedSelectionRect = enclosingIntRect(selectionRect);
     LayoutUnit logicalWidth = snappedSelectionRect.width();
@@ -167,19 +174,16 @@ LayoutRect snappedSelectionRect(const LayoutRect& selectionRect, float logicalRi
     else if (snappedSelectionRect.maxX() > logicalRight)
         logicalWidth = logicalRight - snappedSelectionRect.x();
 
-    LayoutPoint topPoint;
-    LayoutUnit width;
-    LayoutUnit height;
-    if (isHorizontal) {
-        topPoint = LayoutPoint { snappedSelectionRect.x(), selectionTop };
-        width = logicalWidth;
-        height = selectionHeight;
-    } else {
-        topPoint = LayoutPoint { selectionTop, snappedSelectionRect.x() };
-        width = selectionHeight;
-        height = logicalWidth;
+    if (writingMode.isHorizontal()) {
+        return {
+            snappedSelectionRect.x(), selectionRect.y(),
+            logicalWidth, selectionRect.height(),
+        };
     }
-    return LayoutRect { topPoint, LayoutSize { width, height } };
+    return {
+        selectionRect.y(), snappedSelectionRect.x(),
+        selectionRect.height(), logicalWidth,
+    };
 }
 
 LayoutRect LegacyInlineTextBox::localSelectionRect(unsigned startPos, unsigned endPos) const
@@ -189,18 +193,21 @@ LayoutRect LegacyInlineTextBox::localSelectionRect(unsigned startPos, unsigned e
     if (clampedStart >= clampedEnd && !(startPos == endPos && startPos >= start() && startPos <= (start() + len())))
         return { };
 
-    LayoutUnit selectionTop = this->selectionTop();
-    LayoutUnit selectionHeight = this->selectionHeight();
-
     TextRun textRun = createTextRun();
+    auto writingMode = renderer().writingMode();
+    auto width = LayoutUnit { logicalWidth() };
 
-    LayoutRect selectionRect { LayoutUnit(logicalLeft()), selectionTop, LayoutUnit(logicalWidth()), selectionHeight };
+    LayoutRect selectionRect { 0, this->selectionTop(), width, this->selectionHeight() };
     // Avoid measuring the text when the entire line box is selected as an optimization.
     if (clampedStart || clampedEnd != textRun.length())
         lineFont().adjustSelectionRectForText(renderer().canUseSimplifiedTextMeasuring().value_or(false), textRun, selectionRect, clampedStart, clampedEnd);
+
+    if (!writingMode.isLogicalLeftLineLeft())
+        selectionRect.setX(width - selectionRect.x());
+    selectionRect.move(logicalLeft(), 0);
     // FIXME: The computation of the snapped selection rect differs from the computation of this rect
     // in paintMarkedTextBackground(). See <https://bugs.webkit.org/show_bug.cgi?id=138913>.
-    return snappedSelectionRect(selectionRect, logicalRight(), selectionTop, selectionHeight, isHorizontal());
+    return snappedSelectionRect(selectionRect, logicalRight(), renderer().writingMode());
 }
 
 void LegacyInlineTextBox::deleteLine()
@@ -209,68 +216,9 @@ void LegacyInlineTextBox::deleteLine()
     delete this;
 }
 
-void LegacyInlineTextBox::extractLine()
-{
-    if (extracted())
-        return;
-
-    renderer().extractTextBox(*this);
-}
-
-void LegacyInlineTextBox::attachLine()
-{
-    if (!extracted())
-        return;
-
-    renderer().attachTextBox(*this);
-}
-
 bool LegacyInlineTextBox::isLineBreak() const
 {
     return renderer().style().preserveNewline() && len() == 1 && renderer().text()[start()] == '\n';
-}
-
-bool LegacyInlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit /* lineTop */, LayoutUnit /*lineBottom*/,
-    HitTestAction /*hitTestAction*/)
-{
-    if (!renderer().parent()->visibleToHitTesting(request))
-        return false;
-
-    if (isLineBreak())
-        return false;
-
-    FloatRect rect(locationIncludingFlipping(), size());
-    rect.moveBy(accumulatedOffset);
-
-    if (locationInContainer.intersects(rect)) {
-        renderer().updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(accumulatedOffset)));
-        if (result.addNodeToListBasedTestResult(renderer().protectedNodeForHitTest().get(), request, locationInContainer, rect) == HitTestProgress::Stop)
-            return true;
-    }
-    return false;
-}
-
-void LegacyInlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit /*lineTop*/, LayoutUnit /*lineBottom*/)
-{
-    if (isLineBreak() || !paintInfo.shouldPaintWithinRoot(renderer()) || renderer().style().usedVisibility() != Visibility::Visible
-        || paintInfo.phase == PaintPhase::Outline || !hasTextContent())
-        return;
-
-    ASSERT(paintInfo.phase != PaintPhase::SelfOutline && paintInfo.phase != PaintPhase::ChildOutlines);
-
-    LayoutUnit logicalLeftSide = logicalLeftVisualOverflow();
-    LayoutUnit logicalRightSide = logicalRightVisualOverflow();
-    LayoutUnit logicalStart = logicalLeftSide + (isHorizontal() ? paintOffset.x() : paintOffset.y());
-    LayoutUnit logicalExtent = logicalRightSide - logicalLeftSide;
-
-    LayoutUnit paintEnd = isHorizontal() ? paintInfo.rect.maxX() : paintInfo.rect.maxY();
-    LayoutUnit paintStart = isHorizontal() ? paintInfo.rect.x() : paintInfo.rect.y();
-
-    if (logicalStart >= paintEnd || logicalStart + logicalExtent <= paintStart)
-        return;
-
-    LegacyTextBoxPainter textBoxPainter(*this, paintInfo, paintOffset);
-    textBoxPainter.paint();
 }
 
 TextBoxSelectableRange LegacyInlineTextBox::selectableRange() const

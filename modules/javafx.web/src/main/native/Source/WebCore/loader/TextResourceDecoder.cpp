@@ -32,35 +32,27 @@
 #include <pal/text/TextEncodingDetector.h>
 #include <pal/text/TextEncodingRegistry.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-static constexpr bool bytesEqual(const uint8_t* p, uint8_t b)
-{
-    return *p == b;
-}
-
-template<typename... T>
-static constexpr bool bytesEqual(const uint8_t* p, uint8_t b, T... bs)
-{
-    return *p == b && bytesEqual(p + 1, bs...);
-}
-
 // You might think we should put these find functions elsewhere, perhaps with the
 // similar functions that operate on UChar, but arguably only the decoder has
 // a reason to process strings of char rather than UChar.
 
-static int find(const uint8_t* subject, size_t subjectLength, const char* target)
+static size_t find(std::span<const uint8_t> subject, std::span<const uint8_t> target)
 {
-    size_t targetLength = strlen(target);
-    if (targetLength > subjectLength)
-        return -1;
-    for (size_t i = 0; i <= subjectLength - targetLength; ++i) {
+    if (target.size() > subject.size())
+        return notFound;
+
+    size_t sizeDifference = subject.size() - target.size();
+    for (size_t i = 0; i < sizeDifference; ++i) {
         bool match = true;
-        for (size_t j = 0; j < targetLength; ++j) {
+        for (size_t j = 0; j < target.size(); ++j) {
             if (subject[i + j] != target[j]) {
                 match = false;
                 break;
@@ -69,23 +61,20 @@ static int find(const uint8_t* subject, size_t subjectLength, const char* target
         if (match)
             return i;
     }
-    return -1;
+    return notFound;
 }
 
-static PAL::TextEncoding findTextEncoding(const uint8_t* encodingName, int length)
+static PAL::TextEncoding findTextEncoding(std::span<const LChar> encodingName)
 {
-    Vector<char, 64> buffer(length + 1);
-    memcpy(buffer.data(), encodingName, length);
-    buffer[length] = '\0';
-    return buffer.data();
+    return StringView { encodingName };
 }
 
 class KanjiCode {
 public:
-    enum Type { ASCII, JIS, EUC, SJIS, UTF16, UTF8 };
+    enum class Type : uint8_t { ASCII, JIS, EUC, SJIS, UTF16, UTF8 };
     static enum Type judge(std::span<const uint8_t>);
-    static const int ESC = 0x1b;
-    static const unsigned char sjisMap[256];
+    static constexpr int ESC = 0x1b;
+    static const std::array<uint8_t, 256> sjisMap;
     static int ISkanji(int code)
     {
         if (code >= 0x100)
@@ -100,7 +89,7 @@ public:
     }
 };
 
-const unsigned char KanjiCode::sjisMap[256] = {
+const std::array<uint8_t, 256> KanjiCode::sjisMap {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -139,150 +128,138 @@ const unsigned char KanjiCode::sjisMap[256] = {
  * Special Thanks to Kenichi Tsuchida
  */
 
-enum KanjiCode::Type KanjiCode::judge(std::span<const uint8_t> str)
+auto KanjiCode::judge(std::span<const uint8_t> string) -> Type
 {
-    enum Type code;
-    size_t i;
-    int bfr = false;            /* Kana Moji */
+    Type code;
+    bool bfr = false;            /* Kana Moji */
     int bfk = 0;                /* EUC Kana */
     int sjis = 0;
     int euc = 0;
 
-    const uint8_t* ptr = str.data();
+    code = Type::ASCII;
 
-    code = ASCII;
-
-    i = 0;
-    while (i < str.size()) {
-        if (ptr[i] == ESC && (str.size() - i >= 3)) {
-            if (bytesEqual(str.data() + i + 1, '$', 'B')
-                || bytesEqual(str.data() + i + 1, '(', 'B')
-                || bytesEqual(str.data() + i + 1, '$', '@')
-                || bytesEqual(str.data() + i + 1, '(', 'J')) {
-                code = JIS;
-                goto breakBreak;
+    size_t i = 0;
+    while (i < string.size()) {
+        if (string[i] == ESC && (string.size() - i >= 3)) {
+            auto substring = string.subspan(i + 1);
+            if (spanHasPrefix(substring, "$B"_span)
+                || spanHasPrefix(substring, "(B"_span)
+                || spanHasPrefix(substring, "$@"_span)
+                || spanHasPrefix(substring, "(J"_span)) {
+                code = Type::JIS;
+                return code;
             }
-            if (bytesEqual(str.data() + i + 1, '(', 'I') || bytesEqual(str.data() + i + 1, ')', 'I')) {
-                code = JIS;
+            if (spanHasPrefix(substring, "(I"_span) || spanHasPrefix(substring, ")I"_span)) {
+                code = Type::JIS;
                 i += 3;
-            } else {
-                i++;
-            }
+            } else
+                ++i;
             bfr = false;
             bfk = 0;
         } else {
-            if (ptr[i] < 0x20) {
+            if (string[i] < 0x20) {
                 bfr = false;
                 bfk = 0;
                 /* ?? check kudokuten ?? && ?? hiragana ?? */
-                if ((i >= 2) && (ptr[i - 2] == 0x81)
-                        && (0x41 <= ptr[i - 1] && ptr[i - 1] <= 0x49)) {
-                    code = SJIS;
+                if ((i >= 2) && (string[i - 2] == 0x81) && (0x41 <= string[i - 1] && string[i - 1] <= 0x49)) {
+                    code = Type::SJIS;
                     sjis += 100;        /* kudokuten */
-                } else if ((i >= 2) && (ptr[i - 2] == 0xa1)
-                        && (0xa2 <= ptr[i - 1] && ptr[i - 1] <= 0xaa)) {
-                    code = EUC;
+                } else if ((i >= 2) && (string[i - 2] == 0xa1) && (0xa2 <= string[i - 1] && string[i - 1] <= 0xaa)) {
+                    code = Type::EUC;
                     euc += 100;         /* kudokuten */
-                } else if ((i >= 2) && (ptr[i - 2] == 0x82) && (0xa0 <= ptr[i - 1])) {
+                } else if ((i >= 2) && (string[i - 2] == 0x82) && (0xa0 <= string[i - 1]))
                     sjis += 40;         /* hiragana */
-                } else if ((i >= 2) && (ptr[i - 2] == 0xa4) && (0xa0 <= ptr[i - 1])) {
+                else if ((i >= 2) && (string[i - 2] == 0xa4) && (0xa0 <= string[i - 1]))
                     euc += 40;          /* hiragana */
-                }
             } else {
                 /* ?? check hiragana or katana ?? */
-                if ((str.size() - i > 1) && (ptr[i] == 0x82) && (0xa0 <= ptr[i + 1])) {
+                if ((string.size() - i > 1) && (string[i] == 0x82) && (0xa0 <= string[i + 1]))
                     sjis++;     /* hiragana */
-                } else if ((str.size() - i > 1) && (ptr[i] == 0x83)
-                         && (0x40 <= ptr[i + 1] && ptr[i + 1] <= 0x9f)) {
+                else if ((string.size() - i > 1) && (string[i] == 0x83) && (0x40 <= string[i + 1] && string[i + 1] <= 0x9f))
                     sjis++;     /* katakana */
-                } else if ((str.size() - i > 1) && (ptr[i] == 0xa4) && (0xa0 <= ptr[i + 1])) {
+                else if ((string.size() - i > 1) && (string[i] == 0xa4) && (0xa0 <= string[i + 1]))
                     euc++;      /* hiragana */
-                } else if ((str.size() - i > 1) && (ptr[i] == 0xa5) && (0xa0 <= ptr[i + 1])) {
+                else if ((string.size() - i > 1) && (string[i] == 0xa5) && (0xa0 <= string[i + 1]))
                     euc++;      /* katakana */
-                }
+
                 if (bfr) {
-                    if ((i >= 1) && (0x40 <= ptr[i] && ptr[i] <= 0xa0) && ISkanji(ptr[i - 1])) {
-                        code = SJIS;
-                        goto breakBreak;
-                    } else if ((i >= 1) && (0x81 <= ptr[i - 1] && ptr[i - 1] <= 0x9f) && ((0x40 <= ptr[i] && ptr[i] < 0x7e) || (0x7e < ptr[i] && ptr[i] <= 0xfc))) {
-                        code = SJIS;
-                        goto breakBreak;
-                    } else if ((i >= 1) && (0xfd <= ptr[i] && ptr[i] <= 0xfe) && (0xa1 <= ptr[i - 1] && ptr[i - 1] <= 0xfe)) {
-                        code = EUC;
-                        goto breakBreak;
-                    } else if ((i >= 1) && (0xfd <= ptr[i - 1] && ptr[i - 1] <= 0xfe) && (0xa1 <= ptr[i] && ptr[i] <= 0xfe)) {
-                        code = EUC;
-                        goto breakBreak;
-                    } else if ((i >= 1) && (ptr[i] < 0xa0 || 0xdf < ptr[i]) && (0x8e == ptr[i - 1])) {
-                        code = SJIS;
-                        goto breakBreak;
-                    } else if (ptr[i] <= 0x7f) {
-                        code = SJIS;
-                        goto breakBreak;
-                    } else {
-                        if (0xa1 <= ptr[i] && ptr[i] <= 0xa6) {
-                            euc++;      /* sjis hankaku kana kigo */
-                        } else if (0xa1 <= ptr[i] && ptr[i] <= 0xdf) {
-                            ;           /* sjis hankaku kana */
-                        } else if (0xa1 <= ptr[i] && ptr[i] <= 0xfe) {
-                            euc++;
-                        } else if (0x8e == ptr[i]) {
-                            euc++;
-                        } else if (0x20 <= ptr[i] && ptr[i] <= 0x7f) {
-                            sjis++;
-                        }
+                    if ((i >= 1) && (0x40 <= string[i] && string[i] <= 0xa0) && ISkanji(string[i - 1])) {
+                        code = Type::SJIS;
+                        return code;
+                    }
+                    if ((i >= 1) && (0x81 <= string[i - 1] && string[i - 1] <= 0x9f) && ((0x40 <= string[i] && string[i] < 0x7e) || (0x7e < string[i] && string[i] <= 0xfc))) {
+                        code = Type::SJIS;
+                        return code;
+                    }
+                    if ((i >= 1) && (0xfd <= string[i] && string[i] <= 0xfe) && (0xa1 <= string[i - 1] && string[i - 1] <= 0xfe)) {
+                        code = Type::EUC;
+                        return code;
+                    }
+                    if ((i >= 1) && (0xfd <= string[i - 1] && string[i - 1] <= 0xfe) && (0xa1 <= string[i] && string[i] <= 0xfe)) {
+                        code = Type::EUC;
+                        return code;
+                    }
+                    if ((i >= 1) && (string[i] < 0xa0 || 0xdf < string[i]) && (0x8e == string[i - 1])) {
+                        code = Type::SJIS;
+                        return code;
+                    }
+                    if (string[i] <= 0x7f) {
+                        code = Type::SJIS;
+                        return code;
+                    }
+                    if (0xa1 <= string[i] && string[i] <= 0xa6)
+                        ++euc;      /* sjis hankaku kana kigo */
+                    else if (0xa1 <= string[i] && string[i] <= 0xdf) {
+                        /* sjis hankaku kana */
+                    } else if (0xa1 <= string[i] && string[i] <= 0xfe)
+                        ++euc;
+                    else if (0x8e == string[i])
+                        ++euc;
+                    else if (0x20 <= string[i] && string[i] <= 0x7f)
+                        ++sjis;
                         bfr = false;
                         bfk = 0;
-                    }
-                } else if (0x8e == ptr[i]) {
-                    if (str.size() - i <= 1) {
-                        ;
-                    } else if (0xa1 <= ptr[i + 1] && ptr[i + 1] <= 0xdf) {
+                } else if (0x8e == string[i]) {
+                    if (string.size() - i <= 1) {
+                    } else if (0xa1 <= string[i + 1] && string[i + 1] <= 0xdf) {
                         /* EUC KANA or SJIS KANJI */
                         if (bfk == 1) {
                             euc += 100;
                         }
-                        bfk++;
-                        i++;
+                        ++bfk;
+                        ++i;
                     } else {
                         /* SJIS only */
-                        code = SJIS;
-                        goto breakBreak;
+                        code = Type::SJIS;
+                        return code;
                     }
-                } else if (0x81 <= ptr[i] && ptr[i] <= 0x9f) {
+                } else if (0x81 <= string[i] && string[i] <= 0x9f) {
                     /* SJIS only */
-                    code = SJIS;
-                    if ((str.size() - i >= 1)
-                            && ((0x40 <= ptr[i + 1] && ptr[i + 1] <= 0x7e)
-                            || (0x80 <= ptr[i + 1] && ptr[i + 1] <= 0xfc))) {
-                        goto breakBreak;
-                    }
-                } else if (0xfd <= ptr[i] && ptr[i] <= 0xfe) {
+                    code = Type::SJIS;
+                    if ((string.size() - i >= 1) && ((0x40 <= string[i + 1] && string[i + 1] <= 0x7e) || (0x80 <= string[i + 1] && string[i + 1] <= 0xfc)))
+                        return code;
+                } else if (0xfd <= string[i] && string[i] <= 0xfe) {
                     /* EUC only */
-                    code = EUC;
-                    if ((str.size() - i >= 1)
-                            && (0xa1 <= ptr[i + 1] && ptr[i + 1] <= 0xfe)) {
-                        goto breakBreak;
-                    }
-                } else if (ptr[i] <= 0x7f) {
+                    code = Type::EUC;
+                    if ((string.size() - i >= 1) && (0xa1 <= string[i + 1] && string[i + 1] <= 0xfe))
+                        return code;
+                } else if (string[i] <= 0x7f)
                     ;
-                } else {
+                else {
                     bfr = true;
                     bfk = 0;
                 }
             }
-            i++;
-        }
+            ++i;
     }
-    if (code == ASCII) {
-        if (sjis > euc) {
-            code = SJIS;
-        } else if (sjis < euc) {
-            code = EUC;
         }
+    if (code == Type::ASCII) {
+        if (sjis > euc)
+            code = Type::SJIS;
+        else if (sjis < euc)
+            code = Type::EUC;
     }
-breakBreak:
-    return (code);
+    return code;
 }
 
 TextResourceDecoder::ContentType TextResourceDecoder::determineContentType(const String& mimeType)
@@ -321,21 +298,14 @@ Ref<TextResourceDecoder> TextResourceDecoder::create(const String& mimeType, con
 
 TextResourceDecoder::~TextResourceDecoder() = default;
 
-static inline bool shouldPrependBOM(std::span<const uint8_t> data)
-{
-    if (data.size() < 3)
-        return true;
-    return data[0] != 0xef || data[1] != 0xbb || data[2] != 0xbf;
-}
-
 // https://encoding.spec.whatwg.org/#utf-8-decode
 String TextResourceDecoder::textFromUTF8(std::span<const uint8_t> data)
 {
-    auto decoder = TextResourceDecoder::create("text/plain"_s, "UTF-8");
-    if (shouldPrependBOM(data)) {
-        constexpr std::array<uint8_t, 3> bom = { 0xEF, 0xBB, 0xBF };
-        decoder->decode(bom);
-    }
+    constexpr std::array<uint8_t, 3> byteOrderMarkUTF8 = { 0xEF, 0xBB, 0xBF };
+
+    auto decoder = TextResourceDecoder::create("text/plain"_s, "UTF-8"_s);
+    if (!spanHasPrefix(data, std::span { byteOrderMarkUTF8 }))
+        decoder->decode(byteOrderMarkUTF8);
     return decoder->decodeAndFlush(data);
 }
 
@@ -351,7 +321,7 @@ void TextResourceDecoder::setEncoding(const PAL::TextEncoding& encoding, Encodin
     // When encoding comes from meta tag (i.e. it cannot be XML files sent via XHR),
     // treat x-user-defined as windows-1252 (bug 18270)
     if (source == EncodingFromMetaTag && equalLettersIgnoringASCIICase(encoding.name(), "x-user-defined"_s))
-        m_encoding = "windows-1252";
+        m_encoding = "windows-1252"_s;
     else if (source == EncodingFromMetaTag || source == EncodingFromXMLHeader || source == EncodingFromCSSCharset)
         m_encoding = encoding.closestByteBasedEquivalent();
     else
@@ -367,50 +337,50 @@ bool TextResourceDecoder::hasEqualEncodingForCharset(const String& charset) cons
 }
 
 // Returns the position of the encoding string.
-static int findXMLEncoding(const uint8_t* str, int len, int& encodingLength)
+static size_t findXMLEncoding(std::span<const uint8_t> string, size_t& encodingLength)
 {
-    int pos = find(str, len, "encoding");
-    if (pos == -1)
-        return -1;
-    pos += 8;
+    size_t position = find(string, "encoding"_span8);
+    if (position == notFound)
+        return notFound;
+    position += 8;
 
     // Skip spaces and stray control characters.
-    while (pos < len && str[pos] <= ' ')
-        ++pos;
+    while (position < string.size() && string[position] <= ' ')
+        ++position;
 
     // Skip equals sign.
-    if (pos >= len || str[pos] != '=')
-        return -1;
-    ++pos;
+    if (position >= string.size() || string[position] != '=')
+        return notFound;
+    ++position;
 
     // Skip spaces and stray control characters.
-    while (pos < len && str[pos] <= ' ')
-        ++pos;
+    while (position < string.size() && string[position] <= ' ')
+        ++position;
 
     // Skip quotation mark.
-    if (pos >= len)
-        return - 1;
-    char quoteMark = str[pos];
+    if (position >= string.size())
+        return notFound;
+    char quoteMark = string[position];
     if (quoteMark != '"' && quoteMark != '\'')
-        return -1;
-    ++pos;
+        return notFound;
+    ++position;
 
     // Find the trailing quotation mark.
-    int end = pos;
-    while (end < len && str[end] != quoteMark)
+    size_t end = position;
+    while (end < string.size() && string[end] != quoteMark)
         ++end;
-    if (end >= len)
-        return -1;
+    if (end >= string.size())
+        return notFound;
 
-    encodingLength = end - pos;
-    return pos;
+    encodingLength = end - position;
+    return position;
 }
 
 size_t TextResourceDecoder::checkForBOM(std::span<const uint8_t> data)
 {
     // Check for UTF-16 or UTF-8 BOM mark at the beginning, which is a sure sign of a Unicode encoding.
     // We let it override even a user-chosen encoding.
-    const size_t maximumBOMLength = 3;
+    constexpr size_t maximumBOMLength = 3;
 
     ASSERT(!m_checkedForBOM);
 
@@ -418,13 +388,11 @@ size_t TextResourceDecoder::checkForBOM(std::span<const uint8_t> data)
 
     size_t bufferLength = m_buffer.size();
 
-    size_t buf1Len = bufferLength;
-    size_t buf2Len = data.size();
-    const uint8_t* buf1 = m_buffer.data();
-    const uint8_t* buf2 = data.data();
-    unsigned char c1 = buf1Len ? (static_cast<void>(--buf1Len), *buf1++) : buf2Len ? (static_cast<void>(--buf2Len), *buf2++) : 0;
-    unsigned char c2 = buf1Len ? (static_cast<void>(--buf1Len), *buf1++) : buf2Len ? (static_cast<void>(--buf2Len), *buf2++) : 0;
-    unsigned char c3 = buf1Len ? (static_cast<void>(--buf1Len), *buf1++) : buf2Len ? (static_cast<void>(--buf2Len), *buf2++) : 0;
+    auto buffer1 = m_buffer.span();
+    auto buffer2 = data;
+    uint8_t c1 = !buffer1.empty() ? consume(buffer1) : !buffer2.empty() ? consume(buffer2) : 0;
+    uint8_t c2 = !buffer1.empty() ? consume(buffer1) : !buffer2.empty() ? consume(buffer2) : 0;
+    uint8_t c3 = !buffer1.empty() ? consume(buffer1) : !buffer2.empty() ? consume(buffer2) : 0;
 
     // Check for the BOM.
     if (c1 == 0xEF && c2 == 0xBB && c3 == 0xBF) {
@@ -459,33 +427,31 @@ bool TextResourceDecoder::checkForCSSCharset(std::span<const uint8_t> data, bool
 
     size_t oldSize = m_buffer.size();
     m_buffer.grow(oldSize + data.size());
-    memcpy(m_buffer.data() + oldSize, data.data(), data.size());
+    memcpySpan(m_buffer.mutableSpan().subspan(oldSize), data);
 
     movedDataToBuffer = true;
 
     if (m_buffer.size() <= 13) // strlen('@charset "x";') == 13
         return false;
 
-    const uint8_t* dataStart = m_buffer.data();
-    const uint8_t* dataEnd = dataStart + m_buffer.size();
+    data = m_buffer.span();
 
-    if (bytesEqual(dataStart, '@', 'c', 'h', 'a', 'r', 's', 'e', 't', ' ', '"')) {
-        dataStart += 10;
-        const uint8_t* pos = dataStart;
+    if (skipCharactersExactly(data, "@charset \""_span8)) {
+        size_t index = 0;
+        while (index < data.size() && data[index] != '"')
+            ++index;
 
-        while (pos < dataEnd && *pos != '"')
-            ++pos;
-        if (pos == dataEnd)
+        if (index == data.size())
             return false;
 
-        int encodingNameLength = pos - dataStart;
+        auto encodingName = data.first(index);
 
-        ++pos;
-        if (pos == dataEnd)
+        ++index;
+        if (index == data.size())
             return false;
 
-        if (*pos == ';')
-            setEncoding(findTextEncoding(dataStart, encodingNameLength), EncodingFromCSSCharset);
+        if (data[index] == ';')
+            setEncoding(findTextEncoding(encodingName), EncodingFromCSSCharset);
     }
 
     m_checkedForCSSCharset = true;
@@ -504,7 +470,7 @@ bool TextResourceDecoder::checkForHeadCharset(std::span<const uint8_t> data, boo
 
     size_t oldSize = m_buffer.size();
     m_buffer.grow(oldSize + data.size());
-    memcpy(m_buffer.data() + oldSize, data.data(), data.size());
+    memcpySpan(m_buffer.mutableSpan().subspan(oldSize), data);
 
     movedDataToBuffer = true;
 
@@ -512,31 +478,32 @@ bool TextResourceDecoder::checkForHeadCharset(std::span<const uint8_t> data, boo
     if (m_charsetParser)
         return checkForMetaCharset(data);
 
-    const uint8_t* ptr = m_buffer.data();
-    const uint8_t* pEnd = ptr + m_buffer.size();
+    auto bufferData = m_buffer.span();
 
     // Is there enough data available to check for XML declaration?
-    if (m_buffer.size() < 8)
+    if (bufferData.size() < 8)
         return false;
 
     // Handle XML declaration, which can have encoding in it. This encoding is honored even for HTML documents.
     // It is an error for an XML declaration not to be at the start of an XML document, and it is ignored in HTML documents in such case.
-    if (bytesEqual(ptr, '<', '?', 'x', 'm', 'l')) {
-        const uint8_t* xmlDeclarationEnd = ptr;
-        while (xmlDeclarationEnd != pEnd && *xmlDeclarationEnd != '>')
-            ++xmlDeclarationEnd;
-        if (xmlDeclarationEnd == pEnd)
+    static constexpr std::array<uint8_t, 5> xmlPrefix { '<', '?', 'x', 'm', 'l' };
+    static constexpr std::array<uint8_t, 6> xmlPrefixLittleEndian { '<', 0, '?', 0, 'x', 0 };
+    static constexpr std::array<uint8_t, 6> xmlPrefixBigEndian { 0, '<', 0, '?', 0, 'x' };
+    if (spanHasPrefix(bufferData, std::span { xmlPrefix })) {
+        auto xmlDeclarationEnd = bufferData;
+        skipUntil(xmlDeclarationEnd, '>');
+        if (xmlDeclarationEnd.empty())
             return false;
         // No need for +1, because we have an extra "?" to lose at the end of XML declaration.
-        int len = 0;
-        int pos = findXMLEncoding(ptr, xmlDeclarationEnd - ptr, len);
-        if (pos != -1)
-            setEncoding(findTextEncoding(ptr + pos, len), EncodingFromXMLHeader);
+        size_t length = 0;
+        size_t position = findXMLEncoding(bufferData.first(xmlDeclarationEnd.data() - bufferData.data()), length);
+        if (position != notFound)
+            setEncoding(findTextEncoding(bufferData.subspan(position, length)), EncodingFromXMLHeader);
         // continue looking for a charset - it may be specified in an HTTP-Equiv meta
-    } else if (bytesEqual(ptr, '<', 0, '?', 0, 'x', 0)) {
+    } else if (spanHasPrefix(bufferData, std::span { xmlPrefixLittleEndian })) {
         setEncoding(PAL::UTF16LittleEndianEncoding(), AutoDetectedEncoding);
         return true;
-    } else if (bytesEqual(ptr, 0, '<', 0, '?', 0, 'x')) {
+    } else if (spanHasPrefix(bufferData, std::span { xmlPrefixBigEndian })) {
         setEncoding(PAL::UTF16BigEndianEncoding(), AutoDetectedEncoding);
         return true;
     }
@@ -563,18 +530,18 @@ bool TextResourceDecoder::checkForMetaCharset(std::span<const uint8_t> data)
 void TextResourceDecoder::detectJapaneseEncoding(std::span<const uint8_t> data)
 {
     switch (KanjiCode::judge(data)) {
-        case KanjiCode::JIS:
-            setEncoding("ISO-2022-JP", AutoDetectedEncoding);
+    case KanjiCode::Type::JIS:
+        setEncoding("ISO-2022-JP"_s, AutoDetectedEncoding);
             break;
-        case KanjiCode::EUC:
-            setEncoding("EUC-JP", AutoDetectedEncoding);
+    case KanjiCode::Type::EUC:
+        setEncoding("EUC-JP"_s, AutoDetectedEncoding);
             break;
-        case KanjiCode::SJIS:
-            setEncoding("Shift_JIS", AutoDetectedEncoding);
+    case KanjiCode::Type::SJIS:
+        setEncoding("Shift_JIS"_s, AutoDetectedEncoding);
             break;
-        case KanjiCode::ASCII:
-        case KanjiCode::UTF16:
-        case KanjiCode::UTF8:
+    case KanjiCode::Type::ASCII:
+    case KanjiCode::Type::UTF16:
+    case KanjiCode::Type::UTF8:
             break;
     }
 }
@@ -632,7 +599,7 @@ String TextResourceDecoder::decode(std::span<const uint8_t> data)
     if (!movedDataToBuffer) {
         size_t oldSize = m_buffer.size();
         m_buffer.grow(oldSize + data.size());
-        memcpy(m_buffer.data() + oldSize, data.data(), data.size());
+        memcpySpan(m_buffer.mutableSpan().subspan(oldSize), data);
     }
 
     String result = m_codec->decode(m_buffer.subspan(lengthOfBOM), false, m_contentType == XML && !m_useLenientXMLDecoding, m_sawError);

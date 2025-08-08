@@ -61,7 +61,7 @@ static const RenderStyle* styleForContainer(const Element& container, OptionSet<
 {
     // Any element can be a style container and we haven't necessarily committed the style to render tree yet.
     // Look it up from the currently computed style update instead.
-    if (requiredAxes.isEmpty() && evaluationState)
+    if (requiredAxes.isEmpty() && evaluationState && evaluationState->styleUpdate)
         return evaluationState->styleUpdate->elementStyle(container);
 
     return container.existingComputedStyle();
@@ -89,7 +89,7 @@ auto ContainerQueryEvaluator::featureEvaluationContextForQuery(const CQ::Contain
         return { };
 
     RefPtr containerParent = container->parentElementInComposedTree();
-    CheckedPtr containerParentStyle = containerParent ? styleForContainer(*containerParent, containerQuery.requiredAxes, m_evaluationState) : nullptr;
+    CheckedPtr containerParentStyle = containerParent ? styleForContainer(*containerParent, containerQuery.requiredAxes, m_evaluationState) : containerStyle;
 
     Ref document = element->document();
     CheckedPtr rootStyle = document->documentElement()->renderStyle();

@@ -26,15 +26,15 @@
 
 namespace WebCore {
 
-template<typename CharacterType> static constexpr CharacterType disable[] = { 'd', 'i', 's', 'a', 'b', 'l', 'e' };
-template<typename CharacterType> static constexpr CharacterType magnify[] = { 'm', 'a', 'g', 'n', 'i', 'f', 'y' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 7> disable { 'd', 'i', 's', 'a', 'b', 'l', 'e' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 7> magnify { 'm', 'a', 'g', 'n', 'i', 'f', 'y' };
 
 template<typename CharacterType> static std::optional<SVGZoomAndPanType> parseZoomAndPanGeneric(StringParsingBuffer<CharacterType>& buffer)
 {
-    if (skipCharactersExactly(buffer, disable<CharacterType>))
+    if (skipCharactersExactly(buffer, std::span { disable<CharacterType> }))
         return SVGZoomAndPanDisable;
 
-    if (skipCharactersExactly(buffer, magnify<CharacterType>))
+    if (skipCharactersExactly(buffer, std::span { magnify<CharacterType> }))
         return SVGZoomAndPanMagnify;
 
     return std::nullopt;

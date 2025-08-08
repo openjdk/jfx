@@ -157,6 +157,7 @@ private:
     ImageOrientation orientation() const final { return m_descriptor.orientation(); }
     DestinationColorSpace colorSpace() const final { return m_descriptor.colorSpace(); }
     std::optional<Color> singlePixelSolidColor() const final { return m_descriptor.singlePixelSolidColor(); }
+    Headroom headroom() const final { return m_descriptor.headroom(); }
 
     String uti() const final { return m_descriptor.uti(); }
     String filenameExtension() const final { return m_descriptor.filenameExtension(); }
@@ -188,6 +189,8 @@ private:
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool enabled) final { m_clearDecoderAfterAsyncFrameRequestForTesting = enabled; }
     void setAsyncDecodingEnabledForTesting(bool enabled) final { m_isAsyncDecodingEnabledForTesting = enabled; }
     bool isAsyncDecodingEnabledForTesting() const final { return m_isAsyncDecodingEnabledForTesting; }
+    void setHeadroomForTesting(Headroom headroom) final { m_headroomForTesting = headroom; }
+    std::optional<Headroom> headroomForTesting() const final { return m_headroomForTesting; }
 
     void dump(TextStream&) const final;
 
@@ -213,6 +216,7 @@ private:
     unsigned m_blankDrawCountForTesting { 0 };
     bool m_isAsyncDecodingEnabledForTesting { false };
     bool m_clearDecoderAfterAsyncFrameRequestForTesting { false };
+    std::optional<Headroom> m_headroomForTesting;
 };
 
 } // namespace WebCore

@@ -209,7 +209,7 @@ void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameT
     auto result = processFrame(chunk, transformer, identifier, weakTransform);
     std::span<const uint8_t> transformedChunk;
     if (result)
-        transformedChunk = { result->data(), result->size() };
+        transformedChunk = result->span();
     rtcFrame->setData(transformedChunk);
     source.enqueue(toJS(&globalObject, &globalObject, frame));
 }

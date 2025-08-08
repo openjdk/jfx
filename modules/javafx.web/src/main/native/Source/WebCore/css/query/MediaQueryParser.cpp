@@ -79,11 +79,11 @@ MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& rang
     MediaQueryList list;
 
     while (true) {
-        auto begin = range.begin();
+        auto begin = range;
         while (!range.atEnd() && range.peek().type() != CommaToken)
             range.consumeComponentValue();
 
-        auto subrange = range.makeSubRange(begin, &range.peek());
+        auto subrange = begin.rangeUntil(range);
 
         auto consumeMediaQueryOrNotAll = [&] {
             if (auto query = consumeMediaQuery(subrange, context))
@@ -180,11 +180,25 @@ const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& na
     auto* schema = GenericMediaQueryParser<MediaQueryParser>::schemaForFeatureName(name, context, state);
 
     if (schema == &Features::prefersDarkInterface()) {
-        if (!context.useSystemAppearance && !isUASheetBehavior(context.mode))
+        if (!context.context.useSystemAppearance && !isUASheetBehavior(context.context.mode))
             return nullptr;
     }
 
     return schema;
+}
+
+const MediaProgressProviding* MediaQueryParser::mediaProgressProvidingSchemaForFeatureName(const AtomString& name, const MediaQueryParserContext&)
+{
+    using Map = MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, const MediaProgressProviding*>;
+
+    static NeverDestroyed<Map> schemas = [&] {
+        Map map;
+        for (auto& entry : Features::allMediaProgressProvidingSchemas())
+            map.add(entry->name(), entry);
+        return map;
+    }();
+
+    return schemas->get(name);
 }
 
 void serialize(StringBuilder& builder, const MediaQueryList& list)

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,23 +34,34 @@
 #include "FilterResults.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"
+#include "ImageBufferDisplayListBackend.h"
 #include "ImageBufferPlatformBackend.h"
 #include "MIMETypeRegistry.h"
 #include "ProcessCapabilities.h"
 #include "TransparencyLayerContextSwitcher.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/MakeString.h>
 
 #if USE(CG)
+#include "ImageBufferCGPDFDocumentBackend.h"
 #include "ImageBufferUtilitiesCG.h"
 #endif
 
 #if USE(CAIRO)
 #include "ImageBufferUtilitiesCairo.h"
 #endif
+
 #if USE(SKIA)
+#include "GLContext.h"
 #include "ImageBufferSkiaAcceleratedBackend.h"
 #include "ImageBufferUtilitiesSkia.h"
+#include "PlatformDisplay.h"
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/gpu/ganesh/GrBackendSurface.h>
+#include <skia/gpu/ganesh/SkSurfaceGanesh.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 
 #if HAVE(IOSURFACE)
@@ -63,36 +74,53 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageBuffer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SerializedImageBuffer);
+
 static const float MaxClampedLength = 4096;
 static const float MaxClampedArea = MaxClampedLength * MaxClampedLength;
 
-RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, OptionSet<ImageBufferOptions> options, GraphicsClient* graphicsClient)
+RefPtr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, GraphicsClient* graphicsClient)
 {
     RefPtr<ImageBuffer> imageBuffer;
 
     if (graphicsClient) {
-        if (auto imageBuffer = graphicsClient->createImageBuffer(size, purpose, resolutionScale, colorSpace, pixelFormat, options))
+        if (auto imageBuffer = graphicsClient->createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat))
         return imageBuffer;
     }
 
+    switch (renderingMode) {
+    case RenderingMode::Accelerated:
 #if HAVE(IOSURFACE)
-    if (options.contains(ImageBufferOptions::Accelerated) && ProcessCapabilities::canUseAcceleratedBuffers()) {
+        if (ProcessCapabilities::canUseAcceleratedBuffers()) {
         ImageBufferCreationContext creationContext;
         if (graphicsClient)
             creationContext.displayID = graphicsClient->displayID();
         if (auto imageBuffer = ImageBuffer::create<ImageBufferIOSurfaceBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext))
     return imageBuffer;
     }
-#endif
-
-#if USE(SKIA)
-    if (options.contains(ImageBufferOptions::Accelerated)) {
+#elif USE(SKIA)
         if (auto imageBuffer = ImageBuffer::create<ImageBufferSkiaAcceleratedBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { }))
             return imageBuffer;
-    }
+#endif
+        [[fallthrough]];
+
+    case RenderingMode::Unaccelerated:
+    return create<ImageBufferPlatformBitmapBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+
+    case RenderingMode::PDFDocument:
+#if USE(CG)
+        return ImageBuffer::create<ImageBufferCGPDFDocumentBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+#else
+        return nullptr;
 #endif
 
-    return create<ImageBufferPlatformBitmapBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+    case RenderingMode::DisplayList:
+        return ImageBuffer::create<ImageBufferDisplayListBackend>(size, resolutionScale, colorSpace, pixelFormat, purpose, { });
+    }
+
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 ImageBuffer::ImageBuffer(Parameters parameters, const ImageBufferBackend::Info& backendInfo, const WebCore::ImageBufferCreationContext&, std::unique_ptr<ImageBufferBackend>&& backend, RenderingResourceIdentifier renderingResourceIdentifier)
@@ -136,6 +164,7 @@ RefPtr<ImageBuffer> SerializedImageBuffer::sinkIntoImageBuffer(std::unique_ptr<S
 // The default serialization of an ImageBuffer just assumes that we can
 // pass it as-is, as long as this is the only reference.
 class DefaultSerializedImageBuffer : public SerializedImageBuffer {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DefaultSerializedImageBuffer);
 public:
     DefaultSerializedImageBuffer(ImageBuffer* image)
         : m_buffer(image)
@@ -158,7 +187,7 @@ private:
 std::unique_ptr<SerializedImageBuffer> ImageBuffer::sinkIntoSerializedImageBuffer()
 {
     ASSERT(hasOneRef());
-    ASSERT(!controlBlock().weakReferenceCount());
+    ASSERT(!controlBlock().weakRefCount());
     return makeUnique<DefaultSerializedImageBuffer>(this);
 }
 
@@ -282,6 +311,13 @@ bool ImageBuffer::flushDrawingContextAsync()
     return true;
 }
 
+void ImageBuffer::prepareForDisplay()
+{
+    flushDrawingContextAsync();
+    if (auto* backend = ensureBackend())
+        backend->prepareForDisplay();
+}
+
 void ImageBuffer::setBackend(std::unique_ptr<ImageBufferBackend>&& backend)
 {
     if (m_backend.get() == backend.get())
@@ -330,8 +366,39 @@ RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferForCrossThreadTransfer(RefPt
 {
     if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
         return buffer;
-    // FIXME: Try avoiding GPU-to-CPU data transfer by creating accelerated clone that would e.g. leverage underlying GL texture.
-    return copyImageBuffer(const_cast<ImageBuffer&>(*buffer), PreserveResolution::Yes, RenderingMode::Unaccelerated);
+    if (buffer->hasOneRef())
+        return buffer;
+    return copyImageBuffer(const_cast<ImageBuffer&>(*buffer), PreserveResolution::Yes, RenderingMode::Accelerated);
+}
+
+RefPtr<ImageBuffer> ImageBuffer::sinkIntoImageBufferAfterCrossThreadTransfer(RefPtr<ImageBuffer> buffer, std::unique_ptr<GLFence>&& fence)
+{
+    if (!buffer || buffer->renderingMode() != RenderingMode::Accelerated)
+        return buffer;
+
+    auto* glContext = PlatformDisplay::sharedDisplay().skiaGLContext();
+    if (!glContext || !glContext->makeContextCurrent())
+        return nullptr;
+
+    if (fence)
+        fence->serverWait();
+
+    auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
+    RELEASE_ASSERT(grContext);
+
+    auto* currentSurface = buffer->surface();
+    RELEASE_ASSERT(currentSurface);
+
+    auto backendRenderTarget = SkSurfaces::GetBackendRenderTarget(currentSurface, SkSurfaces::BackendHandleAccess::kFlushRead);
+
+    const auto& imageInfo = currentSurface->imageInfo();
+    auto surface = SkSurfaces::WrapBackendRenderTarget(grContext, backendRenderTarget, kTopLeft_GrSurfaceOrigin, imageInfo.colorType(), imageInfo.refColorSpace(), &currentSurface->props());
+    if (!surface || !surface->getCanvas())
+        return nullptr;
+
+    auto bufferBackendParameters = ImageBuffer::backendParameters(buffer->parameters());
+    auto backend = ImageBufferSkiaAcceleratedBackend::create(bufferBackendParameters, { }, WTFMove(surface));
+    return ImageBuffer::create<ImageBuffer>(buffer->parameters(), buffer->backendInfo(), { }, WTFMove(backend));
 }
 #endif
 
@@ -385,6 +452,13 @@ RefPtr<NativeImage> ImageBuffer::filteredNativeImage(Filter& filter, Function<vo
 
 #if HAVE(IOSURFACE)
 IOSurface* ImageBuffer::surface()
+{
+    return m_backend ? m_backend->surface() : nullptr;
+}
+#endif
+
+#if USE(SKIA)
+SkSurface* ImageBuffer::surface() const
 {
     return m_backend ? m_backend->surface() : nullptr;
 }
@@ -500,6 +574,20 @@ void ImageBuffer::putPixelBuffer(const PixelBuffer& pixelBuffer, const IntRect& 
     auto destinationPointScaled = destinationPoint;
     destinationPointScaled.scale(resolutionScale());
     backend->putPixelBuffer(pixelBuffer, sourceRectScaled, destinationPointScaled, destinationFormat);
+}
+
+RefPtr<SharedBuffer> ImageBuffer::sinkIntoPDFDocument()
+{
+    if (auto* backend = ensureBackend())
+        return backend->sinkIntoPDFDocument();
+    return nullptr;
+}
+
+RefPtr<SharedBuffer> ImageBuffer::sinkIntoPDFDocument(RefPtr<ImageBuffer> source)
+{
+    if (!source)
+        return nullptr;
+    return source->sinkIntoPDFDocument();
 }
 
 bool ImageBuffer::isInUse() const

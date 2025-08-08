@@ -124,7 +124,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
     typedef uint8_t LexicallyScopedFeatures;
 
     class Interpreter {
-        WTF_MAKE_TZONE_ALLOCATED(Interpreter);
+        WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Interpreter);
         friend class CachedCall;
         friend class LLIntOffsetsExtractor;
         friend class JIT;
@@ -185,7 +185,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
 
 #if ENABLE(COMPUTED_GOTO_OPCODES)
 #if !ENABLE(LLINT_EMBEDDED_OPCODE_ID) || ASSERT_ENABLED
-        static HashMap<Opcode, OpcodeID>& opcodeIDTable(); // Maps Opcode => OpcodeID.
+        static UncheckedKeyHashMap<Opcode, OpcodeID>& opcodeIDTable(); // Maps Opcode => OpcodeID.
 #endif // !ENABLE(LLINT_EMBEDDED_OPCODE_ID) || ASSERT_ENABLED
 #endif // ENABLE(COMPUTED_GOTO_OPCODES)
     };
@@ -195,7 +195,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
     inline CallFrame* calleeFrameForVarargs(CallFrame*, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis);
 
     unsigned sizeOfVarargs(JSGlobalObject*, JSValue arguments, uint32_t firstVarArgOffset);
-    static constexpr unsigned maxArguments = 0x10000;
+    static constexpr unsigned maxArguments = 0x100000;
     unsigned sizeFrameForVarargs(JSGlobalObject*, CallFrame*, VM&, JSValue arguments, unsigned numUsedStackSlots, uint32_t firstVarArgOffset);
     unsigned sizeFrameForForwardArguments(JSGlobalObject*, CallFrame*, VM&, unsigned numUsedStackSlots);
     void loadVarargs(JSGlobalObject*, JSValue* firstElementDest, JSValue source, uint32_t offset, uint32_t length);

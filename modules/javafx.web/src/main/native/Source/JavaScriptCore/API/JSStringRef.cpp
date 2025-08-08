@@ -33,6 +33,8 @@
 
 using namespace JSC;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 JSStringRef JSStringCreateWithCharacters(const JSChar* chars, size_t numChars)
 {
     JSC::initialize();
@@ -43,7 +45,7 @@ JSStringRef JSStringCreateWithUTF8CString(const char* string)
 {
     JSC::initialize();
     if (string) {
-        auto stringSpan = span8(string);
+        auto stringSpan = unsafeSpan8(string);
         Vector<UChar, 1024> buffer(stringSpan.size());
         auto result = WTF::Unicode::convert(spanReinterpretCast<const char8_t>(stringSpan), buffer.mutableSpan());
         if (result.code == WTF::Unicode::ConversionResultCode::Success) {
@@ -104,9 +106,6 @@ size_t JSStringGetUTF8CString(JSStringRef string, char* buffer, size_t bufferSiz
         result = WTF::Unicode::convert(string->span8(), target);
     else
         result = WTF::Unicode::convert(string->span16(), target);
-    if (result.code == WTF::Unicode::ConversionResultCode::SourceInvalid)
-        return 0;
-
     buffer[result.buffer.size()] = '\0';
     return result.buffer.size() + 1;
 }
@@ -120,3 +119,5 @@ bool JSStringIsEqualToUTF8CString(JSStringRef a, const char* b)
 {
     return JSStringIsEqual(a, adoptRef(JSStringCreateWithUTF8CString(b)).get());
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

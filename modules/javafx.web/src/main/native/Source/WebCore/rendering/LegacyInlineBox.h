@@ -44,8 +44,6 @@ public:
     void assertNotDeleted() const;
 
     virtual void deleteLine() = 0;
-    virtual void extractLine() = 0;
-    virtual void attachLine() = 0;
 
     virtual bool isLineBreak() const { return renderer().isRenderLineBreak(); }
 
@@ -71,9 +69,6 @@ public:
         else
             adjustPosition(delta, 0);
     }
-
-    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) = 0;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) = 0;
 
 #if ENABLE(TREE_DEBUGGING)
     void showNodeTreeForThis() const;

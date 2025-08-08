@@ -29,41 +29,45 @@
 #include "Filter.h"
 #include "GraphicsContext.h"
 #include "PixelBuffer.h"
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEDisplacementMapSoftwareApplier);
 
 FEDisplacementMapSoftwareApplier::FEDisplacementMapSoftwareApplier(const FEDisplacementMap& effect)
     : Base(effect)
 {
-    ASSERT(m_effect.xChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
-    ASSERT(m_effect.yChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
+    ASSERT(m_effect->xChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
+    ASSERT(m_effect->yChannelSelector() != ChannelSelectorType::CHANNEL_UNKNOWN);
 }
 
 int FEDisplacementMapSoftwareApplier::xChannelIndex() const
 {
-    return static_cast<int>(m_effect.xChannelSelector()) - 1;
+    return static_cast<int>(m_effect->xChannelSelector()) - 1;
 }
 
 int FEDisplacementMapSoftwareApplier::yChannelIndex() const
 {
-    return static_cast<int>(m_effect.yChannelSelector()) - 1;
+    return static_cast<int>(m_effect->yChannelSelector()) - 1;
 }
 
 bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
-    auto& input2 = inputs[1].get();
+    Ref input = inputs[0];
+    Ref input2 = inputs[1];
 
-    auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
+    RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)
         return false;
 
     auto effectADrawingRect = result.absoluteImageRectRelativeTo(input);
-    auto inputPixelBuffer = input.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect);
+    auto inputPixelBuffer = input->getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect);
 
     auto effectBDrawingRect = result.absoluteImageRectRelativeTo(input2);
     // The calculations using the pixel values from ‘in2’ are performed using non-premultiplied color values.
-    auto displacementPixelBuffer = input2.getPixelBuffer(AlphaPremultiplication::Unpremultiplied, effectBDrawingRect);
+    auto displacementPixelBuffer = input2->getPixelBuffer(AlphaPremultiplication::Unpremultiplied, effectBDrawingRect);
 
     if (!inputPixelBuffer || !displacementPixelBuffer)
         return false;
@@ -71,7 +75,7 @@ bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterI
     ASSERT(inputPixelBuffer->bytes().size() == displacementPixelBuffer->bytes().size());
 
     auto paintSize = result.absoluteImageRect().size();
-    auto scale = filter.resolvedSize({ m_effect.scale(), m_effect.scale() });
+    auto scale = filter.resolvedSize({ m_effect->scale(), m_effect->scale() });
     auto absoluteScale = filter.scaledByFilterScale(scale);
 
     float scaleForColorX = absoluteScale.width() / 255.0;
@@ -93,13 +97,13 @@ bool FEDisplacementMapSoftwareApplier::apply(const Filter& filter, const FilterI
             int srcX = x + static_cast<int>(scaleForColorX * displacementPixelBuffer->item(destinationIndex + displacementChannelX) + scaledOffsetX);
             int srcY = y + static_cast<int>(scaleForColorY * displacementPixelBuffer->item(destinationIndex + displacementChannelY) + scaledOffsetY);
 
-            unsigned* destinationPixelPtr = reinterpret_cast<unsigned*>(destinationPixelBuffer->bytes().data() + destinationIndex);
+            unsigned& destinationPixel = reinterpretCastSpanStartTo<unsigned>(destinationPixelBuffer->bytes().subspan(destinationIndex));
             if (srcX < 0 || srcX >= paintSize.width() || srcY < 0 || srcY >= paintSize.height()) {
-                *destinationPixelPtr = 0;
+                destinationPixel = 0;
                 continue;
             }
 
-            *destinationPixelPtr = *reinterpret_cast<unsigned*>(inputPixelBuffer->bytes().data() + byteOffsetOfPixel(srcX, srcY, rowBytes));
+            destinationPixel = reinterpretCastSpanStartTo<unsigned>(inputPixelBuffer->bytes().subspan(byteOffsetOfPixel(srcX, srcY, rowBytes)));
         }
     }
 

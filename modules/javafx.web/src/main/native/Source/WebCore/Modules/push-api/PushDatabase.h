@@ -32,9 +32,10 @@
 #include "SQLiteStatementAutoResetScope.h"
 #include <span>
 #include <wtf/CompletionHandler.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UUID.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
@@ -43,7 +44,7 @@
 namespace WebCore {
 
 struct PushRecord {
-    PushSubscriptionIdentifier identifier;
+    Markable<PushSubscriptionIdentifier> identifier { };
     PushSubscriptionSetIdentifier subscriptionSetIdentifier;
     String securityOrigin;
     String scope;
@@ -85,10 +86,10 @@ struct PushTopics {
     WEBCORE_EXPORT PushTopics isolatedCopy() &&;
 };
 
-class PushDatabase {
-    WTF_MAKE_FAST_ALLOCATED;
+class PushDatabase : public RefCountedAndCanMakeWeakPtr<PushDatabase> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PushDatabase, WEBCORE_EXPORT);
 public:
-    using CreationHandler = CompletionHandler<void(std::unique_ptr<PushDatabase>&&)>;
+    using CreationHandler = CompletionHandler<void(RefPtr<PushDatabase>&&)>;
 
     WEBCORE_EXPORT static void create(const String& path, CreationHandler&&);
     WEBCORE_EXPORT ~PushDatabase();
@@ -109,6 +110,7 @@ public:
 
     WEBCORE_EXPORT void removeRecordsBySubscriptionSet(const PushSubscriptionSetIdentifier&, CompletionHandler<void(Vector<RemovedPushRecord>&&)>&&);
     WEBCORE_EXPORT void removeRecordsBySubscriptionSetAndSecurityOrigin(const PushSubscriptionSetIdentifier&, const String& securityOrigin, CompletionHandler<void(Vector<RemovedPushRecord>&&)>&&);
+    WEBCORE_EXPORT void removeRecordsByBundleIdentifierAndDataStore(const String& bundleIdentifier, const std::optional<WTF::UUID>& dataStoreIdentifier, CompletionHandler<void(Vector<RemovedPushRecord>&&)>&&);
 
     WEBCORE_EXPORT void setPushesEnabled(const PushSubscriptionSetIdentifier&, bool, CompletionHandler<void(bool recordsChanged)>&&);
     WEBCORE_EXPORT void setPushesEnabledForOrigin(const PushSubscriptionSetIdentifier&, const String& securityOrigin, bool, CompletionHandler<void(bool recordsChanged)>&&);

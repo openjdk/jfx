@@ -54,13 +54,17 @@ public:
         void timerDidFire();
 
     public:
-        static Manager& shared();
+        static Manager& singleton();
         void registerVM(VM&);
         void unregisterVM(VM&);
         void scheduleTimer(JSRunLoopTimer&, Seconds nextFireTime);
         void cancelTimer(JSRunLoopTimer&);
 
         std::optional<Seconds> timeUntilFire(JSRunLoopTimer&);
+
+        // Do nothing since this is a singleton.
+        void ref() const { }
+        void deref() const { }
 
     private:
         Lock m_lock;
@@ -77,7 +81,7 @@ public:
             Vector<std::pair<Ref<JSRunLoopTimer>, MonotonicTime>> timers;
         };
 
-        HashMap<Ref<JSLock>, std::unique_ptr<PerVMData>> m_mapping;
+        UncheckedKeyHashMap<Ref<JSLock>, std::unique_ptr<PerVMData>> m_mapping;
     };
 
     JSRunLoopTimer(VM&);
@@ -106,7 +110,7 @@ private:
 
     void timerDidFire();
 
-    HashSet<TimerNotificationCallback> m_timerSetCallbacks;
+    UncheckedKeyHashSet<TimerNotificationCallback> m_timerSetCallbacks;
     Lock m_timerCallbacksLock;
 
     Lock m_lock;

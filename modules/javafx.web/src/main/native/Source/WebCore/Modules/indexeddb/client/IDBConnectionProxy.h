@@ -27,8 +27,10 @@
 
 #include "IDBConnectionToServer.h"
 #include "IDBDatabaseNameAndVersionRequest.h"
+#include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBResourceIdentifier.h"
+#include "IndexKey.h"
 #include "TransactionOperation.h"
 #include <wtf/CrossThreadQueue.h>
 #include <wtf/CrossThreadTask.h>
@@ -61,9 +63,9 @@ namespace IDBClient {
 class IDBConnectionToServer;
 
 class WEBCORE_EXPORT IDBConnectionProxy final {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBConnectionProxy);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBConnectionProxy, WEBCORE_EXPORT);
 public:
-    IDBConnectionProxy(IDBConnectionToServer&);
+    IDBConnectionProxy(IDBConnectionToServer&, PAL::SessionID);
 
     Ref<IDBOpenDBRequest> openDatabase(ScriptExecutionContext&, const IDBDatabaseIdentifier&, uint64_t version);
     void didOpenDatabase(const IDBResultData&);
@@ -76,7 +78,7 @@ public:
     void clearObjectStore(TransactionOperation&, IDBObjectStoreIdentifier);
     void createIndex(TransactionOperation&, const IDBIndexInfo&);
     void deleteIndex(TransactionOperation&, IDBObjectStoreIdentifier, const String& indexName);
-    void putOrAdd(TransactionOperation&, IDBKeyData&&, const IDBValue&, const IndexedDB::ObjectStoreOverwriteMode);
+    void putOrAdd(TransactionOperation&, IDBKeyData&&, const IDBValue&, const IndexIDToIndexKeyMap&, const IndexedDB::ObjectStoreOverwriteMode);
     void getRecord(TransactionOperation&, const IDBGetRecordData&);
     void getAllRecords(TransactionOperation&, const IDBGetAllRecordsData&);
     void getCount(TransactionOperation&, const IDBKeyRangeData&);
@@ -84,7 +86,7 @@ public:
     void openCursor(TransactionOperation&, const IDBCursorInfo&);
     void iterateCursor(TransactionOperation&, const IDBIterateCursorData&);
     void renameObjectStore(TransactionOperation&, IDBObjectStoreIdentifier, const String& newName);
-    void renameIndex(TransactionOperation&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
+    void renameIndex(TransactionOperation&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
 
     void fireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
     void didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer = IndexedDB::ConnectionClosedOnBehalfOfServer::No);
@@ -128,6 +130,8 @@ public:
     void abortActivitiesForCurrentThread();
     void setContextSuspended(ScriptExecutionContext& currentContext, bool isContextSuspended);
 
+    PAL::SessionID sessionID() const;
+
 private:
     void completeOpenDBRequest(const IDBResultData&);
     bool hasRecordOfTransaction(const IDBTransaction&) const WTF_REQUIRES_LOCK(m_transactionMapLock);
@@ -139,9 +143,9 @@ private:
     void callConnectionOnMainThread(void (IDBConnectionToServer::*method)(Parameters...), Arguments&&... arguments)
     {
         if (isMainThread())
-            (m_connectionToServer.*method)(std::forward<Arguments>(arguments)...);
+            (m_connectionToServer.get().*method)(std::forward<Arguments>(arguments)...);
         else
-            postMainThreadTask(m_connectionToServer, method, arguments...);
+            postMainThreadTask(m_connectionToServer.get(), method, arguments...);
     }
 
     template<typename... Arguments>
@@ -156,7 +160,7 @@ private:
     void scheduleMainThreadTasks();
     void handleMainThreadTasks();
 
-    IDBConnectionToServer& m_connectionToServer;
+    CheckedRef<IDBConnectionToServer> m_connectionToServer;
     IDBConnectionIdentifier m_serverConnectionIdentifier;
 
     Lock m_databaseConnectionMapLock;
@@ -180,6 +184,7 @@ private:
 
     CrossThreadQueue<CrossThreadTask> m_mainThreadQueue;
     RefPtr<IDBConnectionToServer> m_mainThreadProtector WTF_GUARDED_BY_LOCK(m_mainThreadTaskLock);
+    PAL::SessionID m_sessionID;
 };
 
 } // namespace IDBClient

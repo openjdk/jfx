@@ -50,6 +50,7 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "SubframeLoader.h"
+#include "VoidCallback.h"
 #include "Widget.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -72,6 +73,7 @@ HTMLPlugInElement::HTMLPlugInElement(const QualifiedName& tagName, Document& doc
 HTMLPlugInElement::~HTMLPlugInElement()
 {
     ASSERT(!m_instance); // cleared in detach()
+    ASSERT(!m_pendingPDFTestCallback);
 }
 
 bool HTMLPlugInElement::willRespondToMouseClickEventsWithEditability(Editability) const
@@ -246,6 +248,11 @@ RenderPtr<RenderElement> HTMLPlugInElement::createElementRenderer(RenderStyle&& 
     return createRenderer<RenderEmbeddedObject>(*this, WTFMove(style));
 }
 
+bool HTMLPlugInElement::isReplaced(const RenderStyle&) const
+{
+    return !m_pluginReplacement || !m_pluginReplacement->willCreateRenderer();
+}
+
 void HTMLPlugInElement::swapRendererTimerFired()
 {
     ASSERT(displayState() == PreparingPluginReplacement);
@@ -254,7 +261,6 @@ void HTMLPlugInElement::swapRendererTimerFired()
 
     // Create a shadow root, which will trigger the code to add a snapshot container
     // and reattach, thus making a new Renderer.
-    Ref protectedThis { *this };
     ensureUserAgentShadowRoot();
 }
 
@@ -358,7 +364,7 @@ bool HTMLPlugInElement::requestObject(const String& relativeURL, const String& m
         completedURL = document().completeURL(relativeURL);
 
     ReplacementPlugin* replacement = pluginReplacementForType(completedURL, mimeType);
-    if (!replacement || !replacement->isEnabledBySettings(document().settings()))
+    if (!replacement)
         return false;
 
     LOG(Plugins, "%p - Found plug-in replacement for %s.", this, completedURL.string().utf8().data());
@@ -368,98 +374,23 @@ bool HTMLPlugInElement::requestObject(const String& relativeURL, const String& m
     return true;
 }
 
-bool HTMLPlugInElement::setReplacement(RenderEmbeddedObject::PluginUnavailabilityReason reason, const String& unavailabilityDescription)
-{
-    Ref protectedThis { *this };
-    {
-        CheckedPtr renderer = dynamicDowncast<RenderEmbeddedObject>(this->renderer());
-        if (!renderer)
-        return false;
-
-    if (reason == RenderEmbeddedObject::UnsupportedPlugin)
-        document().addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Tried to use an unsupported plug-in."_s);
-
-        renderer->setPluginUnavailabilityReasonWithDescription(reason, unavailabilityDescription);
-    }
-    bool replacementIsObscured = isReplacementObscured();
-    // hittest in isReplacementObscured() method could destroy the renderer. Let's refetch it.
-    if (CheckedPtr renderer = dynamicDowncast<RenderEmbeddedObject>(this->renderer()))
-        renderer->setUnavailablePluginIndicatorIsHidden(replacementIsObscured);
-    return replacementIsObscured;
-}
-
-bool HTMLPlugInElement::isReplacementObscured()
-{
-    Ref topDocument = document().topDocument();
-    RefPtr topFrameView = topDocument->view();
-    if (!topFrameView)
-        return false;
-
-    topFrameView->updateLayoutAndStyleIfNeededRecursive();
-
-    // Updating the layout may have detached this document from the top document.
-    auto* renderView = topDocument->renderView();
-    if (!renderView || !document().view() || &document().topDocument() != topDocument.ptr())
-        return false;
-
-    CheckedPtr pluginRenderer = dynamicDowncast<RenderEmbeddedObject>(renderer());
-    if (!pluginRenderer)
-        return false;
-
-    // Check the opacity of each layer containing the element or its ancestors.
-    float opacity = 1.0;
-    for (auto* layer = pluginRenderer->enclosingLayer(); layer; layer = layer->parent()) {
-        opacity *= layer->renderer().style().opacity();
-        if (opacity < 0.1)
-            return true;
-    }
-    // Calculate the absolute rect for the blocked plugin replacement text.
-    LayoutPoint absoluteLocation(pluginRenderer->absoluteBoundingBoxRect().location());
-    LayoutRect rect = pluginRenderer->unavailablePluginIndicatorBounds(absoluteLocation);
-    if (rect.isEmpty())
-        return true;
-    auto viewRect = document().view()->convertToRootView(snappedIntRect(rect));
-    auto x = viewRect.x();
-    auto y = viewRect.y();
-    auto width = viewRect.width();
-    auto height = viewRect.height();
-    // Hit test the center and near the corners of the replacement text to ensure
-    // it is visible and is not masked by other elements.
-    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::IgnoreClipping, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
-    HitTestResult result;
-    HitTestLocation location { LayoutPoint { viewRect.center() } };
-    ASSERT(!renderView->needsLayout());
-    ASSERT(!renderView->document().needsStyleRecalc());
-    bool hit = topDocument->hitTest(hitType, location, result);
-    if (!hit || result.innerNode() != &pluginRenderer->frameOwnerElement())
-        return true;
-
-    location = LayoutPoint(x, y);
-    hit = topDocument->hitTest(hitType, location, result);
-    if (!hit || result.innerNode() != &pluginRenderer->frameOwnerElement())
-        return true;
-
-    location = LayoutPoint(x + width, y);
-    hit = topDocument->hitTest(hitType, location, result);
-    if (!hit || result.innerNode() != &pluginRenderer->frameOwnerElement())
-        return true;
-
-    location = LayoutPoint(x + width, y + height);
-    hit = topDocument->hitTest(hitType, location, result);
-    if (!hit || result.innerNode() != &pluginRenderer->frameOwnerElement())
-        return true;
-
-    location = LayoutPoint(x, y + height);
-    hit = topDocument->hitTest(hitType, location, result);
-    if (!hit || result.innerNode() != &pluginRenderer->frameOwnerElement())
-        return true;
-    return false;
-}
-
 bool HTMLPlugInElement::canLoadScriptURL(const URL&) const
 {
     // FIXME: Probably want to at least check canAddSubframe.
-    return true;
+        return true;
+}
+
+void HTMLPlugInElement::pluginDestroyedWithPendingPDFTestCallback(RefPtr<VoidCallback>&& callback)
+{
+    ASSERT(!m_pendingPDFTestCallback);
+    m_pendingPDFTestCallback = WTFMove(callback);
+}
+
+RefPtr<VoidCallback> HTMLPlugInElement::takePendingPDFTestCallback()
+{
+    if (!m_pendingPDFTestCallback)
+        return nullptr;
+    return WTFMove(m_pendingPDFTestCallback);
 }
 
 }

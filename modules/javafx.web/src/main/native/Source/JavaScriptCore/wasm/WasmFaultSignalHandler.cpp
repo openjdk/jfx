@@ -29,6 +29,8 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "ExecutableAllocator.h"
+#include "JSCellInlines.h"
+#include "JSWebAssemblyInstance.h"
 #include "LLIntData.h"
 #include "MachineContext.h"
 #include "NativeCalleeRegistry.h"
@@ -42,6 +44,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/threads/Signals.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace Wasm {
 
@@ -84,25 +88,29 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
         if (faultedInActiveGrowableMemory) {
             dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found active fast memory for faulting address");
 
-            auto didFaultInWasm = [](void* faultingInstruction) {
+            auto didFaultInWasm = [](void* faultingInstruction) -> std::tuple<bool, Wasm::Callee*> {
                 if (LLInt::isWasmLLIntPC(faultingInstruction))
-                    return true;
+                    return { true, nullptr };
                 auto& calleeRegistry = NativeCalleeRegistry::singleton();
                 Locker locker { calleeRegistry.getLock() };
                 for (auto* callee : calleeRegistry.allCallees()) {
                     if (callee->category() != NativeCallee::Category::Wasm)
                         continue;
-                    auto [start, end] = static_cast<Wasm::Callee*>(callee)->range();
+                    auto* wasmCallee = static_cast<Wasm::Callee*>(callee);
+                    auto [start, end] = wasmCallee->range();
                     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "function start: ", RawPointer(start), " end: ", RawPointer(end));
                     if (start <= faultingInstruction && faultingInstruction < end) {
                         dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found match");
-                        return true;
+                        return { true, wasmCallee };
                     }
                 }
-                return false;
+                return { false, nullptr };
             };
 
-            if (didFaultInWasm(faultingInstruction)) {
+            auto [isWasm, callee] = didFaultInWasm(faultingInstruction);
+            if (isWasm) {
+                auto* instance = jsSecureCast<JSWebAssemblyInstance*>(static_cast<JSCell*>(MachineContext::wasmInstancePointer(context)));
+                instance->setFaultPC(faultingInstruction);
 #if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
                 if (g_wtfConfig.signalHandlers.useHardenedHandler) {
                     MachineContext::setInstructionPointer(context, presignedTrampoline);
@@ -152,5 +160,6 @@ void prepareSignalingMemory()
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(WEBASSEMBLY)

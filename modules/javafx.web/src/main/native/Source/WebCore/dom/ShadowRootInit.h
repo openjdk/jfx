@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CustomElementRegistry.h"
 #include "ShadowRootMode.h"
 #include "SlotAssignmentMode.h"
 
@@ -36,6 +37,8 @@ struct ShadowRootInit {
     bool clonable { false };
     bool serializable { false };
     SlotAssignmentMode slotAssignment { SlotAssignmentMode::Named };
+    RefPtr<CustomElementRegistry> customElements;
+    String referenceTarget;
 };
 
 }

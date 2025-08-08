@@ -41,22 +41,20 @@ public:
 
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
 
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageHeight = 0_lu) override;
-    void layoutHorizontalBox(bool relayoutChildren);
-    void layoutVerticalBox(bool relayoutChildren);
+    void layoutBlock(RelayoutChildren, LayoutUnit pageHeight = 0_lu) override;
+    void layoutHorizontalBox(RelayoutChildren);
+    void layoutVerticalBox(RelayoutChildren);
 
     bool isStretchingChildren() const { return m_stretchingChildren; }
 
-    bool avoidsFloats() const override { return true; }
     bool canDropAnonymousBlockChild() const override { return false; }
-
-    void placeChild(RenderBox* child, const LayoutPoint& location, LayoutSize* childLayoutDelta = nullptr);
 
 private:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
 
     LayoutUnit allowedChildFlex(RenderBox* child, bool expanding, unsigned group);
+    void placeChild(RenderBox* child, const LayoutPoint& location, LayoutSize* childLayoutDelta = nullptr);
 
     bool hasMultipleLines() const { return style().boxLines() == BoxLines::Multiple; }
     bool isVertical() const { return style().boxOrient() == BoxOrient::Vertical; }
@@ -66,8 +64,7 @@ private:
         LayoutUnit contentHeight;
         SingleThreadWeakPtr<const RenderBlockFlow> renderer;
     };
-    std::optional<ClampedContent> applyLineClamp(FlexBoxIterator&, bool relayoutChildren);
-    std::optional<ClampedContent> applyModernLineClamp(FlexBoxIterator&);
+    ClampedContent applyLineClamp(FlexBoxIterator&, RelayoutChildren);
     void clearLineClamp();
 
     bool m_stretchingChildren;

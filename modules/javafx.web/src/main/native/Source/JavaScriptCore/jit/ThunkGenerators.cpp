@@ -59,22 +59,6 @@ MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionGenerator(VM& vm)
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "handleException"_s, "handleException");
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenerator(VM& vm)
-{
-    CCallHelpers jit;
-
-    jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame, GPRInfo::argumentGPR0);
-
-    jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
-    jit.prepareCallOperation(vm);
-    CCallHelpers::Call operation = jit.call(OperationPtrTag);
-    jit.jumpToExceptionHandler(vm);
-
-    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::ExtraCTIThunk);
-    patchBuffer.link<OperationPtrTag>(operation, operationLookupExceptionHandlerFromCallerFrame);
-    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "handleExceptionWithCallFrameRollback"_s, "handleExceptionWithCallFrameRollback");
-}
-
 MacroAssemblerCodeRef<JITThunkPtrTag> popThunkStackPreservesAndHandleExceptionGenerator(VM& vm)
 {
     CCallHelpers jit;
@@ -185,6 +169,31 @@ MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallSlowPathGenerator(VM
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "throwExceptionFromCallSlowPath"_s, "Throw exception from call slow path thunk");
 }
 
+MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowAtPrologueGenerator(VM& vm)
+{
+    CCallHelpers jit;
+
+    if (maxFrameExtentForSlowPathCall)
+        jit.addPtr(CCallHelpers::TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), CCallHelpers::stackPointerRegister);
+
+    // In all tiers (LLInt, Baseline, DFG, and FTL), CodeOrigin(BytecodeIndex(0)) is zero, or CallSiteIndex(0) is pointint at CodeOrigin(BytecodeIndex(0)).
+    jit.store32(CCallHelpers::TrustedImm32(0), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+
+    jit.emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
+    jit.prepareCallOperation(vm);
+    jit.callOperation<OperationPtrTag>(operationThrowStackOverflowError);
+
+    jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame, GPRInfo::argumentGPR0);
+
+    jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
+    jit.prepareCallOperation(vm);
+    jit.callOperation<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame);
+    jit.jumpToExceptionHandler(vm);
+
+    LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Thunk);
+    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "throwStackOverflow"_s, "throwStackOverflow");
+}
+
 // FIXME: We should distinguish between a megamorphic virtual call vs. a slow
 // path virtual call so that we can enable fast tail calls for megamorphic
 // virtual calls by using the shuffler.
@@ -283,7 +292,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> virtualThunkFor(VM& vm, CallMode mo
     jit.farJump(GPRInfo::returnValueGPR, JSEntryPtrTag);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::InlineCache);
-    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "VirtualCall"_s "Virtual %s thunk", mode == CallMode::Regular ? "call" : mode == CallMode::Tail ? "tail call" : "construct");
+    return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "VirtualCall"_s, "Virtual %s thunk", mode == CallMode::Regular ? "call" : mode == CallMode::Tail ? "tail call" : "construct");
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> virtualThunkForRegularCall(VM& vm)
@@ -984,8 +993,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> roundThunkGenerator(VM& vm)
         doubleResult.append(jit.branchDouble(MacroAssembler::DoubleEqualAndOrdered, SpecializedThunkJIT::fpRegT0, SpecializedThunkJIT::fpRegT1));
 
         jit.ceilDouble(SpecializedThunkJIT::fpRegT0, SpecializedThunkJIT::fpRegT1);
-        static constexpr double halfConstant = -0.5;
-        jit.loadDouble(MacroAssembler::TrustedImmPtr(&halfConstant), SpecializedThunkJIT::fpRegT2);
+        jit.move64ToDouble(CCallHelpers::TrustedImm64(std::bit_cast<uint64_t>(-0.5)), SpecializedThunkJIT::fpRegT2);
         jit.addDouble(SpecializedThunkJIT::fpRegT1, SpecializedThunkJIT::fpRegT2);
         MacroAssembler::Jump shouldRoundDown = jit.branchDouble(MacroAssembler::DoubleGreaterThanAndOrdered, SpecializedThunkJIT::fpRegT2, SpecializedThunkJIT::fpRegT0);
 
@@ -993,8 +1001,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> roundThunkGenerator(VM& vm)
         MacroAssembler::Jump continuation = jit.jump();
 
         shouldRoundDown.link(&jit);
-        static constexpr double oneConstant = 1.0;
-        jit.loadDouble(MacroAssembler::TrustedImmPtr(&oneConstant), SpecializedThunkJIT::fpRegT2);
+        jit.move64ToDouble(CCallHelpers::TrustedImm64(std::bit_cast<uint64_t>(1.0)), SpecializedThunkJIT::fpRegT2);
         jit.subDouble(SpecializedThunkJIT::fpRegT1, SpecializedThunkJIT::fpRegT2, SpecializedThunkJIT::fpRegT0);
 
         continuation.link(&jit);
@@ -1183,7 +1190,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM& vm)
 
     jit.negPtr(GPRInfo::regT2);
     jit.addPtr(CCallHelpers::stackPointerRegister, GPRInfo::regT2);
-    CCallHelpers::Jump haveStackSpace = jit.branchPtr(CCallHelpers::BelowOrEqual, CCallHelpers::AbsoluteAddress(vm.addressOfSoftStackLimit()), GPRInfo::regT2);
+    CCallHelpers::Jump haveStackSpace = jit.branchPtr(CCallHelpers::LessThanOrEqual, CCallHelpers::AbsoluteAddress(vm.addressOfSoftStackLimit()), GPRInfo::regT2);
 
     // Throw Stack Overflow exception
     jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame, GPRInfo::regT3);
@@ -1347,7 +1354,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> remoteFunctionCallGenerator(VM& vm)
 
     jit.negPtr(GPRInfo::regT2);
     jit.addPtr(CCallHelpers::stackPointerRegister, GPRInfo::regT2);
-    CCallHelpers::Jump haveStackSpace = jit.branchPtr(CCallHelpers::BelowOrEqual, CCallHelpers::AbsoluteAddress(vm.addressOfSoftStackLimit()), GPRInfo::regT2);
+    CCallHelpers::Jump haveStackSpace = jit.branchPtr(CCallHelpers::LessThanOrEqual, CCallHelpers::AbsoluteAddress(vm.addressOfSoftStackLimit()), GPRInfo::regT2);
 
     // Throw Stack Overflow exception
     jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame, GPRInfo::regT3);

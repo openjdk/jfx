@@ -106,15 +106,17 @@ WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const char*);
 template<std::size_t Extent>
 inline void printInternal(PrintStream& out, std::span<const char, Extent> string)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     out.printf("%.*s", static_cast<int>(string.size()), string.data());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, StringView);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const CString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const String&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const AtomString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringImpl*);
-inline void printInternal(PrintStream& out, const AtomStringImpl* value) { printInternal(out, bitwise_cast<const StringImpl*>(value)); }
-inline void printInternal(PrintStream& out, const UniquedStringImpl* value) { printInternal(out, bitwise_cast<const StringImpl*>(value)); }
+inline void printInternal(PrintStream& out, const AtomStringImpl* value) { printInternal(out, std::bit_cast<const StringImpl*>(value)); }
+inline void printInternal(PrintStream& out, const UniquedStringImpl* value) { printInternal(out, std::bit_cast<const StringImpl*>(value)); }
 inline void printInternal(PrintStream& out, const UniquedStringImpl& value) { printInternal(out, &value); }
 inline void printInternal(PrintStream& out, char* value) { printInternal(out, static_cast<const char*>(value)); }
 inline void printInternal(PrintStream& out, CString& value) { printInternal(out, static_cast<const CString&>(value)); }

@@ -40,6 +40,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/MessageQueue.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Threading.h>
 #include <wtf/URL.h>
 
@@ -48,6 +49,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AsyncFileStream);
 
 struct AsyncFileStream::Internals {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -164,8 +167,11 @@ void AsyncFileStream::close()
         internals.stream.close();
     });
 }
-
+#if PLATFORM(JAVA)
 void AsyncFileStream::read(void* buffer, int length)
+#else
+void AsyncFileStream::read(std::span<uint8_t> buffer)
+#endif
 {
     perform([buffer, length](FileStream& stream) -> Function<void(FileStreamClient&)> {
         int bytesRead = stream.read(buffer, length);

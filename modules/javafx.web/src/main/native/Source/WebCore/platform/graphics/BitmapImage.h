@@ -66,6 +66,7 @@ public:
     unsigned currentFrameIndex() const { return m_source->currentFrameIndex(); }
     bool currentFrameHasAlpha() const { return m_source->currentImageFrame().hasAlpha(); }
     ImageOrientation currentFrameOrientation() const { return m_source->currentImageFrame().orientation(); }
+    Headroom currentFrameHeadroom() const { return m_source->currentImageFrame().headroom(); }
     DecodingOptions currentFrameDecodingOptions() const { return m_source->currentImageFrame().decodingOptions(); }
 
     // Primary & current NativeImage
@@ -77,6 +78,7 @@ public:
     FloatSize size(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const final { return m_source->size(orientation); }
     FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const { return m_source->sourceSize(orientation); }
     DestinationColorSpace colorSpace() final { return m_source->colorSpace(); }
+    Headroom headroom() const final { return headroomForTesting().value_or(m_source->headroom()); }
     ImageOrientation orientation() const final { return m_source->orientation(); }
     unsigned frameCount() const final { return m_source->frameCount(); }
 #if ASSERT_ENABLED
@@ -90,11 +92,13 @@ public:
     RefPtr<NativeImage> nativeImageAtIndex(unsigned index) final { return m_source->nativeImageAtIndex(index); }
 
     // Testing support.
-    const char* sourceUTF8() const { return sourceURL().string().utf8().data(); }
+    CString sourceUTF8() const { return sourceURL().string().utf8(); }
     void setAsyncDecodingEnabledForTesting(bool enabled) { m_source->setAsyncDecodingEnabledForTesting(enabled); }
     bool isAsyncDecodingEnabledForTesting() const { return m_source->isAsyncDecodingEnabledForTesting(); }
     void setMinimumDecodingDurationForTesting(Seconds duration) { m_source->setMinimumDecodingDurationForTesting(duration); }
     void setClearDecoderAfterAsyncFrameRequestForTesting(bool enabled) { m_source->setClearDecoderAfterAsyncFrameRequestForTesting(enabled); }
+    void setHeadroomForTesting(Headroom headroom) { m_source->setHeadroomForTesting(headroom); }
+    std::optional<Headroom> headroomForTesting() const { return m_source->headroomForTesting(); }
     unsigned decodeCountForTesting() const { return m_source->decodeCountForTesting(); }
     unsigned blankDrawCountForTesting() const { return m_source->blankDrawCountForTesting(); }
 

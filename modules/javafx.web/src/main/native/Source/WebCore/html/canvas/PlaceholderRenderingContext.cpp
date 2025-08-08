@@ -35,44 +35,12 @@
 
 namespace WebCore {
 
-#if !USE(NICOSIA)
-namespace {
-// FIXME: Once NICOSIA PlaceholderRenderingContextSource is reimplemented with delegated display compositor interface,
-// move these to PlaceholderRenderingContextSource.
-class DelegatedDisplayPlaceholderRenderingContextSource final : public PlaceholderRenderingContextSource {
-public:
-    void setPlaceholderBuffer(ImageBuffer& image) final
-    {
-        RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> delegate;
-        {
-            Locker locker { m_lock };
-            if (m_delegate)
-                m_delegate->tryCopyToLayer(image);
-        }
-        PlaceholderRenderingContextSource::setPlaceholderBuffer(image);
-    }
-
-    void setContentsToLayer(GraphicsLayer& layer) final
-    {
-        Locker locker { m_lock };
-        m_delegate = layer.createAsyncContentsDisplayDelegate(m_delegate.get());
-    }
-
-private:
-    using PlaceholderRenderingContextSource::PlaceholderRenderingContextSource;
-    Lock m_lock;
-    RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> m_delegate WTF_GUARDED_BY_LOCK(m_lock);
-    friend Ref<PlaceholderRenderingContextSource> PlaceholderRenderingContextSource::create(PlaceholderRenderingContext&);
-};
-
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PlaceholderRenderingContextSource);
 
 Ref<PlaceholderRenderingContextSource> PlaceholderRenderingContextSource::create(PlaceholderRenderingContext& context)
 {
-    return adoptRef(*new DelegatedDisplayPlaceholderRenderingContextSource(context));
+    return adoptRef(*new PlaceholderRenderingContextSource(context));
 }
-
-#endif
 
 PlaceholderRenderingContextSource::PlaceholderRenderingContextSource(PlaceholderRenderingContext& placeholder)
     : m_placeholder(placeholder)
@@ -81,6 +49,12 @@ PlaceholderRenderingContextSource::PlaceholderRenderingContextSource(Placeholder
 
 void PlaceholderRenderingContextSource::setPlaceholderBuffer(ImageBuffer& imageBuffer)
 {
+    {
+        Locker locker { m_lock };
+        if (m_delegate)
+            m_delegate->tryCopyToLayer(imageBuffer);
+    }
+
     RefPtr clone = imageBuffer.clone();
     if (!clone)
         return;
@@ -98,6 +72,12 @@ void PlaceholderRenderingContextSource::setPlaceholderBuffer(ImageBuffer& imageB
     });
 }
 
+void PlaceholderRenderingContextSource::setContentsToLayer(GraphicsLayer& layer)
+{
+    Locker locker { m_lock };
+    m_delegate = layer.createAsyncContentsDisplayDelegate(m_delegate.get());
+}
+
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PlaceholderRenderingContext);
 
 std::unique_ptr<PlaceholderRenderingContext> PlaceholderRenderingContext::create(HTMLCanvasElement& element)
@@ -106,7 +86,7 @@ std::unique_ptr<PlaceholderRenderingContext> PlaceholderRenderingContext::create
 }
 
 PlaceholderRenderingContext::PlaceholderRenderingContext(HTMLCanvasElement& canvas)
-    : CanvasRenderingContext(canvas)
+    : CanvasRenderingContext(canvas, Type::Placeholder)
     , m_source(PlaceholderRenderingContextSource::create(*this))
 {
 }

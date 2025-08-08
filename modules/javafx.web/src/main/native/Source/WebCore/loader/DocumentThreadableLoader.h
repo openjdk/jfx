@@ -95,14 +95,14 @@ class CachedRawResource;
         void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
 
         void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&);
-        void didReceiveData(ResourceLoaderIdentifier, const SharedBuffer&);
-        void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&);
-        void didFail(ResourceLoaderIdentifier, const ResourceError&);
+        void didReceiveData(const SharedBuffer&);
+        void didFinishLoading(std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&);
+        void didFail(std::optional<ResourceLoaderIdentifier>, const ResourceError&);
         void makeCrossOriginAccessRequest(ResourceRequest&&);
         void makeSimpleCrossOriginAccessRequest(ResourceRequest&&);
         void makeCrossOriginAccessRequestWithPreflight(ResourceRequest&&);
         void preflightSuccess(ResourceRequest&&);
-        void preflightFailure(ResourceLoaderIdentifier, const ResourceError&);
+        void preflightFailure(std::optional<ResourceLoaderIdentifier>, const ResourceError&);
 
         void loadRequest(ResourceRequest&&, SecurityCheckPolicy);
         bool isAllowedRedirect(const URL&);

@@ -189,11 +189,11 @@ inline void BreakingContext::initializeForCurrentObject()
     if (m_nextObject && m_nextObject->parent() && !m_nextObject->parent()->isDescendantOf(renderer.parent()))
         m_includeEndWidth = true;
 
-    m_currentTextWrap = renderer.isReplacedOrInlineBlock() ? renderer.parent()->style().textWrapMode() : renderer.style().textWrapMode();
-    m_currentWhitespaceCollapse = renderer.isReplacedOrInlineBlock() ? renderer.parent()->style().whiteSpaceCollapse() : renderer.style().whiteSpaceCollapse();
+    m_currentTextWrap = renderer.isReplacedOrAtomicInline() ? renderer.parent()->style().textWrapMode() : renderer.style().textWrapMode();
+    m_currentWhitespaceCollapse = renderer.isReplacedOrAtomicInline() ? renderer.parent()->style().whiteSpaceCollapse() : renderer.style().whiteSpaceCollapse();
 
-    m_lastObjectTextWrap = m_lastObject->isReplacedOrInlineBlock() ? m_lastObject->parent()->style().textWrapMode() : m_lastObject->style().textWrapMode();
-    m_lastObjectWhitespaceCollapse = m_lastObject->isReplacedOrInlineBlock() ? m_lastObject->parent()->style().whiteSpaceCollapse() : m_lastObject->style().whiteSpaceCollapse();
+    m_lastObjectTextWrap = m_lastObject->isReplacedOrAtomicInline() ? m_lastObject->parent()->style().textWrapMode() : m_lastObject->style().textWrapMode();
+    m_lastObjectWhitespaceCollapse = m_lastObject->isReplacedOrAtomicInline() ? m_lastObject->parent()->style().whiteSpaceCollapse() : m_lastObject->style().whiteSpaceCollapse();
 
     bool isSVGText = renderer.isRenderSVGInlineText();
     m_autoWrap = !isSVGText && m_currentTextWrap != TextWrapMode::NoWrap;
@@ -632,12 +632,6 @@ inline bool BreakingContext::handleText()
     return false;
 }
 
-inline bool textBeginsWithBreakablePosition(RenderText& nextText)
-{
-    UChar c = nextText.characterAt(0);
-    return c == ' ' || c == '\t' || (c == '\n' && !nextText.preservesNewline());
-}
-
 inline void BreakingContext::trailingSpacesHang(LegacyInlineIterator& lineBreak, RenderObject& renderObject, bool canBreakMidWord, bool previousCharacterIsSpace)
 {
     ASSERT(m_currentWhitespaceCollapse == WhiteSpaceCollapse::BreakSpaces && m_currentTextWrap == TextWrapMode::Wrap);
@@ -656,55 +650,7 @@ inline void BreakingContext::trailingSpacesHang(LegacyInlineIterator& lineBreak,
 
 inline bool BreakingContext::canBreakAtThisPosition()
 {
-    // If we are no-wrap and have found a line-breaking opportunity already then we should take it.
-    if (m_width.committedWidth() && !m_width.fitsOnLine(m_currentCharacterIsSpace) && m_currentWhitespaceCollapse == WhiteSpaceCollapse::Collapse && m_currentTextWrap == TextWrapMode::NoWrap)
-        return true;
-
-    // Avoid breaking on empty inlines.
-    auto* renderInline = dynamicDowncast<RenderInline>(*m_current.renderer());
-    if (renderInline && isEmptyInline(*renderInline))
         return false;
-
-    // Avoid breaking before empty inlines (as long as the current object isn't replaced).
-    if (!m_current.renderer()->isReplacedOrInlineBlock()) {
-        auto* renderInline = dynamicDowncast<RenderInline>(m_nextObject);
-        if (renderInline && isEmptyInline(*renderInline))
-        return false;
-    }
-
-    // Return early if we autowrap and the current character is a space as we will always want to break at such a position.
-    if (m_autoWrap && m_currentCharacterIsSpace)
-        return true;
-
-    if (m_nextObject && m_nextObject->isLineBreakOpportunity())
-        return m_autoWrap;
-
-    auto* renderText = dynamicDowncast<RenderText>(m_nextObject);
-    bool nextIsAutoWrappingText = renderText && (m_autoWrap || m_nextObject->style().autoWrap());
-    if (!nextIsAutoWrappingText)
-        return m_autoWrap;
-    RenderText& nextRenderText = *renderText;
-    bool currentIsTextOrEmptyInline = [this] {
-        if (is<RenderText>(*m_current.renderer()))
-            return true;
-        auto* renderInline = dynamicDowncast<RenderInline>(*m_current.renderer());
-        return renderInline && isEmptyInline(*renderInline);
-    }();
-    if (!currentIsTextOrEmptyInline)
-        return m_autoWrap;
-
-    bool canBreakHere = !m_currentCharacterIsSpace && textBeginsWithBreakablePosition(nextRenderText);
-
-    // See if attempting to fit below floats creates more available width on the line.
-    if (!m_width.fitsOnLine() && !m_width.hasCommitted())
-        m_width.fitBelowFloats(m_lineInfo.isFirstLine());
-
-    bool canPlaceOnLine = m_width.fitsOnLine() || !m_autoWrapWasEverTrueOnLine;
-
-    if (canPlaceOnLine && canBreakHere)
-        commitLineBreakAtCurrentWidth(nextRenderText);
-
-    return canBreakHere;
 }
 
 inline void BreakingContext::commitAndUpdateLineBreakIfNeeded()
@@ -739,7 +685,7 @@ inline void BreakingContext::commitAndUpdateLineBreakIfNeeded()
 
     if (!m_current.renderer()->isFloatingOrOutOfFlowPositioned()) {
         m_lastObject = m_current.renderer();
-        if (m_lastObject->isReplacedOrInlineBlock() && m_autoWrap && (!m_lastObject->isImage() || m_allowImagesToBreak)) {
+        if (m_lastObject->isReplacedOrAtomicInline() && m_autoWrap && (!m_lastObject->isImage() || m_allowImagesToBreak)) {
             auto* renderListMarker = dynamicDowncast<RenderListMarker>(*m_lastObject);
             if (!renderListMarker || renderListMarker->isInside()) {
             if (m_nextObject)
@@ -757,9 +703,9 @@ inline TrailingObjects::CollapseFirstSpace checkWhitespaceCollapsingTransitions(
     // shave it off the list, and shave off a trailing space if the previous end point doesn't
     // preserve whitespace.
     if (lBreak.renderer() && lineWhitespaceCollapsingState.numTransitions() && !(lineWhitespaceCollapsingState.numTransitions() % 2)) {
-        const LegacyInlineIterator* transitions = lineWhitespaceCollapsingState.transitions().data();
-        const LegacyInlineIterator& endpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 2];
-        const LegacyInlineIterator& startpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 1];
+        auto transitions = lineWhitespaceCollapsingState.transitions().span();
+        auto& endpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 2];
+        auto& startpoint = transitions[lineWhitespaceCollapsingState.numTransitions() - 1];
         LegacyInlineIterator currpoint = endpoint;
         while (!currpoint.atEnd() && currpoint != startpoint && currpoint != lBreak)
             currpoint.increment();

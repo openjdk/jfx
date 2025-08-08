@@ -27,6 +27,7 @@
 #include "config.h"
 #include "LocalizedStrings.h"
 
+#include "DateComponents.h"
 #include "IntSize.h"
 #include "NotImplemented.h"
 #include <wtf/MathExtras.h>
@@ -91,19 +92,17 @@ String formatLocalizedString(const char* format, ...)
 #if PLATFORM(COCOA)
 static CFBundleRef webCoreBundle()
 {
-    static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
+    static LazyNeverDestroyed<RetainPtr<CFBundleRef>> bundle;
+    static std::once_flag flag;
+    std::call_once(flag, [&] mutable {
+        bundle.construct(CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore")));
+    });
     ASSERT(bundle.get());
     return bundle.get().get();
 }
 
 RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
 {
-#if !PLATFORM(IOS_FAMILY)
-    // Can be called on a dispatch queue when initializing strings on iOS.
-    // See LoadWebLocalizedStrings and <rdar://problem/7902473>.
-    ASSERT(isMainThread());
-#endif
-
     static CFStringRef notFound = CFSTR("localized string not found");
 
     auto result = adoptCF(CFBundleCopyLocalizedString(webCoreBundle(), key, notFound, nullptr));
@@ -1454,22 +1453,7 @@ String contextMenuItemTagShowMediaStats()
 
 #endif // ENABLE(VIDEO)
 
-String snapshottedPlugInLabelTitle()
-{
-    return WEB_UI_STRING("Snapshotted Plug-In", "Title of the label to show on a snapshotted plug-in");
-}
-
-String snapshottedPlugInLabelSubtitle()
-{
-    return WEB_UI_STRING("Click to restart", "Subtitle of the label to show on a snapshotted plug-in");
-}
-
-String useBlockedPlugInContextMenuTitle()
-{
-    return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
-}
-
-#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
+#if PLATFORM(COCOA)
 
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 {
@@ -1534,9 +1518,11 @@ String datePickerYearLabelTitle()
 
 #if ENABLE(INPUT_TYPE_WEEK_PICKER)
 
-String inputWeekLabel()
+String inputWeekLabel(const DateComponents& dateComponents)
 {
-    return WEB_UI_STRING_KEY("Week", "Week", "Week label for week of year input type");
+    int week = dateComponents.week();
+    int year = dateComponents.fullYear();
+    return WEB_UI_FORMAT_STRING("Week %1$d, %2$d", "Week of year input type label with week number and year", week, year);
 }
 
 #endif
@@ -1582,9 +1568,21 @@ String pdfPasswordFormInvalidPasswordSubtitle()
     return WEB_UI_STRING("Invalid Password", "Message when a PDF fails to unlock with the given password");
 }
 
-String contextMenuItemTagCopyLinkToHighlight()
+String contextMenuItemTagCopyLinkWithHighlight()
 {
-    return WEB_UI_STRING("Copy Link to Highlight", "Copy link to highlight context menu item");
+    return WEB_UI_STRING("Copy Link with Highlight", "Copy link with highlight context menu item");
 }
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+String fullscreenControllerViewSpatial()
+{
+    return WEB_UI_STRING("View Spatial", "Title for View Spatial action button while in fullscreen");
+}
+
+String fullscreenControllerViewImmersive()
+{
+    return WEB_UI_STRING("View Immersive", "Title for View Immersive action button while in fullscreen");
+}
+#endif
 
 } // namespace WebCore

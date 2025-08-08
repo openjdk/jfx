@@ -136,7 +136,6 @@ private:
     HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_abortingTransactions;
 
     const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
-
     std::atomic<bool> m_isContextSuspended { false };
 };
 

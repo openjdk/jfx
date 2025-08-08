@@ -27,8 +27,8 @@
 
 #include "AudioBufferSourceOptions.h"
 #include "AudioScheduledSourceNode.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Lock.h>
-#include <wtf/UniqueArray.h>
 
 namespace WebCore {
 
@@ -102,9 +102,9 @@ private:
     // m_buffer holds the sample data which this node outputs.
     RefPtr<AudioBuffer> m_buffer WTF_GUARDED_BY_LOCK(m_processLock); // Only modified on the main thread but used on the audio thread.
 
-    // Pointers for the buffer and destination.
-    UniqueArray<const float*> m_sourceChannels;
-    UniqueArray<float*> m_destinationChannels;
+    // Spans for the buffer and destination.
+    FixedVector<std::span<const float>> m_sourceChannels;
+    FixedVector<std::span<float>> m_destinationChannels;
 
     Ref<AudioParam> m_detune;
     Ref<AudioParam> m_playbackRate;

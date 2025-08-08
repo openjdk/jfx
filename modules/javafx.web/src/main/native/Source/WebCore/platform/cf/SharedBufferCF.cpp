@@ -40,7 +40,7 @@ FragmentedSharedBuffer::FragmentedSharedBuffer(CFDataRef data)
 
 // Using Foundation allows for an even more efficient implementation of this function,
 // so only use this version for non-Foundation.
-#if !USE(FOUNDATION)
+#if !USE(FOUNDATION) && !PLATFORM(JAVA)
 RetainPtr<CFDataRef> SharedBuffer::createCFData() const
 {
     if (hasOneSegment()) {

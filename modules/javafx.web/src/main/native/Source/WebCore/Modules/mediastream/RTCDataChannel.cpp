@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,6 +46,7 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DetachedRTCDataChannel);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDataChannel);
 
 Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, std::unique_ptr<RTCDataChannelHandler>&& handler, String&& label, RTCDataChannelInit&& options, RTCDataChannelState state)
@@ -85,14 +86,16 @@ NetworkSendQueue RTCDataChannel::createMessageQueue(ScriptExecutionContext& cont
 RTCDataChannel::RTCDataChannel(ScriptExecutionContext& context, std::unique_ptr<RTCDataChannelHandler>&& handler, String&& label, RTCDataChannelInit&& options, RTCDataChannelState readyState)
     : ActiveDOMObject(&context)
     , m_handler(WTFMove(handler))
-    , m_identifier(RTCDataChannelIdentifier { Process::identifier(), RTCDataChannelLocalIdentifier::generate() })
-    , m_contextIdentifier(context.isDocument() ? ScriptExecutionContextIdentifier { } : context.identifier())
+    , m_identifier(RTCDataChannelIdentifier::generate())
+    , m_contextIdentifier(context.isDocument() ? std::nullopt : std::optional { context.identifier() })
     , m_readyState(readyState)
     , m_label(WTFMove(label))
     , m_options(WTFMove(options))
     , m_messageQueue(createMessageQueue(context, *this))
 {
 }
+
+RTCDataChannel::~RTCDataChannel() = default;
 
 std::optional<unsigned short> RTCDataChannel::id() const
 {
@@ -211,7 +214,7 @@ void RTCDataChannel::didReceiveRawData(std::span<const uint8_t> data)
 {
     switch (m_binaryType) {
     case BinaryType::Blob:
-        scheduleDispatchEvent(MessageEvent::create(Blob::create(scriptExecutionContext(), Vector(data), emptyString()), { }));
+        scheduleDispatchEvent(MessageEvent::create(Blob::create(protectedScriptExecutionContext().get(), Vector(data), emptyString()), { }));
         return;
     case BinaryType::Arraybuffer:
         scheduleDispatchEvent(MessageEvent::create(ArrayBuffer::create(data)));
@@ -282,7 +285,7 @@ std::unique_ptr<DetachedRTCDataChannel> RTCDataChannel::detach()
     m_readyState = RTCDataChannelState::Closed;
 
     Locker locker { s_rtcDataChannelLocalMapLock };
-    rtcDataChannelLocalMap().add(identifier().channelIdentifier, WTFMove(m_handler));
+    rtcDataChannelLocalMap().add(identifier().object(), WTFMove(m_handler));
 
     return makeUnique<DetachedRTCDataChannel>(identifier(), String { label() }, RTCDataChannelInit { options() }, state);
 }
@@ -293,7 +296,7 @@ void RTCDataChannel::removeFromDataChannelLocalMapIfNeeded()
         return;
 
     Locker locker { s_rtcDataChannelLocalMapLock };
-    rtcDataChannelLocalMap().remove(identifier().channelIdentifier);
+    rtcDataChannelLocalMap().remove(identifier().object());
 }
 
 std::unique_ptr<RTCDataChannelHandler> RTCDataChannel::handlerFromIdentifier(RTCDataChannelLocalIdentifier channelIdentifier)
@@ -318,8 +321,8 @@ Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext& context, RTCD
 {
     RTCDataChannelRemoteHandler* remoteHandlerPtr = nullptr;
     std::unique_ptr<RTCDataChannelHandler> handler;
-    if (identifier.processIdentifier == Process::identifier())
-        handler = RTCDataChannel::handlerFromIdentifier(identifier.channelIdentifier);
+    if (identifier.processIdentifier() == Process::identifier())
+        handler = RTCDataChannel::handlerFromIdentifier(identifier.object());
     else {
         auto remoteHandler = RTCDataChannelRemoteHandler::create(identifier, context.createRTCDataChannelRemoteHandlerConnection());
         remoteHandlerPtr = remoteHandler.get();

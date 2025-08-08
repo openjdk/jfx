@@ -25,8 +25,6 @@
 
 #undef IMPL
 
-
-#include <WebCore/CSSUnknownRule.h>
 #include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>

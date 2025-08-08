@@ -29,8 +29,12 @@
 #include "Filter.h"
 #include "PixelBuffer.h"
 #include <wtf/ParallelJobs.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEMorphologySoftwareApplier);
 
 inline ColorComponents<uint8_t, 4> FEMorphologySoftwareApplier::minOrMax(const ColorComponents<uint8_t, 4>& a, const ColorComponents<uint8_t, 4>& b, MorphologyOperatorType type)
 {
@@ -42,10 +46,10 @@ inline ColorComponents<uint8_t, 4> FEMorphologySoftwareApplier::minOrMax(const C
 
 inline ColorComponents<uint8_t, 4> FEMorphologySoftwareApplier::columnExtremum(const PixelBuffer& srcPixelBuffer, int x, int yStart, int yEnd, int width, MorphologyOperatorType type)
 {
-    auto extremum = makeColorComponentsfromPixelValue(PackedColor::RGBA { *reinterpret_cast<const unsigned*>(srcPixelBuffer.bytes().data() + pixelArrayIndex(x, yStart, width)) });
+    auto extremum = makeColorComponentsfromPixelValue(PackedColor::RGBA { reinterpretCastSpanStartTo<const unsigned>(srcPixelBuffer.bytes().subspan(pixelArrayIndex(x, yStart, width))) });
 
     for (int y = yStart + 1; y < yEnd; ++y) {
-        auto pixel = makeColorComponentsfromPixelValue(PackedColor::RGBA { *reinterpret_cast<const unsigned*>(srcPixelBuffer.bytes().data() + pixelArrayIndex(x, y, width)) });
+        auto pixel = makeColorComponentsfromPixelValue(PackedColor::RGBA { reinterpretCastSpanStartTo<const unsigned>(srcPixelBuffer.bytes().subspan(pixelArrayIndex(x, y, width))) });
         extremum = minOrMax(extremum, pixel, type);
     }
     return extremum;
@@ -64,8 +68,8 @@ void FEMorphologySoftwareApplier::applyPlatformGeneric(const PaintingData& paint
 {
     ASSERT(endY > startY);
 
-    const auto& srcPixelBuffer = *paintingData.srcPixelBuffer;
-    auto& dstPixelBuffer = *paintingData.dstPixelBuffer;
+    Ref srcPixelBuffer = *paintingData.srcPixelBuffer;
+    Ref dstPixelBuffer = *paintingData.dstPixelBuffer;
 
     const int radiusX = paintingData.radiusX;
     const int radiusY = paintingData.radiusY;
@@ -96,8 +100,8 @@ void FEMorphologySoftwareApplier::applyPlatformGeneric(const PaintingData& paint
             if (x > radiusX)
                 extrema.remove(0);
 
-            unsigned* destPixel = reinterpret_cast<unsigned*>(dstPixelBuffer.bytes().data() + pixelArrayIndex(x, y, width));
-            *destPixel = makePixelValueFromColorComponents(kernelExtremum(extrema, paintingData.type)).value;
+            unsigned& destPixel = reinterpretCastSpanStartTo<unsigned>(dstPixelBuffer->bytes().subspan(pixelArrayIndex(x, y, width)));
+            destPixel = makePixelValueFromColorComponents(kernelExtremum(extrema, paintingData.type)).value;
         }
     }
 }
@@ -143,9 +147,9 @@ void FEMorphologySoftwareApplier::applyPlatform(const PaintingData& paintingData
 
 bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
-    auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
+    RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)
         return false;
 
@@ -155,11 +159,11 @@ bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageV
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
 
-    auto radius = filter.resolvedSize({ m_effect.radiusX(), m_effect.radiusY() });
+    auto radius = filter.resolvedSize({ m_effect->radiusX(), m_effect->radiusY() });
     auto absoluteRadius = flooredIntSize(filter.scaledByFilterScale(radius));
 
     if (isDegenerate(absoluteRadius)) {
-        input.copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
+        input->copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
         return true;
     }
 
@@ -167,18 +171,18 @@ bool FEMorphologySoftwareApplier::apply(const Filter& filter, const FilterImageV
     int radiusY = std::min(effectDrawingRect.height() - 1, absoluteRadius.height());
 
     if (isDegenerate({ radiusX, radiusY })) {
-        input.copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
+        input->copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
         return true;
     }
 
-    auto sourcePixelBuffer = input.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectDrawingRect, m_effect.operatingColorSpace());
+    RefPtr sourcePixelBuffer = input->getPixelBuffer(AlphaPremultiplication::Premultiplied, effectDrawingRect, m_effect->operatingColorSpace());
     if (!sourcePixelBuffer)
         return false;
 
     PaintingData paintingData;
-    paintingData.type = m_effect.morphologyOperator();
-    paintingData.srcPixelBuffer = &*sourcePixelBuffer;
-    paintingData.dstPixelBuffer = destinationPixelBuffer;
+    paintingData.type = m_effect->morphologyOperator();
+    paintingData.srcPixelBuffer = WTFMove(sourcePixelBuffer);
+    paintingData.dstPixelBuffer = WTFMove(destinationPixelBuffer);
     paintingData.width = effectDrawingRect.width();
     paintingData.height = effectDrawingRect.height();
     paintingData.radiusX = radiusX;

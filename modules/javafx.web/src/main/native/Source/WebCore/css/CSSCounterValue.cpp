@@ -35,7 +35,7 @@
 namespace WebCore {
 
 CSSCounterValue::CSSCounterValue(AtomString identifier, AtomString separator, RefPtr<CSSValue> counterStyle)
-    : CSSValue(CounterClass)
+    : CSSValue(ClassType::Counter)
     , m_identifier(WTFMove(identifier))
     , m_separator(WTFMove(separator))
     , m_counterStyle(WTFMove(counterStyle))
@@ -52,7 +52,7 @@ bool CSSCounterValue::equals(const CSSCounterValue& other) const
     return m_identifier == other.m_identifier && m_separator == other.m_separator && arePointingToEqualData(m_counterStyle, other.m_counterStyle);
 }
 
-String CSSCounterValue::customCSSText() const
+String CSSCounterValue::customCSSText(const CSS::SerializationContext&) const
 {
     bool isDecimal = m_counterStyle->valueID() == CSSValueDecimal || (m_counterStyle->isCustomIdent() && m_counterStyle->customIdent() == "decimal"_s);
     auto listStyleSeparator = isDecimal ? ""_s : ", "_s;

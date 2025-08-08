@@ -34,11 +34,12 @@
 #include "DateComponents.h"
 #include "DateTimeFormat.h"
 #include "LocalizedStrings.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Locale);
 
 class DateTimeStringBuilder : private DateTimeFormat::TokenHandler {
     WTF_MAKE_NONCOPYABLE(DateTimeStringBuilder);
@@ -178,8 +179,6 @@ String DateTimeStringBuilder::toString()
 {
     return m_builder.toString();
 }
-
-#endif
 
 Locale::~Locale() = default;
 
@@ -333,7 +332,11 @@ String Locale::convertFromLocalizedNumber(const String& localized)
     return converted;
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+Locale::WritingDirection Locale::defaultWritingDirection() const
+{
+    return WritingDirection::Default;
+}
+
 String Locale::formatDateTime(const DateComponents& date, FormatType formatType)
 {
     if (date.type() == DateComponentsType::Invalid)
@@ -368,6 +371,5 @@ String Locale::localizedDecimalSeparator()
     initializeLocaleData();
     return m_decimalSymbols[DecimalSeparatorIndex];
 }
-#endif
 
 }

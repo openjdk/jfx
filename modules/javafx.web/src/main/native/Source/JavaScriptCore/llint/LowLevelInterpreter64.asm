@@ -202,7 +202,6 @@ macro doVMEntry(makeCall)
     addp CallFrameHeaderSlots, t4, t4
     lshiftp 3, t4
     subp sp, t4, t3
-    bqbeq sp, t3, _llint_throw_stack_overflow_error_from_vm_entry
 
     # Ensure that we have enough additional stack capacity for the incoming args,
     # and the frame for the JS code we're executing. We need to do this check
@@ -224,39 +223,39 @@ macro doVMEntry(makeCall)
 .stackHeightOK:
     move t3, sp
     else
-        bpb t3, VM::m_softStackLimit[vm],  _llint_throw_stack_overflow_error_from_vm_entry
+        bplteq t3, VM::m_softStackLimit[vm],  _llint_throw_stack_overflow_error_from_vm_entry
         move t3, sp
     end
 
 .copyHeaderLoop:
     # Copy the CodeBlock/Callee/ArgumentCountIncludingThis/|this| from protoCallFrame into the callee frame.
     if ARM64 or ARM64E
-        loadpairq (8 * 0)[protoCallFrame], extraTempReg, t3
-        storepairq extraTempReg, t3, CodeBlock + (8 * 0)[sp]
-        loadpairq (8 * 2)[protoCallFrame], extraTempReg, t3
-        storepairq extraTempReg, t3, CodeBlock + (8 * 2)[sp]
+        loadpairq (8 * 0)[protoCallFrame], t5, t3
+        storepairq t5, t3, CodeBlock + (8 * 0)[sp]
+        loadpairq (8 * 2)[protoCallFrame], t5, t3
+        storepairq t5, t3, CodeBlock + (8 * 2)[sp]
     else
-        loadq (8 * 0)[protoCallFrame], extraTempReg
-        storeq extraTempReg, CodeBlock + (8 * 0)[sp]
-        loadq (8 * 1)[protoCallFrame], extraTempReg
-        storeq extraTempReg, CodeBlock + (8 * 1)[sp]
-        loadq (8 * 2)[protoCallFrame], extraTempReg
-        storeq extraTempReg, CodeBlock + (8 * 2)[sp]
-        loadq (8 * 3)[protoCallFrame], extraTempReg
-        storeq extraTempReg, CodeBlock + (8 * 3)[sp]
+        loadq (8 * 0)[protoCallFrame], t5
+        storeq t5, CodeBlock + (8 * 0)[sp]
+        loadq (8 * 1)[protoCallFrame], t5
+        storeq t5, CodeBlock + (8 * 1)[sp]
+        loadq (8 * 2)[protoCallFrame], t5
+        storeq t5, CodeBlock + (8 * 2)[sp]
+        loadq (8 * 3)[protoCallFrame], t5
+        storeq t5, CodeBlock + (8 * 3)[sp]
     end
 
     loadi PayloadOffset + ProtoCallFrame::argCountAndCodeOriginValue[protoCallFrame], t4
     subi 1, t4
-    loadi ProtoCallFrame::paddedArgCount[protoCallFrame], extraTempReg
-    subi 1, extraTempReg
+    loadi ProtoCallFrame::paddedArgCount[protoCallFrame], t5
+    subi 1, t5
 
-    bieq t4, extraTempReg, .copyArgs
+    bieq t4, t5, .copyArgs
     move ValueUndefined, t3
 .fillExtraArgsLoop:
-    subi 1, extraTempReg
-    storeq t3, ThisArgumentOffset + 8[sp, extraTempReg, 8]
-    bineq t4, extraTempReg, .fillExtraArgsLoop
+    subi 1, t5
+    storeq t3, ThisArgumentOffset + 8[sp, t5, 8]
+    bineq t4, t5, .fillExtraArgsLoop
 
 .copyArgs:
     loadp ProtoCallFrame::args[protoCallFrame], t3
@@ -264,8 +263,8 @@ macro doVMEntry(makeCall)
 .copyArgsLoop:
     btiz t4, .copyArgsDone
     subi 1, t4
-    loadq [t3, t4, 8], extraTempReg
-    storeq extraTempReg, ThisArgumentOffset + 8[sp, t4, 8]
+    loadq [t3, t4, 8], t5
+    storeq t5, ThisArgumentOffset + 8[sp, t4, 8]
     jmp .copyArgsLoop
 
 .copyArgsDone:
@@ -282,7 +281,7 @@ macro doVMEntry(makeCall)
     storep cfr, VM::topEntryFrame[vm]
     end
 
-    checkStackPointerAlignment(extraTempReg, 0xbad0dc02)
+    checkStackPointerAlignment(t5, 0xbad0dc02)
 
     makeCall(entry, protoCallFrame, t3, t4)
 
@@ -323,10 +322,10 @@ _llint_throw_stack_overflow_error_from_vm_entry:
     vmEntryRecord(cfr, t4)
 
     loadp VMEntryRecord::m_vm[t4], vm
-    loadp VMEntryRecord::m_prevTopCallFrame[t4], extraTempReg
-    storep extraTempReg, VM::topCallFrame[vm]
-    loadp VMEntryRecord::m_prevTopEntryFrame[t4], extraTempReg
-    storep extraTempReg, VM::topEntryFrame[vm]
+    loadp VMEntryRecord::m_prevTopCallFrame[t4], t5
+    storep t5, VM::topCallFrame[vm]
+    loadp VMEntryRecord::m_prevTopEntryFrame[t4], t5
+    storep t5, VM::topEntryFrame[vm]
 
     move ValueUndefined, r0
 
@@ -381,10 +380,10 @@ op(llint_handle_uncaught_exception, macro ()
     vmEntryRecord(cfr, t2)
 
     loadp VMEntryRecord::m_vm[t2], t3
-    loadp VMEntryRecord::m_prevTopCallFrame[t2], extraTempReg
-    storep extraTempReg, VM::topCallFrame[t3]
-    loadp VMEntryRecord::m_prevTopEntryFrame[t2], extraTempReg
-    storep extraTempReg, VM::topEntryFrame[t3]
+    loadp VMEntryRecord::m_prevTopCallFrame[t2], t5
+    storep t5, VM::topCallFrame[t3]
+    loadp VMEntryRecord::m_prevTopEntryFrame[t2], t5
+    storep t5, VM::topEntryFrame[t3]
 
     move ValueUndefined, r0
 
@@ -727,9 +726,9 @@ macro functionArityCheck(opcodeName, doneLabel)
     subp cfr, t3, t5
     loadp CodeBlock::m_vm[t1], t0
     if C_LOOP
-        bpbeq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
     else
-        bpbeq VM::m_softStackLimit[t0], t5, .stackHeightOK
+        bplteq VM::m_softStackLimit[t0], t5, .stackHeightOK
     end
 
     prepareStateForCCall()
@@ -1741,11 +1740,9 @@ llintOpWithProfile(op_get_prototype_of, OpGetPrototypeOf, macro (size, get, disp
 
     btqnz t0, notCellMask, .opGetPrototypeOfSlow
     bbb JSCell::m_type[t0], ObjectType, .opGetPrototypeOfSlow
+    btbnz JSCell::m_flags[t0], OverridesGetPrototype, .opGetPrototypeOfSlow
 
     loadStructureWithScratch(t0, t2, t1)
-    loadh Structure::m_outOfLineTypeFlags[t2], t3
-    btinz t3, OverridesGetPrototypeOutOfLine, .opGetPrototypeOfSlow
-
     loadq Structure::m_prototype[t2], t2
     btqz t2, .opGetPrototypeOfPolyProto
     return(t2)
@@ -2404,19 +2401,21 @@ llintOpWithJump(op_switch_imm, OpSwitchImm, macro (size, get, jump, dispatch)
     loadp UnlinkedCodeBlock::RareData::m_unlinkedSwitchJumpTables + UnlinkedSimpleJumpTableFixedVector::m_storage[t2], t2
     addp (constexpr (UnlinkedSimpleJumpTableFixedVector::Storage::offsetOfData())), t2
     addp t3, t2
+
     bqb t1, numberTag, .opSwitchImmNotInt
     subi UnlinkedSimpleJumpTable::m_min[t2], t1
-    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t2
-    btpz t2, .opSwitchImmFallThrough
-    biaeq t1, Int32FixedVector::Storage::m_size[t2], .opSwitchImmFallThrough
-    loadis (constexpr (Int32FixedVector::Storage::offsetOfData()))[t2, t1, 4], t1
+    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t3
+    btpz t3, .opSwitchImmFallThrough
+    biaeq t1, Int32FixedVector::Storage::m_size[t3], .opSwitchImmFallThrough
+    loadis (constexpr (Int32FixedVector::Storage::offsetOfData()))[t3, t1, 4], t1
     btiz t1, .opSwitchImmFallThrough
     dispatchIndirect(t1)
 
 .opSwitchImmNotInt:
     btqnz t1, numberTag, .opSwitchImmSlow   # Go slow if it's a double.
 .opSwitchImmFallThrough:
-    jump(m_defaultOffset)
+    loadis UnlinkedSimpleJumpTable::m_defaultOffset[t2], t1
+    dispatchIndirect(t1)
 
 .opSwitchImmSlow:
     callSlowPath(_llint_slow_path_switch_imm)
@@ -2435,6 +2434,7 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
     loadp UnlinkedCodeBlock::RareData::m_unlinkedSwitchJumpTables + UnlinkedSimpleJumpTableFixedVector::m_storage[t2], t2
     addp (constexpr (UnlinkedSimpleJumpTableFixedVector::Storage::offsetOfData())), t2
     addp t3, t2
+
     btqnz t1, notCellMask, .opSwitchCharFallThrough
     bbneq JSCell::m_type[t1], StringType, .opSwitchCharFallThrough
     loadp JSString::m_fiber[t1], t0
@@ -2448,15 +2448,16 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
     loadb [t1], t0
 .opSwitchCharReady:
     subi UnlinkedSimpleJumpTable::m_min[t2], t0
-    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t2
-    btpz t2, .opSwitchCharFallThrough
-    biaeq t0, Int32FixedVector::Storage::m_size[t2], .opSwitchCharFallThrough
-    loadis (constexpr (Int32FixedVector::Storage::offsetOfData()))[t2, t0, 4], t1
+    loadp UnlinkedSimpleJumpTable::m_branchOffsets + Int32FixedVector::m_storage[t2], t3
+    btpz t3, .opSwitchCharFallThrough
+    biaeq t0, Int32FixedVector::Storage::m_size[t3], .opSwitchCharFallThrough
+    loadis (constexpr (Int32FixedVector::Storage::offsetOfData()))[t3, t0, 4], t1
     btiz t1, .opSwitchCharFallThrough
     dispatchIndirect(t1)
 
 .opSwitchCharFallThrough:
-    jump(m_defaultOffset)
+    loadis UnlinkedSimpleJumpTable::m_defaultOffset[t2], t1
+    dispatchIndirect(t1)
 
 .opSwitchOnRope:
     bineq JSRopeString::m_compactFibers + JSRopeString::CompactFibers::m_length[t1], 1, .opSwitchCharFallThrough
@@ -3150,6 +3151,21 @@ llintOpWithReturn(op_get_parent_scope, OpGetParentScope, macro (size, get, dispa
     return(t0)
 end)
 
+llintOpWithMetadata(op_super_construct_varargs, OpSuperConstructVarargs, macro (size, get, dispatch, metadata, return)
+    metadata(t5, t0)
+    get(m_thisValue, t0)
+    loadConstantOrVariableCell(size, t0, t1, .done)
+    loadp OpSuperConstructVarargs::Metadata::m_cachedCallee[t5], t2
+    bqeq t1, t2, .done
+    btqz t2, .store
+.invalidate:
+    move SeenMultipleCalleeObjects, t1
+.store:
+    storep t1, OpSuperConstructVarargs::Metadata::m_cachedCallee[t5]
+.done:
+    doCallVarargs(op_super_construct_varargs, size, get, OpSuperConstructVarargs, m_valueProfile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_super_construct_varargs, prepareForRegularCall, invokeForRegularCall, prepareForSlowRegularCall, dispatchAfterRegularCall)
+end)
+
 
 llintOpWithMetadata(op_profile_type, OpProfileType, macro (size, get, dispatch, metadata, return)
     loadp CodeBlock[cfr], t1
@@ -3214,6 +3230,76 @@ llintOpWithReturn(op_get_rest_length, OpGetRestLength, macro (size, get, dispatc
     return(t0)
 end)
 
+llintOpWithMetadata(op_instanceof, OpInstanceof, macro (size, get, dispatch, metadata, return)
+
+    macro getAndLoadConstantOrVariable(fieldName, index, value)
+        get(fieldName, index)
+        loadConstantOrVariable(size, index, value)
+    end
+
+    macro isObject(field, falseLabel)
+        getAndLoadConstantOrVariable(field, t1, t0)
+        btqnz t0, notCellMask, falseLabel
+        bbb JSCell::m_type[t0], ObjectType, falseLabel
+    end
+
+    macro overridesHasInstance(hasInstanceField, constructorField, trueLabel)
+        getAndLoadConstantOrVariable(hasInstanceField, t1, t0)
+        loadp CodeBlock[cfr], t2
+        loadp CodeBlock::m_globalObject[t2], t2
+        loadp JSGlobalObject::m_functionProtoHasInstanceSymbolFunction[t2], t2
+        bqneq t0, t2, trueLabel
+
+        getAndLoadConstantOrVariable(constructorField, t1, t0)
+        btbz JSCell::m_flags[t0], ImplementsDefaultHasInstance, trueLabel
+    end
+
+    macro store(result, fieldName)
+        move result, t0
+        storeVariable(get, fieldName, t0, t1)
+    end
+
+    macro getByID(fieldName, modeMetadata, valueProfile, slowPath, return)
+        getAndLoadConstantOrVariable(fieldName, t0, t3)
+        metadata(t2, t0)
+        performGetByIDHelper(OpInstanceof, modeMetadata, valueProfile, .getSlow, size, return)
+
+    .getSlow:
+        callSlowPath(slowPath)
+        branchIfException(_llint_throw_from_slow_path_trampoline)
+    end
+
+.getHasInstance:
+    isObject(m_constructor, .throwStaticError)
+    getByID(m_constructor, m_hasInstanceModeMetadata, m_hasInstanceValueProfile, _llint_slow_path_get_hasInstance_from_instanceof, macro (result)
+        store(result, m_hasInstanceOrPrototype)
+        jmp .getPrototype
+    end)
+
+.getPrototype:
+    overridesHasInstance(m_hasInstanceOrPrototype, m_constructor, .instanceofCustom)
+    isObject(m_value, .false)
+    getByID(m_constructor, m_prototypeModeMetadata, m_prototypeValueProfile, _llint_slow_path_get_prototype_from_instanceof, macro (result)
+        store(result, m_hasInstanceOrPrototype)
+        jmp .instanceof
+    end)
+
+.instanceof:
+    callSlowPath(_llint_slow_path_instanceof_from_instanceof)
+    dispatch()
+
+.throwStaticError:
+    callSlowPath(_slow_path_throw_static_error_from_instanceof)
+    dispatch()
+
+.instanceofCustom:
+    callSlowPath(_slow_path_instanceof_custom_from_instanceof)
+    dispatch()
+
+.false:
+    store(ValueFalse, m_dst)
+    dispatch()
+end)
 
 llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch, metadata, return)
     macro fastNarrow()
@@ -3484,7 +3570,7 @@ llintOpWithMetadata(op_enumerator_put_by_val, OpEnumeratorPutByVal, macro (size,
     bineq t2, JSCell::m_structureID[t0], .putSlowPath
 
     structureIDToStructureWithScratch(t2, t3)
-    btinz Structure::m_bitField[t2], (constexpr Structure::s_isWatchingReplacementBits), .putSlowPath
+    btinz Structure::m_bitField[t2], ((constexpr Structure::s_hasReadOnlyOrGetterSetterPropertiesExcludingProtoBits) | (constexpr Structure::s_isWatchingReplacementBits)), .putSlowPath
 
     get(m_value, t2)
     loadConstantOrVariable(size, t2, t3)

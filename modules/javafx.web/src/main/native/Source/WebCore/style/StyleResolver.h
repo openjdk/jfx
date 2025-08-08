@@ -55,6 +55,7 @@ class StyleRuleKeyframes;
 class StyleRulePage;
 class StyleSheet;
 class StyleSheetList;
+class TimingFunction;
 class ViewportStyleResolver;
 
 // MatchOnlyUserAgentRules is used in media queries, where relative units
@@ -69,6 +70,7 @@ enum class RuleMatchingBehavior: uint8_t {
 
 namespace Style {
 
+struct BuilderContext;
 struct ResolvedStyle;
 struct SelectorMatchingState;
 
@@ -81,7 +83,7 @@ struct ResolutionContext {
     bool isSVGUseTreeRoot { false };
 };
 
-using KeyframesRuleMap = HashMap<AtomString, RefPtr<StyleRuleKeyframes>>;
+using KeyframesRuleMap = UncheckedKeyHashMap<AtomString, RefPtr<StyleRuleKeyframes>>;
 
 class Resolver : public RefCounted<Resolver>, public CanMakeSingleThreadWeakPtr<Resolver> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Resolver);
@@ -94,7 +96,7 @@ public:
     ResolvedStyle styleForElement(Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
     ResolvedStyle styleForElementWithCachedMatchResult(Element&, const ResolutionContext&, const MatchResult&, const RenderStyle& existingRenderStyle);
 
-    void keyframeStylesForAnimation(Element&, const RenderStyle& elementStyle, const ResolutionContext&, BlendingKeyframes&);
+    void keyframeStylesForAnimation(Element&, const RenderStyle& elementStyle, const ResolutionContext&, BlendingKeyframes&, const TimingFunction*);
 
     WEBCORE_EXPORT std::optional<ResolvedStyle> styleForPseudoElement(Element&, const PseudoElementRequest&, const ResolutionContext&);
 
@@ -141,12 +143,13 @@ public:
     static KeyframesRuleMap& userAgentKeyframes();
     static void addUserAgentKeyframeStyle(Ref<StyleRuleKeyframes>&&);
     void addKeyframeStyle(Ref<StyleRuleKeyframes>&&);
-    Vector<Ref<StyleRuleKeyframe>> keyframeRulesForName(const AtomString&) const;
+    Vector<Ref<StyleRuleKeyframe>> keyframeRulesForName(const AtomString&, const TimingFunction*) const;
 
     RefPtr<StyleRuleViewTransition> viewTransitionRule() const;
 
     bool usesFirstLineRules() const { return m_ruleSets.features().usesFirstLineRules; }
     bool usesFirstLetterRules() const { return m_ruleSets.features().usesFirstLetterRules; }
+    bool usesStartingStyleRules() const { return m_ruleSets.features().hasStartingStyleRules; }
 
     void invalidateMatchedDeclarationsCache();
     void clearCachedDeclarationsAffectedByViewportUnits();

@@ -24,9 +24,10 @@
 
 #pragma once
 
+#include "CSSColorType.h"
+#include "CSSParserContext.h"
 #include "CSSParserFastPaths.h"
-#include "CSSUnresolvedColorResolutionContext.h"
-#include "StyleColor.h"
+#include "CSSPlatformColorResolutionState.h"
 #include <optional>
 #include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
@@ -34,33 +35,36 @@
 namespace WebCore {
 
 class Color;
-class CSSPrimitiveValue;
 class CSSParserTokenRange;
-class CSSUnresolvedColor;
-
+class CSSValue;
 struct CSSParserContext;
+
+namespace CSS {
+struct Color;
+struct DynamicRangeLimit;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // Options to augment color parsing.
 struct CSSColorParsingOptions {
     bool acceptQuirkyColors = false;
-    OptionSet<StyleColor::CSSColorType> allowedColorTypes = { StyleColor::CSSColorType::Absolute, StyleColor::CSSColorType::Current, StyleColor::CSSColorType::System };
+    OptionSet<CSS::ColorType> allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System };
 };
 
 // MARK: <color> consuming (unresolved)
-std::optional<CSSUnresolvedColor> consumeUnresolvedColor(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions& = { });
+std::optional<CSS::Color> consumeUnresolvedColor(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions& = { });
 
-// MARK: <color> consuming (CSSPrimitiveValue)
-RefPtr<CSSPrimitiveValue> consumeColor(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions& = { });
+// MARK: <color> consuming (CSSValue)
+RefPtr<CSSValue> consumeColor(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions& = { });
 
 // MARK: <color> consuming (raw)
-Color consumeColorRaw(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions&, const CSSUnresolvedColorResolutionContext& = { });
+WebCore::Color consumeColorRaw(CSSParserTokenRange&, const CSSParserContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
 // MARK: <color> parsing (raw)
-Color parseColorRawSlow(const String&, const CSSParserContext&, const CSSColorParsingOptions&, const CSSUnresolvedColorResolutionContext& = { });
+WEBCORE_EXPORT WebCore::Color parseColorRawSlow(const String&, const CSSParserContext&, const CSSColorParsingOptions&, CSS::PlatformColorResolutionState&);
 
-template<typename F> Color parseColorRaw(const String& string, const CSSParserContext& context, F&& lazySlowPathOptionsFunctor)
+template<typename F> WebCore::Color parseColorRaw(const String& string, const CSSParserContext& context, F&& lazySlowPathOptionsFunctor)
 {
     bool strict = !isQuirksModeBehavior(context.mode);
     if (auto color = CSSParserFastPaths::parseSimpleColor(string, strict))
@@ -68,15 +72,21 @@ template<typename F> Color parseColorRaw(const String& string, const CSSParserCo
 
     // To avoid doing anything unnecessary before the fast path can run, callers bundle up
     // a functor to generate the slow path parameters.
-    auto [options, eagerResolutionContext, eagerResolutionDelegate] = lazySlowPathOptionsFunctor();
+    auto [options, eagerResolutionState, eagerResolutionDelegate] = lazySlowPathOptionsFunctor();
 
     // If a delegate is provided, hook it up to the context here. By having it live on the stack,
     // we avoid allocating it.
     if (eagerResolutionDelegate)
-        eagerResolutionContext.delegate = &eagerResolutionDelegate.value();
+        eagerResolutionState.delegate = &eagerResolutionDelegate.value();
 
-    return parseColorRawSlow(string, context, options, eagerResolutionContext);
+    return parseColorRawSlow(string, context, options, eagerResolutionState);
 }
+
+// MARK: <dynamic-range-limit> (unresolved)
+std::optional<CSS::DynamicRangeLimit> consumeUnresolvedDynamicRangeLimit(CSSParserTokenRange&, const CSSParserContext&);
+
+// MARK: <dynamic-range-limit> (CSSValue)
+RefPtr<CSSValue> consumeDynamicRangeLimit(CSSParserTokenRange&, const CSSParserContext&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

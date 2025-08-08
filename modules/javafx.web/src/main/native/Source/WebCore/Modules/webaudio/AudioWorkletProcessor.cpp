@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,10 +41,12 @@
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/JSTypedArrays.h>
 #include <wtf/GetPtr.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioWorkletProcessorConstructionData);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AudioWorkletProcessor);
 
 using namespace JSC;
@@ -57,9 +59,12 @@ static unsigned busChannelCount(const AudioBus& bus)
 template<typename ArrayType>
 static ArrayType* getArrayAtIndex(JSArray& jsArray, JSGlobalObject& globalObject, unsigned index)
 {
+    // We call getDirectIndex() instead of getIndex() since we only want to consider the values
+    // we populated the array with, not the ones the worklet might have set on the Array prototype.
     auto item = jsArray.getDirectIndex(&globalObject, index);
     return item ? jsDynamicCast<ArrayType*>(item) : nullptr;
 }
+
 static unsigned busChannelCount(const AudioBus* bus)
 {
     return bus ? busChannelCount(*bus) : 0;
@@ -75,12 +80,15 @@ static JSObject* toJSObject(JSValueInWrappedObject& wrapper)
     return wrapper ? jsDynamicCast<JSObject*>(wrapper.getValue()) : nullptr;
 }
 
-static JSFloat32Array* constructJSFloat32Array(JSGlobalObject& globalObject, unsigned length, const float* data = nullptr)
+static JSFloat32Array* constructJSFloat32Array(VM& vm, JSGlobalObject& globalObject, unsigned length, std::span<const float> data = { })
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     constexpr bool isResizableOrGrowableShared = false;
     auto* jsArray = JSFloat32Array::create(&globalObject, globalObject.typedArrayStructure(TypeFloat32, isResizableOrGrowableShared), length);
-    if (data)
-        memcpy(jsArray->typedVector(), data, sizeof(float) * length);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    if (!data.empty())
+        memcpySpan(jsArray->typedSpan(), data.first(length));
     return jsArray;
 }
 
@@ -93,26 +101,33 @@ static JSObject* constructFrozenKeyValueObject(VM& vm, JSGlobalObject& globalObj
         PutPropertySlot slot(object, false, PutPropertySlot::PutById);
         // Per the specification, if the value is constant, we pass the JS an array with length 1, with the array item being the constant.
         unsigned jsArraySize = pair.value->containsConstantValue() ? 1 : pair.value->size();
-        object->putInline(&globalObject, Identifier::fromString(vm, pair.key), constructJSFloat32Array(globalObject, jsArraySize, pair.value->data()), slot);
+        auto* array = constructJSFloat32Array(vm, globalObject, jsArraySize, pair.value->span());
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        object->putInline(&globalObject, Identifier::fromString(vm, pair.key), array, slot);
+        RETURN_IF_EXCEPTION(scope, nullptr);
     }
     JSC::objectConstructorFreeze(&globalObject, object);
-    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
+    RETURN_IF_EXCEPTION(scope, nullptr);
     return object;
 }
 
 enum class ShouldPopulateWithBusData : bool { No, Yes };
 
 template <typename T>
-static JSArray* constructFrozenJSArray(VM& vm, JSGlobalObject& globalObject, JSC::ThrowScope& scope, const T& bus, ShouldPopulateWithBusData shouldPopulateWithBusData)
+static JSArray* constructFrozenJSArray(VM& vm, JSGlobalObject& globalObject, const T& bus, ShouldPopulateWithBusData shouldPopulateWithBusData)
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     unsigned numberOfChannels = busChannelCount(bus.get());
     auto* channelsData = JSArray::create(vm, globalObject.originalArrayStructureForIndexingType(ArrayWithContiguous), numberOfChannels);
     for (unsigned j = 0; j < numberOfChannels; ++j) {
         auto* channel = bus->channel(j);
-        channelsData->setIndexQuickly(vm, j, constructJSFloat32Array(globalObject, channel->length(), shouldPopulateWithBusData == ShouldPopulateWithBusData::Yes ? channel->data() : nullptr));
+        auto array = constructJSFloat32Array(vm, globalObject, channel->length(), shouldPopulateWithBusData == ShouldPopulateWithBusData::Yes ? channel->span() : std::span<const float> { });
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        channelsData->setIndexQuickly(vm, j, array);
     }
     JSC::objectConstructorFreeze(&globalObject, channelsData);
-    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
+    RETURN_IF_EXCEPTION(scope, nullptr);
     return channelsData;
 }
 
@@ -121,19 +136,25 @@ static JSArray* constructFrozenJSArray(VM& vm, JSGlobalObject& globalObject, con
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto* array = JSArray::create(vm, globalObject.originalArrayStructureForIndexingType(ArrayWithContiguous), buses.size());
-    for (unsigned i = 0; i < buses.size(); ++i)
-        array->setIndexQuickly(vm, i, constructFrozenJSArray(vm, globalObject, scope, buses[i], shouldPopulateWithBusData));
+    for (unsigned i = 0; i < buses.size(); ++i) {
+        auto* innerArray = constructFrozenJSArray(vm, globalObject, buses[i], shouldPopulateWithBusData);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        array->setIndexQuickly(vm, i, innerArray);
+    }
     JSC::objectConstructorFreeze(&globalObject, array);
-    EXCEPTION_ASSERT(!scope.exception());
+    RETURN_IF_EXCEPTION(scope, nullptr);
     return array;
 }
 
-static void copyDataFromJSArrayToBuses(JSGlobalObject& globalObject, JSArray& jsArray, Vector<Ref<AudioBus>>& buses)
+static void copyDataFromJSArrayToBuses(VM& vm, JSGlobalObject& globalObject, JSArray& jsArray, Vector<Ref<AudioBus>>& buses)
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     // We can safely make assumptions about the structure of the JSArray since we use frozen arrays.
     for (unsigned i = 0; i < buses.size(); ++i) {
         auto& bus = buses[i];
         auto* channelsArray = getArrayAtIndex<JSArray>(jsArray, globalObject, i);
+        RETURN_IF_EXCEPTION(scope, void());
         if (UNLIKELY(!channelsArray)) {
             bus->zero();
             continue;
@@ -141,31 +162,36 @@ static void copyDataFromJSArrayToBuses(JSGlobalObject& globalObject, JSArray& js
         for (unsigned j = 0; j < bus->numberOfChannels(); ++j) {
             auto* channel = bus->channel(j);
             auto* jsChannelData = getArrayAtIndex<JSFloat32Array>(*channelsArray, globalObject, j);
+            RETURN_IF_EXCEPTION(scope, void());
             if (LIKELY(jsChannelData && !jsChannelData->isShared() && jsChannelData->length() == channel->length()))
-                memcpy(channel->mutableData(), jsChannelData->typedVector(), sizeof(float) * channel->length());
+                memcpySpan(channel->mutableSpan(), jsChannelData->typedSpan().first(channel->length()));
             else
                 channel->zero();
         }
     }
 }
 
-static bool copyDataFromBusesToJSArray(JSGlobalObject& globalObject, const Vector<RefPtr<AudioBus>>& buses, JSArray* jsArray)
+static bool copyDataFromBusesToJSArray(VM& vm, JSGlobalObject& globalObject, const Vector<RefPtr<AudioBus>>& buses, JSArray* jsArray)
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     if (!jsArray)
         return false;
 
     for (size_t busIndex = 0; busIndex < buses.size(); ++busIndex) {
         auto& bus = buses[busIndex];
         auto* jsChannelsArray = getArrayAtIndex<JSArray>(*jsArray, globalObject, busIndex);
+        RETURN_IF_EXCEPTION(scope, false);
         unsigned numberOfChannels = busChannelCount(bus.get());
         if (!jsChannelsArray || jsChannelsArray->length() != numberOfChannels)
             return false;
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
             auto* channel = bus->channel(channelIndex);
             auto* jsChannelArray = getArrayAtIndex<JSFloat32Array>(*jsChannelsArray, globalObject, channelIndex);
+            RETURN_IF_EXCEPTION(scope, false);
             if (!jsChannelArray || jsChannelArray->isShared() || jsChannelArray->length() != channel->length())
                 return false;
-            memcpy(jsChannelArray->typedVector(), channel->mutableData(), sizeof(float) * jsChannelArray->length());
+            memcpySpan(jsChannelArray->typedSpan(), channel->mutableSpan().first(jsChannelArray->length()));
         }
     }
     return true;
@@ -173,38 +199,45 @@ static bool copyDataFromBusesToJSArray(JSGlobalObject& globalObject, const Vecto
 
 static bool copyDataFromParameterMapToJSObject(VM& vm, JSGlobalObject& globalObject, const MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap, JSObject* jsObject)
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     if (!jsObject)
         return false;
 
     for (auto& pair : paramValuesMap) {
         auto* jsTypedArray = jsDynamicCast<JSFloat32Array*>(jsObject->get(&globalObject, Identifier::fromString(vm, pair.key)));
+        RETURN_IF_EXCEPTION(scope, false);
         if (!jsTypedArray)
             return false;
         unsigned expectedLength = pair.value->containsConstantValue() ? 1 : pair.value->size();
         if (jsTypedArray->length() != expectedLength)
             return false;
-        memcpy(jsTypedArray->typedVector(), pair.value->data(), sizeof(float) * jsTypedArray->length());
+        memcpySpan(jsTypedArray->typedSpan(), pair.value->span().first(jsTypedArray->length()));
     }
     return true;
 }
 
-static bool zeroJSArray(JSGlobalObject& globalObject, const Vector<Ref<AudioBus>>& outputs, JSArray* jsArray)
+static bool zeroJSArray(VM& vm, JSGlobalObject& globalObject, const Vector<Ref<AudioBus>>& outputs, JSArray* jsArray)
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     if (!jsArray)
         return false;
 
     for (size_t busIndex = 0; busIndex < outputs.size(); ++busIndex) {
         auto& bus = outputs[busIndex];
         auto* jsChannelsArray = getArrayAtIndex<JSArray>(*jsArray, globalObject, busIndex);
+        RETURN_IF_EXCEPTION(scope, false);
         unsigned numberOfChannels = busChannelCount(bus.get());
         if (!jsChannelsArray || jsChannelsArray->length() != numberOfChannels)
             return false;
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
             auto* channel = bus->channel(channelIndex);
             auto* jsChannelArray = getArrayAtIndex<JSFloat32Array>(*jsChannelsArray, globalObject, channelIndex);
+            RETURN_IF_EXCEPTION(scope, false);
             if (!jsChannelArray || jsChannelArray->isShared() || jsChannelArray->length() != channel->length())
                 return false;
-            memset(jsChannelArray->typedVector(), 0, sizeof(float) * jsChannelArray->length());
+            zeroSpan(jsChannelArray->typedSpan());
         }
     }
     return true;
@@ -232,17 +265,31 @@ AudioWorkletProcessor::AudioWorkletProcessor(AudioWorkletGlobalScope& globalScop
 
 void AudioWorkletProcessor::buildJSArguments(VM& vm, JSGlobalObject& globalObject, MarkedArgumentBuffer& args, const Vector<RefPtr<AudioBus>>& inputs, Vector<Ref<AudioBus>>& outputs, const MemoryCompactLookupOnlyRobinHoodHashMap<String, std::unique_ptr<AudioFloatArray>>& paramValuesMap)
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
     // For performance reasons, we cache the arrays passed to JS and reconstruct them only when the topology changes.
-    if (!copyDataFromBusesToJSArray(globalObject, inputs, toJSArray(m_jsInputs)))
-        m_jsInputs.setWeakly(constructFrozenJSArray(vm, globalObject, inputs, ShouldPopulateWithBusData::Yes));
+    bool success = copyDataFromBusesToJSArray(vm, globalObject, inputs, toJSArray(m_jsInputs));
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!success) {
+        auto* array = constructFrozenJSArray(vm, globalObject, inputs, ShouldPopulateWithBusData::Yes);
+        RETURN_IF_EXCEPTION(scope, void());
+        m_jsInputs.setWeakly(array);
+    }
     args.append(m_jsInputs.getValue());
 
-    if (!zeroJSArray(globalObject, outputs, toJSArray(m_jsOutputs)))
-        m_jsOutputs.setWeakly(constructFrozenJSArray(vm, globalObject, outputs, ShouldPopulateWithBusData::No));
+    success = zeroJSArray(vm, globalObject, outputs, toJSArray(m_jsOutputs));
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!success) {
+        auto* array = constructFrozenJSArray(vm, globalObject, outputs, ShouldPopulateWithBusData::No);
+        RETURN_IF_EXCEPTION(scope, void());
+        m_jsOutputs.setWeakly(array);
+    }
     args.append(m_jsOutputs.getValue());
 
-    if (!copyDataFromParameterMapToJSObject(vm, globalObject, paramValuesMap, toJSObject(m_jsParamValues)))
+    success = copyDataFromParameterMapToJSObject(vm, globalObject, paramValuesMap, toJSObject(m_jsParamValues));
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!success)
         m_jsParamValues.setWeakly(constructFrozenKeyValueObject(vm, globalObject, paramValuesMap));
+
     args.append(m_jsParamValues.getValue());
 }
 
@@ -253,7 +300,7 @@ bool AudioWorkletProcessor::process(const Vector<RefPtr<AudioBus>>& inputs, Vect
     DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
 
     ASSERT(wrapper());
-    auto* globalObject = jsDynamicCast<JSDOMGlobalObject*>(m_globalScope.globalObject());
+    auto* globalObject = jsDynamicCast<JSDOMGlobalObject*>(m_globalScope->globalObject());
     if (UNLIKELY(!globalObject))
         return false;
 
@@ -275,7 +322,7 @@ bool AudioWorkletProcessor::process(const Vector<RefPtr<AudioBus>>& inputs, Vect
         return false;
     }
 
-    copyDataFromJSArrayToBuses(*globalObject, *toJSArray(m_jsOutputs), outputs);
+    copyDataFromJSArrayToBuses(vm, *globalObject, *toJSArray(m_jsOutputs), outputs);
 
     return result.toBoolean(globalObject);
 }

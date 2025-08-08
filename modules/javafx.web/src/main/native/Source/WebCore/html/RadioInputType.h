@@ -32,19 +32,21 @@
 #pragma once
 
 #include "BaseCheckableInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 enum class WasSetByJavaScript : bool;
 
 class RadioInputType final : public BaseCheckableInputType {
+    WTF_MAKE_TZONE_ALLOCATED(RadioInputType);
 public:
     static Ref<RadioInputType> create(HTMLInputElement& element)
     {
         return adoptRef(*new RadioInputType(element));
     }
 
-    static void forEachButtonInDetachedGroup(ContainerNode& rootName, const String& groupName, const Function<bool(HTMLInputElement&)>&);
+    static void forEachButtonInDetachedGroup(ContainerNode& rootName, const String& groupName, NOESCAPE const Function<bool(HTMLInputElement&)>&);
 
     bool valueMissing(const String&) const final;
 

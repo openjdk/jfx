@@ -27,6 +27,8 @@
 #include "config.h"
 #include "JSWebAssemblyArray.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #if ENABLE(WEBASSEMBLY)
 
 #include "JSCInlines.h"
@@ -44,8 +46,8 @@ Structure* JSWebAssemblyArray::createStructure(VM& vm, JSGlobalObject* globalObj
     return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
 }
 
-JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, Structure* structure, Wasm::FieldType elementType, size_t size, RefPtr<const Wasm::RTT> rtt)
-    : Base(vm, structure, rtt)
+JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, Structure* structure, Wasm::FieldType elementType, size_t size, RefPtr<const Wasm::RTT>&& rtt)
+    : Base(vm, structure, WTFMove(rtt))
     , m_elementType(elementType)
     , m_size(size)
 {
@@ -59,9 +61,9 @@ JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, Structure* structure, Wasm::Field
             new (&m_payload16) FixedVector<uint16_t>(m_size);
             m_payload16.fill(0);
             return;
-}
+        }
         return;
-}
+    }
 
     switch (m_elementType.type.as<Wasm::Type>().kind) {
     case Wasm::TypeKind::I32:
@@ -80,8 +82,7 @@ JSWebAssemblyArray::JSWebAssemblyArray(VM& vm, Structure* structure, Wasm::Field
         else
             m_payload64.fill(0);
         return;
-}
-
+    }
 }
 
 JSWebAssemblyArray::~JSWebAssemblyArray()
@@ -156,7 +157,6 @@ void JSWebAssemblyArray::copy(JSWebAssemblyArray& dst, uint32_t dstOffset, uint3
 {
     // Handle ref types separately to ensure write barriers are in effect.
     if (elementsAreRefTypes()) {
-        // If the ranges overlap then copy to a tmp buffer first.
         gcSafeMemmove(dst.m_payload64.mutableSpan().subspan(dstOffset).data(), m_payload64.span().subspan(srcOffset).data(), size * sizeof(JSValue));
         vm().writeBarrier(this);
         return;
@@ -201,7 +201,7 @@ void JSWebAssemblyArray::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Base::visitChildren(thisObject, visitor);
 
     if (thisObject->elementsAreRefTypes())
-        visitor.appendValues(bitwise_cast<WriteBarrier<Unknown>*>(thisObject->reftypeData()), thisObject->size());
+        visitor.appendValues(std::bit_cast<WriteBarrier<Unknown>*>(thisObject->reftypeData()), thisObject->size());
 }
 
 DEFINE_VISIT_CHILDREN(JSWebAssemblyArray);
@@ -209,3 +209,5 @@ DEFINE_VISIT_CHILDREN(JSWebAssemblyArray);
 } // namespace JSC
 
 #endif // ENABLE(WEBASSEMBLY)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

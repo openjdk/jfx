@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,12 +26,15 @@
 #include "SVGElement.h"
 #include "SVGLengthContext.h"
 #include "SVGParserUtilities.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/FastCharacterComparison.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGLengthValue);
 
 static inline ASCIILiteral lengthTypeToString(SVGLengthType lengthType)
 {
@@ -57,6 +60,10 @@ static inline ASCIILiteral lengthTypeToString(SVGLengthType lengthType)
         return "pt"_s;
     case SVGLengthType::Picas:
         return "pc"_s;
+    case SVGLengthType::Lh:
+        return "lh"_s;
+    case SVGLengthType::Ch:
+        return "ch"_s;
     }
 
     ASSERT_NOT_REACHED();
@@ -95,6 +102,10 @@ template<typename CharacterType> static inline SVGLengthType parseLengthType(Str
         return SVGLengthType::Points;
     if (compareCharacters(firstCharacterPosition, 'p', 'c'))
         return SVGLengthType::Picas;
+    if (compareCharacters(firstCharacterPosition, 'l', 'h'))
+        return SVGLengthType::Lh;
+    if (compareCharacters(firstCharacterPosition, 'c', 'h'))
+        return SVGLengthType::Ch;
 
     return SVGLengthType::Unknown;
 }
@@ -124,6 +135,10 @@ static inline SVGLengthType primitiveTypeToLengthType(CSSUnitType primitiveType)
         return SVGLengthType::Points;
     case CSSUnitType::CSS_PC:
         return SVGLengthType::Picas;
+    case CSSUnitType::CSS_LH:
+        return SVGLengthType::Lh;
+    case CSSUnitType::CSS_CH:
+        return SVGLengthType::Ch;
     default:
         return SVGLengthType::Unknown;
     }
@@ -156,6 +171,10 @@ static inline CSSUnitType lengthTypeToPrimitiveType(SVGLengthType lengthType)
         return CSSUnitType::CSS_PT;
     case SVGLengthType::Picas:
         return CSSUnitType::CSS_PC;
+    case SVGLengthType::Lh:
+        return CSSUnitType::CSS_LH;
+    case SVGLengthType::Ch:
+        return CSSUnitType::CSS_CH;
     }
 
     ASSERT_NOT_REACHED();
@@ -242,17 +261,17 @@ SVGLengthValue SVGLengthValue::fromCSSPrimitiveValue(const CSSPrimitiveValue& va
 {
     auto primitiveType = value.primitiveType();
     if (primitiveType == CSSUnitType::CSS_NUMBER && shouldConvertNumberToPxLength == ShouldConvertNumberToPxLength::Yes)
-        return { value.floatValue(), SVGLengthType::Pixels };
+        return { value.resolveAsNumber<float>(conversionData), SVGLengthType::Pixels };
 
-    auto lengthType = primitiveTypeToLengthType(primitiveType);
-    switch (lengthType) {
+    switch (primitiveTypeToLengthType(primitiveType)) {
     case SVGLengthType::Unknown:
         return { };
     case SVGLengthType::Number:
+        return { value.resolveAsNumber<float>(conversionData), SVGLengthType::Number };
     case SVGLengthType::Percentage:
-        return { value.floatValue(), lengthType };
+        return { value.resolveAsPercentage<float>(conversionData), SVGLengthType::Percentage };
     default:
-        return { value.computeLength<float>(conversionData), SVGLengthType::Pixels };
+        return { value.resolveAsLength<float>(conversionData), SVGLengthType::Pixels };
     }
 
     ASSERT_NOT_REACHED();

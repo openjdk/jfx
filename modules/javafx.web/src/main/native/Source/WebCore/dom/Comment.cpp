@@ -44,9 +44,9 @@ String Comment::nodeName() const
     return "#comment"_s;
 }
 
-Ref<Node> Comment::cloneNodeInternal(Document& targetDocument, CloningOperation)
+Ref<Node> Comment::cloneNodeInternal(Document& document, CloningOperation, CustomElementRegistry*)
 {
-    return create(targetDocument, String { data() });
+    return create(document, String { data() });
 }
 
 } // namespace WebCore

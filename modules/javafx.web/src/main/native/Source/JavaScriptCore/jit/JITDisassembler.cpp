@@ -37,6 +37,8 @@
 #include <wtf/StringPrintStream.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(JITDisassembler);
@@ -53,7 +55,7 @@ JITDisassembler::~JITDisassembler() = default;
 void JITDisassembler::dump(PrintStream& out, LinkBuffer& linkBuffer)
 {
     m_codeStart = linkBuffer.entrypoint<DisassemblyPtrTag>().untaggedPtr();
-    m_codeEnd = bitwise_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
+    m_codeEnd = std::bit_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
 
     dumpHeader(out, linkBuffer);
     dumpDisassembly(out, linkBuffer, m_startOfCode, m_labelForBytecodeIndexInMainPath[0]);
@@ -82,9 +84,9 @@ void JITDisassembler::reportToProfiler(Profiler::Compilation* compilation, LinkB
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), out.toCString()));
 
     reportInstructions(compilation, linkBuffer, "    ", m_labelForBytecodeIndexInMainPath, firstSlowLabel());
-    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Main Path)\n"));
+    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Main Path)\n"_s));
     reportInstructions(compilation, linkBuffer, "    (S) ", m_labelForBytecodeIndexInSlowPath, m_endOfSlowPath);
-    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Slow Path)\n"));
+    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Slow Path)\n"_s));
     out.reset();
     dumpDisassembly(out, linkBuffer, m_endOfSlowPath, m_endOfCode);
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), out.toCString()));
@@ -171,5 +173,6 @@ void JITDisassembler::dumpDisassembly(PrintStream& out, LinkBuffer& linkBuffer, 
 
 } // namespace JSC
 
-#endif // ENABLE(JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(JIT)

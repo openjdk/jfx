@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -33,17 +33,18 @@
 #include "CSSCounterStyleRule.h"
 #include "CSSFontSelector.h"
 #include "CSSKeyframesRule.h"
+#include "CSSPositionTryRule.h"
 #include "CSSSelectorParser.h"
 #include "CSSViewTransitionRule.h"
 #include "CustomPropertyRegistry.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "MediaQueryEvaluator.h"
+#include "MutableCSSSelector.h"
 #include "StyleResolver.h"
 #include "StyleRuleImport.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
-#include "css/CSSSelectorList.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
@@ -54,7 +55,7 @@ RuleSetBuilder::RuleSetBuilder(RuleSet& ruleSet, const MQ::MediaQueryEvaluator& 
     , m_mediaQueryCollector({ evaluator })
     , m_resolver(resolver)
     , m_shrinkToFit(shrinkToFit)
-    , m_shouldResolveNesting(shouldResolveNesting)
+    , m_builderShouldResolveNesting(shouldResolveNesting)
 {
 }
 
@@ -119,6 +120,11 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
             addStyleRule(uncheckedDowncast<StyleRule>(rule));
         return;
 
+    case StyleRuleType::NestedDeclarations:
+        if (m_ruleSet)
+            addStyleRule(uncheckedDowncast<StyleRuleNestedDeclarations>(rule));
+        return;
+
     case StyleRuleType::Scope: {
         auto scopeRule = uncheckedDowncast<StyleRuleScope>(WTFMove(rule));
         auto previousScopeIdentifier = m_currentScopeIdentifier;
@@ -130,7 +136,7 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
         // https://drafts.csswg.org/css-nesting/#nesting-at-scope
         // For the purposes of the style rules in its body and its own <scope-end> selector,
         // the @scope rule is treated as an ancestor style rule, matching the elements matched by its <scope-start> selector.
-        if (m_shouldResolveNesting == ShouldResolveNesting::Yes) {
+        if (m_shouldResolveNestingForSheet) {
             const CSSSelectorList* parentResolvedSelectorList = nullptr;
             if (m_selectorListStack.size())
                 parentResolvedSelectorList =  m_selectorListStack.last();
@@ -144,7 +150,9 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
         // If <scope-start> is empty, it doesn't create a nesting context (the nesting selector might eventually be replaced by :scope)
         if (!scopeStart.isEmpty())
             m_selectorListStack.append(&scopeStart);
+        m_ancestorStack.append(CSSParserEnum::NestedContextType::Scope);
         addChildRules(scopeRule->childRules());
+        m_ancestorStack.removeLast();
         if (!scopeStart.isEmpty())
             m_selectorListStack.removeLast();
 
@@ -209,6 +217,8 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     case StyleRuleType::FontFeatureValues:
     case StyleRuleType::Keyframes:
     case StyleRuleType::Property:
+    case StyleRuleType::ViewTransition:
+    case StyleRuleType::PositionTry:
             disallowDynamicMediaQueryEvaluationIfNeeded();
             if (m_resolver)
             m_collectedResolverMutatingRules.append({ rule, m_currentCascadeLayerIdentifier });
@@ -220,10 +230,6 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
             addChildRules(supportsRule->childRules());
         return;
     }
-    case StyleRuleType::ViewTransition:
-        if (m_ruleSet)
-            m_ruleSet->setViewTransitionRule(uncheckedDowncast<StyleRuleViewTransition>(rule));
-        return;
 
     case StyleRuleType::Import:
     case StyleRuleType::Margin:
@@ -231,7 +237,6 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
     case StyleRuleType::FontFeatureValuesBlock:
         return;
 
-    case StyleRuleType::Unknown:
     case StyleRuleType::Charset:
     case StyleRuleType::Keyframe:
         ASSERT_NOT_REACHED();
@@ -241,6 +246,8 @@ void RuleSetBuilder::addChildRule(Ref<StyleRuleBase> rule)
 
 void RuleSetBuilder::addRulesFromSheetContents(const StyleSheetContents& sheet)
 {
+    auto nestingResolveScope = SetForScope { m_shouldResolveNestingForSheet, m_builderShouldResolveNesting == ShouldResolveNesting::Yes && !sheet.hasResolvedNesting() };
+
     for (auto& rule : sheet.layerRulesBeforeImportRules())
         registerLayers(rule->nameList());
 
@@ -267,10 +274,15 @@ void RuleSetBuilder::addRulesFromSheetContents(const StyleSheetContents& sheet)
     }
 
     addChildRules(sheet.childRules());
+
+    if (m_shouldResolveNestingForSheet)
+        sheet.setHasResolvedNesting(true);
 }
 
 void RuleSetBuilder::resolveSelectorListWithNesting(StyleRuleWithNesting& rule)
 {
+    ASSERT(m_shouldResolveNestingForSheet);
+
     const CSSSelectorList* parentResolvedSelectorList = nullptr;
     if (m_selectorListStack.size())
         parentResolvedSelectorList =  m_selectorListStack.last();
@@ -298,21 +310,51 @@ void RuleSetBuilder::addStyleRuleWithSelectorList(const CSSSelectorList& selecto
 
 void RuleSetBuilder::addStyleRule(StyleRuleWithNesting& rule)
 {
-    if (m_shouldResolveNesting == ShouldResolveNesting::Yes)
+    if (m_shouldResolveNestingForSheet)
         resolveSelectorListWithNesting(rule);
 
-    auto& selectorList = rule.selectorList();
+    const auto& selectorList = rule.selectorList();
     addStyleRuleWithSelectorList(selectorList, rule);
 
     // Process nested rules
     m_selectorListStack.append(&selectorList);
+    m_ancestorStack.append(CSSParserEnum::NestedContextType::Style);
     for (auto& nestedRule : rule.nestedRules())
         addChildRule(nestedRule);
+    m_ancestorStack.removeLast();
     m_selectorListStack.removeLast();
 }
 
 void RuleSetBuilder::addStyleRule(const StyleRule& rule)
 {
+    addStyleRuleWithSelectorList(rule.selectorList(), rule);
+}
+
+void RuleSetBuilder::addStyleRule(StyleRuleNestedDeclarations& rule)
+{
+    auto whereScopeSelector = [] {
+        auto scopeSelector = makeUnique<MutableCSSSelector>();
+        scopeSelector->setMatch(CSSSelector::Match::PseudoClass);
+        scopeSelector->setPseudoClass(CSSSelector::PseudoClass::Scope);
+        auto whereSelector = makeUnique<MutableCSSSelector>();
+        whereSelector->setMatch(CSSSelector::Match::PseudoClass);
+        whereSelector->setPseudoClass(CSSSelector::PseudoClass::Where);
+        whereSelector->setSelectorList(makeUnique<CSSSelectorList>(MutableCSSSelectorList::from(WTFMove(scopeSelector))));
+        return whereSelector;
+    };
+
+    auto selectorList = [&] {
+        ASSERT(m_selectorListStack.size());
+        ASSERT(m_ancestorStack.size());
+        if (m_ancestorStack.last() == CSSParserEnum::NestedContextType::Style)
+            return *m_selectorListStack.last();
+        ASSERT(m_ancestorStack.last() == CSSParserEnum::NestedContextType::Scope);
+        return CSSSelectorList { MutableCSSSelectorList::from(whereScopeSelector()) };
+    };
+
+    if (m_shouldResolveNestingForSheet)
+        rule.wrapperAdoptSelectorList(selectorList());
+
     addStyleRuleWithSelectorList(rule.selectorList(), rule);
 }
 
@@ -479,6 +521,10 @@ void RuleSetBuilder::addMutatingRulesToResolver()
             auto& registry = m_resolver->document().styleScope().customPropertyRegistry();
             registry.registerFromStylesheet(styleRuleProperty->descriptor());
             continue;
+        }
+        if (auto* styleRuleViewTransition = dynamicDowncast<StyleRuleViewTransition>(rule.get())) {
+            if (m_ruleSet)
+                m_ruleSet->setViewTransitionRule(*styleRuleViewTransition);
         }
     }
 }

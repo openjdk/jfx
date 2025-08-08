@@ -54,16 +54,6 @@ public:
         return m_vm;
     }
 
-    void setVM(VM* vm)
-    {
-        m_vm = vm;
-    }
-
-    void clearVM(const AbstractLocker&)
-    {
-        m_vm = nullptr;
-    }
-
     Condition& condition()
     {
         ASSERT(!m_isAsync);
@@ -140,7 +130,7 @@ public:
         // `takeFisrt` is used to consume a waiter (either notify, timeout, or remove).
         // So, the waiter must not be removed and belong to this list.
         Waiter& waiter = *m_waiters.begin();
-        ASSERT((waiter.vm() || waiter.ticket(NoLockingNecessary)) && waiter.isOnList());
+        ASSERT((!waiter.isAsync() || waiter.ticket(NoLockingNecessary)) && waiter.vm() && waiter.isOnList());
         Ref<Waiter> protectedWaiter = Ref { waiter };
         removeWithUpdate(waiter);
         return protectedWaiter;
@@ -208,6 +198,7 @@ public:
         OK = 0,
         NotEqual = 1,
         TimedOut = 2,
+        Terminated = 3,
     };
 
     JS_EXPORT_PRIVATE WaitSyncResult waitSync(VM&, int32_t* ptr, int32_t expected, Seconds timeout);
@@ -232,6 +223,7 @@ private:
     template <typename ValueType>
     JSValue waitAsyncImpl(JSGlobalObject*, VM&, ValueType* ptr, ValueType expectedValue, Seconds timeout);
 
+    // Notify the waiter if its ticket is not canceled.
     void notifyWaiterImpl(const AbstractLocker&, Ref<Waiter>&&, const ResolveResult);
 
     void timeoutAsyncWaiter(void* ptr, Ref<Waiter>&&);
@@ -243,7 +235,7 @@ private:
     RefPtr<WaiterList> findList(void* ptr);
 
     Lock m_waiterListsLock;
-    HashMap<void*, Ref<WaiterList>> m_waiterLists;
+    UncheckedKeyHashMap<void*, Ref<WaiterList>> m_waiterLists;
 };
 
 } // namespace JSC

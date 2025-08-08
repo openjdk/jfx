@@ -30,7 +30,7 @@
 #import <wtf/HashMap.h>
 #import <wtf/HashTraits.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
 
@@ -45,7 +45,7 @@ class PipelineLayout;
 class TextureView;
 
 // https://gpuweb.github.io/gpuweb/#gpurenderpipeline
-class RenderPipeline : public WGPURenderPipelineImpl, public RefCounted<RenderPipeline>, public CanMakeWeakPtr<RenderPipeline> {
+class RenderPipeline : public RefCountedAndCanMakeWeakPtr<RenderPipeline>, public WGPURenderPipelineImpl {
     WTF_MAKE_TZONE_ALLOCATED(RenderPipeline);
 public:
     struct BufferData {
@@ -86,16 +86,20 @@ public:
     uint32_t sampleMask() const { return m_sampleMask; }
 
     Device& device() const { return m_device; }
-    PipelineLayout& pipelineLayout() const;
+    PipelineLayout& pipelineLayout() const { return m_pipelineLayout; }
+    Ref<PipelineLayout> protectedPipelineLayout() const { return m_pipelineLayout; }
     bool colorDepthStencilTargetsMatch(const WGPURenderPassDescriptor&, const Vector<RefPtr<TextureView>>&, const RefPtr<TextureView>&) const;
     bool validateRenderBundle(const WGPURenderBundleEncoderDescriptor&) const;
     bool writesDepth() const;
     bool writesStencil() const;
 
     const RequiredBufferIndicesContainer& requiredBufferIndices() const { return m_requiredBufferIndices; }
-    WGPUPrimitiveTopology primitiveTopology() const;
-    MTLIndexType stripIndexFormat() const;
+    WGPUPrimitiveTopology primitiveTopology() const { return m_descriptor.primitive.topology; }
+
+    MTLIndexType stripIndexFormat() const { return m_descriptor.primitive.stripIndexFormat == WGPUIndexFormat_Uint16 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32; }
+
     const BufferBindingSizesForBindGroup* minimumBufferSizes(uint32_t) const;
+    RefPtr<RenderPipeline> recomputeLastStrideAsStride() const;
 
 private:
     RenderPipeline(id<MTLRenderPipelineState>, MTLPrimitiveType, std::optional<MTLIndexType>, MTLWinding, MTLCullMode, MTLDepthClipMode, MTLDepthStencilDescriptor *, Ref<PipelineLayout>&&, float depthBias, float depthBiasSlopeScale, float depthBiasClamp, uint32_t sampleMask, MTLRenderPipelineDescriptor*, uint32_t colorAttachmentCount, const WGPURenderPipelineDescriptor&, RequiredBufferIndicesContainer&&, BufferBindingSizesForPipeline&&, Device&);

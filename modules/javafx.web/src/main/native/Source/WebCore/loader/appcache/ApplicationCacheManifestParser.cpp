@@ -26,8 +26,8 @@
 #include "config.h"
 #include "ApplicationCacheManifestParser.h"
 
-#include "ParsingUtilities.h"
 #include "TextResourceDecoder.h"
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
@@ -67,10 +67,10 @@ template<typename CharacterType> static URL makeManifestURL(const URL& manifestU
     return url;
 }
 
-template<typename CharacterType> static constexpr CharacterType cacheManifestIdentifier[] = { 'C', 'A', 'C', 'H', 'E', ' ', 'M', 'A', 'N', 'I', 'F', 'E', 'S', 'T' };
-template<typename CharacterType> static constexpr CharacterType cacheModeIdentifier[] = { 'C', 'A', 'C', 'H', 'E' };
-template<typename CharacterType> static constexpr CharacterType fallbackModeIdentifier[] = { 'F', 'A', 'L', 'L', 'B', 'A', 'C', 'K' };
-template<typename CharacterType> static constexpr CharacterType networkModeIdentifier[] = { 'N', 'E', 'T', 'W', 'O', 'R', 'K' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 14> cacheManifestIdentifier { 'C', 'A', 'C', 'H', 'E', ' ', 'M', 'A', 'N', 'I', 'F', 'E', 'S', 'T' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 5> cacheModeIdentifier { 'C', 'A', 'C', 'H', 'E' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 8> fallbackModeIdentifier { 'F', 'A', 'L', 'L', 'B', 'A', 'C', 'K' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 7> networkModeIdentifier { 'N', 'E', 'T', 'W', 'O', 'R', 'K' };
 
 std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL& manifestURL, const String& manifestMIMEType, std::span<const uint8_t> data)
 {
@@ -78,16 +78,18 @@ std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL&
     bool allowFallbackNamespaceOutsideManifestPath = equalLettersIgnoringASCIICase(manifestMIMEType, cacheManifestMIMEType);
     auto manifestPath = WebCore::manifestPath(manifestURL);
 
-    auto manifestString = TextResourceDecoder::create(cacheManifestMIMEType, "UTF-8")->decodeAndFlush(data);
+    auto manifestString = TextResourceDecoder::create(cacheManifestMIMEType, "UTF-8"_s)->decodeAndFlush(data);
 
     return readCharactersForParsing(manifestString, [&]<typename CharacterType> (StringParsingBuffer<CharacterType> buffer) -> std::optional<ApplicationCacheManifest> {
         ApplicationCacheManifest manifest;
         auto mode = ApplicationCacheParserMode::Explicit;
 
+        auto originalBuffer = buffer.span();
+
         // Look for the magic signature: "^\xFEFF?CACHE MANIFEST[ \t]?" (the BOM is removed by TextResourceDecoder).
         // Example: "CACHE MANIFEST #comment" is a valid signature.
         // Example: "CACHE MANIFEST;V2" is not.
-        if (!skipCharactersExactly(buffer, cacheManifestIdentifier<CharacterType>))
+        if (!skipCharactersExactly(buffer, std::span { cacheManifestIdentifier<CharacterType> }))
             return std::nullopt;
 
         if (buffer.hasCharactersRemaining() && !isManifestWhitespaceOrNewline(*buffer))
@@ -103,32 +105,33 @@ std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL&
             if (buffer.atEnd())
                 break;
 
-            auto lineStart = buffer.position();
+            auto lineStartIndex = buffer.position() - originalBuffer.data();
 
             // Find the end of the line
             skipUntil<isManifestNewline>(buffer);
 
             // Line is a comment, skip to the next line.
-            if (*lineStart == '#')
+            if (originalBuffer[lineStartIndex] == '#')
                 continue;
 
             // Get rid of trailing whitespace
-            auto lineEnd = buffer.position() - 1;
-            while (lineEnd > lineStart && isManifestWhitespace(*lineEnd))
-                --lineEnd;
 
-            StringParsingBuffer lineBuffer(std::span(lineStart, lineEnd + 1));
+            auto lineEndIndex = buffer.position() - originalBuffer.data() - 1;
+            while (lineEndIndex > lineStartIndex && isManifestWhitespace(originalBuffer[lineEndIndex]))
+                --lineEndIndex;
+
+            StringParsingBuffer lineBuffer(originalBuffer.subspan(lineStartIndex, lineEndIndex + 1 - lineStartIndex));
 
             if (lineBuffer[lineBuffer.lengthRemaining() - 1] == ':') {
-                if (skipCharactersExactly(lineBuffer, cacheModeIdentifier<CharacterType>) && lineBuffer.lengthRemaining() == 1) {
+                if (skipCharactersExactly(lineBuffer, std::span { cacheModeIdentifier<CharacterType> }) && lineBuffer.lengthRemaining() == 1) {
                     mode = ApplicationCacheParserMode::Explicit;
                     continue;
                 }
-                if (skipCharactersExactly(lineBuffer, fallbackModeIdentifier<CharacterType>) && lineBuffer.lengthRemaining() == 1) {
+                if (skipCharactersExactly(lineBuffer, std::span { fallbackModeIdentifier<CharacterType> }) && lineBuffer.lengthRemaining() == 1) {
                     mode = ApplicationCacheParserMode::Fallback;
                     continue;
                 }
-                if (skipCharactersExactly(lineBuffer, networkModeIdentifier<CharacterType>) && lineBuffer.lengthRemaining() == 1) {
+                if (skipCharactersExactly(lineBuffer, std::span { networkModeIdentifier<CharacterType> }) && lineBuffer.lengthRemaining() == 1) {
                     mode = ApplicationCacheParserMode::OnlineAllowlist;
                     continue;
                 }
@@ -147,7 +150,7 @@ std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL&
                 // Look for whitespace separating the URL from subsequent ignored tokens.
                 skipUntil<isManifestWhitespace>(lineBuffer);
 
-                auto url = makeManifestURL(manifestURL, std::span { lineStart, lineBuffer.position() });
+                auto url = makeManifestURL(manifestURL, originalBuffer.subspan(lineStartIndex, lineBuffer.position() - &originalBuffer[lineStartIndex]));
                 if (!url.isValid())
                     continue;
 
@@ -165,13 +168,13 @@ std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL&
                 // Look for whitespace separating the URL from subsequent ignored tokens.
                 skipUntil<isManifestWhitespace>(lineBuffer);
 
-                if (lineBuffer.position() - lineStart == 1 && *lineStart == '*') {
+                if (lineBuffer.position() - &originalBuffer[lineStartIndex] == 1 && originalBuffer[lineStartIndex] == '*') {
                     // Wildcard was found.
                     manifest.allowAllNetworkRequests = true;
                     continue;
                 }
 
-                auto url = makeManifestURL(manifestURL, std::span { lineStart, lineBuffer.position() });
+                auto url = makeManifestURL(manifestURL, originalBuffer.subspan(lineStartIndex, lineBuffer.position() - &originalBuffer[lineStartIndex]));
                 if (!url.isValid())
                     continue;
 
@@ -191,7 +194,7 @@ std::optional<ApplicationCacheManifest> parseApplicationCacheManifest(const URL&
                     continue;
                 }
 
-                auto namespaceURL = makeManifestURL(manifestURL, std::span { lineStart, lineBuffer.position() });
+                auto namespaceURL = makeManifestURL(manifestURL, originalBuffer.subspan(lineStartIndex, lineBuffer.position() - &originalBuffer[lineStartIndex]));
                 if (!namespaceURL.isValid())
                     continue;
 

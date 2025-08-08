@@ -171,9 +171,7 @@ class VideoFrame;
 class WebGLRenderingContextBase : public GraphicsContextGL::Client, public GPUBasedCanvasRenderingContext {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebGLRenderingContextBase);
 public:
-    using GPUBasedCanvasRenderingContext::weakPtrFactory;
-    using GPUBasedCanvasRenderingContext::WeakValueType;
-    using GPUBasedCanvasRenderingContext::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(GPUBasedCanvasRenderingContext);
 
     static std::unique_ptr<WebGLRenderingContextBase> create(CanvasBase&, WebGLContextAttributes, WebGLVersion);
     virtual ~WebGLRenderingContextBase();
@@ -349,6 +347,8 @@ public:
         {
         }
 
+        std::span<const DataType> span() const { return unsafeMakeSpan(data(), length()); }
+
         const DataType* data() const
         {
             return WTF::switchOn(m_variant,
@@ -493,7 +493,7 @@ public:
     bool compositingResultsNeedUpdating() const final { return m_compositingResultsNeedUpdating; }
     void prepareForDisplay() final;
 protected:
-    WebGLRenderingContextBase(CanvasBase&, WebGLContextAttributes&&);
+    WebGLRenderingContextBase(CanvasBase&, CanvasRenderingContext::Type, WebGLContextAttributes&&);
 
     friend class EXTDisjointTimerQuery;
     friend class EXTDisjointTimerQueryWebGL2;
@@ -640,9 +640,9 @@ protected:
 
         GCGLenum type;
         union {
-            GCGLfloat fValue[4];
-            GCGLint iValue[4];
-            GCGLuint uiValue[4];
+            std::array<GCGLfloat, 4> fValue;
+            std::array<GCGLint, 4> iValue;
+            std::array<GCGLuint, 4> uiValue;
         };
     };
     Vector<VertexAttribValue> m_vertexAttribValue;
@@ -700,17 +700,16 @@ protected:
 
     PredefinedColorSpace m_drawingBufferColorSpace { PredefinedColorSpace::SRGB };
 
-    GCGLfloat m_clearColor[4];
+    std::array<GCGLfloat, 4> m_clearColor;
     bool m_scissorEnabled;
     GCGLfloat m_clearDepth;
     GCGLint m_clearStencil;
-    GCGLboolean m_colorMask[4];
+    std::array<GCGLboolean, 4> m_colorMask;
     GCGLuint m_stencilMask;
     GCGLboolean m_depthMask;
 
     bool m_rasterizerDiscardEnabled { false };
 
-    bool m_isGLES2Compliant;
     bool m_isDepthStencilSupported;
 
     int m_numGLErrorsToConsoleAllowed;
@@ -780,9 +779,9 @@ protected:
     bool m_areOESTextureHalfFloatFormatsAndTypesAdded { false };
     bool m_areEXTsRGBFormatsAndTypesAdded { false };
 
-    HashSet<GCGLenum> m_supportedTexImageSourceInternalFormats;
-    HashSet<GCGLenum> m_supportedTexImageSourceFormats;
-    HashSet<GCGLenum> m_supportedTexImageSourceTypes;
+    UncheckedKeyHashSet<GCGLenum> m_supportedTexImageSourceInternalFormats;
+    UncheckedKeyHashSet<GCGLenum> m_supportedTexImageSourceFormats;
+    UncheckedKeyHashSet<GCGLenum> m_supportedTexImageSourceTypes;
 
     // Helpers for getParameter and other similar functions.
     bool getBooleanParameter(GCGLenum);

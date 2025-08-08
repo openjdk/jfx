@@ -155,6 +155,7 @@
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
 #include <wtf/MainThread.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
@@ -165,7 +166,7 @@
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(VIDEO)
 #include "VideoFrame.h"
 #endif
 
@@ -214,7 +215,7 @@ static bool isPrefixReserved(const String& name)
 }
 
 // ES2 formats and internal formats supported by TexImageSource.
-static const GCGLenum supportedFormatsES2[] = {
+static constexpr std::array supportedFormatsES2 {
         GraphicsContextGL::RGB,
         GraphicsContextGL::RGBA,
         GraphicsContextGL::LUMINANCE_ALPHA,
@@ -223,7 +224,7 @@ static const GCGLenum supportedFormatsES2[] = {
 };
 
 // ES2 types supported by TexImageSource.
-static const GCGLenum supportedTypesES2[] = {
+static constexpr std::array supportedTypesES2 {
         GraphicsContextGL::UNSIGNED_BYTE,
         GraphicsContextGL::UNSIGNED_SHORT_5_6_5,
         GraphicsContextGL::UNSIGNED_SHORT_4_4_4_4,
@@ -231,7 +232,7 @@ static const GCGLenum supportedTypesES2[] = {
 };
 
 // ES3 internal formats supported by TexImageSource.
-static const GCGLenum supportedInternalFormatsTexImageSourceES3[] = {
+static constexpr std::array supportedInternalFormatsTexImageSourceES3 {
         GraphicsContextGL::R8,
         GraphicsContextGL::R16F,
         GraphicsContextGL::R32F,
@@ -259,7 +260,7 @@ static const GCGLenum supportedInternalFormatsTexImageSourceES3[] = {
 };
 
 // ES3 formats supported by TexImageSource.
-static const GCGLenum supportedFormatsTexImageSourceES3[] = {
+static constexpr std::array supportedFormatsTexImageSourceES3 {
         GraphicsContextGL::RED,
         GraphicsContextGL::RED_INTEGER,
         GraphicsContextGL::RG,
@@ -271,7 +272,7 @@ static const GCGLenum supportedFormatsTexImageSourceES3[] = {
 };
 
 // ES3 types supported by TexImageSource.
-static const GCGLenum supportedTypesTexImageSourceES3[] = {
+static constexpr std::array supportedTypesTexImageSourceES3 {
         GraphicsContextGL::HALF_FLOAT,
         GraphicsContextGL::FLOAT,
         GraphicsContextGL::UNSIGNED_INT_10F_11F_11F_REV,
@@ -279,35 +280,34 @@ static const GCGLenum supportedTypesTexImageSourceES3[] = {
 };
 
 // Internal formats exposed by GL_EXT_sRGB.
-static const GCGLenum supportedInternalFormatsEXTsRGB[] = {
+static constexpr std::array supportedInternalFormatsEXTsRGB {
         GraphicsContextGL::SRGB,
         GraphicsContextGL::SRGB_ALPHA,
 };
 
 // Formats exposed by GL_EXT_sRGB.
-static const GCGLenum supportedFormatsEXTsRGB[] = {
+static constexpr std::array supportedFormatsEXTsRGB {
         GraphicsContextGL::SRGB,
         GraphicsContextGL::SRGB_ALPHA,
 };
 
 // Types exposed by GL_OES_texture_float.
-static const GCGLenum supportedTypesOESTextureFloat[] = {
+static constexpr std::array supportedTypesOESTextureFloat {
         GraphicsContextGL::FLOAT,
 };
 
 // Types exposed by GL_OES_texture_half_float.
-static const GCGLenum supportedTypesOESTextureHalfFloat[] = {
+static constexpr std::array supportedTypesOESTextureHalfFloat {
         GraphicsContextGL::HALF_FLOAT_OES,
 };
 
-
-#define ADD_VALUES_TO_SET(set, arr) \
-    set.add(arr, arr + std::size(arr))
+#define ADD_VALUES_TO_SET(set, array) \
+    set.add(std::begin(array), std::end(array))
 
 // Counter for determining which context has the earliest active ordinal number.
 static std::atomic<uint64_t> s_lastActiveOrdinal;
 
-using WebGLRenderingContextBaseSet = HashSet<WebGLRenderingContextBase*>;
+using WebGLRenderingContextBaseSet = UncheckedKeyHashSet<WebGLRenderingContextBase*>;
 
 static WebGLRenderingContextBaseSet& activeContexts()
 {
@@ -486,13 +486,14 @@ std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(Can
     return renderingContext;
 }
 
-WebGLRenderingContextBase::WebGLRenderingContextBase(CanvasBase& canvas, WebGLContextAttributes&& attributes)
-    : GPUBasedCanvasRenderingContext(canvas)
+WebGLRenderingContextBase::WebGLRenderingContextBase(CanvasBase& canvas, CanvasRenderingContext::Type type, WebGLContextAttributes&& attributes)
+    : GPUBasedCanvasRenderingContext(canvas, type)
     , m_generatedImageCache(4)
     , m_attributes(WTFMove(attributes))
     , m_creationAttributes(m_attributes)
     , m_numGLErrorsToConsoleAllowed(canvas.scriptExecutionContext()->settingsValues().webGLErrorsToConsoleEnabled ? maxGLErrorsAllowedToConsole : 0)
 {
+    ASSERT(isWebGL());
 }
 
 WebGLCanvas WebGLRenderingContextBase::canvas()
@@ -801,13 +802,13 @@ RefPtr<ByteArrayPixelBuffer> WebGLRenderingContextBase::drawingBufferToPixelBuff
     if (!packReverseRowOrder) {
         // Flip the rows for backends that do not support ANGLE_pack_reverse_row_order.
         const size_t rowStride = 4 * rect.width();
-        uint8_t* top = pixelBuffer->bytes().data();
-        uint8_t* bottom = top + (rect.height() - 1) * rowStride;
-        std::unique_ptr<uint8_t[]> temp(new uint8_t[rowStride]);
-        for (; top < bottom; top += rowStride, bottom -= rowStride) {
-            memcpy(temp.get(), bottom, rowStride);
-            memcpy(bottom, top, rowStride);
-            memcpy(top, temp.get(), rowStride);
+        auto temp = MallocSpan<uint8_t>::malloc(rowStride);
+        for (auto bytes = pixelBuffer->bytes(); bytes.size() >= 2 * rowStride; bytes = bytes.subspan(rowStride, bytes.size() - 2 * rowStride)) {
+            auto top = bytes.first(rowStride);
+            auto bottom = bytes.last(rowStride);
+            memcpySpan(temp.mutableSpan(), bottom);
+            memcpySpan(bottom, top);
+            memcpySpan(top, temp.span());
         }
     }
     return pixelBuffer;
@@ -1092,7 +1093,7 @@ void WebGLRenderingContextBase::bindTexture(GCGLenum target, WebGLTexture* textu
     // ES 2.0 doesn't expose this flag (a bug in the specification) and
     // otherwise the application has no control over the seams in this
     // dimension. However, it appears that supporting this properly on all
-    // platforms is fairly involved (will require a HashMap from texture ID
+    // platforms is fairly involved (will require a UncheckedKeyHashMap from texture ID
     // in all ports), and we have not had any complaints, so the logic has
     // been removed.
 }
@@ -1968,8 +1969,6 @@ WebGLAny WebGLRenderingContextBase::getParameter(GCGLenum pname)
         return getIntParameter(pname);
     case GraphicsContextGL::MAX_VIEWPORT_DIMS:
         return getWebGLIntArrayParameter(pname);
-    case GraphicsContextGL::NUM_SHADER_BINARY_FORMATS:
-        return getIntParameter(pname);
     case GraphicsContextGL::PACK_ALIGNMENT:
         return m_packParameters.alignment;
     case GraphicsContextGL::POLYGON_OFFSET_FACTOR:
@@ -2338,7 +2337,7 @@ RefPtr<WebGLShaderPrecisionFormat> WebGLRenderingContextBase::getShaderPrecision
         return nullptr;
     }
 
-    GCGLint range[2] { };
+    std::array<GCGLint, 2> range = { };
     GCGLint precision = 0;
     m_context->getShaderPrecisionFormat(shaderType, precisionType, range, &precision);
     return WebGLShaderPrecisionFormat::create(range[0], range[1], precision);
@@ -2528,36 +2527,36 @@ WebGLAny WebGLRenderingContextBase::getUniform(WebGLProgram& program, const WebG
     }
     switch (baseType) {
     case GraphicsContextGL::FLOAT: {
-        GCGLfloat value[16] = {0};
-        m_context->getUniformfv(program.object(), location, std::span { value, length });
+        std::array<GCGLfloat, 16> value = { };
+        auto valueSpan = std::span { value }.first(length);
+        m_context->getUniformfv(program.object(), location, valueSpan);
         if (length == 1)
             return value[0];
-        return Float32Array::tryCreate(value, length);
+        return Float32Array::tryCreate(valueSpan);
     }
     case GraphicsContextGL::INT: {
-        GCGLint value[4] = {0};
-        m_context->getUniformiv(program.object(), location, std::span { value, length });
+        std::array<GCGLint, 4> value = { };
+        auto valueSpan = std::span { value }.first(length);
+        m_context->getUniformiv(program.object(), location, valueSpan);
         if (length == 1)
             return value[0];
-        return Int32Array::tryCreate(value, length);
+        return Int32Array::tryCreate(valueSpan);
     }
     case GraphicsContextGL::UNSIGNED_INT: {
-        GCGLuint value[4] = {0};
-        m_context->getUniformuiv(program.object(), location, std::span { value, length });
+        std::array<GCGLuint, 4> value = { };
+        auto valueSpan = std::span { value }.first(length);
+        m_context->getUniformuiv(program.object(), location, valueSpan);
         if (length == 1)
             return value[0];
-        return Uint32Array::tryCreate(value, length);
+        return Uint32Array::tryCreate(valueSpan);
     }
     case GraphicsContextGL::BOOL: {
-        GCGLint value[4] = {0};
-        m_context->getUniformiv(program.object(), location, std::span { value, length });
-        if (length > 1) {
-            Vector<bool> vector(length);
-            for (unsigned j = 0; j < length; j++)
-                vector[j] = value[j];
-            return vector;
-        }
-        return static_cast<bool>(value[0]);
+        std::array<GCGLint, 4> value = { };
+        auto valueSpan = std::span { value }.first(length);
+        m_context->getUniformiv(program.object(), location, valueSpan);
+        if (length > 1)
+            return WTF::map(valueSpan, [](auto& integer) { return !!integer; });
+        return !!value[0];
     }
     default:
         notImplemented();
@@ -2641,11 +2640,11 @@ WebGLAny WebGLRenderingContextBase::getVertexAttrib(GCGLuint index, GCGLenum pna
     case GraphicsContextGL::CURRENT_VERTEX_ATTRIB: {
         switch (m_vertexAttribValue[index].type) {
         case GraphicsContextGL::FLOAT:
-            return Float32Array::tryCreate(m_vertexAttribValue[index].fValue, 4);
+            return Float32Array::tryCreate(std::span { m_vertexAttribValue[index].fValue });
         case GraphicsContextGL::INT:
-            return Int32Array::tryCreate(m_vertexAttribValue[index].iValue, 4);
+            return Int32Array::tryCreate(std::span { m_vertexAttribValue[index].iValue });
         case GraphicsContextGL::UNSIGNED_INT:
-            return Uint32Array::tryCreate(m_vertexAttribValue[index].uiValue, 4);
+            return Uint32Array::tryCreate(std::span { m_vertexAttribValue[index].uiValue });
         default:
             ASSERT_NOT_REACHED();
             break;
@@ -2974,7 +2973,7 @@ void WebGLRenderingContextBase::readPixels(GCGLint x, GCGLint y, GCGLsizei width
         return;
     }
     clearIfComposited(CallerTypeOther);
-    std::span data { static_cast<uint8_t*>(pixels.baseAddress()) + packSizes->initialSkipBytes, packSizes->imageBytes };
+    auto data = pixels.mutableSpan().subspan(packSizes->initialSkipBytes, packSizes->imageBytes);
     const bool packReverseRowOrder = false;
     m_context->readPixels(rect, format, type, data, m_packParameters.alignment, m_packParameters.rowLength, packReverseRowOrder);
 }
@@ -3217,7 +3216,8 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSource(TexImageFunctionID f
         if (m_unpackFlipY)
         adjustedSourceImageRect.setY(source.height() - adjustedSourceImageRect.maxY());
 
-    std::span imageData { source.data().data(), source.data().byteLength() };
+    Ref uint8Data = source.data().asUint8ClampedArray();
+    std::span imageData = uint8Data->typedSpan();
         Vector<uint8_t> data;
 
         // The data from ImageData is always of format RGBA8.
@@ -3231,7 +3231,7 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSource(TexImageFunctionID f
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "texImage2D"_s, "bad image data"_s);
                 return { };
             }
-        imageData = std::span { data.data(), data.size() };
+        imageData = data.span();
         }
     ScopedTightUnpackParameters temporaryResetUnpack(*this);
         if (functionID == TexImageFunctionID::TexImage2D) {
@@ -3338,10 +3338,6 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSource(TexImageFunctionID f
         // elements' size for WebGL 1.0 as late as possible.
     bool sourceImageRectIsDefault = inputSourceImageRect == sentinelEmptyRect() || inputSourceImageRect == IntRect(0, 0, source.videoWidth(), source.videoHeight());
 
-#if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-    if (RefPtr player = source.player())
-            player->willBeAskedToPaintGL();
-#endif
         // Go through the fast path doing a GPU-GPU textures copy without a readback to system memory if possible.
         // Otherwise, it will fall back to the normal SW path.
         // FIXME: The current restrictions require that format shoud be RGB or RGBA,
@@ -3351,10 +3347,12 @@ ExceptionOr<void> WebGLRenderingContextBase::texImageSource(TexImageFunctionID f
             && type == GraphicsContextGL::UNSIGNED_BYTE
             && !level) {
         if (RefPtr player = source.player()) {
-                if (m_context->copyTextureFromMedia(*player, texture->object(), target, level, internalformat, format, type, m_unpackPremultiplyAlpha, m_unpackFlipY))
+            if (RefPtr videoFrame = player->videoFrameForCurrentTime()) {
+                if (m_context->copyTextureFromVideoFrame(*videoFrame, texture->object(), target, level, internalformat, format, type, m_unpackPremultiplyAlpha, m_unpackFlipY))
                     return { };
                 }
             }
+    }
 
         // Fallback pure SW path.
     RefPtr<Image> image = videoFrameToImage(source, functionName);
@@ -3518,22 +3516,19 @@ void WebGLRenderingContextBase::texImageImpl(TexImageFunctionID functionID, GCGL
 
     GraphicsContextGL::DataFormat sourceDataFormat = imageExtractor.imageSourceFormat();
     GraphicsContextGL::AlphaOp alphaOp = imageExtractor.imageAlphaOp();
-    const uint8_t* imagePixelData = static_cast<const uint8_t*>(imageExtractor.imagePixelData());
-    CheckedSize imagePixelByteLength(imageExtractor.imageWidth());
-    imagePixelByteLength *= imageExtractor.imageHeight();
-    imagePixelByteLength *= 4u;
-    if (imagePixelByteLength.hasOverflowed()) {
+    auto imagePixelData = imageExtractor.imagePixelData();
+    if (!imagePixelData.data()) {
         synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, functionName, "image too large"_s);
         return;
     }
 
-    std::span pixels { imagePixelData, imagePixelByteLength };
+    auto pixels = imagePixelData;
     if (type != GraphicsContextGL::UNSIGNED_BYTE || sourceDataFormat != GraphicsContextGL::DataFormat::RGBA8 || format != GraphicsContextGL::RGBA || alphaOp != GraphicsContextGL::AlphaOp::DoNothing || flipY || selectingSubRectangle || depth != 1) {
-        if (!m_context->packImageData(&image, imagePixelData, format, type, flipY, alphaOp, sourceDataFormat, imageExtractor.imageWidth(), imageExtractor.imageHeight(), adjustedSourceImageRect, depth, imageExtractor.imageSourceUnpackAlignment(), unpackImageHeight, data)) {
+        if (!m_context->packImageData(&image, pixels, format, type, flipY, alphaOp, sourceDataFormat, imageExtractor.imageWidth(), imageExtractor.imageHeight(), adjustedSourceImageRect, depth, imageExtractor.imageSourceUnpackAlignment(), unpackImageHeight, data)) {
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "packImage error"_s);
             return;
         }
-        pixels = std::span { data.data(), data.size() };
+        pixels = data.span();
     }
 
     ScopedTightUnpackParameters temporaryResetUnpack(*this);
@@ -4066,6 +4061,7 @@ bool WebGLRenderingContextBase::validateForbiddenInternalFormats(ASCIILiteral fu
     case GraphicsContextGL::BGRA4_ANGLEX:
     case GraphicsContextGL::BGR5_A1_ANGLEX:
     case GraphicsContextGL::BGRA8_SRGB_ANGLEX:
+    case GraphicsContextGL::RGBX8_SRGB_ANGLEX:
     case GraphicsContextGL::BGRA_EXT:
     case GraphicsContextGL::DEPTH_COMPONENT32_OES:
     case GraphicsContextGL::BGRA8_EXT:
@@ -4691,12 +4687,9 @@ Vector<bool> WebGLRenderingContextBase::getBooleanArrayParameter(GCGLenum pname)
         notImplemented();
         return { };
     }
-    GCGLboolean value[4] = { 0 };
+    std::array<GCGLboolean, 4> value = { };
     m_context->getBooleanv(pname, value);
-    Vector<bool> vector(4);
-    for (unsigned i = 0; i < 4; ++i)
-        vector[i] = value[i];
-    return vector;
+    return WTF::map(value, [](auto& boolean) -> bool { return boolean; });
 }
 
 float WebGLRenderingContextBase::getFloatParameter(GCGLenum pname)
@@ -5013,7 +5006,7 @@ std::optional<std::span<const T>> WebGLRenderingContextBase::validateUniformMatr
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "invalid size"_s);
         return { };
     }
-    return std::span { values.data() + srcOffset, static_cast<size_t>(actualSize) };
+    return values.span().subspan(srcOffset, actualSize);
 }
 
 template
@@ -5139,8 +5132,8 @@ void WebGLRenderingContextBase::vertexAttribfvImpl(ASCIILiteral functionName, GC
     if (isContextLost())
         return;
 
-    auto data = list.data();
-    if (!data) {
+    auto data = list.span();
+    if (!data.data()) {
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "no array"_s);
         return;
     }
@@ -5156,16 +5149,16 @@ void WebGLRenderingContextBase::vertexAttribfvImpl(ASCIILiteral functionName, GC
     }
         switch (expectedSize) {
         case 1:
-        m_context->vertexAttrib1fv(index, std::span<const GCGLfloat, 1> { data, 1 });
+        m_context->vertexAttrib1fv(index, data.first<1>());
             break;
         case 2:
-        m_context->vertexAttrib2fv(index, std::span<const GCGLfloat, 2> { data, 2 });
+        m_context->vertexAttrib2fv(index, data.first<2>());
             break;
         case 3:
-        m_context->vertexAttrib3fv(index, std::span<const GCGLfloat, 3> { data, 3 });
+        m_context->vertexAttrib3fv(index, data.first<3>());
             break;
         case 4:
-        m_context->vertexAttrib4fv(index, std::span<const GCGLfloat, 4> { data, 4 });
+        m_context->vertexAttrib4fv(index, data.first<4>());
             break;
         }
     VertexAttribValue& attribValue = m_vertexAttribValue[index];
@@ -5237,7 +5230,7 @@ void WebGLRenderingContextBase::maybeRestoreContext()
             if (auto* htmlCanvas = this->htmlCanvas()) {
                 CheckedPtr renderBox = htmlCanvas->renderBox();
                 if (renderBox && renderBox->hasAcceleratedCompositing())
-                    renderBox->contentChanged(CanvasChanged);
+                    renderBox->contentChanged(ContentChangeType::Canvas);
     }
             return;
         }
@@ -5279,7 +5272,7 @@ RefPtr<ImageBuffer> WebGLRenderingContextBase::LRUImageBufferCache::imageBuffer(
     }
 
     // FIXME (149423): Should this ImageBuffer be unconditionally unaccelerated?
-    auto temp = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, colorSpace, ImageBufferPixelFormat::BGRA8);
+    auto temp = ImageBuffer::create(size, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, colorSpace, ImageBufferPixelFormat::BGRA8);
     if (!temp)
         return nullptr;
     ASSERT(m_buffers.size() > 0);

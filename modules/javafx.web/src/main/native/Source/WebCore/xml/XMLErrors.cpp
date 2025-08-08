@@ -41,8 +41,11 @@
 #include "LocalFrame.h"
 #include "SVGNames.h"
 #include "Text.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XMLErrors);
 
 using namespace HTMLNames;
 
@@ -53,20 +56,20 @@ XMLErrors::XMLErrors(Document& document)
 {
 }
 
-void XMLErrors::handleError(ErrorType type, const char* message, int lineNumber, int columnNumber)
+void XMLErrors::handleError(Type type, const char* message, int lineNumber, int columnNumber)
 {
     handleError(type, message, TextPosition(OrdinalNumber::fromOneBasedInt(lineNumber), OrdinalNumber::fromOneBasedInt(columnNumber)));
 }
 
-void XMLErrors::handleError(ErrorType type, const char* message, TextPosition position)
+void XMLErrors::handleError(Type type, const char* message, TextPosition position)
 {
-    if (type == fatal || (m_errorCount < maxErrors && (!m_lastErrorPosition || (m_lastErrorPosition->m_line != position.m_line && m_lastErrorPosition->m_column != position.m_column)))) {
+    if (type == Type::Fatal || (m_errorCount < maxErrors && (!m_lastErrorPosition || (m_lastErrorPosition->m_line != position.m_line && m_lastErrorPosition->m_column != position.m_column)))) {
         switch (type) {
-        case warning:
+        case Type::Warning:
             appendErrorMessage("warning"_s, position, message);
             break;
-        case fatal:
-        case nonFatal:
+        case Type::Fatal:
+        case Type::NonFatal:
             appendErrorMessage("error"_s, position, message);
         }
 
@@ -78,21 +81,21 @@ void XMLErrors::handleError(ErrorType type, const char* message, TextPosition po
 void XMLErrors::appendErrorMessage(ASCIILiteral typeString, TextPosition position, const char* message)
 {
     // <typeString> on line <lineNumber> at column <columnNumber>: <message>
-    m_errorMessages.append(typeString, " on line "_s, position.m_line.oneBasedInt(), " at column "_s, position.m_column.oneBasedInt(), ": "_s, span(message));
+    m_errorMessages.append(typeString, " on line "_s, position.m_line.oneBasedInt(), " at column "_s, position.m_column.oneBasedInt(), ": "_s, unsafeSpan(message));
 }
 
 static inline Ref<Element> createXHTMLParserErrorHeader(Document& document, String&& errorMessages)
 {
-    Ref<Element> reportElement = document.createElement(QualifiedName(nullAtom(), "parsererror"_s, xhtmlNamespaceURI), true);
+    Ref reportElement = document.createElement(QualifiedName(nullAtom(), "parsererror"_s, xhtmlNamespaceURI), true);
 
     Attribute reportAttribute(styleAttr, "display: block; white-space: pre; border: 2px solid #c77; padding: 0 1em 0 1em; margin: 1em; background-color: #fdd; color: black"_s);
     reportElement->parserSetAttributes(std::span(&reportAttribute, 1));
 
-    auto h3 = HTMLHeadingElement::create(h3Tag, document);
+    Ref h3 = HTMLHeadingElement::create(h3Tag, document);
     reportElement->parserAppendChild(h3);
     h3->parserAppendChild(Text::create(document, "This page contains the following errors:"_s));
 
-    auto fixed = HTMLDivElement::create(document);
+    Ref fixed = HTMLDivElement::create(document);
     Attribute fixedAttribute(styleAttr, "font-family:monospace;font-size:12px"_s);
     fixed->parserSetAttributes(std::span(&fixedAttribute, 1));
     reportElement->parserAppendChild(fixed);
@@ -113,52 +116,52 @@ void XMLErrors::insertErrorMessageBlock()
     // where the errors are located)
 
     // Create elements for display
-    RefPtr<Element> documentElement = m_document.documentElement();
+    Ref document = m_document.get();
+    RefPtr documentElement = document->documentElement();
     if (!documentElement) {
-        auto rootElement = HTMLHtmlElement::create(m_document);
-        auto body = HTMLBodyElement::create(m_document);
+        Ref rootElement = HTMLHtmlElement::create(document);
+        Ref body = HTMLBodyElement::create(document);
         rootElement->parserAppendChild(body);
-        m_document.parserAppendChild(rootElement);
+        document->parserAppendChild(WTFMove(rootElement));
         documentElement = WTFMove(body);
     } else if (documentElement->namespaceURI() == SVGNames::svgNamespaceURI) {
-        auto rootElement = HTMLHtmlElement::create(m_document);
-        auto head = HTMLHeadElement::create(m_document);
-        auto style = HTMLStyleElement::create(m_document);
+        Ref rootElement = HTMLHtmlElement::create(document);
+        Ref head = HTMLHeadElement::create(document);
+        Ref style = HTMLStyleElement::create(document);
         head->parserAppendChild(style);
-        style->parserAppendChild(m_document.createTextNode("html, body { height: 100% } parsererror + svg { width: 100%; height: 100% }"_s));
+        style->parserAppendChild(document->createTextNode("html, body { height: 100% } parsererror + svg { width: 100%; height: 100% }"_s));
         style->finishParsingChildren();
-        rootElement->parserAppendChild(head);
-        auto body = HTMLBodyElement::create(m_document);
+        rootElement->parserAppendChild(WTFMove(head));
+        Ref body = HTMLBodyElement::create(document);
         rootElement->parserAppendChild(body);
 
-        m_document.parserRemoveChild(*documentElement);
+        document->parserRemoveChild(*documentElement);
         if (!documentElement->parentNode())
             body->parserAppendChild(*documentElement);
 
-        m_document.parserAppendChild(rootElement);
+        document->parserAppendChild(WTFMove(rootElement));
 
         documentElement = WTFMove(body);
     }
 
-    auto reportElement = createXHTMLParserErrorHeader(m_document, m_errorMessages.toString());
+    Ref reportElement = createXHTMLParserErrorHeader(document, m_errorMessages.toString());
 
 #if ENABLE(XSLT)
-    if (m_document.transformSourceDocument()) {
+    if (document->transformSourceDocument()) {
         Attribute attribute(styleAttr, "white-space: normal"_s);
-        auto paragraph = HTMLParagraphElement::create(m_document);
+        Ref paragraph = HTMLParagraphElement::create(document);
         paragraph->parserSetAttributes(std::span(&attribute, 1));
-        paragraph->parserAppendChild(m_document.createTextNode("This document was created as the result of an XSL transformation. The line and column numbers given are from the transformed result."_s));
-        reportElement->parserAppendChild(paragraph);
+        paragraph->parserAppendChild(document->createTextNode("This document was created as the result of an XSL transformation. The line and column numbers given are from the transformed result."_s));
+        reportElement->parserAppendChild(WTFMove(paragraph));
     }
 #endif
 
-    Node* firstChild = documentElement->firstChild();
-    if (firstChild)
-        documentElement->parserInsertBefore(reportElement, *firstChild);
+    if (RefPtr firstChild = documentElement->firstChild())
+        documentElement->parserInsertBefore(WTFMove(reportElement), firstChild.releaseNonNull());
     else
-        documentElement->parserAppendChild(reportElement);
+        documentElement->parserAppendChild(WTFMove(reportElement));
 
-    m_document.updateStyleIfNeeded();
+    document->updateStyleIfNeeded();
 }
 
 } // namespace WebCore

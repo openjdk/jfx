@@ -30,13 +30,14 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-
 #include "BaseDateAndTimeInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class DateTimeLocalInputType final : public BaseDateAndTimeInputType {
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeLocalInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeLocalInputType);
 public:
     static Ref<DateTimeLocalInputType> create(HTMLInputElement& element)
     {
@@ -66,5 +67,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(DateTimeLocalInputType, Type::DateTimeLocal)
-
-#endif

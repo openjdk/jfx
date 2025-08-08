@@ -91,9 +91,9 @@ void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* old
         section()->rowLogicalHeightChanged(rowIndex());
 
     // If border was changed, notify table.
-    if (RenderTable* table = this->table()) {
-        if (oldStyle && !oldStyle->borderIsEquivalentForPainting(style()))
-            table->invalidateCollapsedBorders();
+    if (CheckedPtr table = this->table()) {
+        if (oldStyle)
+            table->invalidateCollapsedBordersAfterStyleChangeIfNeeded(*oldStyle, style());
 
         if (oldStyle && diff == StyleDifference::Layout && needsLayout() && table->collapseBorders() && borderWidthChanged(oldStyle, &style())) {
             // If the border width changes on a row, we need to make sure the cells in the row know to lay out again.
@@ -116,14 +116,14 @@ const BorderValue& RenderTableRow::borderAdjoiningStartCell(const RenderTableCel
 {
     ASSERT_UNUSED(cell, cell.isFirstOrLastCellInRow());
     // FIXME: https://webkit.org/b/79272 - Add support for mixed directionality at the cell level.
-    return style().borderStart();
+    return style().borderStart(table()->writingMode());
 }
 
 const BorderValue& RenderTableRow::borderAdjoiningEndCell(const RenderTableCell& cell) const
 {
     ASSERT_UNUSED(cell, cell.isFirstOrLastCellInRow());
     // FIXME: https://webkit.org/b/79272 - Add support for mixed directionality at the cell level.
-    return style().borderEnd();
+    return style().borderEnd(table()->writingMode());
 }
 
 void RenderTableRow::didInsertTableCell(RenderTableCell& child, RenderObject* beforeChild)
@@ -144,7 +144,7 @@ void RenderTableRow::layout()
     ASSERT(needsLayout());
 
     // Table rows do not add translation.
-    LayoutStateMaintainer statePusher(*this, LayoutSize(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(*this, LayoutSize(), isTransformed() || hasReflection() || writingMode().isBlockFlipped());
 
     auto* layoutState = view().frameView().layoutContext().layoutState();
     bool paginated = layoutState->isPaginated();

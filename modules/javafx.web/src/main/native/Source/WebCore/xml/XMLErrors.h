@@ -28,7 +28,14 @@
 
 #pragma once
 
+// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
+IGNORE_WARNINGS_BEGIN("deprecated-declarations")
+IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/parser.h>
+IGNORE_WARNINGS_END
+IGNORE_WARNINGS_END
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -37,20 +44,20 @@ namespace WebCore {
 class Document;
 
 class XMLErrors {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(XMLErrors);
 public:
     explicit XMLErrors(Document&);
 
-    enum ErrorType { warning, nonFatal, fatal };
-    void handleError(ErrorType, const char* message, int lineNumber, int columnNumber);
-    void handleError(ErrorType, const char* message, TextPosition);
+    enum class Type : uint8_t { Warning, NonFatal, Fatal };
+    void handleError(Type, const char* message, int lineNumber, int columnNumber);
+    void handleError(Type, const char* message, TextPosition);
 
     void insertErrorMessageBlock();
 
 private:
     void appendErrorMessage(ASCIILiteral typeString, TextPosition, const char* message);
 
-    Document& m_document;
+    CheckedRef<Document> m_document;
     int m_errorCount { 0 };
     std::optional<TextPosition> m_lastErrorPosition;
     StringBuilder m_errorMessages;

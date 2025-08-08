@@ -34,7 +34,7 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
-#include <wtf/WeakRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -43,7 +43,6 @@ class FrameView;
 class FrameLoaderClient;
 class FrameLoadRequest;
 class HTMLFrameOwnerElement;
-class HistoryController;
 class NavigationScheduler;
 class Page;
 class RenderWidget;
@@ -52,11 +51,16 @@ class WeakPtrImplWithEventTargetData;
 class WindowProxy;
 
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class SandboxFlag : uint16_t;
+enum class ScrollbarMode : uint8_t;
+
+using SandboxFlags = OptionSet<SandboxFlag>;
 
 class Frame : public ThreadSafeRefCounted<Frame, WTF::DestructionThread::Main>, public CanMakeWeakPtr<Frame> {
 public:
     virtual ~Frame();
 
+    enum class NotifyUIProcess : bool { No, Yes };
     enum class FrameType : bool { Local, Remote };
     FrameType frameType() const { return m_frameType; }
 
@@ -69,14 +73,16 @@ public:
     FrameIdentifier frameID() const { return m_frameID; }
     inline Page* page() const; // Defined in Page.h.
     inline RefPtr<Page> protectedPage() const; // Defined in Page.h.
-    WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
+    inline std::optional<PageIdentifier> pageID() const; // Defined in Page.h.
     Settings& settings() const { return m_settings.get(); }
-    Frame& mainFrame() const { return m_mainFrame.get(); }
-    bool isMainFrame() const { return this == m_mainFrame.ptr(); }
-    WEBCORE_EXPORT void setOpener(Frame*);
+    Frame& mainFrame() { return *m_mainFrame; }
+    const Frame& mainFrame() const { return *m_mainFrame; }
+    bool isMainFrame() const { return this == m_mainFrame.get(); }
+    WEBCORE_EXPORT void disownOpener();
+    WEBCORE_EXPORT void updateOpener(Frame&, NotifyUIProcess = NotifyUIProcess::Yes);
+    WEBCORE_EXPORT void setOpenerForWebKitLegacy(Frame*);
     const Frame* opener() const { return m_opener.get(); }
     Frame* opener() { return m_opener.get(); }
-    WEBCORE_EXPORT Vector<Ref<Frame>> openedFrames();
     bool hasOpenedFrames() const;
     WEBCORE_EXPORT void detachFromAllOpenedFrames();
     virtual bool isRootFrame() const = 0;
@@ -92,11 +98,8 @@ public:
 
     WEBCORE_EXPORT void disconnectOwnerElement();
     NavigationScheduler& navigationScheduler() const { return m_navigationScheduler.get(); }
-    CheckedRef<NavigationScheduler> checkedNavigationScheduler() const;
-    WEBCORE_EXPORT void takeWindowProxyFrom(Frame&);
-
-    HistoryController& history() const { return m_history.get(); }
-    WEBCORE_EXPORT CheckedRef<HistoryController> checkedHistory() const;
+    Ref<NavigationScheduler> protectedNavigationScheduler() const;
+    WEBCORE_EXPORT void takeWindowProxyAndOpenerFrom(Frame&);
 
     virtual void frameDetached() = 0;
     virtual bool preventsParentFromBeingComplete() const = 0;
@@ -104,7 +107,7 @@ public:
     virtual void didFinishLoadInAnotherProcess() = 0;
 
     virtual FrameView* virtualView() const = 0;
-    RefPtr<FrameView> protectedVirtualView() const;
+    WEBCORE_EXPORT RefPtr<FrameView> protectedVirtualView() const;
     virtual void disconnectView() = 0;
     virtual FrameLoaderClient& loaderClient() = 0;
     virtual void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) = 0;
@@ -114,10 +117,16 @@ public:
     virtual String customNavigatorPlatform() const = 0;
     virtual OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const = 0;
 
+    virtual void updateSandboxFlags(SandboxFlags, NotifyUIProcess);
+
     WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
 
     WEBCORE_EXPORT void setOwnerPermissionsPolicy(OwnerPermissionsPolicyData&&);
     WEBCORE_EXPORT std::optional<OwnerPermissionsPolicyData> ownerPermissionsPolicy() const;
+
+    virtual void updateScrollingMode() = 0;
+
+    void stopForBackForwardCache();
 
 protected:
     Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent, Frame* opener);
@@ -134,13 +143,12 @@ private:
     mutable FrameTree m_treeNode;
     Ref<WindowProxy> m_windowProxy;
     WeakPtr<HTMLFrameOwnerElement, WeakPtrImplWithEventTargetData> m_ownerElement;
-    const WeakRef<Frame> m_mainFrame;
+    const WeakPtr<Frame> m_mainFrame;
     const Ref<Settings> m_settings;
     FrameType m_frameType;
     mutable UniqueRef<NavigationScheduler> m_navigationScheduler;
     WeakPtr<Frame> m_opener;
     WeakHashSet<Frame> m_openedFrames;
-    mutable UniqueRef<HistoryController> m_history;
     std::optional<OwnerPermissionsPolicyData> m_ownerPermisssionsPolicyOverride;
 };
 

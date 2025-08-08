@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -46,22 +46,16 @@
 #include <wtf/Assertions.h>
 #include <wtf/HexNumber.h>
 #include <wtf/dtoa.h>
+#include <wtf/text/ASCIIFastPath.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 const ASCIILiteral ObjectProtoCalledOnNullOrUndefinedError { "Object.prototype.__proto__ called on null or undefined"_s };
 const ASCIILiteral RestrictedPropertyAccessError { "'arguments', 'callee', and 'caller' cannot be accessed in this context."_s };
-
-template<unsigned charactersCount>
-static constexpr WTF::BitSet<256> makeCharacterBitmap(const char (&characters)[charactersCount])
-{
-    static_assert(charactersCount > 0, "Since string literal is null terminated, characterCount is always larger than 0");
-    WTF::BitSet<256> bitmap;
-    for (unsigned i = 0; i < charactersCount - 1; ++i)
-        bitmap.set(characters[i]);
-    return bitmap;
-}
 
 template<typename CharacterType>
 static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNotEscape, std::span<const CharacterType> characters)
@@ -76,7 +70,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         return JSC::throwException(globalObject, scope, createURIError(globalObject, "String contained an illegal UTF-16 sequence."_s));
     };
 
-    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     builder.reserveCapacity(characters.size());
 
     // 4. Repeat
@@ -161,7 +155,7 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     size_t k = 0;
     UChar u = 0;
     while (k < characters.size()) {
@@ -259,12 +253,11 @@ template <typename CharType>
 static double jsBinaryIntegerLiteral(std::span<const CharType>& data)
 {
     // Binary number.
-    data = data.subspan(2);
+    skip(data, 2);
     auto firstDigitPosition = data;
     double number = 0;
     while (true) {
-        number = number * 2 + (data.front() - '0');
-        data = data.subspan(1);
+        number = number * 2 + (consume(data) - '0');
         if (data.empty())
             break;
         if (!isASCIIBinaryDigit(data.front()))
@@ -281,12 +274,11 @@ template <typename CharType>
 static double jsOctalIntegerLiteral(std::span<const CharType>& data)
 {
     // Octal number.
-    data = data.subspan(2);
+    skip(data, 2);
     auto firstDigitPosition = data;
     double number = 0;
     while (true) {
-        number = number * 8 + (data.front() - '0');
-        data = data.subspan(1);
+        number = number * 8 + (consume(data) - '0');
         if (data.empty())
             break;
         if (!isASCIIOctalDigit(data.front()))
@@ -303,12 +295,11 @@ template <typename CharType>
 static double jsHexIntegerLiteral(std::span<const CharType>& data)
 {
     // Hex number.
-    data = data.subspan(2);
+    skip(data, 2);
     auto firstDigitPosition = data;
     double number = 0;
     while (true) {
-        number = number * 16 + toASCIIHexValue(data.front());
-        data = data.subspan(1);
+        number = number * 16 + toASCIIHexValue(consume(data));
         if (data.empty())
             break;
         if (!isASCIIHexDigit(data.front()))
@@ -329,7 +320,7 @@ static double jsStrDecimalLiteral(std::span<const CharType>& data)
     size_t parsedLength;
     double number = parseDouble(data, parsedLength);
     if (parsedLength) {
-        data = data.subspan(parsedLength);
+        skip(data, parsedLength);
         return number;
     }
 
@@ -337,21 +328,21 @@ static double jsStrDecimalLiteral(std::span<const CharType>& data)
     switch (data.front()) {
     case 'I':
         if (isInfinity(data)) {
-            data = data.subspan(SizeOfInfinity);
+            skip(data, SizeOfInfinity);
             return std::numeric_limits<double>::infinity();
         }
         break;
 
     case '+':
         if (isInfinity(data.subspan(1))) {
-            data = data.subspan(SizeOfInfinity + 1);
+            skip(data, SizeOfInfinity + 1);
             return std::numeric_limits<double>::infinity();
         }
         break;
 
     case '-':
         if (isInfinity(data.subspan(1))) {
-            data = data.subspan(SizeOfInfinity + 1);
+            skip(data, SizeOfInfinity + 1);
             return -std::numeric_limits<double>::infinity();
         }
         break;
@@ -365,10 +356,7 @@ template <typename CharacterType>
 static double toDouble(std::span<const CharacterType> characters)
 {
     // Skip leading white space.
-    for (; !characters.empty(); characters = characters.subspan(1)) {
-        if (!isStrWhiteSpace(characters.front()))
-            break;
-    }
+    skipWhile<isStrWhiteSpace>(characters);
 
     // Empty string.
     if (characters.empty())
@@ -388,10 +376,8 @@ static double toDouble(std::span<const CharacterType> characters)
         number = jsStrDecimalLiteral(characters);
 
     // Allow trailing white space.
-    for (; !characters.empty(); characters = characters.subspan(1)) {
-        if (!isStrWhiteSpace(characters.front()))
-            break;
-    }
+    skipWhile<isStrWhiteSpace>(characters);
+
     if (!characters.empty())
         return PNaN;
 
@@ -443,10 +429,7 @@ static double parseFloat(StringView s)
         auto data = s.span8();
 
         // Skip leading white space.
-        for (; !data.empty(); data = data.subspan(1)) {
-            if (!isStrWhiteSpace(data.front()))
-                break;
-        }
+        skipWhile<isStrWhiteSpace>(data);
 
         // Empty string.
         if (data.empty())
@@ -458,10 +441,7 @@ static double parseFloat(StringView s)
     auto data = s.span16();
 
     // Skip leading white space.
-    for (; !data.empty(); data = data.subspan(1)) {
-        if (!isStrWhiteSpace(data.front()))
-            break;
-    }
+    skipWhile<isStrWhiteSpace>(data);
 
     // Empty string.
     if (data.empty())
@@ -476,38 +456,51 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue x = callFrame->argument(0);
-    JSString* codeString = nullptr;
-    if (LIKELY(x.isString()))
-        codeString = asString(x);
-    else if (Options::useTrustedTypes()) {
+    String programSource;
+    bool isTrusted = false;
+    if (LIKELY(x.isString())) {
+        programSource = x.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+    } else if (Options::useTrustedTypes() && x.isObject()) {
+        auto* structure = globalObject->trustedScriptStructure();
+        if (structure == asObject(x)->structure()) {
+            programSource = x.toWTFString(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
+            isTrusted = true;
+        } else {
         auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, x);
-        if (!code.isNull())
-            codeString = jsString(vm, code);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (!code.isNull()) {
+                programSource = code;
+                isTrusted = true;
+            }
+        }
     }
 
-    if (!codeString)
+    if (programSource.isNull())
         return JSValue::encode(x);
 
-    auto s = codeString->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-
-    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::IndirectEval, s, x)) {
+    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !isTrusted) {
+        bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::IndirectEval, programSource, *vm.emptyList);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (!canCompileStrings) {
         throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
         return { };
     }
+    }
 
     if (!globalObject->evalEnabled()) {
-        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, codeString);
+        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programSource);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return JSValue::encode(jsUndefined());
     }
 
     JSValue parsedObject;
-    if (s->is8Bit()) {
-        LiteralParser preparser(globalObject, s->span8(), SloppyJSON, nullptr);
+    if (programSource.is8Bit()) {
+        LiteralParser<LChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, nullptr);
         parsedObject = preparser.tryLiteralParse();
     } else {
-        LiteralParser preparser(globalObject, s->span16(), SloppyJSON, nullptr);
+        LiteralParser<UChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span16(), SloppyJSON, nullptr);
         parsedObject = preparser.tryLiteralParse();
     }
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -517,7 +510,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
     SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
     LexicallyScopedFeatures lexicallyScopedFeatures = globalObject->globalScopeExtension() ? TaintedByWithScopeLexicallyScopedFeature : NoLexicallyScopedFeatures;
-    EvalExecutable* eval = IndirectEvalExecutable::tryCreate(globalObject, makeSource(s, sourceOrigin, sourceTaintedOrigin), lexicallyScopedFeatures, DerivedContextType::None, false, EvalContextType::None);
+    EvalExecutable* eval = IndirectEvalExecutable::tryCreate(globalObject, makeSource(programSource, sourceOrigin, sourceTaintedOrigin), lexicallyScopedFeatures, DerivedContextType::None, false, EvalContextType::None);
     EXCEPTION_ASSERT(!!scope.exception() == !eval);
     if (!eval)
         return encodedJSValue();
@@ -568,7 +561,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseFloat, (JSGlobalObject* globalObject, Ca
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURI, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static constexpr auto doNotUnescapeWhenDecodingURI = makeCharacterBitmap(
+    static constexpr auto doNotUnescapeWhenDecodingURI = makeLatin1CharacterBitSet(
         "#$&+,/:;=?@"
     );
 
@@ -583,7 +576,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURIComponent, (JSGlobalObject* globalOb
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURI, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static constexpr auto doNotEscapeWhenEncodingURI = makeCharacterBitmap(
+    static constexpr auto doNotEscapeWhenEncodingURI = makeLatin1CharacterBitSet(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
@@ -594,7 +587,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURI, (JSGlobalObject* globalObject, Cal
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURIComponent, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static constexpr auto doNotEscapeWhenEncodingURIComponent = makeCharacterBitmap(
+    static constexpr auto doNotEscapeWhenEncodingURIComponent = makeLatin1CharacterBitSet(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
@@ -606,7 +599,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURIComponent, (JSGlobalObject* globalOb
 JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     return JSValue::encode(toStringView(globalObject, callFrame->argument(0), [&] (StringView view) -> JSString* {
-        static constexpr auto doNotEscape = makeCharacterBitmap(
+        static constexpr auto doNotEscape = makeLatin1CharacterBitSet(
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz"
             "0123456789"
@@ -616,7 +609,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFr
         VM& vm = globalObject->vm();
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+        StringBuilder builder(OverflowPolicy::RecordOverflow);
         if (view.is8Bit()) {
             for (auto character : view.span8()) {
                 if (doNotEscape.get(character))
@@ -654,7 +647,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
         VM& vm = globalObject->vm();
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+        StringBuilder builder(OverflowPolicy::RecordOverflow);
         builder.reserveCapacity(length);
 
         if (view.is8Bit()) {
@@ -833,15 +826,6 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncBuiltinDescribe, (JSGlobalObject* globalObjec
     return JSValue::encode(jsString(globalObject->vm(), toString(callFrame->argument(0))));
 }
 
-JSC_DEFINE_HOST_FUNCTION(globalFuncImportMapStatus, (JSGlobalObject* globalObject, CallFrame*))
-{
-    // https://wicg.github.io/import-maps/#integration-wait-for-import-maps
-    globalObject->importMap().setAcquiringImportMaps();
-    if (auto* promise = globalObject->importMapStatusPromise())
-        return JSValue::encode(promise);
-    return JSValue::encode(jsUndefined());
-}
-
 JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -868,17 +852,11 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, 
 
 static bool canPerformFastPropertyEnumerationForCopyDataProperties(Structure* structure)
 {
-    if (structure->typeInfo().overridesGetOwnPropertySlot())
-        return false;
-    if (structure->typeInfo().overridesAnyFormOfGetOwnPropertyNames())
+    if (!structure->canPerformFastPropertyEnumerationCommon())
         return false;
     // FIXME: Indexed properties can be handled.
     // https://bugs.webkit.org/show_bug.cgi?id=185358
     if (hasIndexedProperties(structure->indexingType()))
-        return false;
-    if (structure->hasAnyKindOfGetterSetterProperties())
-        return false;
-    if (structure->isUncacheableDictionary())
         return false;
     return true;
 };
@@ -1173,3 +1151,5 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncSpeciesGetter, (JSGlobalObject* globalObject,
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

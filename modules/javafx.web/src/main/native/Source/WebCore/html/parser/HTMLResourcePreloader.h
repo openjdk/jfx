@@ -28,6 +28,7 @@
 #include "CachedResource.h"
 #include "CachedResourceRequest.h"
 #include "ScriptType.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
@@ -42,9 +43,9 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::HTMLResource
 namespace WebCore {
 
 class PreloadRequest {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PreloadRequest);
 public:
-    PreloadRequest(ASCIILiteral initiatorType, const String& resourceURL, const URL& baseURL, CachedResource::Type resourceType, const String& mediaAttribute, ScriptType scriptType, const ReferrerPolicy& referrerPolicy, RequestPriority fetchPriorityHint = RequestPriority::Auto)
+    PreloadRequest(ASCIILiteral initiatorType, const String& resourceURL, const URL& baseURL, CachedResource::Type resourceType, const String& mediaAttribute, ScriptType scriptType, const ReferrerPolicy& referrerPolicy, RequestPriority fetchPriority = RequestPriority::Auto)
         : m_initiatorType(initiatorType)
         , m_resourceURL(resourceURL)
         , m_baseURL(baseURL.isolatedCopy())
@@ -52,7 +53,7 @@ public:
         , m_mediaAttribute(mediaAttribute)
         , m_scriptType(scriptType)
         , m_referrerPolicy(referrerPolicy)
-        , m_fetchPriorityHint(fetchPriorityHint)
+        , m_fetchPriority(fetchPriority)
     {
     }
 
@@ -80,13 +81,14 @@ private:
     bool m_scriptIsAsync { false };
     ScriptType m_scriptType;
     ReferrerPolicy m_referrerPolicy;
-    RequestPriority m_fetchPriorityHint;
+    RequestPriority m_fetchPriority;
 };
 
 typedef Vector<std::unique_ptr<PreloadRequest>> PreloadRequestStream;
 
 class HTMLResourcePreloader : public CanMakeWeakPtr<HTMLResourcePreloader> {
-    WTF_MAKE_NONCOPYABLE(HTMLResourcePreloader); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HTMLResourcePreloader);
+    WTF_MAKE_NONCOPYABLE(HTMLResourcePreloader);
 public:
     explicit HTMLResourcePreloader(Document& document)
         : m_document(document)

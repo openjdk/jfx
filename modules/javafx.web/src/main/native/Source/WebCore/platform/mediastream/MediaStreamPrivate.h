@@ -91,8 +91,8 @@ public:
 
     MediaStreamTrackPrivateVector tracks() const;
     bool hasTracks() const { return !m_trackSet.isEmpty(); }
-    void forEachTrack(const Function<void(const MediaStreamTrackPrivate&)>&) const;
-    void forEachTrack(const Function<void(MediaStreamTrackPrivate&)>&);
+    void forEachTrack(NOESCAPE const Function<void(const MediaStreamTrackPrivate&)>&) const;
+    void forEachTrack(NOESCAPE const Function<void(MediaStreamTrackPrivate&)>&);
     MediaStreamTrackPrivate* activeVideoTrack() { return m_activeVideoTrack; }
 
     bool active() const { return m_isActive; }
@@ -109,13 +109,13 @@ public:
     bool hasAudio() const;
     bool muted() const;
 
-    FloatSize intrinsicSize() const;
+    IntSize intrinsicSize() const;
 
     void monitorOrientation(OrientationNotifier&);
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger; }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
 #endif
 
 private:
@@ -132,7 +132,7 @@ private:
     void updateActiveVideoTrack();
 
     bool computeActiveState();
-    void forEachObserver(const Function<void(MediaStreamPrivateObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(MediaStreamPrivateObserver&)>&);
 
 #if !RELEASE_LOG_DISABLED
     ASCIILiteral logClassName() const final { return "MediaStreamPrivate"_s; }
@@ -146,7 +146,7 @@ private:
     bool m_isActive { false };
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
 #endif
 };
 

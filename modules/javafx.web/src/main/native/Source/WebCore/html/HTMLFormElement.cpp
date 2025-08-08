@@ -189,7 +189,7 @@ void HTMLFormElement::submitImplicitly(Event& event, bool fromImplicitSubmission
 {
     unsigned submissionTriggerCount = 0;
     for (auto& listedElement : m_listedElements) {
-        auto* formElement = dynamicDowncast<HTMLFormControlElement>(*listedElement);
+        RefPtr formElement = dynamicDowncast<HTMLFormControlElement>(*listedElement);
         if (!formElement)
             continue;
         if (formElement->isSuccessfulSubmitButton()) {
@@ -374,7 +374,7 @@ void HTMLFormElement::submit(Event* event, bool processingUserGesture, FormSubmi
     if (!view || !frame)
         return;
 
-    if (m_isSubmittingOrPreparingForSubmission) {
+    if (trigger != SubmittedByJavaScript && m_isSubmittingOrPreparingForSubmission) {
         m_shouldSubmit = true;
         return;
     }
@@ -539,7 +539,11 @@ unsigned HTMLFormElement::formElementIndex(FormListedElement& listedElement)
     // Treats separately the case where this element has the form attribute
     // for performance consideration.
     if (listedHTMLElement.hasAttributeWithoutSynchronization(formAttr) && listedHTMLElement.isConnected()) {
-        unsigned short position = compareDocumentPosition(listedHTMLElement);
+        unsigned short position;
+        if (document().settings().shadowRootReferenceTargetEnabled())
+            position = listedHTMLElement.treeScope().retargetToScope(*this)->compareDocumentPosition(listedHTMLElement);
+        else
+            position = compareDocumentPosition(listedHTMLElement);
         ASSERT(!(position & DOCUMENT_POSITION_DISCONNECTED));
         if (position & DOCUMENT_POSITION_PRECEDING) {
             ++m_listedElementsBeforeIndex;

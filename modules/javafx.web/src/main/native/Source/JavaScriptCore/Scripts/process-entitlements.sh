@@ -14,6 +14,7 @@ function mac_process_jsc_entitlements()
     plistbuddy Add :com.apple.security.cs.allow-jit bool YES
     plistbuddy Add :com.apple.security.fatal-exceptions array
     plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
+
     if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
     then
         plistbuddy Add :com.apple.private.pac.exception bool YES
@@ -29,6 +30,8 @@ function mac_process_jsc_entitlements()
             plistbuddy Add :com.apple.private.verified-jit bool YES
             plistbuddy Add :com.apple.security.cs.single-jit bool YES
         fi
+
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
     fi
 }
 
@@ -115,6 +118,8 @@ function maccatalyst_process_testapi_entitlements()
 function ios_family_process_jsc_entitlements()
 {
     plistbuddy Add :com.apple.private.pac.exception bool YES
+    # If you update this, make sure to update jsc.cpp:3973 (or somewhere around there) to
+    # ensure that `Options::crashIfCantAllocateJITMemory` is disabled on non-JIT platforms
     if [[ "${PLATFORM_NAME}" != watchos && "${PLATFORM_NAME}" != appletvos ]]; then
     plistbuddy Add :com.apple.private.verified-jit bool YES
         if [[ "${PLATFORM_NAME}" == iphoneos ]]; then

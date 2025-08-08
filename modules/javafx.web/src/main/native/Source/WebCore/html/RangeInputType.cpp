@@ -34,11 +34,13 @@
 
 #include "Decimal.h"
 #include "DocumentInlines.h"
-#include "ElementChildIteratorInlines.h"
+#include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "EventNames.h"
 #include "HTMLCollection.h"
+#include "HTMLDataListElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
@@ -54,6 +56,7 @@
 #include "UserAgentParts.h"
 #include <limits>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(TOUCH_EVENTS)
 #include "Touch.h"
@@ -61,12 +64,9 @@
 #include "TouchList.h"
 #endif
 
-#if ENABLE(DATALIST_ELEMENT)
-#include "HTMLDataListElement.h"
-#include "HTMLOptionElement.h"
-#endif
-
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RangeInputType);
 
 using namespace HTMLNames;
 
@@ -270,27 +270,22 @@ HTMLElement* RangeInputType::sliderTrackElement() const
 
     RefPtr root = element()->userAgentShadowRoot();
     ASSERT(root);
-    ASSERT(root->firstChild()); // container
-    ASSERT(root->firstChild()->isHTMLElement());
+    ASSERT(is<SliderContainerElement>(root->firstChild())); // container
     ASSERT(root->firstChild()->firstChild()); // track
 
     if (!root)
         return nullptr;
 
-    RefPtr container = childrenOfType<SliderContainerElement>(*root).first();
-    if (!container)
-        return nullptr;
-
-    return childrenOfType<HTMLElement>(*container).first();
+    RefPtr container = root->firstChild();
+    return container ? downcast<HTMLElement>(container->firstChild()) : nullptr;
 }
 
 SliderThumbElement& RangeInputType::typedSliderThumbElement() const
 {
     ASSERT(hasCreatedShadowSubtree());
     ASSERT(sliderTrackElement()->firstChild()); // thumb
-    ASSERT(sliderTrackElement()->firstChild()->isHTMLElement());
 
-    return static_cast<SliderThumbElement&>(*sliderTrackElement()->firstChild());
+    return downcast<SliderThumbElement>(*sliderTrackElement()->firstChild());
 }
 
 HTMLElement* RangeInputType::sliderThumbElement() const
@@ -319,7 +314,7 @@ String RangeInputType::serialize(const Decimal& value) const
 // FIXME: Could share this with BaseClickableWithKeyInputType and BaseCheckableInputType if we had a common base class.
 bool RangeInputType::accessKeyAction(bool sendMouseEvents)
 {
-    auto* element = this->element();
+    RefPtr element = this->element();
     return InputType::accessKeyAction(sendMouseEvents) || (element && element->dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents));
 }
 
@@ -373,14 +368,9 @@ String RangeInputType::sanitizeValue(const String& proposedValue) const
 
 bool RangeInputType::shouldRespectListAttribute()
 {
-#if ENABLE(DATALIST_ELEMENT)
     return element() && element()->document().settings().dataListElementEnabled();
-#else
-    return InputType::themeSupportsDataListUI(this);
-#endif
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 void RangeInputType::dataListMayHaveChanged()
 {
     m_tickMarkValuesDirty = true;
@@ -453,6 +443,5 @@ std::optional<Decimal> RangeInputType::findClosestTickMarkValue(const Decimal& v
 
     return closestLeft;
 }
-#endif
 
 } // namespace WebCore

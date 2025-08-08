@@ -118,7 +118,7 @@ ExceptionOr<Ref<Notification>> Notification::createForServiceWorker(ScriptExecut
 Ref<Notification> Notification::create(ScriptExecutionContext& context, NotificationData&& data)
 {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent, { }, WTFMove(data.defaultActionURL) };
+    Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent, data.navigateURL.string() };
 #else
     Options options { data.direction, WTFMove(data.language), WTFMove(data.body), WTFMove(data.tag), WTFMove(data.iconURL), JSC::jsNull(), nullptr, nullptr, data.silent };
 #endif
@@ -134,8 +134,8 @@ Ref<Notification> Notification::create(ScriptExecutionContext& context, const UR
     Options options;
     if (payload.options) {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent, { }, { } };
-        options.defaultActionURL = payload.defaultActionURL;
+        options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent, { } };
+        options.navigate = payload.defaultActionURL.string();
 #else
         options = { payload.options->dir, payload.options->lang, payload.options->body, payload.options->tag, payload.options->icon, JSC::jsNull(), nullptr, nullptr, payload.options->silent };
 #endif
@@ -181,12 +181,10 @@ Notification::Notification(ScriptExecutionContext& context, WTF::UUID identifier
         RELEASE_ASSERT_NOT_REACHED();
 
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-    if (options.defaultActionURL.isValid())
-        m_defaultActionURL = WTFMove(options.defaultActionURL).isolatedCopy();
-    else if (!options.defaultAction.isEmpty()) {
-        auto defaultActionURL = context.completeURL(WTFMove(options.defaultAction).isolatedCopy());
-        if (defaultActionURL.isValid())
-            m_defaultActionURL = WTFMove(defaultActionURL);
+    if (!options.navigate.isEmpty()) {
+        auto navigate = context.completeURL(WTFMove(options.navigate).isolatedCopy());
+        if (navigate.isValid())
+            m_navigate = WTFMove(navigate);
     }
 #endif
 
@@ -449,7 +447,7 @@ NotificationData Notification::data() const
 
     return {
 #if ENABLE(DECLARATIVE_WEB_PUSH)
-        m_defaultActionURL,
+        m_navigate,
 #else
         { },
 #endif
@@ -484,7 +482,8 @@ void Notification::ensureOnNotificationThread(ScriptExecutionContextIdentifier c
 
 void Notification::ensureOnNotificationThread(const NotificationData& notification, Function<void(Notification*)>&& task)
 {
-    ensureOnNotificationThread(notification.contextIdentifier, notification.notificationID, WTFMove(task));
+    RELEASE_ASSERT(notification.contextIdentifier);
+    ensureOnNotificationThread(*notification.contextIdentifier, notification.notificationID, WTFMove(task));
 }
 
 } // namespace WebCore

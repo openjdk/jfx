@@ -50,8 +50,11 @@
 #include "TextIterator.h"
 #include "TextManipulationItem.h"
 #include "VisibleUnits.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextManipulationController);
 
 inline bool TextManipulationControllerExclusionRule::match(const Element& element) const
 {
@@ -120,7 +123,7 @@ public:
 
 private:
     const Vector<ExclusionRule>& m_rules;
-    HashMap<Ref<Element>, ExclusionRule::Type> m_cache;
+    UncheckedKeyHashMap<Ref<Element>, ExclusionRule::Type> m_cache;
 };
 
 TextManipulationController::TextManipulationController(Document& document)
@@ -368,7 +371,7 @@ static bool shouldIgnoreNodeInTextField(const Node& node)
     if (!input)
         return false;
 
-    return input->lastChangeWasUserEdit() || input->isAutoFilled();
+    return input->lastChangeWasUserEdit() || input->autofilled();
 }
 
 TextManipulationController::ManipulationUnit TextManipulationController::createUnit(const Vector<String>& text, Node& textNode)
@@ -392,8 +395,8 @@ bool TextManipulationController::shouldExcludeNodeBasedOnStyle(const Node& node)
     if (!style)
         return false;
 
-    auto& font = style->fontCascade().primaryFont();
-    auto familyName = font.platformData().familyName();
+    Ref font = style->fontCascade().primaryFont();
+    auto familyName = font->platformData().familyName();
     if (familyName.isEmpty())
         return false;
 
@@ -404,7 +407,7 @@ bool TextManipulationController::shouldExcludeNodeBasedOnStyle(const Node& node)
     // FIXME: We should reconsider whether a node should be excluded if the primary font
     // used to render the node changes, since this "icon font" heuristic may return a
     // different result.
-    bool result = font.isProbablyOnlyUsedToRenderIcons();
+    bool result = font->isProbablyOnlyUsedToRenderIcons();
     m_cachedFontFamilyExclusionResults.set(familyName, result);
     return result;
 }
@@ -421,7 +424,7 @@ void TextManipulationController::parse(ManipulationUnit& unit, const String& tex
         if (isTokenDelimiter(character)) {
             if (positionOfLastNonHTMLSpace != notFound && startPositionOfCurrentToken <= positionOfLastNonHTMLSpace) {
                 auto stringForToken = text.substring(startPositionOfCurrentToken, positionOfLastNonHTMLSpace + 1 - startPositionOfCurrentToken);
-                unit.tokens.append(TextManipulationToken { m_tokenIdentifier.generate(), stringForToken, tokenInfo(&textNode), isNodeExcluded });
+                unit.tokens.append(TextManipulationToken { TextManipulationTokenIdentifier::generate(), stringForToken, tokenInfo(&textNode), isNodeExcluded });
                 startPositionOfCurrentToken = positionOfLastNonHTMLSpace + 1;
             }
 
@@ -433,7 +436,7 @@ void TextManipulationController::parse(ManipulationUnit& unit, const String& tex
             auto stringForToken = text.substring(startPositionOfCurrentToken, index + 1 - startPositionOfCurrentToken);
             if (unit.tokens.isEmpty() && !unit.firstTokenContainsDelimiter)
                 unit.firstTokenContainsDelimiter = true;
-            unit.tokens.append(TextManipulationToken { m_tokenIdentifier.generate(), stringForToken, tokenInfo(&textNode), true });
+            unit.tokens.append(TextManipulationToken { TextManipulationTokenIdentifier::generate(), stringForToken, tokenInfo(&textNode), true });
             startPositionOfCurrentToken = index + 1;
             unit.lastTokenContainsDelimiter = true;
         } else if (isNotSpace(character)) {
@@ -445,7 +448,7 @@ void TextManipulationController::parse(ManipulationUnit& unit, const String& tex
 
     if (startPositionOfCurrentToken < text.length()) {
         auto stringForToken = text.substring(startPositionOfCurrentToken, index + 1 - startPositionOfCurrentToken);
-        unit.tokens.append(TextManipulationToken { m_tokenIdentifier.generate(), stringForToken, tokenInfo(&textNode), isNodeExcluded });
+        unit.tokens.append(TextManipulationToken { TextManipulationTokenIdentifier::generate(), stringForToken, tokenInfo(&textNode), isNodeExcluded });
         unit.lastTokenContainsDelimiter = false;
     }
 }
@@ -510,18 +513,18 @@ void TextManipulationController::observeParagraphs(const Position& start, const 
 
         if (RefPtr currentElement = dynamicDowncast<Element>(*contentNode)) {
             if (!content.isTextContent && canPerformTextManipulationByReplacingEntireTextContent(*currentElement))
-                addItem(ManipulationItemData { Position(), Position(), *currentElement, nullQName(), { TextManipulationToken { m_tokenIdentifier.generate(), currentElement->textContent(), tokenInfo(currentElement.get()) } } });
+                addItem(ManipulationItemData { Position(), Position(), *currentElement, nullQName(), { TextManipulationToken { TextManipulationTokenIdentifier::generate(), currentElement->textContent(), tokenInfo(currentElement.get()) } } });
 
             if (currentElement->hasAttributes()) {
-                for (auto& attribute : currentElement->attributesIterator()) {
+                for (auto& attribute : currentElement->attributes()) {
                     if (isAttributeForTextManipulation(attribute.name()))
-                        addItem(ManipulationItemData { Position(), Position(), *currentElement, attribute.name(), { TextManipulationToken { m_tokenIdentifier.generate(), attribute.value(), tokenInfo(currentElement.get()) } } });
+                        addItem(ManipulationItemData { Position(), Position(), *currentElement, attribute.name(), { TextManipulationToken { TextManipulationTokenIdentifier::generate(), attribute.value(), tokenInfo(currentElement.get()) } } });
                 }
             }
 
             if (RefPtr input = dynamicDowncast<HTMLInputElement>(*currentElement)) {
                 if (shouldExtractValueForTextManipulation(*input))
-                    addItem(ManipulationItemData { { }, { }, *currentElement, HTMLNames::valueAttr, { TextManipulationToken { m_tokenIdentifier.generate(), input->value(), tokenInfo(currentElement.get()) } } });
+                    addItem(ManipulationItemData { { }, { }, *currentElement, HTMLNames::valueAttr, { TextManipulationToken { TextManipulationTokenIdentifier::generate(), input->value(), tokenInfo(currentElement.get()) } } });
             }
 
             if (isEnclosingItemBoundaryElement(*currentElement)) {
@@ -532,7 +535,7 @@ void TextManipulationController::observeParagraphs(const Position& start, const 
 
         if (content.isReplacedContent) {
             if (!unitsInCurrentParagraph.isEmpty())
-                unitsInCurrentParagraph.append(ManipulationUnit { *contentNode, { TextManipulationToken { m_tokenIdentifier.generate(), "[]"_s, tokenInfo(content.node.get()), true } } });
+                unitsInCurrentParagraph.append(ManipulationUnit { *contentNode, { TextManipulationToken { TextManipulationTokenIdentifier::generate(), "[]"_s, tokenInfo(content.node.get()), true } } });
             continue;
         }
 
@@ -597,7 +600,7 @@ void TextManipulationController::scheduleObservationUpdate()
 
         controller->m_didScheduleObservationUpdate = false;
 
-        HashSet<Ref<Node>> nodesToObserve;
+        NodeSet nodesToObserve;
         for (auto& text : controller->m_manipulatedNodesWithNewContent) {
             if (!controller->m_manipulatedNodes.contains(text))
                 continue;
@@ -659,7 +662,7 @@ void TextManipulationController::addItem(ManipulationItemData&& itemData)
 
     ASSERT(m_document);
     ASSERT(!itemData.tokens.isEmpty());
-    auto newID = m_itemIdentifier.generate();
+    auto newID = TextManipulationItemIdentifier::generate();
     m_pendingItemsForCallback.append(TextManipulationItem {
         m_document->frame()->frameID(),
         !m_document->frame()->isMainFrame(),
@@ -686,24 +689,26 @@ void TextManipulationController::flushPendingItemsForCallback()
 auto TextManipulationController::completeManipulation(const Vector<WebCore::TextManipulationItem>& completionItems) -> Vector<ManipulationFailure>
 {
     Vector<ManipulationFailure> failures;
-    HashSet<Ref<Node>> containersWithoutVisualOverflowBeforeReplacement;
+    NodeSet containersWithoutVisualOverflowBeforeReplacement;
     for (unsigned i = 0; i < completionItems.size(); ++i) {
         auto& itemToComplete = completionItems[i];
         auto frameID = itemToComplete.frameID;
+        if (!frameID)
+            continue;
         auto itemID = itemToComplete.identifier;
-        if (!frameID || !m_document || !m_document->frame() || frameID != m_document->frame()->frameID()) {
-            failures.append(ManipulationFailure { frameID, itemID, i, ManipulationFailure::Type::NotAvailable });
+        if (!m_document || !m_document->frame() || (frameID != m_document->frame()->frameID())) {
+            failures.append(ManipulationFailure { *frameID, itemID, i, ManipulationFailure::Type::NotAvailable });
             continue;
         }
 
         if (!itemID) {
-            failures.append(ManipulationFailure { frameID, itemID, i, ManipulationFailure::Type::InvalidItem });
+            failures.append(ManipulationFailure { *frameID, itemID, i, ManipulationFailure::Type::InvalidItem });
             continue;
         }
 
-        auto itemDataIterator = m_items.find(itemID);
+        auto itemDataIterator = m_items.find(*itemID);
         if (itemDataIterator == m_items.end()) {
-            failures.append(ManipulationFailure { frameID, itemID, i, ManipulationFailure::Type::InvalidItem });
+            failures.append(ManipulationFailure { *frameID, itemID, i, ManipulationFailure::Type::InvalidItem });
             continue;
         }
 
@@ -712,7 +717,7 @@ auto TextManipulationController::completeManipulation(const Vector<WebCore::Text
         m_items.remove(itemDataIterator);
 
         if (auto failureOrNullopt = replace(itemData, itemToComplete.tokens, containersWithoutVisualOverflowBeforeReplacement))
-            failures.append(ManipulationFailure { frameID, itemID, i, *failureOrNullopt });
+            failures.append(ManipulationFailure { *frameID, itemID, i, *failureOrNullopt });
     }
 
     if (!containersWithoutVisualOverflowBeforeReplacement.isEmpty()) {
@@ -763,7 +768,7 @@ Vector<Ref<Node>> TextManipulationController::getPath(Node* ancestor, Node* node
     return path;
 }
 
-void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDownPath, const Vector<Ref<Node>>& currentTopDownPath, Node* currentNode, HashSet<Ref<Node>>& insertedNodes, Vector<NodeInsertion>& insertions)
+void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDownPath, const Vector<Ref<Node>>& currentTopDownPath, Node* currentNode, NodeSet& insertedNodes, Vector<NodeInsertion>& insertions)
 {
     size_t i = 0;
     while (i < lastTopDownPath.size() && i < currentTopDownPath.size() && lastTopDownPath[i].first.ptr() == currentTopDownPath[i].ptr())
@@ -776,7 +781,7 @@ void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDown
         for (;i < currentTopDownPath.size(); ++i) {
             Ref<Node> node = currentTopDownPath[i];
             if (!insertedNodes.add(node.copyRef()).isNewEntry) {
-                auto clonedNode = node->cloneNodeInternal(node->protectedDocument(), Node::CloningOperation::OnlySelf);
+                auto clonedNode = node->cloneNode(false);
                 if (auto* data = node->eventTargetData())
                     data->eventListenerMap.copyEventListenersNotCreatedFromMarkupToTarget(clonedNode.ptr());
                 node = WTFMove(clonedNode);
@@ -790,7 +795,7 @@ void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDown
         insertions.append(NodeInsertion { lastTopDownPath.size() ? lastTopDownPath.last().second.ptr() : nullptr, *currentNode });
 }
 
-auto TextManipulationController::replace(const ManipulationItemData& item, const Vector<TextManipulationToken>& replacementTokens, HashSet<Ref<Node>>& containersWithoutVisualOverflowBeforeReplacement) -> std::optional<ManipulationFailure::Type>
+auto TextManipulationController::replace(const ManipulationItemData& item, const Vector<TextManipulationToken>& replacementTokens, NodeSet& containersWithoutVisualOverflowBeforeReplacement) -> std::optional<ManipulationFailure::Type>
 {
     if (item.start.isOrphan() || item.end.isOrphan())
         return ManipulationFailure::Type::ContentChanged;
@@ -826,11 +831,11 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
         return ManipulationFailure::Type::ContentChanged;
 
     size_t currentTokenIndex = 0;
-    HashMap<TextManipulationTokenIdentifier, TokenExchangeData> tokenExchangeMap;
+    UncheckedKeyHashMap<TextManipulationTokenIdentifier, TokenExchangeData> tokenExchangeMap;
     RefPtr<Node> commonAncestor;
     RefPtr<Node> firstContentNode;
     RefPtr<Node> lastChildOfCommonAncestorInRange;
-    HashSet<Ref<Node>> nodesToRemove;
+    NodeSet nodesToRemove;
 
     for (ParagraphContentIterator iterator { item.start, item.end }; !iterator.atEnd(); iterator.advance()) {
         auto content = iterator.currentContent();
@@ -896,7 +901,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
     for (RefPtr node = commonAncestor; node; node = node->parentNode())
         nodesToRemove.remove(*node);
 
-    HashSet<Ref<Node>> reusedOriginalNodes;
+    NodeSet reusedOriginalNodes;
     Vector<NodeInsertion> insertions;
     auto startTopDownPath = getPath(commonAncestor.get(), firstContentNode.get());
     while (!startTopDownPath.isEmpty()) {

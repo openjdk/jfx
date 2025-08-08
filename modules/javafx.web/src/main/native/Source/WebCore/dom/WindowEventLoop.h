@@ -50,16 +50,13 @@ public:
 
     void queueMutationObserverCompoundMicrotask();
     Vector<GCReachableRef<HTMLSlotElement>>& signalSlotList() { return m_signalSlotList; }
-    HashSet<RefPtr<MutationObserver>>& activeMutationObservers() { return m_activeObservers; }
-    HashSet<RefPtr<MutationObserver>>& suspendedMutationObservers() { return m_suspendedObservers; }
+    UncheckedKeyHashSet<RefPtr<MutationObserver>>& activeMutationObservers() { return m_activeObservers; }
+    UncheckedKeyHashSet<RefPtr<MutationObserver>>& suspendedMutationObservers() { return m_suspendedObservers; }
 
     CustomElementQueue& backupElementQueue();
 
-    void scheduleIdlePeriod(Page&);
-    void didScheduleRenderingUpdate(Page&, MonotonicTime);
-    void didStartRenderingUpdate(Page&);
-    void opportunisticallyRunIdleCallbacks();
-    bool shouldEndIdlePeriod(MonotonicTime);
+    void scheduleIdlePeriod();
+    void opportunisticallyRunIdleCallbacks(std::optional<MonotonicTime> deadline = std::nullopt);
     MonotonicTime computeIdleDeadline();
 
     WEBCORE_EXPORT static void breakToAllowRenderingUpdate();
@@ -72,13 +69,18 @@ private:
     bool isContextThread() const final;
     MicrotaskQueue& microtaskQueue() final;
 
+    void startIdlePeriod(MonotonicTime);
+    bool shouldEndIdlePeriod();
+    std::optional<MonotonicTime> nextScheduledWorkTime() const;
     std::optional<MonotonicTime> nextRenderingTime() const;
     void didReachTimeToRun();
+    void didFireIdleTimer();
 
     void decayIdleCallbackDuration() { m_expectedIdleCallbackDuration /= 2; }
 
     String m_agentClusterKey;
     Timer m_timer;
+    Timer m_idleTimer;
     std::unique_ptr<MicrotaskQueue> m_microtaskQueue;
 
     // Each task scheduled in event loop is associated with a document so that it can be suspened or stopped
@@ -89,10 +91,8 @@ private:
     bool m_mutationObserverCompoundMicrotaskQueuedFlag { false };
     bool m_deliveringMutationRecords { false }; // FIXME: This flag doesn't exist in the spec.
     Vector<GCReachableRef<HTMLSlotElement>> m_signalSlotList; // https://dom.spec.whatwg.org/#signal-slot-list
-    HashSet<RefPtr<MutationObserver>> m_activeObservers;
-    HashSet<RefPtr<MutationObserver>> m_suspendedObservers;
-
-    WeakHashMap<Page, MonotonicTime> m_pagesWithRenderingOpportunity;
+    UncheckedKeyHashSet<RefPtr<MutationObserver>> m_activeObservers;
+    UncheckedKeyHashSet<RefPtr<MutationObserver>> m_suspendedObservers;
 
     std::unique_ptr<CustomElementQueue> m_customElementQueue;
     bool m_processingBackupElementQueue { false };

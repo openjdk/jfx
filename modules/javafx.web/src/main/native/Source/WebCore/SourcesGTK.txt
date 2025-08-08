@@ -69,15 +69,16 @@ platform/graphics/egl/GLFenceGL.cpp @no-unify
 platform/graphics/egl/PlatformDisplayDefault.cpp @no-unify
 platform/graphics/egl/PlatformDisplaySurfaceless.cpp @no-unify
 
+platform/graphics/gbm/DMABufBuffer.cpp
 platform/graphics/gbm/DRMDeviceManager.cpp
 platform/graphics/gbm/DRMDeviceNode.cpp
-platform/graphics/gbm/GBMBufferSwapchain.cpp
-platform/graphics/gbm/GraphicsContextGLGBM.cpp @no-unify
+platform/graphics/gbm/GraphicsContextGLTextureMapperGBM.cpp @no-unify
 platform/graphics/gbm/PlatformDisplayGBM.cpp @no-unify
 
 platform/graphics/gtk/ColorGtk.cpp
 platform/graphics/gtk/GdkCairoUtilities.cpp
 platform/graphics/gtk/GdkSkiaUtilities.cpp
+platform/graphics/gtk/IconGtk.cpp
 platform/graphics/gtk/ImageAdapterGtk.cpp
 platform/graphics/gtk/SystemFontDatabaseGTK.cpp
 

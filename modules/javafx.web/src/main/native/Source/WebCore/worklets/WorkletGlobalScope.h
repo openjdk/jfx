@@ -49,7 +49,7 @@ class WorkerScriptLoader;
 struct WorkletParameters;
 
 enum class WorkletGlobalScopeIdentifierType { };
-using WorkletGlobalScopeIdentifier = LegacyNullableObjectIdentifier<WorkletGlobalScopeIdentifierType>;
+using WorkletGlobalScopeIdentifier = ObjectIdentifier<WorkletGlobalScopeIdentifierType>;
 
 class WorkletGlobalScope : public WorkerOrWorkletGlobalScope {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WorkletGlobalScope);
@@ -66,6 +66,7 @@ public:
     MessagePortChannelProvider& messagePortChannelProvider();
 
     const URL& url() const final { return m_url; }
+    const URL& cookieURL() const final { return url(); }
 
     void evaluate();
 
@@ -103,9 +104,15 @@ private:
     void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long) final;
 
     EventTarget* errorEventTarget() final { return this; }
-
+#if !PLATFORM(JAVA)
+    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
+    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
+    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
+#else
     std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
+    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
+#endif
     URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
     String userAgent(const URL&) const final;
     const Settings::Values& settingsValues() const final { return m_settingsValues; }

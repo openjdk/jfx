@@ -34,22 +34,14 @@
 #include "JSArrayBuffer.h"
 #include "ObjectConstructor.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const ClassInfo JSWebAssemblyMemory::s_info = { "WebAssembly.Memory"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyMemory) };
 
-JSWebAssemblyMemory* JSWebAssemblyMemory::tryCreate(JSGlobalObject* globalObject, VM& vm, Structure* structure)
+JSWebAssemblyMemory* JSWebAssemblyMemory::create(VM& vm, Structure* structure)
 {
-    auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-    auto exception = [&] (JSObject* error) {
-        throwException(globalObject, throwScope, error);
-        return nullptr;
-    };
-
-    if (!globalObject->webAssemblyEnabled())
-        return exception(createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
-
     auto* memory = new (NotNull, allocateCell<JSWebAssemblyMemory>(vm)) JSWebAssemblyMemory(vm, structure);
     memory->finishCreation(vm);
     return memory;
@@ -203,5 +195,7 @@ void JSWebAssemblyMemory::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 DEFINE_VISIT_CHILDREN(JSWebAssemblyMemory);
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

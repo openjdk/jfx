@@ -32,6 +32,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -92,7 +93,7 @@ struct TextAutoSizingHashTranslator {
 };
 
 class TextAutoSizingValue {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextAutoSizingValue);
 public:
     TextAutoSizingValue() = default;
     ~TextAutoSizingValue();
@@ -105,7 +106,7 @@ public:
 private:
     void reset();
 
-    HashSet<RefPtr<Text>> m_autoSizedNodes;
+    UncheckedKeyHashSet<RefPtr<Text>> m_autoSizedNodes;
 };
 
 struct TextAutoSizingTraits : HashTraits<TextAutoSizingKey> {
@@ -115,7 +116,7 @@ struct TextAutoSizingTraits : HashTraits<TextAutoSizingKey> {
 };
 
 class TextAutoSizing {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextAutoSizing);
 public:
     TextAutoSizing() = default;
 
@@ -124,7 +125,7 @@ public:
     void reset();
 
 private:
-    HashMap<TextAutoSizingKey, std::unique_ptr<TextAutoSizingValue>, TextAutoSizingHash, TextAutoSizingTraits> m_textNodes;
+    UncheckedKeyHashMap<TextAutoSizingKey, std::unique_ptr<TextAutoSizingValue>, TextAutoSizingHash, TextAutoSizingTraits> m_textNodes;
 };
 
 } // namespace WebCore

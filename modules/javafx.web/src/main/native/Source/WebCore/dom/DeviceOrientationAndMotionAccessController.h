@@ -32,6 +32,7 @@
 #include "ExceptionOr.h"
 #include "SecurityOriginData.h"
 #include <wtf/Function.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -50,7 +51,7 @@ class Document;
 class Page;
 
 class DeviceOrientationAndMotionAccessController : public CanMakeWeakPtr<DeviceOrientationAndMotionAccessController> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DeviceOrientationAndMotionAccessController);
 public:
     explicit DeviceOrientationAndMotionAccessController(Document& topDocument);
 
@@ -59,7 +60,7 @@ public:
 
 private:
     WeakRef<Document, WeakPtrImplWithEventTargetData> m_topDocument;
-    HashMap<SecurityOriginData, DeviceOrientationOrMotionPermissionState> m_accessStatePerOrigin;
+    UncheckedKeyHashMap<SecurityOriginData, DeviceOrientationOrMotionPermissionState> m_accessStatePerOrigin;
 };
 
 } // namespace WebCore

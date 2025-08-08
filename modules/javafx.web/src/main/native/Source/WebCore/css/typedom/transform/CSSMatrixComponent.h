@@ -39,7 +39,7 @@ class CSSMatrixComponent : public CSSTransformComponent {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSMatrixComponent);
 public:
     static Ref<CSSTransformComponent> create(Ref<DOMMatrixReadOnly>&&, CSSMatrixComponentOptions&& = { });
-    static ExceptionOr<Ref<CSSTransformComponent>> create(CSSFunctionValue&);
+    static ExceptionOr<Ref<CSSTransformComponent>> create(Ref<const CSSFunctionValue>);
 
     DOMMatrix& matrix();
     void setMatrix(Ref<DOMMatrix>&&);

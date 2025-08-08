@@ -41,7 +41,11 @@ namespace WebCore {
 
 using FontTag = std::array<char, 4>;
 
-inline FontTag fontFeatureTag(const char characters[4]) { return {{ characters[0], characters[1], characters[2], characters[3] }}; }
+inline FontTag fontFeatureTag(std::span<const char, 5> nullTerminatedString)
+{
+    ASSERT(nullTerminatedString[4] == '\0');
+    return { nullTerminatedString[0], nullTerminatedString[1], nullTerminatedString[2], nullTerminatedString[3] };
+}
 
 inline void add(Hasher& hasher, std::array<char, 4> array)
 {

@@ -58,22 +58,13 @@
 #endif
 
 namespace WebCore {
-class MockDisplayCapturer;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MockDisplayCapturer> : std::true_type { };
-}
-
-namespace WebCore {
 
 static inline Vector<MockMediaDevice> defaultDevices()
 {
     return Vector<MockMediaDevice> {
-        MockMediaDevice { "239c24b0-2b15-11e3-8224-0800200c9a66"_s, "Mock audio device 1"_s, { }, MockMicrophoneProperties { 44100 } },
-        MockMediaDevice { "239c24b1-2b15-11e3-8224-0800200c9a66"_s, "Mock audio device 2"_s, { },  MockMicrophoneProperties { 48000 } },
-        MockMediaDevice { "239c24b1-3b15-11e3-8224-0800200c9a66"_s, "Mock audio device 3"_s, { },  MockMicrophoneProperties { 96000 } },
+        MockMediaDevice { "239c24b0-2b15-11e3-8224-0800200c9a66"_s, "Mock audio device 1"_s, { }, MockMicrophoneProperties { 44100 , { } } },
+        MockMediaDevice { "239c24b1-2b15-11e3-8224-0800200c9a66"_s, "Mock audio device 2"_s, { },  MockMicrophoneProperties { 48000, { false } } },
+        MockMediaDevice { "239c24b1-3b15-11e3-8224-0800200c9a66"_s, "Mock audio device 3"_s, { },  MockMicrophoneProperties { 96000, { true } } },
 
         MockMediaDevice { "239c24b0-2b15-11e3-8224-0800200c9a67"_s, "Mock speaker device 1"_s, { },  MockSpeakerProperties { "239c24b0-2b15-11e3-8224-0800200c9a66"_s, 44100 } },
         MockMediaDevice { "239c24b1-2b15-11e3-8224-0800200c9a67"_s, "Mock speaker device 2"_s, { },  MockSpeakerProperties { "239c24b1-2b15-11e3-8224-0800200c9a66"_s, 48000 } },
@@ -123,7 +114,7 @@ static inline Vector<MockMediaDevice> defaultDevices()
 
 class MockRealtimeVideoSourceFactory : public VideoCaptureFactory {
 public:
-    CaptureSourceOrError createVideoCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, PageIdentifier pageIdentifier) final
+    CaptureSourceOrError createVideoCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier) final
     {
         ASSERT(device.type() == CaptureDevice::DeviceType::Camera);
         if (!MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(CaptureDevice::DeviceType::Camera, device.persistentId()))
@@ -146,13 +137,13 @@ class MockDisplayCapturer final
     : public DisplayCaptureSourceCocoa::Capturer
     , public CanMakeWeakPtr<MockDisplayCapturer> {
 public:
-    MockDisplayCapturer(const CaptureDevice&, PageIdentifier);
+    MockDisplayCapturer(CapturerObserver&, const CaptureDevice&, std::optional<PageIdentifier>);
 
     void triggerMockCaptureConfigurationChange();
 
 private:
     bool start() final;
-    void stop() final  { m_source->stop(); }
+    void stop() final;
     DisplayCaptureSourceCocoa::DisplayFrameType generateFrame() final;
     DisplaySurfaceType surfaceType() const final { return DisplaySurfaceType::Monitor; }
     void commitConfiguration(const RealtimeMediaSourceSettings&) final;
@@ -161,20 +152,59 @@ private:
 #if !RELEASE_LOG_DISABLED
     ASCIILiteral logClassName() const final { return "MockDisplayCapturer"_s; }
 #endif
+    void whenReady(CompletionHandler<void(CaptureSourceError&&)>&&) final;
+
+    void readyTimerFired();
+
     Ref<MockRealtimeVideoSource> m_source;
     RealtimeMediaSourceSettings m_settings;
+    Timer m_readyTimer;
+    bool m_isRunning { false };
+    bool m_didReceiveVideoFrame { false };
+    CompletionHandler<void(CaptureSourceError&&)> m_whenReadyCallback;
 };
 
-MockDisplayCapturer::MockDisplayCapturer(const CaptureDevice& device, PageIdentifier pageIdentifier)
-    : m_source(MockRealtimeVideoSourceMac::createForMockDisplayCapturer(String { device.persistentId() }, AtomString { device.label() }, MediaDeviceHashSalts { "persistent"_s, "ephemeral"_s }, pageIdentifier))
+MockDisplayCapturer::MockDisplayCapturer(CapturerObserver& observer, const CaptureDevice& device, std::optional<PageIdentifier> pageIdentifier)
+    : DisplayCaptureSourceCocoa::Capturer(observer)
+    , m_source(MockRealtimeVideoSourceMac::createForMockDisplayCapturer(String { device.persistentId() }, AtomString { device.label() }, MediaDeviceHashSalts { "persistent"_s, "ephemeral"_s }, pageIdentifier))
+    , m_readyTimer(*this, &MockDisplayCapturer::readyTimerFired)
 {
 }
 
 bool MockDisplayCapturer::start()
 {
     ASSERT(m_settings.frameRate());
+
+    ASSERT(!m_whenReadyCallback);
+    ASSERT(!m_isRunning);
+
+    m_isRunning = true;
     m_source->start();
     return true;
+}
+
+void MockDisplayCapturer::stop()
+{
+    ASSERT(!m_whenReadyCallback);
+
+    m_isRunning = false;
+    m_source->stop();
+}
+
+void MockDisplayCapturer::whenReady(CompletionHandler<void(CaptureSourceError&&)>&& callback)
+{
+    ASSERT(!m_isRunning);
+
+    m_whenReadyCallback = WTFMove(callback);
+    m_readyTimer.startOneShot(50_ms);
+}
+
+void MockDisplayCapturer::readyTimerFired()
+{
+    ASSERT(!m_isRunning);
+
+    configurationChanged();
+    m_whenReadyCallback({ });
 }
 
 void MockDisplayCapturer::commitConfiguration(const RealtimeMediaSourceSettings& settings)
@@ -227,7 +257,7 @@ class MockRealtimeDisplaySourceFactory : public DisplayCaptureFactory {
 public:
     static MockRealtimeDisplaySourceFactory& singleton();
 
-    CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, PageIdentifier pageIdentifier) final
+    CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier) final
     {
         if (!MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(device.type(), device.persistentId()))
             return CaptureSourceOrError({ "Unable to find mock display device with given persistentID"_s, MediaAccessDenialReason::PermissionDenied });
@@ -236,9 +266,11 @@ public:
         case CaptureDevice::DeviceType::Screen:
         case CaptureDevice::DeviceType::Window: {
 #if PLATFORM(COCOA)
-            auto capturer = makeUniqueRef<MockDisplayCapturer>(device, pageIdentifier);
+            return DisplayCaptureSourceCocoa::create([this, &device, pageIdentifier] (auto& observer) {
+                auto capturer = makeUniqueRefWithoutRefCountedCheck<MockDisplayCapturer>(observer, device, pageIdentifier);
             m_capturer = capturer.get();
-            return DisplayCaptureSourceCocoa::create(UniqueRef<DisplayCaptureSourceCocoa::Capturer>(WTFMove(capturer)), device, WTFMove(hashSalts), constraints, pageIdentifier);
+                return capturer;
+            }, device, WTFMove(hashSalts), constraints, pageIdentifier);
 #elif USE(GSTREAMER)
             return MockDisplayCaptureSourceGStreamer::create(device, WTFMove(hashSalts), constraints, pageIdentifier);
 #else
@@ -269,10 +301,15 @@ private:
 #endif
 };
 
-class MockRealtimeAudioSourceFactory final : public AudioCaptureFactory
+class MockRealtimeAudioSourceFactory final
+#if PLATFORM(COCOA)
+    : public CoreAudioCaptureSourceFactory
+#else
+    : public AudioCaptureFactory
+#endif
 {
 public:
-    CaptureSourceOrError createAudioCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, PageIdentifier pageIdentifier) final
+    CaptureSourceOrError createAudioCaptureSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier) final
     {
         ASSERT(device.type() == CaptureDevice::DeviceType::Microphone || device.type() == CaptureDevice::DeviceType::Speaker);
         if (!MockRealtimeMediaSourceCenter::captureDeviceWithPersistentID(device.type(), device.persistentId()))
@@ -337,8 +374,12 @@ void MockRealtimeMediaSourceCenter::setMockRealtimeMediaSourceCenterEnabled(bool
     RealtimeMediaSourceCenter& center = RealtimeMediaSourceCenter::singleton();
 
     if (mock.m_isEnabled) {
-        if (mock.m_isMockAudioCaptureEnabled)
+        if (mock.m_isMockAudioCaptureEnabled) {
+#if PLATFORM(COCOA)
+            MockAudioSharedUnit::enable();
+#endif
             center.setAudioCaptureFactory(mock.audioCaptureFactory());
+        }
         if (mock.m_isMockVideoCaptureEnabled)
             center.setVideoCaptureFactory(mock.videoCaptureFactory());
         if (mock.m_isMockDisplayCaptureEnabled)
@@ -346,8 +387,12 @@ void MockRealtimeMediaSourceCenter::setMockRealtimeMediaSourceCenterEnabled(bool
         return;
     }
 
-    if (mock.m_isMockAudioCaptureEnabled)
+    if (mock.m_isMockAudioCaptureEnabled) {
+#if PLATFORM(COCOA)
+        MockAudioSharedUnit::disable();
+#endif
         center.unsetAudioCaptureFactory(mock.audioCaptureFactory());
+    }
     if (mock.m_isMockVideoCaptureEnabled)
         center.unsetVideoCaptureFactory(mock.videoCaptureFactory());
     if (mock.m_isMockDisplayCaptureEnabled)
@@ -388,14 +433,17 @@ void MockRealtimeMediaSourceCenter::setMockCaptureDevicesInterrupted(bool isCame
     MockRealtimeAudioSource::setIsInterrupted(isMicrophoneInterrupted);
 }
 
-void MockRealtimeMediaSourceCenter::triggerMockCaptureConfigurationChange(bool forMicrophone, bool forDisplay)
+void MockRealtimeMediaSourceCenter::triggerMockCaptureConfigurationChange(bool forCamera, bool forMicrophone, bool forDisplay)
 {
+    if (forCamera)
+        MockRealtimeVideoSource::triggerCameraConfigurationChange();
+
 #if PLATFORM(COCOA)
     if (forMicrophone) {
     auto devices = audioCaptureDeviceManager().captureDevices();
         if (devices.size() > 1) {
     MockAudioSharedUnit::increaseBufferSize();
-    MockAudioSharedUnit::singleton().handleNewCurrentMicrophoneDevice(WTFMove(devices[1]));
+            CoreAudioSharedUnit::singleton().handleNewCurrentMicrophoneDevice(WTFMove(devices[1]));
         }
     }
     if (forDisplay) {

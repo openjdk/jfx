@@ -44,6 +44,7 @@
 #import <UIKit/UIKeyboardPreferencesController.h>
 #import <UIKit/UIKeyboard_Private.h>
 #import <UIKit/UIPress_Private.h>
+#import <UIKit/UIRemoteView.h>
 #import <UIKit/UIResponder_Private.h>
 #import <UIKit/UIScreen_Private.h>
 #import <UIKit/UIScrollEvent_Private.h>
@@ -139,12 +140,6 @@ WTF_EXTERN_C_END
 @end
 
 @interface UITextInputTraits : NSObject <UITextInputTraits, UITextInputTraits_Private, NSCopying>
-@end
-
-@protocol UIDragInteractionDelegate_ForWebKitOnly <UIDragInteractionDelegate>
-@optional
-- (void)_dragInteraction:(UIDragInteraction *)interaction prepareForSession:(id<UIDragSession>)session completion:(void(^)(void))completion;
-- (void)_dragInteraction:(UIDragInteraction *)interaction itemsForAddingToSession:(id <UIDragSession>)session withTouchAtPoint:(CGPoint)point completion:(void(^)(NSArray<UIDragItem *> *))completion;
 @end
 
 @class WebEvent;
@@ -261,6 +256,7 @@ typedef NS_ENUM(NSInteger, UIWKGestureType) {
 @end
 
 @interface UIScreen ()
+- (BOOL)_isEmbeddedScreen;
 @property (nonatomic, readonly) CGRect _referenceBounds;
 @end
 
@@ -285,6 +281,7 @@ typedef NS_ENUM(NSInteger, _UIDataOwner) {
 - (BOOL)isAutoShifted;
 - (void)dismissKeyboard;
 - (void)setCorrectionLearningAllowed:(BOOL)allowed;
+- (void)updateForChangedSelection;
 @end
 
 @interface UIScreen ()
@@ -292,7 +289,7 @@ typedef NS_ENUM(NSInteger, _UIDataOwner) {
 @end
 
 @protocol UITextInputSuggestionDelegate <UITextInputDelegate>
-- (void)setSuggestions:(NSArray <UITextSuggestion*> *)suggestions;
+- (void)setSuggestions:(NSArray<UITextSuggestion *> *)suggestions;
 @end
 
 @interface UIScrollView (SPI)
@@ -656,5 +653,13 @@ typedef NS_ENUM(NSInteger, NSTextBlockLayer) {
 @property (nonatomic, readonly) WebEvent *webEvent;
 @end
 #endif
+
+#if ENABLE(DRAG_SUPPORT)
+@protocol UIDragInteractionDelegate_SPI<UIDragInteractionDelegate>
+@optional
+- (void)_dragInteraction:(UIDragInteraction *)interaction prepareForSession:(id<UIDragSession>)session completion:(void(^)(void))completion;
+- (void)_dragInteraction:(UIDragInteraction *)interaction itemsForAddingToSession:(id<UIDragSession>)session withTouchAtPoint:(CGPoint)point completion:(void(^)(NSArray<UIDragItem *> *))completion;
+@end
+#endif // ENABLE(DRAG_SUPPORT)
 
 #endif // PLATFORM(IOS_FAMILY)

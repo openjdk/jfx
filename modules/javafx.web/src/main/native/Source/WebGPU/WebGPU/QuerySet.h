@@ -25,10 +25,13 @@
 
 #pragma once
 
+#import "WebGPU.h"
+#import "WebGPUExt.h"
 #import <optional>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakHashSet.h>
@@ -82,7 +85,6 @@ private:
     QuerySet(Device&);
 
     const Ref<Device> m_device;
-    // FIXME: Can we use a variant for these two resources?
     id<MTLBuffer> m_visibilityBuffer { nil };
     id<MTLCounterSampleBuffer> m_timestampBuffer { nil };
     uint32_t m_count { 0 };
@@ -100,6 +102,16 @@ private:
     };
     mutable WeakHashSet<CommandEncoder> m_commandEncoders;
     bool m_destroyed { false };
-};
+} SWIFT_SHARED_REFERENCE(refQuerySet, derefQuerySet);
 
 } // namespace WebGPU
+
+inline void refQuerySet(WebGPU::QuerySet* obj)
+{
+    WTF::ref(obj);
+}
+
+inline void derefQuerySet(WebGPU::QuerySet* obj)
+{
+    WTF::deref(obj);
+}

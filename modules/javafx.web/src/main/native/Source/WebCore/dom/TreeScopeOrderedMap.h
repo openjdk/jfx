@@ -33,6 +33,7 @@
 #include "Element.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
@@ -45,7 +46,7 @@ class HTMLMapElement;
 class TreeScope;
 
 class TreeScopeOrderedMap {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TreeScopeOrderedMap);
 public:
     void add(const AtomString&, Element&, const TreeScope&);
     void remove(const AtomString&, Element&);
@@ -85,11 +86,11 @@ private:
         unsigned count { 0 };
         Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>> orderedList;
 #if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
-        HashSet<WeakRef<Element, WeakPtrImplWithEventTargetData>> registeredElements;
+        UncheckedKeyHashSet<WeakRef<Element, WeakPtrImplWithEventTargetData>> registeredElements;
 #endif
     };
 
-    using Map = HashMap<AtomString, MapEntry>;
+    using Map = UncheckedKeyHashMap<AtomString, MapEntry>;
 
     mutable Map m_map;
 };

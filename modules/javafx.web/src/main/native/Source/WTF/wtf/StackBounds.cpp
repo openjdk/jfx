@@ -29,7 +29,7 @@
 
 #include <windows.h>
 
-#elif OS(UNIX)
+#elif OS(UNIX) || OS(HAIKU)
 
 #include <pthread.h>
 #if HAVE(PTHREAD_NP_H)
@@ -61,7 +61,9 @@ StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
 {
     void* origin = pthread_get_stackaddr_np(thread);
     rlim_t size = pthread_get_stacksize_np(thread);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void* bound = static_cast<char*>(origin) - size;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return StackBounds { origin, bound };
 }
 
@@ -85,7 +87,7 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     return newThreadStackBounds(pthread_self());
 }
 
-#elif OS(UNIX)
+#elif OS(UNIX) || OS(HAIKU)
 
 #if OS(OPENBSD)
 
@@ -94,7 +96,9 @@ StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
     stack_t stack;
     pthread_stackseg_np(thread, &stack);
     void* origin = stack.ss_sp;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void* bound = static_cast<char*>(origin) - stack.ss_size;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return StackBounds { origin, bound };
 }
 
@@ -104,7 +108,9 @@ StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
 {
     struct _thread_local_storage* tls = __tls();
     void* bound = tls->__stackaddr;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     void* origin = static_cast<char*>(bound) + tls->__stacksize;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     return StackBounds { origin, bound };
 }
 
@@ -156,7 +162,9 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
             size = 8 * MB;
         // account for a guard page
         size -= static_cast<rlim_t>(sysconf(_SC_PAGESIZE));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         void* bound = static_cast<char*>(origin) - size;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         return StackBounds { origin, bound };
     }
 #endif
@@ -170,8 +178,9 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     MEMORY_BASIC_INFORMATION stackOrigin { };
     VirtualQuery(&stackOrigin, &stackOrigin, sizeof(stackOrigin));
     // stackOrigin.AllocationBase points to the reserved stack memory base address.
-
+#if PLATFORM(JAVA)
     const LPVOID theAllocBase = stackOrigin.AllocationBase;
+#endif
     void* origin = static_cast<char*>(stackOrigin.BaseAddress) + stackOrigin.RegionSize;
 
     // The stack on Windows consists out of three parts (uncommitted memory, a guard page and present
@@ -191,6 +200,10 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
 
     // look for uncommited memory block.
     MEMORY_BASIC_INFORMATION uncommittedMemory;
+#if !PLATFORM(JAVA)
+    VirtualQuery(stackOrigin.AllocationBase, &uncommittedMemory, sizeof(uncommittedMemory));
+    ASSERT(uncommittedMemory.State == MEM_RESERVE);
+#else
     LPVOID a = stackOrigin.AllocationBase;
 
     do {
@@ -199,7 +212,7 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
         a = (LPVOID)((static_cast<char*>(a)) + uncommittedMemory.RegionSize);
     } while (theAllocBase == uncommittedMemory.AllocationBase &&
         uncommittedMemory.State != MEM_RESERVE);
-
+#endif
     MEMORY_BASIC_INFORMATION guardPage;
     VirtualQuery(static_cast<char*>(uncommittedMemory.BaseAddress) + uncommittedMemory.RegionSize, &guardPage, sizeof(guardPage));
     ASSERT(guardPage.Protect & PAGE_GUARD);

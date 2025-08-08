@@ -25,8 +25,10 @@
 #pragma once
 
 #include "BufferSource.h"
+#include "CompressionStream.h"
 #include "ExceptionOr.h"
 #include "Formats.h"
+#include "ZStream.h"
 #include <JavaScriptCore/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -39,37 +41,34 @@ namespace WebCore {
 
 class CompressionStreamEncoder : public RefCounted<CompressionStreamEncoder> {
 public:
-    static Ref<CompressionStreamEncoder> create(unsigned char format)
+    static ExceptionOr<Ref<CompressionStreamEncoder>> create(unsigned char formatChar)
     {
+        auto format = static_cast<Formats::CompressionFormat>(formatChar);
+#if !PLATFORM(COCOA)
+        if (format == Formats::CompressionFormat::Brotli)
+            return Exception { ExceptionCode::NotSupportedError, "Unsupported algorithm"_s };
+#endif
         return adoptRef(*new CompressionStreamEncoder(format));
     }
 
     ExceptionOr<RefPtr<Uint8Array>> encode(const BufferSource&&);
     ExceptionOr<RefPtr<Uint8Array>> flush();
 
-    ~CompressionStreamEncoder()
-    {
 /* removing zlib dependency , as newly added module compression requires zlib */
-#if !PLATFORM(JAVA)
-        if (m_initialized)
-            deflateEnd(&m_zstream);
-#endif
-    }
 
 private:
     bool didDeflateFinish(int) const;
 
     ExceptionOr<Ref<JSC::ArrayBuffer>> compress(std::span<const uint8_t>);
-    ExceptionOr<bool> initialize();
 
-    explicit CompressionStreamEncoder(unsigned char format)
-#if !PLATFORM(JAVA)
-        : m_format(static_cast<Formats::CompressionFormat>(format))
+    ExceptionOr<Ref<JSC::ArrayBuffer>> compressZlib(std::span<const uint8_t>);
+#if PLATFORM(COCOA) && !PLATFORM(JAVA)
+    bool didDeflateFinishAppleCompressionFramework(int);
+    ExceptionOr<Ref<JSC::ArrayBuffer>> compressAppleCompressionFramework(std::span<const uint8_t>);
 #endif
+    explicit CompressionStreamEncoder(Formats::CompressionFormat format)
+        : m_format(format)
     {
-#if !PLATFORM(JAVA)
-        std::memset(&m_zstream, 0, sizeof(m_zstream));
-#endif
     }
 
     // If the user provides too small of an input size we will automatically allocate a page worth of memory instead.
@@ -78,11 +77,12 @@ private:
     const size_t startingAllocationSize = 16384; // 16KB
     const size_t maxAllocationSize = 1073741824; // 1GB
 
-    bool m_initialized { false };
     bool m_didFinish { false };
+    const Formats::CompressionFormat m_format;
+
+    CompressionStream m_compressionStream;
 #if !PLATFORM(JAVA)
-    z_stream m_zstream;
+    ZStream m_zstream;
 #endif
-    Formats::CompressionFormat m_format;
 };
 } // namespace WebCore

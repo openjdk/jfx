@@ -47,11 +47,11 @@ public:
     CSSPropertyID shorthandPropertyId() const { return m_shorthandPropertyId; }
 
     bool equals(const CSSPendingSubstitutionValue& other) const { return m_shorthandValue.ptr() == other.m_shorthandValue.ptr(); }
-    static String customCSSText() { return emptyString(); }
+    static String customCSSText(const CSS::SerializationContext&) { return emptyString(); }
 
     RefPtr<CSSValue> resolveValue(Style::BuilderState&, CSSPropertyID) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(m_shorthandValue.get()) == IterationStatus::Done)
             return IterationStatus::Done;
@@ -60,7 +60,7 @@ public:
 
 private:
     CSSPendingSubstitutionValue(CSSPropertyID shorthandPropertyId, Ref<CSSVariableReferenceValue>&& shorthandValue)
-        : CSSValue(PendingSubstitutionValueClass)
+        : CSSValue(ClassType::PendingSubstitutionValue)
         , m_shorthandPropertyId(shorthandPropertyId)
         , m_shorthandValue(WTFMove(shorthandValue))
     {

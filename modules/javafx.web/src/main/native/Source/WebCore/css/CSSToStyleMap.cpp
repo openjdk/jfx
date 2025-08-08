@@ -40,7 +40,6 @@
 #include "CSSPropertyParser.h"
 #include "CSSQuadValue.h"
 #include "CSSScrollValue.h"
-#include "CSSTimingFunctionValue.h"
 #include "CSSValueKeywords.h"
 #include "CSSViewValue.h"
 #include "CompositeOperation.h"
@@ -67,11 +66,6 @@ static bool treatAsInitialValue(const CSSValue& value, CSSPropertyID propertyID)
 CSSToStyleMap::CSSToStyleMap(Style::BuilderState& builderState)
     : m_builderState(builderState)
 {
-}
-
-RenderStyle* CSSToStyleMap::style() const
-{
-    return &m_builderState.style();
 }
 
 RefPtr<StyleImage> CSSToStyleMap::styleImage(const CSSValue& value)
@@ -182,13 +176,21 @@ void CSSToStyleMap::mapFillRepeat(CSSPropertyID propertyID, FillLayer& layer, co
     layer.setRepeat(FillRepeatXY { repeatX, repeatY });
 }
 
-static inline bool convertToLengthSize(const CSSValue& value, const CSSToLengthConversionData& conversionData, LengthSize& size)
+static inline bool convertToLengthSize(const CSSValue& value, Style::BuilderState& builderState, LengthSize& size)
 {
+    auto& conversionData = builderState.cssToLengthConversionData();
     if (value.isPair()) {
-        size.width = downcast<CSSPrimitiveValue>(value.first()).convertToLength<AnyConversion>(conversionData);
-        size.height = downcast<CSSPrimitiveValue>(value.second()).convertToLength<AnyConversion>(conversionData);
-    } else
-        size.width = downcast<CSSPrimitiveValue>(value).convertToLength<AnyConversion>(conversionData);
+        auto pair = Style::BuilderConverter::requiredPairDowncast<CSSPrimitiveValue>(builderState, value);
+        if (!pair)
+            return false;
+        size.width = pair->first.convertToLength<AnyConversion>(conversionData);
+        size.height = pair->second.convertToLength<AnyConversion>(conversionData);
+    } else {
+        auto primitiveValue = Style::BuilderConverter::requiredDowncast<CSSPrimitiveValue>(builderState, value);
+        if (!primitiveValue)
+            return false;
+        size.width = primitiveValue->convertToLength<AnyConversion>(conversionData);
+    }
     return !size.width.isUndefined() && !size.height.isUndefined();
 }
 
@@ -209,7 +211,7 @@ void CSSToStyleMap::mapFillSize(CSSPropertyID propertyID, FillLayer& layer, cons
         break;
     default:
         ASSERT(fillSize.type == FillSizeType::Size);
-        if (!convertToLengthSize(value, m_builderState.cssToLengthConversionData(), fillSize.size))
+        if (!convertToLengthSize(value, m_builderState, fillSize.size))
             return;
         break;
     }
@@ -296,7 +298,7 @@ void CSSToStyleMap::mapAnimationDelay(Animation& animation, const CSSValue& valu
     if (!primitiveValue)
         return;
 
-    animation.setDelay(primitiveValue->computeTime<double, CSSPrimitiveValue::Seconds>());
+    animation.setDelay(primitiveValue->resolveAsTime(m_builderState.cssToLengthConversionData()));
 }
 
 void CSSToStyleMap::mapAnimationDirection(Animation& layer, const CSSValue& value)
@@ -338,7 +340,12 @@ void CSSToStyleMap::mapAnimationDuration(Animation& animation, const CSSValue& v
     if (!primitiveValue)
         return;
 
-    auto duration = std::max<double>(primitiveValue->computeTime<double, CSSPrimitiveValue::Seconds>(), 0);
+    if (value.valueID() == CSSValueAuto) {
+        animation.setDuration(std::nullopt);
+        return;
+    }
+
+    auto duration = std::max<double>(primitiveValue->resolveAsTime(m_builderState.cssToLengthConversionData()), 0);
     animation.setDuration(duration);
 }
 
@@ -384,7 +391,7 @@ void CSSToStyleMap::mapAnimationIterationCount(Animation& animation, const CSSVa
     if (primitiveValue->valueID() == CSSValueInfinite)
         animation.setIterationCount(Animation::IterationCountInfinite);
     else
-        animation.setIterationCount(primitiveValue->floatValue());
+        animation.setIterationCount(primitiveValue->resolveAsNumber<float>(m_builderState.cssToLengthConversionData()));
 }
 
 void CSSToStyleMap::mapAnimationName(Animation& layer, const CSSValue& value)
@@ -449,12 +456,52 @@ void CSSToStyleMap::mapAnimationProperty(Animation& animation, const CSSValue& v
 
 void CSSToStyleMap::mapAnimationTimeline(Animation& animation, const CSSValue& value)
 {
+    auto mapScrollValue = [](const CSSScrollValue& cssScrollValue) -> Animation::AnonymousScrollTimeline {
+        auto scroller = [&] {
+            auto& scrollerValue = cssScrollValue.scroller();
+            if (!scrollerValue)
+                return Scroller::Nearest;
+
+            switch (scrollerValue->valueID()) {
+            case CSSValueNearest:
+                return Scroller::Nearest;
+            case CSSValueRoot:
+                return Scroller::Root;
+            case CSSValueSelf:
+                return Scroller::Self;
+            default:
+                ASSERT_NOT_REACHED();
+                return Scroller::Nearest;
+            }
+        }();
+        auto& axisValue = cssScrollValue.axis();
+        auto axis = axisValue ? fromCSSValueID<ScrollAxis>(axisValue->valueID()) : ScrollAxis::Block;
+        return { scroller, axis };
+    };
+
+    auto mapViewValue = [&](const CSSViewValue& cssViewValue) -> Animation::AnonymousViewTimeline {
+        auto& axisValue = cssViewValue.axis();
+        auto axis = axisValue ? fromCSSValueID<ScrollAxis>(axisValue->valueID()) : ScrollAxis::Block;
+        auto convertInsetValue = [&](CSSValue* value) -> std::optional<Length> {
+            if (!value)
+                return std::nullopt;
+            return Style::BuilderConverter::convertLengthOrAuto(m_builderState, *value);
+        };
+        auto startInset = convertInsetValue(cssViewValue.startInset().get());
+        auto endInset = [&] {
+            if (auto& endInsetValue = cssViewValue.endInset())
+                return convertInsetValue(endInsetValue.get());
+            return convertInsetValue(cssViewValue.startInset().get());
+        }();
+        return { axis, { startInset, endInset } };
+    };
+
     if (treatAsInitialValue(value, CSSPropertyAnimationTimeline))
         animation.setTimeline(Animation::initialTimeline());
     else if (auto* viewValue = dynamicDowncast<CSSViewValue>(value))
-        animation.setTimeline(ViewTimeline::createFromCSSValue(*viewValue));
+        animation.setTimeline(mapViewValue(*viewValue));
     else if (auto* scrollValue = dynamicDowncast<CSSScrollValue>(value))
-        animation.setTimeline(ScrollTimeline::createFromCSSValue(*scrollValue));
+        animation.setTimeline(mapScrollValue(*scrollValue));
     else if (value.isCustomIdent())
         animation.setTimeline(AtomString(value.customIdent()));
     else {
@@ -476,7 +523,7 @@ void CSSToStyleMap::mapAnimationTimingFunction(Animation& animation, const CSSVa
 {
     if (treatAsInitialValue(value, CSSPropertyAnimationTimingFunction))
         animation.setTimingFunction(Animation::initialTimingFunction());
-    else if (auto timingFunction = TimingFunction::createFromCSSValue(value))
+    else if (auto timingFunction = Style::BuilderConverter::convertTimingFunction(m_builderState, value))
         animation.setTimingFunction(WTFMove(timingFunction));
 }
 
@@ -494,6 +541,20 @@ void CSSToStyleMap::mapAnimationAllowsDiscreteTransitions(Animation& layer, cons
         layer.setAllowsDiscreteTransitions(Animation::initialAllowsDiscreteTransitions());
     else if (is<CSSPrimitiveValue>(value))
         layer.setAllowsDiscreteTransitions(value.valueID() == CSSValueAllowDiscrete);
+}
+
+void CSSToStyleMap::mapAnimationRangeStart(Animation& animation, const CSSValue& value)
+{
+    if (treatAsInitialValue(value, CSSPropertyAnimationRangeStart))
+        animation.setRangeStart(Animation::initialRangeStart());
+    animation.setRangeStart(SingleTimelineRange::range(value, SingleTimelineRange::Type::Start, &m_builderState));
+}
+
+void CSSToStyleMap::mapAnimationRangeEnd(Animation& animation, const CSSValue& value)
+{
+    if (treatAsInitialValue(value, CSSPropertyAnimationRangeEnd))
+        animation.setRangeEnd(Animation::initialRangeEnd());
+    animation.setRangeEnd(SingleTimelineRange::range(value, SingleTimelineRange::Type::End, &m_builderState));
 }
 
 void CSSToStyleMap::mapNinePieceImage(const CSSValue* value, NinePieceImage& image)
@@ -537,13 +598,19 @@ void CSSToStyleMap::mapNinePieceImageSlice(const CSSValue& value, NinePieceImage
 void CSSToStyleMap::mapNinePieceImageSlice(const CSSBorderImageSliceValue& value, NinePieceImage& image)
 {
     // Set up a length box to represent our image slices.
-    auto side = [](const CSSPrimitiveValue& value) -> Length {
+    auto& conversionData = m_builderState.cssToLengthConversionData();
+    auto side = [&](const CSSPrimitiveValue& value) -> Length {
         if (value.isPercentage())
-            return { value.doubleValue(), LengthType::Percent };
-        return { value.intValue(CSSUnitType::CSS_NUMBER), LengthType::Fixed };
+            return { value.resolveAsPercentage(conversionData), LengthType::Percent };
+        return { value.resolveAsNumber<int>(conversionData), LengthType::Fixed };
     };
     auto& slices = value.slices();
-    image.setImageSlices({ side(slices.top()), side(slices.right()), side(slices.bottom()), side(slices.left()) });
+    image.setImageSlices({
+        side(slices.top()),
+        side(slices.right()),
+        side(slices.bottom()),
+        side(slices.left())
+    });
 
     // Set our fill mode.
     image.setFill(value.fill());
@@ -579,19 +646,21 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(const CSSValue& value)
     return { Length { side }, Length { side }, Length { side }, Length { side } };
 }
 
-Length CSSToStyleMap::mapNinePieceImageSide(const CSSValue& side)
+Length CSSToStyleMap::mapNinePieceImageSide(const CSSValue& value)
 {
-    auto& value = downcast<CSSPrimitiveValue>(side);
-    if (value.valueID() == CSSValueAuto)
+    auto primitiveValue = Style::BuilderConverter::requiredDowncast<CSSPrimitiveValue>(m_builderState, value);
+    if (!primitiveValue)
         return { };
-    if (value.isNumber())
-        return { value.floatValue(), LengthType::Relative };
-    if (value.isPercentage())
-        return { value.doubleValue(CSSUnitType::CSS_PERCENTAGE), LengthType::Percent };
+    if (primitiveValue->valueID() == CSSValueAuto)
+        return { };
     auto& conversionData = m_builderState.cssToLengthConversionData();
-    if (value.isCalculatedPercentageWithLength())
-        return Length { value.cssCalcValue()->createCalculationValue(conversionData) };
-    return { value.computeLength<Length>(conversionData) };
+    if (primitiveValue->isNumber())
+        return { primitiveValue->resolveAsNumber<float>(conversionData), LengthType::Relative };
+    if (primitiveValue->isPercentage())
+        return { primitiveValue->resolveAsPercentage<float>(conversionData), LengthType::Percent };
+    if (primitiveValue->isCalculatedPercentageWithLength())
+        return Length { primitiveValue->cssCalcValue()->createCalculationValue(conversionData, CSSCalcSymbolTable { }) };
+    return { primitiveValue->resolveAsLength<Length>(conversionData) };
 }
 
 LengthBox CSSToStyleMap::mapNinePieceImageQuad(const Quad& quad)

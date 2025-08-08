@@ -37,6 +37,7 @@
 #include "FloatConversion.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -50,7 +51,7 @@ constexpr double DefaultGrainDuration = 0.020; // 20ms
 // to minimize linear interpolation aliasing.
 const double MaxRate = 1024;
 
-static float computeSampleUsingLinearInterpolation(const float* source, unsigned readIndex, unsigned readIndex2, float interpolationFactor)
+static float computeSampleUsingLinearInterpolation(std::span<const float> source, unsigned readIndex, unsigned readIndex2, float interpolationFactor)
 {
     if (readIndex == readIndex2 && readIndex >= 1) {
         // We're at the end of the buffer, so just linearly extrapolate from the last two samples.
@@ -136,7 +137,7 @@ void AudioBufferSourceNode::process(size_t framesToProcess)
     }
 
     for (unsigned i = 0; i < outputBus.numberOfChannels(); ++i)
-        m_destinationChannels[i] = outputBus.channel(i)->mutableData();
+        m_destinationChannels[i] = outputBus.channel(i)->mutableSpan();
 
     // Render by reading directly from the buffer.
     if (!renderFromBuffer(&outputBus, quantumFrameOffset, bufferFramesToProcess, startFrameOffset)) {
@@ -157,7 +158,7 @@ bool AudioBufferSourceNode::renderSilenceAndFinishIfNotLooping(AudioBus*, unsign
             // We're not looping and we've reached the end of the sample data, but we still need to provide more output,
             // so generate silence for the remaining.
             for (unsigned i = 0; i < numberOfChannels(); ++i)
-                memset(m_destinationChannels[i] + index, 0, sizeof(float) * framesToProcess);
+                zeroSpan(m_destinationChannels[i].subspan(index, framesToProcess));
         }
 
         if (!hasFinished())
@@ -201,7 +202,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
     // Potentially zero out initial frames leading up to the offset.
     if (destinationFrameOffset) {
         for (unsigned i = 0; i < numberOfChannels; ++i)
-            memset(m_destinationChannels[i], 0, sizeof(float) * destinationFrameOffset);
+            zeroSpan(m_destinationChannels[i].first(destinationFrameOffset));
     }
 
     // Offset the pointers to the correct offset frame.
@@ -240,9 +241,12 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         virtualDeltaFrames = virtualMaxFrame - virtualMinFrame;
     }
 
-    // If we're looping and the offset (virtualReadIndex) is past the end of the loop, wrap back to the
-    // beginning of the loop. For other cases, nothing needs to be done.
-    if (m_isLooping && m_virtualReadIndex >= virtualMaxFrame) {
+    if (m_virtualReadIndex >= virtualMaxFrame) {
+        // Early exit to avoid going past the end of the source buffer.
+        if (!m_isLooping)
+            return false;
+
+        // Wrap back to the beginning of the loop.
         m_virtualReadIndex = (m_loopStart < 0) ? 0 : (m_loopStart * m_buffer->sampleRate());
         m_virtualReadIndex = std::min(m_virtualReadIndex, static_cast<double>(bufferLength - 1));
     }
@@ -267,9 +271,6 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
     // Render loop - reading from the source buffer to the destination using linear interpolation.
     int framesToProcess = numberOfFrames;
 
-    const float** sourceChannels = m_sourceChannels.get();
-    float** destinationChannels = m_destinationChannels.get();
-
     // Optimize for the very common case of playing back with pitchRate == 1.
     // We can avoid the linear interpolation.
     if (pitchRate == 1 && !needsInterpolation) {
@@ -282,7 +283,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
             framesThisTime = std::max(0, framesThisTime);
 
             for (unsigned i = 0; i < numberOfChannels; ++i)
-                memcpy(destinationChannels[i] + writeIndex, sourceChannels[i] + readIndex, sizeof(float) * framesThisTime);
+                memcpySpan(m_destinationChannels[i].subspan(writeIndex), m_sourceChannels[i].subspan(readIndex).first(framesThisTime));
 
             writeIndex += framesThisTime;
             readIndex += framesThisTime;
@@ -311,8 +312,8 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
 
             while (framesThisTime--) {
                 for (unsigned i = 0; i < numberOfChannels; ++i) {
-                    float* destination = destinationChannels[i];
-                    const float* source = sourceChannels[i];
+                    auto destination = m_destinationChannels[i];
+                    auto source = m_sourceChannels[i];
 
                     destination[writeIndex] = source[readIndex];
                 }
@@ -339,7 +340,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
             readIndex -= deltaFrames;
 
         for (unsigned i = 0; i < numberOfChannels; ++i)
-            std::fill_n(destinationChannels[i] + writeIndex, framesToProcess, sourceChannels[i][readIndex]);
+            std::ranges::fill(m_destinationChannels[i].subspan(writeIndex).first(framesToProcess), m_sourceChannels[i][readIndex]);
 
         virtualReadIndex = readIndex;
     } else if (reverse) {
@@ -362,8 +363,8 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
 
             // Linear interpolation.
             for (unsigned i = 0; i < numberOfChannels; ++i) {
-                float* destination = destinationChannels[i];
-                const float* source = sourceChannels[i];
+                auto destination = m_destinationChannels[i];
+                auto source = m_sourceChannels[i];
 
                 destination[writeIndex] = computeSampleUsingLinearInterpolation(source, readIndex, readIndex2, interpolationFactor);
             }
@@ -401,8 +402,8 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
 
             // Linear interpolation.
             for (unsigned i = 0; i < numberOfChannels; ++i) {
-                float* destination = destinationChannels[i];
-                const float* source = sourceChannels[i];
+                auto destination = m_destinationChannels[i];
+                auto source = m_sourceChannels[i];
 
                 destination[writeIndex] = computeSampleUsingLinearInterpolation(source, readIndex, readIndex2, interpolationFactor);
             }
@@ -460,11 +461,11 @@ ExceptionOr<void> AudioBufferSourceNode::setBufferForBindings(RefPtr<AudioBuffer
 
         output(0)->setNumberOfChannels(numberOfChannels);
 
-        m_sourceChannels = makeUniqueArray<const float*>(numberOfChannels);
-        m_destinationChannels = makeUniqueArray<float*>(numberOfChannels);
+        m_sourceChannels = FixedVector<std::span<const float>>(numberOfChannels);
+        m_destinationChannels = FixedVector<std::span<float>>(numberOfChannels);
 
         for (unsigned i = 0; i < numberOfChannels; ++i)
-            m_sourceChannels[i] = buffer->channelData(i)->data();
+            m_sourceChannels[i] = buffer->channelData(i)->typedSpan();
     }
 
     m_virtualReadIndex = 0;

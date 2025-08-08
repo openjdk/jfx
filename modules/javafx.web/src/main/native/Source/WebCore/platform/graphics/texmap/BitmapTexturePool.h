@@ -27,6 +27,7 @@
 #pragma once
 #if PLATFORM(JAVA)
 #include "BitmapTexture.h"
+#include <wtf/CheckedPtr.h>
 #include "TextureMapperContextAttributes.h"
 #include <wtf/RunLoop.h>
 
@@ -34,7 +35,7 @@ namespace WebCore {
 
 class IntSize;
 
-class BitmapTexturePool {
+class BitmapTexturePool: public RefCounted<BitmapTexturePool> {
     WTF_MAKE_NONCOPYABLE(BitmapTexturePool);
     WTF_MAKE_FAST_ALLOCATED;
 public:

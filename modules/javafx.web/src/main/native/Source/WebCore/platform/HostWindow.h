@@ -27,6 +27,7 @@
 
 #include "GraphicsClient.h"
 #include "Widget.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
 OBJC_CLASS NSData;
@@ -39,7 +40,8 @@ class Cursor;
 using FramesPerSecond = unsigned;
 
 class HostWindow : public GraphicsClient {
-    WTF_MAKE_NONCOPYABLE(HostWindow); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(HostWindow);
+    WTF_MAKE_NONCOPYABLE(HostWindow);
 public:
     HostWindow() = default;
     virtual ~HostWindow() = default;
@@ -58,6 +60,7 @@ public:
 
     // Methods for doing coordinate conversions to and from screen coordinates.
     virtual IntPoint screenToRootView(const IntPoint&) const = 0;
+    virtual IntPoint rootViewToScreen(const IntPoint&) const = 0;
     virtual IntRect rootViewToScreen(const IntRect&) const = 0;
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;

@@ -36,7 +36,7 @@ public:
         : m_frame(frame)
     {
         if (frame) {
-            if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame()))
+            if (RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame()))
                 ++localFrame->m_navigationDisableCount;
         } else // Disable all navigations when destructing a frame-less document.
             ++s_globalNavigationDisableCount;
@@ -44,8 +44,8 @@ public:
 
     ~NavigationDisabler()
     {
-        if (m_frame) {
-            if (auto* mainFrame = dynamicDowncast<LocalFrame>(m_frame->mainFrame())) {
+        if (RefPtr frame = m_frame.get()) {
+            if (RefPtr mainFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
                 ASSERT(mainFrame->m_navigationDisableCount);
                 --mainFrame->m_navigationDisableCount;
             }

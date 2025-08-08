@@ -32,7 +32,8 @@
 #include "JSWebAssemblyInstance.h"
 #include "WasmFormat.h"
 #include "WasmModuleInformation.h"
-#include <wtf/MallocPtr.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -43,23 +44,17 @@ Structure* JSWebAssemblyStruct::createStructure(VM& vm, JSGlobalObject* globalOb
     return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info());
 }
 
-JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<const Wasm::TypeDefinition>&& type, RefPtr<const Wasm::RTT> rtt)
-    : Base(vm, structure, rtt)
+JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<const Wasm::TypeDefinition>&& type, RefPtr<const Wasm::RTT>&& rtt)
+    : Base(vm, structure, WTFMove(rtt))
     , m_type(WTFMove(type))
     , m_payload(structType()->instancePayloadSize(), 0)
 {
 }
 
-JSWebAssemblyStruct* JSWebAssemblyStruct::tryCreate(JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, uint32_t typeIndex, RefPtr<const Wasm::RTT> rtt)
+JSWebAssemblyStruct* JSWebAssemblyStruct::create(VM& vm, Structure* structure, JSWebAssemblyInstance* instance, uint32_t typeIndex, RefPtr<const Wasm::RTT>&& rtt)
 {
-    VM& vm = globalObject->vm();
-
-    Ref<const Wasm::TypeDefinition> type = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
-
-    void* buffer = tryAllocateCell<JSWebAssemblyStruct>(vm);
-    if (UNLIKELY(!buffer))
-        return nullptr;
-    auto* structValue = new (NotNull, buffer) JSWebAssemblyStruct(vm, structure, Ref { type }, rtt);
+    Ref type = instance->module().moduleInformation().typeSignatures[typeIndex]->expand();
+    auto* structValue = new (NotNull, allocateCell<JSWebAssemblyStruct>(vm)) JSWebAssemblyStruct(vm, structure, WTFMove(type), WTFMove(rtt));
     structValue->finishCreation(vm);
     return structValue;
 }
@@ -83,9 +78,9 @@ uint64_t JSWebAssemblyStruct::get(uint32_t fieldIndex) const
     if (fieldType(fieldIndex).type.is<Wasm::PackedType>()) {
         switch (fieldType(fieldIndex).type.as<Wasm::PackedType>()) {
         case Wasm::PackedType::I8:
-            return *bitwise_cast<uint8_t*>(targetPointer);
+            return *std::bit_cast<uint8_t*>(targetPointer);
         case Wasm::PackedType::I16:
-            return *bitwise_cast<uint16_t*>(targetPointer);
+            return *std::bit_cast<uint16_t*>(targetPointer);
         }
     }
     ASSERT(fieldType(fieldIndex).type.is<Wasm::Type>());
@@ -93,15 +88,16 @@ uint64_t JSWebAssemblyStruct::get(uint32_t fieldIndex) const
     switch (fieldType(fieldIndex).type.as<Wasm::Type>().kind) {
     case TypeKind::I32:
     case TypeKind::F32:
-        return *bitwise_cast<uint32_t*>(targetPointer);
+        return *std::bit_cast<uint32_t*>(targetPointer);
     case TypeKind::I64:
     case TypeKind::F64:
-        return *bitwise_cast<const uint64_t*>(targetPointer);
+        return *std::bit_cast<const uint64_t*>(targetPointer);
+    case TypeKind::Exn:
     case TypeKind::Externref:
     case TypeKind::Funcref:
     case TypeKind::Ref:
     case TypeKind::RefNull:
-        return JSValue::encode(bitwise_cast<WriteBarrierBase<Unknown>*>(targetPointer)->get());
+        return JSValue::encode(std::bit_cast<WriteBarrierBase<Unknown>*>(targetPointer)->get());
     case TypeKind::V128:
         // V128 is not supported in LLInt.
     default:
@@ -119,10 +115,10 @@ void JSWebAssemblyStruct::set(uint32_t fieldIndex, uint64_t argument)
     if (fieldType(fieldIndex).type.is<Wasm::PackedType>()) {
         switch (fieldType(fieldIndex).type.as<Wasm::PackedType>()) {
         case Wasm::PackedType::I8:
-            *bitwise_cast<uint8_t*>(targetPointer) = static_cast<uint8_t>(argument);
+            *std::bit_cast<uint8_t*>(targetPointer) = static_cast<uint8_t>(argument);
             return;
         case Wasm::PackedType::I16:
-            *bitwise_cast<uint16_t*>(targetPointer) = static_cast<uint16_t>(argument);
+            *std::bit_cast<uint16_t*>(targetPointer) = static_cast<uint16_t>(argument);
             return;
         }
     }
@@ -131,12 +127,12 @@ void JSWebAssemblyStruct::set(uint32_t fieldIndex, uint64_t argument)
     switch (fieldType(fieldIndex).type.as<Wasm::Type>().kind) {
     case TypeKind::I32:
     case TypeKind::F32: {
-        *bitwise_cast<uint32_t*>(targetPointer) = static_cast<uint32_t>(argument);
+        *std::bit_cast<uint32_t*>(targetPointer) = static_cast<uint32_t>(argument);
         return;
     }
     case TypeKind::I64:
     case TypeKind::F64: {
-        *bitwise_cast<uint64_t*>(targetPointer) = argument;
+        *std::bit_cast<uint64_t*>(targetPointer) = argument;
         return;
     }
     case TypeKind::Arrayref:
@@ -145,7 +141,7 @@ void JSWebAssemblyStruct::set(uint32_t fieldIndex, uint64_t argument)
     case TypeKind::Funcref:
     case TypeKind::Ref:
     case TypeKind::RefNull: {
-        bitwise_cast<WriteBarrierBase<Unknown>*>(targetPointer)->set(vm(), this, JSValue::decode(static_cast<EncodedJSValue>(argument)));
+        std::bit_cast<WriteBarrierBase<Unknown>*>(targetPointer)->set(vm(), this, JSValue::decode(static_cast<EncodedJSValue>(argument)));
         return;
     }
     case TypeKind::V128:
@@ -156,8 +152,10 @@ void JSWebAssemblyStruct::set(uint32_t fieldIndex, uint64_t argument)
     case TypeKind::Sub:
     case TypeKind::Subfinal:
     case TypeKind::Rec:
+    case TypeKind::Exn:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -174,7 +172,7 @@ void JSWebAssemblyStruct::set(uint32_t fieldIndex, v128_t argument)
     uint8_t* targetPointer = fieldPointer(fieldIndex);
     ASSERT(fieldType(fieldIndex).type.is<Wasm::Type>());
     ASSERT(fieldType(fieldIndex).type.as<Wasm::Type>().kind == Wasm::TypeKind::V128);
-    *bitwise_cast<v128_t*>(targetPointer) = argument;
+    *std::bit_cast<v128_t*>(targetPointer) = argument;
 }
 
 template<typename Visitor>
@@ -185,7 +183,7 @@ void JSWebAssemblyStruct::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     auto* wasmStruct = jsCast<JSWebAssemblyStruct*>(cell);
     for (unsigned i = 0; i < wasmStruct->structType()->fieldCount(); ++i) {
         if (isRefType(wasmStruct->fieldType(i).type))
-            visitor.append(*bitwise_cast<WriteBarrier<Unknown>*>(wasmStruct->fieldPointer(i)));
+            visitor.append(*std::bit_cast<WriteBarrier<Unknown>*>(wasmStruct->fieldPointer(i)));
     }
 }
 
@@ -197,5 +195,7 @@ void JSWebAssemblyStruct::destroy(JSCell* cell)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

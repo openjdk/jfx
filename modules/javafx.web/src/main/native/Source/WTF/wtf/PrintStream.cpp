@@ -30,6 +30,8 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 PrintStream::PrintStream() = default;
@@ -203,12 +205,20 @@ void printInternal(PrintStream& out, RawHex value)
         return;
     }
 #endif
+#if OS(WINDOWS)
+    out.printf("0x%p", value.ptr());
+#else
     out.printf("%p", value.ptr());
+#endif
 }
 
 void printInternal(PrintStream& out, RawPointer value)
 {
+#if OS(WINDOWS)
+    out.printf("0x%p", value.value());
+#else
     out.printf("%p", value.value());
+#endif
 }
 
 void printInternal(PrintStream& out, FixedWidthDouble value)
@@ -223,3 +233,4 @@ void dumpCharacter(PrintStream& out, char value)
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

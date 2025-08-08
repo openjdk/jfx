@@ -33,6 +33,7 @@
 #include "AccessibilityTable.h"
 #include "AccessibilityTableRow.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLTableCellElement.h"
 #include "RenderObject.h"
 #include "RenderTableCell.h"
 
@@ -40,29 +41,29 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityTableCell::AccessibilityTableCell(RenderObject& renderer)
-    : AccessibilityRenderObject(renderer)
+AccessibilityTableCell::AccessibilityTableCell(AXID axID, RenderObject& renderer)
+    : AccessibilityRenderObject(axID, renderer)
 {
 }
 
-AccessibilityTableCell::AccessibilityTableCell(Node& node)
-    : AccessibilityRenderObject(node)
+AccessibilityTableCell::AccessibilityTableCell(AXID axID, Node& node)
+    : AccessibilityRenderObject(axID, node)
 {
 }
 
 AccessibilityTableCell::~AccessibilityTableCell() = default;
 
-Ref<AccessibilityTableCell> AccessibilityTableCell::create(RenderObject& renderer)
+Ref<AccessibilityTableCell> AccessibilityTableCell::create(AXID axID, RenderObject& renderer)
 {
-    return adoptRef(*new AccessibilityTableCell(renderer));
+    return adoptRef(*new AccessibilityTableCell(axID, renderer));
 }
 
-Ref<AccessibilityTableCell> AccessibilityTableCell::create(Node& node)
+Ref<AccessibilityTableCell> AccessibilityTableCell::create(AXID axID, Node& node)
 {
-    return adoptRef(*new AccessibilityTableCell(node));
+    return adoptRef(*new AccessibilityTableCell(axID, node));
 }
 
-bool AccessibilityTableCell::computeAccessibilityIsIgnored() const
+bool AccessibilityTableCell::computeIsIgnored() const
 {
     auto decision = defaultObjectInclusion();
     if (decision == AccessibilityObjectInclusion::IncludeObject)
@@ -72,11 +73,11 @@ bool AccessibilityTableCell::computeAccessibilityIsIgnored() const
 
     // Ignore anonymous table cells as long as they're not in a table (ie. when display:table is used).
     WeakPtr parentTable = this->parentTable();
-    bool inTable = parentTable && parentTable->element() && (parentTable->element()->hasTagName(tableTag) || nodeHasTableRole(parentTable->element()));
+    bool inTable = parentTable && parentTable->element() && (parentTable->element()->hasTagName(tableTag) || hasTableRole(*parentTable->element()));
     if (!element() && !inTable)
         return true;
 
-    return !isExposedTableCell() && AccessibilityRenderObject::computeAccessibilityIsIgnored();
+    return !isExposedTableCell() && AccessibilityRenderObject::computeIsIgnored();
 }
 
 AccessibilityTable* AccessibilityTableCell::parentTable() const
@@ -147,7 +148,7 @@ AccessibilityRole AccessibilityTableCell::determineAccessibilityRole()
     if (!parentTable || !parentTable->isExposable())
         return defaultRole;
 
-    auto cellRole = parentTable->hasGridAriaRole() ? AccessibilityRole::GridCell : AccessibilityRole::Cell;
+    auto cellRole = parentTable->hasGridRole() ? AccessibilityRole::GridCell : AccessibilityRole::Cell;
     // It's important that we temporarily set our m_role because:
     // 1. isColumnHeader() and isRowHeader() call rowIndexRange() and columnIndexRange(), in turn calling
     //    ensureIndexesUpToDate()
@@ -239,13 +240,13 @@ bool AccessibilityTableCell::isRowHeader() const
     return false;
 }
 
-AXID AccessibilityTableCell::rowGroupAncestorID() const
+std::optional<AXID> AccessibilityTableCell::rowGroupAncestorID() const
 {
     auto* rowGroup = Accessibility::findAncestor<AccessibilityObject>(*this, false, [] (const auto& ancestor) {
         return ancestor.hasTagName(theadTag) || ancestor.hasTagName(tbodyTag) || ancestor.hasTagName(tfootTag);
     });
     if (!rowGroup)
-        return { };
+        return std::nullopt;
 
     return rowGroup->objectID();
 }
@@ -260,36 +261,6 @@ bool AccessibilityTableCell::supportsExpandedTextValue() const
     return isTableHeaderCell() && hasAttribute(abbrAttr);
 }
 
-AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::columnHeaders()
-{
-    RefPtr parent = parentTable();
-    if (!parent)
-        return { };
-
-    // Choose columnHeaders as the place where the "headers" attribute is reported.
-    auto headers = relatedObjects(AXRelationType::Headers);
-    // If the headers attribute returned valid values, then do not further search for column headers.
-    if (!headers.isEmpty())
-        return headers;
-
-    auto rowRange = rowIndexRange();
-    auto colRange = columnIndexRange();
-
-    for (unsigned row = 0; row < rowRange.first; row++) {
-        RefPtr tableCell = parent->cellForColumnAndRow(colRange.first, row);
-        if (!tableCell || tableCell == this || headers.contains(tableCell))
-            continue;
-
-        ASSERT(is<AccessibilityObject>(tableCell));
-        if (tableCell->cellScope() == "colgroup"_s && isTableCellInSameColGroup(tableCell.get()))
-            headers.append(tableCell);
-        else if (tableCell->isColumnHeader())
-            headers.append(tableCell);
-    }
-
-    return headers;
-}
-
 AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::rowHeaders()
 {
     AccessibilityChildrenVector headers;
@@ -302,37 +273,20 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityTableCell::rowHeaders()
 
     for (unsigned column = 0; column < colRange.first; column++) {
         RefPtr tableCell = parent->cellForColumnAndRow(column, rowRange.first);
-        if (!tableCell || tableCell == this || headers.contains(tableCell))
+        if (!tableCell || tableCell == this || headers.contains(Ref { *tableCell }))
             continue;
 
-        if (tableCell->cellScope() == "rowgroup"_s && isTableCellInSameRowGroup(tableCell.get()))
-            headers.append(tableCell);
+        if (tableCell->cellScope() == "rowgroup"_s && isTableCellInSameRowGroup(*tableCell))
+            headers.append(tableCell.releaseNonNull());
         else if (tableCell->isRowHeader())
-            headers.append(tableCell);
+            headers.append(tableCell.releaseNonNull());
     }
 
     return headers;
 }
 
-AccessibilityTableRow* AccessibilityTableCell::ariaOwnedByParent() const
-{
-    auto owners = this->owners();
-    if (owners.size() == 1 && owners[0]->isTableRow())
-        return downcast<AccessibilityTableRow>(owners[0].get());
-    return nullptr;
-}
-
-AccessibilityObject* AccessibilityTableCell::parentObjectUnignored() const
-{
-    if (auto ownerParent = ariaOwnedByParent())
-        return ownerParent;
-    return AccessibilityRenderObject::parentObjectUnignored();
-}
-
 AccessibilityTableRow* AccessibilityTableCell::parentRow() const
 {
-    if (auto ownerParent = ariaOwnedByParent())
-        return ownerParent;
     return dynamicDowncast<AccessibilityTableRow>(parentObjectUnignored());
 }
 
@@ -446,13 +400,18 @@ unsigned AccessibilityTableCell::rowSpan() const
 {
     // According to the ARIA spec, "If aria-rowspan is used on an element for which the host language
     // provides an equivalent attribute, user agents must ignore the value of aria-rowspan."
-    if (auto rowSpan = parseHTMLInteger(getAttribute(rowspanAttr)); rowSpan && *rowSpan >= 1) {
-        // https://html.spec.whatwg.org/multipage/tables.html
-        // If rowspan is greater than 65534, let it be 65534 instead.
-        return std::min(std::max(*rowSpan, 1), 65534);
+    if (auto rowSpan = parseHTMLInteger(getAttribute(rowspanAttr))) {
+        if (*rowSpan < 0)
+            return 1;
+        return std::min(static_cast<unsigned>(*rowSpan), HTMLTableCellElement::maxRowspan);
     }
-    if (auto ariaRowSpan = parseHTMLInteger(getAttribute(aria_rowspanAttr)); ariaRowSpan && *ariaRowSpan >= 1)
-        return std::min(std::max(*ariaRowSpan, 1), 65534);
+
+    if (auto ariaRowSpan = parseHTMLInteger(getAttribute(aria_rowspanAttr))) {
+        if (*ariaRowSpan < 0)
+            return 1;
+        return std::min(static_cast<unsigned>(*ariaRowSpan), HTMLTableCellElement::maxRowspan);
+    }
+
     return 1;
 }
 

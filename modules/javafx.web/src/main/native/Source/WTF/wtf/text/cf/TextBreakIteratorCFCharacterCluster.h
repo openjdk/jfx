@@ -58,7 +58,7 @@ public:
     void setText(StringView string, StringView priorContext)
     {
         if (priorContext.isEmpty())
-        m_string = string.createCFStringWithoutCopying();
+            m_string = string.createCFStringWithoutCopying();
         else
             m_string = createContextualizedCFString(string, priorContext);
         m_stringLength = string.length();

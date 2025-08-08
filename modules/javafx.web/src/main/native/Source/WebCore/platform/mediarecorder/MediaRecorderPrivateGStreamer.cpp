@@ -33,8 +33,12 @@
 #include <gst/app/gstappsink.h>
 #include <gst/transcoder/gsttranscoder.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorderPrivateBackend);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorderPrivateGStreamer);
 
 GST_DEBUG_CATEGORY(webkit_media_recorder_debug);
 #define GST_CAT_DEFAULT webkit_media_recorder_debug
@@ -95,7 +99,7 @@ void MediaRecorderPrivateGStreamer::resumeRecording(CompletionHandler<void()>&& 
     m_recorder->resumeRecording(WTFMove(completionHandler));
 }
 
-const String& MediaRecorderPrivateGStreamer::mimeType() const
+String MediaRecorderPrivateGStreamer::mimeType() const
 {
     return m_recorder->mimeType();
 }
@@ -104,6 +108,8 @@ bool MediaRecorderPrivateGStreamer::isTypeSupported(const ContentType& contentTy
 {
     auto& scanner = GStreamerRegistryScanner::singleton();
     bool isSupported = scanner.isContentTypeSupported(GStreamerRegistryScanner::Configuration::Encoding, contentType, { }, GStreamerRegistryScanner::CaseSensitiveCodecName::No) > MediaPlayerEnums::SupportsType::IsNotSupported;
+
+    // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/7670
     if (isSupported && !contentType.containerType().endsWith("mp4"_s) && !webkitGstCheckVersion(1, 24, 9))
         isSupported = false;
     return isSupported;
@@ -128,9 +134,14 @@ MediaRecorderPrivateBackend::MediaRecorderPrivateBackend(MediaStreamPrivate& str
         }
     } else {
         containerType = selectedTracks.videoTrack ? "video/mp4"_s : "audio/mp4"_s;
-        if (codecs.isEmpty() && selectedTracks.audioTrack && !selectedTracks.videoTrack)
+        if (codecs.isEmpty()) {
+            if (selectedTracks.videoTrack)
+                codecs.append("avc1.4d002a"_s);
+            if (selectedTracks.audioTrack)
             codecs.append("mp4a"_s);
     }
+    }
+
     StringBuilder builder;
     builder.append(containerType);
     if (!codecs.isEmpty()) {
@@ -166,9 +177,9 @@ void MediaRecorderPrivateBackend::stopRecording(CompletionHandler<void()>&& comp
     GST_DEBUG_OBJECT(m_transcoder.get(), "Stop requested, pushing EOS event");
 
     auto scopeExit = makeScopeExit([this, completionHandler = WTFMove(completionHandler)]() mutable {
+        GST_DEBUG_OBJECT(m_transcoder.get(), "Tearing down pipeline");
         unregisterPipeline(m_pipeline);
         m_pipeline.clear();
-        GST_DEBUG_OBJECT(m_transcoder.get(), "Stopping");
         m_transcoder.clear();
         completionHandler();
     });
@@ -178,7 +189,13 @@ void MediaRecorderPrivateBackend::stopRecording(CompletionHandler<void()>&& comp
         m_eos = true;
         return;
     }
-    webkitMediaStreamSrcSignalEndOfStream(WEBKIT_MEDIA_STREAM_SRC(m_src.get()));
+
+    GST_DEBUG_OBJECT(m_transcoder.get(), "Emitting EOS event(s)");
+    if (!webkitMediaStreamSrcSignalEndOfStream(WEBKIT_MEDIA_STREAM_SRC(m_src.get()))) {
+        GST_DEBUG_OBJECT(m_transcoder.get(), "EOS event(s) un-successfully sent, not expecting them on the sink");
+        m_eos = true;
+        return;
+    }
 
     bool isEOS = false;
     while (!isEOS) {
@@ -190,6 +207,7 @@ void MediaRecorderPrivateBackend::stopRecording(CompletionHandler<void()>&& comp
         });
         isEOS = m_eos;
     }
+    GST_DEBUG_OBJECT(m_transcoder.get(), "EOS event received on sink");
 }
 
 void MediaRecorderPrivateBackend::fetchData(MediaRecorderPrivate::FetchDataCallback&& completionHandler)
@@ -243,8 +261,6 @@ void MediaRecorderPrivateBackend::resumeRecording(CompletionHandler<void()>&& co
         gst_element_set_state(m_pipeline.get(), GST_STATE_PLAYING);
     completionHandler();
 }
-
-
 
 GRefPtr<GstEncodingContainerProfile> MediaRecorderPrivateBackend::containerProfile()
 {
@@ -328,13 +344,19 @@ GRefPtr<GstEncodingContainerProfile> MediaRecorderPrivateBackend::containerProfi
         auto audioCaps = adoptGRef(gst_caps_from_string(audioCapsName.utf8().data()));
         GST_DEBUG("Creating audio encoding profile for caps %" GST_PTR_FORMAT, audioCaps.get());
         m_audioEncodingProfile = adoptGRef(GST_ENCODING_PROFILE(gst_encoding_audio_profile_new(audioCaps.get(), nullptr, nullptr, 1)));
+
         auto& settings = selectedTracks.audioTrack->settings();
         if (settings.supportsSampleRate()) {
+            // opusenc doesn't support the default 44.1 kHz sample rate, so fallback to 48 kHz. This
+            // appears to be an unexpected behaviour from the encoding profile "restriction" API.
+            // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/4054
             auto sampleRate = audioCapsName == "audio/x-opus"_s ? 48000 : settings.sampleRate();
+
             auto restrictionCaps = adoptGRef(gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, sampleRate, nullptr));
             GST_DEBUG("Setting audio restriction caps to %" GST_PTR_FORMAT, restrictionCaps.get());
             gst_encoding_profile_set_restriction(m_audioEncodingProfile.get(), restrictionCaps.leakRef());
         }
+
         gst_encoding_container_profile_add_profile(profile.get(), m_audioEncodingProfile.get());
     }
 
@@ -391,14 +413,17 @@ void MediaRecorderPrivateBackend::configureAudioEncoder(GstElement* element)
         GST_WARNING_OBJECT(m_pipeline.get(), "Audio encoder %" GST_PTR_FORMAT " has no bitrate property, skipping configuration", element);
         return;
     }
+
     int bitRate = 0;
     if (m_options.audioBitsPerSecond)
         bitRate = *m_options.audioBitsPerSecond;
     else if (m_options.bitsPerSecond)
         bitRate = *m_options.bitsPerSecond;
+
     if (bitRate)
         g_object_set(element, "bitrate", bitRate, nullptr);
 }
+
 void MediaRecorderPrivateBackend::configureVideoEncoder(GstElement* element)
 {
     videoEncoderSetCodec(WEBKIT_VIDEO_ENCODER(element), m_videoCodec);
@@ -424,10 +449,12 @@ bool MediaRecorderPrivateBackend::preparePipeline()
     m_transcoder = adoptGRef(gst_transcoder_new_full("mediastream://", "appsink://", GST_ENCODING_PROFILE(profile.get())));
     gst_transcoder_set_avoid_reencoding(m_transcoder.get(), true);
     m_pipeline = gst_transcoder_get_pipeline(m_transcoder.get());
+
     auto clock = adoptGRef(gst_system_clock_obtain());
     gst_pipeline_use_clock(GST_PIPELINE(m_pipeline.get()), clock.get());
     gst_element_set_base_time(m_pipeline.get(), 0);
     gst_element_set_start_time(m_pipeline.get(), GST_CLOCK_TIME_NONE);
+
     registerActivePipeline(m_pipeline);
 
     g_signal_connect_swapped(m_pipeline.get(), "source-setup", G_CALLBACK(+[](MediaRecorderPrivateBackend* recorder, GstElement* sourceElement) {
@@ -445,7 +472,7 @@ bool MediaRecorderPrivateBackend::preparePipeline()
             return;
         }
 
-        String elementClass = WTF::span(gst_element_get_metadata(element, GST_ELEMENT_METADATA_KLASS));
+        String elementClass = unsafeSpan(gst_element_get_metadata(element, GST_ELEMENT_METADATA_KLASS));
         auto classifiers = elementClass.split('/');
         if (classifiers.contains("Audio"_s) && classifiers.contains("Codec"_s) && classifiers.contains("Encoder"_s))
             recorder->configureAudioEncoder(element);
@@ -474,7 +501,7 @@ void MediaRecorderPrivateBackend::processSample(GRefPtr<GstSample>&& sample)
     Locker locker { m_dataLock };
 
     GST_LOG_OBJECT(m_transcoder.get(), "Queueing %zu bytes of encoded data, caps: %" GST_PTR_FORMAT, buffer.size(), gst_sample_get_caps(sample.get()));
-    m_data.append(std::span<const uint8_t> { buffer.data(), buffer.size() });
+    m_data.append(buffer.span<uint8_t>());
 }
 
 void MediaRecorderPrivateBackend::notifyPosition(GstClockTime position)
@@ -482,6 +509,7 @@ void MediaRecorderPrivateBackend::notifyPosition(GstClockTime position)
     Locker locker { m_dataLock };
     m_position = fromGstClockTime(position);
 }
+
 void MediaRecorderPrivateBackend::notifyEOS()
 {
     GST_DEBUG("EOS received");

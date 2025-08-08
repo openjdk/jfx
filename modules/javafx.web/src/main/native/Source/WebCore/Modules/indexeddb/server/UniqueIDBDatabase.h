@@ -30,6 +30,7 @@
 #include "IDBDatabaseInfo.h"
 #include "IDBDatabaseNameAndVersion.h"
 #include "IDBGetResult.h"
+#include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "ServerOpenDBRequest.h"
 #include "UniqueIDBDatabaseTransaction.h"
@@ -38,6 +39,7 @@
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace IDBServer {
@@ -78,7 +80,7 @@ using GetAllResultsCallback = Function<void(const IDBError&, const IDBGetAllResu
 using CountCallback = Function<void(const IDBError&, uint64_t)>;
 
 class UniqueIDBDatabase : public CanMakeWeakPtr<UniqueIDBDatabase> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(UniqueIDBDatabase, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT UniqueIDBDatabase(UniqueIDBDatabaseManager&, const IDBDatabaseIdentifier&);
     UniqueIDBDatabase(UniqueIDBDatabase&) = delete;
@@ -101,8 +103,8 @@ public:
     void clearObjectStore(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void createIndex(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void deleteIndex(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, const String& indexName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
-    void renameIndex(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
-    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback&&);
+    void renameIndex(UniqueIDBDatabaseTransaction&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName, ErrorCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
+    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexIDToIndexKeyMap&, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback&&);
     void putOrAddAfterSpaceCheck(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback&&, bool isKeyGenerated, const IndexIDToIndexKeyMap&, const IDBObjectStoreInfo&, SpaceCheckResult);
     void getRecord(const IDBRequestData&, const IDBGetRecordData&, GetResultCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);
     void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&, GetAllResultsCallback&&, SpaceCheckResult = SpaceCheckResult::Unknown);

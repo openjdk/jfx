@@ -38,13 +38,15 @@ namespace WebCore {
 
 class WebSocketExtensionParser {
 public:
-    explicit WebSocketExtensionParser(const char* start, const char* end)
-        : m_current(start)
-        , m_end(end)
+    // FIXME: What character encoding are we parsing? Specify LChar, char8_t, UChar, or something else here.
+    explicit WebSocketExtensionParser(std::span<const uint8_t> data)
+        : m_data(data)
     {
     }
     bool finished();
     bool parsedSuccessfully();
+
+    // FIXME: What character encoding are we parsing? Specify LChar, char8_t, UChar, or something else here.
     bool parseExtension(String& extensionToken, HashMap<String, String>& parameters);
 
 private:
@@ -59,9 +61,9 @@ private:
 
     void skipSpaces();
 
-    const char* m_current;
-    const char* m_end;
+    std::span<const uint8_t> m_data;
     String m_currentToken;
+    bool m_didFailParsing { false };
 };
 
 } // namespace WebCore

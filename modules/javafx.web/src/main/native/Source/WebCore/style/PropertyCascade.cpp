@@ -30,15 +30,19 @@
 #include "CSSPaintImageValue.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSValuePool.h"
+#include "ComputedStyleDependencies.h"
 #include "PaintWorkletGlobalScope.h"
 #include "PropertyAllowlist.h"
 #include "StyleBuilderGenerated.h"
 #include "StylePropertyShorthand.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Style {
 
-PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableCSSProperty>* animatedProperties)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PropertyCascade);
+
+PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel maximumCascadeLevel, OptionSet<PropertyType> includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* animatedProperties)
     : m_matchResult(matchResult)
     , m_includedProperties(includedProperties)
     , m_maximumCascadeLevel(maximumCascadeLevel)
@@ -49,7 +53,7 @@ PropertyCascade::PropertyCascade(const MatchResult& matchResult, CascadeLevel ma
 
 PropertyCascade::PropertyCascade(const PropertyCascade& parent, CascadeLevel maximumCascadeLevel, std::optional<ScopeOrdinal> rollbackScope, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback)
     : m_matchResult(parent.m_matchResult)
-    , m_includedProperties(parent.m_includedProperties)
+    , m_includedProperties(normalProperties()) // Include all properties to the rollback cascade, lower prority layers may not get included otherwise.
     , m_maximumCascadeLevel(maximumCascadeLevel)
     , m_rollbackScope(rollbackScope)
     , m_maximumCascadeLayerPriorityForRollback(maximumCascadeLayerPriorityForRollback)
@@ -60,7 +64,7 @@ PropertyCascade::PropertyCascade(const PropertyCascade& parent, CascadeLevel max
 
 PropertyCascade::~PropertyCascade() = default;
 
-PropertyCascade::AnimationLayer::AnimationLayer(const HashSet<AnimatableCSSProperty>& properties)
+PropertyCascade::AnimationLayer::AnimationLayer(const UncheckedKeyHashSet<AnimatableCSSProperty>& properties)
     : properties(properties)
 {
     hasCustomProperties = std::find_if(properties.begin(), properties.end(), [](auto& property) {
@@ -102,11 +106,18 @@ void PropertyCascade::setPropertyInternal(Property& property, CSSPropertyID id, 
     property.fromStyleAttribute = matchedProperties.fromStyleAttribute;
 
     if (matchedProperties.linkMatchType == SelectorChecker::MatchAll) {
-        property.cssValue[0] = &cssValue;
+        property.cascadeLevels[SelectorChecker::MatchDefault] = cascadeLevel;
+        property.cssValue[SelectorChecker::MatchDefault] = &cssValue;
+
+        property.cascadeLevels[SelectorChecker::MatchLink] = cascadeLevel;
         property.cssValue[SelectorChecker::MatchLink] = &cssValue;
+
+        property.cascadeLevels[SelectorChecker::MatchVisited] = cascadeLevel;
         property.cssValue[SelectorChecker::MatchVisited] = &cssValue;
-    } else
+    } else {
+        property.cascadeLevels[matchedProperties.linkMatchType] = cascadeLevel;
         property.cssValue[matchedProperties.linkMatchType] = &cssValue;
+    }
 }
 
 void PropertyCascade::set(CSSPropertyID id, CSSValue& cssValue, const MatchedProperties& matchedProperties, CascadeLevel cascadeLevel)
@@ -157,14 +168,14 @@ bool PropertyCascade::hasProperty(CSSPropertyID propertyID, const CSSValue& valu
     return propertyID < firstLogicalGroupProperty ? hasNormalProperty(propertyID) : hasLogicalGroupProperty(propertyID);
 }
 
-const PropertyCascade::Property* PropertyCascade::lastPropertyResolvingLogicalPropertyPair(CSSPropertyID propertyID, TextDirection direction, WritingMode writingMode) const
+const PropertyCascade::Property* PropertyCascade::lastPropertyResolvingLogicalPropertyPair(CSSPropertyID propertyID, WritingMode writingMode) const
 {
     ASSERT(CSSProperty::isInLogicalPropertyGroup(propertyID));
 
     auto pairID = [&] {
         if (CSSProperty::isDirectionAwareProperty(propertyID))
-            return CSSProperty::resolveDirectionAwareProperty(propertyID, direction, writingMode);
-        return CSSProperty::unresolvePhysicalProperty(propertyID, direction, writingMode);
+            return CSSProperty::resolveDirectionAwareProperty(propertyID, writingMode);
+        return CSSProperty::unresolvePhysicalProperty(propertyID, writingMode);
     }();
     ASSERT(pairID != CSSPropertyInvalid);
 
@@ -237,11 +248,12 @@ bool PropertyCascade::addMatch(const MatchedProperties& matchedProperties, Casca
                 return false;
             }
 
-            if (m_includedProperties.contains(PropertyType::Inherited) && current.isInherited())
+            bool currentIsInherited = CSSProperty::isInheritedProperty(current.id());
+            if (m_includedProperties.contains(PropertyType::Inherited) && currentIsInherited)
                 return true;
             if (m_includedProperties.contains(PropertyType::ExplicitlyInherited) && isValueID(*current.value(), CSSValueInherit))
                 return true;
-            if (m_includedProperties.contains(PropertyType::NonInherited) && !current.isInherited())
+            if (m_includedProperties.contains(PropertyType::NonInherited) && !currentIsInherited)
                 return true;
 
             // Apply all logical group properties if we have applied any. They may override the ones we already applied.
@@ -379,20 +391,20 @@ void PropertyCascade::addImportantMatches(CascadeLevel cascadeLevel)
 
 void PropertyCascade::sortLogicalGroupPropertyIDs()
 {
-    auto begin = m_logicalGroupPropertyIDs.begin();
-    auto end = begin;
+    size_t endIndex = 0;
     for (uint16_t id = m_lowestSeenLogicalGroupProperty; id <= m_highestSeenLogicalGroupProperty; ++id) {
         auto propertyID = static_cast<CSSPropertyID>(id);
         if (hasLogicalGroupProperty(propertyID))
-            *end++ = propertyID;
+            m_logicalGroupPropertyIDs[endIndex++] = propertyID;
     }
-    m_seenLogicalGroupPropertyCount = end - begin;
-    std::sort(begin, end, [&](auto id1, auto id2) {
+    m_seenLogicalGroupPropertyCount = endIndex;
+    auto logicalGroupPropertyIDs = std::span { m_logicalGroupPropertyIDs }.first(endIndex);
+    std::sort(logicalGroupPropertyIDs.begin(), logicalGroupPropertyIDs.end(), [&](auto id1, auto id2) {
         return logicalGroupPropertyIndex(id1) < logicalGroupPropertyIndex(id2);
     });
 }
 
-const HashSet<AnimatableCSSProperty> PropertyCascade::overriddenAnimatedProperties() const
+const UncheckedKeyHashSet<AnimatableCSSProperty> PropertyCascade::overriddenAnimatedProperties() const
 {
     if (m_animationLayer)
         return m_animationLayer->overriddenProperties;

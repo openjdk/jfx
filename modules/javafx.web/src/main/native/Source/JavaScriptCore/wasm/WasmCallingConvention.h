@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,9 @@ namespace JSC { namespace Wasm {
 constexpr unsigned numberOfLLIntCalleeSaveRegisters = 2;
 constexpr unsigned numberOfIPIntCalleeSaveRegisters = 3;
 constexpr unsigned numberOfLLIntInternalRegisters = 2;
+constexpr unsigned numberOfIPIntInternalRegisters = 2;
+constexpr ptrdiff_t WasmToJSScratchSpaceSize = 0x8 * 1 + 0x8; // Needs to be aligned to 0x10.
+constexpr ptrdiff_t WasmToJSCallableFunctionSlot = -0x8;
 
 struct ArgumentLocation {
 #if USE(JSVALUE32_64)
@@ -81,11 +84,13 @@ enum class CallRole : uint8_t {
 };
 
 struct CallInformation {
-    CallInformation(ArgumentLocation passedThisArgument, Vector<ArgumentLocation>&& parameters, Vector<ArgumentLocation, 1>&& returnValues, size_t stackOffset)
+    CallInformation() = default;
+    CallInformation(ArgumentLocation passedThisArgument, Vector<ArgumentLocation, 8>&& parameters, Vector<ArgumentLocation, 1>&& returnValues, size_t stackOffset, size_t stackValues)
         : thisArgument(passedThisArgument)
         , params(WTFMove(parameters))
         , results(WTFMove(returnValues))
         , headerAndArgumentStackSizeInBytes(stackOffset)
+        , numberOfStackValues(stackValues)
     { }
 
     RegisterAtOffsetList computeResultsOffsetList()
@@ -97,24 +102,20 @@ struct CallInformation {
 #if USE(JSVALUE32_64)
                 usedResultRegisters.add(loc.location.jsr().tagGPR(), IgnoreVectors);
 #endif
-            } else if (loc.location.isFPR()) {
-                ASSERT(loc.width <= Width64 || argumentsOrResultsIncludeV128);
+            } else if (loc.location.isFPR())
                 usedResultRegisters.add(loc.location.fpr(), loc.width);
             }
-        }
 
         RegisterAtOffsetList savedRegs(usedResultRegisters, RegisterAtOffsetList::ZeroBased);
         return savedRegs;
     }
 
-    bool argumentsIncludeI64 : 1 { false };
-    bool resultsIncludeI64 : 1 { false };
-    bool argumentsOrResultsIncludeV128 : 1 { false };
-    ArgumentLocation thisArgument;
-    Vector<ArgumentLocation> params;
-    Vector<ArgumentLocation, 1> results;
+    ArgumentLocation thisArgument { };
+    Vector<ArgumentLocation, 8> params { };
+    Vector<ArgumentLocation, 1> results { };
     // As a callee this includes CallerFrameAndPC as a caller it does not.
-    size_t headerAndArgumentStackSizeInBytes;
+    size_t headerAndArgumentStackSizeInBytes { 0 };
+    size_t numberOfStackValues { 0 };
 };
 
 class WasmCallingConvention {
@@ -170,6 +171,7 @@ private:
         case TypeKind::I32:
         case TypeKind::I64:
         case TypeKind::Funcref:
+        case TypeKind::Exn:
         case TypeKind::Externref:
         case TypeKind::Ref:
         case TypeKind::RefNull:
@@ -196,6 +198,7 @@ public:
             switch (signature.returnType(i).kind) {
             case TypeKind::I32:
             case TypeKind::I64:
+            case TypeKind::Exn:
             case TypeKind::Externref:
             case TypeKind::Funcref:
             case TypeKind::RefNull:
@@ -221,6 +224,7 @@ public:
             case TypeKind::Arrayref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
+            case TypeKind::Nullexn:
             case TypeKind::Nullref:
             case TypeKind::Nullfuncref:
             case TypeKind::Nullexternref:
@@ -245,6 +249,7 @@ public:
             switch (signature.argumentType(i).kind) {
             case TypeKind::I32:
             case TypeKind::I64:
+            case TypeKind::Exn:
             case TypeKind::Externref:
             case TypeKind::Funcref:
             case TypeKind::RefNull:
@@ -270,6 +275,7 @@ public:
             case TypeKind::Arrayref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
+            case TypeKind::Nullexn:
             case TypeKind::Nullref:
             case TypeKind::Nullfuncref:
             case TypeKind::Nullexternref:
@@ -296,9 +302,6 @@ public:
 
     CallInformation callInformationFor(const FunctionSignature& signature, CallRole role = CallRole::Caller) const
     {
-        bool argumentsIncludeI64 = false;
-        bool resultsIncludeI64 = false;
-        bool argumentsOrResultsIncludeV128 = false;
         size_t gpArgumentCount = 0;
         size_t fpArgumentCount = 0;
         size_t headerSize = headerSizeInBytes;
@@ -309,34 +312,33 @@ public:
         headerSize += sizeof(Register);
 
         size_t argStackOffset = headerSize;
-        Vector<ArgumentLocation> params(signature.argumentCount());
-        for (size_t i = 0; i < signature.argumentCount(); ++i) {
-            argumentsIncludeI64 |= signature.argumentType(i).isI64();
-            argumentsOrResultsIncludeV128 |= signature.argumentType(i).isV128();
-            params[i] = marshallLocation(role, signature.argumentType(i), gpArgumentCount, fpArgumentCount, argStackOffset);
-        }
+        Vector<ArgumentLocation, 8> params(signature.argumentCount(),
+            [&](unsigned index) {
+                return marshallLocation(role, signature.argumentType(index), gpArgumentCount, fpArgumentCount, argStackOffset);
+            });
         uint32_t stackArgs = argStackOffset - headerSize;
+        size_t stackArguments = 0;
+        if (gpArgumentCount > jsrArgs.size())
+            stackArguments += (gpArgumentCount - jsrArgs.size());
+        if (fpArgumentCount > fprArgs.size())
+            stackArguments += (fpArgumentCount - fprArgs.size());
+        ASSERT(stackArguments == numberOfStackArguments(signature));
+
         gpArgumentCount = 0;
         fpArgumentCount = 0;
+        size_t stackResults = numberOfStackResults(signature);
+        uint32_t stackResultsInBytes = stackResults * sizeof(Register);
+        uint32_t stackCountAligned = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(std::max(stackArgs, stackResultsInBytes));
+        size_t resultStackOffset = headerSize + stackCountAligned - stackResultsInBytes;
+        Vector<ArgumentLocation, 1> results(signature.returnCount(),
+            [&](unsigned index) {
+                return marshallLocation(role, signature.returnType(index), gpArgumentCount, fpArgumentCount, resultStackOffset);
+            });
 
-        uint32_t stackResults = numberOfStackResults(signature) * sizeof(Register);
-        uint32_t stackCountAligned = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(std::max(stackArgs, stackResults));
-        size_t resultStackOffset = headerSize + stackCountAligned - stackResults;
-        Vector<ArgumentLocation, 1> results(signature.returnCount());
-        for (size_t i = 0; i < signature.returnCount(); ++i) {
-            resultsIncludeI64 |= signature.returnType(i).isI64();
-            argumentsOrResultsIncludeV128 |= signature.returnType(i).isV128();
-            results[i] = marshallLocation(role, signature.returnType(i), gpArgumentCount, fpArgumentCount, resultStackOffset);
-        }
-
-        CallInformation result(thisArgument, WTFMove(params), WTFMove(results), std::max(argStackOffset, resultStackOffset));
-        result.argumentsIncludeI64 = argumentsIncludeI64;
-        result.resultsIncludeI64 = resultsIncludeI64;
-        result.argumentsOrResultsIncludeV128 = argumentsOrResultsIncludeV128;
-        return result;
+        return { thisArgument, WTFMove(params), WTFMove(results), std::max(argStackOffset, resultStackOffset), std::max(stackArguments, stackResults) };
     }
 
-    RegisterSet argumentGPRS() const { return RegisterSetBuilder::argumentGPRS(); }
+    RegisterSet argumentGPRs() const { return RegisterSetBuilder::argumentGPRs(); }
 
     const Vector<JSValueRegs> jsrArgs;
     const Vector<FPRReg> fprArgs;
@@ -375,6 +377,7 @@ private:
         case TypeKind::I32:
         case TypeKind::I64:
         case TypeKind::Funcref:
+        case TypeKind::Exn:
         case TypeKind::Externref:
         case TypeKind::Ref:
         case TypeKind::RefNull:
@@ -389,7 +392,8 @@ private:
     }
 
 public:
-    CallInformation callInformationFor(const TypeDefinition& signature, CallRole role = CallRole::Callee) const
+    CallInformation callInformationFor(const TypeDefinition& signature, CallRole role = CallRole::Callee) const { return callInformationFor(*signature.as<FunctionSignature>(), role); }
+    CallInformation callInformationFor(const FunctionSignature& signature, CallRole role = CallRole::Callee) const
     {
         size_t gpArgumentCount = 0;
         size_t fpArgumentCount = 0;
@@ -400,12 +404,12 @@ public:
         ArgumentLocation thisArgument = { role == CallRole::Caller ? ValueLocation::stackArgument(stackOffset) : ValueLocation::stack(stackOffset), widthForBytes(sizeof(void*)) };
         stackOffset += sizeof(Register);
 
-        Vector<ArgumentLocation> params;
-        for (size_t i = 0; i < signature.as<FunctionSignature>()->argumentCount(); ++i)
-            params.append(marshallLocation(role, signature.as<FunctionSignature>()->argumentType(i), gpArgumentCount, fpArgumentCount, stackOffset));
-
+        Vector<ArgumentLocation, 8> params(signature.argumentCount(),
+            [&](unsigned index) {
+                return marshallLocation(role, signature.argumentType(index), gpArgumentCount, fpArgumentCount, stackOffset);
+            });
         Vector<ArgumentLocation, 1> results { ArgumentLocation { ValueLocation { JSRInfo::returnValueJSR }, Width64 } };
-        return CallInformation(thisArgument, WTFMove(params), WTFMove(results), stackOffset);
+        return { thisArgument, WTFMove(params), WTFMove(results), stackOffset, 0U };
     }
 
     const Vector<JSValueRegs> jsrArgs;
@@ -477,6 +481,7 @@ private:
         switch (valueType.kind) {
         case TypeKind::I64:
         case TypeKind::Funcref:
+        case TypeKind::Exn:
         case TypeKind::Externref:
         case TypeKind::RefNull:
         case TypeKind::Ref:
@@ -504,6 +509,7 @@ public:
             switch (signature.returnType(i).kind) {
             case TypeKind::I64:
             case TypeKind::Funcref:
+            case TypeKind::Exn:
             case TypeKind::Externref:
             case TypeKind::RefNull:
             case TypeKind::Ref:
@@ -544,6 +550,7 @@ public:
             switch (signature.argumentType(i).kind) {
             case TypeKind::I64:
             case TypeKind::Funcref:
+            case TypeKind::Exn:
             case TypeKind::Externref:
             case TypeKind::RefNull:
             case TypeKind::Ref:
@@ -578,8 +585,6 @@ public:
     CallInformation callInformationFor(const TypeDefinition& type, CallRole role = CallRole::Caller) const
     {
         const auto& signature = *type.as<FunctionSignature>();
-        bool argumentsIncludeI64 = false;
-        bool resultsIncludeI64 = false;
         size_t gpArgumentCount = 0;
         size_t fpArgumentCount = 0;
         size_t headerSize = headerSizeInBytes;
@@ -590,30 +595,27 @@ public:
         headerSize += sizeof(Register);
 
         size_t argStackOffset = headerSize;
-        Vector<ArgumentLocation> params(signature.argumentCount());
-        for (size_t i = 0; i < signature.argumentCount(); ++i) {
-            argumentsIncludeI64 |= signature.argumentType(i).isI64();
-            ASSERT(!signature.argumentType(i).isV128());
-            params[i] = marshallLocation(role, signature.argumentType(i), gpArgumentCount, fpArgumentCount, argStackOffset);
-        }
+        Vector<ArgumentLocation, 8> params(signature.argumentCount(),
+            [&](unsigned index) {
+                auto argumentType = signature.argumentType(index);
+                ASSERT(!argumentType.isV128());
+                return marshallLocation(role, argumentType, gpArgumentCount, fpArgumentCount, argStackOffset);
+            });
         uint32_t stackArgs = argStackOffset - headerSize;
+        size_t stackArgsCount = numberOfStackArguments(signature);
+
         gpArgumentCount = 0;
         fpArgumentCount = 0;
-
-        uint32_t stackResults = numberOfStackResults(signature) * sizeof(Register);
+        size_t stackResultsCount = numberOfStackResults(signature);
+        uint32_t stackResults = stackResultsCount * sizeof(Register);
         uint32_t stackCountAligned = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(std::max(stackArgs, stackResults));
         size_t resultStackOffset = headerSize + stackCountAligned - stackResults;
-        Vector<ArgumentLocation, 1> results(signature.returnCount());
-        for (size_t i = 0; i < signature.returnCount(); ++i) {
-            resultsIncludeI64 |= signature.returnType(i).isI64();
-            ASSERT(!signature.returnType(i).isV128());
-            results[i] = marshallLocation(role, signature.returnType(i), gpArgumentCount, fpArgumentCount, resultStackOffset);
-        }
-
-        CallInformation result(thisArgument, WTFMove(params), WTFMove(results), std::max(argStackOffset, resultStackOffset));
-        result.argumentsIncludeI64 = argumentsIncludeI64;
-        result.resultsIncludeI64 = resultsIncludeI64;
-        return result;
+        Vector<ArgumentLocation, 1> results(signature.returnCount(),
+            [&](unsigned index) {
+                ASSERT(!signature.returnType(index).isV128());
+                return marshallLocation(role, signature.returnType(index), gpArgumentCount, fpArgumentCount, resultStackOffset);
+            });
+        return { thisArgument, WTFMove(params), WTFMove(results), std::max(argStackOffset, resultStackOffset), std::max(stackArgsCount, stackResultsCount) };
     }
 
     const Vector<GPRReg> gprArgs;
@@ -626,5 +628,16 @@ const CCallingConventionArmThumb2& cCallingConventionArmThumb2();
 #endif
 
 } } // namespace JSC::Wasm
+
+namespace WTF {
+
+template<>
+struct VectorTraits<JSC::Wasm::ArgumentLocation> : VectorTraitsBase<false, JSC::Wasm::ValueLocation> {
+    static constexpr bool canInitializeWithMemset = true;
+    static constexpr bool canMoveWithMemcpy = true;
+    static constexpr bool canCopyWithMemcpy = true;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(WEBASSEMBLY)

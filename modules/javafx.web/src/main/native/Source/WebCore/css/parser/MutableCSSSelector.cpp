@@ -25,13 +25,11 @@
 #include "CSSSelectorInlines.h"
 #include "CSSSelectorList.h"
 #include "SelectorPseudoTypeMap.h"
-
-#if COMPILER(MSVC)
-// See https://msdn.microsoft.com/en-us/library/1wea5zwe.aspx
-#pragma warning(disable: 4701)
-#endif
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MutableCSSSelector);
 
 std::unique_ptr<MutableCSSSelector> MutableCSSSelector::parsePagePseudoSelector(StringView pseudoTypeString)
 {
@@ -129,10 +127,16 @@ void MutableCSSSelector::adoptSelectorVector(MutableCSSSelectorList&& selectorVe
     m_selector->setSelectorList(makeUnique<CSSSelectorList>(WTFMove(selectorVector)));
 }
 
-void MutableCSSSelector::setArgumentList(FixedVector<PossiblyQuotedIdentifier> list)
+void MutableCSSSelector::setArgumentList(FixedVector<AtomString> list)
 {
     ASSERT(!list.isEmpty());
     m_selector->setArgumentList(WTFMove(list));
+}
+
+void MutableCSSSelector::setLangList(FixedVector<PossiblyQuotedIdentifier> list)
+{
+    ASSERT(!list.isEmpty());
+    m_selector->setLangList(WTFMove(list));
 }
 
 void MutableCSSSelector::setSelectorList(std::unique_ptr<CSSSelectorList> selectorList)

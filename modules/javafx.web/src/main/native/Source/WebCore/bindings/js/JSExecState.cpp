@@ -58,4 +58,9 @@ ScriptExecutionContext* executionContext(JSC::JSGlobalObject* globalObject)
     return JSC::jsCast<JSDOMGlobalObject*>(globalObject)->scriptExecutionContext();
 }
 
+RefPtr<ScriptExecutionContext> protectedExecutionContext(JSC::JSGlobalObject* globalObject)
+{
+    return executionContext(globalObject);
+}
+
 } // namespace WebCore

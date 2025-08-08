@@ -47,6 +47,10 @@
 #include <stdlib.h>
 #include <wtf/ExportMacros.h>
 
+#if OS(ANDROID)
+#include <android/log.h>
+#endif
+
 #if OS(DARWIN) && !PLATFORM(JAVA)
 #include <wtf/spi/darwin/AbortWithReasonSPI.h>
 #endif
@@ -62,6 +66,7 @@
 
 #ifdef __cplusplus
 #include <cstdlib>
+#include <span>
 #include <type_traits>
 #endif
 
@@ -98,7 +103,7 @@
 #if ENABLE(RELEASE_LOG)
 #define RELEASE_LOG_DISABLED 0
 #else
-#define RELEASE_LOG_DISABLED !(USE(OS_LOG) || ENABLE(JOURNALD_LOG))
+#define RELEASE_LOG_DISABLED !(USE(OS_LOG) || ENABLE(JOURNALD_LOG) || OS(ANDROID))
 #endif
 
 #ifndef VERBOSE_RELEASE_LOG
@@ -224,9 +229,9 @@ WTF_EXPORT_PRIVATE void WTFReportBacktraceWithPrefixAndStackDepth(const char*, i
 WTF_EXPORT_PRIVATE void WTFReportBacktrace(void);
 #ifdef __cplusplus
 WTF_EXPORT_PRIVATE void WTFReportBacktraceWithPrefixAndPrintStream(WTF::PrintStream&, const char*);
-WTF_EXPORT_PRIVATE void WTFPrintBacktraceWithPrefixAndPrintStream(WTF::PrintStream&, void** stack, int size, const char* prefix);
+WTF_EXPORT_PRIVATE void WTFPrintBacktraceWithPrefixAndPrintStream(WTF::PrintStream&, std::span<void* const> stack, const char* prefix);
+WTF_EXPORT_PRIVATE void WTFPrintBacktrace(std::span<void* const> stack);
 #endif
-WTF_EXPORT_PRIVATE void WTFPrintBacktrace(void** stack, int size);
 
 WTF_EXPORT_PRIVATE bool WTFIsDebuggerAttached(void);
 
@@ -331,6 +336,11 @@ WTF_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH void WTFCrash(void);
 
 #ifndef CRASH_WITH_SECURITY_IMPLICATION
 #define CRASH_WITH_SECURITY_IMPLICATION() WTFCrashWithSecurityImplication()
+#endif
+
+#if ENABLE(CONJECTURE_ASSERT)
+extern WTF_EXPORT_PRIVATE int wtfConjectureAssertIsEnabled;
+WTF_EXPORT_PRIVATE NEVER_INLINE NO_RETURN_DUE_TO_CRASH void WTFCrashDueToConjectureAssert(const char* file, int line, const char* function, const char* assertion);
 #endif
 
 WTF_EXPORT_PRIVATE NO_RETURN_DUE_TO_CRASH void WTFCrashWithSecurityImplication(void);
@@ -542,6 +552,28 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 #endif
 #endif
 
+#ifdef __cplusplus
+namespace WTF {
+template <typename T>
+static constexpr bool unreachableForType = false;
+template <auto v>
+static constexpr bool unreachableForValue = false;
+} // namespace WTF
+// This could be used in a function template, or a member function of a class template.
+// It will trigger in code that gets instantiated when it shouldn't, for example a template function invocation, or a constexpr-if/else branch that is actually taken.
+// The 1st parameter TYPE or COMPILE_TIME_VALUE is necessary as part of delaying the assertion evaluation until instantiation, and that parameter will be visible in compiler errors.
+// The 2nd parameter is an optional explanation string.
+#define STATIC_ASSERT_NOT_REACHED_FOR_TYPE(TYPE, ...) do { \
+    static_assert(WTF::unreachableForType<TYPE>, ##__VA_ARGS__); \
+    CRASH(); \
+} while (0)
+
+#define STATIC_ASSERT_NOT_REACHED_FOR_VALUE(COMPILE_TIME_VALUE, ...) do { \
+    static_assert(WTF::unreachableForValue<COMPILE_TIME_VALUE>, ##__VA_ARGS__); \
+    CRASH(); \
+} while (0)
+#endif // __cplusplus
+
 /* FATAL */
 
 #if FATAL_DISABLED
@@ -558,19 +590,37 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 
 #if ERROR_DISABLED
 #define LOG_ERROR(...) ((void)0)
+#define LOG_ERROR_ONCE(...) ((void)0)
 #else
 #define LOG_ERROR(...) WTFReportError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, __VA_ARGS__)
+#define LOG_ERROR_ONCE(...) do { \
+    static std::once_flag onceFlag; \
+    std::call_once( \
+        onceFlag, \
+        [&] { \
+            LOG_ERROR(__VA_ARGS__); \
+        }); \
+} while (0)
 #endif
 
 /* LOG */
 
 #if LOG_DISABLED
 #define LOG(channel, ...) ((void)0)
+#define LOG_ONCE(channel, ...) ((void)0)
 #else
 #define LOG(channel, ...) do { \
         if (LOG_CHANNEL(channel).state != logChannelStateOff) \
             WTFLog(&LOG_CHANNEL(channel), __VA_ARGS__); \
     } while (0)
+#define LOG_ONCE(channel, ...) do { \
+    static std::once_flag onceFlag; \
+    std::call_once( \
+        onceFlag, \
+        [&] { \
+            LOG(channel, __VA_ARGS__); \
+        }); \
+} while (0)
 #endif
 
 /* LOG_VERBOSE */
@@ -648,6 +698,34 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 #define RELEASE_LOG_WITH_LEVEL_IF(isAllowed, channel, logLevel, ...) do { \
     if ((isAllowed) && LOG_CHANNEL(channel).level >= (logLevel)) \
         os_log(LOG_CHANNEL(channel).osLogChannel, __VA_ARGS__); \
+} while (0)
+
+#elif OS(ANDROID)
+
+#define PUBLIC_LOG_STRING "s"
+#define PRIVATE_LOG_STRING "s"
+#define SENSITIVE_LOG_STRING "s"
+
+#define LOG_ANDROID_SEND(channel, priority, fmt, ...) do { \
+    auto& logChannel = LOG_CHANNEL(channel); \
+    if (logChannel.state != WTFLogChannelState::Off) \
+        __android_log_print(ANDROID_LOG_ ## priority, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] " fmt, logChannel.name, ##__VA_ARGS__); \
+} while (0)
+
+#define RELEASE_LOG(channel, ...) LOG_ANDROID_SEND(channel, VERBOSE, __VA_ARGS__)
+#define RELEASE_LOG_ERROR(channel, ...) LOG_ANDROID_SEND(channel, ERROR, __VA_ARGS__)
+#define RELEASE_LOG_FAULT(channel, ...) LOG_ANDROID_SEND(channel, FATAL, __VA_ARGS__)
+#define RELEASE_LOG_INFO(channel, ...) LOG_ANDROID_SEND(channel, INFO, __VA_ARGS__)
+#define RELEASE_LOG_DEBUG(channel, ...) LOG_ANDROID_SEND(channel, DEBUG, __VA_ARGS__)
+
+#define RELEASE_LOG_WITH_LEVEL(channel, logLevel, ...) do { \
+    if (LOG_CHANNEL(channel).level >= (logLevel)) \
+        LOG_ANDROID_SEND(channel, VERBOSE, __VA_ARGS__); \
+} while (0)
+
+#define RELEASE_LOG_WITH_LEVEL_IF(isAllowed, channel, logLevel, ...) do { \
+    if ((isAllowed) && LOG_CHANNEL(channel).level >= (logLevel)) \
+        LOG_ANDROID_SEND(channel, VERBOSE, __VA_ARGS__); \
 } while (0)
 
 #elif ENABLE(JOURNALD_LOG)
@@ -743,6 +821,11 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
         CRASH_UNDER_CONSTEXPR_CONTEXT(); \
     } \
 } while (0)
+#define RELEASE_ASSERT_IMPLIES(condition, assertion) do { \
+    if (UNLIKELY((condition) && !(assertion))) { \
+        CRASH(); \
+    } \
+} while (0)
 
 #else /* ASSERT_ENABLED */
 
@@ -752,6 +835,7 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
 #define RELEASE_ASSERT_NOT_REACHED(...) ASSERT_NOT_REACHED(__VA_ARGS__)
 #define RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT() ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT()
 #define RELEASE_ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion) ASSERT_UNDER_CONSTEXPR_CONTEXT(assertion)
+#define RELEASE_ASSERT_IMPLIES(condition, assertion) ASSERT_IMPLIES(condition, assertion)
 
 #endif /* ASSERT_ENABLED */
 
@@ -759,18 +843,33 @@ constexpr bool assertionFailureDueToUnreachableCode = false;
    about the code. We want to be able to land these in the code base for some time to enable
    extended testing.
 
-   If the conjecture is proven false it, the CONJECTURE_ASSERT should either be removed or
+   If the conjecture is proven false, then the CONJECTURE_ASSERT should either be removed or
    updated to test a new conjecture. If the conjecture is proven true, the CONJECTURE_ASSERT
    should either be promoted to an ASSERT or RELEASE_ASSERT as appropriate, or removed if
    deemed of low value.
 
    The number of CONJECTURE_ASSERTs should not be growing unboundedly, and they should not
    stay in the codebase perpetually.
- */
+
+   There is no EWS coverage for CONJECTURE_ASSERTs. So, if you add one, you are responsible
+   for making sure it builds with ENABLE_CONJECTURE_ASSERT set to 1, and for running tests on
+   your build to make sure that the assertion is not immediately failing.
+
+   To run with CONJECTURE_ASSERTs enabled, you also need to define the environmental variable
+   ENABLE_WEBKIT_CONJECTURE_ASSERT. Otherwise, the assertion will not be tested.
+*/
 #if ENABLE(CONJECTURE_ASSERT)
-#define CONJECTURE_ASSERT(assertion, ...) RELEASE_ASSERT(assertion, __VA_ARGS__)
+#define CONJECTURE_ASSERT(assertion, ...) do { \
+        if (UNLIKELY(wtfConjectureAssertIsEnabled && !(assertion))) \
+            WTFCrashDueToConjectureAssert(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion); \
+    } while (false)
+#define CONJECTURE_ASSERT_IMPLIES(condition, assertion)  do { \
+        if (UNLIKELY(wtfConjectureAssertIsEnabled && (condition) && !(assertion))) \
+            WTFCrashDueToConjectureAssert(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #assertion); \
+    } while (false)
 #else
 #define CONJECTURE_ASSERT(assertion, ...)
+#define CONJECTURE_ASSERT_IMPLIES(condition, assertion)
 #endif
 
 #ifdef __cplusplus
@@ -873,11 +972,11 @@ inline void isIntegralOrPointerType() { }
 template<typename T, typename... Types>
 void isIntegralOrPointerType(T, Types... types)
 {
-    static_assert(std::is_integral<T>::value || std::is_enum<T>::value || std::is_pointer<T>::value, "All types need to be bitwise_cast-able to integral type for logging");
+    static_assert(std::is_integral<T>::value || std::is_enum<T>::value || std::is_pointer<T>::value, "All types need to be std::bit_cast-able to integral type for logging");
     isIntegralOrPointerType(types...);
 }
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || OS(ANDROID)
 WTF_EXPORT_PRIVATE void disableForwardingVPrintfStdErrToOSLog();
 #endif
 

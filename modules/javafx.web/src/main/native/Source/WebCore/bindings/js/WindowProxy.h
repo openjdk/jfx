@@ -23,6 +23,7 @@
 #include <JavaScriptCore/Strong.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakPtr.h>
 
@@ -39,9 +40,9 @@ class JSDOMGlobalObject;
 class JSWindowProxy;
 
 class WindowProxy : public RefCounted<WindowProxy> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WindowProxy, WEBCORE_EXPORT);
 public:
-    using ProxyMap = HashMap<RefPtr<DOMWrapperWorld>, JSC::Strong<JSWindowProxy>>;
+    using ProxyMap = UncheckedKeyHashMap<RefPtr<DOMWrapperWorld>, JSC::Strong<JSWindowProxy>>;
 
     static Ref<WindowProxy> create(Frame& frame)
     {
@@ -56,7 +57,6 @@ public:
 
     void destroyJSWindowProxy(DOMWrapperWorld&);
 
-    ProxyMap::ValuesConstIteratorRange jsWindowProxies() const;
     Vector<JSC::Strong<JSWindowProxy>> jsWindowProxiesAsVector() const;
 
     WEBCORE_EXPORT ProxyMap releaseJSWindowProxies();
@@ -67,15 +67,9 @@ public:
         if (!m_frame)
             return nullptr;
 
-        if (auto* existingProxy = existingJSWindowProxy(world)) {
-#if PLATFORM(JAVA)
-            set_existing_window_proxy(true, world);
-#endif
+        if (auto* existingProxy = existingJSWindowProxy(world))
             return existingProxy;
-        }
-#if PLATFORM(JAVA)
-        set_existing_window_proxy(false, world);
-#endif
+
         return &createJSWindowProxyWithInitializedScript(world);
     }
 
@@ -101,9 +95,6 @@ private:
 
     JSWindowProxy& createJSWindowProxy(DOMWrapperWorld&);
     WEBCORE_EXPORT JSWindowProxy& createJSWindowProxyWithInitializedScript(DOMWrapperWorld&);
-#if PLATFORM(JAVA)
-    void set_existing_window_proxy(bool existingWindowProxy_, DOMWrapperWorld& world);
-#endif
 
     WeakPtr<Frame> m_frame;
     UniqueRef<ProxyMap> m_jsWindowProxies;

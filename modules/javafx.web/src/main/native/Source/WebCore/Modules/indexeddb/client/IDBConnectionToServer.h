@@ -28,8 +28,12 @@
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServerDelegate.h"
 #include "IDBDatabaseConnectionIdentifier.h"
+#include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBResourceIdentifier.h"
+#include "IndexKey.h"
+#include <pal/SessionID.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
 #include <wtf/TZoneMalloc.h>
@@ -54,10 +58,12 @@ struct IDBIterateCursorData;
 
 namespace IDBClient {
 
-class IDBConnectionToServer : public ThreadSafeRefCounted<IDBConnectionToServer> {
+class IDBConnectionToServer final : public ThreadSafeRefCounted<IDBConnectionToServer>, public CanMakeThreadSafeCheckedPtr<IDBConnectionToServer> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBConnectionToServer, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IDBConnectionToServer);
 public:
-    WEBCORE_EXPORT static Ref<IDBConnectionToServer> create(IDBConnectionToServerDelegate&);
+    WEBCORE_EXPORT static Ref<IDBConnectionToServer> create(IDBConnectionToServerDelegate&, PAL::SessionID);
+    WEBCORE_EXPORT ~IDBConnectionToServer();
 
     WEBCORE_EXPORT IDBConnectionIdentifier identifier() const;
 
@@ -87,10 +93,10 @@ public:
     void deleteIndex(const IDBRequestData&, IDBObjectStoreIdentifier, const String& indexName);
     WEBCORE_EXPORT void didDeleteIndex(const IDBResultData&);
 
-    void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
+    void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
     WEBCORE_EXPORT void didRenameIndex(const IDBResultData&);
 
-    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexedDB::ObjectStoreOverwriteMode);
+    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexIDToIndexKeyMap&, const IndexedDB::ObjectStoreOverwriteMode);
     WEBCORE_EXPORT void didPutOrAdd(const IDBResultData&);
 
     void getRecord(const IDBRequestData&, const IDBGetRecordData&);
@@ -144,7 +150,7 @@ public:
     WEBCORE_EXPORT void didGetAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, Vector<IDBDatabaseNameAndVersion>&&);
 
 private:
-    IDBConnectionToServer(IDBConnectionToServerDelegate&);
+    IDBConnectionToServer(IDBConnectionToServerDelegate&, PAL::SessionID);
 
     typedef void (IDBConnectionToServer::*ResultFunction)(const IDBResultData&);
     void callResultFunctionWithErrorLater(ResultFunction, const IDBResourceIdentifier& requestIdentifier);

@@ -29,6 +29,7 @@
 #include <variant>
 #include <wtf/Hasher.h>
 #include <wtf/StdSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -37,7 +38,7 @@ class KeyedDecoder;
 class KeyedEncoder;
 
 class IDBKeyData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBKeyData, WEBCORE_EXPORT);
 public:
     struct Date {
         double value { 0.0 };
@@ -54,7 +55,11 @@ public:
     IDBKeyData(ValueVariant&& value)
         : m_value(WTFMove(value)) { }
     IDBKeyData(const IDBKeyData&, IsolatedCopyTag);
+    IDBKeyData(bool isPlaceholder, ValueVariant&& value)
+        : m_isPlaceholder(isPlaceholder)
+        , m_value(WTFMove(value)) { }
     WEBCORE_EXPORT IDBKeyData(const IDBKey*);
+    bool isPlaceholder() const { return m_isPlaceholder; }
 
     static IDBKeyData minimum()
     {
@@ -67,6 +72,13 @@ public:
     {
         IDBKeyData result;
         result.m_value = Max { };
+        return result;
+    }
+
+    static IDBKeyData placeholder()
+    {
+        IDBKeyData result;
+        result.m_isPlaceholder = true;
         return result;
     }
 
@@ -89,9 +101,7 @@ public:
     void setDateValue(double);
     WEBCORE_EXPORT void setNumberValue(double);
 
-#if !LOG_DISABLED
     WEBCORE_EXPORT String loggingString() const;
-#endif
 
     bool isNull() const { return std::holds_alternative<std::nullptr_t>(m_value); }
     bool isValid() const;
@@ -148,6 +158,7 @@ private:
     friend struct IDBKeyDataHashTraits;
 
     bool m_isDeletedValue { false };
+    bool m_isPlaceholder { false };
     ValueVariant m_value;
 };
 

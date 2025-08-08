@@ -36,8 +36,11 @@
 #include "LocalDOMWindow.h"
 #include "MouseEvent.h"
 #include "TouchEvent.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EventContext);
 
 void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
 {
@@ -87,12 +90,6 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
 
     if (!m_node->hasEventTargetData())
         return;
-
-    if (event.isTrusted() && is<MouseEvent>(event) && !event.isWheelEvent() && !m_node->document().settings().sendMouseEventsToDisabledFormControlsEnabled()) {
-        auto* element = dynamicDowncast<Element>(m_node.get());
-        if (element && element->isDisabledFormControl())
-        return;
-    }
 
     protectedNode()->fireEventListeners(event, phase);
 }

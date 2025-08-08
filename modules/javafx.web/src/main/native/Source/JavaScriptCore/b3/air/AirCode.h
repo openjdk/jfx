@@ -51,6 +51,7 @@ class CCallHelpers;
 namespace B3 {
 
 class Procedure;
+class WasmBoundsCheckValue;
 
 #if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
@@ -65,7 +66,7 @@ class CFG;
 class Code;
 class Disassembler;
 
-typedef void WasmBoundsCheckGeneratorFunction(CCallHelpers&, GPRReg);
+typedef void WasmBoundsCheckGeneratorFunction(CCallHelpers&, WasmBoundsCheckValue*, GPRReg);
 typedef SharedTask<WasmBoundsCheckGeneratorFunction> WasmBoundsCheckGenerator;
 
 typedef void PrologueGeneratorFunction(CCallHelpers&, Code&);
@@ -101,7 +102,7 @@ public:
     RegisterSet mutableRegs() const { return m_mutableRegs.toRegisterSet().includeWholeRegisterWidth(); }
 
     bool isPinned(Reg reg) const { return !mutableRegs().contains(reg, IgnoreVectors); }
-    void pinRegister(Reg);
+    JS_EXPORT_PRIVATE void pinRegister(Reg);
 
     void setOptLevel(unsigned optLevel) { m_optLevel = optLevel; }
     unsigned optLevel() const { return m_optLevel; }
@@ -151,6 +152,14 @@ public:
             for (unsigned i = 0; i < numTmps; ++i)
                 func(Tmp::tmpForIndex(bank, i));
         }
+    }
+
+    template<Bank bank, typename Func>
+    void forEachTmp(const Func& func)
+    {
+        unsigned numTmps = this->numTmps(bank);
+        for (unsigned i = 0; i < numTmps; ++i)
+            func(Tmp::tmpForIndex(bank, i));
     }
 
     unsigned callArgAreaSizeInBytes() const { return m_callArgAreaSize; }

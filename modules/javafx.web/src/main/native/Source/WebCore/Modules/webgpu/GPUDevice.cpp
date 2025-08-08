@@ -83,7 +83,7 @@ GPUDevice::GPUDevice(ScriptExecutionContext* scriptExecutionContext, Ref<WebGPU:
     : ActiveDOMObject { scriptExecutionContext }
     , m_lostPromise(makeUniqueRef<LostPromise>())
     , m_backing(WTFMove(backing))
-    , m_queue(GPUQueue::create(Ref { m_backing->queue() }))
+    , m_queue(GPUQueue::create(Ref { m_backing->queue() }, this->backing()))
     , m_autoPipelineLayout(createAutoPipelineLayout())
 {
     m_queue->setLabel(WTFMove(queueLabel));
@@ -314,6 +314,24 @@ GPUExternalTexture* GPUDevice::externalTextureForDescriptor(const GPUExternalTex
 
 class GPUDeviceVideoFrameRequestCallback final : public VideoFrameRequestCallback {
 public:
+    static Ref<GPUDeviceVideoFrameRequestCallback> create(GPUExternalTexture& externalTexture, HTMLVideoElement& videoElement, GPUDevice& gpuDevice, ScriptExecutionContext* scriptExecutionContext)
+    {
+        return adoptRef(*new GPUDeviceVideoFrameRequestCallback(externalTexture, videoElement, gpuDevice, scriptExecutionContext));
+    }
+
+    ~GPUDeviceVideoFrameRequestCallback() final { }
+
+private:
+    GPUDeviceVideoFrameRequestCallback(GPUExternalTexture& externalTexture, HTMLVideoElement& videoElement, GPUDevice& gpuDevice, ScriptExecutionContext* scriptExecutionContext)
+        : VideoFrameRequestCallback(scriptExecutionContext)
+        , m_externalTexture(externalTexture)
+        , m_videoElement(videoElement)
+        , m_gpuDevice(gpuDevice)
+    {
+    }
+
+    bool hasCallback() const final { return true; }
+
     CallbackResult<void> handleEvent(double, const VideoFrameMetadata&) override
     {
         if (!m_videoElement)
@@ -327,21 +345,10 @@ public:
             m_externalTexture->destroy();
         return { };
     }
-    static Ref<GPUDeviceVideoFrameRequestCallback> create(GPUExternalTexture& externalTexture, HTMLVideoElement& videoElement, GPUDevice& gpuDevice, ScriptExecutionContext* scriptExecutionContext)
-    {
-        return adoptRef(*new GPUDeviceVideoFrameRequestCallback(externalTexture, videoElement, gpuDevice, scriptExecutionContext));
-    }
 
-    bool hasCallback() const final { return true; }
-
-    ~GPUDeviceVideoFrameRequestCallback() final { }
-private:
-    GPUDeviceVideoFrameRequestCallback(GPUExternalTexture& externalTexture, HTMLVideoElement& videoElement, GPUDevice& gpuDevice, ScriptExecutionContext* scriptExecutionContext)
-        : VideoFrameRequestCallback(scriptExecutionContext)
-        , m_externalTexture(externalTexture)
-        , m_videoElement(videoElement)
-        , m_gpuDevice(gpuDevice)
+    CallbackResult<void> handleEventRethrowingException(double now, const VideoFrameMetadata& metadata) override
     {
+        return handleEvent(now, metadata);
     }
 
     Ref<GPUExternalTexture> m_externalTexture;
@@ -435,10 +442,11 @@ ExceptionOr<Ref<GPUBindGroup>> GPUDevice::createBindGroup(const GPUBindGroupDesc
 #if ENABLE(VIDEO) && PLATFORM(COCOA)
     bool hasExternalTexture = false;
     auto* externalTexture = bindGroupDescriptor.externalTextureMatches(m_lastCreatedExternalTextureBindGroup.first, hasExternalTexture);
-    if (externalTexture && (*externalTexture).get()) {
-        m_lastCreatedExternalTextureBindGroup.second->updateExternalTextures(*(*externalTexture).get());
+    if (auto externalTextureValue = externalTexture ? externalTexture->get() : nullptr) {
+        if (m_lastCreatedExternalTextureBindGroup.second->updateExternalTextures(*externalTextureValue)) {
         RefPtr bindGroup = m_lastCreatedExternalTextureBindGroup.second.get();
         return bindGroup.releaseNonNull();
+    }
     }
 #endif
 
@@ -553,7 +561,7 @@ ExceptionOr<Ref<GPUCommandEncoder>> GPUDevice::createCommandEncoder(const std::o
     RefPtr encoder = m_backing->createCommandEncoder(convertToBacking(commandEncoderDescriptor));
     if (!encoder)
         return Exception { ExceptionCode::InvalidStateError, "GPUDevice.createCommandEncoder: Unable to make command encoder."_s };
-    return GPUCommandEncoder::create(encoder.releaseNonNull());
+    return GPUCommandEncoder::create(encoder.releaseNonNull(), m_backing.get());
 }
 
 ExceptionOr<Ref<GPURenderBundleEncoder>> GPUDevice::createRenderBundleEncoder(const GPURenderBundleEncoderDescriptor& renderBundleEncoderDescriptor)

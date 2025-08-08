@@ -94,6 +94,10 @@ private:
 
     void fontLoaded(CachedFont& font) final
     {
+        if (m_fontLoadedProcessed)
+            return;
+
+        m_fontLoadedProcessed = true;
         ASSERT_UNUSED(font, &font == m_font.get());
         if (m_fontLoadRequestClient)
             m_fontLoadRequestClient->fontLoaded(*this); // fontLoaded() might destroy this object. Don't deref its members after it.
@@ -102,6 +106,7 @@ private:
     CachedResourceHandle<CachedFont> m_font;
     WeakPtr<FontLoadRequestClient> m_fontLoadRequestClient;
     WeakPtr<ScriptExecutionContext> m_context;
+    bool m_fontLoadedProcessed { false };
 };
 
 } // namespace WebCore

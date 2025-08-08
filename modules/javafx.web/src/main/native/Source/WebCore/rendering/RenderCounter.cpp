@@ -48,7 +48,7 @@ using namespace HTMLNames;
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderCounter);
 
-using CounterMap = HashMap<AtomString, Ref<CounterNode>>;
+using CounterMap = UncheckedKeyHashMap<AtomString, Ref<CounterNode>>;
 using CounterMaps = SingleThreadWeakHashMap<RenderElement, std::unique_ptr<CounterMap>>;
 
 static CounterNode* makeCounterNode(RenderElement&, const AtomString& identifier, bool alwaysCreateCounter);
@@ -438,10 +438,8 @@ RenderCounter::RenderCounter(Document& document, const CounterContent& counter)
     view().addCounterNeedingUpdate(*this);
 }
 
-RenderCounter::~RenderCounter()
-{
-    // Do not add any code here. Add it to willBeDestroyed() instead.
-}
+// Do not add any code in below destructor. Add it to willBeDestroyed() instead.
+RenderCounter::~RenderCounter() = default;
 
 void RenderCounter::willBeDestroyed()
 {
@@ -472,7 +470,7 @@ String RenderCounter::originalText() const
 
         if (m_counter.listStyleType().type == ListStyleType::Type::CounterStyle) {
             ASSERT(counterStyle());
-            return counterStyle()->text(value, makeTextFlow(style().writingMode(), style().direction()));
+            return counterStyle()->text(value, writingMode());
         }
 
         ASSERT_NOT_REACHED();

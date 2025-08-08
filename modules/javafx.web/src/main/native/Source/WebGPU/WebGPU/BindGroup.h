@@ -30,7 +30,7 @@
 #import <wtf/EnumeratedArray.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
@@ -52,7 +52,7 @@ struct ExternalTextureIndices {
 };
 
 // https://gpuweb.github.io/gpuweb/#gpubindgroup
-class BindGroup : public WGPUBindGroupImpl, public RefCounted<BindGroup>, public CanMakeWeakPtr<BindGroup> {
+class BindGroup : public RefCountedAndCanMakeWeakPtr<BindGroup>, public WGPUBindGroupImpl {
     WTF_MAKE_TZONE_ALLOCATED(BindGroup);
 public:
     template <typename T>
@@ -90,15 +90,20 @@ public:
     const Vector<BindableResources>& resources() const { return m_resources; }
 
     Device& device() const { return m_device; }
+    Ref<Device> protectedDevice() const { return m_device; }
     static bool allowedUsage(const OptionSet<BindGroupEntryUsage>&);
     static NSString* usageName(const OptionSet<BindGroupEntryUsage>&);
     static uint64_t makeEntryMapKey(uint32_t baseMipLevel, uint32_t baseArrayLayer, WGPUTextureAspect);
 
-    const BindGroupLayout* bindGroupLayout() const;
+    const BindGroupLayout* bindGroupLayout() const { return m_bindGroupLayout.get(); }
+    RefPtr<const BindGroupLayout> protectedBindGroupLayout() const { return m_bindGroupLayout; }
+
     const BufferAndType* dynamicBuffer(uint32_t) const;
     uint32_t dynamicOffset(uint32_t bindingIndex, const Vector<uint32_t>*) const;
-    void rebindSamplersIfNeeded() const;
-    void updateExternalTextures(const ExternalTexture&);
+    bool rebindSamplersIfNeeded() const;
+    bool updateExternalTextures(ExternalTexture&);
+    bool makeSubmitInvalid(ShaderStage, const BindGroupLayout*) const;
+    const SamplersContainer& samplers() const { return m_samplers; }
 
 private:
     BindGroup(id<MTLBuffer> vertexArgumentBuffer, id<MTLBuffer> fragmentArgumentBuffer, id<MTLBuffer> computeArgumentBuffer, Vector<BindableResources>&&, const BindGroupLayout&, DynamicBuffersContainer&&, SamplersContainer&&, ShaderStageArray<ExternalTextureIndices>&&, Device&);

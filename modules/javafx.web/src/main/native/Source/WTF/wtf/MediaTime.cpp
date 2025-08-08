@@ -51,6 +51,7 @@ static uint32_t greatestCommonDivisor(uint32_t a, uint32_t b)
 
     if (a == b)
         return a;
+
     // Euclid's Algorithm
     while (b)
         b = std::exchange(a, b) % b;
@@ -176,6 +177,7 @@ int64_t MediaTime::toMicroseconds() const
         return m_timeValue < 0 ? std::numeric_limits<int64_t>::min() : std::numeric_limits<int64_t>::max();
     return result.value();
 }
+
 MediaTime MediaTime::operator+(const MediaTime& rhs) const
 {
     if (rhs.isInvalid() || isInvalid())
@@ -210,6 +212,7 @@ MediaTime MediaTime::operator+(const MediaTime& rhs) const
         commonTimeScale = MaximumTimeScale;
     a.setTimeScale(commonTimeScale);
     b.setTimeScale(commonTimeScale);
+
     while (!safeAdd(a.m_timeValue, b.m_timeValue, a.m_timeValue)) {
         if (commonTimeScale == 1)
             return a.m_timeValue > 0 ? positiveInfiniteTime() : negativeInfiniteTime();
@@ -254,6 +257,7 @@ MediaTime MediaTime::operator-(const MediaTime& rhs) const
         commonTimeScale = MaximumTimeScale;
     a.setTimeScale(commonTimeScale);
     b.setTimeScale(commonTimeScale);
+
     while (!safeSub(a.m_timeValue, b.m_timeValue, a.m_timeValue)) {
         if (commonTimeScale == 1)
             return a.m_timeValue > 0 ? positiveInfiniteTime() : negativeInfiniteTime();
@@ -619,6 +623,11 @@ String MediaTimeRange::toJSONString() const
 TextStream& operator<<(TextStream& stream, const MediaTime& time)
 {
     return stream << time.toJSONString();
+}
+
+MediaTime MediaTime::isolatedCopy() const
+{
+    return *this;
 }
 
 }

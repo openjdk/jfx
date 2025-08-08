@@ -294,7 +294,7 @@ void SVGFontFaceElement::rebuildFontFace()
         return;
 
     // Parse in-memory CSS rules
-    protectedFontFaceRule()->mutableProperties().addParsedProperty(CSSProperty(CSSPropertySrc, list));
+    protectedFontFaceRule()->mutableProperties().addParsedProperty(CSSProperty(CSSPropertySrc, list.releaseNonNull()));
 
     if (describesParentFont) {
         // Traverse parsed CSS values and associate CSSFontFaceSrcLocalValue elements with ourselves.
@@ -326,7 +326,7 @@ void SVGFontFaceElement::removedFromAncestor(RemovalType removalType, ContainerN
 
     if (removalType.disconnectedFromDocument) {
         m_fontElement = nullptr;
-        RefAllowingPartiallyDestroyed<Document> document = this->document();
+        Ref<Document> document = this->document();
         document->checkedSVGExtensions()->unregisterSVGFontFaceElement(*this);
         Ref fontFaceSet = document->fontSelector().cssFontFaceSet();
         Ref fontFaceRule = m_fontFaceRule;

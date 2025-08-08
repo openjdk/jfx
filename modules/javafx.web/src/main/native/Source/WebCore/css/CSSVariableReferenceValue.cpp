@@ -45,7 +45,7 @@
 namespace WebCore {
 
 CSSVariableReferenceValue::CSSVariableReferenceValue(Ref<CSSVariableData>&& data)
-    : CSSValue(VariableReferenceClass)
+    : CSSValue(ClassType::VariableReference)
     , m_data(WTFMove(data))
 {
     cacheSimpleReference();
@@ -66,7 +66,7 @@ bool CSSVariableReferenceValue::equals(const CSSVariableReferenceValue& other) c
     return m_data.get() == other.m_data.get();
 }
 
-String CSSVariableReferenceValue::customCSSText() const
+String CSSVariableReferenceValue::customCSSText(const CSS::SerializationContext&) const
 {
     if (m_stringValue.isNull())
         m_stringValue = m_data->serialize();

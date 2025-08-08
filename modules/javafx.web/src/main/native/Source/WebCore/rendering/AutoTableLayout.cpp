@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2002 Lars Knoll (knoll@kde.org)
  *           (C) 2002 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2006, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -208,40 +209,6 @@ static bool shouldScaleColumnsForParent(const RenderTable& table)
     return true;
 }
 
-// FIXME: This needs to be adapted for vertical writing modes.
-static bool shouldScaleColumnsForSelf(RenderTable* table)
-{
-    // Normally, scale all columns to satisfy this from CSS2.2:
-    // "A percentage value for a column width is relative to the table width.
-    // If the table has 'width: auto', a percentage represents a constraint on the column's width"
-
-    // A special case.  If this table is not fixed width and contained inside
-    // a cell, then don't bloat the maxwidth by examining percentage growth.
-    bool scale = true;
-    while (table) {
-        Length tableWidth = table->style().width();
-        if ((tableWidth.isAuto() || tableWidth.isPercentOrCalculated()) && !table->isOutOfFlowPositioned()) {
-            RenderBlock* containingBlock = table->containingBlock();
-            while (containingBlock && !is<RenderView>(*containingBlock) && !is<RenderTableCell>(*containingBlock)
-                && containingBlock->style().width().isAuto() && !containingBlock->isOutOfFlowPositioned())
-                containingBlock = containingBlock->containingBlock();
-
-            table = nullptr;
-            CheckedPtr cell = dynamicDowncast<RenderTableCell>(containingBlock);
-            if (cell
-                && (containingBlock->style().width().isAuto() || containingBlock->style().width().isPercentOrCalculated())) {
-                if (cell->colSpan() > 1 || cell->table()->style().width().isAuto())
-                    scale = false;
-                else
-                    table = cell->table();
-            }
-        }
-        else
-            table = nullptr;
-    }
-    return scale;
-}
-
 void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth, TableIntrinsics intrinsics)
 {
     fullRecalc();
@@ -251,11 +218,7 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
     maxWidth = 0;
     float maxPercent = 0;
     float maxNonPercent = 0;
-    bool scaleColumnsForSelf = shouldScaleColumnsForSelf(m_table) && intrinsics == TableIntrinsics::ForLayout;
-
-    // We substitute 0 percent by (epsilon / percentScaleFactor) percent in two places below to avoid division by zero.
-    // FIXME: Handle the 0% cases properly.
-    const float epsilon = 1 / 128.0f;
+    bool scaleColumnsForSelf = intrinsics == TableIntrinsics::ForLayout;
 
     float remainingPercent = 100;
     for (size_t i = 0; i < m_layoutStruct.size(); ++i) {
@@ -264,7 +227,12 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
         if (scaleColumnsForSelf) {
             if (m_layoutStruct[i].effectiveLogicalWidth.isPercent()) {
                 float percent = std::min(m_layoutStruct[i].effectiveLogicalWidth.percent(), remainingPercent);
-                float logicalWidth = m_layoutStruct[i].effectiveMaxLogicalWidth * 100 / std::max(percent, epsilon);
+                // When percent columns meet or exceed 100% and there are remaining
+                // columns, the other browsers (FF, Edge) use an artificially high max
+                // width, so we do too. Instead of division by zero, logicalWidth and
+                // maxNonPercent are set to tableMaxWidth.
+                // Issue: https://github.com/w3c/csswg-drafts/issues/1501
+                float logicalWidth = (percent > 0) ? m_layoutStruct[i].effectiveMaxLogicalWidth * 100 / percent : tableMaxWidth;
                 maxPercent = std::max(logicalWidth,  maxPercent);
                 remainingPercent -= percent;
             } else
@@ -273,9 +241,9 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
     }
 
     if (scaleColumnsForSelf) {
-        maxNonPercent = maxNonPercent * 100 / std::max(remainingPercent, epsilon);
-        m_scaledWidthFromPercentColumns = LayoutUnit(std::min<float>(maxNonPercent, tableMaxWidth));
-        m_scaledWidthFromPercentColumns = std::max(m_scaledWidthFromPercentColumns, LayoutUnit(std::min<float>(maxPercent, tableMaxWidth)));
+        if (maxNonPercent > 0)
+            maxNonPercent = (remainingPercent > 0) ? maxNonPercent * 100 / remainingPercent : tableMaxWidth;
+        m_scaledWidthFromPercentColumns = std::min(LayoutUnit(tableMaxWidth), LayoutUnit(std::max(maxPercent, maxNonPercent)));
         if (m_scaledWidthFromPercentColumns > maxWidth && shouldScaleColumnsForParent(*m_table))
             maxWidth = m_scaledWidthFromPercentColumns;
     }
@@ -286,7 +254,7 @@ void AutoTableLayout::computeIntrinsicLogicalWidths(LayoutUnit& minWidth, Layout
 void AutoTableLayout::applyPreferredLogicalWidthQuirks(LayoutUnit& minWidth, LayoutUnit& maxWidth) const
 {
     if (auto tableLogicalWidth = m_table->style().logicalWidth(); tableLogicalWidth.isFixed() && tableLogicalWidth.isPositive()) {
-        minWidth = std::max(minWidth, m_table->overridingLogicalWidth().value_or(LayoutUnit { tableLogicalWidth.value() }));
+        minWidth = std::max(minWidth, m_table->overridingBorderBoxLogicalWidth().value_or(LayoutUnit { tableLogicalWidth.value() }));
         maxWidth = minWidth;
     }
 }
@@ -494,7 +462,7 @@ float AutoTableLayout::calcEffectiveLogicalWidth()
 /* gets all cells that originate in a column and have a cellspan > 1
    Sorts them by increasing cellspan
 */
-void AutoTableLayout::insertSpanCell(RenderTableCell *cell)
+void AutoTableLayout::insertSpanCell(RenderTableCell* cell)
 {
     ASSERT_ARG(cell, cell && cell->colSpan() != 1);
     if (!cell || cell->colSpan() == 1)
@@ -512,8 +480,8 @@ void AutoTableLayout::insertSpanCell(RenderTableCell *cell)
     unsigned pos = 0;
     unsigned span = cell->colSpan();
     while (pos < m_spanCells.size() && m_spanCells[pos] && span > m_spanCells[pos]->colSpan())
-        pos++;
-    memmove(m_spanCells.data()+pos+1, m_spanCells.data()+pos, (size-pos-1)*sizeof(RenderTableCell *));
+        ++pos;
+    memmoveSpan(m_spanCells.mutableSpan().subspan(pos + 1), m_spanCells.subspan(pos, size - (pos + 1)));
     m_spanCells[pos] = cell;
 }
 

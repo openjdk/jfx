@@ -54,6 +54,8 @@ class SharedBuffer;
 
 enum class MemoryLedger { None, Default, Network, Media, Graphics, Neural };
 
+WEBCORE_EXPORT bool isMemoryAttributionDisabled();
+
 class SharedMemoryHandle {
 public:
     using Type =
@@ -66,7 +68,11 @@ public:
 #endif
 
     SharedMemoryHandle(SharedMemoryHandle&&) = default;
+#if USE(UNIX_DOMAIN_SOCKETS)
+    explicit SharedMemoryHandle(const SharedMemoryHandle&);
+#else
     explicit SharedMemoryHandle(const SharedMemoryHandle&) = default;
+#endif
     WEBCORE_EXPORT SharedMemoryHandle(SharedMemoryHandle::Type&&, size_t);
 
     SharedMemoryHandle& operator=(SharedMemoryHandle&&) = default;
@@ -113,8 +119,8 @@ public:
 
     size_t size() const { return m_size; }
 
-    std::span<const uint8_t> span() const { return { static_cast<const uint8_t*>(m_data), m_size }; }
-    std::span<uint8_t> mutableSpan() const { return { static_cast<uint8_t*>(m_data), m_size }; }
+    std::span<const uint8_t> span() const { return unsafeMakeSpan(static_cast<const uint8_t*>(m_data), m_size); }
+    std::span<uint8_t> mutableSpan() const { return unsafeMakeSpan(static_cast<uint8_t*>(m_data), m_size); }
 
 #if OS(WINDOWS)
     HANDLE handle() const { return m_handle.get(); }

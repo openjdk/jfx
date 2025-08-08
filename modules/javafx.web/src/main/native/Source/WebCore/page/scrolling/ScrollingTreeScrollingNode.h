@@ -32,6 +32,7 @@
 #include "ScrollableArea.h"
 #include "ScrollingTree.h"
 #include "ScrollingTreeNode.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -46,6 +47,7 @@ struct ScrollPropagationInfo {
 };
 
 class WEBCORE_EXPORT ScrollingTreeScrollingNode : public ScrollingTreeNode {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ScrollingTreeScrollingNode, WEBCORE_EXPORT);
     friend class ScrollingTreeScrollingNodeDelegate;
 #if PLATFORM(MAC)
     friend class ScrollingTreeScrollingNodeDelegateMac;
@@ -102,6 +104,7 @@ public:
     OptionSet<SynchronousScrollingReason> synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
     void addSynchronousScrollingReason(SynchronousScrollingReason reason) { m_synchronousScrollingReasons.add(reason); }
     bool hasSynchronousScrollingReasons() const { return !m_synchronousScrollingReasons.isEmpty(); }
+    bool hasNonRepaintSynchronousScrollingReasons() const { return !(m_synchronousScrollingReasons - SynchronousScrollingReason::HasSlowRepaintObjects).isEmpty(); }
 #endif
 
     const FloatSize& scrollableAreaSize() const { return m_scrollableAreaSize; }
@@ -118,8 +121,6 @@ public:
     std::optional<unsigned> currentVerticalSnapPointIndex() const;
     void setCurrentHorizontalSnapPointIndex(std::optional<unsigned>);
     void setCurrentVerticalSnapPointIndex(std::optional<unsigned>);
-
-    bool useDarkAppearanceForScrollbars() const { return m_scrollableAreaParameters.useDarkAppearanceForScrollbars; }
 
     bool eventCanScrollContents(const PlatformWheelEvent&) const;
 
@@ -181,12 +182,20 @@ protected:
 
     bool allowsHorizontalScrolling() const { return m_scrollableAreaParameters.allowsHorizontalScrolling; }
     bool allowsVerticalScrolling() const { return m_scrollableAreaParameters.allowsVerticalScrolling; }
+
     bool horizontalOverscrollBehaviorPreventsPropagation() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior != OverscrollBehavior::Auto; }
     bool verticalOverscrollBehaviorPreventsPropagation() const { return m_scrollableAreaParameters.verticalOverscrollBehavior != OverscrollBehavior::Auto; }
+
+    bool overscrollBehaviorAllowsHorizontalRubberBand() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior != OverscrollBehavior::None; }
+    bool overscrollBehaviorAllowsVerticalRubberBand() const { return m_scrollableAreaParameters.verticalOverscrollBehavior != OverscrollBehavior::None; }
+
     PlatformWheelEvent eventForPropagation(const PlatformWheelEvent&) const;
     ScrollPropagationInfo computeScrollPropagation(const FloatSize&) const;
     bool overscrollBehaviorAllowsRubberBand() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior != OverscrollBehavior::None ||  m_scrollableAreaParameters.verticalOverscrollBehavior != OverscrollBehavior::None; }
+
     bool shouldRubberBand(const PlatformWheelEvent&, EventTargeting) const;
+    bool shouldRubberBandOnSide(BoxSide, RectEdges<bool> pinnedEdges) const;
+
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
     std::unique_ptr<ScrollingTreeScrollingNodeDelegate> m_delegate;

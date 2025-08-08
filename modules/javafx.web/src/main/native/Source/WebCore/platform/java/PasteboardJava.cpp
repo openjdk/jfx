@@ -30,6 +30,7 @@
 #include "DocumentFragment.h"
 #include "Image.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "LocalFrame.h"
@@ -184,16 +185,13 @@ String imageToMarkup(const String& url, const Element& element)
     markup.append(WTF::String::fromUTF8("\""));
     // Copy over attributes.  If we are dragging an image, we expect things like
     // the id to be copied as well.
-    NamedNodeMap* attrs = &element.attributes();
-    unsigned length = attrs->length();
-    for (unsigned i = 0; i < length; ++i) {
-        RefPtr<Attr> attr(static_cast<Attr*>(attrs->item(i).get()));
-        if (attr->name() == "src"_s)
+    for (const auto& attr : element.attributes()) {
+        if (attr.name() == "src"_s)
             continue;
         markup.append(WTF::String::fromUTF8(" "));
-        markup.append(attr->name());
+        markup.append(attr.localName().string());
         markup.append(WTF::String::fromUTF8("=\""));
-        String escapedAttr = attr->value();
+        String escapedAttr = attr.value().string();
         escapedAttr = makeStringByReplacingAll(escapedAttr,"\""_s, "&quot;"_s);
         markup.append(escapedAttr);
         markup.append(WTF::String::fromUTF8("\""));

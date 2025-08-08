@@ -58,12 +58,12 @@ CachedModuleScriptLoader::~CachedModuleScriptLoader()
     }
 }
 
-bool CachedModuleScriptLoader::load(Document& document, URL&& sourceURL)
+bool CachedModuleScriptLoader::load(Document& document, URL&& sourceURL, std::optional<ServiceWorkersMode> serviceWorkersMode)
 {
     ASSERT(m_promise);
     ASSERT(!m_cachedScript);
     String integrity = m_parameters ? m_parameters->integrity() : String { };
-    m_cachedScript = scriptFetcher().requestModuleScript(document, sourceURL, WTFMove(integrity));
+    m_cachedScript = scriptFetcher().requestModuleScript(document, sourceURL, WTFMove(integrity), serviceWorkersMode);
     if (!m_cachedScript)
         return false;
     m_sourceURL = WTFMove(sourceURL);

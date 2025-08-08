@@ -38,6 +38,7 @@
 #include "CSSRegisteredCustomProperty.h"
 #include "CSSValuePair.h"
 #include "CSSValuePool.h"
+#include "ComputedStyleDependencies.h"
 #include "CustomPropertyRegistry.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -51,9 +52,12 @@
 #include "StylePropertyShorthand.h"
 
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Style {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Builder);
 
 static const CSSPropertyID firstLowPriorityProperty = static_cast<CSSPropertyID>(lastHighPriorityProperty + 1);
 
@@ -84,7 +88,7 @@ inline bool isValidVisitedLinkProperty(CSSPropertyID id)
     return false;
 }
 
-Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, OptionSet<PropertyCascade::PropertyType> includedProperties, const HashSet<AnimatableCSSProperty>* animatedPropertes)
+Builder::Builder(RenderStyle& style, BuilderContext&& context, const MatchResult& matchResult, CascadeLevel cascadeLevel, OptionSet<PropertyCascade::PropertyType> includedProperties, const UncheckedKeyHashSet<AnimatableCSSProperty>* animatedPropertes)
     : m_cascade(matchResult, cascadeLevel, includedProperties, animatedPropertes)
     , m_state(*this, style, WTFMove(context))
 {
@@ -238,7 +242,7 @@ void Builder::applyCustomPropertyImpl(const AtomString& name, const PropertyCasc
 
     SetForScope levelScope(m_state.m_currentProperty, &property);
     SetForScope scopedLinkMatchMutation(m_state.m_linkMatch, SelectorChecker::MatchDefault);
-    applyProperty(CSSPropertyCustom, *resolvedValue, SelectorChecker::MatchDefault);
+    applyProperty(CSSPropertyCustom, *resolvedValue, SelectorChecker::MatchDefault, property.cascadeLevel);
 
     m_state.m_inProgressCustomProperties.remove(name);
     m_state.m_appliedCustomProperties.add(name);
@@ -252,7 +256,7 @@ inline void Builder::applyCascadeProperty(const PropertyCascade::Property& prope
     auto applyWithLinkMatch = [&](SelectorChecker::LinkMatchMask linkMatch) {
         if (property.cssValue[linkMatch]) {
             SetForScope scopedLinkMatchMutation(m_state.m_linkMatch, linkMatch);
-            applyProperty(property.id, *property.cssValue[linkMatch], linkMatch);
+            applyProperty(property.id, *property.cssValue[linkMatch], linkMatch, property.cascadeLevels[linkMatch]);
         }
     };
 
@@ -275,10 +279,10 @@ void Builder::applyRollbackCascadeProperty(const PropertyCascade::Property& prop
 
     SetForScope levelScope(m_state.m_currentProperty, &property);
 
-    applyProperty(property.id, *value, linkMatchMask);
+    applyProperty(property.id, *value, linkMatchMask, property.cascadeLevel);
 }
 
-void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::LinkMatchMask linkMatchMask)
+void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::LinkMatchMask linkMatchMask, CascadeLevel cascadeLevel)
 {
     ASSERT_WITH_MESSAGE(!isShorthand(id), "Shorthand property id = %d wasn't expanded at parsing time", id);
 
@@ -286,10 +290,13 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
     auto& style = m_state.style();
 
     if (CSSProperty::isDirectionAwareProperty(id)) {
-        CSSPropertyID newId = CSSProperty::resolveDirectionAwareProperty(id, style.direction(), style.writingMode());
+        CSSPropertyID newId = CSSProperty::resolveDirectionAwareProperty(id, style.writingMode());
         ASSERT(newId != id);
-        return applyProperty(newId, valueToApply.get(), linkMatchMask);
+        return applyProperty(newId, valueToApply.get(), linkMatchMask, cascadeLevel);
     }
+
+    if (m_state.positionTryFallback())
+        id = AnchorPositionEvaluator::resolvePositionTryFallbackProperty(id, style.writingMode(), *m_state.positionTryFallback());
 
     auto valueID = WebCore::valueID(valueToApply.get());
 
@@ -342,7 +349,7 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
                     applyRollbackCascadeProperty(property, linkMatchMask);
                     return;
                 }
-            } else if (auto* property = rollbackCascade->lastPropertyResolvingLogicalPropertyPair(id, style.direction(), style.writingMode())) {
+            } else if (auto* property = rollbackCascade->lastPropertyResolvingLogicalPropertyPair(id, style.writingMode())) {
                 applyRollbackCascadeProperty(*property, linkMatchMask);
                 return;
             }
@@ -355,11 +362,14 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
         return registeredCustomProperty ? registeredCustomProperty->inherits : CSSProperty::isInheritedProperty(id);
     };
 
-    if (isUnset) {
+    auto unsetValueType = [&] {
         // https://drafts.csswg.org/css-cascade-4/#inherit-initial
         // The unset CSS-wide keyword acts as either inherit or initial, depending on whether the property is inherited or not.
-        valueType = isInheritedProperty() ? ApplyValueType::Inherit : ApplyValueType::Initial;
-    }
+        return isInheritedProperty() ? ApplyValueType::Inherit : ApplyValueType::Initial;
+    };
+
+    if (isUnset)
+        valueType = unsetValueType();
 
     if (!m_state.applyPropertyToRegularStyle() && !isValidVisitedLinkProperty(id)) {
         // Limit the properties that can be applied to only the ones honored by :visited.
@@ -392,6 +402,20 @@ void Builder::applyProperty(CSSPropertyID id, CSSValue& value, SelectorChecker::
     }
 
     BuilderGenerated::applyProperty(id, m_state, valueToApply.get(), valueType);
+
+    if (!isUnset) {
+        if (cascadeLevel == CascadeLevel::Author && m_state.element()->isDevolvableWidget() && CSSProperty::disablesNativeAppearance(id) && m_state.applyPropertyToRegularStyle())
+            style.setNativeAppearanceDisabled(true);
+
+        if (m_state.isCurrentPropertyInvalidAtComputedValueTime()) {
+            // https://drafts.csswg.org/css-variables-2/#invalid-variables
+            // A declaration can be invalid at computed-value time if...
+            // When this happens, the computed value is one of the following...
+            // Otherwise: Either the property’s inherited value or its initial value depending on whether the property
+            // is inherited or not, respectively, as if the property’s value had been specified as the unset keyword
+            BuilderGenerated::applyProperty(id, m_state, valueToApply.get(), unsetValueType());
+        }
+    }
 }
 
 void Builder::applyCustomPropertyValue(const CSSCustomPropertyValue& value, ApplyValueType valueType, const CSSRegisteredCustomProperty* registered)
@@ -453,7 +477,7 @@ Ref<CSSValue> Builder::resolveVariableReferences(CSSPropertyID propertyID, CSSVa
 
     // https://drafts.csswg.org/css-variables-2/#invalid-variables
     // ...as if the property’s value had been specified as the unset keyword.
-    if (!variableValue || m_state.m_inUnitCycleProperties.get(propertyID))
+    if (!variableValue || m_state.m_invalidAtComputedValueTimeProperties.get(propertyID))
         return CSSPrimitiveValue::create(CSSValueUnset);
 
     return *variableValue;
@@ -544,7 +568,7 @@ RefPtr<CSSCustomPropertyValue> Builder::resolveCustomPropertyValue(CSSCustomProp
     auto checkDependencies = [&](auto& propertyDependencies) {
         for (auto property : propertyDependencies) {
             if (m_state.m_inProgressProperties.get(property)) {
-                m_state.m_inUnitCycleProperties.set(property);
+                m_state.m_invalidAtComputedValueTimeProperties.set(property);
                 hasCycles = true;
             }
             if (property == CSSPropertyFontSize)
@@ -566,36 +590,36 @@ RefPtr<CSSCustomPropertyValue> Builder::resolveCustomPropertyValue(CSSCustomProp
     return CSSPropertyParser::parseTypedCustomPropertyValue(name, registered->syntax, resolvedData->tokens(), m_state, resolvedData->context());
 }
 
-static bool pageSizeFromName(const CSSPrimitiveValue& pageSizeName, const CSSPrimitiveValue* pageOrientation, Length& width, Length& height)
+static bool pageSizeFromName(const CSSPrimitiveValue& pageSizeName, const CSSPrimitiveValue* pageOrientation, WebCore::Length& width, WebCore::Length& height)
 {
     auto mmLength = [](double mm) {
-        return CSSPrimitiveValue::create(mm, CSSUnitType::CSS_MM).get().computeLength<Length>({ });
+        return WebCore::Length(CSS::pixelsPerMm * mm, LengthType::Fixed);
     };
 
     auto inchLength = [](double inch) {
-        return CSSPrimitiveValue::create(inch, CSSUnitType::CSS_IN).get().computeLength<Length>({ });
+        return WebCore::Length(CSS::pixelsPerInch * inch, LengthType::Fixed);
     };
 
-    static NeverDestroyed<Length> a5Width(mmLength(148));
-    static NeverDestroyed<Length> a5Height(mmLength(210));
-    static NeverDestroyed<Length> a4Width(mmLength(210));
-    static NeverDestroyed<Length> a4Height(mmLength(297));
-    static NeverDestroyed<Length> a3Width(mmLength(297));
-    static NeverDestroyed<Length> a3Height(mmLength(420));
-    static NeverDestroyed<Length> b5Width(mmLength(176));
-    static NeverDestroyed<Length> b5Height(mmLength(250));
-    static NeverDestroyed<Length> b4Width(mmLength(250));
-    static NeverDestroyed<Length> b4Height(mmLength(353));
-    static NeverDestroyed<Length> jisB5Width(mmLength(182));
-    static NeverDestroyed<Length> jisB5Height(mmLength(257));
-    static NeverDestroyed<Length> jisB4Width(mmLength(257));
-    static NeverDestroyed<Length> jisB4Height(mmLength(364));
-    static NeverDestroyed<Length> letterWidth(inchLength(8.5));
-    static NeverDestroyed<Length> letterHeight(inchLength(11));
-    static NeverDestroyed<Length> legalWidth(inchLength(8.5));
-    static NeverDestroyed<Length> legalHeight(inchLength(14));
-    static NeverDestroyed<Length> ledgerWidth(inchLength(11));
-    static NeverDestroyed<Length> ledgerHeight(inchLength(17));
+    static NeverDestroyed<WebCore::Length> a5Width(mmLength(148));
+    static NeverDestroyed<WebCore::Length> a5Height(mmLength(210));
+    static NeverDestroyed<WebCore::Length> a4Width(mmLength(210));
+    static NeverDestroyed<WebCore::Length> a4Height(mmLength(297));
+    static NeverDestroyed<WebCore::Length> a3Width(mmLength(297));
+    static NeverDestroyed<WebCore::Length> a3Height(mmLength(420));
+    static NeverDestroyed<WebCore::Length> b5Width(mmLength(176));
+    static NeverDestroyed<WebCore::Length> b5Height(mmLength(250));
+    static NeverDestroyed<WebCore::Length> b4Width(mmLength(250));
+    static NeverDestroyed<WebCore::Length> b4Height(mmLength(353));
+    static NeverDestroyed<WebCore::Length> jisB5Width(mmLength(182));
+    static NeverDestroyed<WebCore::Length> jisB5Height(mmLength(257));
+    static NeverDestroyed<WebCore::Length> jisB4Width(mmLength(257));
+    static NeverDestroyed<WebCore::Length> jisB4Height(mmLength(364));
+    static NeverDestroyed<WebCore::Length> letterWidth(inchLength(8.5));
+    static NeverDestroyed<WebCore::Length> letterHeight(inchLength(11));
+    static NeverDestroyed<WebCore::Length> legalWidth(inchLength(8.5));
+    static NeverDestroyed<WebCore::Length> legalHeight(inchLength(14));
+    static NeverDestroyed<WebCore::Length> ledgerWidth(inchLength(11));
+    static NeverDestroyed<WebCore::Length> ledgerHeight(inchLength(17));
 
     switch (pageSizeName.valueID()) {
     case CSSValueA5:
@@ -661,8 +685,8 @@ void Builder::applyPageSizeDescriptor(CSSValue& value)
 {
     m_state.style().resetPageSizeType();
 
-    Length width;
-    Length height;
+    WebCore::Length width;
+    WebCore::Length height;
     auto pageSizeType = PageSizeType::Auto;
 
     if (auto* pair = dynamicDowncast<CSSValuePair>(value)) {
@@ -676,8 +700,8 @@ void Builder::applyPageSizeDescriptor(CSSValue& value)
             if (!second->isLength())
                 return;
             auto conversionData = m_state.cssToLengthConversionData().copyWithAdjustedZoom(1.0f);
-            width = first->computeLength<Length>(conversionData);
-            height = second->computeLength<Length>(conversionData);
+            width = first->resolveAsLength<WebCore::Length>(conversionData);
+            height = second->resolveAsLength<WebCore::Length>(conversionData);
         } else {
             // <page-size> <orientation>
             // The value order is guaranteed. See CSSParser::parseSizeParameter.
@@ -690,7 +714,7 @@ void Builder::applyPageSizeDescriptor(CSSValue& value)
         if (primitiveValue->isLength()) {
             // <length>
             pageSizeType = PageSizeType::Resolved;
-            width = height = primitiveValue->computeLength<Length>(m_state.cssToLengthConversionData().copyWithAdjustedZoom(1.0f));
+            width = height = primitiveValue->resolveAsLength<WebCore::Length>(m_state.cssToLengthConversionData().copyWithAdjustedZoom(1.0f));
         } else {
             switch (primitiveValue->valueID()) {
             case CSSValueInvalid:

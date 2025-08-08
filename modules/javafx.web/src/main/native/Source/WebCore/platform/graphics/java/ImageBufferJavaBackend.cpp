@@ -140,7 +140,7 @@ Vector<uint8_t> ImageBufferJavaBackend::toDataJava(const String& mimeType, std::
     return { };
 }
 
-void* ImageBufferJavaBackend::getData()
+std::pair<void*, size_t> ImageBufferJavaBackend::getDataAndSize()
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -156,11 +156,15 @@ void* ImageBufferJavaBackend::getData()
 
     jobject pixelBuf = env->CallObjectMethod(getWCImage(), midGetBGRABytes);
     if (WTF::CheckAndClearException(env) || !pixelBuf) {
-        return NULL;
+        return {nullptr, 0};
     }
     JLObject byteBuffer(pixelBuf);
 
-    return env->GetDirectBufferAddress(byteBuffer);
+    void* data = env->GetDirectBufferAddress(byteBuffer);
+    jlong capacity = env->GetDirectBufferCapacity(byteBuffer);
+    if (!data || capacity <= 0)
+        return {nullptr, 0};
+    return {data, static_cast<size_t>(capacity)};
 }
 
 void ImageBufferJavaBackend::update() const
@@ -199,19 +203,20 @@ RefPtr<NativeImage> ImageBufferJavaBackend::createNativeImageReference()
 
 void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) //overide method
 {
-    void *data = getData();
-    if (!data)
+    auto [data, size] = getDataAndSize();
+    if (!data || size == 0)
         return;
-    return getPixelBuffer(srcRect, static_cast<const uint8_t*>(data), destination);
+    std::span<const uint8_t> spanData(static_cast<const uint8_t*>(data), size);
+    return getPixelBuffer(srcRect, spanData, destination);
 
 }
 
-void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, const uint8_t* data, PixelBuffer& destination)
+void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, std::span<const uint8_t> data, PixelBuffer& destination)
 {
     return ImageBufferBackend::getPixelBuffer(srcRect, data,destination);
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, uint8_t* destination)
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, std::span<uint8_t> destination)
 {
     ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, destination);
     update();
@@ -219,10 +224,11 @@ void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer
 
 void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) //override
 {
-    void *data = getData();
-    if (!data)
+    auto [data, size] = getDataAndSize();
+    if (!data || size == 0)
         return;
-    putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, static_cast<uint8_t*>(data));
+    std::span<uint8_t> spanData(static_cast<uint8_t*>(data), size);
+    putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, spanData);
     update();
 }
 

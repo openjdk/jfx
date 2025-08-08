@@ -34,6 +34,7 @@
 
 namespace WebCore {
 
+class DOMPromise;
 enum class RejectAsHandled : bool { No, Yes };
 
 #define DEFERRED_PROMISE_HANDLE_AND_RETURN_IF_EXCEPTION(scope, globalObject) do { \
@@ -124,7 +125,7 @@ public:
     }
 
     template<class IDLType>
-    void resolveCallbackValueWithNewlyCreated(const Function<typename IDLType::InnerParameterType(ScriptExecutionContext&)>& createValue)
+    void resolveCallbackValueWithNewlyCreated(NOESCAPE const Function<typename IDLType::InnerParameterType(ScriptExecutionContext&)>& createValue)
     {
         if (shouldIgnoreRequestToFulfill())
             return;
@@ -235,7 +236,7 @@ private:
 };
 
 class DOMPromiseDeferredBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DOMPromiseDeferredBase, WEBCORE_EXPORT);
 public:
     DOMPromiseDeferredBase(Ref<DeferredPromise>&& genericPromise)
         : m_promise(WTFMove(genericPromise))
@@ -273,6 +274,12 @@ public:
     void reject(ErrorType&&... error)
     {
         m_promise->reject(std::forward<ErrorType>(error)...);
+    }
+
+    template<typename Callback>
+    void rejectWithCallback(Callback callback, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
+    {
+        m_promise->rejectWithCallback(callback, rejectAsHandled);
     }
 
     template<typename IDLType>
@@ -347,6 +354,9 @@ WEBCORE_EXPORT void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject&, JSDOMG
 
 enum class RejectedPromiseWithTypeErrorCause { NativeGetter, InvalidThis };
 JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::JSGlobalObject&, const String&, RejectedPromiseWithTypeErrorCause);
+
+std::pair<Ref<DOMPromise>, Ref<DeferredPromise>> createPromiseAndWrapper(Document&);
+std::pair<Ref<DOMPromise>, Ref<DeferredPromise>> createPromiseAndWrapper(JSDOMGlobalObject&);
 
 using PromiseFunction = void(JSC::JSGlobalObject&, JSC::CallFrame&, Ref<DeferredPromise>&&);
 

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
 #include "Element.h"
 #include "markup.h"
@@ -41,7 +42,7 @@ class Node;
 class Range;
 class ShadowRoot;
 
-typedef HashMap<AtomString, AtomStringImpl*> Namespaces;
+typedef UncheckedKeyHashMap<AtomString, AtomStringImpl*> Namespaces;
 
 enum class EntityMask : uint8_t {
     Amp = 1 << 0,
@@ -73,7 +74,7 @@ public:
     String serializeNodes(Node& targetNode, SerializedNodes);
 
     static void appendCharactersReplacingEntities(StringBuilder&, const String&, unsigned, unsigned, OptionSet<EntityMask>);
-    void enableURLReplacement(HashMap<String, String>&& replacementURLStrings, HashMap<RefPtr<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet);
+    void enableURLReplacement(UncheckedKeyHashMap<String, String>&& replacementURLStrings, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet);
 
 protected:
     unsigned length() const { return m_markup.length(); }
@@ -125,16 +126,10 @@ private:
     const ResolveURLs m_resolveURLs;
     const SerializationSyntax m_serializationSyntax;
     unsigned m_prefixLevel { 0 };
-    HashMap<String, String> m_replacementURLStrings;
-    HashMap<RefPtr<CSSStyleSheet>, String> m_replacementURLStringsForCSSStyleSheet;
     SerializeShadowRoots m_serializeShadowRoots;
     Vector<Ref<ShadowRoot>> m_explicitShadowRoots;
     Vector<MarkupExclusionRule> m_exclusionRules;
-    struct URLReplacementData {
-        HashMap<String, String> replacementURLStrings;
-        HashMap<RefPtr<CSSStyleSheet>, String> replacementURLStringsForCSSStyleSheet;
-    };
-    std::optional<URLReplacementData> m_urlReplacementData;
+    std::optional<CSS::SerializationContext> m_serializationContext;
 };
 
 inline void MarkupAccumulator::endAppendingNode(const Node& node)

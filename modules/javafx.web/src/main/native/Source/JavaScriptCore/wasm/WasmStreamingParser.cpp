@@ -37,6 +37,8 @@
 #include <wtf/UnalignedAccess.h>
 #include <wtf/text/MakeString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace Wasm {
 
 namespace WasmStreamingParserInternal {
@@ -78,7 +80,7 @@ static void dumpWasmSource(const Vector<uint8_t>& source)
     const char* file = Options::dumpWasmSourceFileName();
     if (!file)
         return;
-    auto fileHandle = FileSystem::openFile(WTF::makeString(span(file), (count++), ".wasm"_s),
+    auto fileHandle = FileSystem::openFile(WTF::makeString(unsafeSpan(file), (count++), ".wasm"_s),
         FileSystem::FileOpenMode::Truncate,
         FileSystem::FileAccessPermission::All,
         /* failIfFileExists = */ true);
@@ -86,7 +88,7 @@ static void dumpWasmSource(const Vector<uint8_t>& source)
         dataLogLn("Error dumping wasm");
         return;
     }
-    dataLogLn("Dumping ", source.size(), " wasm source bytes to ", WTF::makeString(span(file), (count - 1), ".wasm"_s));
+    dataLogLn("Dumping ", source.size(), " wasm source bytes to ", WTF::makeString(unsafeSpan(file), (count - 1), ".wasm"_s));
     FileSystem::writeToFile(fileHandle, source.span());
     FileSystem::closeFile(fileHandle);
 }
@@ -173,11 +175,13 @@ auto StreamingParser::parseFunctionPayload(Vector<uint8_t>&& data) -> State
     function.end = m_offset + m_functionSize;
     function.data = WTFMove(data);
     dataLogLnIf(WasmStreamingParserInternal::verbose, "Processing function starting at: ", function.start, " and ending at: ", function.end);
-    if (!m_client.didReceiveFunctionData(m_functionIndex, function))
+    if (!m_client.didReceiveFunctionData(FunctionCodeIndex(m_functionIndex), function))
         return State::FatalError;
     ++m_functionIndex;
+    m_totalFunctionSize += m_functionSize;
 
     if (m_functionIndex == m_functionCount) {
+        m_info->setTotalFunctionSize(m_totalFunctionSize);
         WASM_PARSER_FAIL_IF((m_codeOffset + m_sectionLength) != (m_offset + m_functionSize), "parsing ended before the end of "_s, m_section, " section"_s);
         if (!m_client.didReceiveSectionData(m_section))
             return State::FatalError;
@@ -454,5 +458,7 @@ auto StreamingParser::finalize() -> State
 }
 
 } } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

@@ -12,6 +12,7 @@ align
 alink
 allow
 allowfullscreen
+alpha
 alt
 archive
 aria-activedescendant
@@ -103,12 +104,12 @@ code
 codebase
 codetype
 color
+colorspace
 cols
 colspan
 command
 commandfor
 compact
-composite
 content
 contenteditable
 controls
@@ -134,6 +135,7 @@ dropzone
 enctype
 end
 enterkeyhint
+environmentmap
 event
 expanded
 exportparts
@@ -161,7 +163,6 @@ http-equiv
 id
 imagesizes
 imagesrcset
-incremental
 inert
 inputmode
 integrity
@@ -199,6 +200,7 @@ name
 nohref
 nomodule
 nonce
+noportal
 noresize
 noshade
 novalidate
@@ -228,6 +230,7 @@ oncanplaythrough
 onchange
 onclick
 onclose
+oncommand
 oncontentvisibilityautostatechange
 oncontextmenu
 oncopy
@@ -307,7 +310,6 @@ onrejectionhandled
 onreset
 onresize
 onscroll
-onsearch
 onsecuritypolicyviolation
 onseeked
 onseeking
@@ -390,8 +392,10 @@ scrolling
 select
 selected
 shadowrootclonable
+shadowrootcustomelements
 shadowrootdelegatesfocus
 shadowrootmode
+shadowrootreferencetarget
 shadowrootserializable
 shape
 size
@@ -403,6 +407,7 @@ src
 srcdoc
 srclang
 srcset
+stagemode
 standby
 start
 step

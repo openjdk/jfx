@@ -40,9 +40,11 @@
 #include "JSDOMFormData.h"
 #include "JSDOMPromiseDeferred.h"
 #include "TextResourceDecoder.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
 #include <wtf/URLParser.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -141,13 +143,15 @@ FetchBodyConsumer& FetchBodyConsumer::operator=(FetchBodyConsumer&&) = default;
 // https://fetch.spec.whatwg.org/#concept-body-package-data
 RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* context, const String& contentType, std::span<const uint8_t> data)
 {
+    static constexpr auto oneNewLine = "\r\n"_s;
     auto parseMultipartPart = [context] (std::span<const uint8_t> part, DOMFormData& form) -> bool {
-        auto* headerEnd = static_cast<const uint8_t*>(memmem(part.data(), part.size(), "\r\n\r\n", 4));
-        if (!headerEnd)
+        static constexpr auto twoNewLines = "\r\n\r\n"_span;
+        size_t headerEnd = find(part, twoNewLines);
+        if (headerEnd == notFound)
             return false;
-        auto headerBytes = part.first(static_cast<size_t>(headerEnd - part.data()));
+        auto headerBytes = part.first(headerEnd);
 
-        auto body = part.subspan(headerBytes.size() + strlen("\r\n\r\n"));
+        auto body = part.subspan(headerBytes.size() + twoNewLines.size());
 
         auto header = String::fromUTF8(headerBytes);
 
@@ -155,7 +159,8 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         size_t contentDispositionBegin = header.findIgnoringASCIICase(contentDispositionCharacters);
         if (contentDispositionBegin == notFound)
             return false;
-        size_t contentDispositionEnd = header.find("\r\n"_s, contentDispositionBegin);
+
+        size_t contentDispositionEnd = header.find(oneNewLine, contentDispositionBegin);
         size_t contentDispositionParametersBegin = header.find(';', contentDispositionBegin + contentDispositionCharacters.length());
         if (contentDispositionParametersBegin != notFound)
             contentDispositionParametersBegin++;
@@ -174,7 +179,7 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
             size_t contentTypePrefixLength = contentTypeCharacters.length();
             size_t contentTypeBegin = header.findIgnoringASCIICase(contentTypeCharacters);
             if (contentTypeBegin != notFound) {
-                size_t contentTypeEnd = header.find("\r\n"_s, contentTypeBegin);
+                size_t contentTypeEnd = header.find(oneNewLine, contentTypeBegin);
                 contentType = StringView(header).substring(contentTypeBegin + contentTypePrefixLength, contentTypeEnd - contentTypeBegin - contentTypePrefixLength).trim(isASCIIWhitespaceWithoutFF<UChar>).toString();
             }
 
@@ -201,14 +206,15 @@ RefPtr<DOMFormData> FetchBodyConsumer::packageFormData(ScriptExecutionContext* c
         CString boundary = boundaryWithDashes.utf8();
         size_t boundaryLength = boundary.length();
 
-        auto* currentBoundary = static_cast<const uint8_t*>(memmem(data.data(), data.size(), boundary.data(), boundaryLength));
-        if (!currentBoundary)
+        size_t currentBoundaryIndex = find(data, boundary.span());
+        if (currentBoundaryIndex == notFound)
             return nullptr;
-        auto* nextBoundary = static_cast<const uint8_t*>(memmem(currentBoundary + boundaryLength, data.size() - (currentBoundary + boundaryLength - data.data()), boundary.data(), boundaryLength));
-        while (nextBoundary) {
-            parseMultipartPart(std::span { currentBoundary + boundaryLength, nextBoundary - currentBoundary - boundaryLength - strlen("\r\n") }, form.get());
-            currentBoundary = nextBoundary;
-            nextBoundary = static_cast<const uint8_t*>(memmem(nextBoundary + boundaryLength, data.size() - (nextBoundary + boundaryLength - data.data()), boundary.data(), boundaryLength));
+        skip(data, currentBoundaryIndex + boundaryLength);
+        size_t nextBoundaryIndex;
+        while ((nextBoundaryIndex = find(data, boundary.span())) != notFound) {
+            parseMultipartPart(data.first(nextBoundaryIndex - oneNewLine.length()), form.get());
+            currentBoundaryIndex = nextBoundaryIndex;
+            skip(data, nextBoundaryIndex + boundaryLength);
         }
     } else if (mimeType && equalLettersIgnoringASCIICase(mimeType->type, "application"_s) && equalLettersIgnoringASCIICase(mimeType->subtype, "x-www-form-urlencoded"_s)) {
         auto dataString = String::fromUTF8(data);
@@ -281,23 +287,25 @@ void FetchBodyConsumer::resolveWithFormData(Ref<DeferredPromise>&& promise, cons
     if (!context)
         return;
 
-    m_formDataConsumer = makeUnique<FormDataConsumer>(formData, *context, [this, promise = WTFMove(promise), contentType, builder = SharedBufferBuilder { }](auto&& result) mutable {
+    m_formDataConsumer = FormDataConsumer::create(formData, *context, [promise = WTFMove(promise), type = m_type, contentType, builder = SharedBufferBuilder { }](auto&& result) mutable {
         if (result.hasException()) {
             auto protectedPromise = WTFMove(promise);
             protectedPromise->reject(result.releaseException());
-            return;
+            return false;
         }
 
         auto& value = result.returnValue();
         if (value.empty()) {
             auto protectedPromise = WTFMove(promise);
             auto buffer = builder.takeAsContiguous();
-            resolveWithData(WTFMove(protectedPromise), contentType, buffer->span());
-            return;
+            resolveWithTypeAndData(WTFMove(protectedPromise), type, contentType, buffer->span());
+            return false;
         }
 
         builder.append(value);
+        return true;
     });
+    m_formDataConsumer->start();
 }
 
 void FetchBodyConsumer::consumeFormDataAsStream(const FormData& formData, FetchBodySource& source, ScriptExecutionContext* context)
@@ -311,22 +319,22 @@ void FetchBodyConsumer::consumeFormDataAsStream(const FormData& formData, FetchB
     if (!context)
         return;
 
-    m_formDataConsumer = makeUnique<FormDataConsumer>(formData, *context, [this, source = Ref { source }](auto&& result) {
+    m_formDataConsumer = FormDataConsumer::create(formData, *context, [source = Ref { source }](auto&& result) {
         auto protectedSource = source;
         if (result.hasException()) {
             source->error(result.releaseException());
-            return;
+            return false;
         }
 
         auto& value = result.returnValue();
         if (value.empty()) {
             source->close();
-            return;
+            return false;
         }
 
-        if (!source->enqueue(ArrayBuffer::tryCreate(value)))
-            m_formDataConsumer->cancel();
+        return source->enqueue(ArrayBuffer::tryCreate(value));
     });
+    m_formDataConsumer->start();
 }
 
 void FetchBodyConsumer::extract(ReadableStream& stream, ReadableStreamToSharedBufferSink::Callback&& callback)
@@ -432,12 +440,31 @@ RefPtr<JSC::ArrayBuffer> FetchBodyConsumer::takeAsArrayBuffer()
 
 Ref<Blob> FetchBodyConsumer::takeAsBlob(ScriptExecutionContext* context, const String& contentType)
 {
+    static constexpr size_t MaximumBlobSize = 512 * 1024 * 1024;
+
     String normalizedContentType = Blob::normalizedContentType(extractMIMETypeFromMediaType(contentType));
 
     if (!m_buffer)
         return Blob::create(context, Vector<uint8_t>(), normalizedContentType);
 
-    return blobFromData(context, m_buffer.take()->extractData(), normalizedContentType);
+    RefPtr buffer = m_buffer.take();
+    if (!context || buffer->isContiguous() || buffer->size() < MaximumBlobSize)
+        return blobFromData(context, buffer->extractData(), normalizedContentType);
+
+    Vector<RefPtr<SharedBuffer>> segments;
+    segments.reserveInitialCapacity(buffer->segmentsCount());
+    buffer->forEachSegmentAsSharedBuffer([&](Ref<SharedBuffer>&& sharedBuffer) {
+        segments.append(WTFMove(sharedBuffer));
+    });
+    buffer = nullptr; // So that the segments above hold each a single refcount to allow extractData to move the content.
+
+    Vector<BlobPartVariant> blobPartsFromBuffer { segments.size(), [&](auto index) {
+        RefPtr blob = Blob::create(context, std::exchange(segments[index], nullptr)->extractData(), normalizedContentType);
+        return blob;
+    } };
+
+    BlobPropertyBag propertyBag = { .type = normalizedContentType };
+    return Blob::create(*context, WTFMove(blobPartsFromBuffer), propertyBag);
 }
 
 String FetchBodyConsumer::takeAsText()
@@ -507,6 +534,12 @@ FetchBodyConsumer FetchBodyConsumer::clone()
     FetchBodyConsumer clone { m_type };
     clone.m_buffer = m_buffer;
     return clone;
+}
+
+bool FetchBodyConsumer::hasPendingActivity() const
+{
+    return (m_formDataConsumer && m_formDataConsumer->hasPendingActivity())
+        || (m_sink && m_sink->hasCallback());
 }
 
 } // namespace WebCore

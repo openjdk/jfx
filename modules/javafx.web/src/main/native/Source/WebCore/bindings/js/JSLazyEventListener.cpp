@@ -72,7 +72,7 @@ static TextPosition convertZeroToOne(const TextPosition& position)
 }
 
 JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const URL& sourceURL, const TextPosition& sourcePosition)
-    : JSEventListener(nullptr, arguments.wrapper, true, CreatedFromMarkup::Yes, mainThreadNormalWorld())
+    : JSEventListener(nullptr, arguments.wrapper, true, CreatedFromMarkup::Yes, mainThreadNormalWorldSingleton())
     , m_functionName(arguments.attributeName.localName().string())
     , m_functionParameters(functionParameters(arguments.shouldUseSVGEventName))
     , m_code(arguments.attributeValue)
@@ -210,6 +210,7 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(CreationArguments&& argu
         sourceURL = arguments.document.url();
     }
 
+    JSLockHolder locker(arguments.document.vm());
     return adoptRef(*new JSLazyEventListener(WTFMove(arguments), sourceURL, position));
 }
 
@@ -230,7 +231,7 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(LocalDOMWindow& window, 
     ASSERT(window.document());
     auto& document = *window.document();
     ASSERT(document.frame());
-    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document.frame(), mainThreadNormalWorld()), document.isSVGDocument() });
+    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document.frame(), mainThreadNormalWorldSingleton()), document.isSVGDocument() });
 }
 
 } // namespace WebCore

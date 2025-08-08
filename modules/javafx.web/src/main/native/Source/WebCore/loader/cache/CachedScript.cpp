@@ -3,7 +3,7 @@
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -29,14 +29,18 @@
 
 #include "CachedResourceClient.h"
 #include "CachedResourceRequest.h"
-#include "RuntimeApplicationChecks.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 
+#if PLATFORM(MAC)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
 namespace WebCore {
 
-CachedScript::CachedScript(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
+CachedScript::CachedScript(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar, ScriptRequiresTelemetry requiresTelemetry)
     : CachedResource(WTFMove(request), Type::Script, sessionID, cookieJar)
+    , m_requiresTelemetry(requiresTelemetry == ScriptRequiresTelemetry::Yes)
     , m_decoder(TextResourceDecoder::create("text/javascript"_s, request.charset()))
 {
 }
@@ -53,9 +57,9 @@ void CachedScript::setEncoding(const String& chs)
     protectedDecoder()->setEncoding(chs, TextResourceDecoder::EncodingFromHTTPHeader);
 }
 
-String CachedScript::encoding() const
+ASCIILiteral CachedScript::encoding() const
 {
-    return String::fromLatin1(protectedDecoder()->encoding().name());
+    return protectedDecoder()->encoding().name();
 }
 
 StringView CachedScript::script(ShouldDecodeAsUTF8Only shouldDecodeAsUTF8Only)
@@ -92,7 +96,7 @@ StringView CachedScript::script(ShouldDecodeAsUTF8Only shouldDecodeAsUTF8Only)
             forceUTF8Decoder->setAlwaysUseUTF8();
             m_script = forceUTF8Decoder->decodeAndFlush(contiguousData->span());
         } else
-            m_script = m_decoder->decodeAndFlush(contiguousData->span());
+            m_script = protectedDecoder()->decodeAndFlush(contiguousData->span());
         if (m_decodingState == NeverDecoded || shouldForceRedecoding)
             m_scriptHash = m_script.hash();
         ASSERT(!m_scriptHash || m_scriptHash == m_script.hash());
@@ -133,7 +137,7 @@ void CachedScript::destroyDecodedData()
 void CachedScript::setBodyDataFrom(const CachedResource& resource)
 {
     ASSERT(resource.type() == type());
-    auto& script = static_cast<const CachedScript&>(resource);
+    auto& script = downcast<const CachedScript>(resource);
 
     CachedResource::setBodyDataFrom(resource);
 
@@ -142,22 +146,6 @@ void CachedScript::setBodyDataFrom(const CachedResource& resource)
     m_wasForceDecodedAsUTF8 = script.m_wasForceDecodedAsUTF8;
     m_decodingState = script.m_decodingState;
     m_decoder = script.m_decoder;
-}
-
-bool CachedScript::shouldIgnoreHTTPStatusCodeErrors() const
-{
-#if PLATFORM(MAC)
-    // This is a workaround for <rdar://problem/13916291>
-    // REGRESSION (r119759): Adobe Flash Player "smaller" installer relies on the incorrect firing
-    // of a load event and needs an app-specific hack for compatibility.
-    // The installer in question tries to load .js file that doesn't exist, causing the server to
-    // return a 404 response. Normally, this would trigger an error event to be dispatched, but the
-    // installer expects a load event instead so we work around it here.
-    if (MacApplication::isSolidStateNetworksDownloader())
-        return true;
-#endif
-
-    return CachedResource::shouldIgnoreHTTPStatusCodeErrors();
 }
 
 } // namespace WebCore

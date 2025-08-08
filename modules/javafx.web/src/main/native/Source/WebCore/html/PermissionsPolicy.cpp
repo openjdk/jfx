@@ -35,9 +35,12 @@
 #include "LocalDOMWindow.h"
 #include "Quirks.h"
 #include "SecurityOrigin.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PermissionsPolicy);
 
 using namespace HTMLNames;
 
@@ -234,7 +237,7 @@ static ASCIILiteral defaultAllowlistValue(PermissionsPolicy::Feature feature)
     return "'none'"_s;
 }
 
-static void forEachFeature(const Function<void(PermissionsPolicy::Feature)>& apply)
+static void forEachFeature(NOESCAPE const Function<void(PermissionsPolicy::Feature)>& apply)
 {
     for (uint8_t index = 0, end = static_cast<uint8_t>(PermissionsPolicy::Feature::Invalid); index < end; ++index)
         apply(static_cast<PermissionsPolicy::Feature>(index));
@@ -275,7 +278,7 @@ static std::pair<StringView, StringView> splitOnAsciiWhiteSpace(StringView input
 // https://w3c.github.io/webappsec-permissions-policy/#declared-origin
 static Ref<SecurityOrigin> declaredOrigin(const HTMLIFrameElement& iframe)
 {
-    if (iframe.document().isSandboxed(SandboxOrigin) || (iframe.sandboxFlags() & SandboxOrigin))
+    if (iframe.document().isSandboxed(SandboxFlag::Origin) || (iframe.sandboxFlags().contains(SandboxFlag::Origin)))
         return SecurityOrigin::createOpaque();
 
     if (iframe.hasAttributeWithoutSynchronization(srcdocAttr))
@@ -307,14 +310,10 @@ static bool computeFeatureEnabled(PermissionsPolicy::Feature feature, const Docu
     return enabled;
 }
 
-static Allowlist parseAllowlist(StringView value, const SecurityOriginData& containerOrigin, const SecurityOriginData& targetOrigin, bool useStarAsDefaultAllowlistValue)
+static Allowlist parseAllowlist(StringView value, const SecurityOriginData& containerOrigin, const SecurityOriginData& targetOrigin)
 {
-    if (value.isEmpty()) {
-        if (useStarAsDefaultAllowlistValue)
-            return Allowlist::AllowAllOrigins { };
-
+    if (value.isEmpty())
         return Allowlist { targetOrigin };
-    }
 
     HashSet<SecurityOriginData> allowedOrigins;
     while (!value.isEmpty()) {
@@ -346,7 +345,7 @@ static Allowlist parseAllowlist(StringView value, const SecurityOriginData& cont
 }
 
 // https://w3c.github.io/webappsec-permissions-policy/#algo-parse-policy-directive
-static PermissionsPolicy::PolicyDirective parsePolicyDirective(StringView value, const SecurityOriginData& containerOrigin, const SecurityOriginData& targetOrigin, bool useStarAsDefaultAllowlistValue)
+static PermissionsPolicy::PolicyDirective parsePolicyDirective(StringView value, const SecurityOriginData& containerOrigin, const SecurityOriginData& targetOrigin)
 {
     PermissionsPolicy::PolicyDirective result;
     for (auto item : value.split(';')) {
@@ -354,7 +353,7 @@ static PermissionsPolicy::PolicyDirective parsePolicyDirective(StringView value,
         if (feature == PermissionsPolicy::Feature::Invalid)
             continue;
 
-        result.add(feature, parseAllowlist(remainingItem, containerOrigin, targetOrigin, useStarAsDefaultAllowlistValue));
+        result.add(feature, parseAllowlist(remainingItem, containerOrigin, targetOrigin));
     }
 
     return result;
@@ -364,7 +363,7 @@ static PermissionsPolicy::PolicyDirective parsePolicyDirective(StringView value,
 PermissionsPolicy::PolicyDirective PermissionsPolicy::processPermissionsPolicyAttribute(const HTMLIFrameElement& iframe)
 {
     auto allowAttributeValue = iframe.attributeWithoutSynchronization(allowAttr);
-    auto policyDirective = parsePolicyDirective(allowAttributeValue, iframe.document().securityOrigin().data(), declaredOrigin(iframe)->data(), iframe.document().quirks().shouldStarBePermissionsPolicyDefaultValue());
+    auto policyDirective = parsePolicyDirective(allowAttributeValue, iframe.document().securityOrigin().data(), declaredOrigin(iframe)->data());
 
     if (iframe.hasAttribute(allowfullscreenAttr) || iframe.hasAttribute(webkitallowfullscreenAttr))
         policyDirective.add(Feature::Fullscreen, Allowlist::AllowAllOrigins { });

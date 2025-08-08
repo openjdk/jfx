@@ -27,6 +27,7 @@
 #include "EventDispatcher.h"
 
 #include "CompositionEvent.h"
+#include "DocumentInlines.h"
 #include "EventContext.h"
 #include "EventNames.h"
 #include "EventPath.h"
@@ -119,15 +120,11 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!event.isTrusted())
         return false;
 
-    RefPtr frame = node.document().frame();
-    if (!frame)
+    RefPtr localMainFrame = node.protectedDocument()->localMainFrame();
+    if (!localMainFrame)
         return false;
 
-    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return false;
-
-    if (!localFrame->checkedLoader()->shouldSuppressTextInputFromEditing())
+    if (!localMainFrame->protectedLoader()->shouldSuppressTextInputFromEditing())
         return false;
 
     if (auto* textEvent = dynamicDowncast<TextEvent>(event))
@@ -173,15 +170,16 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     LOG_WITH_STREAM(Events, stream << "EventDispatcher::dispatchEvent " << event << " on node " << node);
 
     Ref protectedNode { node };
-    RefPtr protectedView { node.document().view() };
+    Ref document = node.document();
+    RefPtr protectedView { document->view() };
 
     auto typeInfo = eventNames().typeInfoForEvent(event.type());
-    bool shouldDispatchEventToScripts = hasRelevantEventListener(node.document(), event);
+    bool shouldDispatchEventToScripts = hasRelevantEventListener(document, event);
 
     bool targetOrRelatedTargetIsInShadowTree = node.isInShadowTree() || isInShadowTree(event.relatedTarget());
     // FIXME: We should also check touch target list.
-    bool hasNoEventListnerOrDefaultEventHandler = !shouldDispatchEventToScripts && !typeInfo.hasDefaultEventHandler() && !node.document().hasConnectedPluginElements();
-    if (hasNoEventListnerOrDefaultEventHandler && !targetOrRelatedTargetIsInShadowTree) {
+    bool hasNoEventListenerOrDefaultEventHandler = !shouldDispatchEventToScripts && !typeInfo.hasDefaultEventHandler() && !node.document().hasConnectedPluginElements();
+    if (hasNoEventListenerOrDefaultEventHandler && !targetOrRelatedTargetIsInShadowTree) {
         event.resetBeforeDispatch();
         event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
         return;
@@ -189,7 +187,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     EventPath eventPath { node, event };
 
-    if (node.document().settings().sendMouseEventsToDisabledFormControlsEnabled() && event.isTrusted() && is<MouseEvent>(event)
+    if (event.isTrusted() && is<MouseEvent>(event)
         && (typeInfo.type() == EventType::mousedown || typeInfo.type() == EventType::mouseup || typeInfo.type() == EventType::click || typeInfo.type() == EventType::dblclick)) {
         eventPath.adjustForDisabledFormControl();
     }
@@ -200,12 +198,12 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         // FIXME: We should also set shouldClearTargetsAfterDispatch to true if an EventTarget object in eventContext's touch target list
         // is a node and its root is a shadow root.
         if (eventContext.target()) {
-            shouldClearTargetsAfterDispatch = isInShadowTree(eventContext.target()) || isInShadowTree(eventContext.relatedTarget());
+            shouldClearTargetsAfterDispatch = isInShadowTree(eventContext.protectedTarget().get()) || isInShadowTree(eventContext.protectedRelatedTarget().get());
             break;
         }
     }
 
-    if (hasNoEventListnerOrDefaultEventHandler) {
+    if (hasNoEventListenerOrDefaultEventHandler) {
         if (shouldClearTargetsAfterDispatch)
             resetAfterDispatchInShadowTree(event);
         return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012, Samsung Electronics. All rights reserved.
  *
@@ -31,6 +31,7 @@
 #include <wtf/Forward.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 
@@ -84,12 +85,18 @@ class WorkerClient;
 struct AppHighlight;
 struct ContactInfo;
 struct ContactsRequestData;
-struct DateTimeChooserParameters;
 struct ShareDataWithParsedURL;
 struct ViewportArguments;
 struct WindowFeatures;
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+struct DigitalCredentialsRequestData;
+struct DigitalCredentialsResponseData;
+struct ExceptionData;
+#endif
+
 class Chrome : public HostWindow {
+    WTF_MAKE_TZONE_ALLOCATED(Chrome);
 public:
     Chrome(Page&, UniqueRef<ChromeClient>&&);
     virtual ~Chrome();
@@ -103,6 +110,7 @@ public:
     void invalidateContentsForSlowScroll(const IntRect&) override;
     void scroll(const IntSize&, const IntRect&, const IntRect&) override;
     IntPoint screenToRootView(const IntPoint&) const override;
+    IntPoint rootViewToScreen(const IntPoint&) const override;
     IntRect rootViewToScreen(const IntRect&) const override;
     IntPoint accessibilityScreenToRootView(const IntPoint&) const override;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
@@ -113,7 +121,7 @@ public:
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat, OptionSet<ImageBufferOptions>) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferPixelFormat) const override;
     RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
 
 #if ENABLE(WEBGL)
@@ -136,7 +144,7 @@ public:
     FloatSize overrideAvailableScreenSize() const override;
 
     void scrollContainingScrollViewsToRevealRect(const IntRect&) const;
-    void scrollMainFrameToRevealRect(const IntRect&) const;
+    WEBCORE_EXPORT void scrollMainFrameToRevealRect(const IntRect&) const;
 
     void contentsSizeChanged(LocalFrame&, const IntSize&) const;
 
@@ -154,7 +162,7 @@ public:
     void focusedElementChanged(Element*);
     void focusedFrameChanged(Frame*);
 
-    WEBCORE_EXPORT RefPtr<Page> createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&);
+    WEBCORE_EXPORT RefPtr<Page> createWindow(LocalFrame&, const String& openedMainFrameName, const WindowFeatures&, const NavigationAction&);
     WEBCORE_EXPORT void show();
 
     bool canRunModal() const;
@@ -182,8 +190,9 @@ public:
     void runJavaScriptAlert(LocalFrame&, const String&);
     bool runJavaScriptConfirm(LocalFrame&, const String&);
     bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result);
+#if PLATFORM(JAVA)
     WEBCORE_EXPORT void setStatusbarText(LocalFrame&, const String&);
-
+#endif
     void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>);
 
     WEBCORE_EXPORT bool print(LocalFrame&);
@@ -191,23 +200,23 @@ public:
     WEBCORE_EXPORT void enableSuddenTermination();
     WEBCORE_EXPORT void disableSuddenTermination();
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient&, const Color& initialColor);
-#endif
+    RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color& initialColor);
 
-#if ENABLE(DATALIST_ELEMENT)
-    std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
-#endif
+    RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
-#endif
+    RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
 
     std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
     void runOpenPanel(LocalFrame&, FileChooser&);
     void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
     void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&);
+    void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&&);
+#endif
+
     void loadIconForFiles(const Vector<String>&, FileIconLoader&);
 
     void dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>&) const;

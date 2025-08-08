@@ -28,6 +28,7 @@
 
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLMapElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/JSExecState.h>
 

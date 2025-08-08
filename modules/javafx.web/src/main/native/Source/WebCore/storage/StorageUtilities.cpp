@@ -60,7 +60,7 @@ std::optional<ClientOrigin> readOriginFromFile(const String& filePath)
     if (!originContent)
         return std::nullopt;
 
-    WTF::Persistence::Decoder decoder({ originContent->data(), originContent->size() });
+    WTF::Persistence::Decoder decoder(originContent->span());
     std::optional<ClientOrigin> origin;
     decoder >> origin;
     return origin;
@@ -92,7 +92,7 @@ String encodeSecurityOriginForFileName(FileSystem::Salt salt, const SecurityOrig
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto originString = origin.toString().utf8();
-    crypto->addBytes(originString.span());
+    crypto->addBytes(byteCast<uint8_t>(originString.span()));
     crypto->addBytes(salt);
     return base64URLEncodeToString(crypto->computeHash());
 }

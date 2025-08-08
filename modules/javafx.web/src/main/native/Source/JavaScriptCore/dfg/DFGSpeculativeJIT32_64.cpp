@@ -1032,10 +1032,11 @@ GPRReg SpeculativeJIT::fillSpeculateInt32Internal(Edge edge, DataFormat& returnF
         // Check the value is an integer.
         GPRReg tagGPR = info.tagGPR();
         GPRReg payloadGPR = info.payloadGPR();
+        JSValueRegs valueRegs = JSValueRegs(tagGPR, payloadGPR);
         m_gprs.lock(tagGPR);
         m_gprs.lock(payloadGPR);
         if (type & ~SpecInt32Only)
-            speculationCheck(BadType, JSValueRegs(tagGPR, payloadGPR), edge, branchIfNotInt32(tagGPR));
+            speculateInt32(edge, valueRegs);
         m_gprs.unlock(tagGPR);
         m_gprs.release(tagGPR);
         m_gprs.release(payloadGPR);
@@ -2504,6 +2505,10 @@ void SpeculativeJIT::compile(Node* node)
         compileArithUnary(node);
         break;
 
+    case PurifyNaN:
+        compilePurifyNaN(node);
+        break;
+
     case ToBoolean: {
         bool invert = false;
         compileToBoolean(node, invert);
@@ -2567,8 +2572,9 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case StringAt:
     case StringCharAt: {
-        // Relies on StringCharAt node having same basic layout as GetByVal
+        // Relies on StringCharAt and StringAt node having same basic layout as GetByVal
         JSValueRegsTemporary result;
         compileGetByValOnString(node, scopedLambda<std::tuple<JSValueRegs, DataFormat>(DataFormat preferredFormat, bool needsFlush)>([&](DataFormat preferredFormat, bool needsFlush) {
             result = JSValueRegsTemporary(this);
@@ -2921,13 +2927,14 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
-    case ArraySpliceExtract: {
-        compileArraySpliceExtract(node);
+    case ArraySplice: {
+        compileArraySplice(node);
         break;
     }
 
+    case ArrayIncludes:
     case ArrayIndexOf: {
-        compileArrayIndexOf(node);
+        compileArrayIndexOfOrArrayIncludes(node);
         break;
     }
 
@@ -3172,6 +3179,11 @@ void SpeculativeJIT::compile(Node* node)
 
     case NewArrayWithSpecies: {
         compileNewArrayWithSpecies(node);
+        break;
+    }
+
+    case NewArrayWithSizeAndStructure: {
+        compileNewArrayWithSizeAndStructure(node);
         break;
     }
 
@@ -3864,6 +3876,10 @@ void SpeculativeJIT::compile(Node* node)
         compileMapStorage(node);
         break;
 
+    case MapStorageOrSentinel:
+        compileMapStorageOrSentinel(node);
+        break;
+
     case MapIteratorNext:
         compileMapIteratorNext(node);
         break;
@@ -4219,11 +4235,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
 
     case SuperSamplerBegin:
-        add32(TrustedImm32(1), AbsoluteAddress(bitwise_cast<void*>(&g_superSamplerCount)));
+        add32(TrustedImm32(1), AbsoluteAddress(std::bit_cast<void*>(&g_superSamplerCount)));
         break;
 
     case SuperSamplerEnd:
-        sub32(TrustedImm32(1), AbsoluteAddress(bitwise_cast<void*>(&g_superSamplerCount)));
+        sub32(TrustedImm32(1), AbsoluteAddress(std::bit_cast<void*>(&g_superSamplerCount)));
         break;
 
     case Phantom:
@@ -4243,6 +4259,10 @@ void SpeculativeJIT::compile(Node* node)
 
     case MaterializeNewObject:
         compileMaterializeNewObject(node);
+        break;
+
+    case MaterializeNewArrayWithConstantSize:
+        compileMaterializeNewArrayWithConstantSize(node);
         break;
 
     case PutDynamicVar: {
@@ -4334,6 +4354,7 @@ void SpeculativeJIT::compile(Node* node)
     case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
@@ -5373,6 +5394,11 @@ void SpeculativeJIT::cachedPutById(Node* node, CodeOrigin codeOrigin, GPRReg bas
 
     addPutById(gen, slowPath.get());
     addSlowPathGenerator(WTFMove(slowPath));
+}
+
+void SpeculativeJIT::speculateInt32(Edge edge, JSValueRegs regs)
+{
+    speculationCheck(BadType, regs, edge, branchIfNotInt32(regs.tagGPR()));
 }
 
 #endif

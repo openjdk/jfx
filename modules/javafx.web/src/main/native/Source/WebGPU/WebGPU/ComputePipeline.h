@@ -32,7 +32,7 @@
 #import <wtf/HashMap.h>
 #import <wtf/HashTraits.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
 
@@ -46,7 +46,7 @@ class Device;
 class PipelineLayout;
 
 // https://gpuweb.github.io/gpuweb/#gpucomputepipeline
-class ComputePipeline : public WGPUComputePipelineImpl, public RefCounted<ComputePipeline>, public CanMakeWeakPtr<ComputePipeline> {
+class ComputePipeline : public RefCountedAndCanMakeWeakPtr<ComputePipeline>, public WGPUComputePipelineImpl {
     WTF_MAKE_TZONE_ALLOCATED(ComputePipeline);
 public:
     static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, Device& device)
@@ -70,7 +70,9 @@ public:
     Device& device() const { return m_device; }
     MTLSize threadsPerThreadgroup() const { return m_threadsPerThreadgroup; }
 
-    PipelineLayout& pipelineLayout() const;
+    PipelineLayout& pipelineLayout() const { return m_pipelineLayout; }
+    Ref<PipelineLayout> protectedPipelineLayout() const { return m_pipelineLayout; }
+
     const BufferBindingSizesForBindGroup* minimumBufferSizes(uint32_t) const;
 
 private:

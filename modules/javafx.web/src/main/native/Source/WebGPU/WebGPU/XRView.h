@@ -29,8 +29,7 @@
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
-#import <wtf/WeakPtr.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 struct WGPUXRViewImpl {
 };
@@ -41,7 +40,7 @@ class CommandEncoder;
 class Device;
 class XRProjectionLayer;
 
-class XRView : public WGPUXRViewImpl, public RefCounted<XRView>, public CanMakeWeakPtr<XRView> {
+class XRView : public RefCountedAndCanMakeWeakPtr<XRView>, public WGPUXRViewImpl {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<XRView> create(Device& device)

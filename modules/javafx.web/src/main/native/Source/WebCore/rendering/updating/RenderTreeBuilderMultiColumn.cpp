@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2003-2015, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -35,8 +35,14 @@
 #include "RenderTreeBuilderBlock.h"
 #include "RenderView.h"
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+static bool gRestoringColumnSpannersForContainer = false;
+static bool gShiftingSpanner = false;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::MultiColumn);
 
 static RenderMultiColumnSet* findSetRendering(const RenderMultiColumnFlow& fragmentedFlow, const RenderObject& renderer)
 {
@@ -151,6 +157,134 @@ void RenderTreeBuilder::MultiColumn::updateAfterDescendants(RenderBlockFlow& flo
     }
 }
 
+RenderObject* RenderTreeBuilder::MultiColumn::resolveMovedChild(RenderFragmentedFlow& enclosingFragmentedFlow, RenderObject* beforeChild)
+{
+    if (!beforeChild)
+        return nullptr;
+
+    auto* beforeChildRenderBox = dynamicDowncast<RenderBox>(*beforeChild);
+    if (!beforeChildRenderBox)
+        return beforeChild;
+
+    auto* renderMultiColumnFlow = dynamicDowncast<RenderMultiColumnFlow>(enclosingFragmentedFlow);
+    if (!renderMultiColumnFlow)
+        return beforeChild;
+
+    // We only need to resolve for column spanners.
+    if (beforeChild->style().columnSpan() != ColumnSpan::All)
+        return beforeChild;
+
+    // The renderer for the actual DOM node that establishes a spanner is moved from its original
+    // location in the render tree to becoming a sibling of the column sets. In other words, it's
+    // moved out from the flow thread (and becomes a sibling of it). When we for instance want to
+    // create and insert a renderer for the sibling node immediately preceding the spanner, we need
+    // to map that spanner renderer to the spanner's placeholder, which is where the new inserted
+    // renderer belongs.
+    if (auto* placeholder = renderMultiColumnFlow->findColumnSpannerPlaceholder(beforeChildRenderBox))
+        return placeholder;
+
+    // This is an invalid spanner, or its placeholder hasn't been created yet. This happens when
+    // moving an entire subtree into the flow thread, when we are processing the insertion of this
+    // spanner's preceding sibling, and we obviously haven't got as far as processing this spanner
+    // yet.
+    return beforeChild;
+}
+
+void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(RenderMultiColumnFlow& multiColumnFlow, const RenderElement& container)
+{
+    auto& spanners = multiColumnFlow.spannerMap();
+    Vector<RenderMultiColumnSpannerPlaceholder*> placeholdersToRestore;
+    for (auto& spannerAndPlaceholder : spanners) {
+        auto& placeholder = spannerAndPlaceholder.value;
+        if (!placeholder || !placeholder->isDescendantOf(&container))
+            continue;
+        placeholdersToRestore.append(placeholder.get());
+    }
+    for (auto* placeholder : placeholdersToRestore) {
+        auto* spanner = placeholder->spanner();
+        if (!spanner) {
+            ASSERT_NOT_REACHED();
+            continue;
+        }
+        // Move the spanner back to its original position.
+        auto& spannerOriginalParent = *placeholder->parent();
+        // Detaching the spanner takes care of removing the placeholder (and merges the RenderMultiColumnSets).
+        auto spannerToReInsert = m_builder.detach(*spanner->parent(), *spanner, WillBeDestroyed::No);
+        auto restoreColumnSpannersScope = SetForScope { gRestoringColumnSpannersForContainer, true };
+        m_builder.attach(spannerOriginalParent, WTFMove(spannerToReInsert));
+    }
+}
+
+void RenderTreeBuilder::MultiColumn::multiColumnDescendantInserted(RenderMultiColumnFlow& flow, RenderObject& newDescendant)
+{
+    if (gShiftingSpanner || gRestoringColumnSpannersForContainer || newDescendant.isRenderFragmentedFlow())
+        return;
+
+    auto* subtreeRoot = &newDescendant;
+    auto* descendant = subtreeRoot;
+    while (descendant) {
+        // Skip nested multicolumn flows.
+        if (is<RenderMultiColumnFlow>(*descendant)) {
+            descendant = descendant->nextSibling();
+            continue;
+        }
+        if (auto* placeholder = dynamicDowncast<RenderMultiColumnSpannerPlaceholder>(*descendant)) {
+            // A spanner's placeholder has been inserted. The actual spanner renderer is moved from
+            // where it would otherwise occur (if it weren't a spanner) to becoming a sibling of the
+            // column sets.
+            ASSERT(!flow.spannerMap().get(placeholder->spanner()));
+            flow.spannerMap().add(*placeholder->spanner(), placeholder);
+            ASSERT(!placeholder->firstChild()); // There should be no children here, but if there are, we ought to skip them.
+        } else
+            descendant = processPossibleSpannerDescendant(flow, subtreeRoot, *descendant);
+        if (descendant)
+            descendant = descendant->nextInPreOrder(subtreeRoot);
+    }
+}
+
+void RenderTreeBuilder::MultiColumn::multiColumnRelativeWillBeRemoved(RenderMultiColumnFlow& flow, RenderObject& relative, RenderTreeBuilder::CanCollapseAnonymousBlock canCollapseAnonymousBlock)
+{
+    flow.invalidateFragments();
+    if (auto* placeholder = dynamicDowncast<RenderMultiColumnSpannerPlaceholder>(relative)) {
+        // Remove the map entry for this spanner, but leave the actual spanner renderer alone. Also
+        // keep the reference to the spanner, since the placeholder may be about to be re-inserted
+        // in the tree.
+        ASSERT(relative.isDescendantOf(&flow));
+        flow.spannerMap().remove(placeholder->spanner());
+        return;
+    }
+    if (relative.style().columnSpan() == ColumnSpan::All) {
+        if (relative.parent() != flow.parent())
+            return; // not a valid spanner.
+
+        handleSpannerRemoval(flow, relative, canCollapseAnonymousBlock);
+    }
+    // Note that we might end up with empty column sets if all column content is removed. That's no
+    // big deal though (and locating them would be expensive), and they will be found and re-used if
+    // content is added again later.
+}
+
+RenderObject* RenderTreeBuilder::MultiColumn::adjustBeforeChildForMultiColumnSpannerIfNeeded(RenderObject& beforeChild)
+{
+    auto* beforeChildBox = dynamicDowncast<RenderBox>(beforeChild);
+    if (!beforeChildBox)
+        return &beforeChild;
+
+    auto* nextSibling = beforeChildBox->nextSibling();
+    if (!nextSibling)
+        return &beforeChild;
+
+    auto* renderMultiColumnSet = dynamicDowncast<RenderMultiColumnSet>(*nextSibling);
+    if (!renderMultiColumnSet)
+        return &beforeChild;
+
+    auto* multiColumnFlow = renderMultiColumnSet->multiColumnFlow();
+    if (!multiColumnFlow)
+        return &beforeChild;
+
+    return multiColumnFlow->findColumnSpannerPlaceholder(beforeChildBox);
+}
+
 void RenderTreeBuilder::MultiColumn::createFragmentedFlow(RenderBlockFlow& flow)
 {
     flow.setChildrenInline(false); // Do this to avoid wrapping inline children that are just going to move into the flow thread.
@@ -158,7 +292,7 @@ void RenderTreeBuilder::MultiColumn::createFragmentedFlow(RenderBlockFlow& flow)
     // If this soon-to-be multicolumn flow is already part of a multicolumn context, we need to move back the descendant spanners
     // to their original position before moving subtrees around.
     if (auto* enclosingflow = dynamicDowncast<RenderMultiColumnFlow>(flow.enclosingFragmentedFlow()))
-        restoreColumnSpannersForContainer(flow, *enclosingflow);
+        restoreColumnSpannersForContainer(*enclosingflow, flow);
 
     auto newFragmentedFlow = WebCore::createRenderer<RenderMultiColumnFlow>(flow.document(), RenderStyle::createAnonymousStyleWithDisplay(flow.style(), DisplayType::Block));
     newFragmentedFlow->initializeStyle();
@@ -178,39 +312,9 @@ void RenderTreeBuilder::MultiColumn::createFragmentedFlow(RenderBlockFlow& flow)
     flow.setMultiColumnFlow(fragmentedFlow);
 }
 
-static bool gRestoringColumnSpannersForContainer = false;
 
-void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(const RenderElement& container, RenderMultiColumnFlow& multiColumnFlow)
-{
-    auto& spanners = multiColumnFlow.spannerMap();
-    Vector<RenderMultiColumnSpannerPlaceholder*> placeholdersToRestore;
-    for (auto& spannerAndPlaceholder : spanners) {
-        auto& placeholder = *spannerAndPlaceholder.value;
-#if PLATFORM(JAVA)
-        if (spannerAndPlaceholder.value.get() != nullptr)
-        {
-#endif
-            if (!placeholder.isDescendantOf(&container))
-                continue;
-            placeholdersToRestore.append(&placeholder);
-#if PLATFORM(JAVA)
-        }
-#endif
-     }
-    for (auto* placeholder : placeholdersToRestore) {
-        auto* spanner = placeholder->spanner();
-        if (!spanner) {
-            ASSERT_NOT_REACHED();
-            continue;
-        }
         // Move the spanner back to its original position.
-        auto& spannerOriginalParent = *placeholder->parent();
         // Detaching the spanner takes care of removing the placeholder (and merges the RenderMultiColumnSets).
-        auto spannerToReInsert = m_builder.detach(*spanner->parent(), *spanner, WillBeDestroyed::No);
-        auto restoreColumnSpannersScope = SetForScope { gRestoringColumnSpannersForContainer, true };
-        m_builder.attach(spannerOriginalParent, WTFMove(spannerToReInsert));
-    }
-}
 
 void RenderTreeBuilder::MultiColumn::destroyFragmentedFlow(RenderBlockFlow& flow)
 {
@@ -251,69 +355,6 @@ void RenderTreeBuilder::MultiColumn::destroyFragmentedFlow(RenderBlockFlow& flow
     m_builder.destroy(multiColumnFlow);
     for (auto& parentAndSpanner : parentAndSpannerList)
         m_builder.attach(*parentAndSpanner.first, WTFMove(parentAndSpanner.second));
-}
-
-
-RenderObject* RenderTreeBuilder::MultiColumn::resolveMovedChild(RenderFragmentedFlow& enclosingFragmentedFlow, RenderObject* beforeChild)
-{
-    if (!beforeChild)
-        return nullptr;
-
-    auto* beforeChildRenderBox = dynamicDowncast<RenderBox>(*beforeChild);
-    if (!beforeChildRenderBox)
-        return beforeChild;
-
-    auto* renderMultiColumnFlow = dynamicDowncast<RenderMultiColumnFlow>(enclosingFragmentedFlow);
-    if (!renderMultiColumnFlow)
-        return beforeChild;
-
-    // We only need to resolve for column spanners.
-    if (beforeChild->style().columnSpan() != ColumnSpan::All)
-        return beforeChild;
-
-    // The renderer for the actual DOM node that establishes a spanner is moved from its original
-    // location in the render tree to becoming a sibling of the column sets. In other words, it's
-    // moved out from the flow thread (and becomes a sibling of it). When we for instance want to
-    // create and insert a renderer for the sibling node immediately preceding the spanner, we need
-    // to map that spanner renderer to the spanner's placeholder, which is where the new inserted
-    // renderer belongs.
-    if (auto* placeholder = renderMultiColumnFlow->findColumnSpannerPlaceholder(beforeChildRenderBox))
-        return placeholder;
-
-    // This is an invalid spanner, or its placeholder hasn't been created yet. This happens when
-    // moving an entire subtree into the flow thread, when we are processing the insertion of this
-    // spanner's preceding sibling, and we obviously haven't got as far as processing this spanner
-    // yet.
-    return beforeChild;
-}
-
-static bool gShiftingSpanner = false;
-
-void RenderTreeBuilder::MultiColumn::multiColumnDescendantInserted(RenderMultiColumnFlow& flow, RenderObject& newDescendant)
-{
-    if (gShiftingSpanner || gRestoringColumnSpannersForContainer || newDescendant.isRenderFragmentedFlow())
-        return;
-
-    auto* subtreeRoot = &newDescendant;
-    auto* descendant = subtreeRoot;
-    while (descendant) {
-        // Skip nested multicolumn flows.
-        if (is<RenderMultiColumnFlow>(*descendant)) {
-            descendant = descendant->nextSibling();
-            continue;
-        }
-        if (auto* placeholder = dynamicDowncast<RenderMultiColumnSpannerPlaceholder>(*descendant)) {
-            // A spanner's placeholder has been inserted. The actual spanner renderer is moved from
-            // where it would otherwise occur (if it weren't a spanner) to becoming a sibling of the
-            // column sets.
-            ASSERT(!flow.spannerMap().get(placeholder->spanner()));
-            flow.spannerMap().add(*placeholder->spanner(), placeholder);
-            ASSERT(!placeholder->firstChild()); // There should be no children here, but if there are, we ought to skip them.
-        } else
-            descendant = processPossibleSpannerDescendant(flow, subtreeRoot, *descendant);
-        if (descendant)
-            descendant = descendant->nextInPreOrder(subtreeRoot);
-    }
 }
 
 RenderObject* RenderTreeBuilder::MultiColumn::processPossibleSpannerDescendant(RenderMultiColumnFlow& flow, RenderObject*& subtreeRoot, RenderObject& descendant)
@@ -422,47 +463,4 @@ void RenderTreeBuilder::MultiColumn::handleSpannerRemoval(RenderMultiColumnFlow&
     }
 }
 
-void RenderTreeBuilder::MultiColumn::multiColumnRelativeWillBeRemoved(RenderMultiColumnFlow& flow, RenderObject& relative, RenderTreeBuilder::CanCollapseAnonymousBlock canCollapseAnonymousBlock)
-{
-    flow.invalidateFragments();
-    if (auto* placeholder = dynamicDowncast<RenderMultiColumnSpannerPlaceholder>(relative)) {
-        // Remove the map entry for this spanner, but leave the actual spanner renderer alone. Also
-        // keep the reference to the spanner, since the placeholder may be about to be re-inserted
-        // in the tree.
-        ASSERT(relative.isDescendantOf(&flow));
-        flow.spannerMap().remove(placeholder->spanner());
-        return;
-    }
-    if (relative.style().columnSpan() == ColumnSpan::All) {
-        if (relative.parent() != flow.parent())
-            return; // not a valid spanner.
-
-        handleSpannerRemoval(flow, relative, canCollapseAnonymousBlock);
-    }
-    // Note that we might end up with empty column sets if all column content is removed. That's no
-    // big deal though (and locating them would be expensive), and they will be found and re-used if
-    // content is added again later.
-}
-
-RenderObject* RenderTreeBuilder::MultiColumn::adjustBeforeChildForMultiColumnSpannerIfNeeded(RenderObject& beforeChild)
-{
-    auto* beforeChildBox = dynamicDowncast<RenderBox>(beforeChild);
-    if (!beforeChildBox)
-        return &beforeChild;
-
-    auto* nextSibling = beforeChildBox->nextSibling();
-    if (!nextSibling)
-        return &beforeChild;
-
-    auto* renderMultiColumnSet = dynamicDowncast<RenderMultiColumnSet>(*nextSibling);
-    if (!renderMultiColumnSet)
-        return &beforeChild;
-
-    auto* multiColumnFlow = renderMultiColumnSet->multiColumnFlow();
-    if (!multiColumnFlow)
-        return &beforeChild;
-
-    return multiColumnFlow->findColumnSpannerPlaceholder(beforeChildBox);
-}
-
-}
+} // namespace Webcore

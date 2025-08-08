@@ -56,7 +56,6 @@
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceTiming.h"
-#include "RuntimeApplicationChecks.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
@@ -65,6 +64,7 @@
 #include "ThreadableLoaderClient.h"
 #include <wtf/Assertions.h>
 #include <wtf/Ref.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -135,7 +135,7 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
     // Setting a referrer header is only supported in the async code path.
     ASSERT(m_async || m_referrer.isEmpty());
 
-    if (document.settings().disallowSyncXHRDuringPageDismissalEnabled() && !m_async && (!document.page() || !document.page()->areSynchronousLoadsAllowed())) {
+    if (!m_async && (!document.page() || !document.page()->areSynchronousLoadsAllowed())) {
         document.didRejectSyncXHRDuringPageDismissal();
         logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, request.url(), "Synchronous loads are not allowed at this time"_s));
         return;
@@ -157,9 +157,11 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
     if (shouldSetHTTPHeadersToKeep())
         m_options.httpHeadersToKeep = httpHeadersToKeepFromCleaning(request.httpHeaderFields());
 
-    bool shouldDisableCORS = document.isRunningUserScripts() && LegacySchemeRegistry::isUserExtensionScheme(request.url().protocol());
-    if (RefPtr page = document.page())
+    bool shouldDisableCORS = false;
+    if (RefPtr page = document.protectedPage()) {
+        shouldDisableCORS = page->hasInjectedUserScript() && LegacySchemeRegistry::isUserExtensionScheme(request.url().protocol());
         shouldDisableCORS |= page->shouldDisableCorsForRequestTo(request.url());
+    }
 
     if (shouldDisableCORS) {
         m_options.mode = FetchOptions::Mode::NoCors;
@@ -202,7 +204,7 @@ void DocumentThreadableLoader::makeCrossOriginAccessRequest(ResourceRequest&& re
     ASSERT(m_options.mode == FetchOptions::Mode::Cors);
 
 #if PLATFORM(IOS_FAMILY)
-    bool needsPreflightQuirk = IOSApplication::isMoviStarPlus() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoMoviStarPlusCORSPreflightQuirk) && (m_options.preflightPolicy == PreflightPolicy::Consider || m_options.preflightPolicy == PreflightPolicy::Force);
+    bool needsPreflightQuirk = WTF::IOSApplication::isMoviStarPlus() && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoMoviStarPlusCORSPreflightQuirk) && (m_options.preflightPolicy == PreflightPolicy::Consider || m_options.preflightPolicy == PreflightPolicy::Force);
 #else
     bool needsPreflightQuirk = false;
 #endif
@@ -402,9 +404,9 @@ void DocumentThreadableLoader::responseReceived(CachedResource& resource, const 
     if (!m_responsesCanBeOpaque) {
         ResourceResponse responseWithoutTainting = responseWithCorrectFragmentIdentifier.isNull() ? response : responseWithCorrectFragmentIdentifier;
         responseWithoutTainting.setTainting(ResourceResponse::Tainting::Basic);
-        didReceiveResponse(m_resource->identifier(), responseWithoutTainting);
+        didReceiveResponse(*m_resource->resourceLoaderIdentifier(), responseWithoutTainting);
     } else
-        didReceiveResponse(m_resource->identifier(), responseWithCorrectFragmentIdentifier.isNull() ? response : responseWithCorrectFragmentIdentifier);
+        didReceiveResponse(*m_resource->resourceLoaderIdentifier(), responseWithCorrectFragmentIdentifier.isNull() ? response : responseWithCorrectFragmentIdentifier);
 
     if (completionHandler)
         completionHandler();
@@ -449,10 +451,10 @@ void DocumentThreadableLoader::didReceiveResponse(ResourceLoaderIdentifier ident
 void DocumentThreadableLoader::dataReceived(CachedResource& resource, const SharedBuffer& buffer)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
-    didReceiveData(m_resource->identifier(), buffer);
+    didReceiveData(buffer);
 }
 
-void DocumentThreadableLoader::didReceiveData(ResourceLoaderIdentifier, const SharedBuffer& buffer)
+void DocumentThreadableLoader::didReceiveData(const SharedBuffer& buffer)
 {
     ASSERT(m_client);
 
@@ -483,12 +485,12 @@ void DocumentThreadableLoader::notifyFinished(CachedResource& resource, const Ne
     ASSERT_UNUSED(resource, &resource == m_resource);
 
     if (m_resource->errorOccurred())
-        didFail(m_resource->identifier(), m_resource->resourceError());
+        didFail(m_resource->resourceLoaderIdentifier(), m_resource->resourceError());
     else
-        didFinishLoading(m_resource->identifier(), metrics);
+        didFinishLoading(m_resource->resourceLoaderIdentifier(), metrics);
 }
 
-void DocumentThreadableLoader::didFinishLoading(ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& metrics)
+void DocumentThreadableLoader::didFinishLoading(std::optional<ResourceLoaderIdentifier> identifier, const NetworkLoadMetrics& metrics)
 {
     ASSERT(m_client);
 
@@ -520,7 +522,7 @@ void DocumentThreadableLoader::didFinishLoading(ResourceLoaderIdentifier identif
     m_client->didFinishLoading(m_document->identifier(), identifier, metrics);
 }
 
-void DocumentThreadableLoader::didFail(ResourceLoaderIdentifier, const ResourceError& error)
+void DocumentThreadableLoader::didFail(std::optional<ResourceLoaderIdentifier>, const ResourceError& error)
 {
     ASSERT(m_client);
     if (m_bypassingPreflightForServiceWorkerRequest && error.isCancellation()) {
@@ -556,12 +558,13 @@ void DocumentThreadableLoader::preflightSuccess(ResourceRequest&& request)
     loadRequest(WTFMove(actualRequest), SecurityCheckPolicy::SkipSecurityCheck);
 }
 
-void DocumentThreadableLoader::preflightFailure(ResourceLoaderIdentifier identifier, const ResourceError& error)
+void DocumentThreadableLoader::preflightFailure(std::optional<ResourceLoaderIdentifier> identifier, const ResourceError& error)
 {
     m_preflightChecker = std::nullopt;
 
     RefPtr frame = m_document->frame();
-    InspectorInstrumentation::didFailLoading(frame.get(), frame->loader().protectedDocumentLoader().get(), identifier, error);
+    if (identifier)
+        InspectorInstrumentation::didFailLoading(frame.get(), frame->loader().protectedDocumentLoader().get(), *identifier, error);
 
     if (m_shouldLogError == ShouldLogError::Yes)
         logError(protectedDocument(), error, m_options.initiatorType);
@@ -618,16 +621,18 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
     loadTiming.markStartTime();
 
     // FIXME: ThreadableLoaderOptions.sniffContent is not supported for synchronous requests.
+    RefPtr frame = m_document->frame();
+    if (!frame)
+        return;
+
+    if (MixedContentChecker::shouldBlockRequestForRunnableContent(*frame, m_document->protectedSecurityOrigin(), requestURL, MixedContentChecker::ShouldLogWarning::Yes))
+        return;
+
     RefPtr<SharedBuffer> data;
     ResourceError error;
     ResourceResponse response;
-    auto identifier = LegacyNullableAtomicObjectIdentifier<ResourceLoader> { std::numeric_limits<uint64_t>::max() };
-    if (RefPtr frame = m_document->frame()) {
-        if (MixedContentChecker::shouldBlockRequestForRunnableContent(*frame, m_document->protectedSecurityOrigin(), requestURL, MixedContentChecker::ShouldLogWarning::Yes))
-            return;
-        CheckedRef frameLoader = frame->loader();
-        identifier = frameLoader->loadResourceSynchronously(request, m_options.clientCredentialPolicy, m_options, *m_originalHeaders, error, response, data);
-    }
+    Ref frameLoader = frame->loader();
+    auto identifier = frameLoader->loadResourceSynchronously(request, m_options.clientCredentialPolicy, m_options, *m_originalHeaders, error, response, data);
 
     loadTiming.markEndTime();
 
@@ -681,7 +686,7 @@ void DocumentThreadableLoader::loadRequest(ResourceRequest&& request, SecurityCh
     didReceiveResponse(identifier, response);
 
     if (data)
-        didReceiveData(identifier, *data);
+        didReceiveData(*data);
 
     const auto* timing = response.deprecatedNetworkLoadMetricsOrNull();
     auto resourceTiming = ResourceTiming::fromSynchronousLoad(requestURL, m_options.initiatorType, loadTiming, timing ? *timing : NetworkLoadMetrics::emptyMetrics(), response, securityOrigin());
@@ -733,6 +738,7 @@ Ref<SecurityOrigin> DocumentThreadableLoader::topOrigin() const
 {
     return m_document->topOrigin();
 }
+
 Ref<SecurityOrigin> DocumentThreadableLoader::protectedSecurityOrigin() const
 {
     return securityOrigin();

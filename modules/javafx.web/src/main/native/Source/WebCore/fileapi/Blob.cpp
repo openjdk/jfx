@@ -55,6 +55,7 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BlobLoader);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Blob);
 
 class BlobURLRegistry final : public URLRegistry {
@@ -66,7 +67,7 @@ public:
     static URLRegistry& registry();
 
     Lock m_urlsPerContextLock;
-    HashMap<ScriptExecutionContextIdentifier, HashSet<URL>> m_urlsPerContext WTF_GUARDED_BY_LOCK(m_urlsPerContextLock);
+    HashMap<ScriptExecutionContextIdentifier, UncheckedKeyHashSet<URL>> m_urlsPerContext WTF_GUARDED_BY_LOCK(m_urlsPerContextLock);
 };
 
 void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const URL& publicURL, URLRegistrable& blob)
@@ -74,9 +75,9 @@ void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const U
     ASSERT(&blob.registry() == this);
     {
         Locker locker { m_urlsPerContextLock };
-        m_urlsPerContext.add(context.identifier(), HashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
+        m_urlsPerContext.add(context.identifier(), UncheckedKeyHashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
     }
-    ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, static_cast<Blob&>(blob).url(), context.topOrigin().data());
+    ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, downcast<Blob>(blob).url(), context.topOrigin().data());
 }
 
 void BlobURLRegistry::unregisterURL(const URL& url, const SecurityOriginData& topOrigin)
@@ -101,7 +102,7 @@ void BlobURLRegistry::unregisterURL(const URL& url, const SecurityOriginData& to
 
 void BlobURLRegistry::unregisterURLsForContext(const ScriptExecutionContext& context)
 {
-    HashSet<URL> urlsForContext;
+    UncheckedKeyHashSet<URL> urlsForContext;
     {
         Locker locker { m_urlsPerContextLock };
         urlsForContext = m_urlsPerContext.take(context.identifier());
@@ -265,7 +266,7 @@ String Blob::normalizedContentType(const String& contentType)
     return contentType.convertToASCIILowercase();
 }
 
-void Blob::loadBlob(FileReaderLoader::ReadType readType, CompletionHandler<void(BlobLoader&)>&& completionHandler)
+void Blob::loadBlob(FileReaderLoader::ReadType readType, Function<void(BlobLoader&)>&& completionHandler)
 {
     auto blobLoader = makeUnique<BlobLoader>([this, pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
         completionHandler(blobLoader);
@@ -303,6 +304,13 @@ void Blob::arrayBuffer(DOMPromiseDeferred<IDLArrayBuffer>&& promise)
 {
     loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
         promise.settle(arrayBufferFromBlobLoader(blobLoader));
+    });
+}
+
+void Blob::getArrayBuffer(CompletionHandler<void(ExceptionOr<Ref<JSC::ArrayBuffer>>)>&& completionHandler)
+{
+    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
+        completionHandler(arrayBufferFromBlobLoader(blobLoader));
     });
 }
 
@@ -452,12 +460,10 @@ bool Blob::isNormalizedContentType(const String& contentType)
 bool Blob::isNormalizedContentType(const CString& contentType)
 {
     // FIXME: Do we really want to treat the empty string and null string as valid content types?
-    size_t length = contentType.length();
-    const char* characters = contentType.data();
-    for (size_t i = 0; i < length; ++i) {
-        if (characters[i] < 0x20 || characters[i] > 0x7e)
+    for (auto character : contentType.span()) {
+        if (character < 0x20 || character > 0x7e)
             return false;
-        if (isASCIIUpper(characters[i]))
+        if (isASCIIUpper(character))
             return false;
     }
     return true;

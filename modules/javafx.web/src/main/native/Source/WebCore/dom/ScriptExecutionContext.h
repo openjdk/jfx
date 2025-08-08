@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
  * Copyright (C) 2012 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -88,7 +88,10 @@ class SocketProvider;
 class WebCoreOpaqueRoot;
 enum class AdvancedPrivacyProtections : uint16_t;
 enum class LoadedFromOpaqueSource : bool;
+enum class NoiseInjectionPolicy : uint8_t;
+enum class ScriptTelemetryCategory : uint8_t;
 enum class TaskSource : uint8_t;
+struct CryptoKeyData;
 
 #if ENABLE(NOTIFICATIONS)
 class NotificationClient;
@@ -108,7 +111,7 @@ class ScriptExecutionContext : public SecurityContext, public TimerAlignment {
 public:
     using Type = ScriptExecutionContextType;
 
-    explicit ScriptExecutionContext(Type, ScriptExecutionContextIdentifier = { });
+    explicit ScriptExecutionContext(Type, std::optional<ScriptExecutionContextIdentifier> = std::nullopt);
     virtual ~ScriptExecutionContext();
 
     bool isDocument() const { return m_type == Type::Document; }
@@ -127,6 +130,8 @@ public:
     virtual const URL& url() const = 0;
     enum class ForceUTF8 : bool { No, Yes };
     virtual URL completeURL(const String& url, ForceUTF8 = ForceUTF8::No) const = 0;
+
+    virtual const URL& cookieURL() const = 0;
 
     virtual String userAgent(const URL&) const = 0;
 
@@ -147,6 +152,7 @@ public:
 
     virtual OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const = 0;
     virtual std::optional<uint64_t> noiseInjectionHashSalt() const = 0;
+    virtual OptionSet<NoiseInjectionPolicy> noiseInjectionPolicies() const = 0;
 
     virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection();
 
@@ -178,7 +184,8 @@ public:
 
     JSC::ScriptExecutionStatus jscScriptExecutionStatus() const;
 
-    URL currentSourceURL() const;
+    enum class CallStackPosition : bool { BottomMost, TopMost };
+    URL currentSourceURL(CallStackPosition = CallStackPosition::BottomMost) const;
 
     // Called from the constructor and destructors of ActiveDOMObject.
     void didCreateActiveDOMObject(ActiveDOMObject&);
@@ -207,11 +214,11 @@ public:
 
     WEBCORE_EXPORT void ref();
     WEBCORE_EXPORT void deref();
-    WEBCORE_EXPORT void refAllowingPartiallyDestroyed();
-    WEBCORE_EXPORT void derefAllowingPartiallyDestroyed();
+
+    WEBCORE_EXPORT bool requiresScriptExecutionTelemetry(ScriptTelemetryCategory);
 
     class Task {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(Task);
     public:
         enum CleanupTaskTag { CleanupTask };
 
@@ -264,6 +271,7 @@ public:
 
     virtual JSC::VM& vm() = 0;
     virtual Ref<JSC::VM> protectedVM();
+    virtual JSC::VM* vmIfExists() const = 0;
 
     void adjustMinimumDOMTimerInterval(Seconds oldMinimumTimerInterval);
     virtual Seconds minimumDOMTimerInterval() const;
@@ -321,6 +329,7 @@ public:
     WEBCORE_EXPORT static bool postTaskTo(ScriptExecutionContextIdentifier, Task&&);
     WEBCORE_EXPORT static bool postTaskForModeToWorkerOrWorklet(ScriptExecutionContextIdentifier, Task&&, const String&);
     WEBCORE_EXPORT static bool ensureOnContextThread(ScriptExecutionContextIdentifier, Task&&);
+    WEBCORE_EXPORT static bool isContextThread(ScriptExecutionContextIdentifier);
     WEBCORE_EXPORT static bool ensureOnContextThreadForCrossThreadTask(ScriptExecutionContextIdentifier, CrossThreadTask&&);
 
     ScriptExecutionContextIdentifier identifier() const { return m_identifier; }
@@ -344,13 +353,10 @@ public:
     WEBCORE_EXPORT HasResourceAccess canAccessResource(ResourceType) const;
 
     enum NotificationCallbackIdentifierType { };
-    using NotificationCallbackIdentifier = LegacyNullableAtomicObjectIdentifier<NotificationCallbackIdentifierType>;
+    using NotificationCallbackIdentifier = AtomicObjectIdentifier<NotificationCallbackIdentifierType>;
 
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
-
-    void addDeferredPromise(Ref<DeferredPromise>&&);
-    RefPtr<DeferredPromise> takeDeferredPromise(DeferredPromise*);
 
     template<typename Promise, typename Task>
     void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task)
@@ -377,6 +383,8 @@ public:
     {
         enqueueTaskWhenSettled(WTFMove(promise), taskSource, CompletionHandlerWithFinalizer<void(typename Promise::Result&&)>(WTFMove(task), WTFMove(finalizer)));
     }
+
+    bool isAlwaysOnLoggingAllowed() const;
 
 protected:
     class AddConsoleMessageTask : public Task {
@@ -418,18 +426,18 @@ private:
     void dispatchMessagePortEvents();
 
     enum class ShouldContinue : bool { No, Yes };
-    void forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>&) const;
+    void forEachActiveDOMObject(NOESCAPE const Function<ShouldContinue(ActiveDOMObject&)>&) const;
 
     RejectedPromiseTracker* ensureRejectedPromiseTrackerSlow();
 
     void checkConsistency() const;
-    WEBCORE_EXPORT RefCountedSerialFunctionDispatcher& nativePromiseDispatcher();
+    WEBCORE_EXPORT GuaranteedSerialFunctionDispatcher& nativePromiseDispatcher();
 
-    HashSet<MessagePort*> m_messagePorts;
-    HashSet<ContextDestructionObserver*> m_destructionObservers;
-    HashSet<ActiveDOMObject*> m_activeDOMObjects;
+    UncheckedKeyHashSet<MessagePort*> m_messagePorts;
+    UncheckedKeyHashSet<ContextDestructionObserver*> m_destructionObservers;
+    UncheckedKeyHashSet<ActiveDOMObject*> m_activeDOMObjects;
 
-    HashMap<int, RefPtr<DOMTimer>> m_timeouts;
+    UncheckedKeyHashMap<int, RefPtr<DOMTimer>> m_timeouts;
 
     struct PendingException;
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;
@@ -449,13 +457,12 @@ private:
 #endif
 
     RefPtr<ServiceWorker> m_activeServiceWorker;
-    HashMap<ServiceWorkerIdentifier, ServiceWorker*> m_serviceWorkers;
+    UncheckedKeyHashMap<ServiceWorkerIdentifier, ServiceWorker*> m_serviceWorkers;
 
     String m_domainForCachePartition;
     mutable ScriptExecutionContextIdentifier m_identifier;
 
-    HashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
-    HashSet<Ref<DeferredPromise>> m_deferredPromises;
+    UncheckedKeyHashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
 
     StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
     ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
@@ -468,7 +475,7 @@ private:
     bool m_willprocessMessageWithMessagePortsSoon { false };
     bool m_hasLoggedAuthenticatedEncryptionWarning { false };
 
-    RefPtr<RefCountedSerialFunctionDispatcher> m_nativePromiseDispatcher;
+    RefPtr<GuaranteedSerialFunctionDispatcher> m_nativePromiseDispatcher;
     WeakHashSet<NativePromiseRequest> m_nativePromiseRequests;
 };
 

@@ -39,8 +39,8 @@ Lock messageHandlerLoggerObserverLock;
 String Logger::LogSiteIdentifier::toString() const
 {
     if (className)
-        return makeString(className, "::"_s, span(methodName), '(', hex(objectPtr), ") "_s);
-    return makeString(span(methodName), '(', hex(objectPtr), ") "_s);
+        return makeString(className, "::"_s, unsafeSpan(methodName), '(', hex(objectIdentifier), ") "_s);
+    return makeString(unsafeSpan(methodName), '(', hex(objectIdentifier), ") "_s);
 }
 
 String LogArgument<const void*>::toString(const void* argument)
@@ -67,4 +67,5 @@ Vector<std::reference_wrapper<Logger::MessageHandlerObserver>>& Logger::messageH
     });
     return observers;
 }
+
 } // namespace WTF

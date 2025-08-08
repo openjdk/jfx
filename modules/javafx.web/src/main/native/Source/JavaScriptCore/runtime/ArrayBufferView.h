@@ -33,6 +33,8 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 class JSArrayBufferView;
@@ -98,7 +100,7 @@ public:
             byteOffsetEnd = bufferByteLength;
         else
             byteOffsetEnd = byteOffsetStart + byteLengthRaw();
-        if (UNLIKELY(!(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength)))
+        if (UNLIKELY(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength))
             return 0;
         return byteOffsetRaw();
     }
@@ -120,7 +122,7 @@ public:
             byteOffsetEnd = bufferByteLength;
         else
             byteOffsetEnd = byteOffsetStart + byteLengthRaw();
-        if (UNLIKELY(!(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength)))
+        if (UNLIKELY(byteOffsetStart > bufferByteLength || byteOffsetEnd > bufferByteLength))
             return 0;
         if (!isAutoLength())
             return byteLengthRaw();
@@ -266,3 +268,5 @@ bool ArrayBufferView::zeroRangeImpl(size_t byteOffset, size_t rangeByteLength)
 } // namespace JSC
 
 using JSC::ArrayBufferView;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

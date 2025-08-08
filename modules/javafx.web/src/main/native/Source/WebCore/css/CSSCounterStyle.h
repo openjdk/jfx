@@ -28,6 +28,7 @@
 #include "CSSCounterStyleDescriptors.h"
 #include "WritingMode.h"
 #include <wtf/Forward.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
@@ -35,7 +36,7 @@ namespace WebCore {
 
 class StyleRuleCounterStyle;
 
-class CSSCounterStyle : public RefCounted<CSSCounterStyle>, public CanMakeWeakPtr<CSSCounterStyle> {
+class CSSCounterStyle : public RefCountedAndCanMakeWeakPtr<CSSCounterStyle> {
 public:
     static Ref<CSSCounterStyle> create(const CSSCounterStyleDescriptors&, bool isPredefinedCounterStyle);
 
@@ -45,7 +46,7 @@ public:
             && m_predefinedCounterStyle == other.m_predefinedCounterStyle;
     }
 
-    String text(int, TextFlow);
+    String text(int, WritingMode);
     const CSSCounterStyleDescriptors::Name& name() const { return m_descriptors.m_name; }
     CSSCounterStyleDescriptors::System system() const { return m_descriptors.m_system; }
     const CSSCounterStyleDescriptors::NegativeSymbols& negative() const { return m_descriptors.m_negativeSymbols; }
@@ -84,8 +85,8 @@ public:
     static String counterForSystemTraditionalChineseInformal(int);
     static String counterForSystemTraditionalChineseFormal(int);
     static String counterForSystemEthiopicNumeric(unsigned);
-    static String counterForSystemDisclosureClosed(TextFlow);
-    static String counterForSystemDisclosureOpen(TextFlow);
+    static String counterForSystemDisclosureClosed(WritingMode);
+    static String counterForSystemDisclosureOpen(WritingMode);
 
 private:
     CSSCounterStyle(const CSSCounterStyleDescriptors&, bool isPredefinedCounterStyle);
@@ -97,12 +98,12 @@ private:
     bool shouldApplyNegativeSymbols(int) const;
     // https://www.w3.org/TR/css-counter-styles-3/#counter-style-fallback
     WeakPtr<CSSCounterStyle> fallback() const { return m_fallbackReference; };
-    String fallbackText(int, TextFlow);
+    String fallbackText(int, WritingMode);
     // Generates a CSSCounterStyle object as it was defined by a 'decimal' descriptor. It is used as a last-resource in case we can't resolve fallback references.
     void applyPadSymbols(String&, int) const;
     void applyNegativeSymbols(String&) const;
     // Initial text representation for the counter, before applying pad and/or negative symbols. Suffix and Prefix are also not considered as described by https://www.w3.org/TR/css-counter-styles-3/#counter-styles.
-    String initialRepresentation(int, TextFlow) const;
+    String initialRepresentation(int, WritingMode) const;
 
     String counterForSystemCyclic(int) const;
     String counterForSystemFixed(int) const;

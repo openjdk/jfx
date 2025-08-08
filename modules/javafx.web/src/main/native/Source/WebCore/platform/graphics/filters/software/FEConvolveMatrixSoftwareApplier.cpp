@@ -30,9 +30,12 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include <wtf/ParallelJobs.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEConvolveMatrixSoftwareApplier);
 
 /*
    -----------------------------------
@@ -93,7 +96,7 @@ namespace WebCore {
 FEConvolveMatrixSoftwareApplier::FEConvolveMatrixSoftwareApplier(const FEConvolveMatrix& effect)
     : Base(effect)
 {
-    ASSERT(IntRect(IntPoint::zero(), m_effect.kernelSize()).contains(m_effect.targetOffset()));
+    ASSERT(IntRect(IntPoint::zero(), m_effect->kernelSize()).contains(m_effect->targetOffset()));
 }
 
 inline uint8_t FEConvolveMatrixSoftwareApplier::clampRGBAValue(float channel, uint8_t max)
@@ -105,7 +108,7 @@ inline uint8_t FEConvolveMatrixSoftwareApplier::clampRGBAValue(float channel, ui
     return channel;
 }
 
-inline void FEConvolveMatrixSoftwareApplier::setDestinationPixels(const PixelBuffer& sourcePixelBuffer, PixelBuffer& destinationPixelBuffer, int& pixel, float* totals, float divisor, float bias, bool preserveAlphaValues)
+inline void FEConvolveMatrixSoftwareApplier::setDestinationPixels(const PixelBuffer& sourcePixelBuffer, PixelBuffer& destinationPixelBuffer, int& pixel, std::span<float> totals, float divisor, float bias, bool preserveAlphaValues)
 {
     uint8_t maxAlpha = preserveAlphaValues ? 255 : clampRGBAValue(totals[3] / divisor + bias);
     for (int i = 0; i < 3; ++i)
@@ -155,7 +158,7 @@ inline void FEConvolveMatrixSoftwareApplier::setInteriorPixels(PaintingData& pai
     int kernelIncrease = clipRight * 4;
     int xIncrease = (paintingData.kernelSize.width() - 1) * 4;
     // Contains the sum of rgb(a) components
-    float totals[4];
+    std::array<float, 4> totals;
 
     // divisor cannot be 0, SVGFEConvolveMatrixElement ensures this
     ASSERT(paintingData.divisor);
@@ -176,11 +179,11 @@ inline void FEConvolveMatrixSoftwareApplier::setInteriorPixels(PaintingData& pai
             totals[3] = 0;
 
             while (kernelValue >= 0) {
-                totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
-                totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
-                totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel++));
+                totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel++));
+                totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel++));
+                totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel++));
                 if (!paintingData.preserveAlpha)
-                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(kernelPixel));
+                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(kernelPixel));
                 ++kernelPixel;
                 --kernelValue;
                 if (!--width) {
@@ -189,7 +192,7 @@ inline void FEConvolveMatrixSoftwareApplier::setInteriorPixels(PaintingData& pai
                 }
             }
 
-            setDestinationPixels(paintingData.sourcePixelBuffer, paintingData.destinationPixelBuffer, pixel, totals, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
+            setDestinationPixels(paintingData.sourcePixelBuffer, paintingData.destinationPixelBuffer, pixel, std::span { totals }, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
             startKernelPixel += 4;
         }
         pixel += xIncrease;
@@ -208,7 +211,7 @@ inline void FEConvolveMatrixSoftwareApplier::setOuterPixels(PaintingData& painti
     int startKernelPixelY = y1 - paintingData.targetOffset.y();
     int xIncrease = (paintingData.width - width) * 4;
     // Contains the sum of rgb(a) components
-    float totals[4];
+    std::array<float, 4> totals;
 
     // paintingData.divisor cannot be 0, SVGFEConvolveMatrixElement ensures this
     ASSERT(paintingData.divisor);
@@ -228,12 +231,12 @@ inline void FEConvolveMatrixSoftwareApplier::setOuterPixels(PaintingData& painti
             while (kernelValue >= 0) {
                 int pixelIndex = getPixelValue(paintingData, kernelPixelX, kernelPixelY);
                 if (pixelIndex >= 0) {
-                    totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex));
-                    totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 1));
-                    totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 2));
+                    totals[0] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex));
+                    totals[1] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex + 1));
+                    totals[2] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex + 2));
                 }
                 if (!paintingData.preserveAlpha && pixelIndex >= 0)
-                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer.item(pixelIndex + 3));
+                    totals[3] += paintingData.kernelMatrix[kernelValue] * static_cast<float>(paintingData.sourcePixelBuffer->item(pixelIndex + 3));
                 ++kernelPixelX;
                 --kernelValue;
                 if (!--width) {
@@ -243,7 +246,7 @@ inline void FEConvolveMatrixSoftwareApplier::setOuterPixels(PaintingData& painti
                 }
             }
 
-            setDestinationPixels(paintingData.sourcePixelBuffer, paintingData.destinationPixelBuffer, pixel, totals, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
+            setDestinationPixels(paintingData.sourcePixelBuffer, paintingData.destinationPixelBuffer, pixel, std::span { totals }, paintingData.divisor, paintingData.bias, paintingData.preserveAlpha);
             ++startKernelPixelX;
         }
         pixel += xIncrease;
@@ -301,32 +304,32 @@ void FEConvolveMatrixSoftwareApplier::applyPlatform(PaintingData& paintingData) 
 
 bool FEConvolveMatrixSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
-    auto alphaFormat = m_effect.preserveAlpha() ? AlphaPremultiplication::Unpremultiplied : AlphaPremultiplication::Premultiplied;
-    auto destinationPixelBuffer = result.pixelBuffer(alphaFormat);
+    auto alphaFormat = m_effect->preserveAlpha() ? AlphaPremultiplication::Unpremultiplied : AlphaPremultiplication::Premultiplied;
+    RefPtr destinationPixelBuffer = result.pixelBuffer(alphaFormat);
     if (!destinationPixelBuffer)
         return false;
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
-    auto sourcePixelBuffer = input.getPixelBuffer(alphaFormat, effectDrawingRect, m_effect.operatingColorSpace());
+    RefPtr sourcePixelBuffer = input->getPixelBuffer(alphaFormat, effectDrawingRect, m_effect->operatingColorSpace());
     if (!sourcePixelBuffer)
         return false;
 
     auto paintSize = result.absoluteImageRect().size();
 
     PaintingData paintingData = {
-        *sourcePixelBuffer,
-        *destinationPixelBuffer,
+        sourcePixelBuffer.releaseNonNull(),
+        destinationPixelBuffer.releaseNonNull(),
         paintSize.width(),
         paintSize.height(),
-        m_effect.kernelSize(),
-        m_effect.divisor(),
-        m_effect.bias() * 255,
-        m_effect.targetOffset(),
-        m_effect.edgeMode(),
-        m_effect.preserveAlpha(),
-        FEColorMatrix::normalizedFloats(m_effect.kernel())
+        m_effect->kernelSize(),
+        m_effect->divisor(),
+        m_effect->bias() * 255,
+        m_effect->targetOffset(),
+        m_effect->edgeMode(),
+        m_effect->preserveAlpha(),
+        FEColorMatrix::normalizedFloats(m_effect->kernel())
     };
 
     applyPlatform(paintingData);

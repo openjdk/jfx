@@ -57,13 +57,9 @@ HTMLIFrameElement& RenderIFrame::iframeElement() const
     return downcast<HTMLIFrameElement>(RenderFrameBase::frameOwnerElement());
 }
 
-bool RenderIFrame::shouldComputeSizeAsReplaced() const
+bool RenderIFrame::isNonReplacedAtomicInline() const
 {
-    return true;
-}
-
-bool RenderIFrame::isInlineBlockOrInlineTable() const
-{
+    // FIXME: iFrames should not override this function.
     return isInline();
 }
 

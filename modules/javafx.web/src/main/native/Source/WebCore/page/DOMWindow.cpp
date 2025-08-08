@@ -39,6 +39,7 @@
 #include "NodeList.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
+#include "PlatformStrategies.h"
 #include "RemoteDOMWindow.h"
 #include "ResourceLoadObserver.h"
 #include "ScheduledAction.h"
@@ -94,7 +95,7 @@ bool DOMWindow::closed() const
 
 void DOMWindow::close(Document& document)
 {
-    if (!document.canNavigate(protectedFrame().get()))
+    if (document.canNavigate(protectedFrame().get()) != CanNavigateState::Able)
         return;
     close();
 }
@@ -112,13 +113,13 @@ void DOMWindow::close()
     if (!frame->isMainFrame())
         return;
 
-    if (!(page->openedByDOM() || page->backForward().count() <= 1)) {
+    if (!(page->openedByDOM() || page->checkedBackForward()->count() <= 1)) {
         checkedConsole()->addMessage(MessageSource::JS, MessageLevel::Warning, "Can't close the window since it was not opened by JavaScript"_s);
         return;
     }
 
     RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
-    if (localFrame && !localFrame->checkedLoader()->shouldClose())
+    if (localFrame && !localFrame->protectedLoader()->shouldClose())
         return;
 
     ResourceLoadObserver::shared().updateCentralStatisticsStore([] { });
@@ -906,5 +907,15 @@ ExceptionOr<String> DOMWindow::atob(const String& stringToEncode)
         return Exception { ExceptionCode::SecurityError };
     return Base64Utilities::atob(stringToEncode);
 }
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+ExceptionOr<PushManager&> DOMWindow::pushManager()
+{
+    auto* localThis = dynamicDowncast<LocalDOMWindow>(*this);
+    if (!localThis)
+        return Exception { ExceptionCode::SecurityError };
+    return localThis->pushManager();
+}
+#endif
 
 } // namespace WebCore

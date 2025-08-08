@@ -34,8 +34,11 @@
 #include "FEBlend.h"
 #include "PixelBuffer.h"
 #include <arm_neon.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FELightingNeonParallelApplier);
 
 class FEBlendUtilitiesNEON {
 public:
@@ -130,7 +133,7 @@ void FEBlendNeonApplier::applyPlatform(unsigned char* srcPixelArrayA, unsigned c
         uint16x8_t alphaB = vcombine_u16(vdup_n_u16(alphaB1), vdup_n_u16(alphaB2));
 
         uint16x8_t result;
-        switch (m_effect.blendMode()) {
+        switch (m_effect->blendMode()) {
         case BlendMode::Normal:
             result = FEBlendUtilitiesNEON::normal(doubblePixelA, doubblePixelB, alphaA, alphaB, sixteenConst255, sixteenConstOne);
             break;
@@ -169,8 +172,8 @@ void FEBlendNeonApplier::applyPlatform(unsigned char* srcPixelArrayA, unsigned c
 
 bool FEBlendNeonApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
-    auto& input2 = inputs[1].get();
+    Ref input = inputs[0];
+    Ref input2 = inputs[1];
 
     auto* destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)
@@ -179,10 +182,10 @@ bool FEBlendNeonApplier::apply(const Filter&, const FilterImageVector& inputs, F
     auto* destinationPixelArray = destinationPixelBuffer->bytes().data();
 
     auto effectADrawingRect = result.absoluteImageRectRelativeTo(input);
-    auto sourcePixelArrayA = input.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect);
+    auto sourcePixelArrayA = input->getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect);
 
     auto effectBDrawingRect = result.absoluteImageRectRelativeTo(input2);
-    auto sourcePixelArrayB = input2.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectBDrawingRect);
+    auto sourcePixelArrayB = input2->getPixelBuffer(AlphaPremultiplication::Premultiplied, effectBDrawingRect);
 
     unsigned sourcePixelArrayLength = sourcePixelArrayA->bytes().size();
     ASSERT(sourcePixelArrayLength == sourcePixelArrayB->bytes().size());

@@ -61,9 +61,12 @@
 #include <JavaScriptCore/JSString.h>
 #include <JavaScriptCore/SourceProvider.h>
 #include <JavaScriptCore/Symbol.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptModuleLoader);
 
 ScriptModuleLoader::ScriptModuleLoader(ScriptExecutionContext* context, OwnerType ownerType)
     : m_context(context)
@@ -205,7 +208,11 @@ JSC::JSInternalPromise* ScriptModuleLoader::fetch(JSC::JSGlobalObject* jsGlobalO
     if (m_ownerType == OwnerType::Document) {
         auto loader = CachedModuleScriptLoader::create(*this, deferred.get(), *static_cast<CachedScriptFetcher*>(JSC::jsCast<JSC::JSScriptFetcher*>(scriptFetcher)->fetcher()), WTFMove(parameters));
         m_loaders.add(loader.copyRef());
-        if (!loader->load(downcast<Document>(*m_context), WTFMove(completedURL))) {
+
+        // Prevent non-normal worlds from loading with a service worker.
+        auto serviceWorkersMode = currentWorld(*jsGlobalObject).isNormal() ? ServiceWorkersMode::All : ServiceWorkersMode::None;
+
+        if (!loader->load(downcast<Document>(*m_context), WTFMove(completedURL), serviceWorkersMode)) {
             loader->clearClient();
             m_loaders.remove(WTFMove(loader));
             rejectToPropagateNetworkError(*m_context, WTFMove(deferred), ModuleFetchFailureKind::WasPropagatedError, "Importing a module script failed."_s);
@@ -282,7 +289,7 @@ JSC::JSValue ScriptModuleLoader::evaluate(JSC::JSGlobalObject* jsGlobalObject, J
             RELEASE_AND_RETURN(scope, frame->script().evaluateModule(sourceURL, *moduleRecord, awaitedValue, resumeMode));
     } else {
         if (auto* script = downcast<WorkerOrWorkletGlobalScope>(*m_context).script())
-            RELEASE_AND_RETURN(scope, script->evaluateModule(*moduleRecord, awaitedValue, resumeMode));
+            RELEASE_AND_RETURN(scope, script->evaluateModule(sourceURL, *moduleRecord, awaitedValue, resumeMode));
     }
     return JSC::jsUndefined();
 }

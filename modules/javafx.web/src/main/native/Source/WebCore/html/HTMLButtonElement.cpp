@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTMLButtonElement.h"
 
+#include "CommandEvent.h"
 #include "CommonAtomStrings.h"
 #include "DOMFormData.h"
 #include "ElementInlines.h"
@@ -40,6 +41,10 @@
 
 #if ENABLE(SERVICE_CONTROLS)
 #include "ImageControlsMac.h"
+#endif
+
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+#include "SpatialImageControls.h"
 #endif
 
 namespace WebCore {
@@ -130,10 +135,90 @@ void HTMLButtonElement::attributeChanged(const QualifiedName& name, const AtomSt
         HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
+RefPtr<Element> HTMLButtonElement::commandForElement() const
+{
+    auto canInvoke = [](const HTMLFormControlElement& element) -> bool {
+        if (!element.document().settings().invokerAttributesEnabled())
+            return false;
+        return is<HTMLButtonElement>(element);
+    };
+
+    if (!canInvoke(*this))
+        return nullptr;
+
+    return elementForAttributeInternal(commandforAttr);
+}
+
+constexpr ASCIILiteral togglePopoverLiteral = "toggle-popover"_s;
+constexpr ASCIILiteral showPopoverLiteral = "show-popover"_s;
+constexpr ASCIILiteral hidePopoverLiteral = "hide-popover"_s;
+constexpr ASCIILiteral showModalLiteral = "show-modal"_s;
+constexpr ASCIILiteral closeLiteral = "close"_s;
+CommandType HTMLButtonElement::commandType() const
+{
+    auto action = attributeWithoutSynchronization(HTMLNames::commandAttr);
+    if (action.isNull() || action.isEmpty())
+        return CommandType::Invalid;
+
+    if (equalLettersIgnoringASCIICase(action, togglePopoverLiteral))
+        return CommandType::TogglePopover;
+
+    if (equalLettersIgnoringASCIICase(action, showPopoverLiteral))
+        return CommandType::ShowPopover;
+
+    if (equalLettersIgnoringASCIICase(action, hidePopoverLiteral))
+        return CommandType::HidePopover;
+
+    if (equalLettersIgnoringASCIICase(action, showModalLiteral))
+        return CommandType::ShowModal;
+
+    if (equalLettersIgnoringASCIICase(action, closeLiteral))
+        return CommandType::Close;
+
+    if (action.startsWith("--"_s))
+        return CommandType::Custom;
+
+    return CommandType::Invalid;
+}
+
+void HTMLButtonElement::handleCommand()
+{
+    RefPtr invokee = commandForElement();
+    if (!invokee)
+        return;
+
+    auto commandRaw = attributeWithoutSynchronization(HTMLNames::commandAttr);
+    auto command = commandType();
+
+    if (command == CommandType::Invalid)
+        return;
+
+    if (command != CommandType::Custom && !invokee->isValidCommandType(command))
+        return;
+
+    CommandEvent::Init init;
+    init.bubbles = false;
+    init.cancelable = true;
+    init.composed = true;
+    init.source = this;
+    init.command = commandRaw.isNull() ? emptyAtom() : commandRaw;
+
+    Ref event = CommandEvent::create(eventNames().commandEvent, init,
+        CommandEvent::IsTrusted::Yes);
+    invokee->dispatchEvent(event);
+
+    if (!event->defaultPrevented() && command != CommandType::Custom)
+        invokee->handleCommandInternal(*this, command);
+}
+
 void HTMLButtonElement::defaultEventHandler(Event& event)
 {
 #if ENABLE(SERVICE_CONTROLS)
     if (ImageControlsMac::handleEvent(*this, event))
+        return;
+#endif
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    if (SpatialImageControls::handleEvent(*this, event))
         return;
 #endif
     auto& eventNames = WebCore::eventNames();
@@ -151,7 +236,7 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
             // the Form or button relationships.
             protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-            if (auto currentForm = form()) {
+            if (RefPtr currentForm = form()) {
                 if (m_type == SUBMIT)
                     currentForm->submitIfPossible(&event, this);
 
@@ -161,8 +246,11 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
 
             if (m_type == SUBMIT || m_type == RESET)
                 event.setDefaultHandled();
-        } else
-            handlePopoverTargetAction();
+        }
+
+        if (!(protectedForm && m_type == SUBMIT))
+            handlePopoverTargetAction(event.target());
+
     }
 
     if (RefPtr keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {

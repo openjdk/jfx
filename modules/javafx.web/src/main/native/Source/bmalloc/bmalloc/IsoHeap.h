@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,8 @@
  */
 
 #pragma once
+
+#if !BUSE(TZONE)
 
 #include "CompactAllocationMode.h"
 #include "IsoConfig.h"
@@ -192,7 +194,7 @@ public: \
     \
     exportMacro static void freeAfterDestruction(void*); \
     \
-    using WTFIsFastAllocated = int; \
+    using WTFIsFastMallocAllocated = int; \
 private: \
     using __makeBisoMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
@@ -218,8 +220,40 @@ public: \
     \
     exportMacro static void freeAfterDestruction(void*); \
     \
-    using WTFIsFastAllocated = int; \
+    using WTFIsFastMallocAllocated = int; \
 private: \
     using __makeBisoMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
+// Use this together with MAKE_BISO_MALLOCED for template classes.
+#define MAKE_BISO_MALLOCED_TEMPLATE_IMPL(templateParameters, isoType) \
+templateParameters \
+::bmalloc::api::IsoHeap<isoType>& isoType::bisoHeap() \
+{ \
+    static ::bmalloc::api::IsoHeap<isoType> heap("WebKit_"#isoType); \
+    return heap; \
+} \
+\
+templateParameters \
+void* isoType::operator new(size_t size) \
+{ \
+    RELEASE_BASSERT(size == sizeof(isoType)); \
+    return bisoHeap().allocate(); \
+} \
+\
+templateParameters \
+void isoType::operator delete(void* p) \
+{ \
+    bisoHeap().deallocate(p); \
+} \
+\
+templateParameters \
+void isoType::freeAfterDestruction(void* p) \
+{ \
+    bisoHeap().deallocate(p); \
+} \
+\
+using __makeBisoMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
+
 } } // namespace bmalloc::api
+
+#endif // !BUSE(TZONE)

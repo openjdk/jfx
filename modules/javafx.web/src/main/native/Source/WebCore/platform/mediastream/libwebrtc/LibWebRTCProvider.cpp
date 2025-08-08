@@ -39,9 +39,9 @@
 #include "MediaEncodingConfiguration.h"
 #include "ProcessQualified.h"
 #include <dlfcn.h>
+#include <wtf/TZoneMallocInlines.h>
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #include <webrtc/api/audio_codecs/builtin_audio_decoder_factory.h>
 #include <webrtc/api/audio_codecs/builtin_audio_encoder_factory.h>
@@ -49,13 +49,15 @@ ALLOW_COMMA_BEGIN
 #include <webrtc/modules/audio_processing/include/audio_processing.h>
 #include <webrtc/p2p/base/basic_packet_socket_factory.h>
 #include <webrtc/p2p/client/basic_port_allocator.h>
+// See Bug 274508: Disable thread-safety-reference-return warnings in libwebrtc
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
 #include <webrtc/pc/peer_connection_factory.h>
+IGNORE_CLANG_WARNINGS_END
 #include <webrtc/pc/peer_connection_factory_proxy.h>
 #include <webrtc/rtc_base/physical_socket_server.h>
 #include <webrtc/rtc_base/task_queue_gcd.h>
 
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 #include <wtf/Function.h>
 #include <wtf/NeverDestroyed.h>
@@ -66,6 +68,8 @@ ALLOW_COMMA_END
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCProvider);
+
 LibWebRTCProvider::LibWebRTCProvider()
 {
 }
@@ -75,14 +79,6 @@ LibWebRTCProvider::~LibWebRTCProvider()
 }
 
 #if !PLATFORM(COCOA)
-void LibWebRTCProvider::registerWebKitVP9Decoder()
-{
-}
-
-void LibWebRTCProvider::registerWebKitVP8Decoder()
-{
-}
-
 void WebRTCProvider::setH264HardwareEncoderAllowed(bool)
 {
 }
@@ -97,7 +93,7 @@ static inline rtc::SocketAddress prepareSocketAddress(const rtc::SocketAddress& 
 }
 
 class BasicPacketSocketFactory : public rtc::PacketSocketFactory {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(BasicPacketSocketFactory);
 public:
     explicit BasicPacketSocketFactory(rtc::Thread& networkThread)
         : m_socketFactory(makeUniqueRefWithoutFastMallocCheck<rtc::BasicPacketSocketFactory>(networkThread.socketserver()))
@@ -314,10 +310,9 @@ rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> LibWebRTCProvider::cr
     willCreatePeerConnectionFactory();
 
     ASSERT(!m_audioModule);
-    auto audioModule = rtc::make_ref_counted<LibWebRTCAudioModule>();
-    m_audioModule = audioModule.get();
+    m_audioModule = LibWebRTCAudioModule::create();
 
-    return webrtc::CreatePeerConnectionFactory(networkThread, signalingThread, signalingThread, WTFMove(audioModule), webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(), createEncoderFactory(), createDecoderFactory(), nullptr, nullptr, nullptr, nullptr
+    return webrtc::CreatePeerConnectionFactory(networkThread, signalingThread, signalingThread, rtc::scoped_refptr<webrtc::AudioDeviceModule>(m_audioModule.get()), webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(), createEncoderFactory(), createDecoderFactory(), nullptr, nullptr, nullptr, nullptr
 #if PLATFORM(COCOA)
         , webrtc::CreateTaskQueueGcdFactory()
 #endif
@@ -387,6 +382,9 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
     if (!factory)
         return nullptr;
 
+    if (auto portRange = portAllocatorRange())
+        portAllocator->SetPortRange(portRange->first, portRange->second);
+
     webrtc::PeerConnectionDependencies dependencies { &observer };
     dependencies.allocator = WTFMove(portAllocator);
     dependencies.async_dns_resolver_factory = WTFMove(asyncDnsResolverFactory);
@@ -417,12 +415,6 @@ static inline std::optional<cricket::MediaType> typeFromKind(const String& kind)
         return cricket::MediaType::MEDIA_TYPE_VIDEO;
     return { };
 }
-static inline std::optional<uint16_t> toChannels(absl::optional<int> numChannels)
-{
-    if (!numChannels)
-        return { };
-    return static_cast<uint32_t>(*numChannels);
-}
 
 static inline RTCRtpCapabilities toRTCRtpCapabilities(const webrtc::RtpCapabilities& rtpCapabilities)
 {
@@ -438,7 +430,7 @@ static inline RTCRtpCapabilities toRTCRtpCapabilities(const webrtc::RtpCapabilit
         String sdpFmtpLine;
         if (sdpFmtpLineBuilder.length())
             sdpFmtpLine = sdpFmtpLineBuilder.toString();
-        return RTCRtpCodecCapability { fromStdString(codec.mime_type()), static_cast<uint32_t>(codec.clock_rate ? *codec.clock_rate : 0), toChannels(codec.num_channels), WTFMove(sdpFmtpLine) };
+        return RTCRtpCodecCapability { fromStdString(codec.mime_type()), static_cast<uint32_t>(codec.clock_rate ? *codec.clock_rate : 0), codec.num_channels, WTFMove(sdpFmtpLine) };
 
     });
 

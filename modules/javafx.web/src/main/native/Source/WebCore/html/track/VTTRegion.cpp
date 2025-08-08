@@ -164,17 +164,17 @@ void VTTRegion::setRegionSettings(const String& inputString)
 
 VTTRegion::RegionSetting VTTRegion::scanSettingName(VTTScanner& input)
 {
-    if (input.scan("id:"))
+    if (input.scan("id:"_span8))
         return Id;
-    if (input.scan("lines:"))
+    if (input.scan("lines:"_span8))
         return Lines;
-    if (input.scan("width:"))
+    if (input.scan("width:"_span8))
         return Width;
-    if (input.scan("viewportanchor:"))
+    if (input.scan("viewportanchor:"_span8))
         return ViewportAnchor;
-    if (input.scan("regionanchor:"))
+    if (input.scan("regionanchor:"_span8))
         return RegionAnchor;
-    if (input.scan("scroll:"))
+    if (input.scan("scroll:"_span8))
         return Scroll;
 
     return None;

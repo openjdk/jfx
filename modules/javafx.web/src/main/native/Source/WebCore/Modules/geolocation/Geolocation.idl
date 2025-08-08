@@ -27,6 +27,7 @@
 [
     ActiveDOMObject,
     Conditional=GEOLOCATION, 
+    EnabledBySetting=GeolocationAPIEnabled,
     GenerateIsReachable=ReachableFromNavigator,
     Exposed=Window
 ] interface Geolocation {

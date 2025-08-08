@@ -26,6 +26,7 @@
 #include "RenderStyleConstants.h"
 #include <wtf/EnumTraits.h>
 #include <wtf/FixedVector.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -50,7 +51,7 @@ enum class SelectorSpecificityIncrement {
 // Selector for a StyleRule.
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSSelectorRareData);
 class CSSSelector {
-        WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CSSSelector);
 public:
         CSSSelector() = default;
         CSSSelector(const CSSSelector&);
@@ -130,7 +131,10 @@ public:
 
         // Selectors are kept in an array by CSSSelectorList.
         // The next component of the selector is the next item in the array.
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         const CSSSelector* tagHistory() const { return m_isLastInTagHistory ? nullptr : this + 1; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
         const CSSSelector* firstInCompound() const;
 
         const QualifiedName& tagQName() const;
@@ -141,7 +145,8 @@ public:
         const QualifiedName& attribute() const;
         const AtomString& argument() const { return m_hasRareData ? m_data.rareData->argument : nullAtom(); }
         bool attributeValueMatchingIsCaseInsensitive() const;
-        const FixedVector<PossiblyQuotedIdentifier>* argumentList() const { return m_hasRareData ? &m_data.rareData->argumentList : nullptr; }
+    const FixedVector<AtomString>* argumentList() const { return m_hasRareData ? &m_data.rareData->argumentList : nullptr; }
+    const FixedVector<PossiblyQuotedIdentifier>* langList() const { return m_hasRareData ? &m_data.rareData->langList : nullptr; }
         const CSSSelectorList* selectorList() const { return m_hasRareData ? m_data.rareData->selectorList.get() : nullptr; }
         CSSSelectorList* selectorList() { return m_hasRareData ? m_data.rareData->selectorList.get() : nullptr; }
 
@@ -178,6 +183,10 @@ public:
     // Implicit means that this selector is not author/UA written.
     bool isImplicit() const { return m_isImplicit; }
 
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+    bool destructorHasBeenCalled() const { return m_destructorHasBeenCalled; }
+#endif
+
 private:
     friend class MutableCSSSelector;
 
@@ -186,7 +195,8 @@ private:
         void setAttribute(const QualifiedName&, AttributeMatchType);
         void setNth(int a, int b);
         void setArgument(const AtomString&);
-        void setArgumentList(FixedVector<PossiblyQuotedIdentifier>);
+    void setArgumentList(FixedVector<AtomString>);
+    void setLangList(FixedVector<PossiblyQuotedIdentifier>);
         void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
     void setPseudoClass(PseudoClass);
@@ -200,7 +210,10 @@ private:
     void setImplicit() { m_isImplicit = true; }
 
     unsigned simpleSelectorSpecificityForPage() const;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     CSSSelector* tagHistory() { return m_isLastInTagHistory ? nullptr : this + 1; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     unsigned m_relation : 4 { enumToUnderlyingType(Relation::DescendantSpace) };
     mutable unsigned m_match : 5 { enumToUnderlyingType(Match::Unknown) };
@@ -239,7 +252,8 @@ private:
             int b { 0 }; // Used for :nth-*
             QualifiedName attribute; // used for attribute selector
             AtomString argument; // Used for :contains and :nth-*
-        FixedVector<PossiblyQuotedIdentifier> argumentList; // Used for :lang, :active-view-transition-type, and ::part arguments.
+        FixedVector<AtomString> argumentList; // Used for :active-view-transition-type, ::highlight, ::view-transition-{group, image-pair, new, old}, ::part arguments.
+        FixedVector<PossiblyQuotedIdentifier> langList; // Used for :lang arguments.
             std::unique_ptr<CSSSelectorList> selectorList; // Used for :is(), :matches(), and :not().
 
             Ref<RareData> deepCopy() const;

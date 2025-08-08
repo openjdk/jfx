@@ -350,7 +350,7 @@ public:
 
     RefPtr<PixelBuffer> readRenderingResultsForPainting();
 
-    virtual void withBufferAsNativeImage(SurfaceBuffer, Function<void(NativeImage&)>);
+    virtual RefPtr<NativeImage> bufferAsNativeImage(SurfaceBuffer);
 
     // Returns the span of valid data read on success.
     bool getBufferSubDataWithStatus(GCGLenum target, GCGLintptr offset, std::span<uint8_t> data);
@@ -387,7 +387,7 @@ protected:
     void validateAttributes();
 
     bool getBufferSubDataImpl(GCGLenum target, GCGLintptr offset, std::span<uint8_t> data);
-    std::optional<IntSize> readPixelsImpl(IntRect, GCGLenum format, GCGLenum type, GCGLsizei bufSize, uint8_t* data, bool readingToPixelBufferObject);
+    std::optional<IntSize> readPixelsImpl(IntRect, GCGLenum format, GCGLenum type, std::span<uint8_t> data);
 
     // Did the most recent drawing operation leave the GPU in an acceptable state?
     void checkGPUStatus();
@@ -415,10 +415,12 @@ protected:
     GCGLenum adjustWebGL1TextureInternalFormat(GCGLenum internalformat, GCGLenum format, GCGLenum type);
     void setPackParameters(GCGLint alignment, GCGLint rowLength, GCGLboolean reverseRowOrder);
     bool validateClearBufferv(GCGLenum buffer, size_t valuesSize);
+    void prepareForDrawingBufferWriteIfBound();
+    virtual void prepareForDrawingBufferWrite();
 
-    HashSet<String> m_availableExtensions;
-    HashSet<String> m_requestableExtensions;
-    HashSet<String> m_enabledExtensions;
+    UncheckedKeyHashSet<String> m_availableExtensions;
+    UncheckedKeyHashSet<String> m_requestableExtensions;
+    UncheckedKeyHashSet<String> m_enabledExtensions;
     bool m_webglColorBufferFloatRGB { false };
     bool m_webglColorBufferFloatRGBA { false };
     GCGLuint m_texture { 0 };
@@ -451,8 +453,8 @@ protected:
     GCGLboolean m_packReverseRowOrder { false };
     uint32_t m_nextExternalImageName { 0 };
     uint32_t m_nextExternalSyncName { 0 };
-    HashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglImages;
-    HashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglSyncs;
+    UncheckedKeyHashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglImages;
+    UncheckedKeyHashMap<uint32_t, void*, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_eglSyncs;
 };
 
 

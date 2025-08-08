@@ -61,5 +61,7 @@ struct CryptoOperationReturnValue {
 } // Cpp
 
 #ifndef __swift__
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include "PALSwift-Generated.h"
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif

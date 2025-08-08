@@ -35,7 +35,7 @@ namespace WTF {
 struct URLHash {
     static unsigned hash(const URL& key)
     {
-        return key.string().hash();
+        return key.string().impl()->hash();
     }
 
     static bool equal(const URL& a, const URL& b)

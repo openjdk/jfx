@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HTMLSourceElement.h"
 
+#include "CSSSerializationContext.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
@@ -79,16 +80,16 @@ Node::InsertedIntoAncestorResult HTMLSourceElement::insertedIntoAncestor(Inserti
     RefPtr<Element> parent = parentElement();
     if (parent == &parentOfInsertedTree) {
 #if ENABLE(VIDEO)
-        if (auto* mediaElement = dynamicDowncast<HTMLMediaElement>(*parent))
+        if (RefPtr mediaElement = dynamicDowncast<HTMLMediaElement>(*parent))
             mediaElement->sourceWasAdded(*this);
         else
 #endif
 #if ENABLE(MODEL_ELEMENT)
-        if (auto* modelElement = dynamicDowncast<HTMLModelElement>(*parent))
+        if (RefPtr modelElement = dynamicDowncast<HTMLModelElement>(*parent))
             modelElement->sourcesChanged();
         else
 #endif
-        if (auto* pictureElement = dynamicDowncast<HTMLPictureElement>(*parent)) {
+        if (RefPtr pictureElement = dynamicDowncast<HTMLPictureElement>(*parent)) {
             // The new source element only is a relevant mutation if it precedes any img element.
             m_shouldCallSourcesChanged = true;
             for (const Node* node = previousSibling(); node; node = node->previousSibling()) {
@@ -107,12 +108,12 @@ void HTMLSourceElement::removedFromAncestor(RemovalType removalType, ContainerNo
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
     if (!parentNode() && is<Element>(oldParentOfRemovedTree)) {
 #if ENABLE(VIDEO)
-        if (auto* medialElement = dynamicDowncast<HTMLMediaElement>(oldParentOfRemovedTree))
+        if (RefPtr medialElement = dynamicDowncast<HTMLMediaElement>(oldParentOfRemovedTree))
             medialElement->sourceWasRemoved(*this);
         else
 #endif
 #if ENABLE(MODEL_ELEMENT)
-        if (auto* model = dynamicDowncast<HTMLModelElement>(oldParentOfRemovedTree))
+        if (RefPtr model = dynamicDowncast<HTMLModelElement>(oldParentOfRemovedTree))
             model->sourcesChanged();
         else
 #endif
@@ -170,7 +171,7 @@ void HTMLSourceElement::attributeChanged(const QualifiedName& name, const AtomSt
         if (m_shouldCallSourcesChanged && parent)
             downcast<HTMLPictureElement>(*parent).sourcesChanged();
 #if ENABLE(MODEL_ELEMENT)
-        if (auto* parentModelElement = dynamicDowncast<HTMLModelElement>(parent.get()))
+        if (RefPtr parentModelElement = dynamicDowncast<HTMLModelElement>(parent.get()))
             parentModelElement->sourcesChanged();
 #endif
         break;
@@ -210,15 +211,15 @@ const MQ::MediaQueryList& HTMLSourceElement::parsedMediaAttribute(Document& docu
     return m_cachedParsedMediaAttribute.value();
 }
 
-Attribute HTMLSourceElement::replaceURLsInAttributeValue(const Attribute& attribute, const HashMap<String, String>& replacementURLStrings) const
+Attribute HTMLSourceElement::replaceURLsInAttributeValue(const Attribute& attribute, const CSS::SerializationContext& serializationContext) const
 {
     if (attribute.name() != srcsetAttr)
         return attribute;
 
-    if (replacementURLStrings.isEmpty())
+    if (serializationContext.replacementURLStrings.isEmpty())
         return attribute;
 
-    return Attribute { srcsetAttr, AtomString { replaceURLsInSrcsetAttribute(*this, StringView(attribute.value()), replacementURLStrings) } };
+    return Attribute { srcsetAttr, AtomString { replaceURLsInSrcsetAttribute(*this, StringView(attribute.value()), serializationContext) } };
 }
 
 void HTMLSourceElement::addCandidateSubresourceURLs(ListHashSet<URL>& urls) const
@@ -226,11 +227,11 @@ void HTMLSourceElement::addCandidateSubresourceURLs(ListHashSet<URL>& urls) cons
     getURLsFromSrcsetAttribute(*this, attributeWithoutSynchronization(srcsetAttr), urls);
 }
 
-Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> HTMLSourceElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
 {
-    auto clone = create(targetDocument);
+    Ref clone = create(document);
 #if ENABLE(ATTACHMENT_ELEMENT)
-    cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, targetDocument);
+    cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, document);
 #endif
     return clone;
 }

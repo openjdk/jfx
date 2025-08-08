@@ -246,10 +246,6 @@
 #define USE_SOURCE_APPLICATION_AUDIT_DATA 1
 #endif
 
-#if PLATFORM(COCOA) && USE(CA)
-#define USE_IOSURFACE_CANVAS_BACKING_STORE 1
-#endif
-
 /* The override isn't needed on iOS family, as the default behavior is to not sniff. */
 #if PLATFORM(MAC)
 #define USE_CFNETWORK_CONTENT_ENCODING_SNIFFING_OVERRIDE 1
@@ -305,19 +301,15 @@
 #define USE_SANDBOX_EXTENSIONS_FOR_CACHE_AND_TEMP_DIRECTORY_ACCESS 1
 #endif
 
-
-#if !defined(USE_ISO_MALLOC)
-#define USE_ISO_MALLOC 1
-#endif
-
 #if !defined(USE_TZONE_MALLOC)
-#if CPU(ARM64) && OS(DARWIN) && (__SIZEOF_POINTER__ == 8)
-// Only MacroAssemblerARM64 is known to build.
-// Building with TZONE_MALLOC currently disabled for all platforms.
-#define USE_TZONE_MALLOC 0
+#if (CPU(ARM64) || CPU(X86_64)) && OS(DARWIN) && (__SIZEOF_POINTER__ == 8)
+#define USE_TZONE_MALLOC 1
 #else
 #define USE_TZONE_MALLOC 0
 #endif
+#endif
+#if !defined(USE_ISO_MALLOC)
+#define USE_ISO_MALLOC 1
 #endif
 
 #if !PLATFORM(WATCHOS)
@@ -431,4 +423,10 @@
 
 #if !USE(EXIT_XPC_MESSAGE_WORKAROUND) && ((PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 180000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED < 150000))
 #define USE_EXIT_XPC_MESSAGE_WORKAROUND 1
+#endif
+
+#if !defined(USE_MODERN_AVCONTENTKEYSESSION) \
+    && ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140400) \
+    || (PLATFORM(IOS_FAMILY) && !PLATFORM(IOS_FAMILY_SIMULATOR)))
+#define USE_MODERN_AVCONTENTKEYSESSION 1
 #endif

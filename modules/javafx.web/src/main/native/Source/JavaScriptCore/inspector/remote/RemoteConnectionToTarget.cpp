@@ -64,8 +64,8 @@ bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automatica
         m_connected = true;
 
         RemoteInspector::singleton().updateTargetListing(targetIdentifier);
-    } else if (auto* automationTarget = dynamicDowncast<RemoteAutomationTarget>(*target)) {
-        automationTarget->connect(*this);
+    } else if (auto* inspectionTarget = dynamicDowncast<RemoteAutomationTarget>(*target)) {
+        inspectionTarget->connect(*this);
         m_connected = true;
 
         RemoteInspector::singleton().updateTargetListing(targetIdentifier);
@@ -87,7 +87,7 @@ void RemoteConnectionToTarget::sendMessageToTarget(String&& message)
 
 void RemoteConnectionToTarget::close()
 {
-    RunLoop::current().dispatch([this, protectThis = Ref { *this }] {
+    RunLoop::protectedCurrent()->dispatch([this, protectThis = Ref { *this }] {
         Locker locker { m_targetMutex };
         RefPtr target = m_target.get();
         if (!target)

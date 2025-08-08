@@ -32,8 +32,9 @@
 #include <wtf/Function.h>
 #include <wtf/Markable.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
@@ -48,8 +49,8 @@ class ScriptExecutionContext;
 class TimerAlignment;
 
 class EventLoopTask {
+    WTF_MAKE_TZONE_ALLOCATED(EventLoopTask);
     WTF_MAKE_NONCOPYABLE(EventLoopTask);
-    WTF_MAKE_FAST_ALLOCATED;
 
 public:
     virtual ~EventLoopTask() = default;
@@ -68,7 +69,7 @@ private:
 };
 
 class EventLoopTimerHandle {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EventLoopTimerHandle);
 public:
     EventLoopTimerHandle();
     EventLoopTimerHandle(EventLoopTimer&);
@@ -95,7 +96,7 @@ private:
 enum class HasReachedMaxNestingLevel : bool { No, Yes };
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#event-loop
-class EventLoop : public RefCounted<EventLoop>, public CanMakeWeakPtr<EventLoop> {
+class EventLoop : public RefCountedAndCanMakeWeakPtr<EventLoop> {
 public:
     virtual ~EventLoop();
 
@@ -122,8 +123,8 @@ public:
     void unregisterGroup(EventLoopTaskGroup&);
     void stopAssociatedGroupsIfNecessary();
 
-    void forEachAssociatedContext(const Function<void(ScriptExecutionContext&)>&);
-    bool findMatchingAssociatedContext(const Function<bool(ScriptExecutionContext&)>&);
+    void forEachAssociatedContext(NOESCAPE const Function<void(ScriptExecutionContext&)>&);
+    bool findMatchingAssociatedContext(NOESCAPE const Function<bool(ScriptExecutionContext&)>&);
     void addAssociatedContext(ScriptExecutionContext&);
     void removeAssociatedContext(ScriptExecutionContext&);
 
@@ -154,8 +155,8 @@ private:
 };
 
 class EventLoopTaskGroup final : public CanMakeWeakPtr<EventLoopTaskGroup>, public CanMakeCheckedPtr<EventLoopTaskGroup> {
+    WTF_MAKE_TZONE_ALLOCATED(EventLoopTaskGroup);
     WTF_MAKE_NONCOPYABLE(EventLoopTaskGroup);
-    WTF_MAKE_FAST_ALLOCATED;
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventLoopTaskGroup);
 public:
     EventLoopTaskGroup(EventLoop& eventLoop)
@@ -166,7 +167,7 @@ public:
 
     ~EventLoopTaskGroup()
     {
-        if (auto* eventLoop = m_eventLoop.get())
+        if (RefPtr eventLoop = m_eventLoop.get())
             eventLoop->unregisterGroup(*this);
     }
 
@@ -191,7 +192,7 @@ public:
     {
         ASSERT(isReadyToStop());
         m_state = State::Stopped;
-        if (auto* eventLoop = m_eventLoop.get())
+        if (RefPtr eventLoop = m_eventLoop.get())
             eventLoop->stopGroup(*this);
     }
 
@@ -207,7 +208,7 @@ public:
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#queue-a-microtask
     WEBCORE_EXPORT void queueMicrotask(EventLoop::TaskFunction&&);
-    MicrotaskQueue& microtaskQueue() { return m_eventLoop->microtaskQueue(); }
+    MicrotaskQueue& microtaskQueue() { return protectedEventLoop()->microtaskQueue(); }
 
     // https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint
     void performMicrotaskCheckpoint();

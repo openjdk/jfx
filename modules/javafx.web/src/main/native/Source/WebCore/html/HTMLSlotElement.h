@@ -55,6 +55,7 @@ public:
 
     bool isInInsertedIntoAncestor() const { return m_isInInsertedIntoAncestor; }
 
+    void updateAccessibilityOnSlotChange() const;
 private:
     HTMLSlotElement(const QualifiedName&, Document&);
 
@@ -62,11 +63,11 @@ private:
     void removedFromAncestor(RemovalType, ContainerNode&) final;
     void childrenChanged(const ChildChange&) final;
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
+    void didFinishInsertingNode() final;
 
     bool m_inSignalSlotList { false };
     bool m_isInInsertedIntoAncestor { false };
     Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>> m_manuallyAssignedNodes;
 };
 
-}
-
+} // namespace WebCore

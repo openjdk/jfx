@@ -40,7 +40,7 @@ namespace JSC { namespace DFG {
 
 void VariableEventStreamBuilder::logEvent(const VariableEvent& event)
 {
-    dataLogF("seq#%u:", static_cast<unsigned>(m_stream.size()));
+    dataLog("seq#", static_cast<unsigned>(m_stream.size()), ":");
     event.dump(WTF::dataFile());
     dataLogLn(" ");
 }
@@ -181,7 +181,7 @@ unsigned VariableEventStream::reconstruct(
     Operands<ValueSource> operandSources(codeBlock->numParameters(), numVariables, numTmps);
     for (unsigned i = operandSources.size(); i--;)
         operandSources[i] = ValueSource(SourceIsDead);
-    HashMap<MinifiedID, MinifiedGenerationInfo> generationInfos;
+    UncheckedKeyHashMap<MinifiedID, MinifiedGenerationInfo> generationInfos;
     for (unsigned i = startIndex; i < index; ++i) {
         const VariableEvent& event = m_stream.at(i);
         dataLogLnIf(verbose, "Processing event ", event);
@@ -200,7 +200,7 @@ unsigned VariableEventStream::reconstruct(
         case Fill:
         case Spill:
         case Death: {
-            HashMap<MinifiedID, MinifiedGenerationInfo>::iterator iter = generationInfos.find(event.id());
+            UncheckedKeyHashMap<MinifiedID, MinifiedGenerationInfo>::iterator iter = generationInfos.find(event.id());
             ASSERT(iter != generationInfos.end());
             iter->value.update(event);
             break;

@@ -61,10 +61,12 @@ struct CanvasRenderingContext2DSettings;
 struct ImageBitmapRenderingContextSettings;
 struct UncachedString;
 
-class HTMLCanvasElement final : public HTMLElement, public CanvasBase, public ActiveDOMObject {
+class HTMLCanvasElement final : public HTMLElement, public ActiveDOMObject, public CanvasBase {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLCanvasElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLCanvasElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
     static Ref<HTMLCanvasElement> create(Document&);
     static Ref<HTMLCanvasElement> create(const QualifiedName&, Document&);
     virtual ~HTMLCanvasElement();
@@ -162,6 +164,7 @@ private:
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+    bool isReplaced(const RenderStyle&) const final;
 
     bool canContainRangeEndPoint() const final;
     bool canStartSelection() const final;
@@ -175,22 +178,20 @@ private:
 
     bool usesContentsAsLayerContents() const;
 
-    void refCanvasBase() const final { HTMLElement::ref(); }
-    void derefCanvasBase() const final { HTMLElement::deref(); }
-
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return HTMLElement::scriptExecutionContext(); }
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
-    std::unique_ptr<CanvasRenderingContext> m_context;
-    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
     bool m_ignoreReset { false };
     mutable bool m_didClearImageBuffer { false };
 #if ENABLE(WEBGL)
     bool m_hasRelevantWebGLEventListener { false };
 #endif
     bool m_isSnapshotting { false };
+
+    std::unique_ptr<CanvasRenderingContext> m_context;
+    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
+    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 };
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);

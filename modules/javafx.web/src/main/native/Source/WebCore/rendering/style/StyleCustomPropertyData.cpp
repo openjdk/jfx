@@ -151,7 +151,7 @@ void StyleCustomPropertyData::forEachInternal(Callback&& callback) const
     }
 }
 
-void StyleCustomPropertyData::forEach(const Function<IterationStatus(const KeyValuePair<AtomString, RefPtr<const CSSCustomPropertyValue>>&)>& callback) const
+void StyleCustomPropertyData::forEach(NOESCAPE const Function<IterationStatus(const KeyValuePair<AtomString, RefPtr<const CSSCustomPropertyValue>>&)>& callback) const
 {
     forEachInternal(callback);
 }
@@ -170,5 +170,13 @@ AtomString StyleCustomPropertyData::findKeyAtIndex(unsigned index) const
     });
     return key;
 }
+
+#if !LOG_DISABLED
+void StyleCustomPropertyData::dumpDifferences(TextStream& ts, const StyleCustomPropertyData& other) const
+{
+    if (*this != other)
+        ts << "custom properies differ\n";
+}
+#endif // !LOG_DISABLED
 
 } // namespace WebCore

@@ -30,18 +30,18 @@ TextStream& TextStream::operator<<(id object)
 {
     if (object_isClass(object)) {
         m_text.append(NSStringFromClass(object));
-    return *this;
+        return *this;
     }
 
     auto outputArray = [&](NSArray *array) {
-    *this << "[";
+        *this << "[";
 
-    for (NSUInteger i = 0; i < array.count; ++i) {
-        id item = array[i];
-        *this << item;
-        if (i < array.count - 1)
-            *this << ", ";
-    }
+        for (NSUInteger i = 0; i < array.count; ++i) {
+            id item = array[i];
+            *this << item;
+            if (i < array.count - 1)
+                *this << ", ";
+        }
 
         *this << "]";
     };

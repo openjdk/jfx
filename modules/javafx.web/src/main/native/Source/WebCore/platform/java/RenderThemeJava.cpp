@@ -313,7 +313,7 @@ void RenderThemeJava::adjustSwitchStyle(RenderStyle& style, const Element*) cons
 {
     notImplemented();
 }
-bool RenderThemeJava::paintSearchField(const RenderObject&o, const PaintInfo& i, const IntRect& rect)
+bool RenderThemeJava::paintSearchField(const RenderObject&o, const PaintInfo& i, const FloatRect& rect)
 {
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
 }
@@ -426,7 +426,7 @@ void RenderThemeJava::paintMenuListButtonDecorations(const RenderBox& o, const P
     paintWidget(JNI_EXPAND(MENU_LIST_BUTTON), o, i, rect);
 }
 
-bool RenderThemeJava::supportsFocusRing(const RenderStyle& style) const
+bool RenderThemeJava::supportsFocusRing(const RenderObject& obj, const RenderStyle& style) const
 {
     if (!style.hasAppearance())
         return false;
@@ -440,7 +440,7 @@ bool RenderThemeJava::supportsFocusRing(const RenderStyle& style) const
     case StyleAppearance::Menulist:
         return true;
     default:
-        return RenderTheme::supportsFocusRing(style);
+        return RenderTheme::supportsFocusRing(obj,style);
     }
 }
 

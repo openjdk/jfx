@@ -34,20 +34,22 @@
 
 #include <webrtc/api/create_peerconnection_factory.h>
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+
 #include <webrtc/webkit_sdk/WebKit/WebKitDecoder.h>
 #include <webrtc/webkit_sdk/WebKit/WebKitEncoder.h>
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
-#include <webrtc/webkit_sdk/WebKit/WebKitVP8Decoder.h>
-#include <webrtc/webkit_sdk/WebKit/WebKitVP9Decoder.h>
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/darwin/WeakLinking.h>
 
 WTF_WEAK_LINK_FORCE_IMPORT(webrtc::CreatePeerConnectionFactory);
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCProviderCocoa);
 
 UniqueRef<WebRTCProvider> WebRTCProvider::create()
 {
@@ -104,18 +106,6 @@ bool WebRTCProvider::webRTCAvailable()
 #else
     return !!webrtc::CreatePeerConnectionFactory;
 #endif
-}
-
-void LibWebRTCProvider::registerWebKitVP9Decoder()
-{
-    if (webRTCAvailable())
-        webrtc::registerWebKitVP9Decoder();
-}
-
-void LibWebRTCProvider::registerWebKitVP8Decoder()
-{
-    if (webRTCAvailable())
-        webrtc::registerWebKitVP8Decoder();
 }
 
 } // namespace WebCore

@@ -364,6 +364,9 @@ public:
                         VALIDATE((node), !hasAnyArrayStorage(structure->indexingType()));
                     }
                     break;
+                case MaterializeNewArrayWithConstantSize:
+                    VALIDATE((node), isNewArrayWithConstantSizeIndexingType(node->indexingType()));
+                    break;
                 case DoubleConstant:
                 case Int52Constant:
                     VALIDATE((node), node->isNumberConstant());
@@ -496,7 +499,7 @@ public:
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             // We expect the predecessor list to be de-duplicated.
-            HashSet<BasicBlock*> predecessors;
+            UncheckedKeyHashSet<BasicBlock*> predecessors;
             for (BasicBlock* predecessor : block->predecessors)
                 predecessors.add(predecessor);
             VALIDATE((block), predecessors.size() == block->predecessors.size());
@@ -516,8 +519,8 @@ private:
             if (!block)
                 continue;
 
-            HashSet<Node*> phisInThisBlock;
-            HashSet<Node*> nodesInThisBlock;
+            UncheckedKeyHashSet<Node*> phisInThisBlock;
+            UncheckedKeyHashSet<Node*> nodesInThisBlock;
 
             for (size_t i = 0; i < block->numNodes(); ++i) {
                 Node* node = block->node(i);
@@ -533,7 +536,7 @@ private:
             }
 
             {
-                HashSet<Node*> seenNodes;
+                UncheckedKeyHashSet<Node*> seenNodes;
                 for (size_t i = 0; i < block->size(); ++i) {
                     Node* node = block->at(i);
                     m_graph.doToChildren(node, [&] (const Edge& edge) {
@@ -675,6 +678,7 @@ private:
                 case CheckInBounds:
                 case CheckInBoundsInt52:
                 case PhantomNewObject:
+                case PhantomNewArrayWithConstantSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
@@ -797,7 +801,7 @@ private:
 
         if (m_graph.m_form == ThreadedCPS) {
             Vector<Node*> worklist;
-            HashSet<Node*> seen;
+            UncheckedKeyHashSet<Node*> seen;
             for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
                 for (Node* node : *block) {
                     if (node->op() == GetLocal || node->op() == PhantomLocal) {
@@ -867,7 +871,7 @@ private:
 
             bool isOSRExited = false;
 
-            HashSet<Node*> nodesInThisBlock;
+            UncheckedKeyHashSet<Node*> nodesInThisBlock;
 
             for (auto* node : *block) {
                 switch (node->op()) {
@@ -895,6 +899,7 @@ private:
                     continue;
                 switch (node->op()) {
                 case PhantomNewObject:
+                case PhantomNewArrayWithConstantSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
@@ -1087,22 +1092,24 @@ private:
     {
         if (m_graphDumpMode == DontDumpGraph)
             return;
+        WTF::dataFile().atomically([&](auto&) {
         dataLog("\n");
         if (!m_graphDumpBeforePhase.isNull()) {
             dataLog("Before phase:\n");
             dataLog(m_graphDumpBeforePhase);
         }
         dataLog("At time of failure:\n");
-        m_graph.dump();
+            dataLog(m_graph);
+        });
     }
 
     Graph& m_graph;
     GraphDumpMode m_graphDumpMode;
     CString m_graphDumpBeforePhase;
 
-    HashMap<Node*, unsigned> m_myRefCounts;
+    UncheckedKeyHashMap<Node*, unsigned> m_myRefCounts;
     Vector<uint32_t> m_myTupleRefCounts;
-    HashSet<Node*> m_acceptableNodes;
+    UncheckedKeyHashSet<Node*> m_acceptableNodes;
 };
 
 } // End anonymous namespace.

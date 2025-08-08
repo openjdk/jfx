@@ -49,7 +49,12 @@ void RenderMathMLSpace::computePreferredLogicalWidths()
 {
     ASSERT(preferredLogicalWidthsDirty());
 
-    m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = spaceWidth() + borderAndPaddingLogicalWidth();
+    m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = spaceWidth();
+
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::CalculatePreferredLogicalWidth);
+    applySizeToMathContent(LayoutPhase::CalculatePreferredLogicalWidth, sizes);
+
+    adjustPreferredLogicalWidthsForBorderAndPadding();
 
     setPreferredLogicalWidthsDirty(false);
 }
@@ -74,19 +79,28 @@ void RenderMathMLSpace::getSpaceHeightAndDepth(LayoutUnit& height, LayoutUnit& d
     }
 }
 
-void RenderMathMLSpace::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLSpace::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
-    if (!relayoutChildren && simplifiedLayout())
+    insertPositionedChildrenIntoContainingBlock();
+
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
 
     recomputeLogicalWidth();
 
-    setLogicalWidth(spaceWidth() + borderAndPaddingLogicalWidth());
+    setLogicalWidth(spaceWidth());
     LayoutUnit height, depth;
     getSpaceHeightAndDepth(height, depth);
-    setLogicalHeight(height + depth + borderAndPaddingLogicalHeight());
+    setLogicalHeight(height + depth);
+
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::Layout);
+    applySizeToMathContent(LayoutPhase::Layout, sizes);
+
+    adjustLayoutForBorderAndPadding();
 
     updateScrollInfoAfterLayout();
 

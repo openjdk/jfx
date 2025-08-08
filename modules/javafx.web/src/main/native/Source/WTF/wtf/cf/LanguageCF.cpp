@@ -54,7 +54,7 @@ static String httpStyleLanguageCode(CFStringRef language, ShouldMinimizeLanguage
         preferredLanguageCode = adoptCF(CFLocaleCreateCanonicalLanguageIdentifierFromString(kCFAllocatorDefault, language));
     else {
 #endif
-        UNUSED_PARAM(shouldMinimizeLanguages);
+
         SInt32 languageCode;
         SInt32 regionCode;
         SInt32 scriptCode;
@@ -99,6 +99,7 @@ Vector<String> platformUserPreferredLanguages(ShouldMinimizeLanguages shouldMini
 #if !PLATFORM(JAVA)
     if (shouldMinimizeLanguages == ShouldMinimizeLanguages::Yes)
         platformLanguages = minimizedLanguagesFromLanguages(platformLanguages.get());
+
     LOG_WITH_STREAM(Language, stream << "Minimized languages: " << reinterpret_cast<id>(const_cast<CFMutableArrayRef>(platformLanguages.get())));
 #endif
 

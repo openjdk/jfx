@@ -44,6 +44,8 @@ public:
 
     double position() const;
 
+    bool isDevolvableWidget() const override { return true; }
+
 private:
     HTMLProgressElement(const QualifiedName&, Document&);
     virtual ~HTMLProgressElement();

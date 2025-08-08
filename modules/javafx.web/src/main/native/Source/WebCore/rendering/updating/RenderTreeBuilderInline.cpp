@@ -27,14 +27,19 @@
 #include "RenderTreeBuilderInline.h"
 
 #include "RenderBlockFlow.h"
+#include "RenderBlockInlines.h"
+#include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
 #include "RenderInline.h"
 #include "RenderTable.h"
 #include "RenderTreeBuilderMultiColumn.h"
 #include "RenderTreeBuilderTable.h"
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Inline);
 
 static bool canUseAsParentForContinuation(const RenderObject* renderer)
 {
@@ -47,43 +52,38 @@ static bool canUseAsParentForContinuation(const RenderObject* renderer)
     return true;
 }
 
-static RenderBoxModelObject* nextContinuation(RenderObject* renderer)
+static RenderBoxModelObject* nextContinuation(const RenderBoxModelObject* renderer)
 {
-    if (auto* renderInline = dynamicDowncast<RenderInline>(*renderer); renderInline && !renderInline->isReplacedOrInlineBlock())
+    if (CheckedPtr renderInline = dynamicDowncast<RenderInline>(*renderer); renderInline && !renderInline->isReplacedOrAtomicInline())
         return renderInline->continuation();
-    return downcast<RenderBlock>(*renderer).inlineContinuation();
+    return renderer->inlineContinuation();
 }
 
-static RenderBoxModelObject* continuationBefore(RenderInline& parent, RenderObject* beforeChild)
+RenderBoxModelObject& RenderTreeBuilder::Inline::parentCandidateInContinuation(RenderInline& parent, const RenderObject* beforeChild)
 {
     if (beforeChild && beforeChild->parent() == &parent)
-        return &parent;
+        return parent;
 
-    RenderBoxModelObject* curr = nextContinuation(&parent);
-    RenderBoxModelObject* nextToLast = &parent;
-    RenderBoxModelObject* last = &parent;
-    while (curr) {
-        if (beforeChild && beforeChild->parent() == curr) {
-            if (curr->firstChild() == beforeChild)
-                return last;
-            return curr;
+    CheckedPtr<RenderBoxModelObject> previous = &parent;
+    CheckedPtr current = nextContinuation(&parent);
+    while (current) {
+        if (beforeChild && beforeChild->parent() == current)
+            return current->firstChild() == beforeChild ? *previous : *current;
+        auto next = nextContinuation(current.get());
+        if (!next)
+            return !beforeChild && !current->firstChild() ? *previous : *current;
+        previous = current;
+        current = next;
         }
-
-        nextToLast = last;
-        last = curr;
-        curr = nextContinuation(curr);
-    }
-
-    if (!beforeChild && !last->firstChild())
-        return nextToLast;
-    return last;
+    ASSERT_NOT_REACHED();
+    return *previous;
 }
 
 static RenderPtr<RenderInline> cloneAsContinuation(RenderInline& renderer)
 {
-    auto continuationStyle = RenderStyle::clone(renderer.style());
-    continuationStyle.setDisplay(DisplayType::Inline);
-    RenderPtr<RenderInline> cloneInline = createRenderer<RenderInline>(RenderObject::Type::Inline, *renderer.element(), WTFMove(continuationStyle));
+    RenderPtr<RenderInline> cloneInline = renderer.isAnonymous() ?
+    createRenderer<RenderInline>(RenderObject::Type::Inline, renderer.document(), RenderStyle::clone(renderer.style()))
+    : createRenderer<RenderInline>(RenderObject::Type::Inline, *renderer.element(), RenderStyle::clone(renderer.style()));
     cloneInline->initializeStyle();
     cloneInline->setFragmentedFlowState(renderer.fragmentedFlowState());
     cloneInline->setHasOutlineAutoAncestor(renderer.hasOutlineAutoAncestor());
@@ -121,14 +121,25 @@ void RenderTreeBuilder::Inline::attach(RenderInline& parent, RenderPtr<RenderObj
 
 void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
-    auto* flow = continuationBefore(parent, beforeChild);
-    // It may or may not be the direct parent of the beforeChild.
-    RenderBoxModelObject* beforeChildAncestor = nullptr;
     if (!beforeChild) {
-        auto* continuation = nextContinuation(flow);
-        beforeChildAncestor = continuation ? continuation : flow;
-    } else if (canUseAsParentForContinuation(beforeChild->parent()))
-        beforeChildAncestor = downcast<RenderBoxModelObject>(beforeChild->parent());
+        auto& parentCandidate = parentCandidateInContinuation(parent, { });
+        auto* lastContinuation = nextContinuation(&parentCandidate);
+        if (!lastContinuation) {
+            // parentCandidate is the last continuation.
+            return m_builder.attachIgnoringContinuation(parentCandidate, WTFMove(child));
+        }
+        // The inline box inside the "post" part of the continuation is the preferred parent but we may not be able to put this child in there.
+        auto& nextToLastContinuation = parentCandidate;
+        auto childIsInline = newChildIsInline(parent, *child);
+        if (childIsInline == lastContinuation->isInline() || childIsInline != nextToLastContinuation.isInline() || child->isFloatingOrOutOfFlowPositioned())
+            return m_builder.attachIgnoringContinuation(*lastContinuation, WTFMove(child));
+        return m_builder.attachIgnoringContinuation(nextToLastContinuation, WTFMove(child));
+    }
+
+    // It may or may not be the direct parent of the beforeChild.
+    RenderBoxModelObject* beforeChildContinuationAncestor = nullptr;
+    if (canUseAsParentForContinuation(beforeChild->parent()))
+        beforeChildContinuationAncestor = downcast<RenderBoxModelObject>(beforeChild->parent());
     else if (beforeChild->parent()) {
         // In case of anonymous wrappers, the parent of the beforeChild is mostly irrelevant. What we need is the topmost wrapper.
         auto* parent = beforeChild->parent();
@@ -139,25 +150,29 @@ void RenderTreeBuilder::Inline::insertChildToContinuation(RenderInline& parent, 
             parent = parent->parent();
         }
         ASSERT(parent && parent->parent());
-        beforeChildAncestor = downcast<RenderBoxModelObject>(parent->parent());
+        beforeChildContinuationAncestor = downcast<RenderBoxModelObject>(parent->parent());
     } else
         ASSERT_NOT_REACHED();
 
-    if (child->isFloatingOrOutOfFlowPositioned())
-        return m_builder.attachIgnoringContinuation(*beforeChildAncestor, WTFMove(child), beforeChild);
+    if (child->isFloatingOrOutOfFlowPositioned()) {
+        auto beforeChildIsFirstChild = beforeChild == beforeChild->parent()->firstChild();
+        if (!beforeChildIsFirstChild)
+            return m_builder.attachIgnoringContinuation(*beforeChildContinuationAncestor, WTFMove(child), beforeChild);
+        return m_builder.attachIgnoringContinuation(parentCandidateInContinuation(parent, beforeChild), WTFMove(child));
+    }
 
-    if (flow == beforeChildAncestor)
-        return m_builder.attachIgnoringContinuation(*flow, WTFMove(child), beforeChild);
-    // A continuation always consists of two potential candidates: an inline or an anonymous
-    // block box holding block children.
+    auto& parentCandidate = parentCandidateInContinuation(parent, beforeChild);
+    if (&parentCandidate == beforeChildContinuationAncestor)
+        return m_builder.attachIgnoringContinuation(parentCandidate, WTFMove(child), beforeChild);
+    // A continuation always consists of two potential candidates: an inline or an anonymous block box holding block children.
     bool childInline = newChildIsInline(parent, *child);
     // The goal here is to match up if we can, so that we can coalesce and create the
     // minimal # of continuations needed for the inline.
-    if (childInline == beforeChildAncestor->isInline() || (beforeChild && beforeChild->isInline()))
-        return m_builder.attachIgnoringContinuation(*beforeChildAncestor, WTFMove(child), beforeChild);
-    if (flow->isInline() == childInline)
-        return m_builder.attachIgnoringContinuation(*flow, WTFMove(child)); // Just treat like an append.
-    return m_builder.attachIgnoringContinuation(*beforeChildAncestor, WTFMove(child), beforeChild);
+    if (childInline == beforeChildContinuationAncestor->isInline() || beforeChild->isInline())
+        return m_builder.attachIgnoringContinuation(*beforeChildContinuationAncestor, WTFMove(child), beforeChild);
+    if (parentCandidate.isInline() == childInline)
+        return m_builder.attachIgnoringContinuation(parentCandidate, WTFMove(child)); // Just treat like an append.
+    return m_builder.attachIgnoringContinuation(*beforeChildContinuationAncestor, WTFMove(child), beforeChild);
 }
 
 void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
@@ -208,7 +223,14 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
 
     RenderPtr<RenderBlock> createdPre;
     bool madeNewBeforeBlock = false;
-    if (block->isAnonymousBlock() && (!block->parent() || !block->parent()->createsAnonymousWrapper())) {
+    auto canResueContainingBlockAsPreBlock = [&] {
+        if (!block->isAnonymousBlock())
+            return false;
+        if (auto* containingBlockParent = block->parent())
+            return !containingBlockParent->createsAnonymousWrapper() && !containingBlockParent->isRenderDeprecatedFlexibleBox();
+        return false;
+    };
+    if (canResueContainingBlockAsPreBlock()) {
         // We can reuse this block and make it the preBlock of the next continuation.
         pre = block;
         pre->removePositionedObjects(nullptr);

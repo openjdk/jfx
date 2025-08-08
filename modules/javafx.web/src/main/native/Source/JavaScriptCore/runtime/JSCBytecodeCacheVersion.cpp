@@ -26,14 +26,15 @@
 #include "config.h"
 #include "JSCBytecodeCacheVersion.h"
 
+#include <wtf/DataLog.h>
+#include <wtf/HexNumber.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/SuperFastHash.h>
 
 #if OS(DARWIN) && !PLATFORM(JAVA)
 #include <dlfcn.h>
 #include <mach-o/dyld.h>
 #include <uuid/uuid.h>
-#include <wtf/DataLog.h>
-#include <wtf/NeverDestroyed.h>
 #include <wtf/spi/darwin/dyldSPI.h>
 #endif
 
@@ -61,13 +62,14 @@ uint32_t computeJSCBytecodeCacheVersion()
             dataLogLnIf(JSCBytecodeCacheVersionInternal::verbose, "UUID of JavaScriptCore.framework:", uuidString);
             return;
         }
-
         cacheVersion.construct(0);
         dataLogLnIf(JSCBytecodeCacheVersionInternal::verbose, "Failed to get UUID for JavaScriptCore framework");
+
+
     });
     return cacheVersion.get();
 #else
-    static constexpr uint32_t precomputedCacheVersion = SuperFastHash::computeHash(__TIMESTAMP__);
+        static constexpr uint32_t precomputedCacheVersion = SuperFastHash::computeHash(__TIMESTAMP__);
     return precomputedCacheVersion;
 #endif
 }

@@ -28,6 +28,7 @@
 
 #include <WebCore/DOMException.h>
 #include <WebCore/Element.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLElement.h>
 #include <WebCore/HTMLNames.h>

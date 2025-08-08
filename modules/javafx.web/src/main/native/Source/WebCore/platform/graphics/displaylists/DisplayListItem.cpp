@@ -53,11 +53,11 @@ bool isValid(const Item& item)
 template<class T>
 inline static std::optional<RenderingResourceIdentifier> applyFilteredImageBufferItem(GraphicsContext& context, const ResourceHeap& resourceHeap, const T& item)
 {
-    ImageBuffer* sourceImage = nullptr;
-    if (auto resourceIdentifier = item.sourceImageIdentifier(); resourceIdentifier.has_value()) {
-        if (sourceImage = resourceHeap.getImageBuffer(resourceIdentifier.value()); !sourceImage)
+    auto resourceIdentifier = item.sourceImageIdentifier();
+    auto sourceImage = resourceIdentifier ? resourceHeap.getImageBuffer(*resourceIdentifier) : nullptr;
+    if (UNLIKELY(!sourceImage && resourceIdentifier))
             return resourceIdentifier;
-    }
+
         FilterResults results;
         item.apply(context, sourceImage, results);
         return std::nullopt;
@@ -147,7 +147,7 @@ inline static std::optional<RenderingResourceIdentifier> applyDrawDecomposedGlyp
     return std::nullopt;
 }
 
-ApplyItemResult applyItem(GraphicsContext& context, const ResourceHeap& resourceHeap, const Item& item)
+ApplyItemResult applyItem(GraphicsContext& context, const ResourceHeap& resourceHeap, ControlFactory& controlFactory, const Item& item)
 {
     if (!isValid(item))
         return { StopReplayReason::InvalidItemOrExtent, std::nullopt };
@@ -157,6 +157,9 @@ ApplyItemResult applyItem(GraphicsContext& context, const ResourceHeap& resource
             if (auto missingCachedResourceIdentifier = applyImageBufferItem(context, resourceHeap, item))
                 return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
             return { };
+        }, [&](const DrawControlPart& item) -> ApplyItemResult {
+            item.apply(context, controlFactory);
+            return { };
         }, [&](const DrawGlyphs& item) -> ApplyItemResult {
             if (auto missingCachedResourceIdentifier = applyDrawGlyphs(context, resourceHeap, item))
                 return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
@@ -164,9 +167,6 @@ ApplyItemResult applyItem(GraphicsContext& context, const ResourceHeap& resource
         }, [&](const DrawDecomposedGlyphs& item) -> ApplyItemResult {
             if (auto missingCachedResourceIdentifier = applyDrawDecomposedGlyphs(context, resourceHeap, item))
                 return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
-            return { };
-        }, [&](const DrawDisplayListItems& item) -> ApplyItemResult {
-            item.apply(context, resourceHeap);
             return { };
         }, [&](const DrawFilteredImageBuffer& item) -> ApplyItemResult {
             if (auto missingCachedResourceIdentifier = applyFilteredImageBufferItem(context, resourceHeap, item))
@@ -226,6 +226,17 @@ void dumpItem(TextStream& ts, const Item& item, OptionSet<AsTextFlag> flags)
 TextStream& operator<<(TextStream& ts, const Item& item)
 {
     dumpItem(ts, item, { AsTextFlag::IncludePlatformOperations, AsTextFlag::IncludeResourceIdentifiers });
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, StopReplayReason reason)
+{
+    switch (reason) {
+    case StopReplayReason::ReplayedAllItems: ts << "ReplayedAllItems"; break;
+    case StopReplayReason::MissingCachedResource: ts << "MissingCachedResource"; break;
+    case StopReplayReason::InvalidItemOrExtent: ts << "InvalidItemOrExtent"; break;
+    case StopReplayReason::OutOfMemory: ts << "OutOfMemory"; break;
+    }
     return ts;
 }
 

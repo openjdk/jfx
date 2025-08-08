@@ -26,8 +26,6 @@
 #pragma once
 
 #include "Element.h"
-#include "ElementRuleCollector.h"
-#include "KeyframeEffectStack.h"
 #include "PseudoElement.h"
 #include "PseudoElementIdentifier.h"
 #include "RenderStyleConstants.h"
@@ -85,6 +83,7 @@ struct Styleable {
     bool hasRunningAcceleratedAnimations() const;
 
     bool capturedInViewTransition() const;
+    void setCapturedInViewTransition(AtomString);
 
     KeyframeEffectStack* keyframeEffectStack() const
     {
@@ -101,10 +100,7 @@ struct Styleable {
         return element.hasKeyframeEffects(pseudoElementIdentifier);
     }
 
-    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
-    {
-        return element.ensureKeyframeEffectStack(pseudoElementIdentifier).applyKeyframeEffects(targetStyle, affectedProperties, previousLastStyleChangeEventStyle, resolutionContext);
-    }
+    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, UncheckedKeyHashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext&) const;
 
     const AnimationCollection* animations() const
     {
@@ -193,6 +189,8 @@ struct Styleable {
 
     void updateCSSAnimations(const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle, const Style::ResolutionContext&, WeakStyleOriginatedAnimations&, Style::IsInDisplayNoneTree) const;
     void updateCSSTransitions(const RenderStyle& currentStyle, const RenderStyle& newStyle, WeakStyleOriginatedAnimations&) const;
+    void updateCSSScrollTimelines(const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle) const;
+    void updateCSSViewTimelines(const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle) const;
 };
 
 class WeakStyleable {
@@ -201,11 +199,19 @@ public:
 
     explicit operator bool() const { return !!m_element; }
 
+    bool operator==(const WeakStyleable& other) const = default;
+
     WeakStyleable& operator=(const Styleable& styleable)
     {
         m_element = styleable.element;
         m_pseudoElementIdentifier = styleable.pseudoElementIdentifier;
         return *this;
+    }
+
+    WeakStyleable(const Styleable& styleable)
+    {
+        m_element = styleable.element;
+        m_pseudoElementIdentifier = styleable.pseudoElementIdentifier;
     }
 
     std::optional<Styleable> styleable() const
@@ -215,9 +221,15 @@ public:
         return Styleable(*m_element, m_pseudoElementIdentifier);
     }
 
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> element() const { return m_element; }
+    std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier() const { return m_pseudoElementIdentifier; }
+
 private:
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_element;
     std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier;
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const Styleable&);
+WTF::TextStream& operator<<(WTF::TextStream&, const WeakStyleable&);
 
 } // namespace WebCore

@@ -52,6 +52,7 @@ private:
     bool isManaged() const final;
     void setAsSrcObject(bool) final;
     void memoryPressure() final;
+    bool detachable() const final;
 
     explicit MediaSourceInterfaceWorker(Ref<MediaSourceHandle>&&);
 

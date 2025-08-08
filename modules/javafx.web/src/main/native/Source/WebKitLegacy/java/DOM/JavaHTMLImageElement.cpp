@@ -27,6 +27,7 @@
 
 
 #include <WebCore/HTMLImageElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/JSExecState.h>
 

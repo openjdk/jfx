@@ -25,12 +25,13 @@
 
 #pragma once
 
+#include "BoxExtents.h"
 #include "IntPoint.h"
 #include "PlatformLayerIdentifier.h"
 #include "TileGridIdentifier.h"
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -53,11 +54,6 @@ class PlatformCALayer;
 
 struct VelocityData;
 
-enum TileSizeMode {
-    StandardTileSizeMode,
-    GiantTileSizeMode
-};
-
 enum ScrollingModeIndication {
     SynchronousScrollingBecauseOfLackOfScrollingCoordinatorIndication,
     SynchronousScrollingBecauseOfStyleIndication,
@@ -69,6 +65,11 @@ enum class TiledBackingScrollability : uint8_t {
     NotScrollable           = 0,
     HorizontallyScrollable  = 1 << 0,
     VerticallyScrollable    = 1 << 1
+};
+
+enum class TileRevalidationType : uint8_t {
+    Partial,
+    Full
 };
 
 using TileIndex = IntPoint;
@@ -83,16 +84,22 @@ public:
     virtual void willRemoveTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
     virtual void willRepaintAllTiles(TiledBacking&, TileGridIdentifier) = 0;
 
+    // The client will not receive `willRepaintTile()` for tiles needing display as part of a revalidation.
+    virtual void willRevalidateTiles(TiledBacking&, TileGridIdentifier, TileRevalidationType) = 0;
+    virtual void didRevalidateTiles(TiledBacking&, TileGridIdentifier, TileRevalidationType, const HashSet<TileIndex>& tilesNeedingDisplay) = 0;
+
     virtual void didAddGrid(TiledBacking&, TileGridIdentifier) = 0;
     virtual void willRemoveGrid(TiledBacking&, TileGridIdentifier) = 0;
 
     virtual void coverageRectDidChange(TiledBacking&, const FloatRect&) = 0;
-    virtual void tilingScaleFactorDidChange(TiledBacking&, float) = 0;
+
+    virtual void willRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
+    virtual void didRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
 };
 
 
 class TiledBacking : public CanMakeCheckedPtr<TiledBacking> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TiledBacking);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TiledBacking);
 public:
     virtual ~TiledBacking() = default;
@@ -117,7 +124,7 @@ public:
     virtual bool tilesWouldChangeForCoverageRect(const FloatRect&) const = 0;
 
     virtual void setTiledScrollingIndicatorPosition(const FloatPoint&) = 0;
-    virtual void setTopContentInset(float) = 0;
+    virtual void setObscuredContentInsets(const FloatBoxExtent&) = 0;
 
     virtual void setVelocity(const VelocityData&) = 0;
 

@@ -30,6 +30,7 @@
 #include "Editing.h"
 #include "Editor.h"
 #include "HTMLElement.h"
+#include "HTMLImageElement.h"
 #include "HTMLInterchange.h"
 #include "LocalFrame.h"
 #include "Text.h"
@@ -81,7 +82,7 @@ void InsertTextCommand::setEndingSelectionWithoutValidation(const Position& star
     // <http://bugs.webkit.org/show_bug.cgi?id=15781>
     VisibleSelection forcedEndingSelection;
     forcedEndingSelection.setWithoutValidation(startPosition, endPosition);
-    forcedEndingSelection.setIsDirectional(endingSelection().isDirectional());
+    forcedEndingSelection.setDirectionality(endingSelection().directionality());
     setEndingSelection(forcedEndingSelection);
 }
 
@@ -102,7 +103,7 @@ bool InsertTextCommand::performTrivialReplace(const String& text, bool selectIns
 
     setEndingSelectionWithoutValidation(start, endPosition);
     if (!selectInsertedText)
-        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().directionality()));
 
     return true;
 }
@@ -123,7 +124,7 @@ bool InsertTextCommand::performOverwrite(const String& text, bool selectInserted
     Position endPosition = Position(textNode.get(), start.offsetInContainerNode() + text.length());
     setEndingSelectionWithoutValidation(start, endPosition);
     if (!selectInsertedText)
-        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingSelection().visibleEnd(), endingSelection().directionality()));
 
     return true;
 }
@@ -230,15 +231,23 @@ void InsertTextCommand::doApply()
 
     setEndingSelectionWithoutValidation(startPosition, endPosition);
 
-    // Handle the case where there is a typing style.
-    if (RefPtr<EditingStyle> typingStyle = document().selection().typingStyle()) {
+    RefPtr typingStyle = document().selection().typingStyle();
+
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    if (!typingStyle && document().selection().isCaret()) {
+        if (RefPtr imageElement = dynamicDowncast<HTMLImageElement>(document().selection().selection().start().deprecatedNode()); imageElement && imageElement->isMultiRepresentationHEIC())
+            typingStyle = EditingStyle::create(imageElement.get());
+    }
+#endif
+
+    if (typingStyle) {
         typingStyle->prepareToApplyAt(endPosition, EditingStyle::PreserveWritingDirection);
         if (!typingStyle->isEmpty())
             applyStyle(typingStyle.get());
     }
 
     if (!m_selectInsertedText)
-        setEndingSelection(VisibleSelection(endingSelection().end(), endingSelection().affinity(), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingSelection().end(), endingSelection().affinity(), endingSelection().directionality()));
 }
 
 Position InsertTextCommand::insertTab(const Position& pos)

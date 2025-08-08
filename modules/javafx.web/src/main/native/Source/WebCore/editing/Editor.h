@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CompositionUnderline.h"
-#include "DocumentMarker.h"
 #include "EditAction.h"
 #include "EditingBehavior.h"
 #include "EditingStyle.h"
@@ -43,7 +42,8 @@
 #include "VisibleSelection.h"
 #include "WritingDirection.h"
 #include <memory>
-#include <wtf/WeakRef.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/WeakPtr.h>
 
 #if PLATFORM(COCOA)
 OBJC_CLASS NSAttributedString;
@@ -64,6 +64,7 @@ class SharedBuffer;
 class CustomUndoStep;
 class DataTransfer;
 class DeleteButtonController;
+class DocumentMarker;
 class EditCommand;
 class EditCommandComposition;
 class EditorClient;
@@ -96,6 +97,8 @@ struct FontAttributes;
 struct PasteboardPlainText;
 struct PasteboardURL;
 struct TextCheckingResult;
+
+enum class DocumentMarkerType : uint32_t;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 struct PromisedAttachmentInfo;
@@ -137,7 +140,8 @@ enum class TemporarySelectionOption : uint16_t {
 };
 
 class TemporarySelectionChange {
-    WTF_MAKE_NONCOPYABLE(TemporarySelectionChange); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(TemporarySelectionChange, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(TemporarySelectionChange);
 public:
     WEBCORE_EXPORT TemporarySelectionChange(Document&, std::optional<VisibleSelection> = std::nullopt, OptionSet<TemporarySelectionOption> = { });
     WEBCORE_EXPORT ~TemporarySelectionChange();
@@ -159,7 +163,8 @@ private:
 };
 
 class IgnoreSelectionChangeForScope {
-    WTF_MAKE_NONCOPYABLE(IgnoreSelectionChangeForScope); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IgnoreSelectionChangeForScope, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(IgnoreSelectionChangeForScope);
 public:
     IgnoreSelectionChangeForScope(LocalFrame& frame)
         : m_selectionChange(*frame.document(), std::nullopt, TemporarySelectionOption::IgnoreSelectionChanges)
@@ -174,9 +179,8 @@ private:
     TemporarySelectionChange m_selectionChange;
 };
 
-class Editor final : public CanMakeCheckedPtr<Editor> {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Editor);
+class Editor final : public CanMakeWeakPtr<Editor> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(Editor, WEBCORE_EXPORT);
 public:
     explicit Editor(Document&);
     ~Editor();
@@ -191,6 +195,12 @@ public:
     WEBCORE_EXPORT TextCheckerClient* textChecker() const;
 
     CompositeEditCommand* lastEditCommand() { return m_lastEditCommand.get(); }
+
+    Document& document() const { return m_document.get(); }
+    Ref<Document> protectedDocument() const { return m_document.get(); }
+
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
 
     void handleKeyboardEvent(KeyboardEvent&);
     void handleInputMethodKeydown(KeyboardEvent&);
@@ -321,10 +331,11 @@ public:
         WEBCORE_EXPORT bool allowExecutionWhenDisabled() const;
 
     private:
+        RefPtr<LocalFrame> frame() const;
+
         const EditorInternalCommand* m_command { nullptr };
         EditorCommandSource m_source;
         RefPtr<Document> m_document;
-        RefPtr<LocalFrame> m_frame;
     };
     WEBCORE_EXPORT Command command(const String& commandName); // Command source is EditorCommandSource::MenuOrKeyBinding.
     Command command(const String& commandName, EditorCommandSource);
@@ -514,7 +525,8 @@ public:
     enum class MatchStyle : bool { No, Yes };
     WEBCORE_EXPORT void replaceSelectionWithFragment(DocumentFragment&, SelectReplacement, SmartReplace, MatchStyle, EditAction = EditAction::Insert, MailBlockquoteHandling = MailBlockquoteHandling::RespectBlockquote);
     WEBCORE_EXPORT void replaceSelectionWithText(const String&, SelectReplacement, SmartReplace, EditAction = EditAction::Insert);
-    WEBCORE_EXPORT bool selectionStartHasMarkerFor(DocumentMarker::Type, int from, int length) const;
+    WEBCORE_EXPORT bool selectionStartHasMarkerFor(DocumentMarkerType, int from, int length) const;
+    WEBCORE_EXPORT void selectionStartSetMarkerForTesting(DocumentMarkerType, int from, int length, const String&);
     void updateMarkersForWordsAffectedByEditing(bool doNotRemoveIfSelectionAtWordBoundary);
     void deletedAutocorrectionAtPosition(const Position&, const String& originalString);
 
@@ -630,10 +642,11 @@ public:
 
     WEBCORE_EXPORT void closeTyping();
 
-private:
-    Document& document() const { return m_document.get(); }
-    Ref<Document> protectedDocument() const { return m_document.get(); }
+#if PLATFORM(IOS_FAMILY)
+    bool shouldDrawVisuallyContiguousBidiSelection() const;
+#endif
 
+private:
     bool canDeleteRange(const SimpleRange&) const;
     bool canSmartReplaceWithPasteboard(Pasteboard&);
     void pasteAsPlainTextWithPasteboard(Pasteboard&);
@@ -699,9 +712,9 @@ private:
     bool m_ignoreSelectionChanges { false };
     bool m_shouldStartNewKillRingSequence { false };
     bool m_shouldStyleWithCSS { false };
-    const std::unique_ptr<PAL::KillRing> m_killRing;
-    const std::unique_ptr<SpellChecker> m_spellChecker;
-    const std::unique_ptr<AlternativeTextController> m_alternativeTextController;
+    const UniqueRef<PAL::KillRing> m_killRing;
+    const UniqueRef<SpellChecker> m_spellChecker;
+    const UniqueRef<AlternativeTextController> m_alternativeTextController;
     EditorParagraphSeparator m_defaultParagraphSeparator { EditorParagraphSeparator::div };
     bool m_overwriteModeEnabled { false };
 

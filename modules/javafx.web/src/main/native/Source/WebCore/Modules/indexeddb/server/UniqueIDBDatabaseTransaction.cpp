@@ -150,7 +150,7 @@ void UniqueIDBDatabaseTransaction::createObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -174,7 +174,7 @@ void UniqueIDBDatabaseTransaction::deleteObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -200,7 +200,7 @@ void UniqueIDBDatabaseTransaction::renameObjectStore(const IDBRequestData& reque
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameObjectStore");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -249,7 +249,7 @@ void UniqueIDBDatabaseTransaction::createIndex(const IDBRequestData& requestData
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::createIndex");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -273,7 +273,7 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::deleteIndex");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -293,11 +293,11 @@ void UniqueIDBDatabaseTransaction::deleteIndex(const IDBRequestData& requestData
     });
 }
 
-void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData, IDBObjectStoreIdentifier objectStoreIdentifier, uint64_t indexIdentifier, const String& newName)
+void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData, IDBObjectStoreIdentifier objectStoreIdentifier, IDBIndexIdentifier indexIdentifier, const String& newName)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::renameIndex");
 
-    ASSERT(isVersionChange());
+    RELEASE_ASSERT(isVersionChange());
     ASSERT(m_transactionInfo.identifier() == requestData.transactionIdentifier());
 
     auto* database = this->database();
@@ -318,7 +318,7 @@ void UniqueIDBDatabaseTransaction::renameIndex(const IDBRequestData& requestData
 }
 
 
-void UniqueIDBDatabaseTransaction::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, IndexedDB::ObjectStoreOverwriteMode overwriteMode)
+void UniqueIDBDatabaseTransaction::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, const IndexIDToIndexKeyMap& indexKeys, IndexedDB::ObjectStoreOverwriteMode overwriteMode)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseTransaction::putOrAdd");
 
@@ -329,7 +329,7 @@ void UniqueIDBDatabaseTransaction::putOrAdd(const IDBRequestData& requestData, c
     if (!database)
         return;
 
-    database->putOrAdd(requestData, keyData, value, overwriteMode, [this, weakThis = WeakPtr { *this }, requestData](auto& error, const IDBKeyData& key) {
+    database->putOrAdd(requestData, keyData, value, indexKeys, overwriteMode, [this, weakThis = WeakPtr { *this }, requestData](auto& error, const IDBKeyData& key) {
         LOG(IndexedDB, "UniqueIDBDatabaseTransaction::putOrAdd (callback)");
 
         if (!weakThis || !m_databaseConnection)

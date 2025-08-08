@@ -392,9 +392,10 @@ bool unmapViewOfFile(void* , size_t)
 
 MappedFileData::~MappedFileData()
 {
+#if !OS(WINDOWS)
     if (!m_fileData)
         return;
-    unmapViewOfFile(m_fileData, m_fileSize);
+#endif
 }
 
 bool deleteFile(const String&)

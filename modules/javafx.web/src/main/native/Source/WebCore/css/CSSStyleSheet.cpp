@@ -65,8 +65,8 @@ public:
     StyleSheetCSSRuleList(CSSStyleSheet* sheet) : m_styleSheet(sheet) { }
 
 private:
-    void ref() final { m_styleSheet->ref(); }
-    void deref() final { m_styleSheet->deref(); }
+    void ref() const final { m_styleSheet->ref(); }
+    void deref() const final { m_styleSheet->deref(); }
 
     unsigned length() const final { return m_styleSheet->length(); }
     CSSRule* item(unsigned index) const final { return m_styleSheet->item(index); }
@@ -90,9 +90,9 @@ static bool isAcceptableCSSStyleSheetParent(Node* parentNode)
 }
 #endif // ASSERT_ENABLED
 
-Ref<CSSStyleSheet> CSSStyleSheet::create(Ref<StyleSheetContents>&& sheet, CSSImportRule* ownerRule)
+Ref<CSSStyleSheet> CSSStyleSheet::create(Ref<StyleSheetContents>&& sheet, CSSImportRule* ownerRule, std::optional<bool> isOriginClean)
 {
-    return adoptRef(*new CSSStyleSheet(WTFMove(sheet), ownerRule));
+    return adoptRef(*new CSSStyleSheet(WTFMove(sheet), ownerRule, isOriginClean));
 }
 
 Ref<CSSStyleSheet> CSSStyleSheet::create(Ref<StyleSheetContents>&& sheet, Node& ownerNode, const std::optional<bool>& isCleanOrigin)
@@ -121,8 +121,9 @@ ExceptionOr<Ref<CSSStyleSheet>> CSSStyleSheet::create(Document& document, Init&&
     return adoptRef(*new CSSStyleSheet(StyleSheetContents::create(parserContext), document, WTFMove(init)));
 }
 
-CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, CSSImportRule* ownerRule)
+CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, CSSImportRule* ownerRule, std::optional<bool> isOriginClean)
     : m_contents(WTFMove(contents))
+    , m_isOriginClean(isOriginClean)
     , m_ownerRule(ownerRule)
 {
     if (auto* parent = parentStyleSheet())
@@ -230,6 +231,7 @@ void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, ContentsCloned
 {
     ASSERT(m_contents->isMutable());
     ASSERT(m_contents->hasOneClient());
+    m_contents->setHasResolvedNesting(false);
 
     forEachStyleScope([&](Style::Scope& scope) {
         if ((mutationType == RuleInsertion || mutationType == RuleReplace) && contentsClonedForMutation == ContentsClonedForMutation::No && !scope.activeStyleSheetsContains(*this)) {
@@ -249,18 +251,20 @@ void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, ContentsCloned
 
         scope.didChangeStyleSheetContents();
 
-    m_mutatedRules = true;
+        m_wasMutated = true;
     });
 }
 
 void CSSStyleSheet::didMutate()
 {
-    forEachStyleScope([](auto& scope) {
+    forEachStyleScope([&](auto& scope) {
         scope.didChangeStyleSheetContents();
+
+        m_wasMutated = true;
     });
 }
 
-void CSSStyleSheet::forEachStyleScope(const Function<void(Style::Scope&)>& apply)
+void CSSStyleSheet::forEachStyleScope(NOESCAPE const Function<void(Style::Scope&)>& apply)
 {
     if (auto* scope = styleScope()) {
         apply(*scope);
@@ -334,9 +338,11 @@ bool CSSStyleSheet::canAccessRules() const
     URL baseURL = m_contents->baseURL();
     if (baseURL.isEmpty())
         return true;
+
     Document* document = ownerDocument();
     if (!document)
-        return true;
+        return false;
+
     return document->protectedSecurityOrigin()->canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
@@ -345,6 +351,9 @@ ExceptionOr<unsigned> CSSStyleSheet::insertRule(const String& ruleString, unsign
     LOG_WITH_STREAM(StyleSheets, stream << "CSSStyleSheet " << this << " insertRule() " << ruleString << " at " << index);
 
     ASSERT(m_childRuleCSSOMWrappers.isEmpty() || m_childRuleCSSOMWrappers.size() == m_contents->ruleCount());
+
+    if (!canAccessRules())
+        return Exception { ExceptionCode::SecurityError, "Not allowed to insert rule into cross-origin stylesheet"_s };
 
     if (index > length())
         return Exception { ExceptionCode::IndexSizeError };
@@ -372,6 +381,9 @@ ExceptionOr<void> CSSStyleSheet::deleteRule(unsigned index)
     LOG_WITH_STREAM(StyleSheets, stream << "CSSStyleSheet " << this << " deleteRule(" << index << ")");
 
     ASSERT(m_childRuleCSSOMWrappers.isEmpty() || m_childRuleCSSOMWrappers.size() == m_contents->ruleCount());
+
+    if (!canAccessRules())
+        return Exception { ExceptionCode::SecurityError, "Not allowed to delete rule from cross-origin stylesheet"_s };
 
     if (index >= length())
         return Exception { ExceptionCode::IndexSizeError };
@@ -487,7 +499,7 @@ String CSSStyleSheet::debugDescription() const
     return makeString("CSSStyleSheet "_s, "0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase), ' ', href());
 }
 
-String CSSStyleSheet::cssTextWithReplacementURLs(const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet)
+String CSSStyleSheet::cssText(const CSS::SerializationContext& context)
 {
     auto ruleList = cssRulesSkippingAccessCheck();
     if (!ruleList)
@@ -499,7 +511,7 @@ String CSSStyleSheet::cssTextWithReplacementURLs(const HashMap<String, String>& 
         if (!rule)
             continue;
 
-        auto ruleText = rule->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet);
+        auto ruleText = rule->cssText(context);
         if (!result.isEmpty() && !ruleText.isEmpty())
             result.append(' ');
 
@@ -581,7 +593,7 @@ Ref<StyleSheetContents> CSSStyleSheet::protectedContents()
     return m_contents;
 }
 
-void CSSStyleSheet::getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
+void CSSStyleSheet::getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
 {
     RefPtr ruleList = cssRules();
     if (!ruleList)

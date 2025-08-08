@@ -32,12 +32,16 @@
 #include "ChromeClient.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "FrameLoader.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "Page.h"
 #include "UserGestureIndicator.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceOrientationAndMotionAccessController);
 
 DeviceOrientationAndMotionAccessController::DeviceOrientationAndMotionAccessController(Document& topDocument)
     : m_topDocument(topDocument)
@@ -52,7 +56,7 @@ DeviceOrientationOrMotionPermissionState DeviceOrientationAndMotionAccessControl
 
     // Check per-site setting.
     Ref topDocument = m_topDocument.get();
-    if (&document == topDocument.ptr() || document.securityOrigin().isSameOriginAs(topDocument->securityOrigin())) {
+    if (&document == topDocument.ptr() || document.protectedSecurityOrigin()->isSameOriginAs(topDocument->protectedSecurityOrigin())) {
         RefPtr frame = topDocument->frame();
         if (RefPtr documentLoader = frame ? frame->loader().documentLoader() : nullptr)
             return documentLoader->deviceOrientationAndMotionAccessState();

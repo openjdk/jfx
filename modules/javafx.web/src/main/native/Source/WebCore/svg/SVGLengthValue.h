@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +24,7 @@
 #include "ExceptionOr.h"
 #include "SVGParsingError.h"
 #include "SVGPropertyTraits.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -42,7 +43,9 @@ enum class SVGLengthType : uint8_t {
     Millimeters,
     Inches,
     Points,
-    Picas
+    Picas,
+    Lh,
+    Ch
 };
 
 enum class SVGLengthMode : uint8_t {
@@ -59,7 +62,7 @@ enum class SVGLengthNegativeValuesMode : uint8_t {
 enum class ShouldConvertNumberToPxLength : bool { No, Yes };
 
 class SVGLengthValue {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGLengthValue);
 public:
     SVGLengthValue(SVGLengthMode = SVGLengthMode::Other, const String& valueAsString = { });
     SVGLengthValue(float valueInSpecifiedUnits, SVGLengthType, SVGLengthMode = SVGLengthMode::Other);
@@ -76,7 +79,7 @@ public:
     SVGLengthMode lengthMode() const { return m_lengthMode; }
 
     bool isZero() const { return !m_valueInSpecifiedUnits;  }
-    bool isRelative() const { return m_lengthType == SVGLengthType::Percentage || m_lengthType == SVGLengthType::Ems || m_lengthType == SVGLengthType::Exs; }
+    bool isRelative() const { return m_lengthType == SVGLengthType::Percentage || m_lengthType == SVGLengthType::Ems || m_lengthType == SVGLengthType::Exs || m_lengthType == SVGLengthType::Ch; }
 
     float value(const SVGLengthContext&) const;
     float valueAsPercentage() const { return m_lengthType == SVGLengthType::Percentage ? m_valueInSpecifiedUnits / 100 : m_valueInSpecifiedUnits; }

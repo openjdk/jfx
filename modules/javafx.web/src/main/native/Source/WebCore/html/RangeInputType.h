@@ -32,12 +32,14 @@
 #pragma once
 
 #include "InputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SliderThumbElement;
 
 class RangeInputType final : public InputType {
+    WTF_MAKE_TZONE_ALLOCATED(RangeInputType);
 public:
     static Ref<RangeInputType> create(HTMLInputElement& element)
     {
@@ -71,14 +73,12 @@ private:
 
     SliderThumbElement& typedSliderThumbElement() const;
 
-#if ENABLE(DATALIST_ELEMENT)
     void dataListMayHaveChanged() final;
     void updateTickMarkValues();
     std::optional<Decimal> findClosestTickMarkValue(const Decimal&) final;
 
     bool m_tickMarkValuesDirty { true };
     Vector<Decimal> m_tickMarkValues;
-#endif
 
 #if ENABLE(TOUCH_EVENTS)
     void handleTouchEvent(TouchEvent&) final;

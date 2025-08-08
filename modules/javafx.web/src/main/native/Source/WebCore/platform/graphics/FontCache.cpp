@@ -43,7 +43,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/StringHash.h>
 
@@ -51,7 +51,13 @@
 #include "OpenTypeVerticalData.h"
 #endif
 
+#if PLATFORM(WIN)
+#include <dwrite.h>
+#endif
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FontCache);
 
 struct FontPlatformDataCacheKey {
     FontDescriptionKey descriptionKey;
@@ -112,10 +118,10 @@ struct FontDataCacheKeyTraits : WTF::GenericHashTraits<FontPlatformData> {
     }
 };
 
-using FontPlatformDataCache = HashMap<FontPlatformDataCacheKey, std::unique_ptr<FontPlatformData>, FontPlatformDataCacheKeyHash, FontPlatformDataCacheKeyHashTraits>;
-using FontDataCache = HashMap<FontPlatformData, Ref<Font>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
+using FontPlatformDataCache = UncheckedKeyHashMap<FontPlatformDataCacheKey, std::unique_ptr<FontPlatformData>, FontPlatformDataCacheKeyHash, FontPlatformDataCacheKeyHashTraits>;
+using FontDataCache = UncheckedKeyHashMap<FontPlatformData, Ref<Font>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
 #if ENABLE(OPENTYPE_VERTICAL)
-using FontVerticalDataCache = HashMap<FontPlatformData, RefPtr<OpenTypeVerticalData>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
+using FontVerticalDataCache = UncheckedKeyHashMap<FontPlatformData, RefPtr<OpenTypeVerticalData>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
 #endif
 
 struct FontCache::FontDataCaches {
@@ -151,7 +157,7 @@ FontCache::FontCache()
 
 FontCache::~FontCache() = default;
 
-std::optional<ASCIILiteral> FontCache::alternateFamilyName(const String& familyName)
+ASCIILiteral FontCache::alternateFamilyName(const String& familyName)
 {
     if (auto platformSpecificAlternate = platformAlternateFamilyName(familyName))
         return platformSpecificAlternate;
@@ -188,7 +194,7 @@ std::optional<ASCIILiteral> FontCache::alternateFamilyName(const String& familyN
         break;
     }
 
-    return std::nullopt;
+    return { };
 }
 
 FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontDescription, const String& passedFamilyName, const FontCreationContext& fontCreationContext, OptionSet<FontLookupOptions> options)
@@ -221,7 +227,7 @@ FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontD
             // We were unable to find a font. We have a small set of fonts that we alias to other names,
             // e.g., Arial/Helvetica, Courier/Courier New, etc. Try looking up the font under the aliased name.
             if (auto alternateName = alternateFamilyName(familyName)) {
-                auto* alternateData = cachedFontPlatformData(fontDescription, *alternateName, fontCreationContext, options | FontLookupOptions::ExactFamilyNameMatch);
+                auto* alternateData = cachedFontPlatformData(fontDescription, alternateName, fontCreationContext, options | FontLookupOptions::ExactFamilyNameMatch);
                 // Look up the key in the hash table again as the previous iterator may have
                 // been invalidated by the recursive call to cachedFontPlatformData().
                 it = m_fontDataCaches->platformData.find(key);
@@ -459,7 +465,7 @@ bool FontCache::useBackslashAsYenSignForFamily(const AtomString& family)
     if (m_familiesUsingBackslashAsYenSign.isEmpty()) {
         auto add = [&] (ASCIILiteral name, std::initializer_list<UChar> unicodeName) {
             m_familiesUsingBackslashAsYenSign.add(AtomString { name });
-            m_familiesUsingBackslashAsYenSign.add(AtomString({ unicodeName.begin(), unicodeName.size() }));
+            m_familiesUsingBackslashAsYenSign.add(AtomString(std::span { unicodeName }));
         };
         add("MS PGothic"_s, { 0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x30B4, 0x30B7, 0x30C3, 0x30AF });
         add("MS PMincho"_s, { 0xFF2D, 0xFF33, 0x0020, 0xFF30, 0x660E, 0x671D });

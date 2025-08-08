@@ -28,6 +28,7 @@
 
 #include "HTMLConstructionSite.h"
 #include "HTMLParserOptions.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -42,19 +43,20 @@ enum class TagName : uint16_t;
 struct CustomElementConstructionData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    CustomElementConstructionData(Ref<JSCustomElementInterface>&&, const AtomString& name, Vector<Attribute>&&);
+    CustomElementConstructionData(Ref<JSCustomElementInterface>&&, Ref<CustomElementRegistry>&&, const AtomString& name, Vector<Attribute>&&);
     ~CustomElementConstructionData();
 
     Ref<JSCustomElementInterface> elementInterface;
+    Ref<CustomElementRegistry> registry;
     AtomString name;
     Vector<Attribute> attributes;
 };
 
 class HTMLTreeBuilder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTreeBuilder);
 public:
     HTMLTreeBuilder(HTMLDocumentParser&, HTMLDocument&, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
-    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
+    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, OptionSet<ParserContentPolicy>, const HTMLParserOptions&, CustomElementRegistry*);
     void setShouldSkipLeadingNewline(bool);
 
     ~HTMLTreeBuilder();
@@ -69,12 +71,15 @@ public:
     // Must be called to take the parser-blocking script before calling the parser again.
     RefPtr<ScriptElement> takeScriptToProcess(TextPosition& scriptStartPosition);
     const ScriptElement* scriptToProcess() const { return m_scriptToProcess.get(); }
+    RefPtr<const ScriptElement> protectedScriptToProcess() const;
 
     std::unique_ptr<CustomElementConstructionData> takeCustomElementConstructionData() { return WTFMove(m_customElementToConstruct); }
     void didCreateCustomOrFallbackElement(Ref<Element>&&, CustomElementConstructionData&);
 
     // Done, close any open tags, etc.
     void finished();
+
+    bool isOnStackOfOpenElements(Element&) const;
 
 private:
     class ExternalCharacterTokenBuffer;

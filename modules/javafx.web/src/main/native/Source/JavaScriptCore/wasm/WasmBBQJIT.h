@@ -32,6 +32,8 @@
 #include "WasmFunctionParser.h"
 #include "WasmLimits.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace Wasm {
 
 namespace BBQJITImpl {
@@ -473,7 +475,7 @@ public:
             : m_enclosedHeight(0)
         { }
 
-        ControlData(BBQJIT& generator, BlockType blockType, BlockSignature signature, LocalOrTempIndex enclosedHeight, RegisterSet liveScratchGPRs);
+        ControlData(BBQJIT& generator, BlockType, BlockSignature, LocalOrTempIndex enclosedHeight, RegisterSet liveScratchGPRs, RegisterSet liveScratchFPRs);
 
         // Re-use the argument layout of another block (eg. else will re-use the argument/result locations from if)
         enum BranchCallingConventionReuseTag { UseBlockCallingConventionOfOtherBranch };
@@ -662,6 +664,16 @@ public:
 
         void setTryInfo(unsigned tryStart, unsigned tryEnd, unsigned tryCatchDepth);
 
+        struct TryTableTarget {
+            CatchKind type;
+            uint32_t tag;
+            const TypeDefinition* exceptionSignature;
+            ControlRef target;
+        };
+        using TargetList = Vector<TryTableTarget>;
+
+        void setTryTableTargets(TargetList&&);
+
         void setIfBranch(MacroAssembler::Jump branch);
 
         void setLoopLabel(MacroAssembler::Label label);
@@ -689,6 +701,7 @@ public:
         unsigned m_tryStart { 0 };
         unsigned m_tryEnd { 0 };
         unsigned m_tryCatchDepth { 0 };
+        Vector<TryTableTarget, 8> m_tryTableTargets;
     };
 
     friend struct ControlData;
@@ -697,10 +710,12 @@ public:
     using ControlType = ControlData;
     using CallType = CallLinkInfo::CallType;
     using ResultList = Vector<ExpressionType, 8>;
+    using ArgumentList = Vector<ExpressionType, 8>;
     using ControlEntry = typename FunctionParserTypes<ControlType, ExpressionType, CallType>::ControlEntry;
     using TypedExpression = typename FunctionParserTypes<ControlType, ExpressionType, CallType>::TypedExpression;
     using Stack = FunctionParser<BBQJIT>::Stack;
     using ControlStack = FunctionParser<BBQJIT>::ControlStack;
+    using CatchHandler = FunctionParser<BBQJIT>::CatchHandler;
 
     unsigned stackCheckSize() const { return alignedFrameSize(m_maxCalleeStackSize + m_frameSize); }
 
@@ -846,9 +861,13 @@ private:
 #define LOG_DEDENT() do { if (UNLIKELY(Options::verboseBBQJITInstructions())) { m_loggingIndent -= 2; } } while (false);
 
 public:
-    static constexpr bool tierSupportsSIMD = true;
+    // FIXME: Support fused branch compare on 32-bit platforms.
+    static constexpr bool shouldFuseBranchCompare = is64Bit();
 
-    BBQJIT(CCallHelpers& jit, const TypeDefinition& signature, BBQCallee& callee, const FunctionData& function, uint32_t functionIndex, const ModuleInformation& info, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, MemoryMode mode, InternalFunction* compilation, std::optional<bool> hasExceptionHandlers, unsigned loopIndexForOSREntry, TierUpCount* tierUp);
+    static constexpr bool tierSupportsSIMD = true;
+    static constexpr bool validateFunctionBodySize = true;
+
+    BBQJIT(CCallHelpers& jit, const TypeDefinition& signature, BBQCallee& callee, const FunctionData& function, FunctionCodeIndex functionIndex, const ModuleInformation& info, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, MemoryMode mode, InternalFunction* compilation, std::optional<bool> hasExceptionHandlers, unsigned loopIndexForOSREntry);
 
     ALWAYS_INLINE static Value emptyExpression()
     {
@@ -1182,7 +1201,7 @@ public:
 
     void emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value index, Value value);
 
-    PartialResult WARN_UNUSED_RETURN addArrayNewFixed(uint32_t typeIndex, Vector<ExpressionType>& args, ExpressionType& result);
+    PartialResult WARN_UNUSED_RETURN addArrayNewFixed(uint32_t typeIndex, ArgumentList& args, ExpressionType& result);
 
     PartialResult WARN_UNUSED_RETURN addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, ExpressionType arrayref, ExpressionType index, ExpressionType& result);
 
@@ -1204,7 +1223,7 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addStructNewDefault(uint32_t typeIndex, ExpressionType& result);
 
-    PartialResult WARN_UNUSED_RETURN addStructNew(uint32_t typeIndex, Vector<Value>& args, Value& result);
+    PartialResult WARN_UNUSED_RETURN addStructNew(uint32_t typeIndex, ArgumentList& args, Value& result);
 
     PartialResult WARN_UNUSED_RETURN addStructGet(ExtGCOpType structGetKind, Value structValue, const StructType& structType, uint32_t fieldIndex, Value& result);
 
@@ -1433,22 +1452,22 @@ public:
 
     inline float floatCopySign(float lhs, float rhs)
     {
-        uint32_t lhsAsInt32 = bitwise_cast<uint32_t>(lhs);
-        uint32_t rhsAsInt32 = bitwise_cast<uint32_t>(rhs);
+        uint32_t lhsAsInt32 = std::bit_cast<uint32_t>(lhs);
+        uint32_t rhsAsInt32 = std::bit_cast<uint32_t>(rhs);
         lhsAsInt32 &= 0x7fffffffu;
         rhsAsInt32 &= 0x80000000u;
         lhsAsInt32 |= rhsAsInt32;
-        return bitwise_cast<float>(lhsAsInt32);
+        return std::bit_cast<float>(lhsAsInt32);
     }
 
     inline double doubleCopySign(double lhs, double rhs)
     {
-        uint64_t lhsAsInt64 = bitwise_cast<uint64_t>(lhs);
-        uint64_t rhsAsInt64 = bitwise_cast<uint64_t>(rhs);
+        uint64_t lhsAsInt64 = std::bit_cast<uint64_t>(lhs);
+        uint64_t rhsAsInt64 = std::bit_cast<uint64_t>(rhs);
         lhsAsInt64 &= 0x7fffffffffffffffu;
         rhsAsInt64 &= 0x8000000000000000u;
         lhsAsInt64 |= rhsAsInt64;
-        return bitwise_cast<double>(lhsAsInt64);
+        return std::bit_cast<double>(lhsAsInt64);
     }
 
     PartialResult WARN_UNUSED_RETURN addI32And(Value lhs, Value rhs, Value& result);
@@ -1674,7 +1693,7 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addRefEq(Value ref0, Value ref1, Value& result);
 
-    PartialResult WARN_UNUSED_RETURN addRefFunc(uint32_t index, Value& result);
+    PartialResult WARN_UNUSED_RETURN addRefFunc(FunctionSpaceIndex index, Value& result);
 
     void emitEntryTierUpCheck();
 
@@ -1695,7 +1714,7 @@ public:
 
     StackMap makeStackMap(const ControlData& data, Stack& enclosingStack);
 
-    void emitLoopTierUpCheckAndOSREntryData(const ControlData& data, Stack& enclosingStack, unsigned loopIndex);
+    void emitLoopTierUpCheckAndOSREntryData(const ControlData&, Stack& enclosingStack, unsigned loopIndex);
 
     PartialResult WARN_UNUSED_RETURN addLoop(BlockSignature signature, Stack& enclosingStack, ControlType& result, Stack& newStack, uint32_t loopIndex);
 
@@ -1706,12 +1725,14 @@ public:
     PartialResult WARN_UNUSED_RETURN addElseToUnreachable(ControlData& data);
 
     PartialResult WARN_UNUSED_RETURN addTry(BlockSignature signature, Stack& enclosingStack, ControlType& result, Stack& newStack);
+    PartialResult WARN_UNUSED_RETURN addTryTable(BlockSignature, Stack& enclosingStack, const Vector<CatchHandler>& targets, ControlType& result, Stack& newStack);
 
     void emitCatchPrologue();
 
     void emitCatchAllImpl(ControlData& dataCatch);
 
     void emitCatchImpl(ControlData& dataCatch, const TypeDefinition& exceptionSignature, ResultList& results);
+    void emitCatchTableImpl(ControlData& entryData, ControlType::TryTableTarget&);
 
     PartialResult WARN_UNUSED_RETURN addCatch(unsigned exceptionIndex, const TypeDefinition& exceptionSignature, Stack& expressionStack, ControlType& data, ResultList& results);
 
@@ -1725,9 +1746,11 @@ public:
 
     PartialResult WARN_UNUSED_RETURN addDelegateToUnreachable(ControlType& target, ControlType& data);
 
-    PartialResult WARN_UNUSED_RETURN addThrow(unsigned exceptionIndex, Vector<ExpressionType>& arguments, Stack&);
+    PartialResult WARN_UNUSED_RETURN addThrow(unsigned exceptionIndex, ArgumentList& arguments, Stack&);
 
     PartialResult WARN_UNUSED_RETURN addRethrow(unsigned, ControlType& data);
+
+    PartialResult WARN_UNUSED_RETURN addThrowRef(ExpressionType exception, Stack&);
 
     void prepareForExceptions();
 
@@ -1748,6 +1771,22 @@ public:
     int alignedFrameSize(int frameSize) const;
 
     PartialResult WARN_UNUSED_RETURN endTopLevel(BlockSignature, const Stack&);
+
+    enum BranchFoldResult {
+        BranchAlwaysTaken,
+        BranchNeverTaken,
+        BranchNotFolded
+    };
+
+    BranchFoldResult WARN_UNUSED_RETURN tryFoldFusedBranchCompare(OpType, ExpressionType);
+    Jump WARN_UNUSED_RETURN emitFusedBranchCompareBranch(OpType, ExpressionType, Location);
+    BranchFoldResult WARN_UNUSED_RETURN tryFoldFusedBranchCompare(OpType, ExpressionType, ExpressionType);
+    Jump WARN_UNUSED_RETURN emitFusedBranchCompareBranch(OpType, ExpressionType, Location, ExpressionType, Location);
+
+    PartialResult WARN_UNUSED_RETURN addFusedBranchCompare(OpType, ControlType& target, ExpressionType, Stack&);
+    PartialResult WARN_UNUSED_RETURN addFusedBranchCompare(OpType, ControlType& target, ExpressionType, ExpressionType, Stack&);
+    PartialResult WARN_UNUSED_RETURN addFusedIfCompare(OpType, ExpressionType, BlockSignature, Stack&, ControlType&, Stack&);
+    PartialResult WARN_UNUSED_RETURN addFusedIfCompare(OpType, ExpressionType, ExpressionType, BlockSignature, Stack&, ControlType&, Stack&);
 
     // Flush a value to its canonical slot.
     void flushValue(Value value);
@@ -1778,17 +1817,17 @@ public:
     template<typename Func, size_t N>
     void emitCCall(Func function, const Vector<Value, N>& arguments, Value& result);
 
-    void emitTailCall(unsigned functionIndex, const TypeDefinition& signature, Vector<Value>& arguments);
-    PartialResult WARN_UNUSED_RETURN addCall(unsigned functionIndex, const TypeDefinition& signature, Vector<Value>& arguments, ResultList& results, CallType callType = CallType::Call);
+    void emitTailCall(FunctionSpaceIndex functionIndex, const TypeDefinition& signature, ArgumentList& arguments);
+    PartialResult WARN_UNUSED_RETURN addCall(FunctionSpaceIndex functionIndex, const TypeDefinition& signature, ArgumentList& arguments, ResultList& results, CallType = CallType::Call);
 
-    void emitIndirectCall(const char* opcode, const Value& calleeIndex, GPRReg calleeInstance, GPRReg calleeCode, const TypeDefinition& signature, Vector<Value>& arguments, ResultList& results);
-    void emitIndirectTailCall(const Value& calleeIndex, GPRReg calleeInstance, GPRReg calleeCode, const TypeDefinition& signature, Vector<Value>& arguments);
+    void emitIndirectCall(const char* opcode, const Value& callee, GPRReg calleeInstance, GPRReg calleeCode, const TypeDefinition& signature, ArgumentList& arguments, ResultList& results);
+    void emitIndirectTailCall(const char* opcode, const Value& callee, GPRReg calleeInstance, GPRReg calleeCode, const TypeDefinition& signature, ArgumentList& arguments);
     void addRTTSlowPathJump(TypeIndex, GPRReg);
     void emitSlowPathRTTCheck(MacroAssembler::Label, TypeIndex, GPRReg);
 
-    PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition& originalSignature, Vector<Value>& args, ResultList& results, CallType callType = CallType::Call);
+    PartialResult WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const TypeDefinition& originalSignature, ArgumentList& args, ResultList& results, CallType = CallType::Call);
 
-    PartialResult WARN_UNUSED_RETURN addCallRef(const TypeDefinition& originalSignature, Vector<Value>& args, ResultList& results);
+    PartialResult WARN_UNUSED_RETURN addCallRef(const TypeDefinition& originalSignature, ArgumentList& args, ResultList& results, CallType = CallType::Call);
 
     PartialResult WARN_UNUSED_RETURN addUnreachable();
 
@@ -1859,9 +1898,8 @@ public:
     void finalize();
 
     Vector<UnlinkedHandlerInfo>&& takeExceptionHandlers();
-
+    FixedBitVector&& takeDirectCallees();
     Vector<CCallHelpers::Label>&& takeCatchEntrypoints();
-
     Box<PCToCodeOriginMapBuilder> takePCToCodeOriginMapBuilder();
 
     std::unique_ptr<BBQDisassembler> takeDisassembler();
@@ -1936,6 +1974,7 @@ private:
     void unbind(Value value, Location loc);
 
     void unbindAllRegisters();
+
     template<typename Register>
     static Register fromJSCReg(Reg reg)
     {
@@ -2138,7 +2177,7 @@ private:
             RegisterBinding& binding = m_generator.m_gprBindings[reg];
             m_generator.m_gprLRU.unlock(reg);
             if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                dataLogLn("BBQ\tReleasing GPR ", MacroAssembler::gprName(reg));
+                dataLogLn("BBQ\tReleasing GPR ", MacroAssembler::gprName(reg), " preserved? ", m_preserved.contains(reg, IgnoreVectors), " binding: ", binding);
             if (m_preserved.contains(reg, IgnoreVectors) && !binding.isScratch())
                 return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.
             ASSERT(binding.isScratch());
@@ -2153,7 +2192,7 @@ private:
             RegisterBinding& binding = m_generator.m_fprBindings[reg];
             m_generator.m_fprLRU.unlock(reg);
             if (UNLIKELY(Options::verboseBBQJITAllocation()))
-                dataLogLn("BBQ\tReleasing FPR ", MacroAssembler::fprName(reg));
+                dataLogLn("BBQ\tReleasing FPR ", MacroAssembler::fprName(reg), " preserved? ", m_preserved.contains(reg, Width::Width128), " binding: ", binding);
             if (m_preserved.contains(reg, Width::Width128) && !binding.isScratch())
                 return; // It's okay if the register isn't bound to a scratch if we meant to preserve it - maybe it was just already bound to something.
             ASSERT(binding.isScratch());
@@ -2219,16 +2258,18 @@ private:
 
     void F64CopysignHelper(Location lhsLocation, Location rhsLocation, Location resultLocation);
 
+    bool canTierUpToOMG() const;
+
     CCallHelpers& m_jit;
     BBQCallee& m_callee;
     const FunctionData& m_function;
     const FunctionSignature* m_functionSignature;
-    uint32_t m_functionIndex;
+    FunctionCodeIndex m_functionIndex;
     const ModuleInformation& m_info;
     MemoryMode m_mode;
     Vector<UnlinkedWasmToWasmCall>& m_unlinkedWasmToWasmCalls;
+    FixedBitVector m_directCallees;
     std::optional<bool> m_hasExceptionHandlers;
-    TierUpCount* m_tierUp;
     FunctionParser<BBQJIT>* m_parser;
     Vector<uint32_t, 4> m_arguments;
     ControlData m_topLevel;
@@ -2273,6 +2314,7 @@ private:
 
     PCToCodeOriginMapBuilder m_pcToCodeOriginMapBuilder;
     std::unique_ptr<BBQDisassembler> m_disassembler;
+
 #if ASSERT_ENABLED
     Vector<Value, 8> m_justPoppedStack;
     OpType m_prevOpcode;
@@ -2296,8 +2338,10 @@ using MinOrMax = BBQJIT::MinOrMax;
 class BBQCallee;
 
 using BBQJIT = BBQJITImpl::BBQJIT;
-Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileBBQ(CompilationContext&, BBQCallee&, const FunctionData&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>&, const ModuleInformation&, MemoryMode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, unsigned, TierUpCount* = nullptr);
+Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileBBQ(CompilationContext&, BBQCallee&, const FunctionData&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>&, const ModuleInformation&, MemoryMode, FunctionCodeIndex functionIndex, std::optional<bool> hasExceptionHandlers, unsigned);
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_OMGJIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#endif // ENABLE(WEBASSEMBLY_BBQJIT)

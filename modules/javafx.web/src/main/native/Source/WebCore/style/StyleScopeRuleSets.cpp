@@ -308,14 +308,14 @@ void ScopeRuleSets::collectFeatures() const
 }
 
 template<typename KeyType, typename RuleFeatureVectorType, typename Hash, typename HashTraits>
-static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& key, HashMap<KeyType, std::unique_ptr<Vector<InvalidationRuleSet>>, Hash, HashTraits>& ruleSetMap, const HashMap<KeyType, std::unique_ptr<RuleFeatureVectorType>, Hash, HashTraits>& ruleFeatures)
+static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const KeyType& key, UncheckedKeyHashMap<KeyType, std::unique_ptr<Vector<InvalidationRuleSet>>, Hash, HashTraits>& ruleSetMap, const UncheckedKeyHashMap<KeyType, std::unique_ptr<RuleFeatureVectorType>, Hash, HashTraits>& ruleFeatures)
 {
     return ruleSetMap.ensure(key, [&] () -> std::unique_ptr<Vector<InvalidationRuleSet>> {
         auto* features = ruleFeatures.get(key);
         if (!features)
             return nullptr;
 
-        HashMap<std::tuple<uint8_t, bool, bool>, InvalidationRuleSet> invalidationRuleSetMap;
+        UncheckedKeyHashMap<std::tuple<uint8_t, bool, bool>, InvalidationRuleSet> invalidationRuleSetMap;
 
         for (auto& feature : *features) {
             auto key = std::tuple { static_cast<uint8_t>(feature.matchElement), static_cast<bool>(feature.isNegation), true };
@@ -369,10 +369,10 @@ const Vector<InvalidationRuleSet>* ScopeRuleSets::hasPseudoClassInvalidationRule
     return ensureInvalidationRuleSets(key, m_hasPseudoClassInvalidationRuleSets, m_features.hasPseudoClassRules);
 }
 
-const HashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQueries() const
+const UncheckedKeyHashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQueries() const
 {
     if (!m_customPropertyNamesInStyleContainerQueries) {
-        HashSet<AtomString> propertyNames;
+        UncheckedKeyHashSet<AtomString> propertyNames;
 
         auto collectPropertyNames = [&](auto* ruleSet) {
             if (!ruleSet)
@@ -395,7 +395,6 @@ const HashSet<AtomString>& ScopeRuleSets::customPropertyNamesInStyleContainerQue
 
 SelectorsForStyleAttribute ScopeRuleSets::selectorsForStyleAttribute() const
 {
-
     auto compute = [&] {
         auto* ruleSets = attributeInvalidationRuleSets(HTMLNames::styleAttr->localName());
         if (!ruleSets)
@@ -413,7 +412,7 @@ SelectorsForStyleAttribute ScopeRuleSets::selectorsForStyleAttribute() const
     return *m_cachedSelectorsForStyleAttribute;
 }
 
-bool ScopeRuleSets::hasMatchingUserOrAuthorStyle(const Function<bool(RuleSet&)>& predicate)
+bool ScopeRuleSets::hasMatchingUserOrAuthorStyle(NOESCAPE const WTF::Function<bool(RuleSet&)>& predicate)
 {
     if (m_authorStyle && predicate(*m_authorStyle))
         return true;

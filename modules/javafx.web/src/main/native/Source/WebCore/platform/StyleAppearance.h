@@ -35,6 +35,7 @@ namespace WebCore {
 enum class StyleAppearance : uint8_t {
     None,
     Auto,
+    Base,
     Checkbox,
     Radio,
     PushButton,
@@ -63,16 +64,12 @@ enum class StyleAppearance : uint8_t {
     TextArea,
     TextField,
     // Internal-only Values
-#if ENABLE(INPUT_TYPE_COLOR)
     ColorWell,
-#endif
 #if ENABLE(SERVICE_CONTROLS)
     ImageControlsButton,
 #endif
     InnerSpinButton,
-#if ENABLE(DATALIST_ELEMENT)
     ListButton,
-#endif
     SearchFieldDecoration,
     SearchFieldResultsDecoration,
     SearchFieldResultsButton,

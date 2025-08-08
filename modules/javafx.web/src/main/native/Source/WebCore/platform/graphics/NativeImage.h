@@ -32,16 +32,16 @@
 #include "IntSize.h"
 #include "PlatformImage.h"
 #include "RenderingResource.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class GraphicsContext;
-
 class NativeImageBackend;
 
 class NativeImage final : public RenderingResource {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NativeImage);
 public:
     static WEBCORE_EXPORT RefPtr<NativeImage> create(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
     // Creates a NativeImage that is intended to be drawn once or only few times. Signals the platform to avoid generating any caches for the image.
@@ -55,6 +55,7 @@ public:
     bool hasAlpha() const;
     std::optional<Color> singlePixelSolidColor() const;
     WEBCORE_EXPORT DestinationColorSpace colorSpace() const;
+    Headroom headroom() const;
 
     void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions);
     void clearSubimages();
@@ -62,6 +63,10 @@ public:
     WEBCORE_EXPORT void replaceBackend(UniqueRef<NativeImageBackend>);
     NativeImageBackend& backend() { return m_backend.get(); }
     const NativeImageBackend& backend() const { return m_backend.get(); }
+
+#if USE(COORDINATED_GRAPHICS)
+    uint64_t uniqueID() const;
+#endif
 protected:
     NativeImage(UniqueRef<NativeImageBackend>, RenderingResourceIdentifier);
 
@@ -78,6 +83,7 @@ public:
     virtual IntSize size() const = 0;
     virtual bool hasAlpha() const = 0;
     virtual DestinationColorSpace colorSpace() const = 0;
+    virtual Headroom headroom() const = 0;
     WEBCORE_EXPORT virtual bool isRemoteNativeImageBackendProxy() const;
 };
 
@@ -89,6 +95,7 @@ public:
     WEBCORE_EXPORT IntSize size() const final;
     WEBCORE_EXPORT bool hasAlpha() const final;
     WEBCORE_EXPORT DestinationColorSpace colorSpace() const final;
+    WEBCORE_EXPORT Headroom headroom() const final;
 private:
     PlatformImagePtr m_platformImage;
 };

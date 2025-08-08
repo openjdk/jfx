@@ -36,14 +36,16 @@ class WorkerOrWorkletGlobalScope;
 class WorkerWorkerAgent final : public InspectorWorkerAgent {
     WTF_MAKE_TZONE_ALLOCATED(WorkerWorkerAgent);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerWorkerAgent);
+
 public:
     explicit WorkerWorkerAgent(WorkerAgentContext&);
+
     ~WorkerWorkerAgent();
 
 private:
     void connectToAllWorkerInspectorProxies() override;
 
-    WorkerOrWorkletGlobalScope& m_globalScope;
+    WeakRef<WorkerOrWorkletGlobalScope> m_globalScope;
 };
 
 } // namespace WebCore

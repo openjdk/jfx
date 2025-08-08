@@ -24,7 +24,9 @@
 
 #include "CSSLayerBlockRule.h"
 #include "CSSMarkup.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
+#include "CachedCSSStyleSheet.h"
 #include "MediaList.h"
 #include "MediaQueryParser.h"
 #include "StyleRuleImport.h"
@@ -103,16 +105,16 @@ String CSSImportRule::cssText() const
     return cssTextInternal(m_importRule->href());
 }
 
-String CSSImportRule::cssTextWithReplacementURLs(const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+String CSSImportRule::cssText(const CSS::SerializationContext& context) const
 {
     if (RefPtr sheet = styleSheet()) {
-        auto urlString = replacementURLStringsForCSSStyleSheet.get(sheet);
+        auto urlString = context.replacementURLStringsForCSSStyleSheet.get(*sheet);
         if (!urlString.isEmpty())
             return cssTextInternal(urlString);
     }
 
     auto urlString = m_importRule->href();
-    auto replacementURLString = replacementURLStrings.get(urlString);
+    auto replacementURLString = context.replacementURLStrings.get(urlString);
     return replacementURLString.isEmpty() ? cssTextInternal(urlString) : cssTextInternal(replacementURLString);
 }
 
@@ -120,8 +122,13 @@ CSSStyleSheet* CSSImportRule::styleSheet() const
 {
     if (!m_importRule.get().styleSheet())
         return nullptr;
+
+    std::optional<bool> isOriginClean;
+    if (const auto* cachedSheet = m_importRule->cachedCSSStyleSheet())
+        isOriginClean = cachedSheet->isCORSSameOrigin();
+
     if (!m_styleSheetCSSOMWrapper)
-        m_styleSheetCSSOMWrapper = CSSStyleSheet::create(*m_importRule.get().styleSheet(), const_cast<CSSImportRule*>(this));
+        m_styleSheetCSSOMWrapper = CSSStyleSheet::create(*m_importRule.get().styleSheet(), const_cast<CSSImportRule*>(this), isOriginClean);
     return m_styleSheetCSSOMWrapper.get();
 }
 
@@ -146,7 +153,7 @@ void CSSImportRule::setMediaQueries(MQ::MediaQueryList&& queries)
     m_importRule->setMediaQueries(WTFMove(queries));
 }
 
-void CSSImportRule::getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
+void CSSImportRule::getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
 {
     RefPtr sheet = styleSheet();
     if (!sheet)

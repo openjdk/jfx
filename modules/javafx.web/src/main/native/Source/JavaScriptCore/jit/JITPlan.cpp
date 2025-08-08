@@ -52,6 +52,13 @@ JITPlan::JITPlan(JITCompilationMode mode, CodeBlock* codeBlock)
     , m_vm(&codeBlock->vm())
     , m_codeBlock(codeBlock)
 {
+    m_vm->changeNumberOfActiveJITPlans(1);
+}
+
+JITPlan::~JITPlan()
+{
+    if (m_vm)
+        m_vm->changeNumberOfActiveJITPlans(-1);
 }
 
 void JITPlan::cancel()
@@ -59,6 +66,7 @@ void JITPlan::cancel()
     RELEASE_ASSERT(m_stage != JITPlanStage::Canceled);
     RELEASE_ASSERT(!safepointKeepsDependenciesLive());
     ASSERT(m_vm);
+    m_vm->changeNumberOfActiveJITPlans(-1);
     m_stage = JITPlanStage::Canceled;
     m_vm = nullptr;
     m_codeBlock = nullptr;
@@ -120,7 +128,7 @@ bool JITPlan::isKnownToBeLiveDuringGC(AbstractSlotVisitor& visitor)
     return true;
 }
 
-bool JITPlan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, const Function<void(CodeBlock*)>& func)
+bool JITPlan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, NOESCAPE const Function<void(CodeBlock*)>& func)
 {
     if (!isKnownToBeLiveDuringGC(visitor))
         return false;
@@ -139,6 +147,11 @@ bool JITPlan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
 
     visitor.appendUnbarriered(m_codeBlock);
     return true;
+}
+
+bool JITPlan::isInSafepoint() const
+{
+    return m_thread && m_thread->safepoint();
 }
 
 bool JITPlan::safepointKeepsDependenciesLive() const

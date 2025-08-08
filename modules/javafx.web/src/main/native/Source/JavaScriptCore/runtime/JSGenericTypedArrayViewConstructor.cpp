@@ -31,6 +31,8 @@
 #include "ParseInt.h"
 #include <wtf/text/Base64.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -97,8 +99,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
     JSUint8Array* uint8Array = JSUint8Array::createUninitialized(globalObject, globalObject->typedArrayStructure(TypeUint8, false), writeLength);
     RETURN_IF_EXCEPTION(scope, { });
 
-    uint8_t* data = uint8Array->typedVector();
-    memcpySpan(std::span { data, data + writeLength }, output.span().subspan(0, writeLength));
+    memcpySpan(uint8Array->typedSpan(), output.span().first(writeLength));
     return JSValue::encode(uint8Array);
 }
 
@@ -152,12 +153,12 @@ inline static WARN_UNUSED_RETURN size_t decodeHexImpl(std::span<CharacterType> s
     if (span.size() >= stride) {
         auto doStridedDecode = [&]() ALWAYS_INLINE_LAMBDA {
             if constexpr (sizeof(CharacterType) == 1) {
-                for (; cursor + (stride - 1) < end; cursor += stride, output += halfStride) {
-                    if (!vectorDecode8(SIMD::load(bitwise_cast<const uint8_t*>(cursor)), output))
+                for (; cursor + stride <= end; cursor += stride, output += halfStride) {
+                    if (!vectorDecode8(SIMD::load(std::bit_cast<const uint8_t*>(cursor)), output))
                         return false;
                 }
                 if (cursor < end) {
-                    if (!vectorDecode8(SIMD::load(bitwise_cast<const uint8_t*>(end - stride)), outputEnd - halfStride))
+                    if (!vectorDecode8(SIMD::load(std::bit_cast<const uint8_t*>(end - stride)), outputEnd - halfStride))
                         return false;
                 }
                 return true;
@@ -168,12 +169,12 @@ inline static WARN_UNUSED_RETURN size_t decodeHexImpl(std::span<CharacterType> s
                     return vectorDecode8(input.val[0], output);
                 };
 
-                for (; cursor + (stride - 1) < end; cursor += stride, output += halfStride) {
-                    if (!vectorDecode16(simde_vld2q_u8(bitwise_cast<const uint8_t*>(cursor)), output))
+                for (; cursor + stride <= end; cursor += stride, output += halfStride) {
+                    if (!vectorDecode16(simde_vld2q_u8(std::bit_cast<const uint8_t*>(cursor)), output))
                         return false;
                 }
                 if (cursor < end) {
-                    if (!vectorDecode16(simde_vld2q_u8(bitwise_cast<const uint8_t*>(end - stride)), outputEnd - halfStride))
+                    if (!vectorDecode16(simde_vld2q_u8(std::bit_cast<const uint8_t*>(end - stride)), outputEnd - halfStride))
                         return false;
                 }
                 return true;
@@ -242,3 +243,5 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromHex, (JSGlobalObject* globalOb
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

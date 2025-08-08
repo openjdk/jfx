@@ -98,12 +98,16 @@ public:
     static JSGenericTypedArrayView* create(JSGlobalObject*, Structure*, RefPtr<ArrayBuffer>&&, size_t byteOffset, std::optional<size_t> length);
     static JSGenericTypedArrayView* create(VM&, Structure*, RefPtr<typename Adaptor::ViewType>&& impl);
     static JSGenericTypedArrayView* create(Structure*, JSGlobalObject*, RefPtr<typename Adaptor::ViewType>&& impl);
+    static JSGenericTypedArrayView* tryCreate(JSGlobalObject*, Structure*, RefPtr<typename Adaptor::ViewType>&& impl);
 
     inline size_t byteLength() const;
     inline size_t byteLengthRaw() const;
 
     inline const typename Adaptor::Type* typedVector() const;
     inline typename Adaptor::Type* typedVector();
+
+    std::span<const typename Adaptor::Type> typedSpan() const { return unsafeMakeSpan(typedVector(), length()); }
+    std::span<typename Adaptor::Type> typedSpan() { return unsafeMakeSpan(typedVector(), length()); }
 
     inline bool inBounds(size_t) const;
 
@@ -223,6 +227,8 @@ public:
 
     static inline const ClassInfo* info();
     static inline Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
+
+    static bool preventExtensions(JSObject*, JSGlobalObject*);
 };
 
 template<typename Adaptor> inline RefPtr<typename Adaptor::ViewType> toPossiblySharedNativeTypedView(VM&, JSValue);

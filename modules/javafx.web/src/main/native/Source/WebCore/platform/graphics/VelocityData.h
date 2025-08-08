@@ -27,6 +27,7 @@
 
 #include "FloatPoint.h"
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -64,7 +65,7 @@ struct VelocityData  {
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const VelocityData&);
 
 class HistoricalVelocityData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HistoricalVelocityData);
 public:
     HistoricalVelocityData() = default;
 
@@ -82,7 +83,8 @@ private:
         MonotonicTime timestamp;
         FloatPoint position;
         double scale;
-    } m_positionHistory[maxHistoryDepth];
+    };
+    std::array<Data, maxHistoryDepth> m_positionHistory;
 };
 
 } // namespace WebCore

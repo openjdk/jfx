@@ -65,7 +65,7 @@ public:
     void useLenientXMLDecoding() { m_useLenientXMLDecoding = true; }
     bool sawError() const { return m_sawError; }
 
-    void setAlwaysUseUTF8() { ASSERT(!strcmp(m_encoding.name(), "UTF-8")); m_alwaysUseUTF8 = true; }
+    void setAlwaysUseUTF8() { ASSERT(m_encoding.name() == "UTF-8"_s); m_alwaysUseUTF8 = true; }
 
 private:
     TextResourceDecoder(const String& mimeType, const PAL::TextEncoding& defaultEncoding, bool usesEncodingDetector);
@@ -86,7 +86,7 @@ private:
     std::unique_ptr<PAL::TextCodec> m_codec;
     std::unique_ptr<HTMLMetaCharsetParser> m_charsetParser;
     EncodingSource m_source { DefaultEncoding };
-    const char* m_parentFrameAutoDetectedEncoding { nullptr };
+    ASCIILiteral m_parentFrameAutoDetectedEncoding;
     Vector<uint8_t> m_buffer;
     bool m_checkedForBOM { false };
     bool m_checkedForCSSCharset { false };

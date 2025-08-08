@@ -49,6 +49,7 @@ public:
     PlatformPathPtr platformPath() const;
 
     void addPath(const PathJava&, const AffineTransform&);
+    bool definitelyEqual(const PathImpl&) const final;
 
     bool applyElements(const PathElementApplier&) const final;
 
@@ -72,6 +73,7 @@ private:
     void add(PathEllipseInRect) final;
     void add(PathRect) final;
     void add(PathRoundedRect) final;
+    void add(PathContinuousRoundedRect) final;
     void add(PathCloseSubpath) final;
 
     void applySegments(const PathSegmentApplier&) const final;

@@ -29,6 +29,8 @@
 #include "AudioParam.h"
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -39,14 +41,14 @@ class AudioNodeInput;
 // It may be connected to one or more AudioNodeInputs.
 
 class AudioNodeOutput {
+    WTF_MAKE_TZONE_ALLOCATED(AudioNodeOutput);
     WTF_MAKE_NONCOPYABLE(AudioNodeOutput);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     // It's OK to pass 0 for numberOfChannels in which case setNumberOfChannels() must be called later on.
     AudioNodeOutput(AudioNode*, unsigned numberOfChannels);
 
     // Can be called from any thread.
-    AudioNode* node() const { return m_node; }
+    AudioNode* node() const { return m_node.get(); }
     BaseAudioContext& context() { return m_node->context(); }
 
     // Causes our AudioNode to process if it hasn't already for this render quantum.
@@ -92,7 +94,7 @@ public:
     void updateRenderingState();
 
 private:
-    AudioNode* m_node;
+    WeakPtr<AudioNode, WeakPtrImplWithEventTargetData> m_node;
 
     friend class AudioNodeInput;
     friend class AudioParam;

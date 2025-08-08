@@ -96,6 +96,36 @@ String PublicSuffixStore::topPrivatelyControlledDomain(StringView host) const
     return result;
 }
 
+
+
+String PublicSuffixStore::topPrivatelyControlledDomainWithoutPublicSuffix(StringView host) const
+{
+    auto topPrivatelyControlledDomain = this->topPrivatelyControlledDomain(host);
+    if (topPrivatelyControlledDomain.isEmpty())
+        return { };
+
+    return domainWithoutPublicSuffix(topPrivatelyControlledDomain);
+}
+
+String PublicSuffixStore::domainWithoutPublicSuffix(StringView domain) const
+{
+    if (URL::hostIsIPAddress(domain))
+        return domain.toString();
+
+    size_t separatorPosition;
+    for (unsigned labelStart = 0; (separatorPosition = domain.find('.', labelStart)) != notFound; labelStart = separatorPosition + 1) {
+        auto candidate = domain.substring(separatorPosition + 1);
+        if (isPublicSuffix(candidate)) {
+            if (separatorPosition > 0 && domain.length() > separatorPosition) {
+                auto domainWithoutSuffix = domain.substring(0, separatorPosition);
+                return domainWithoutSuffix.toString();
+            }
+        }
+    }
+
+    return domain.toString();
+}
+
 #if PLATFORM(JAVA)
 bool PublicSuffixStore::platformIsPublicSuffix(StringView domain) const
 {

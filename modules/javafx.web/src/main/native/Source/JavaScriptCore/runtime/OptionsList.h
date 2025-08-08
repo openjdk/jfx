@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,14 +38,11 @@ using WTF::PrintStream;
 
 namespace JSC {
 
-#if PLATFORM(IOS_FAMILY)
-#define MAXIMUM_NUMBER_OF_FTL_COMPILER_THREADS 2
-#else
 #define MAXIMUM_NUMBER_OF_FTL_COMPILER_THREADS 8
-#endif
 
 JS_EXPORT_PRIVATE bool canUseJITCage();
 bool canUseHandlerIC();
+bool canUseWasm();
 bool hasCapacityToUseLargeGigacage();
 
 // How do JSC VM options work?
@@ -88,6 +85,7 @@ bool hasCapacityToUseLargeGigacage();
     \
     v(Bool, useLLInt,  true, Normal, "allows the LLINT to be used if true"_s) \
     v(Bool, useJIT, jitEnabledByDefault(), Normal, "allows the executable pages to be allocated for JIT and thunks if true"_s) \
+    v(Bool, useWasmJIT, jitEnabledByDefault(), Normal, "allows wasm to use JIT and thunks if true"_s) \
     v(Bool, useBaselineJIT, true, Normal, "allows the baseline JIT to be used if true"_s) \
     v(Bool, useDFGJIT, true, Normal, "allows the DFG JIT to be used if true"_s) \
     v(Bool, useRegExpJIT, jitEnabledByDefault(), Normal, "allows the RegExp JIT to be used if true"_s) \
@@ -211,6 +209,9 @@ bool hasCapacityToUseLargeGigacage();
     v(Double, mediumHeapGrowthFactor, 1.5, Normal, nullptr) \
     v(Double, largeHeapGrowthFactor, 1.24, Normal, nullptr) \
     v(Double, miniVMHeapGrowthFactor, 1.20, Normal, nullptr) \
+    v(Double, heapGrowthSteepnessFactor, 1.00, Normal, nullptr) \
+    v(Double, heapGrowthMaxIncrease, 2.00, Normal, nullptr) \
+    v(Unsigned, heapGrowthFunctionThresholdInMB, 16 * 1024, Normal, nullptr) \
     v(Double, criticalGCMemoryThreshold, 0.80, Normal, "percent memory in use the GC considers critical.  The collector is much more aggressive above this threshold"_s) \
     v(Double, customFullGCCallbackBailThreshold, -1.0, Normal, "percent of memory paged out before we bail out of timer based Full GCs. -1.0 means use (maxHeapGrowthFactor - 1)"_s) \
     v(Double, minimumMutatorUtilization, 0, Normal, nullptr) \
@@ -290,11 +291,13 @@ bool hasCapacityToUseLargeGigacage();
     v(Unsigned, maximumFunctionForCallInlineCandidateBytecodeCostForDFG, 80, Normal, nullptr) \
     v(Unsigned, maximumFunctionForClosureCallInlineCandidateBytecodeCostForDFG, 80, Normal, nullptr) \
     v(Unsigned, maximumFunctionForConstructInlineCandidateBytecodeCostForDFG, 80, Normal, nullptr) \
-    v(Unsigned, maximumFunctionForCallInlineCandidateBytecodeCostForFTL, 125, Normal, nullptr) \
+    v(Unsigned, maximumFunctionForCallInlineCandidateBytecodeCostForFTL, 160, Normal, nullptr) \
     v(Unsigned, maximumFunctionForClosureCallInlineCandidateBytecodeCostForFTL, 100, Normal, nullptr) \
     v(Unsigned, maximumFunctionForConstructInlineCandidateBytecodeCostForFTL, 100, Normal, nullptr) \
     \
     v(Unsigned, maximumFTLCandidateBytecodeCost, 20000, Normal, nullptr) \
+    \
+    v(Double, ratioFTLNodesToBytecodeCost, 1.8, Normal, "Ratio converting FTL # of DFG nodes to approx bytecode cost") \
     \
     /* Depth of inline stack, so 1 = no inlining, 2 = one level, etc. */ \
     v(Unsigned, maximumInliningDepth, 5, Normal, "maximum allowed inlining depth.  Depth of 1 means no inlining"_s) \
@@ -313,6 +316,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Unsigned, maximumWasmDepthForInlining, isIOS() ? 2 : 8, Normal, "Maximum inlining depth to consider inlining a wasm function."_s) \
     v(Unsigned, maximumWasmCalleeSizeForInlining, 200, Normal, "Maximum wasm size in bytes to consider inlining a wasm function."_s) \
     v(Unsigned, maximumWasmCallerSizeForInlining, 10000, Normal, "Maximum wasm size in bytes for the caller of an inlined function."_s) \
+    v(Unsigned, maximumWasmSelfRecursionDepthForInlining, 5, Normal, "Maximum self cursion inlining depth to consider inlining a wasm function."_s) \
     \
     v(Double, jitPolicyScale, 1.0, Normal, "scale JIT thresholds to this specified ratio between 0.0 (compile ASAP) and 1.0 (compile like normal)."_s) \
     v(Bool, forceEagerCompilation, false, Normal, nullptr) \
@@ -366,6 +370,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Double, minHeapUtilization, 0.8, Normal, nullptr) \
     v(Double, minMarkedBlockUtilization, 0.9, Normal, nullptr) \
     v(Unsigned, slowPathAllocsBetweenGCs, 0, Normal, "force a GC on every Nth slow path alloc, where N is specified by this option"_s) \
+    v(Unsigned, maxRegExpStackSize, 128 * MB, Normal, nullptr) \
     \
     v(Double, percentCPUPerMBForFullTimer, 0.0003125, Normal, nullptr) \
     v(Double, percentCPUPerMBForEdenTimer, 0.0025, Normal, nullptr) \
@@ -388,9 +393,11 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, forceGCSlowPaths, false, Normal, "If true, we will force all JIT fast allocations down their slow paths."_s) \
     v(Bool, forceDidDeferGCWork, false, Normal, "If true, we will force all DeferGC destructions to perform a GC."_s) \
     v(Unsigned, gcMaxHeapSize, 0, Normal, nullptr) \
-    v(Unsigned, forceRAMSize, 0, Normal, nullptr) \
+    v(Size, forceRAMSize, 0, Normal, nullptr) \
     v(Bool, recordGCPauseTimes, false, Normal, nullptr) \
     v(Bool, dumpHeapStatisticsAtVMDestruction, false, Normal, nullptr) \
+    v(Bool, enableStrongRefTracker, false, Normal, "Enable logging of live Strong<*> values. Use alongside $vm.triggerMemoryPressure() and dumpHeapOnLowMemory."_s) \
+    v(Bool, dumpHeapOnLowMemory, false, Normal, "Dump a heap dump when the memory handler is triggered. Use alongside $vm.triggerMemoryPressure() and enableStrongRefTracker."_s) \
     v(Bool, forceCodeBlockToJettisonDueToOldAge, false, Normal, "If true, this means that anytime we can jettison a CodeBlock due to old age, we do."_s) \
     v(Bool, useEagerCodeBlockJettisonTiming, false, Normal, "If true, the time slices for jettisoning a CodeBlock due to old age are shrunk significantly."_s) \
     \
@@ -427,12 +434,15 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, validateDFGClobberize, false, Normal, "Emits code in the DFG/FTL to validate the Clobberize phase"_s) \
     v(Bool, validateBoundsCheckElimination, false, Normal, "Emits code in the DFG/FTL to validate bounds check elimination"_s) \
     \
+    v(Bool, validateVMEntryCalleeSaves, false, Configurable, "Causes vmEntryToJavaScript to validate VMEntry callee saves are properly restored"_s) \
+    \
     v(Bool, useExecutableAllocationFuzz, false, Normal, nullptr) \
     v(Unsigned, fireExecutableAllocationFuzzAt, 0, Normal, nullptr) \
     v(Unsigned, fireExecutableAllocationFuzzAtOrAfter, 0, Normal, nullptr) \
     v(Bool, fireExecutableAllocationFuzzRandomly, false, Normal, nullptr) \
     v(Double, fireExecutableAllocationFuzzRandomlyProbability, 0.1, Normal, nullptr) \
     v(Bool, verboseExecutableAllocationFuzz, false, Normal, nullptr) \
+    v(Bool, zeroExecutableMemoryOnFree, false, Normal, "0 out instructions when freeing JIT memory."_s) \
     \
     v(Bool, useOSRExitFuzz, false, Normal, nullptr) \
     v(Unsigned, fireOSRExitFuzzAtStatic, 0, Normal, nullptr) \
@@ -459,6 +469,10 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, airLinearScanSpillsEverything, false, Normal, nullptr) \
     v(Bool, airForceBriggsAllocator, false, Normal, nullptr) \
     v(Bool, airForceIRCAllocator, false, Normal, nullptr) \
+    v(Bool, airGreedyRegAllocVerbose, false, Normal, nullptr) \
+    v(Bool, airUseGreedyRegAlloc, false, Normal, nullptr) \
+    v(Double, airGreedyRegAllocSplitMultiplier, 2.0, Normal, nullptr) \
+    v(Bool, airValidateGreedRegAlloc, ASSERT_ENABLED, Normal, nullptr) \
     v(Bool, airRandomizeRegs, false, Normal, nullptr) \
     v(Unsigned, airRandomizeRegsSeed, 0, Normal, nullptr) \
     v(Bool, coalesceSpillSlots, true, Normal, nullptr) \
@@ -497,10 +511,11 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useSourceProviderCache, true, Normal, "If false, the parser will not use the source provider cache. It's good to verify everything works when this is false. Because the cache is so successful, it can mask bugs."_s) \
     v(Bool, useCodeCache, true, Normal, "If false, the unlinked byte code cache will not be used."_s) \
     \
-    v(Bool, useWasm, true, Normal, "Expose the Wasm global object."_s) \
+    v(Bool, useWasm, canUseWasm(), Normal, "Expose the Wasm global object."_s) \
     \
     v(Bool, failToCompileWasmCode, false, Normal, "If true, no Wasm::Plan will sucessfully compile a function."_s) \
-    v(Size, wasmPartialCompileLimit, 5000, Normal, "Limit on the number of bytes a Wasm::Plan::compile should attempt before checking for other work."_s) \
+    v(Size, wasmSmallPartialCompileLimit, 5000, Normal, "Limit on the number of bytes a Wasm::Plan::compile should attempt for small wasm binary before checking for other work."_s) \
+    v(Size, wasmLargePartialCompileLimit, 20000, Normal, "Limit on the number of bytes a Wasm::Plan::compile should attempt for large wasm binary before checking for other work."_s) \
     v(Unsigned, wasmOMGOptimizationLevel, Options::defaultB3OptLevel(), Normal, "B3 Optimization level for OMG Web Assembly module compilations."_s) \
     \
     v(Bool, useBBQTierUpChecks, true, Normal, "Enables tier up checks for our BBQ code."_s) \
@@ -509,6 +524,7 @@ bool hasCapacityToUseLargeGigacage();
     v(Int32, thresholdForBBQOptimizeSoon, 50, Normal, nullptr) \
     v(Int32, thresholdForOMGOptimizeAfterWarmUp, 50000, Normal, "The count before we tier up a function to OMG."_s) \
     v(Int32, thresholdForOMGOptimizeSoon, 500, Normal, nullptr) \
+    v(Unsigned, maximumOMGCandidateCost, 40000, Normal, nullptr) \
     v(Int32, omgTierUpCounterIncrementForLoop, 1, Normal, "The amount the tier up counter is incremented on each loop backedge."_s) \
     v(Int32, omgTierUpCounterIncrementForEntry, 15, Normal, "The amount the tier up counter is incremented on each function entry."_s) \
     v(Bool, useWasmFastMemory, true, Normal, "If true, we will try to use a 32-bit address space with a signal handler to bounds check wasm memory."_s) \
@@ -526,14 +542,15 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useWasmLLIntLoopOSR, true, Normal, "allows loop OSR from wasm LLInt if true"_s) \
     v(Bool, useWasmLLIntEpilogueOSR, true, Normal, "allows epilogue OSR from wasm LLInt if true"_s) \
     v(OptionRange, wasmFunctionIndexRangeToCompile, nullptr, Normal, "wasm function index range to allow compilation on, e.g. 1:100"_s) \
-    v(Bool, wasmLLIntTiersUpToBBQ, true, Normal, nullptr) \
     v(Bool, useEagerWasmModuleHashing, false, Normal, "Unnamed Wasm modules are identified in backtraces through their hash, if available."_s) \
     v(Bool, useArrayAllocationProfiling, true, Normal, "If true, we will use our normal array allocation profiling. If false, the allocation profile will always claim to be undecided."_s) \
     v(Bool, forcePolyProto, false, Normal, "If true, create_this will always create an object with a poly proto structure."_s) \
     v(Bool, forceMiniVMMode, false, Normal, "If true, it will force mini VM mode on."_s) \
     v(Bool, useTracePoints, false, Normal, nullptr) \
     v(Bool, useCompilerSignpost, false, Normal, nullptr) \
+    v(Bool, useGCSignpost, false, Normal, nullptr) \
     v(Bool, traceLLIntExecution, false, Configurable, nullptr) \
+    v(Bool, traceWasmLLIntExecution, false, Configurable, nullptr) \
     v(Bool, traceLLIntSlowPath, false, Configurable, nullptr) \
     v(Bool, traceBaselineJITExecution, false, Normal, nullptr) \
     v(Unsigned, thresholdForGlobalLexicalBindingEpoch, UINT_MAX, Normal, "Threshold for global lexical binding epoch. If the epoch reaches to this value, CodeBlock metadata for scope operations will be revised globally. It needs to be greater than 1."_s) \
@@ -557,8 +574,15 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, exposeCustomSettersOnGlobalObjectForTesting, false, Normal, nullptr) \
     v(Bool, useJITCage, canUseJITCage(), Normal, nullptr) \
     v(Bool, useAllocationProfiling, false, Normal, "Allows toggling of bmalloc/libPAS allocation profiling features at JSC launch."_s) \
+    v(Unsigned, allocationProfilingMode, 0, Normal, "Allows custom arguments to be passed to bmalloc/libPAS allocation profiling features at JSC launch."_s) \
     v(Bool, dumpBaselineJITSizeStatistics, false, Normal, nullptr) \
     v(Bool, dumpDFGJITSizeStatistics, false, Normal, nullptr) \
+    v(Bool, useLoopUnrolling, false, Normal, nullptr) \
+    v(Bool, verboseLoopUnrolling, false, Normal, nullptr) \
+    v(Unsigned, maxLoopUnrollingCount, 2, Normal, nullptr) \
+    v(Unsigned, maxLoopUnrollingBodyNodeSize, 200, Normal, nullptr) \
+    v(Unsigned, maxLoopUnrollingIterationCount, 4, Normal, nullptr) \
+    v(Bool, printEachUnrolledLoop, false, Normal, nullptr) \
     v(Bool, verboseExecutablePoolAllocation, false, Normal, nullptr) \
     v(Bool, useHandlerIC, canUseHandlerIC(), Normal, nullptr) \
     v(Bool, useDataICInFTL, false, Normal, nullptr) \
@@ -566,35 +590,41 @@ bool hasCapacityToUseLargeGigacage();
     v(Bool, useLLIntICs, true, Normal, "Use property and call ICs in LLInt code."_s) \
     v(Bool, useBaselineJITCodeSharing, is64Bit(), Normal, nullptr) \
     v(Bool, libpasScavengeContinuously, false, Normal, nullptr) \
+    v(Unsigned, libpasForcePGMWithRate, 0, Normal, "Forces on probablistic guard malloc and guards allocations with a rate 1/N (0 is disabled)"_s) \
     v(Bool, useWasmFaultSignalHandler, true, Normal, nullptr) \
     v(Bool, dumpUnlinkedDFGValidation, false, Normal, nullptr) \
     v(Bool, dumpWasmOpcodeStatistics, false, Normal, nullptr) \
     v(Bool, dumpWasmWarnings, false, Normal, nullptr) \
     v(Bool, useRecursiveJSONParse, true, Normal, nullptr) \
     v(Unsigned, thresholdForStringReplaceCache, 0x1000, Normal, nullptr) \
-    v(Bool, useWasmIPInt, false, Normal, "Use the in-place interpereter for WASM instead of LLInt."_s) \
+    v(Bool, useWasmIPInt, ipintEnabledByDefault(), Normal, "Use the in-place interpereter for WASM instead of LLInt."_s) \
     v(Bool, useWasmIPIntPrologueOSR, true, Normal, "Allow IPInt to tier up during function prologues"_s) \
     v(Bool, useWasmIPIntLoopOSR, true, Normal, "Allow IPInt to tier up during loop iterations"_s) \
     v(Bool, useWasmIPIntEpilogueOSR, true, Normal, "Allow IPInt to tier up during function epilogues"_s) \
-    v(Bool, wasmIPIntTiersUpToBBQ, true, Normal, "Allow IPInt to tier up to BBQ"_s) \
-    v(Bool, wasmIPIntTiersUpToOMG, true, Normal, "Allow IPInt to tier up to OMG"_s) \
-    v(Bool, useWasmJITLessJSEntrypoint, true, Normal, "Allow JS->wasm wrappers to be replaced by jit-less versions."_s) \
     v(Bool, forceAllFunctionsToUseSIMD, false, Normal, "Force all functions to act conservatively w.r.t fp/vector registers for testing."_s) \
+    v(Bool, useOMGInlining, true, Normal, "Use OMG inlining"_s) \
+    v(Bool, freeRetiredWasmCode, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
+    v(Bool, useArrayAllocationSinking, true, Normal, "free BBQ/OMG-OSR wasm code once it's no longer reachable."_s) \
+    v(Bool, dumpFTLCodeSize, false, Normal, nullptr) \
     \
     /* Feature Flags */\
     \
-    v(Bool, useFloat16Array, true, Normal, "Expose Float16Array."_s) \
-    v(Bool, usePromiseTryMethod, true, Normal, "Expose the Promise.try() method."_s) \
-    v(Bool, useRegExpEscape, true, Normal, "Expose RegExp.escape feature."_s) \
+    v(Bool, useImportDefer, false, Normal, "Enable deferred module import."_s) \
+    v(Bool, useIteratorChunking, false, Normal, "Expose the Iterator.prototype.chunks and Iterator.prototype.windows methods."_s) \
+    v(Bool, useIteratorHelpers, true, Normal, "Expose the Iterator Helpers."_s) \
+    v(Bool, useIteratorSequencing, false, Normal, "Expose the Iterator.concat method."_s) \
+    v(Bool, useJSONSourceTextAccess, true, Normal, "Expose JSON source text access feature."_s) \
+    v(Bool, useMapGetOrInsert, false, Normal, "Expose the Map.prototype.getOrInsert family of methods."_s) \
+    v(Bool, useMathSumPreciseMethod, false, Normal, "Expose the Math.sumPrecise() method."_s) \
+    v(Bool, useMoreCurrencyDisplayChoices, false, Normal, "Enable more currencyDisplay choices for Intl.NumberFormat"_s) \
     v(Bool, useSharedArrayBuffer, false, Normal, nullptr) \
     v(Bool, useShadowRealm, false, Normal, "Expose the ShadowRealm object."_s) \
     v(Bool, useTemporal, false, Normal, "Expose the Temporal object."_s) \
     v(Bool, useTrustedTypes, false, Normal, "Enable trusted types eval protection feature."_s) \
-    v(Bool, useUint8ArrayBase64Methods, true, Normal, "Expose methods for converting Uint8Array to/from base64 and hex."_s) \
-    v(Bool, useWasmGC, true, Normal, "Allow gc types from the wasm gc proposal."_s) \
     v(Bool, useWasmSIMD, true, Normal, "Allow the new simd instructions and types from the wasm simd spec."_s) \
     v(Bool, useWasmRelaxedSIMD, false, Normal, "Allow the relaxed simd instructions and types from the wasm relaxed simd spec."_s) \
     v(Bool, useWasmTailCalls, true, Normal, "Allow the new instructions from the wasm tail calls spec."_s) \
+    v(Unsigned, markedBlockDumpInfoCount, 0, Normal, nullptr) /* FIXME: rdar://139998916 */ \
 
 
 

@@ -553,7 +553,10 @@ String serializationForCSS(const SRGBA<float>& color, bool useColorFunctionSeria
 
 String serializationForHTML(const SRGBA<float>& color, bool useColorFunctionSerialization)
 {
-    return serializationForCSS(color, useColorFunctionSerialization);
+    if (useColorFunctionSerialization)
+        return serializationUsingColorFunction(color);
+
+    return serializationForHTML(convertColor<SRGBA<uint8_t>>(color), false);
 }
 
 String serializationForRenderTreeAsText(const SRGBA<float>& color, bool useColorFunctionSerialization)
@@ -592,7 +595,7 @@ String serializationForCSS(SRGBA<uint8_t> color, bool useColorFunctionSerializat
     case 0xFF:
         return makeString("rgb("_s, red, ", "_s, green, ", "_s, blue, ')');
     default:
-        return makeString("rgba("_s, red, ", "_s, green, ", "_s, blue, ", 0."_s, span(fractionDigitsForFractionalAlphaValue(alpha).data()), ')');
+        return makeString("rgba("_s, red, ", "_s, green, ", "_s, blue, ", 0."_s, unsafeSpan(fractionDigitsForFractionalAlphaValue(alpha).data()), ')');
     }
 }
 
@@ -604,7 +607,7 @@ String serializationForHTML(SRGBA<uint8_t> color, bool useColorFunctionSerializa
     auto [red, green, blue, alpha] = color.resolved();
     if (alpha == 0xFF)
         return makeString('#', hex(red, 2, Lowercase), hex(green, 2, Lowercase), hex(blue, 2, Lowercase));
-    return serializationForCSS(color);
+    return serializationForCSS(Color { color } );
 }
 
 String serializationForRenderTreeAsText(SRGBA<uint8_t> color, bool useColorFunctionSerialization)

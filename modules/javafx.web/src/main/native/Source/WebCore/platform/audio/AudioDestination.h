@@ -32,8 +32,10 @@
 #include "AudioBus.h"
 #include "AudioIOCallback.h"
 #include <memory>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Lock.h>
+#include <wtf/MediaTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -43,15 +45,13 @@ namespace WebCore {
 // The audio hardware periodically calls the AudioIOCallback render() method asking it to render/output the next render quantum of audio.
 // It optionally will pass in local/live audio input when it calls render().
 
-class AudioDestination {
+class AudioDestination : public AbstractRefCounted {
 public:
     // Pass in (numberOfInputChannels > 0) if live/local audio input is desired.
     // Port-specific device identification information for live/local input streams can be passed in the inputDeviceId.
     WEBCORE_EXPORT static Ref<AudioDestination> create(AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate);
 
     virtual ~AudioDestination() = default;
-    virtual void ref() const = 0;
-    virtual void deref() const = 0;
 
     void clearCallback();
 
@@ -64,6 +64,7 @@ public:
     WEBCORE_EXPORT static float hardwareSampleRate();
 
     virtual unsigned framesPerBuffer() const = 0;
+    virtual WTF::MediaTime outputLatency() const { return MediaTime::zeroTime(); }
 
     // maxChannelCount() returns the total number of output channels of the audio hardware.
     // A value of 0 indicates that the number of channels cannot be configured and

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,13 +31,21 @@
 
 #pragma once
 
+#include "CSSCalcTree.h"
 #include "CSSValue.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
-class CSSCalcExpressionNode;
+namespace Calculation {
+enum class Category : uint8_t;
+}
+
+namespace CSS {
+struct Range;
+}
+
 class CSSCalcSymbolTable;
 class CSSCalcSymbolsAllowed;
 class CSSParserTokenRange;
@@ -44,47 +53,69 @@ class CSSToLengthConversionData;
 class CalculationValue;
 class RenderStyle;
 
+struct CSSParserContext;
+struct CSSPropertyParserOptions;
+struct Length;
+struct NoConversionDataRequiredToken;
+
 enum CSSValueID : uint16_t;
 
 enum class CSSUnitType : uint8_t;
-enum class CalculationCategory : uint8_t;
-enum class ValueRange : uint8_t;
 
 class CSSCalcValue final : public CSSValue {
 public:
-    static RefPtr<CSSCalcValue> create(CSSValueID function, const CSSParserTokenRange&, CalculationCategory destinationCategory, ValueRange, CSSCalcSymbolsAllowed, bool allowsNegativePercentage = false);
-    static RefPtr<CSSCalcValue> create(CSSValueID function, const CSSParserTokenRange&, CalculationCategory destinationCategory, ValueRange);
-    static RefPtr<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
-    static Ref<CSSCalcValue> create(Ref<CSSCalcExpressionNode>&&, bool shouldClampToNonNegative = false);
+    static RefPtr<CSSCalcValue> parse(CSSParserTokenRange&, const CSSParserContext&, Calculation::Category, CSS::Range, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
+
+    static Ref<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
+    static Ref<CSSCalcValue> create(Calculation::Category, CSS::Range, CSSCalc::Tree&&);
+
     ~CSSCalcValue();
 
-    CalculationCategory category() const;
-    double doubleValue(const CSSCalcSymbolTable&) const;
-    double computeLengthPx(const CSSToLengthConversionData&) const;
+    // Creates a copy of the CSSCalc::Tree with non-canonical dimensions and any symbols present in the provided symbol table resolved.
+    Ref<CSSCalcValue> copySimplified(const CSSToLengthConversionData&) const;
+    Ref<CSSCalcValue> copySimplified(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+    Ref<CSSCalcValue> copySimplified(NoConversionDataRequiredToken) const;
+    Ref<CSSCalcValue> copySimplified(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+
+    Calculation::Category category() const { return m_category; }
+    CSS::Range range() const { return m_range; }
+
     CSSUnitType primitiveType() const;
 
+    // Returns whether the CSSCalc::Tree requires `CSSToLengthConversionData` to fully resolve.
+    bool requiresConversionData() const;
+
+    double doubleValue(const CSSToLengthConversionData&) const;
+    double doubleValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+    double doubleValue(NoConversionDataRequiredToken) const;
+    double doubleValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    double doubleValueDeprecated() const;
+
+    double computeLengthPx(const CSSToLengthConversionData&) const;
+    double computeLengthPx(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+
+    Ref<CalculationValue> createCalculationValue(NoConversionDataRequiredToken) const;
+    Ref<CalculationValue> createCalculationValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
     Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&) const;
-    void setPermittedValueRange(ValueRange);
+    Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSCalcValue&) const;
-
-    static bool isCalcFunction(CSSValueID);
 
     void dump(TextStream&) const;
 
-    const CSSCalcExpressionNode& expressionNode() const { return m_expression; }
-    Ref<CSSCalcExpressionNode> protectedExpressionNode() const;
+    const CSSCalc::Tree& tree() const { return m_tree; }
 
 private:
-    explicit CSSCalcValue(Ref<CSSCalcExpressionNode>&&, bool shouldClampToNonNegative = false);
+    explicit CSSCalcValue(Calculation::Category, CSS::Range, CSSCalc::Tree&&);
 
     double clampToPermittedRange(double) const;
 
-    const Ref<CSSCalcExpressionNode> m_expression;
-    bool m_shouldClampToNonNegative;
+    Calculation::Category m_category;
+    CSS::Range m_range;
+    CSSCalc::Tree m_tree;
 };
 
 TextStream& operator<<(TextStream&, const CSSCalcValue&);

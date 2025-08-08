@@ -66,12 +66,15 @@
 #include <JavaScriptCore/InspectorFrontendRouter.h>
 #include <wtf/JSONValues.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorIndexedDBAgent);
 
 namespace {
 
@@ -83,9 +86,9 @@ public:
     void start(IDBFactory*, SecurityOrigin*, const String& databaseName);
     virtual void execute(IDBDatabase&) = 0;
     virtual BackendDispatcher::CallbackBase& requestCallback() = 0;
-    ScriptExecutionContext* context() const { return m_context; }
+    ScriptExecutionContext* context() const { return m_context.get(); }
 private:
-    ScriptExecutionContext* m_context;
+    WeakPtr<ScriptExecutionContext> m_context;
 };
 
 class OpenDatabaseCallback final : public EventListener {
@@ -537,7 +540,7 @@ static Inspector::Protocol::ErrorStringOr<Document*> documentFromFrame(LocalFram
 
 static Inspector::Protocol::ErrorStringOr<IDBFactory*> IDBFactoryFromDocument(Document* document)
 {
-    auto* domWindow = document->domWindow();
+    RefPtr domWindow = document->domWindow();
     if (!domWindow)
         return makeUnexpected("Missing window for given document"_s);
 

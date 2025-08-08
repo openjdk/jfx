@@ -46,7 +46,7 @@ class CDMPrivateClient;
 class CDMFactory {
 public:
     virtual ~CDMFactory() { };
-    virtual std::unique_ptr<CDMPrivate> createCDM(const String&, const CDMPrivateClient&) = 0;
+    virtual std::unique_ptr<CDMPrivate> createCDM(const String& keySystem, const String& mediaKeysHashSalt, const CDMPrivateClient&) = 0;
     virtual bool supportsKeySystem(const String&) = 0;
 
     WEBCORE_EXPORT static Vector<CDMFactory*>& registeredFactories();

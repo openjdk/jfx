@@ -78,7 +78,7 @@ ThreadableWebSocketChannel::ThreadableWebSocketChannel() = default;
 std::optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::validateURL(Document& document, const URL& requestedURL)
 {
     ValidatedURL validatedURL { requestedURL, true };
-    if (auto* page = document.page()) {
+    if (RefPtr page = document.page()) {
         if (!page->allowsLoadFromURL(requestedURL, MainFrameMainResource::No))
             return { };
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -131,9 +131,9 @@ std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectReque
         request.addHTTPHeaderField(HTTPHeaderName::SecFetchDest, "websocket"_s);
         request.addHTTPHeaderField(HTTPHeaderName::SecFetchMode, "websocket"_s);
 
-        if (document.securityOrigin().isSameOriginAs(requestOrigin.get()))
+        if (document.protectedSecurityOrigin()->isSameOriginAs(requestOrigin.get()))
             request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "same-origin"_s);
-        else if (document.securityOrigin().isSameSiteAs(requestOrigin))
+        else if (document.protectedSecurityOrigin()->isSameSiteAs(requestOrigin))
             request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "same-site"_s);
         else
             request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "cross-site"_s);

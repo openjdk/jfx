@@ -29,6 +29,7 @@
 #include <WebCore/DOMException.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLTableRowElement.h>
 #include <WebCore/JSExecState.h>

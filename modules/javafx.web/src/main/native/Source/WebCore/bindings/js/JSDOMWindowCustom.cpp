@@ -308,7 +308,7 @@ bool JSDOMWindow::putByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalObject, 
 
     if (allowsLegacyExpandoIndexedProperties()) {
         RefPtr localDOMWindow = dynamicDowncast<LocalDOMWindow>(thisObject->wrapped());
-        if (auto* document = localDOMWindow ? localDOMWindow->document() : nullptr)
+        if (RefPtr document = localDOMWindow ? localDOMWindow->document() : nullptr)
             document->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Adding expando indexed properties to 'window' was a non-standard behavior that is now removed."_s);
         RELEASE_AND_RETURN(scope, Base::putByIndex(thisObject, lexicalGlobalObject, index, value, shouldThrow));
     }
@@ -493,7 +493,7 @@ public:
 private:
     JSGlobalObject& m_globalObject;
     CallFrame& m_callFrame;
-    RefPtr<LocalFrame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
 };
 
 inline void DialogHandler::dialogCreated(DOMWindow& dialog)
@@ -503,6 +503,7 @@ inline void DialogHandler::dialogCreated(DOMWindow& dialog)
         return;
     VM& vm = m_globalObject.vm();
     m_frame = localDOMWindow->frame();
+    RefPtr frame = m_frame.get();
 
     // FIXME: This looks like a leak between the normal world and an isolated
     //        world if dialogArguments comes from an isolated world.
@@ -514,6 +515,9 @@ inline void DialogHandler::dialogCreated(DOMWindow& dialog)
 inline JSValue DialogHandler::returnValue() const
 {
     VM& vm = m_globalObject.vm();
+    RefPtr frame = m_frame.get();
+    if (!frame)
+        return jsUndefined();
     auto* globalObject = toJSDOMWindow(m_frame.get(), normalWorld(vm));
     if (!globalObject)
         return jsUndefined();
@@ -536,7 +540,7 @@ JSC_DEFINE_CUSTOM_GETTER(showModalDialogGetter, (JSGlobalObject* lexicalGlobalOb
         return throwVMDOMAttributeGetterTypeError(lexicalGlobalObject, scope, JSDOMWindow::info(), propertyName);
 
     RefPtr localDOMWindow = dynamicDowncast<LocalDOMWindow>(thisObject->wrapped());
-    if (auto* document = localDOMWindow ? localDOMWindow->document() : nullptr)
+    if (RefPtr document = localDOMWindow ? localDOMWindow->document() : nullptr)
         document->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Window 'showModalDialog' function is deprecated and will be removed soon."_s);
 
     if (RefPtr frame = thisObject->wrapped().frame()) {
@@ -722,7 +726,7 @@ JSDOMWindow& mainWorldGlobalObject(LocalFrame& frame)
     // FIXME: What guarantees the result of jsWindowProxy() is non-null?
     // FIXME: What guarantees the result of window() is non-null?
     // FIXME: What guarantees the result of window() a JSDOMWindow?
-    return *jsCast<JSDOMWindow*>(frame.windowProxy().jsWindowProxy(mainThreadNormalWorld())->window());
+    return *jsCast<JSDOMWindow*>(frame.windowProxy().jsWindowProxy(mainThreadNormalWorldSingleton())->window());
 }
 
 } // namespace WebCore

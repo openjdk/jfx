@@ -56,6 +56,8 @@ public:
 
     bool shouldSaveAndRestoreFormControlState() const final { return true; }
 
+    bool isDevolvableWidget() const override { return true; }
+
     bool dirAutoUsesValue() const final { return true; }
 
 private:

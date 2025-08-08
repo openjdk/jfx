@@ -28,6 +28,7 @@
 #include <WebCore/Document.h>
 #include <WebCore/HTMLButtonElement.h>
 #include <WebCore/HTMLFormElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/NodeList.h>
 #include <WebCore/JSExecState.h>

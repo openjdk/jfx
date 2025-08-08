@@ -191,7 +191,7 @@ public:
     auto end() const { return m_keys.end(); }
 
 protected:
-    HashMap<KeyIDType, RefPtr<T>> m_keys;
+    UncheckedKeyHashMap<KeyIDType, RefPtr<T>> m_keys;
 
 private:
     KeyStoreIDType m_id;
@@ -232,7 +232,7 @@ private:
         m_references.remove(id);
     }
 
-    HashSet<KeyStoreIDType> m_references;
+    UncheckedKeyHashSet<KeyStoreIDType> m_references;
 };
 
 class ReferenceAwareKeyStore : public KeyStoreBase<ReferenceAwareKeyHandle> {

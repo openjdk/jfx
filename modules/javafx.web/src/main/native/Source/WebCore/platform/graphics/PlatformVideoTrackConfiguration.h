@@ -29,6 +29,8 @@
 
 #include "PlatformTrackConfiguration.h"
 #include "PlatformVideoColorSpace.h"
+#include "SpatialVideoMetadata.h"
+#include <optional>
 
 namespace WebCore {
 
@@ -38,6 +40,8 @@ struct PlatformVideoTrackConfiguration : PlatformTrackConfiguration {
     PlatformVideoColorSpace colorSpace;
     double framerate { 0 };
     uint64_t bitrate { 0 };
+    std::optional<SpatialVideoMetadata> spatialVideoMetadata;
+    bool isImmersiveVideo { false };
 
     friend bool operator==(const PlatformVideoTrackConfiguration&, const PlatformVideoTrackConfiguration&) = default;
 };

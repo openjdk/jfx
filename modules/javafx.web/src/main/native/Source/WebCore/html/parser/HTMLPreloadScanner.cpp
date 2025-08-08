@@ -48,25 +48,30 @@
 #include "SizesAttributeParser.h"
 #include <wtf/MainThread.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TokenPreloadScanner);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLPreloadScanner);
 
 using namespace HTMLNames;
 
 TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVector& data)
 {
     static constexpr std::pair<PackedASCIILiteral<uint64_t>, TokenPreloadScanner::TagId> mappings[] = {
-        { "base", TagId::Base },
-        { "img", TagId::Img },
-        { "input", TagId::Input },
-        { "link", TagId::Link },
-        { "meta", TagId::Meta },
-        { "picture", TagId::Picture },
-        { "script", TagId::Script },
-        { "source", TagId::Source },
-        { "style", TagId::Style },
-        { "template", TagId::Template },
+        { "base"_s, TagId::Base },
+        { "img"_s, TagId::Img },
+        { "input"_s, TagId::Input },
+        { "link"_s, TagId::Link },
+        { "meta"_s, TagId::Meta },
+        { "picture"_s, TagId::Picture },
+        { "script"_s, TagId::Script },
+        { "source"_s, TagId::Source },
+        { "style"_s, TagId::Style },
+        { "template"_s, TagId::Template },
+        { "video"_s, TagId::Video },
     };
     static constexpr SortedArrayMap map { mappings };
     return map.get(data.span(), TagId::Unknown);
@@ -84,6 +89,8 @@ ASCIILiteral TokenPreloadScanner::initiatorFor(TagId tagId)
         return "link"_s;
     case TagId::Script:
         return "script"_s;
+    case TagId::Video:
+        return "video"_s;
     case TagId::Unknown:
     case TagId::Style:
     case TagId::Base:
@@ -171,7 +178,7 @@ public:
                 return nullptr;
         }
 
-        auto request = makeUnique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, scriptType.value_or(ScriptType::Classic), m_referrerPolicy, m_fetchPriorityHint);
+        auto request = makeUnique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, scriptType.value_or(ScriptType::Classic), m_referrerPolicy, m_fetchPriority);
         request->setCrossOriginMode(m_crossOriginMode);
         request->setNonce(m_nonceAttribute);
         request->setScriptIsAsync(m_scriptIsAsync);
@@ -200,6 +207,14 @@ private:
             m_charset = attributeValue.toString();
     }
 
+    void processVideoAttribute(const AtomString& attributeName, StringView attributeValue)
+    {
+        if (match(attributeName, posterAttr))
+            setURLToLoad(attributeValue);
+        else if (match(attributeName, crossoriginAttr))
+            m_crossOriginMode = attributeValue.trim(isASCIIWhitespace<UChar>).toString();
+    }
+
     void processAttribute(const AtomString& attributeName, StringView attributeValue, const Vector<bool>& pictureState)
     {
         bool inPicture = !pictureState.isEmpty();
@@ -218,8 +233,8 @@ private:
                 m_sizesAttribute = attributeValue.toString();
                 break;
             }
-            if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled()) {
-                m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
+            if (match(attributeName, fetchpriorityAttr)) {
+                m_fetchPriority = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
                 break;
             }
             if (match(attributeName, referrerpolicyAttr)) {
@@ -277,8 +292,8 @@ private:
             } else if (match(attributeName, asyncAttr)) {
                 m_scriptIsAsync = true;
                 break;
-            } else if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled()) {
-                m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
+            } else if (match(attributeName, fetchpriorityAttr)) {
+                m_fetchPriority = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
                 break;
             }
             processImageAndScriptAttribute(attributeName, attributeValue);
@@ -304,8 +319,8 @@ private:
                 m_typeAttribute = attributeValue.toString();
             else if (match(attributeName, referrerpolicyAttr))
                 m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-            else if (match(attributeName, fetchpriorityAttr) && document->settings().fetchPriorityEnabled())
-                m_fetchPriorityHint = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
+            else if (match(attributeName, fetchpriorityAttr))
+                m_fetchPriority = parseEnumerationFromString<RequestPriority>(attributeValue.toString()).value_or(RequestPriority::Auto);
             break;
         case TagId::Input:
             if (match(attributeName, srcAttr))
@@ -320,6 +335,9 @@ private:
                 m_metaIsViewport = equalLettersIgnoringASCIICase(attributeValue, "viewport"_s);
             else if (document->settings().disabledAdaptationsMetaTagEnabled() && match(attributeName, nameAttr))
                 m_metaIsDisabledAdaptations = equalLettersIgnoringASCIICase(attributeValue, "disabled-adaptations"_s);
+            break;
+        case TagId::Video:
+            processVideoAttribute(attributeName, attributeValue);
             break;
         case TagId::Base:
         case TagId::Style:
@@ -365,6 +383,7 @@ private:
         case TagId::Img:
         case TagId::Input:
         case TagId::Source:
+        case TagId::Video:
             ASSERT(m_tagId != TagId::Input || m_inputIsImage);
             return CachedResource::Type::ImageResource;
         case TagId::Link:
@@ -429,7 +448,7 @@ private:
     bool m_scriptIsAsync { false };
     float m_deviceScaleFactor;
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
-    RequestPriority m_fetchPriorityHint { RequestPriority::Auto };
+    RequestPriority m_fetchPriority { RequestPriority::Auto };
 };
 
 TokenPreloadScanner::TokenPreloadScanner(const URL& documentURL, float deviceScaleFactor)

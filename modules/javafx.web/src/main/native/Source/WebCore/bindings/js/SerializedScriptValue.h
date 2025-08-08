@@ -62,12 +62,18 @@ class MemoryHandle;
 } }
 #endif
 
+namespace JSC {
+class ErrorInstance;
+class JSGlobalObject;
+}
+
 namespace WebCore {
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
 class DetachedOffscreenCanvas;
 class OffscreenCanvas;
 #endif
+class CryptoKey;
 class IDBValue;
 class MessagePort;
 class DetachedImageBitmap;
@@ -83,6 +89,17 @@ using ArrayBufferContentsArray = Vector<JSC::ArrayBufferContents>;
 using WasmModuleArray = Vector<RefPtr<JSC::Wasm::Module>>;
 using WasmMemoryHandleArray = Vector<RefPtr<JSC::SharedArrayBufferContents>>;
 #endif
+
+struct ErrorInformation {
+    String errorTypeString;
+    String message;
+    unsigned line { 0 };
+    unsigned column { 0 };
+    String sourceURL;
+    String stack;
+};
+
+std::optional<ErrorInformation> extractErrorInformationFromErrorInstance(JSC::JSGlobalObject*, JSC::ErrorInstance&);
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SerializedScriptValue);
 class SerializedScriptValue : public ThreadSafeRefCounted<SerializedScriptValue> {
@@ -105,13 +122,14 @@ public:
     // API implementation helpers. These don't expose special behavior for ArrayBuffers or MessagePorts.
     WEBCORE_EXPORT static RefPtr<SerializedScriptValue> create(JSContextRef, JSValueRef, JSValueRef* exception);
     WEBCORE_EXPORT JSValueRef deserialize(JSContextRef, JSValueRef* exception);
+    WEBCORE_EXPORT static Vector<uint8_t> serializeCryptoKey(JSContextRef, const WebCore::CryptoKey&);
 
     bool hasBlobURLs() const { return !m_internals.blobHandles.isEmpty(); }
 
     Vector<String> blobURLs() const;
     Vector<URLKeepingBlobAlive> blobHandles() const { return crossThreadCopy(m_internals.blobHandles); }
-    void writeBlobsToDiskForIndexedDB(CompletionHandler<void(IDBValue&&)>&&);
-    IDBValue writeBlobsToDiskForIndexedDBSynchronously();
+    void writeBlobsToDiskForIndexedDB(bool isEphemeral, CompletionHandler<void(IDBValue&&)>&&);
+    IDBValue writeBlobsToDiskForIndexedDBSynchronously(bool isEphemeral);
     static Ref<SerializedScriptValue> createFromWireBytes(Vector<uint8_t>&& data)
     {
         return adoptRef(*new SerializedScriptValue(WTFMove(data)));

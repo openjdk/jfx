@@ -28,7 +28,7 @@
 #include "IntersectionObserver.h"
 
 #include "CSSParserTokenRange.h"
-#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+LengthPercentage.h"
 #include "CSSTokenizer.h"
 #include "Element.h"
 #include "FrameDestructionObserverInlines.h"
@@ -61,13 +61,13 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
     while (!tokenRange.atEnd()) {
         if (margins.size() == 4)
             return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin."_s };
-        RefPtr<CSSPrimitiveValue> parsedValue = CSSPropertyParserHelpers::consumeLengthOrPercent(tokenRange, HTMLStandardMode);
+        RefPtr<CSSPrimitiveValue> parsedValue = CSSPropertyParserHelpers::consumeLengthPercentage(tokenRange, HTMLStandardMode);
         if (!parsedValue || parsedValue->isCalculated())
             return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
         if (parsedValue->isPercentage())
-            margins.append(Length(parsedValue->doubleValue(), LengthType::Percent));
+            margins.append(Length(parsedValue->resolveAsPercentageNoConversionDataRequired(), LengthType::Percent));
         else if (parsedValue->isPx())
-            margins.append(Length(parsedValue->intValue(), LengthType::Fixed));
+            margins.append(Length(parsedValue->resolveAsLengthNoConversionDataRequired<int>(), LengthType::Fixed));
         else
             return Exception { ExceptionCode::SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
     }

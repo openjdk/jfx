@@ -45,6 +45,94 @@ const ClassInfo WebAssemblyMemoryConstructor::s_info = { "Function"_s, &Base::s_
 static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyMemory);
 static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyMemory);
 
+JSWebAssemblyMemory* WebAssemblyMemoryConstructor::createMemoryFromDescriptor(JSGlobalObject* globalObject, Structure* webAssemblyMemoryStructure, JSObject* memoryDescriptor, std::optional<MemoryMode> desiredMemoryMode)
+{
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    PageCount initialPageCount;
+    {
+        Identifier initial = Identifier::fromString(vm, "initial"_s);
+        JSValue initSizeValue = memoryDescriptor->get(globalObject, initial);
+        RETURN_IF_EXCEPTION(throwScope, { });
+        Identifier minimum = Identifier::fromString(vm, "minimum"_s);
+        JSValue minSizeValue = memoryDescriptor->get(globalObject, minimum);
+        RETURN_IF_EXCEPTION(throwScope, { });
+        if (!minSizeValue.isUndefined() && !initSizeValue.isUndefined()) {
+            // Error because both specified.
+            throwTypeError(globalObject, throwScope, "WebAssembly.Memory 'initial' and 'minimum' options are specified at the same time"_s);
+            return { };
+        }
+        if (!initSizeValue.isUndefined())
+            minSizeValue = initSizeValue;
+
+        uint32_t size = toNonWrappingUint32(globalObject, minSizeValue);
+        RETURN_IF_EXCEPTION(throwScope, { });
+        if (!PageCount::isValid(size)) {
+            throwException(globalObject, throwScope, createRangeError(globalObject, "WebAssembly.Memory 'initial' page count is too large"_s));
+            return { };
+        }
+        if (PageCount(size).bytes() > MAX_ARRAY_BUFFER_SIZE) {
+            throwException(globalObject, throwScope, createOutOfMemoryError(globalObject));
+            return { };
+        }
+        initialPageCount = PageCount(size);
+    }
+
+    PageCount maximumPageCount;
+    {
+        // In WebIDL, "present" means that [[Get]] result is undefined, not [[HasProperty]] result.
+        // https://webidl.spec.whatwg.org/#idl-dictionaries
+        Identifier maximum = Identifier::fromString(vm, "maximum"_s);
+        JSValue maxSizeValue = memoryDescriptor->get(globalObject, maximum);
+        RETURN_IF_EXCEPTION(throwScope, { });
+        if (!maxSizeValue.isUndefined()) {
+            uint32_t size = toNonWrappingUint32(globalObject, maxSizeValue);
+            RETURN_IF_EXCEPTION(throwScope, { });
+            if (!PageCount::isValid(size)) {
+                throwException(globalObject, throwScope, createRangeError(globalObject, "WebAssembly.Memory 'maximum' page count is too large"_s));
+                return { };
+            }
+            maximumPageCount = PageCount(size);
+
+            if (initialPageCount > maximumPageCount) {
+                throwException(globalObject, throwScope,
+                    createRangeError(globalObject, "'maximum' page count must be than greater than or equal to the 'initial' page count"_s));
+                return { };
+            }
+        }
+    }
+
+    // Even though Options::useSharedArrayBuffer() is false, we can create SharedArrayBuffer through wasm shared memory.
+    // But we cannot send SharedArrayBuffer to the other workers, so it is not effective.
+    MemorySharingMode sharingMode = MemorySharingMode::Default;
+    if (LIKELY(Options::useWasmFaultSignalHandler())) {
+        JSValue sharedValue = memoryDescriptor->get(globalObject, Identifier::fromString(vm, "shared"_s));
+        RETURN_IF_EXCEPTION(throwScope, { });
+        bool shared = sharedValue.toBoolean(globalObject);
+        RETURN_IF_EXCEPTION(throwScope, { });
+        if (shared) {
+            if (!maximumPageCount) {
+                throwTypeError(globalObject, throwScope, "'maximum' page count must be defined if 'shared' is true"_s);
+                return { };
+            }
+            sharingMode = MemorySharingMode::Shared;
+        }
+    }
+
+    auto* jsMemory = JSWebAssemblyMemory::create(vm, webAssemblyMemoryStructure);
+
+    RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(vm, initialPageCount, maximumPageCount, sharingMode, desiredMemoryMode,
+        [&vm, jsMemory] (Wasm::Memory::GrowSuccess, PageCount oldPageCount, PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); });
+    if (!memory) {
+        throwException(globalObject, throwScope, createOutOfMemoryError(globalObject));
+        return { };
+    }
+
+    jsMemory->adopt(memory.releaseNonNull());
+    return jsMemory;
+}
+
 JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyMemory, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -62,77 +150,10 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyMemory, (JSGlobalObject* globalOb
         memoryDescriptor = jsCast<JSObject*>(argument);
     }
 
-    PageCount initialPageCount;
-    {
-        Identifier initial = Identifier::fromString(vm, "initial"_s);
-        JSValue initSizeValue = memoryDescriptor->get(globalObject, initial);
-        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        Identifier minimum = Identifier::fromString(vm, "minimum"_s);
-        JSValue minSizeValue = memoryDescriptor->get(globalObject, minimum);
-        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        if (!minSizeValue.isUndefined() && !initSizeValue.isUndefined()) {
-            // Error because both specified.
-            return throwVMTypeError(globalObject, throwScope, "WebAssembly.Memory 'initial' and 'minimum' options are specified at the same time"_s);
-        }
-        if (!initSizeValue.isUndefined())
-            minSizeValue = initSizeValue;
-
-        uint32_t size = toNonWrappingUint32(globalObject, minSizeValue);
-        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        if (!PageCount::isValid(size))
-            return JSValue::encode(throwException(globalObject, throwScope, createRangeError(globalObject, "WebAssembly.Memory 'initial' page count is too large"_s)));
-        if (PageCount(size).bytes() > MAX_ARRAY_BUFFER_SIZE)
-            return JSValue::encode(throwException(globalObject, throwScope, createOutOfMemoryError(globalObject)));
-        initialPageCount = PageCount(size);
-    }
-
-    PageCount maximumPageCount;
-    {
-        // In WebIDL, "present" means that [[Get]] result is undefined, not [[HasProperty]] result.
-        // https://webidl.spec.whatwg.org/#idl-dictionaries
-        Identifier maximum = Identifier::fromString(vm, "maximum"_s);
-        JSValue maxSizeValue = memoryDescriptor->get(globalObject, maximum);
-        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        if (!maxSizeValue.isUndefined()) {
-            uint32_t size = toNonWrappingUint32(globalObject, maxSizeValue);
-            RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-            if (!PageCount::isValid(size))
-                return JSValue::encode(throwException(globalObject, throwScope, createRangeError(globalObject, "WebAssembly.Memory 'maximum' page count is too large"_s)));
-            maximumPageCount = PageCount(size);
-
-            if (initialPageCount > maximumPageCount) {
-                return JSValue::encode(throwException(globalObject, throwScope,
-                    createRangeError(globalObject, "'maximum' page count must be than greater than or equal to the 'initial' page count"_s)));
-            }
-        }
-    }
-
-    // Even though Options::useSharedArrayBuffer() is false, we can create SharedArrayBuffer through wasm shared memory.
-    // But we cannot send SharedArrayBuffer to the other workers, so it is not effective.
-    MemorySharingMode sharingMode = MemorySharingMode::Default;
-    if (LIKELY(Options::useWasmFaultSignalHandler())) {
-        JSValue sharedValue = memoryDescriptor->get(globalObject, Identifier::fromString(vm, "shared"_s));
-        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        bool shared = sharedValue.toBoolean(globalObject);
-        RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        if (shared) {
-            if (!maximumPageCount)
-                return throwVMTypeError(globalObject, throwScope, "'maximum' page count must be defined if 'shared' is true"_s);
-            sharingMode = MemorySharingMode::Shared;
-        }
-    }
-
-    auto* jsMemory = JSWebAssemblyMemory::tryCreate(globalObject, vm, webAssemblyMemoryStructure);
+    JSWebAssemblyMemory* memory = WebAssemblyMemoryConstructor::createMemoryFromDescriptor(globalObject, webAssemblyMemoryStructure, memoryDescriptor);
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(vm, initialPageCount, maximumPageCount, sharingMode,
-        [&vm, jsMemory] (Wasm::Memory::GrowSuccess, PageCount oldPageCount, PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); });
-    if (!memory)
-        return JSValue::encode(throwException(globalObject, throwScope, createOutOfMemoryError(globalObject)));
-
-    jsMemory->adopt(memory.releaseNonNull());
-
-    return JSValue::encode(jsMemory);
+    return JSValue::encode(memory);
 }
 
 JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyMemory, (JSGlobalObject* globalObject, CallFrame*))

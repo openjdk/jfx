@@ -33,6 +33,7 @@
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -50,7 +51,7 @@ class TreeScope;
 struct FocusCandidate;
 
 class FocusController final : public CanMakeCheckedPtr<FocusController> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FocusController);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FocusController);
 public:
     explicit FocusController(Page&, OptionSet<ActivityState>);
@@ -60,6 +61,7 @@ public:
     Frame* focusedFrame() const { return m_focusedFrame.get(); }
     LocalFrame* focusedLocalFrame() const { return dynamicDowncast<LocalFrame>(m_focusedFrame.get()); }
     WEBCORE_EXPORT LocalFrame* focusedOrMainFrame() const;
+    RefPtr<LocalFrame> protectedFocusedOrMainFrame() const { return focusedOrMainFrame(); }
 
     WEBCORE_EXPORT bool setInitialFocus(FocusDirection, KeyboardEvent*);
     bool advanceFocus(FocusDirection, KeyboardEvent*, bool initialFocus = false);

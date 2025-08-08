@@ -39,6 +39,7 @@
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
 #include <wtf/Forward.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -59,8 +60,12 @@ class LegacyPreviewLoader;
 class LocalFrame;
 class NetworkLoadMetrics;
 
+#if ENABLE(CONTENT_EXTENSIONS)
+class ResourceMonitor;
+#endif
+
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
-class ResourceLoader : public CanMakeWeakPtr<ResourceLoader>, public RefCounted<ResourceLoader>, protected ResourceHandleClient {
+class ResourceLoader : public RefCountedAndCanMakeWeakPtr<ResourceLoader>, protected ResourceHandleClient {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader);
 public:
     virtual ~ResourceLoader() = 0;
@@ -81,9 +86,9 @@ public:
 #endif
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
-    WEBCORE_EXPORT CheckedPtr<FrameLoader> checkedFrameLoader() const;
+    WEBCORE_EXPORT RefPtr<FrameLoader> protectedFrameLoader() const;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
-    RefPtr<DocumentLoader> protectedDocumentLoader() const;
+    WEBCORE_EXPORT RefPtr<DocumentLoader> protectedDocumentLoader() const;
     const ResourceRequest& originalRequest() const { return m_originalRequest; }
 
     WEBCORE_EXPORT void start();
@@ -97,7 +102,7 @@ public:
     virtual void setDefersLoading(bool);
     bool defersLoading() const { return m_defersLoading; }
 
-    ResourceLoaderIdentifier identifier() const { return m_identifier; }
+    std::optional<ResourceLoaderIdentifier> identifier() const { return m_identifier; }
 
     bool wasAuthenticationChallengeBlocked() const { return m_wasAuthenticationChallengeBlocked; }
 
@@ -159,7 +164,7 @@ public:
     void unschedule(WTF::SchedulePair&);
 #endif
 
-    LocalFrame* frame() const { return m_frame.get(); }
+    WEBCORE_EXPORT LocalFrame* frame() const;
     RefPtr<LocalFrame> protectedFrame() const;
 
     const ResourceLoaderOptions& options() const { return m_options; }
@@ -168,6 +173,10 @@ public:
     ResourceRequest takeDeferredRequest() { return std::exchange(m_deferredRequest, { }); }
 
     bool isPDFJSResourceLoad() const;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT ResourceMonitor* resourceMonitorIfExists();
+#endif
 
 protected:
     ResourceLoader(LocalFrame&, ResourceLoaderOptions);
@@ -187,7 +196,7 @@ protected:
     virtual void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&);
 
     RefPtr<ResourceHandle> m_handle;
-    RefPtr<LocalFrame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
     RefPtr<DocumentLoader> m_documentLoader;
     ResourceResponse m_response;
     ResourceLoadTiming m_loadTiming;
@@ -234,7 +243,7 @@ private:
     ResourceRequest m_originalRequest; // Before redirects.
     SharedBufferBuilder m_resourceData;
 
-    ResourceLoaderIdentifier m_identifier;
+    Markable<ResourceLoaderIdentifier> m_identifier;
 
     bool m_reachedTerminalState { false };
     bool m_notifiedLoadComplete { false };

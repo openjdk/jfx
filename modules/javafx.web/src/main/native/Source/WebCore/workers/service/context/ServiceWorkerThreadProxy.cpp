@@ -32,6 +32,7 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FetchLoader.h"
+#include "FetchLoaderClient.h"
 #include "FrameLoader.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
@@ -66,7 +67,7 @@ static ThreadSafeWeakHashSet<ServiceWorkerThreadProxy>& allServiceWorkerThreadPr
 
 ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(Ref<Page>&& page, ServiceWorkerContextData&& contextData, ServiceWorkerData&& workerData, String&& userAgent, WorkerThreadMode workerThreadMode, CacheStorageProvider& cacheStorageProvider, std::unique_ptr<NotificationClient>&& notificationClient)
     : m_page(WTFMove(page))
-    , m_document(*dynamicDowncast<LocalFrame>(m_page->mainFrame())->document())
+    , m_document(*m_page->localTopDocument())
 #if ENABLE(REMOTE_INSPECTOR)
     , m_remoteDebuggable(ServiceWorkerDebuggable::create(*this, contextData))
 #endif
@@ -134,7 +135,7 @@ void ServiceWorkerThreadProxy::postTaskToLoader(ScriptExecutionContext::Task&& t
 
 void ServiceWorkerThreadProxy::postMessageToDebugger(const String& message)
 {
-    RunLoop::main().dispatch([this, protectedThis = Ref { *this }, message = message.isolatedCopy()]() mutable {
+    RunLoop::protectedMain()->dispatch([this, protectedThis = Ref { *this }, message = message.isolatedCopy()]() mutable {
         // FIXME: Handle terminated case.
         m_inspectorProxy.sendMessageFromWorkerToFrontend(WTFMove(message));
     });

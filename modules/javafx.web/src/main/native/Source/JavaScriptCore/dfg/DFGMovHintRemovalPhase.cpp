@@ -57,10 +57,7 @@ public:
 
     bool run()
     {
-        if (DFGMovHintRemovalPhaseInternal::verbose) {
-            dataLog("Graph before MovHint removal:\n");
-            m_graph.dump();
-        }
+        dataLogIf(DFGMovHintRemovalPhaseInternal::verbose, "Graph before MovHint removal:\n", m_graph);
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder())
             handleBlock(block);
@@ -73,8 +70,7 @@ public:
 private:
     void handleBlock(BasicBlock* block)
     {
-        if (DFGMovHintRemovalPhaseInternal::verbose)
-            dataLog("Handing block ", pointerDump(block), "\n");
+        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "Handing block ", pointerDump(block));
 
         // A MovHint is unnecessary if the local dies before it is used. We answer this question by
         // maintaining the current exit epoch, and associating an epoch with each local. When a
@@ -91,8 +87,7 @@ private:
                 m_state.operand(reg) = currentEpoch;
             });
 
-        if (DFGMovHintRemovalPhaseInternal::verbose)
-            dataLog("    Locals at ", block->terminal()->origin.forExit, ": ", m_state, "\n");
+        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Locals at ", block->terminal()->origin.forExit, ": ", m_state);
 
         // Assume that blocks after we exit.
         currentEpoch.bump();
@@ -102,8 +97,7 @@ private:
 
             if (node->op() == MovHint) {
                 Epoch localEpoch = m_state.operand(node->unlinkedOperand());
-                if (DFGMovHintRemovalPhaseInternal::verbose)
-                    dataLog("    At ", node, " (", node->unlinkedOperand(), "): current = ", currentEpoch, ", local = ", localEpoch, "\n");
+                dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    At ", node, " (", node->unlinkedOperand(), "): current = ", currentEpoch, ", local = ", localEpoch);
                 if (!localEpoch || localEpoch == currentEpoch) {
                     // Now, MovHint will put bottom value to dead locals. This means that if you insert a new DFG node which introduce
                     // a new OSR exit, then it gets confused with the already-determined-dead locals. So this phase runs at very end of
@@ -132,8 +126,7 @@ private:
                         if (!!m_state.operand(operand))
                             return;
 
-                        if (DFGMovHintRemovalPhaseInternal::verbose)
-                            dataLog("    Killed operand at ", node, ": ", operand, "\n");
+                        dataLogLnIf(DFGMovHintRemovalPhaseInternal::verbose, "    Killed operand at ", node, ": ", operand);
                         m_state.operand(operand) = currentEpoch;
                     });
             }
@@ -141,7 +134,7 @@ private:
     }
 
     InsertionSet m_insertionSet;
-    HashMap<std::underlying_type_t<UseKind>, Node*, WTF::IntHash<std::underlying_type_t<UseKind>>, WTF::UnsignedWithZeroKeyHashTraits<std::underlying_type_t<UseKind>>> m_constants;
+    UncheckedKeyHashMap<std::underlying_type_t<UseKind>, Node*, WTF::IntHash<std::underlying_type_t<UseKind>>, WTF::UnsignedWithZeroKeyHashTraits<std::underlying_type_t<UseKind>>> m_constants;
     Operands<Epoch> m_state;
     bool m_changed;
 };

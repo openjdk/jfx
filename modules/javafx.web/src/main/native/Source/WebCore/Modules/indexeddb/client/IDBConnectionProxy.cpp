@@ -47,21 +47,27 @@ namespace IDBClient {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBConnectionProxy);
 
-IDBConnectionProxy::IDBConnectionProxy(IDBConnectionToServer& connection)
+IDBConnectionProxy::IDBConnectionProxy(IDBConnectionToServer& connection, PAL::SessionID sessionID)
     : m_connectionToServer(connection)
     , m_serverConnectionIdentifier(connection.identifier())
+    , m_sessionID(sessionID)
 {
     ASSERT(isMainThread());
 }
 
 void IDBConnectionProxy::ref()
 {
-    m_connectionToServer.ref();
+    m_connectionToServer->ref();
 }
 
 void IDBConnectionProxy::deref()
 {
-    m_connectionToServer.deref();
+    m_connectionToServer->deref();
+}
+
+PAL::SessionID IDBConnectionProxy::sessionID() const
+{
+    return m_sessionID;
 }
 
 Ref<IDBOpenDBRequest> IDBConnectionProxy::openDatabase(ScriptExecutionContext& context, const IDBDatabaseIdentifier& databaseIdentifier, uint64_t version)
@@ -151,7 +157,7 @@ void IDBConnectionProxy::renameObjectStore(TransactionOperation& operation, IDBO
     callConnectionOnMainThread(&IDBConnectionToServer::renameObjectStore, requestData, objectStoreIdentifier, newName);
 }
 
-void IDBConnectionProxy::renameIndex(TransactionOperation& operation, IDBObjectStoreIdentifier objectStoreIdentifier, uint64_t indexIdentifier, const String& newName)
+void IDBConnectionProxy::renameIndex(TransactionOperation& operation, IDBObjectStoreIdentifier objectStoreIdentifier, IDBIndexIdentifier indexIdentifier, const String& newName)
 {
     const IDBRequestData requestData { operation };
     saveOperation(operation);
@@ -191,12 +197,12 @@ void IDBConnectionProxy::deleteIndex(TransactionOperation& operation, IDBObjectS
     callConnectionOnMainThread(&IDBConnectionToServer::deleteIndex, requestData, WTFMove(objectStoreIdentifier), indexName);
 }
 
-void IDBConnectionProxy::putOrAdd(TransactionOperation& operation, IDBKeyData&& keyData, const IDBValue& value, const IndexedDB::ObjectStoreOverwriteMode mode)
+void IDBConnectionProxy::putOrAdd(TransactionOperation& operation, IDBKeyData&& keyData, const IDBValue& value, const IndexIDToIndexKeyMap& indexKeys, const IndexedDB::ObjectStoreOverwriteMode mode)
 {
     const IDBRequestData requestData { operation };
     saveOperation(operation);
 
-    callConnectionOnMainThread(&IDBConnectionToServer::putOrAdd, requestData, keyData, value, mode);
+    callConnectionOnMainThread(&IDBConnectionToServer::putOrAdd, requestData, keyData, value, indexKeys, mode);
 }
 
 void IDBConnectionProxy::getRecord(TransactionOperation& operation, const IDBGetRecordData& getRecordData)
@@ -281,6 +287,7 @@ std::pair<RefPtr<IDBDatabase>, std::optional<ScriptExecutionContextIdentifier>> 
     auto it = m_databaseConnectionMap.find(connectionIdentifier);
     if (it == m_databaseConnectionMap.end())
         return { };
+
     RefPtr database = it->value.database.get();
     if (!database) {
         m_databaseConnectionMap.remove(it);
@@ -289,6 +296,7 @@ std::pair<RefPtr<IDBDatabase>, std::optional<ScriptExecutionContextIdentifier>> 
 
     return { database, it->value.contextIdentifier };
 }
+
 void IDBConnectionProxy::fireVersionChangeEvent(IDBDatabaseConnectionIdentifier databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion)
 {
     auto [database, contextIdentifier] = databaseFromConnectionIdentifier(databaseConnectionIdentifier);
@@ -432,7 +440,6 @@ void IDBConnectionProxy::databaseConnectionClosed(IDBDatabase& database)
 void IDBConnectionProxy::didCloseFromServer(IDBDatabaseConnectionIdentifier databaseConnectionIdentifier, const IDBError& error)
 {
     auto [database, contextIdentifier] = databaseFromConnectionIdentifier(databaseConnectionIdentifier);
-
     if (!database)
         return;
 
@@ -449,7 +456,6 @@ void IDBConnectionProxy::connectionToServerLost(const IDBError& error)
 
     for (auto connectionIdentifier : databaseConnectionIdentifiers) {
         auto [database, contextIdentifier] = databaseFromConnectionIdentifier(connectionIdentifier);
-
         if (!database)
             continue;
 
@@ -492,7 +498,7 @@ void IDBConnectionProxy::scheduleMainThreadTasks()
     if (m_mainThreadProtector)
         return;
 
-    m_mainThreadProtector = &m_connectionToServer;
+    m_mainThreadProtector = m_connectionToServer.ptr();
     callOnMainThread([this] {
         handleMainThreadTasks();
     });
@@ -629,16 +635,23 @@ void IDBConnectionProxy::abortActivitiesForCurrentThread()
                 transaction->didAbort(IDBError { ExceptionCode::InvalidStateError, "Transaction is removed"_s });
         });
     }
+
+    HashSet<RefPtr<TransactionOperation>> activeOperationsForThread;
     {
         Locker locker { m_transactionOperationLock };
-        removeItemsMatchingCurrentThread(m_activeOperations, [](auto& operation) {
-            if (!operation)
-                return;
-
-            auto result = IDBResultData::error(operation->identifier(), IDBError { ExceptionCode::InvalidStateError, "Operation is removed"_s });
-            operation->transitionToComplete(result, Ref { *operation });
-        });
+        for (auto& operation : m_activeOperations.values()) {
+            if (&operation->originThread() == &Thread::current())
+                activeOperationsForThread.add(operation);
+        }
+        for (auto& operation : activeOperationsForThread)
+            m_activeOperations.remove(operation->identifier());
     }
+
+    for (auto& operation : activeOperationsForThread) {
+            auto result = IDBResultData::error(operation->identifier(), IDBError { ExceptionCode::InvalidStateError, "Operation is removed"_s });
+        operation->transitionToCompleteOnThisThread(result);
+    }
+
     {
         Locker locker { m_databaseInfoMapLock };
         removeItemsMatchingCurrentThread(m_databaseInfoCallbacks, [](auto& request) {
@@ -660,6 +673,7 @@ void IDBConnectionProxy::setContextSuspended(ScriptExecutionContext& currentCont
             }
         }
     }
+
     {
         Locker locker { m_openDBRequestMapLock };
         setMatchingItemsContextSuspended(currentContext, m_openDBRequestMap, isContextSuspended);

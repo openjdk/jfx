@@ -46,6 +46,8 @@ public:
     bool needsWidgetUpdate() const { return m_needsWidgetUpdate; }
     void setNeedsWidgetUpdate(bool needsWidgetUpdate) { m_needsWidgetUpdate = needsWidgetUpdate; }
 
+    bool shouldBypassCSPForPDFPlugin(const String& contentType) const;
+
 protected:
     HTMLPlugInImageElement(const QualifiedName& tagName, Document&);
 
@@ -68,7 +70,6 @@ protected:
 private:
     bool isPlugInImageElement() const final { return true; }
 
-    bool shouldBypassCSPForPDFPlugin(const String&) const;
     bool canLoadPlugInContent(const String& relativeURL, const String& mimeType) const;
     bool canLoadURL(const URL&) const;
 

@@ -134,6 +134,28 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         break;
     }
 
+    case op_instanceof: {
+        auto& metadata = instruction->as<OpInstanceof>().metadata(profiledBlock);
+        switch (bytecodeIndex.checkpoint()) {
+        case OpInstanceof::getHasInstance:
+            if (metadata.m_hasInstanceModeMetadata.mode != GetByIdMode::Default)
+                return GetByStatus(NoInformation, false);
+            structureID = metadata.m_hasInstanceModeMetadata.defaultMode.structureID;
+            identifier = &vm.propertyNames->hasInstanceSymbol;
+            break;
+        case OpInstanceof::getPrototype:
+            if (metadata.m_prototypeModeMetadata.mode != GetByIdMode::Default)
+                return GetByStatus(NoInformation, false);
+            structureID = metadata.m_prototypeModeMetadata.defaultMode.structureID;
+            identifier = &vm.propertyNames->prototype;
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
+        break;
+    }
+
     case op_get_private_name:
         // FIXME: Consider using LLInt caches or IC information to populate GetByStatus
         // https://bugs.webkit.org/show_bug.cgi?id=217245
@@ -225,7 +247,7 @@ GetByStatus::GetByStatus(const ModuleNamespaceAccessCase& accessCase)
 
 GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin)
 {
-    StubInfoSummary summary = StructureStubInfo::summary(profiledBlock->vm(), stubInfo);
+    StubInfoSummary summary = StructureStubInfo::summary(locker, profiledBlock->vm(), stubInfo);
     if (!isInlineable(summary))
         return GetByStatus(summary, stubInfo);
 
@@ -259,9 +281,9 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
     }
 
     case CacheType::Stub: {
-        PolymorphicAccess* list = stubInfo->m_stub.get();
-        if (list->size() == 1) {
-            const AccessCase& access = list->at(0);
+        auto list = stubInfo->listedAccessCases(locker);
+        if (list.size() == 1) {
+            const AccessCase& access = *list.at(0);
             switch (access.type()) {
             case AccessCase::ModuleNamespaceLoad:
                 return GetByStatus(access.as<ModuleNamespaceAccessCase>());
@@ -285,8 +307,8 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurr
             }
         }
 
-        for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
-            const AccessCase& access = list->at(listIndex);
+        for (unsigned listIndex = 0; listIndex < list.size(); ++listIndex) {
+            const AccessCase& access = *list.at(listIndex);
             bool viaGlobalProxy = access.viaGlobalProxy();
 
             if (access.usesPolyProto())

@@ -34,12 +34,15 @@
 #include "AudioUtilities.h"
 #include "ChannelCountMode.h"
 #include <algorithm>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioNodeInput);
+
 AudioNodeInput::AudioNodeInput(AudioNode* node)
     : AudioSummingJunction(node->context())
-    , m_node(node)
+    , m_node(node, EnableWeakPtrThreadingAssertions::No) // WebAudio code uses locking when accessing the context.
 {
     // Set to mono by default.
     m_internalSummingBus = AudioBus::create(1, AudioUtilities::renderQuantumSize);

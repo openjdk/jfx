@@ -22,6 +22,7 @@
 #include "StyleRareNonInheritedData.h"
 
 #include "RenderCounter.h"
+#include "RenderStyleDifference.h"
 #include "RenderStyleInlines.h"
 #include "ShadowData.h"
 #include "StyleImage.h"
@@ -42,6 +43,12 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , perspectiveOriginX(RenderStyle::initialPerspectiveOriginX())
     , perspectiveOriginY(RenderStyle::initialPerspectiveOriginY())
     , lineClamp(RenderStyle::initialLineClamp())
+    , zoom(RenderStyle::initialZoom())
+    , maxLines(RenderStyle::initialMaxLines())
+    , overflowContinue(RenderStyle::initialOverflowContinue())
+    , touchActions(RenderStyle::initialTouchActions())
+    , marginTrim(RenderStyle::initialMarginTrim())
+    , contain(RenderStyle::initialContainment())
     , initialLetter(RenderStyle::initialInitialLetter())
     , marquee(StyleMarqueeData::create())
     , backdropFilter(StyleFilterData::create())
@@ -69,7 +76,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , offsetPath(RenderStyle::initialOffsetPath())
     // containerNames
     , viewTransitionClasses(RenderStyle::initialViewTransitionClasses())
-    // viewTransitionName
+    , viewTransitionName(RenderStyle::initialViewTransitionName())
     , columnGap(RenderStyle::initialColumnGap())
     , rowGap(RenderStyle::initialRowGap())
     , offsetDistance(RenderStyle::initialOffsetDistance())
@@ -77,12 +84,6 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , offsetAnchor(RenderStyle::initialOffsetAnchor())
     , offsetRotate(RenderStyle::initialOffsetRotate())
     , textDecorationThickness(RenderStyle::initialTextDecorationThickness())
-    , touchActions(RenderStyle::initialTouchActions())
-    , marginTrim(RenderStyle::initialMarginTrim())
-    , contain(RenderStyle::initialContainment())
-    // scrollSnapType
-    // scrollSnapAlign
-    // scrollSnapStop
     // scrollTimelines
     // scrollTimelineAxes
     // scrollTimelineNames
@@ -90,15 +91,21 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     // viewTimelineAxes
     // viewTimelineInsets
     // viewTimelineNames
+    // timelineScope
     // scrollbarGutter
-    , scrollbarWidth(RenderStyle::initialScrollbarWidth())
-    , zoom(RenderStyle::initialZoom())
+    // scrollSnapType
+    // scrollSnapAlign
+    // scrollSnapStop
     , pseudoElementNameArgument(nullAtom())
     , anchorNames(RenderStyle::initialAnchorNames())
+    , anchorScope(RenderStyle::initialAnchorScope())
     , positionAnchor(RenderStyle::initialPositionAnchor())
-    , textBoxEdge(RenderStyle::initialTextBoxEdge())
+    , positionArea(RenderStyle::initialPositionArea())
+    , positionTryFallbacks(RenderStyle::initialPositionTryFallbacks())
     , blockStepSize(RenderStyle::initialBlockStepSize())
+    , blockStepAlign(static_cast<unsigned>(RenderStyle::initialBlockStepAlign()))
     , blockStepInsert(static_cast<unsigned>(RenderStyle::initialBlockStepInsert()))
+    , blockStepRound(static_cast<unsigned>(RenderStyle::initialBlockStepRound()))
     , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
     , overscrollBehaviorY(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorY()))
     , pageSizeType(static_cast<unsigned>(PageSizeType::Auto))
@@ -111,6 +118,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , contentVisibility(static_cast<unsigned>(RenderStyle::initialContentVisibility()))
     , effectiveBlendMode(static_cast<unsigned>(RenderStyle::initialBlendMode()))
     , isolation(static_cast<unsigned>(RenderStyle::initialIsolation()))
+    , inputSecurity(static_cast<unsigned>(RenderStyle::initialInputSecurity()))
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(static_cast<unsigned>(RenderStyle::initialApplePayButtonStyle()))
     , applePayButtonType(static_cast<unsigned>(RenderStyle::initialApplePayButtonType()))
@@ -118,14 +126,19 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , breakBefore(static_cast<unsigned>(RenderStyle::initialBreakBetween()))
     , breakAfter(static_cast<unsigned>(RenderStyle::initialBreakBetween()))
     , breakInside(static_cast<unsigned>(RenderStyle::initialBreakInside()))
-    , inputSecurity(static_cast<unsigned>(RenderStyle::initialInputSecurity()))
     , containIntrinsicWidthType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicWidthType()))
     , containIntrinsicHeightType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicHeightType()))
     , containerType(static_cast<unsigned>(RenderStyle::initialContainerType()))
     , textBoxTrim(static_cast<unsigned>(RenderStyle::initialTextBoxTrim()))
     , overflowAnchor(static_cast<unsigned>(RenderStyle::initialOverflowAnchor()))
     , hasClip(false)
-    , fieldSizing(RenderStyle::initialFieldSizing())
+    , positionTryOrder(static_cast<unsigned>(RenderStyle::initialPositionTryOrder()))
+    , fieldSizing(static_cast<unsigned>(RenderStyle::initialFieldSizing()))
+    , nativeAppearanceDisabled(static_cast<unsigned>(RenderStyle::initialNativeAppearanceDisabled()))
+#if HAVE(CORE_MATERIAL)
+    , appleVisualEffect(static_cast<unsigned>(RenderStyle::initialAppleVisualEffect()))
+#endif
+    , scrollbarWidth(static_cast<unsigned>(RenderStyle::initialScrollbarWidth()))
 {
 }
 
@@ -136,6 +149,12 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , perspectiveOriginX(o.perspectiveOriginX)
     , perspectiveOriginY(o.perspectiveOriginY)
     , lineClamp(o.lineClamp)
+    , zoom(o.zoom)
+    , maxLines(o.maxLines)
+    , overflowContinue(o.overflowContinue)
+    , touchActions(o.touchActions)
+    , marginTrim(o.marginTrim)
+    , contain(o.contain)
     , initialLetter(o.initialLetter)
     , marquee(o.marquee)
     , backdropFilter(o.backdropFilter)
@@ -171,12 +190,6 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , offsetAnchor(o.offsetAnchor)
     , offsetRotate(o.offsetRotate)
     , textDecorationThickness(o.textDecorationThickness)
-    , touchActions(o.touchActions)
-    , marginTrim(o.marginTrim)
-    , contain(o.contain)
-    , scrollSnapType(o.scrollSnapType)
-    , scrollSnapAlign(o.scrollSnapAlign)
-    , scrollSnapStop(o.scrollSnapStop)
     , scrollTimelines(o.scrollTimelines)
     , scrollTimelineAxes(o.scrollTimelineAxes)
     , scrollTimelineNames(o.scrollTimelineNames)
@@ -184,15 +197,21 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , viewTimelineAxes(o.viewTimelineAxes)
     , viewTimelineInsets(o.viewTimelineInsets)
     , viewTimelineNames(o.viewTimelineNames)
+    , timelineScope(o.timelineScope)
     , scrollbarGutter(o.scrollbarGutter)
-    , scrollbarWidth(o.scrollbarWidth)
-    , zoom(o.zoom)
+    , scrollSnapType(o.scrollSnapType)
+    , scrollSnapAlign(o.scrollSnapAlign)
+    , scrollSnapStop(o.scrollSnapStop)
     , pseudoElementNameArgument(o.pseudoElementNameArgument)
     , anchorNames(o.anchorNames)
+    , anchorScope(o.anchorScope)
     , positionAnchor(o.positionAnchor)
-    , textBoxEdge(o.textBoxEdge)
+    , positionArea(o.positionArea)
+    , positionTryFallbacks(o.positionTryFallbacks)
     , blockStepSize(o.blockStepSize)
+    , blockStepAlign(o.blockStepAlign)
     , blockStepInsert(o.blockStepInsert)
+    , blockStepRound(o.blockStepRound)
     , overscrollBehaviorX(o.overscrollBehaviorX)
     , overscrollBehaviorY(o.overscrollBehaviorY)
     , pageSizeType(o.pageSizeType)
@@ -205,6 +224,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , contentVisibility(o.contentVisibility)
     , effectiveBlendMode(o.effectiveBlendMode)
     , isolation(o.isolation)
+    , inputSecurity(o.inputSecurity)
 #if ENABLE(APPLE_PAY)
     , applePayButtonStyle(o.applePayButtonStyle)
     , applePayButtonType(o.applePayButtonType)
@@ -212,14 +232,19 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , breakBefore(o.breakBefore)
     , breakAfter(o.breakAfter)
     , breakInside(o.breakInside)
-    , inputSecurity(o.inputSecurity)
     , containIntrinsicWidthType(o.containIntrinsicWidthType)
     , containIntrinsicHeightType(o.containIntrinsicHeightType)
     , containerType(o.containerType)
     , textBoxTrim(o.textBoxTrim)
     , overflowAnchor(o.overflowAnchor)
     , hasClip(o.hasClip)
+    , positionTryOrder(o.positionTryOrder)
     , fieldSizing(o.fieldSizing)
+    , nativeAppearanceDisabled(o.nativeAppearanceDisabled)
+#if HAVE(CORE_MATERIAL)
+    , appleVisualEffect(o.appleVisualEffect)
+#endif
+    , scrollbarWidth(o.scrollbarWidth)
 {
 }
 
@@ -237,6 +262,12 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && perspectiveOriginX == o.perspectiveOriginX
         && perspectiveOriginY == o.perspectiveOriginY
         && lineClamp == o.lineClamp
+        && zoom == o.zoom
+        && maxLines == o.maxLines
+        && overflowContinue == o.overflowContinue
+        && touchActions == o.touchActions
+        && marginTrim == o.marginTrim
+        && contain == o.contain
         && initialLetter == o.initialLetter
         && marquee == o.marquee
         && backdropFilter == o.backdropFilter
@@ -245,7 +276,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && clip == o.clip
         && scrollMargin == o.scrollMargin
         && scrollPadding == o.scrollPadding
-        && counterDirectives.map == o.counterDirectives.map
+        && counterDirectives == o.counterDirectives
         && arePointingToEqualData(willChange, o.willChange)
         && arePointingToEqualData(boxReflect, o.boxReflect)
         && maskBorder == o.maskBorder
@@ -270,12 +301,6 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && offsetAnchor == o.offsetAnchor
         && offsetRotate == o.offsetRotate
         && textDecorationThickness == o.textDecorationThickness
-        && touchActions == o.touchActions
-        && marginTrim == o.marginTrim
-        && contain == o.contain
-        && scrollSnapType == o.scrollSnapType
-        && scrollSnapAlign == o.scrollSnapAlign
-        && scrollSnapStop == o.scrollSnapStop
         && scrollTimelines == o.scrollTimelines
         && scrollTimelineAxes == o.scrollTimelineAxes
         && scrollTimelineNames == o.scrollTimelineNames
@@ -283,14 +308,21 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && viewTimelineAxes == o.viewTimelineAxes
         && viewTimelineInsets == o.viewTimelineInsets
         && viewTimelineNames == o.viewTimelineNames
+        && timelineScope == o.timelineScope
         && scrollbarGutter == o.scrollbarGutter
-        && scrollbarWidth == o.scrollbarWidth
-        && zoom == o.zoom
+        && scrollSnapType == o.scrollSnapType
+        && scrollSnapAlign == o.scrollSnapAlign
+        && scrollSnapStop == o.scrollSnapStop
         && pseudoElementNameArgument == o.pseudoElementNameArgument
         && anchorNames == o.anchorNames
+        && anchorScope == o.anchorScope
         && positionAnchor == o.positionAnchor
+        && positionArea == o.positionArea
+        && positionTryFallbacks == o.positionTryFallbacks
         && blockStepSize == o.blockStepSize
+        && blockStepAlign == o.blockStepAlign
         && blockStepInsert == o.blockStepInsert
+        && blockStepRound == o.blockStepRound
         && overscrollBehaviorX == o.overscrollBehaviorX
         && overscrollBehaviorY == o.overscrollBehaviorY
         && pageSizeType == o.pageSizeType
@@ -302,6 +334,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && textGroupAlign == o.textGroupAlign
         && effectiveBlendMode == o.effectiveBlendMode
         && isolation == o.isolation
+        && inputSecurity == o.inputSecurity
 #if ENABLE(APPLE_PAY)
         && applePayButtonStyle == o.applePayButtonStyle
         && applePayButtonType == o.applePayButtonType
@@ -310,17 +343,21 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && breakAfter == o.breakAfter
         && breakBefore == o.breakBefore
         && breakInside == o.breakInside
-        && inputSecurity == o.inputSecurity
         && containIntrinsicWidthType == o.containIntrinsicWidthType
         && containIntrinsicHeightType == o.containIntrinsicHeightType
         && containerType == o.containerType
         && textBoxTrim == o.textBoxTrim
-        && textBoxEdge == o.textBoxEdge
         && overflowAnchor == o.overflowAnchor
         && viewTransitionClasses == o.viewTransitionClasses
         && viewTransitionName == o.viewTransitionName
         && hasClip == o.hasClip
-        && fieldSizing == o.fieldSizing;
+        && positionTryOrder == o.positionTryOrder
+        && fieldSizing == o.fieldSizing
+        && nativeAppearanceDisabled == o.nativeAppearanceDisabled
+#if HAVE(CORE_MATERIAL)
+        && appleVisualEffect == o.appleVisualEffect
+#endif
+        && scrollbarWidth == o.scrollbarWidth;
 }
 
 OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
@@ -331,10 +368,10 @@ OptionSet<Containment> StyleRareNonInheritedData::usedContain() const
     case ContainerType::Normal:
         break;
     case ContainerType::Size:
-        containment.add({ Containment::Layout, Containment::Style, Containment::Size });
+        containment.add({ Containment::Style, Containment::Size });
         break;
     case ContainerType::InlineSize:
-        containment.add({ Containment::Layout, Containment::Style, Containment::InlineSize });
+        containment.add({ Containment::Style, Containment::InlineSize });
         break;
     };
 
@@ -345,5 +382,157 @@ bool StyleRareNonInheritedData::hasBackdropFilters() const
 {
     return !backdropFilter->operations.isEmpty();
 }
+
+#if !LOG_DISABLED
+void StyleRareNonInheritedData::dumpDifferences(TextStream& ts, const StyleRareNonInheritedData& other) const
+{
+    marquee->dumpDifferences(ts, other.marquee);
+    backdropFilter->dumpDifferences(ts, other.backdropFilter);
+    grid->dumpDifferences(ts, other.grid);
+    gridItem->dumpDifferences(ts, other.gridItem);
+
+    LOG_IF_DIFFERENT(containIntrinsicWidth);
+    LOG_IF_DIFFERENT(containIntrinsicHeight);
+
+    LOG_IF_DIFFERENT(perspectiveOriginX);
+    LOG_IF_DIFFERENT(perspectiveOriginY);
+
+    LOG_IF_DIFFERENT(lineClamp);
+
+    LOG_IF_DIFFERENT(zoom);
+
+    LOG_IF_DIFFERENT(maxLines);
+    LOG_IF_DIFFERENT(overflowContinue);
+
+    LOG_IF_DIFFERENT(touchActions);
+    LOG_IF_DIFFERENT(marginTrim);
+    LOG_IF_DIFFERENT(contain);
+
+    LOG_IF_DIFFERENT(initialLetter);
+
+    LOG_IF_DIFFERENT(clip);
+    LOG_IF_DIFFERENT(scrollMargin);
+    LOG_IF_DIFFERENT(scrollPadding);
+
+    LOG_IF_DIFFERENT(counterDirectives);
+
+    LOG_IF_DIFFERENT(willChange);
+    LOG_IF_DIFFERENT(boxReflect);
+
+    LOG_IF_DIFFERENT(maskBorder);
+    LOG_IF_DIFFERENT(pageSize);
+
+    LOG_IF_DIFFERENT(shapeOutside);
+
+    LOG_IF_DIFFERENT(shapeMargin);
+    LOG_IF_DIFFERENT(shapeImageThreshold);
+    LOG_IF_DIFFERENT(perspective);
+
+    LOG_IF_DIFFERENT(clipPath);
+
+    LOG_IF_DIFFERENT(textDecorationColor);
+
+    customProperties->dumpDifferences(ts, other.customProperties);
+    LOG_IF_DIFFERENT(customPaintWatchedProperties);
+
+    LOG_IF_DIFFERENT(rotate);
+    LOG_IF_DIFFERENT(scale);
+    LOG_IF_DIFFERENT(translate);
+    LOG_IF_DIFFERENT(offsetPath);
+
+    LOG_IF_DIFFERENT(containerNames);
+
+    LOG_IF_DIFFERENT(viewTransitionClasses);
+    LOG_IF_DIFFERENT(viewTransitionName);
+
+    LOG_IF_DIFFERENT(columnGap);
+    LOG_IF_DIFFERENT(rowGap);
+
+    LOG_IF_DIFFERENT(offsetDistance);
+    LOG_IF_DIFFERENT(offsetPosition);
+    LOG_IF_DIFFERENT(offsetAnchor);
+    LOG_IF_DIFFERENT(offsetRotate);
+
+    LOG_IF_DIFFERENT(textDecorationThickness);
+
+    LOG_IF_DIFFERENT(scrollTimelines);
+    LOG_IF_DIFFERENT(scrollTimelineAxes);
+    LOG_IF_DIFFERENT(scrollTimelineNames);
+
+    LOG_IF_DIFFERENT(viewTimelines);
+    LOG_IF_DIFFERENT(viewTimelineAxes);
+    LOG_IF_DIFFERENT(viewTimelineInsets);
+    LOG_IF_DIFFERENT(viewTimelineNames);
+
+    LOG_IF_DIFFERENT(timelineScope);
+
+    LOG_IF_DIFFERENT(scrollbarGutter);
+
+    LOG_IF_DIFFERENT(scrollSnapType);
+    LOG_IF_DIFFERENT(scrollSnapAlign);
+    LOG_IF_DIFFERENT(scrollSnapStop);
+
+    LOG_IF_DIFFERENT(pseudoElementNameArgument);
+
+    LOG_IF_DIFFERENT(anchorNames);
+    LOG_IF_DIFFERENT(anchorScope);
+    LOG_IF_DIFFERENT(positionAnchor);
+    LOG_IF_DIFFERENT(positionArea);
+    LOG_IF_DIFFERENT(positionTryFallbacks);
+
+    LOG_IF_DIFFERENT(blockStepSize);
+
+    LOG_IF_DIFFERENT_WITH_CAST(BlockStepAlign, blockStepAlign);
+    LOG_IF_DIFFERENT_WITH_CAST(BlockStepInsert, blockStepInsert);
+    LOG_IF_DIFFERENT_WITH_CAST(BlockStepRound, blockStepRound);
+
+    LOG_IF_DIFFERENT_WITH_CAST(OverscrollBehavior, overscrollBehaviorX);
+    LOG_IF_DIFFERENT_WITH_CAST(OverscrollBehavior, overscrollBehaviorY);
+
+    LOG_IF_DIFFERENT_WITH_CAST(PageSizeType, pageSizeType);
+
+    LOG_IF_DIFFERENT_WITH_CAST(TransformStyle3D, transformStyle3D);
+    LOG_IF_DIFFERENT_WITH_CAST(bool, transformStyleForcedToFlat);
+    LOG_IF_DIFFERENT_WITH_CAST(BackfaceVisibility, backfaceVisibility);
+
+    LOG_IF_DIFFERENT_WITH_CAST(ScrollBehavior, useSmoothScrolling);
+    LOG_IF_DIFFERENT_WITH_CAST(TextDecorationStyle, textDecorationStyle);
+    LOG_IF_DIFFERENT_WITH_CAST(TextGroupAlign, textGroupAlign);
+
+    LOG_IF_DIFFERENT_WITH_CAST(ContentVisibility, contentVisibility);
+    LOG_IF_DIFFERENT_WITH_CAST(BlendMode, effectiveBlendMode);
+
+    LOG_IF_DIFFERENT_WITH_CAST(Isolation, isolation);
+
+    LOG_IF_DIFFERENT_WITH_CAST(InputSecurity, inputSecurity);
+
+#if ENABLE(APPLE_PAY)
+    LOG_IF_DIFFERENT_WITH_CAST(ApplePayButtonStyle, applePayButtonStyle);
+    LOG_IF_DIFFERENT_WITH_CAST(ApplePayButtonType, applePayButtonType);
+#endif
+
+    LOG_IF_DIFFERENT_WITH_CAST(BreakBetween, breakBefore);
+    LOG_IF_DIFFERENT_WITH_CAST(BreakBetween, breakAfter);
+    LOG_IF_DIFFERENT_WITH_CAST(BreakInside, breakInside);
+
+    LOG_IF_DIFFERENT_WITH_CAST(ContainIntrinsicSizeType, containIntrinsicWidthType);
+    LOG_IF_DIFFERENT_WITH_CAST(ContainIntrinsicSizeType, containIntrinsicHeightType);
+
+    LOG_IF_DIFFERENT_WITH_CAST(ContainerType, containerType);
+    LOG_IF_DIFFERENT_WITH_CAST(TextBoxTrim, textBoxTrim);
+    LOG_IF_DIFFERENT_WITH_CAST(OverflowAnchor, overflowAnchor);
+    LOG_IF_DIFFERENT_WITH_CAST(bool, hasClip);
+    LOG_IF_DIFFERENT_WITH_CAST(Style::PositionTryOrder, positionTryOrder);
+    LOG_IF_DIFFERENT(fieldSizing);
+
+    LOG_IF_DIFFERENT(nativeAppearanceDisabled);
+
+#if HAVE(CORE_MATERIAL)
+    LOG_IF_DIFFERENT(appleVisualEffect);
+#endif
+
+    LOG_IF_DIFFERENT(scrollbarWidth);
+}
+#endif // !LOG_DISABLED
 
 } // namespace WebCore

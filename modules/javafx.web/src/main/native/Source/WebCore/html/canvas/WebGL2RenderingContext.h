@@ -261,9 +261,6 @@ public:
 
 private:
     using WebGLRenderingContextBase::WebGLRenderingContextBase;
-
-    bool isWebGL2() const final { return true; }
-
     void initializeContextState() final;
 
     RefPtr<ArrayBufferView> arrayBufferViewSliceFactory(ASCIILiteral functionName, const ArrayBufferView& data, unsigned startByte, unsigned bytelength);
@@ -332,7 +329,7 @@ private:
     WebGLBindingPoint<WebGLBuffer, GraphicsContextGL::UNIFORM_BUFFER> m_boundUniformBuffer;
     Vector<WebGLBindingPoint<WebGLBuffer, GraphicsContextGL::UNIFORM_BUFFER>> m_boundIndexedUniformBuffers;
 
-    RefPtr<WebGLQuery> m_activeQueries[ActiveQueryKey::NumKeys];
+    std::array<RefPtr<WebGLQuery>, ActiveQueryKey::NumKeys> m_activeQueries;
 
     Vector<RefPtr<WebGLSampler>> m_boundSamplers;
 

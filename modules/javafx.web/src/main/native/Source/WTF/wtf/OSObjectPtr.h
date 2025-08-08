@@ -34,6 +34,7 @@
 #define adoptOSObject adoptOSObjectArc
 #define retainOSObject retainOSObjectArc
 #define releaseOSObject releaseOSObjectArc
+#define OSObjectPtr OSObjectPtrArc
 #endif
 
 namespace WTF {

@@ -76,6 +76,10 @@ std::optional<Color> NativeImage::singlePixelSolidColor() const
     return {};
 }
 
+Headroom PlatformImageNativeImageBackend::headroom() const
+{
+    return Headroom::None;
+}
 void NativeImage::clearSubimages()
 {
     notImplemented();

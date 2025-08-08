@@ -61,7 +61,7 @@ public:
 
 private:
     Thread(const AbstractLocker& locker, Worklist& work)
-        : Base(locker, work.m_lock, work.m_planEnqueued.copyRef())
+        : Base(locker, work.m_lock, work.m_planEnqueued.copyRef(), ThreadType::Compiler)
         , worklist(work)
     {
 
@@ -105,7 +105,7 @@ private:
         ASSERT(plan);
 
         bool wasMultiThreaded = plan->multiThreaded();
-        plan->work(Plan::Partial);
+        plan->work();
 
         ASSERT(!plan->hasWork() || plan->multiThreaded());
         if (plan->hasWork() && !wasMultiThreaded && plan->multiThreaded()) {

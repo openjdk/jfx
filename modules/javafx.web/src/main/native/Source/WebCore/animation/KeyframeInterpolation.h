@@ -40,6 +40,7 @@ public:
 
     class Keyframe {
     public:
+        bool hasResolvedOffset() const { return !std::isnan(offset()); }
         virtual double offset() const = 0;
         virtual std::optional<CompositeOperation> compositeOperation() const = 0;
         virtual bool animatesProperty(Property) const = 0;
@@ -69,7 +70,7 @@ public:
     using AccumulationCallback = Function<void(const Keyframe&)>;
     using InterpolationCallback = Function<void(double intervalProgress, double currentIteration, IterationCompositeOperation)>;
     using RequiresBlendingForAccumulativeIterationCallback = Function<bool()>;
-    void interpolateKeyframes(Property, const KeyframeInterval&, double iterationProgress, double currentIteration, Seconds iterationDuration, const CompositionCallback&, const AccumulationCallback&, const InterpolationCallback&, const RequiresBlendingForAccumulativeIterationCallback&) const;
+    void interpolateKeyframes(Property, const KeyframeInterval&, double iterationProgress, double currentIteration, const WebAnimationTime& iterationDuration, TimingFunction::Before, const CompositionCallback&, const AccumulationCallback&, const InterpolationCallback&, const RequiresBlendingForAccumulativeIterationCallback&) const;
 
     virtual ~KeyframeInterpolation() = default;
 };

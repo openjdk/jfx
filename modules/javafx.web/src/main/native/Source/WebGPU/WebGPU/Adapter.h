@@ -26,11 +26,13 @@
 #pragma once
 
 #import "HardwareCapabilities.h"
+#import <Metal/Metal.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 #import <wtf/TZoneMalloc.h>
+#import <wtf/WeakPtr.h>
 
 struct WGPUAdapterImpl {
 };
@@ -65,15 +67,15 @@ public:
     void makeInvalid() { m_device = nil; }
     bool isXRCompatible() const;
 
-    Instance& instance() const { return m_instance; }
-
+    RefPtr<Instance> instance() const { return m_instance.get(); }
+    ThreadSafeWeakPtr<Instance> weakInstance() const { return m_instance; }
 
 private:
     Adapter(id<MTLDevice>, Instance&, bool xrCompatible, HardwareCapabilities&&);
     Adapter(Instance&);
 
     id<MTLDevice> m_device { nil };
-    const Ref<Instance> m_instance;
+    const ThreadSafeWeakPtr<Instance> m_instance;
 
     const HardwareCapabilities m_capabilities { };
     bool m_deviceRequested { false };

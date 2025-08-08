@@ -70,7 +70,7 @@ bool isOrthogonalParent(const RenderGrid&, const RenderElement& parent);
 bool isAspectRatioBlockSizeDependentGridItem(const RenderBox&);
 GridTrackSizingDirection flowAwareDirectionForGridItem(const RenderGrid&, const RenderBox&, GridTrackSizingDirection);
 GridTrackSizingDirection flowAwareDirectionForParent(const RenderGrid&, const RenderElement& parent, GridTrackSizingDirection);
-std::optional<RenderBox::ContainingBlockOverrideValue> overridingContainingBlockContentSizeForGridItem(const RenderBox&, GridTrackSizingDirection);
+std::optional<RenderBox::GridAreaSize> overridingContainingBlockContentSizeForGridItem(const RenderBox&, GridTrackSizingDirection);
 bool hasRelativeOrIntrinsicSizeForGridItem(const RenderBox& gridItem, GridTrackSizingDirection);
 
 bool isFlippedDirection(const RenderGrid&, GridTrackSizingDirection);
@@ -78,6 +78,9 @@ bool isSubgridReversedDirection(const RenderGrid&, GridTrackSizingDirection oute
 ExtraMarginsFromSubgrids extraMarginForSubgridAncestors(GridTrackSizingDirection, const RenderBox& gridItem);
 
 unsigned alignmentContextForBaselineAlignment(const GridSpan&, const ItemPosition& alignment);
+
+GridAxis gridAxisForDirection(GridTrackSizingDirection);
+GridTrackSizingDirection gridDirectionForAxis(GridAxis);
 
 }
 

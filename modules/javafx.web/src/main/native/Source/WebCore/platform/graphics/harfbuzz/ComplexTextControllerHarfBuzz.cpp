@@ -132,16 +132,16 @@ static hb_font_funcs_t* harfBuzzFontFunctions()
     return fontFunctions;
 }
 
-ComplexTextController::ComplexTextRun::ComplexTextRun(hb_buffer_t* buffer, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength, unsigned indexBegin, unsigned indexEnd)
+ComplexTextController::ComplexTextRun::ComplexTextRun(hb_buffer_t* buffer, const Font& font, std::span<const UChar> characters, unsigned stringLocation, unsigned indexBegin, unsigned indexEnd)
     : m_initialAdvance(0, 0)
     , m_font(font)
     , m_characters(characters)
-    , m_stringLength(stringLength)
     , m_indexBegin(indexBegin)
     , m_indexEnd(indexEnd)
     , m_glyphCount(hb_buffer_get_length(buffer))
     , m_stringLocation(stringLocation)
     , m_isLTR(HB_DIRECTION_IS_FORWARD(hb_buffer_get_direction(buffer)))
+    , m_textAutospaceSize(TextAutospace::textAutospaceSize(font))
 {
     if (!m_glyphCount)
         return;
@@ -191,8 +191,10 @@ static Vector<hb_feature_t, 4> fontFeatures(const FontCascade& font, const FontP
     //    font-feature-settings descriptor in the @font-face rule.
     auto* fcPattern = fontPlatformData.fcPattern();
     FcChar8* fcFontFeature;
-    for (int i = 0; FcPatternGetString(fcPattern, FC_FONT_FEATURES, i, &fcFontFeature) == FcResultMatch; ++i)
-        featuresToBeApplied.set(fontFeatureTag(reinterpret_cast<char*>(fcFontFeature)), 1);
+    for (int i = 0; FcPatternGetString(fcPattern, FC_FONT_FEATURES, i, &fcFontFeature) == FcResultMatch; ++i) {
+        auto fcFontFeatureSpan = unsafeSpanIncludingNullTerminator(reinterpret_cast<char*>(fcFontFeature)).subspan<0, 5>();
+        featuresToBeApplied.set(fontFeatureTag(fcFontFeatureSpan), 1);
+    }
 
     // 3. Font features implied by the value of the ‘font-variant’ property, the related ‘font-variant’
     //    subproperties and any other CSS property that uses OpenType features.
@@ -310,7 +312,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
 {
     if (!font) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), characters.data(), stringLocation, characters.size(), 0, characters.size(), m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), characters, stringLocation, 0, characters.size(), m_run.ltr()));
         return;
     }
 
@@ -382,7 +384,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
         hb_buffer_add_utf16(buffer.get(), reinterpret_cast<const uint16_t*>(characters.data()), characters.size(), run.startIndex, run.endIndex - run.startIndex);
 
         hb_shape(harfBuzzFont.get(), buffer.get(), features.isEmpty() ? nullptr : features.data(), features.size());
-        m_complexTextRuns.append(ComplexTextRun::create(buffer.get(), *font, characters.data(), stringLocation, characters.size(), run.startIndex, run.endIndex));
+        m_complexTextRuns.append(ComplexTextRun::create(buffer.get(), *font, characters, stringLocation, run.startIndex, run.endIndex));
         hb_buffer_reset(buffer.get());
     }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2014, 2016 Apple Inc. All rights reserved.
+# Copyright (c) 2014-2025 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -170,7 +170,7 @@ def generate_from_specification(primary_specification_filepath=None,
         generators.append(CppProtocolTypesHeaderGenerator(*generator_arguments))
         generators.append(CppProtocolTypesImplementationGenerator(*generator_arguments))
 
-    elif protocol.framework is Frameworks.WebKit and generate_backend:
+    elif generate_backend and protocol.framework in [Frameworks.WebKit, Frameworks.WebDriverBidi]:
         generators.append(CppBackendDispatcherHeaderGenerator(*generator_arguments))
         generators.append(CppBackendDispatcherImplementationGenerator(*generator_arguments))
         generators.append(CppFrontendDispatcherHeaderGenerator(*generator_arguments))
@@ -263,7 +263,7 @@ def generate_from_specification(primary_specification_filepath=None,
 
 
 if __name__ == '__main__':
-    allowed_framework_names = ['JavaScriptCore', 'WebInspector', 'WebInspectorUI', 'WebKit', 'Test']
+    allowed_framework_names = ['JavaScriptCore', 'WebInspector', 'WebInspectorUI', 'WebKit', 'WebDriverBidi', 'Test']
     cli_parser = optparse.OptionParser(usage="usage: %prog [options] PrimaryProtocol.json [SupplementalProtocol.json ...]")
     cli_parser.add_option("-o", "--outputDir", help="Directory where generated files should be written.")
     cli_parser.add_option("--framework", type="choice", choices=allowed_framework_names, help="The framework that the primary specification belongs to.")

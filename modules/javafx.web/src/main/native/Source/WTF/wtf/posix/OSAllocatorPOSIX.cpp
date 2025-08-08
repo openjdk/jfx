@@ -30,7 +30,9 @@
 #include <sys/mman.h>
 #include <wtf/Assertions.h>
 #include <wtf/DataLog.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Mmap.h>
 #include <wtf/PageBlock.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
@@ -81,53 +83,21 @@ void* OSAllocator::tryReserveAndCommit(size_t bytes, Usage usage, bool writable,
     int fd = -1;
 #endif
 
-    void* result = nullptr;
-#if (OS(DARWIN) && CPU(X86_64))
-    if (executable) {
-        ASSERT(includesGuardPages);
-        // Cook up an address to allocate at, using the following recipe:
-        //   17 bits of zero, stay in userspace kids.
-        //   26 bits of randomness for ASLR.
-        //   21 bits of zero, at least stay aligned within one level of the pagetables.
-        //
-        // But! - as a temporary workaround for some plugin problems (rdar://problem/6812854),
-        // for now instead of 2^26 bits of ASLR lets stick with 25 bits of randomization plus
-        // 2^24, which should put up somewhere in the middle of userspace (in the address range
-        // 0x200000000000 .. 0x5fffffffffff).
-        intptr_t randomLocation = 0;
-        randomLocation = arc4random() & ((1 << 25) - 1);
-        randomLocation += (1 << 24);
-        randomLocation <<= 21;
-        result = reinterpret_cast<void*>(randomLocation);
-    }
-#endif
-
-    result = mmap(result, bytes, protection, flags, fd, 0);
-    if (result == MAP_FAILED)
-        result = nullptr;
+    auto result = MallocSpan<uint8_t, Mmap>::mmap(bytes, protection, flags, fd);
     if (result && includesGuardPages) {
         // We use mmap to remap the guardpages rather than using mprotect as
         // mprotect results in multiple references to the code region. This
         // breaks the madvise based mechanism we use to return physical memory
         // to the OS.
-        const auto guardPageSize = pageSize();
-        auto foreGuardResult = mmap(result, guardPageSize, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
-        if (UNLIKELY(foreGuardResult == MAP_FAILED)) {
-            munmap(result, bytes);
-            return nullptr;
+        mmap(result.mutableSpan().data(), pageSize(), PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
+        mmap(result.mutableSpan().last(pageSize()).data(), pageSize(), PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
         }
-        auto aftGuardResult = mmap(static_cast<char*>(result) + bytes - guardPageSize, guardPageSize, PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
-        if (UNLIKELY(aftGuardResult == MAP_FAILED)) {
-            munmap(result, bytes);
-            return nullptr;
-        }
-    }
-    return result;
+    return result.leakSpan().data();
 }
 
 void* OSAllocator::tryReserveUncommitted(size_t bytes, Usage usage, bool writable, bool executable, bool jitCageEnabled, bool includesGuardPages)
 {
-#if OS(LINUX)
+#if OS(LINUX) || OS(HAIKU)
     UNUSED_PARAM(usage);
     UNUSED_PARAM(jitCageEnabled);
     UNUSED_PARAM(includesGuardPages);
@@ -216,23 +186,21 @@ void* OSAllocator::tryReserveUncommittedAligned(size_t bytes, size_t alignment, 
 
     // Add the alignment so we can ensure enough mapped memory to get an aligned start.
     size_t mappedSize = bytes + alignment;
-    char* mapped = reinterpret_cast<char*>(tryReserveUncommitted(mappedSize, usage, writable, executable, jitCageEnabled, includesGuardPages));
-    if (!mapped)
+    auto* rawMapped = reinterpret_cast<uint8_t*>(tryReserveUncommitted(mappedSize, usage, writable, executable, jitCageEnabled, includesGuardPages));
+    if (!rawMapped)
         return nullptr;
-    char* mappedEnd = mapped + mappedSize;
+    auto mappedSpan = unsafeMakeSpan(rawMapped, mappedSize);
 
-    char* aligned = reinterpret_cast<char*>(roundUpToMultipleOf(alignment, reinterpret_cast<uintptr_t>(mapped)));
-    char* alignedEnd = aligned + bytes;
+    auto* rawAligned = reinterpret_cast<uint8_t*>(roundUpToMultipleOf(alignment, reinterpret_cast<uintptr_t>(mappedSpan.data())));
+    auto alignedSpan = mappedSpan.subspan(rawAligned - mappedSpan.data(), bytes);
 
-    RELEASE_ASSERT(alignedEnd <= mappedEnd);
+    if (size_t leftExtra = alignedSpan.data() - mappedSpan.data())
+        releaseDecommitted(mappedSpan.data(), leftExtra);
 
-    if (size_t leftExtra = aligned - mapped)
-        releaseDecommitted(mapped, leftExtra);
+    if (size_t rightExtra = std::to_address(mappedSpan.end()) - std::to_address(alignedSpan.end()))
+        releaseDecommitted(std::to_address(alignedSpan.end()), rightExtra);
 
-    if (size_t rightExtra = mappedEnd - alignedEnd)
-        releaseDecommitted(alignedEnd, rightExtra);
-
-    return aligned;
+    return alignedSpan.data();
 #endif // HAVE(MAP_ALIGNED)
 #endif // PLATFORM(MAC) || USE(APPLE_INTERNAL_SDK)
 }
@@ -246,7 +214,7 @@ void* OSAllocator::reserveAndCommit(size_t bytes, Usage usage, bool writable, bo
 
 void OSAllocator::commit(void* address, size_t bytes, bool writable, bool executable)
 {
-#if OS(LINUX)
+#if OS(LINUX) || OS(HAIKU)
     UNUSED_PARAM(writable);
     UNUSED_PARAM(executable);
     while (madvise(address, bytes, MADV_WILLNEED) == -1 && errno == EAGAIN) { }
@@ -265,7 +233,7 @@ void OSAllocator::commit(void* address, size_t bytes, bool writable, bool execut
 
 void OSAllocator::decommit(void* address, size_t bytes)
 {
-#if OS(LINUX)
+#if OS(LINUX) || OS(HAIKU)
     while (madvise(address, bytes, MADV_DONTNEED) == -1 && errno == EAGAIN) { }
 #elif HAVE(MADV_FREE_REUSE)
     while (madvise(address, bytes, MADV_FREE_REUSABLE) == -1 && errno == EAGAIN) { }

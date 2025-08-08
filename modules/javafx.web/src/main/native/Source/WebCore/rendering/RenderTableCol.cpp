@@ -72,10 +72,7 @@ void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* old
     // If border was changed, notify table.
     if (!oldStyle)
         return;
-    if (!oldStyle->borderIsEquivalentForPainting(style())) {
-        table->invalidateCollapsedBorders();
-        return;
-    }
+    table->invalidateCollapsedBordersAfterStyleChangeIfNeeded(*oldStyle, style());
     if (oldStyle->width() != style().width()) {
         table->recalcSectionsIfNeeded();
         for (auto& section : childrenOfType<RenderTableSection>(*table)) {
@@ -102,8 +99,12 @@ void RenderTableCol::updateFromElement()
         m_span = tc.span();
     } else
         m_span = 1;
-    if (m_span != oldSpan && hasInitializedStyle() && parent())
+    if (m_span != oldSpan && parent()) {
+        if (hasInitializedStyle())
         setNeedsLayoutAndPrefWidthsRecalc();
+        if (RenderTable* table = this->table())
+            table->invalidateColumns();
+    }
 }
 
 void RenderTableCol::insertedIntoTree()
@@ -212,24 +213,24 @@ RenderTableCol* RenderTableCol::nextColumn() const
 
 const BorderValue& RenderTableCol::borderAdjoiningCellStartBorder() const
 {
-    return style().borderStart();
+    return style().borderStart(table()->writingMode());
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellEndBorder() const
 {
-    return style().borderEnd();
+    return style().borderEnd(table()->writingMode());
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellBefore(const RenderTableCell& cell) const
 {
     ASSERT_UNUSED(cell, table()->colElement(cell.col() + cell.colSpan()) == this);
-    return style().borderStart();
+    return style().borderStart(table()->writingMode());
 }
 
 const BorderValue& RenderTableCol::borderAdjoiningCellAfter(const RenderTableCell& cell) const
 {
     ASSERT_UNUSED(cell, table()->colElement(cell.col() - 1) == this);
-    return style().borderEnd();
+    return style().borderEnd(table()->writingMode());
 }
 
 LayoutUnit RenderTableCol::offsetLeft() const

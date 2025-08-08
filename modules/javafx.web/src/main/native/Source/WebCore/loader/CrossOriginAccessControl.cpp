@@ -38,11 +38,11 @@
 #include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "ResourceRequest.h"
-#include "RuntimeApplicationChecks.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <mutex>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
@@ -152,7 +152,7 @@ CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& requ
         options.mode = FetchOptions::Mode::SameOrigin;
 
     if (options.mode != FetchOptions::Mode::NoCors) {
-        if (auto* page = document.page()) {
+        if (RefPtr page = document.page()) {
             if (page->shouldDisableCorsForRequestTo(request.url()))
                 options.mode = FetchOptions::Mode::NoCors;
         }

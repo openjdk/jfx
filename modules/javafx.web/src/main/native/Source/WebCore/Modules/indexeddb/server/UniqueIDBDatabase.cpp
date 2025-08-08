@@ -46,6 +46,7 @@
 #include "UniqueIDBDatabaseManager.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -137,6 +138,8 @@ static inline uint64_t estimateSize(const IDBObjectStoreInfo& info)
         size += estimateSize(*keyPath);
     return size;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UniqueIDBDatabase);
 
 UniqueIDBDatabase::UniqueIDBDatabase(UniqueIDBDatabaseManager& manager, const IDBDatabaseIdentifier& identifier)
     : m_manager(manager)
@@ -747,7 +750,7 @@ void UniqueIDBDatabase::createIndex(UniqueIDBDatabaseTransaction& transaction, c
         auto* objectStoreInfo = m_databaseInfo->infoForExistingObjectStore(info.objectStoreIdentifier());
         ASSERT(objectStoreInfo);
         objectStoreInfo->addExistingIndex(info);
-        m_databaseInfo->setMaxIndexID(info.identifier());
+        m_databaseInfo->setMaxIndexID(info.identifier().toRawValue());
     }
 
     callback(error);
@@ -795,7 +798,7 @@ void UniqueIDBDatabase::deleteIndex(UniqueIDBDatabaseTransaction& transaction, I
     callback(error);
 }
 
-void UniqueIDBDatabase::renameIndex(UniqueIDBDatabaseTransaction& transaction, IDBObjectStoreIdentifier objectStoreIdentifier, uint64_t indexIdentifier, const String& newName, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
+void UniqueIDBDatabase::renameIndex(UniqueIDBDatabaseTransaction& transaction, IDBObjectStoreIdentifier objectStoreIdentifier, IDBIndexIdentifier indexIdentifier, const String& newName, ErrorCallback&& callback, SpaceCheckResult spaceCheckResult)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::renameIndex");
@@ -841,7 +844,7 @@ void UniqueIDBDatabase::renameIndex(UniqueIDBDatabaseTransaction& transaction, I
     callback(error);
 }
 
-void UniqueIDBDatabase::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, IndexedDB::ObjectStoreOverwriteMode overwriteMode, KeyDataCallback&& callback)
+void UniqueIDBDatabase::putOrAdd(const IDBRequestData& requestData, const IDBKeyData& keyData, const IDBValue& value, const IndexIDToIndexKeyMap& indexKeys, IndexedDB::ObjectStoreOverwriteMode overwriteMode, KeyDataCallback&& callback)
 {
     ASSERT(!isMainThread());
     LOG(IndexedDB, "UniqueIDBDatabase::putOrAdd");
@@ -889,24 +892,25 @@ void UniqueIDBDatabase::putOrAdd(const IDBRequestData& requestData, const IDBKey
             return callback(error, usedKey);
     }
 
-    // Generate index keys up front for more accurate quota check.
-    IndexIDToIndexKeyMap indexKeys;
-    callOnIDBSerializationThreadAndWait([objectStoreInfo = objectStoreInfo->isolatedCopy(), key = usedKey.isolatedCopy(), value = value.isolatedCopy(), &indexKeys](auto& globalObject) {
-        indexKeys = generateIndexKeyMapForValueIsolatedCopy(globalObject, objectStoreInfo, key, value);
-    });
+    auto usedIndexKeys = indexKeys;
+    if (usedKeyIsGenerated) {
+        // If key is generated on server, client does not know about that and uses placeholder in index keys.
+        for (auto& indexKey : usedIndexKeys.values())
+            indexKey.updatePlaceholderKeys(usedKey);
+    }
 
     generatedKeyResetter.release();
     auto keySize = estimateSize(usedKey);
     auto valueSize = estimateSize(value);
-    auto indexSize = estimateSize(*objectStoreInfo, indexKeys, keySize);
+    auto indexSize = estimateSize(*objectStoreInfo, usedIndexKeys, keySize);
     auto taskSize = defaultWriteOperationCost + keySize + valueSize + indexSize;
 
     LOG(IndexedDB, "UniqueIDBDatabase::putOrAdd quota check with task size: %" PRIu64 " key size: %" PRIu64 " value size: %" PRIu64 " index size: %" PRIu64, taskSize, keySize, valueSize, indexSize);
-    m_manager->requestSpace(m_identifier.origin(), taskSize, [this, weakThis = WeakPtr { *this }, requestData, usedKey, value, overwriteMode, callback = WTFMove(callback), usedKeyIsGenerated, indexKeys, objectStoreInfo = *objectStoreInfo](bool granted) mutable {
+    m_manager->requestSpace(m_identifier.origin(), taskSize, [this, weakThis = WeakPtr { *this }, requestData, usedKey, value, overwriteMode, callback = WTFMove(callback), usedKeyIsGenerated, usedIndexKeys, objectStoreInfo = *objectStoreInfo](bool granted) mutable {
         if (!weakThis)
             return callback(IDBError { ExceptionCode::InvalidStateError, "Database is closed"_s }, usedKey);
 
-        putOrAddAfterSpaceCheck(requestData, usedKey, value, overwriteMode, WTFMove(callback), usedKeyIsGenerated, indexKeys, objectStoreInfo, granted ? SpaceCheckResult::Pass : SpaceCheckResult::Fail);
+        putOrAddAfterSpaceCheck(requestData, usedKey, value, overwriteMode, WTFMove(callback), usedKeyIsGenerated, usedIndexKeys, objectStoreInfo, granted ? SpaceCheckResult::Pass : SpaceCheckResult::Fail);
     });
 }
 
@@ -971,8 +975,8 @@ void UniqueIDBDatabase::getRecord(const IDBRequestData& requestData, const IDBGe
     IDBError error;
 
     auto transactionIdentifier = requestData.transactionIdentifier();
-    if (uint64_t indexIdentifier = requestData.indexIdentifier())
-        error = m_backingStore->getIndexRecord(transactionIdentifier, requestData.objectStoreIdentifier(), indexIdentifier, requestData.indexRecordType(), getRecordData.keyRangeData, result);
+    if (auto indexIdentifier = requestData.indexIdentifier())
+        error = m_backingStore->getIndexRecord(transactionIdentifier, requestData.objectStoreIdentifier(), *indexIdentifier, requestData.indexRecordType(), getRecordData.keyRangeData, result);
     else
         error = m_backingStore->getRecord(transactionIdentifier, requestData.objectStoreIdentifier(), getRecordData.keyRangeData, getRecordData.type, result);
 
@@ -1343,6 +1347,10 @@ template<typename T> bool scopesOverlap(const T& aScopes, const Vector<IDBObject
 RefPtr<UniqueIDBDatabaseTransaction> UniqueIDBDatabase::takeNextRunnableTransaction(bool& hadDeferredTransactions)
 {
     hadDeferredTransactions = false;
+
+    // Version change transaction should have exclusive access to database.
+    if (m_versionChangeTransaction)
+        return nullptr;
 
     if (m_pendingTransactions.isEmpty())
         return nullptr;

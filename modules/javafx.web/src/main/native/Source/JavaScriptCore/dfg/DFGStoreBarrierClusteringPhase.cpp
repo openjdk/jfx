@@ -36,6 +36,8 @@
 #include "JSCJSValueInlines.h"
 #include <wtf/FastBitVector.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 namespace {
@@ -100,11 +102,10 @@ private:
             // would be weird because it would create a new root for OSR availability analysis. I
             // don't have evidence that it would be worth it.
             if (doesGC(m_graph, node) || mayExit(m_graph, node) != DoesNotExit) {
-                if (verbose) {
-                    dataLog("Possible GC point at ", node, "\n");
-                    dataLog("    doesGC = ", doesGC(m_graph, node), "\n");
-                    dataLog("    mayExit = ", mayExit(m_graph, node), "\n");
-                }
+                dataLogLnIf(verbose,
+                    "Possible GC point at ", node, "\n",
+                    "    doesGC = ", doesGC(m_graph, node), "\n",
+                    "    mayExit = ", mayExit(m_graph, node));
                 futureGC = true;
                 continue;
             }
@@ -176,5 +177,6 @@ bool performStoreBarrierClustering(Graph& graph)
 
 } } // namespace JSC::DFG
 
-#endif // ENABLE(DFG_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(DFG_JIT)

@@ -43,7 +43,7 @@ public:
 private:
     IIRFilterNode(BaseAudioContext&, const Vector<double>& feedforward, const Vector<double>& feedback, bool isFilterStable);
 
-    IIRProcessor* iirProcessor() { return static_cast<IIRProcessor*>(processor()); }
+    IIRProcessor* iirProcessor() { return downcast<IIRProcessor>(processor()); }
 };
 
 } // namespace WebCore

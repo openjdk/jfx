@@ -47,7 +47,7 @@ std::unique_ptr<ImageBitmapRenderingContext> ImageBitmapRenderingContext::create
 }
 
 ImageBitmapRenderingContext::ImageBitmapRenderingContext(CanvasBase& canvas, ImageBitmapRenderingContextSettings&& settings)
-    : CanvasRenderingContext(canvas)
+    : CanvasRenderingContext(canvas, Type::BitmapRenderer)
     , m_settings(WTFMove(settings))
 {
 }
@@ -145,7 +145,7 @@ void ImageBitmapRenderingContext::setBlank()
     // can never be changed? Wouldn't a 1x1 buffer give the same rendering? The
     // only reason I can think of is toDataURL(), but that doesn't seem like
     // a good enough argument to waste memory.
-    auto buffer = ImageBuffer::create(FloatSize(canvasBase().width(), canvasBase().height()), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, bufferOptionsForRendingMode(RenderingMode::Unaccelerated));
+    auto buffer = ImageBuffer::create(FloatSize(canvasBase().width(), canvasBase().height()), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     canvasBase().setImageBufferAndMarkDirty(WTFMove(buffer));
 }
 

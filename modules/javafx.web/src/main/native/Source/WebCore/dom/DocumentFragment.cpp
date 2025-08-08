@@ -50,7 +50,8 @@ Ref<DocumentFragment> DocumentFragment::create(Document& document)
 
 Ref<DocumentFragment> DocumentFragment::createForInnerOuterHTML(Document& document)
 {
-    auto node = adoptRef(*new DocumentFragment(document, TypeFlag::IsSpecialInternalNode));
+    auto node = adoptRef(*new DocumentFragment(document));
+    node->setStateFlag(StateFlag::IsSpecialInternalNode);
     ASSERT(node->isDocumentFragmentForInnerOuterHTML());
     return node;
 }
@@ -74,21 +75,21 @@ bool DocumentFragment::childTypeAllowed(NodeType type) const
     }
 }
 
-Ref<Node> DocumentFragment::cloneNodeInternal(Document& targetDocument, CloningOperation type)
+Ref<Node> DocumentFragment::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry)
 {
-    Ref clone = create(targetDocument);
+    Ref clone = create(document);
     switch (type) {
     case CloningOperation::OnlySelf:
     case CloningOperation::SelfWithTemplateContent:
         break;
     case CloningOperation::Everything:
-        cloneChildNodes(clone);
+        cloneChildNodes(document, registry, clone);
         break;
     }
     return clone;
 }
 
-void DocumentFragment::parseHTML(const String& source, Element& contextElement, OptionSet<ParserContentPolicy> parserContentPolicy)
+void DocumentFragment::parseHTML(const String& source, Element& contextElement, OptionSet<ParserContentPolicy> parserContentPolicy, CustomElementRegistry* registry)
 {
     Ref document = this->document();
     if (tryFastParsingHTMLFragment(source, document, *this, contextElement, parserContentPolicy)) {
@@ -103,7 +104,7 @@ void DocumentFragment::parseHTML(const String& source, Element& contextElement, 
     if (hasChildNodes())
         removeChildren();
 
-    HTMLDocumentParser::parseDocumentFragment(source, *this, contextElement, parserContentPolicy);
+    HTMLDocumentParser::parseDocumentFragment(source, *this, contextElement, parserContentPolicy, registry);
 }
 
 bool DocumentFragment::parseXML(const String& source, Element* contextElement, OptionSet<ParserContentPolicy> parserContentPolicy)

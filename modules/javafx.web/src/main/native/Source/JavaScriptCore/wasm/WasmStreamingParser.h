@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <yusukesuzuki@slowstart.org>.
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "WasmFormat.h"
 #include "WasmSections.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/SHA1.h>
@@ -46,7 +47,7 @@ class StreamingParserClient {
 public:
     virtual ~StreamingParserClient() = default;
     virtual bool didReceiveSectionData(Section) { return true; };
-    virtual bool didReceiveFunctionData(unsigned, const FunctionData&) = 0;
+    virtual bool didReceiveFunctionData(FunctionCodeIndex, const FunctionData&) = 0;
     virtual void didFinishParsing() { }
 };
 
@@ -128,8 +129,8 @@ private:
     uint32_t m_functionIndex { 0 };
 
     uint32_t m_functionSize { 0 };
+    size_t m_totalFunctionSize { 0 };
 
-    Lock m_stateLock;
     State m_state { State::ModuleHeader };
     Section m_section { Section::Begin };
     Section m_previousKnownSection { Section::Begin };

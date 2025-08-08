@@ -31,6 +31,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "RenderLayer.h"
+#include "RenderLayerInlines.h"
 #include "RenderObject.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -56,6 +57,7 @@ MouseRelatedEvent::MouseRelatedEvent(enum EventInterfaceType eventInterface, con
     , m_screenLocation(screenLocation)
     , m_movementX(movementX)
     , m_movementY(movementY)
+    , m_windowLocation(windowLocation)
     , m_isSimulated(isSimulated == IsSimulated::Yes)
 {
     init(m_isSimulated, windowLocation);

@@ -49,19 +49,19 @@ ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(Ref<CSSNumericValue> ay)
     return adoptRef(*new CSSSkewY(WTFMove(ay)));
 }
 
-ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(CSSFunctionValue& cssFunctionValue)
+ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(Ref<const CSSFunctionValue> cssFunctionValue)
 {
-    if (cssFunctionValue.name() != CSSValueSkewY) {
+    if (cssFunctionValue->name() != CSSValueSkewY) {
         ASSERT_NOT_REACHED();
-        return CSSSkewY::create(CSSNumericFactory::deg(0));
+        return CSSSkewY::create(Ref<CSSNumericValue>(CSSNumericFactory::deg(0)));
     }
 
-    if (cssFunctionValue.size() != 1 || !cssFunctionValue.item(0)) {
+    if (cssFunctionValue->size() != 1 || !cssFunctionValue->item(0)) {
         ASSERT_NOT_REACHED();
         return Exception { ExceptionCode::TypeError, "Unexpected number of values."_s };
     }
 
-    auto valueOrException = CSSStyleValueFactory::reifyValue(*cssFunctionValue.item(0), std::nullopt);
+    auto valueOrException = CSSStyleValueFactory::reifyValue(*cssFunctionValue->item(0), std::nullopt);
     if (valueOrException.hasException())
         return valueOrException.releaseException();
     RefPtr numericValue = dynamicDowncast<CSSNumericValue>(valueOrException.releaseReturnValue());

@@ -26,20 +26,24 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
-class ReadableStreamSource;
 class WritableStreamSink;
 
+struct WebTransportStreamIdentifierType;
+using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
+
 struct WebTransportBidirectionalStreamConstructionParameters {
-    WEBCORE_EXPORT WebTransportBidirectionalStreamConstructionParameters(Ref<ReadableStreamSource>&&, Ref<WritableStreamSink>&&);
+    WEBCORE_EXPORT WebTransportBidirectionalStreamConstructionParameters(WebTransportStreamIdentifier, Ref<WritableStreamSink>&&);
     WEBCORE_EXPORT WebTransportBidirectionalStreamConstructionParameters(WebTransportBidirectionalStreamConstructionParameters&&);
     WEBCORE_EXPORT WebTransportBidirectionalStreamConstructionParameters& operator=(WebTransportBidirectionalStreamConstructionParameters&&);
     WEBCORE_EXPORT ~WebTransportBidirectionalStreamConstructionParameters();
+    WEBCORE_EXPORT WebTransportBidirectionalStreamConstructionParameters isolatedCopy() &&;
 
-    Ref<ReadableStreamSource> source;
+    WebTransportStreamIdentifier identifier;
     Ref<WritableStreamSink> sink;
 };
 

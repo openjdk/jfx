@@ -119,13 +119,13 @@ VisiblePosition RenderFragmentContainer::positionForPoint(const LayoutPoint& poi
 LayoutUnit RenderFragmentContainer::pageLogicalWidth() const
 {
     ASSERT(isValid());
-    return m_fragmentedFlow->isHorizontalWritingMode() ? contentWidth() : contentHeight();
+    return m_fragmentedFlow->isHorizontalWritingMode() ? contentBoxWidth() : contentBoxHeight();
 }
 
 LayoutUnit RenderFragmentContainer::pageLogicalHeight() const
 {
     ASSERT(isValid());
-    return m_fragmentedFlow->isHorizontalWritingMode() ? contentHeight() : contentWidth();
+    return m_fragmentedFlow->isHorizontalWritingMode() ? contentBoxHeight() : contentBoxWidth();
 }
 
 LayoutUnit RenderFragmentContainer::logicalHeightOfAllFragmentedFlowContent() const
@@ -143,7 +143,7 @@ LayoutPoint RenderFragmentContainer::fragmentedFlowPortionLocation() const
     LayoutPoint portionLocation;
     LayoutRect portionRect = fragmentedFlowPortionRect();
 
-    if (fragmentedFlow()->style().isFlippedBlocksWritingMode()) {
+    if (fragmentedFlow()->writingMode().isBlockFlipped()) {
         LayoutRect flippedFragmentedFlowPortionRect(portionRect);
         fragmentedFlow()->flipForWritingMode(flippedFragmentedFlowPortionRect);
         portionLocation = flippedFragmentedFlowPortionRect.location();
@@ -210,7 +210,7 @@ void RenderFragmentContainer::styleDidChange(StyleDifference diff, const RenderS
     if (!isValid())
         return;
 
-    if (oldStyle && oldStyle->writingMode() != style().writingMode())
+    if (oldStyle && oldStyle->writingMode().computedWritingMode() !=writingMode().computedWritingMode())
         m_fragmentedFlow->fragmentChangedWritingMode(this);
 }
 
@@ -408,39 +408,45 @@ void RenderFragmentContainer::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-void RenderFragmentContainer::ensureOverflowForBox(const RenderBox& box, RefPtr<RenderOverflow>& overflow, bool forceCreation) const
+LayoutRect RenderFragmentContainer::computedVisualOverflowRectForBox(const RenderBox& box) const
+{
+    ASSERT(m_fragmentedFlow->objectShouldFragmentInFlowFragment(&box, this));
+
+    auto borderBox = box.borderBoxRect();
+    if (borderBox.isEmpty())
+        return { };
+
+    borderBox = rectFlowPortionForBox(box, borderBox);
+    m_fragmentedFlow->flipForWritingModeLocalCoordinates(borderBox);
+    return borderBox;
+}
+
+LayoutRect RenderFragmentContainer::computedLayoutOverflowRectForBox(const RenderBox& box) const
+{
+    ASSERT(m_fragmentedFlow->objectShouldFragmentInFlowFragment(&box, this));
+    auto clientBox = box.clientBoxRect();
+    if (clientBox.isEmpty())
+        return { };
+
+        clientBox = rectFlowPortionForBox(box, clientBox);
+        m_fragmentedFlow->flipForWritingModeLocalCoordinates(clientBox);
+    return clientBox;
+}
+
+RenderOverflow* RenderFragmentContainer::overflowForBox(const RenderBox& box) const
 {
     ASSERT(m_fragmentedFlow->renderFragmentContainerList().contains(*this));
     ASSERT(isValid());
 
-    RenderBoxFragmentInfo* boxInfo = renderBoxFragmentInfo(box);
-    if (!boxInfo && !forceCreation)
-        return;
+    auto* boxInfo = renderBoxFragmentInfo(box);
+    if (!boxInfo)
+        return { };
 
-    if (boxInfo && boxInfo->overflow()) {
-        overflow = boxInfo->overflow();
-        return;
-    }
+    if (CheckedPtr overflow = boxInfo->overflow())
+        return overflow.get();
 
-    LayoutRect borderBox = box.borderBoxRectInFragment(this);
-    LayoutRect clientBox;
-    ASSERT(m_fragmentedFlow->objectShouldFragmentInFlowFragment(&box, this));
-
-    if (!borderBox.isEmpty()) {
-        borderBox = rectFlowPortionForBox(box, borderBox);
-
-        clientBox = box.clientBoxRectInFragment(this);
-        clientBox = rectFlowPortionForBox(box, clientBox);
-
-        m_fragmentedFlow->flipForWritingModeLocalCoordinates(borderBox);
-        m_fragmentedFlow->flipForWritingModeLocalCoordinates(clientBox);
-    }
-
-    if (boxInfo) {
-        boxInfo->createOverflow(clientBox, borderBox);
-        overflow = boxInfo->overflow();
-    } else
-        overflow = adoptRef(new RenderOverflow(clientBox, borderBox));
+    boxInfo->createOverflow(computedLayoutOverflowRectForBox(box), computedVisualOverflowRectForBox(box));
+    return boxInfo->overflow();
 }
 
 LayoutRect RenderFragmentContainer::rectFlowPortionForBox(const RenderBox& box, const LayoutRect& rect) const
@@ -471,13 +477,8 @@ void RenderFragmentContainer::addLayoutOverflowForBox(const RenderBox& box, cons
     if (rect.isEmpty())
         return;
 
-    RefPtr<RenderOverflow> fragmentOverflow;
-    ensureOverflowForBox(box, fragmentOverflow, false);
-
-    if (!fragmentOverflow)
-        return;
-
-    fragmentOverflow->addLayoutOverflow(rect);
+    if (CheckedPtr overflow = overflowForBox(box))
+        overflow->addLayoutOverflow(rect);
 }
 
 void RenderFragmentContainer::addVisualOverflowForBox(const RenderBox& box, const LayoutRect& rect)
@@ -485,37 +486,33 @@ void RenderFragmentContainer::addVisualOverflowForBox(const RenderBox& box, cons
     if (rect.isEmpty())
         return;
 
-    RefPtr<RenderOverflow> fragmentOverflow;
-    ensureOverflowForBox(box, fragmentOverflow, false);
-
-    if (!fragmentOverflow)
-        return;
-
+    if (CheckedPtr overflow = overflowForBox(box)) {
     LayoutRect flippedRect = rect;
     fragmentedFlow()->flipForWritingModeLocalCoordinates(flippedRect);
-    fragmentOverflow->addVisualOverflow(flippedRect);
+        overflow->addVisualOverflow(flippedRect);
+    }
 }
 
 LayoutRect RenderFragmentContainer::visualOverflowRectForBox(const RenderBox& box) const
 {
-        RefPtr<RenderOverflow> overflow;
-    ensureOverflowForBox(box, overflow, true);
-
-        ASSERT(overflow);
+    if (CheckedPtr overflow = overflowForBox(box))
         return overflow->visualOverflowRect();
+    return computedVisualOverflowRectForBox(box);
 }
 
 // FIXME: This doesn't work for writing modes.
 LayoutRect RenderFragmentContainer::layoutOverflowRectForBoxForPropagation(const RenderBox& box)
 {
     // Only propagate interior layout overflow if we don't clip it.
-    LayoutRect rect = box.borderBoxRectInFragment(this);
+    LayoutRect rect = box.borderBoxRect();
     rect = rectFlowPortionForBox(box, rect);
     if (!box.hasNonVisibleOverflow()) {
-        RefPtr<RenderOverflow> overflow;
-        ensureOverflowForBox(box, overflow, true);
-        ASSERT(overflow);
-        rect.unite(overflow->layoutOverflowRect());
+        auto layoutOverflowRect = LayoutRect { };
+        if (CheckedPtr overflow = overflowForBox(box))
+            layoutOverflowRect = overflow->layoutOverflowRect();
+        else
+            layoutOverflowRect = computedLayoutOverflowRectForBox(box);
+        rect.unite(layoutOverflowRect);
     }
 
     bool hasTransform = box.isTransformed();

@@ -33,8 +33,6 @@ public:
     AtomString(std::span<const LChar>);
     AtomString(std::span<const UChar>);
 
-    ALWAYS_INLINE static AtomString fromLatin1(const char* characters) { return AtomString(characters); }
-
     AtomString(AtomStringImpl*);
     AtomString(RefPtr<AtomStringImpl>&&);
     AtomString(Ref<AtomStringImpl>&&);
@@ -62,7 +60,7 @@ public:
     String releaseString() { return WTFMove(m_string); }
 
     // FIXME: What guarantees this isn't a SymbolImpl rather than an AtomStringImpl?
-    AtomStringImpl* impl() const { return static_cast<AtomStringImpl*>(m_string.impl()); }
+    AtomStringImpl* impl() const { SUPPRESS_MEMORY_UNSAFE_CAST return static_cast<AtomStringImpl*>(m_string.impl()); }
     RefPtr<AtomStringImpl> releaseImpl() { return static_pointer_cast<AtomStringImpl>(m_string.releaseImpl()); }
 
     bool is8Bit() const { return m_string.is8Bit(); }
@@ -169,11 +167,6 @@ inline AtomString::AtomString()
 {
 }
 
-inline AtomString::AtomString(const char* string)
-    : m_string(AtomStringImpl::addCString(string))
-{
-}
-
 inline AtomString::AtomString(std::span<const LChar> string)
     : m_string(AtomStringImpl::add(string))
 {
@@ -259,8 +252,8 @@ static_assert(sizeof(AtomString) == sizeof(StaticAtomString), "AtomString and St
 extern WTF_EXPORT_PRIVATE const StaticAtomString nullAtomData;
 extern WTF_EXPORT_PRIVATE const StaticAtomString emptyAtomData;
 
-inline const AtomString& nullAtom() { return *reinterpret_cast<const AtomString*>(&nullAtomData); }
-inline const AtomString& emptyAtom() { return *reinterpret_cast<const AtomString*>(&emptyAtomData); }
+inline const AtomString& nullAtom() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<const AtomString*>(&nullAtomData); }
+inline const AtomString& emptyAtom() { SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<const AtomString*>(&emptyAtomData); }
 
 inline AtomString::AtomString(ASCIILiteral literal)
     : m_string(literal.length() ? AtomStringImpl::add(literal.span8()) : Ref { *emptyAtom().impl() })
@@ -282,7 +275,7 @@ inline AtomString AtomString::fromUTF8(const char* characters)
         return nullAtom();
     if (!*characters)
         return emptyAtom();
-    return fromUTF8Internal(span(characters));
+    return fromUTF8Internal(unsafeSpan(characters));
 }
 
 inline AtomString String::toExistingAtomString() const

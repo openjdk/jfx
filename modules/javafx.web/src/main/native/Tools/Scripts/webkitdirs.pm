@@ -748,7 +748,7 @@ sub determineLTOMode
     return if defined $ltoMode;
     determineBaseProductDir();
 
-    if (open LTO, "$baseProductDir/LTO") {
+    if (open LTO, File::Spec->catfile($baseProductDir, "LTO")) {
         $ltoMode = <LTO>;
         close LTO;
         chomp $ltoMode;
@@ -974,9 +974,11 @@ sub determineXcodeSDKPlatformName {
         $xcodeSDKPlatformNameExplanation ||= "via argument, `--simulator`";
         $simulatorIdiom = 'iPhone';
     }
-    if (checkForArgumentAndRemoveFromARGV("--ios-simulator")) {
+    if (checkForArgumentAndRemoveFromARGV("--iphone-simulator") ||
+        checkForArgumentAndRemoveFromARGV("--ios-simulator")) {
+        # `--ios-simulator` option checking is for compatible here.
         $xcodeSDKPlatformName ||= 'iphonesimulator';
-        $xcodeSDKPlatformNameExplanation ||= "via argument, `--ios-simulator`";
+        $xcodeSDKPlatformNameExplanation ||= "via argument, `--iphone-simulator`";
         $simulatorIdiom = 'iPhone';
     }
     if (checkForArgumentAndRemoveFromARGV("--ipad-simulator")) {
@@ -1016,6 +1018,7 @@ sub determineXcodeSDKPlatformName {
 
 sub determineXcodeSDK
 {
+    return if $^O ne 'darwin'; #skip for Linux and window
     determineXcodeSDKPlatformName();  # This can set $xcodeSDK if --sdk was used.
     return if defined $xcodeSDK;
 
@@ -1147,7 +1150,7 @@ sub determineConfigurationProductDir
     return if defined $configurationProductDir;
     determineBaseProductDir();
     determineConfiguration();
-    if (isWin() || isPlayStation()) {
+    if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
         $configurationProductDir = File::Spec->catdir($baseProductDir, $configuration);
     } else {
         if (usesPerConfigurationBuildDirectory()) {
@@ -2631,7 +2634,7 @@ sub shouldUseFlatpak()
         return 0;
     }
 
-    if ((defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) or defined $ENV{'WEBKIT_BUILD_USE_SYSTEM_LIBRARIES'}) {
+    if ((defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) or (defined $ENV{'WEBKIT_BUILD_USE_SYSTEM_LIBRARIES'} && $ENV{'WEBKIT_BUILD_USE_SYSTEM_LIBRARIES'})) {
         return 0;
     }
 
@@ -2707,7 +2710,7 @@ sub shouldRemoveCMakeCache(@)
 
     if(isAnyWindows()) {
         my $winConfiguration = File::Spec->catdir(sourceDir(), "Source", "cmake", "OptionsWin.cmake");
-        if ($cacheFileModifiedTime < stat($winConfiguration)->mtime) {
+        if ($cacheFileModifiedTime < (stat($winConfiguration))[9]) {
             return 1;
         }
     }
@@ -3011,9 +3014,10 @@ sub printHelpAndExitForRunAndDebugWebKitAppIfNeeded
     return unless checkForArgumentAndRemoveFromARGV("--help");
 
     print STDERR <<EOF;
-Usage: @{[basename($0)]} [options] [args ...]
+Usage: @{[basename($0)]} [options] <application-path>
   --help                            Show this help message
   --no-saved-state                  Launch the application without state restoration
+  --debug|release                   build configuration
 
 Options specific to macOS:
   -g|--guard-malloc                 Enable Guard Malloc
@@ -3265,9 +3269,10 @@ sub findOrCreateSimulatorForIOSDevice($)
     my $simulatorName;
     my $simulatorDeviceType;
 
+    # These should match the DEFAULT_DEVICE_TYPES in webkitpy/port/ios_simulator.py.
     if ($simulatorIdiom eq "iPad") {
-        $simulatorName = "iPad Pro " . $simulatorNameSuffix;
-        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPad-Pro--9-7-inch-";
+        $simulatorName = "iPad (9th generation) " . $simulatorNameSuffix;
+        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPad-9th-generation";
     } else {
         $simulatorName = "iPhone 12 " . $simulatorNameSuffix;
         $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-12";

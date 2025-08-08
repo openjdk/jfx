@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-static constexpr ASCIILiteral compositeOperatorNames[] = {
+static constexpr std::array compositeOperatorNames {
     "clear"_s,
     "copy"_s,
     "source-over"_s,
@@ -52,7 +52,7 @@ static constexpr ASCIILiteral compositeOperatorNames[] = {
     "difference"_s
 };
 
-static constexpr ASCIILiteral blendOperatorNames[] = {
+static constexpr std::array blendOperatorNames {
     "normal"_s,
     "multiply"_s,
     "screen"_s,

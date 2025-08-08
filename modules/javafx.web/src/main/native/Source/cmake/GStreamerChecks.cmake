@@ -1,4 +1,4 @@
-if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
+if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO OR ENABLE_WEB_CODECS)
     SET_AND_EXPOSE_TO_BUILD(USE_GSTREAMER TRUE)
       if (USE_GSTREAMER_FULL)
           find_package(GStreamer 1.18.4 REQUIRED COMPONENTS full)
@@ -60,10 +60,10 @@ endif ()
 if (ENABLE_MEDIA_STREAM AND ENABLE_WEB_RTC)
     if (USE_GSTREAMER_WEBRTC)
         SET_AND_EXPOSE_TO_BUILD(USE_LIBWEBRTC FALSE)
-
+        # OpenSSL is required for SFrame encryption support.
         find_package(OpenSSL)
         if (NOT OPENSSL_FOUND OR OPENSSL_VERSION VERSION_LESS "3.0.0")
-            message(FATAL_ERROR "OpenSSL 3 is needed for USE_GSTREAMER_WEBRTC.")
+            message(FATAL_ERROR "OpenSSL 3 is needed for ENABLE_WEB_RTC.")
         endif ()
     else ()
         SET_AND_EXPOSE_TO_BUILD(USE_LIBWEBRTC TRUE)

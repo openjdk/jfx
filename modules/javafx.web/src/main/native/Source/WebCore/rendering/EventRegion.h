@@ -38,6 +38,7 @@
 #include <wtf/ArgumentCoder.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -48,7 +49,7 @@ class RenderObject;
 class RenderStyle;
 
 class EventRegionContext final : public RegionContext {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(EventRegionContext, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EventRegionContext);
 public:
     WEBCORE_EXPORT explicit EventRegionContext(EventRegion&);
@@ -73,15 +74,30 @@ private:
 
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
     Vector<InteractionRegion> m_interactionRegions;
-    HashMap<IntRect, InteractionRegion::ContentHint> m_interactionRectsAndContentHints;
-    HashSet<IntRect> m_occlusionRects;
+    UncheckedKeyHashMap<IntRect, InteractionRegion::ContentHint> m_interactionRectsAndContentHints;
+    UncheckedKeyHashSet<IntRect> m_occlusionRects;
     enum class Inflated : bool { No, Yes };
-    HashMap<IntRect, Inflated> m_guardRects;
-    HashSet<ElementIdentifier> m_containerRemovalCandidates;
-    HashSet<ElementIdentifier> m_containersToRemove;
-    HashMap<ElementIdentifier, Vector<InteractionRegion>> m_discoveredRegionsByElement;
+    UncheckedKeyHashMap<IntRect, Inflated> m_guardRects;
+    UncheckedKeyHashSet<ElementIdentifier> m_containerRemovalCandidates;
+    UncheckedKeyHashSet<ElementIdentifier> m_containersToRemove;
+    UncheckedKeyHashMap<ElementIdentifier, Vector<InteractionRegion>> m_discoveredRegionsByElement;
 #endif
 };
+
+#if ENABLE(TOUCH_EVENT_REGIONS)
+struct TouchEventListenerRegion {
+    bool operator==(const TouchEventListenerRegion&) const = default;
+
+    bool isEmpty() const { return start.isEmpty() && end.isEmpty() && move.isEmpty() && cancel.isEmpty(); }
+
+    Region start;
+    Region end;
+    Region move;
+    Region cancel;
+};
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const TouchEventListenerRegion&);
+#endif
 
 class EventRegion {
 public:
@@ -93,6 +109,10 @@ public:
 #if ENABLE(WHEEL_EVENT_REGIONS)
     , WebCore::Region wheelEventListenerRegion
     , WebCore::Region nonPassiveWheelEventListenerRegion
+#endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    , TouchEventListenerRegion touchEventListenerRegion
+    , TouchEventListenerRegion nonPassiveTouchEventListenerRegion
 #endif
 #if ENABLE(EDITABLE_REGION)
     , std::optional<WebCore::Region>
@@ -157,6 +177,10 @@ private:
 #if ENABLE(WHEEL_EVENT_REGIONS)
     Region m_wheelEventListenerRegion;
     Region m_nonPassiveWheelEventListenerRegion;
+#endif
+#if ENABLE(TOUCH_EVENT_REGIONS)
+    TouchEventListenerRegion m_touchEventListenerRegion;
+    TouchEventListenerRegion m_nonPassiveTouchEventListenerRegion;
 #endif
 #if ENABLE(EDITABLE_REGION)
     std::optional<Region> m_editableRegion;

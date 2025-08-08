@@ -35,12 +35,16 @@
 #include "DocumentInlines.h"
 #include "FontCascade.h"
 #include "RenderStyleInlines.h"
+#include "StyleLengthResolution.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
 namespace Style {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MatchedDeclarationsCache);
 
 MatchedDeclarationsCache::MatchedDeclarationsCache(const Resolver& owner)
     : m_owner(owner)
@@ -76,7 +80,8 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
         return false;
     if (style.zoom() != RenderStyle::initialZoom())
         return false;
-    if (style.writingMode() != RenderStyle::initialWritingMode() || style.direction() != RenderStyle::initialDirection())
+    if (style.writingMode().computedWritingMode() != RenderStyle::initialWritingMode()
+        || style.writingMode().computedTextDirection() != RenderStyle::initialDirection())
         return false;
     if (style.usesContainerUnits())
         return false;
@@ -97,6 +102,9 @@ bool MatchedDeclarationsCache::isCacheable(const Element& element, const RenderS
     if (!parentStyle.fontCascade().isCurrent(fontSelector))
         return false;
 
+    if (element.hasRandomKeyMap())
+        return false;
+
     // FIXME: counter-style: we might need to resolve cache like for fontSelector here (rdar://103018993).
 
     return true;
@@ -112,7 +120,7 @@ bool MatchedDeclarationsCache::Entry::isUsableAfterHighPriorityProperties(const 
         return false;
 #endif
 
-    return CSSPrimitiveValue::equalForLengthResolution(style, *renderStyle);
+    return Style::equalForLengthResolution(style, *renderStyle);
 }
 
 unsigned MatchedDeclarationsCache::computeHash(const MatchResult& matchResult, const StyleCustomPropertyData& inheritedCustomProperties)

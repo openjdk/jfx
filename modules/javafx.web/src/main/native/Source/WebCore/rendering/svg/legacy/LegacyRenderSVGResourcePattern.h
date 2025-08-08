@@ -33,7 +33,7 @@
 namespace WebCore {
 
 struct PatternData {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PatternData);
 public:
     RefPtr<Pattern> pattern;
     AffineTransform transform;
@@ -71,7 +71,7 @@ private:
     PatternData* buildPattern(RenderElement&, OptionSet<RenderSVGResourceMode>, GraphicsContext&);
 
     PatternAttributes m_attributes;
-    HashMap<SingleThreadWeakRef<RenderElement>, std::unique_ptr<PatternData>> m_patternMap;
+    UncheckedKeyHashMap<SingleThreadWeakRef<RenderElement>, std::unique_ptr<PatternData>> m_patternMap;
     bool m_shouldCollectPatternAttributes { true };
 };
 

@@ -34,6 +34,7 @@
 #include "MutationObserver.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
@@ -56,14 +57,14 @@ namespace WebCore {
 class QualifiedName;
 
 class MutationObserverRegistration : public CanMakeWeakPtr<MutationObserverRegistration> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MutationObserverRegistration);
 public:
     MutationObserverRegistration(MutationObserver&, Node&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     ~MutationObserverRegistration();
 
     void resetObservation(MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     void observedSubtreeNodeWillDetach(Node&);
-    HashSet<GCReachableRef<Node>> takeTransientRegistrations();
+    UncheckedKeyHashSet<GCReachableRef<Node>> takeTransientRegistrations();
     bool hasTransientRegistrations() const { return !m_transientRegistrationNodes.isEmpty(); }
 
     bool shouldReceiveMutationFrom(Node&, MutationObserverOptionType, const QualifiedName* attributeName) const;
@@ -81,7 +82,7 @@ private:
     Ref<MutationObserver> m_observer;
     WeakRef<Node, WeakPtrImplWithEventTargetData> m_node;
     RefPtr<Node> m_nodeKeptAlive;
-    HashSet<GCReachableRef<Node>> m_transientRegistrationNodes;
+    UncheckedKeyHashSet<GCReachableRef<Node>> m_transientRegistrationNodes;
     MutationObserverOptions m_options;
     MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> m_attributeFilter;
 };

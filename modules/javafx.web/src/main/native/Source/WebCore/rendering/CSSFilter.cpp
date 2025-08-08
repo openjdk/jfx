@@ -39,8 +39,11 @@
 #include "SVGFilter.h"
 #include "SVGFilterElement.h"
 #include "SourceGraphic.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSFilter);
 
 RefPtr<CSSFilter> CSSFilter::create(RenderElement& renderer, const FilterOperations& operations, OptionSet<FilterRenderingMode> preferredFilterRenderingModes, const FloatSize& filterScale, const FloatRect& targetBoundingBox, const GraphicsContext& destinationContext)
 {
@@ -194,7 +197,7 @@ static RefPtr<FilterEffect> createSepiaEffect(const BasicColorMatrixFilterOperat
 
 static RefPtr<SVGFilterElement> referenceFilterElement(const ReferenceFilterOperation& filterOperation, RenderElement& renderer)
 {
-    RefPtr filterElement = ReferencedSVGResources::referencedFilterElement(renderer.treeScopeForSVGReferences(), filterOperation);
+    RefPtr filterElement = ReferencedSVGResources::referencedFilterElement(renderer.protectedTreeScopeForSVGReferences(), filterOperation);
 
     if (!filterElement) {
         LOG_WITH_STREAM(Filters, stream << " buildReferenceFilter: failed to find filter renderer, adding pending resource " << filterOperation.fragment());

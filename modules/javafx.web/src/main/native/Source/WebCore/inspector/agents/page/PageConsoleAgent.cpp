@@ -41,10 +41,13 @@
 #include "Page.h"
 #include "WebInjectedScriptManager.h"
 #include <JavaScriptCore/ConsoleMessage.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageConsoleAgent);
 
 PageConsoleAgent::PageConsoleAgent(PageAgentContext& context)
     : WebConsoleAgent(context)
@@ -110,15 +113,15 @@ Inspector::Protocol::ErrorStringOr<void> PageConsoleAgent::setLoggingChannelLeve
 {
     switch (level) {
     case Inspector::Protocol::Console::ChannelLevel::Off:
-        m_inspectedPage.configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::Off, WTFLogLevel::Error);
+        m_inspectedPage->configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::Off, WTFLogLevel::Error);
         return { };
 
     case Inspector::Protocol::Console::ChannelLevel::Basic:
-        m_inspectedPage.configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Info);
+        m_inspectedPage->configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Info);
         return { };
 
     case Inspector::Protocol::Console::ChannelLevel::Verbose:
-        m_inspectedPage.configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Debug);
+        m_inspectedPage->configureLoggingChannel(Inspector::Protocol::Helpers::getEnumConstantValue(source), WTFLogChannelState::On, WTFLogLevel::Debug);
         return { };
     }
 

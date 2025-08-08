@@ -65,10 +65,8 @@ RenderSearchField::RenderSearchField(HTMLInputElement& element, RenderStyle&& st
     ASSERT(isRenderSearchField());
 }
 
-RenderSearchField::~RenderSearchField()
-{
-    // Do not add any code here. Add it to willBeDestroyed() instead.
-}
+// Do not add any code in below destructor. Add it to willBeDestroyed() instead.
+RenderSearchField::~RenderSearchField() = default;
 
 void RenderSearchField::willBeDestroyed()
 {
@@ -237,9 +235,6 @@ void RenderSearchField::valueChanged(unsigned listIndex, bool fireEvents)
     } else {
         Ref input = inputElement();
         input->setValue(itemText(listIndex));
-        if (input->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled()
-            && fireEvents)
-            input->onSearch();
         input->select();
     }
 }
@@ -289,7 +284,7 @@ PopupMenuStyle RenderSearchField::itemStyle(unsigned) const
 PopupMenuStyle RenderSearchField::menuStyle() const
 {
     return PopupMenuStyle(style().visitedDependentColorWithColorFilter(CSSPropertyColor), style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor), style().fontCascade(), style().usedVisibility() == Visibility::Visible,
-        style().display() == DisplayType::None, true, style().textIndent(), style().direction(), isOverride(style().unicodeBidi()), PopupMenuStyle::CustomBackgroundColor);
+        style().display() == DisplayType::None, true, style().textIndent(), writingMode().bidiDirection(), isOverride(style().unicodeBidi()), PopupMenuStyle::CustomBackgroundColor);
 }
 
 int RenderSearchField::clientInsetLeft() const

@@ -37,11 +37,14 @@
 #include <stdio.h>
 #include <wtf/DateMath.h>
 #include <wtf/DebugUtilities.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HistoryItemClient);
 
 int64_t HistoryItem::generateSequenceNumber()
 {
@@ -56,13 +59,13 @@ extern "C" {
 extern void notifyHistoryItemDestroyed(const JLObject&);
 }
 #endif
-HistoryItem::HistoryItem(Client& client, const String& urlString, const String& title, const String& alternateTitle, std::optional<BackForwardItemIdentifier> identifier)
+HistoryItem::HistoryItem(Client& client, const String& urlString, const String& title, const String& alternateTitle, std::optional<BackForwardItemIdentifier> itemID, std::optional<BackForwardFrameItemIdentifier> frameItemID)
     : m_urlString(urlString)
     , m_originalURLString(urlString)
     , m_title(title)
     , m_displayTitle(alternateTitle)
-    , m_pruningReason(PruningReason::None)
-    , m_identifier(identifier ? *identifier : BackForwardItemIdentifier::generate())
+    , m_itemID(itemID ? *itemID : BackForwardItemIdentifier::generate())
+    , m_frameItemID(frameItemID ? *frameItemID : BackForwardFrameItemIdentifier::generate())
     , m_uuidIdentifier(WTF::UUID::createVersion4Weak())
     , m_client(client)
 {
@@ -70,7 +73,6 @@ HistoryItem::HistoryItem(Client& client, const String& urlString, const String& 
 
 HistoryItem::~HistoryItem()
 {
-    ASSERT(!m_cachedPage);
 #if PLATFORM(JAVA)
     if (m_hostObject) {
         notifyHistoryItemDestroyed(m_hostObject);
@@ -79,9 +81,7 @@ HistoryItem::~HistoryItem()
 }
 
 HistoryItem::HistoryItem(const HistoryItem& item)
-    : RefCounted<HistoryItem>()
-    , CanMakeWeakPtr<HistoryItem>()
-    , m_urlString(item.m_urlString)
+    : m_urlString(item.m_urlString)
     , m_originalURLString(item.m_originalURLString)
     , m_referrer(item.m_referrer)
     , m_target(item.m_target)
@@ -97,7 +97,6 @@ HistoryItem::HistoryItem(const HistoryItem& item)
     , m_documentSequenceNumber(item.m_documentSequenceNumber)
     , m_formData(item.m_formData ? RefPtr<FormData> { item.m_formData->copy() } : nullptr)
     , m_formContentType(item.m_formContentType)
-    , m_pruningReason(PruningReason::None)
 #if PLATFORM(IOS_FAMILY)
     , m_obscuredInsets(item.m_obscuredInsets)
     , m_scale(item.m_scale)
@@ -106,7 +105,8 @@ HistoryItem::HistoryItem(const HistoryItem& item)
 #if PLATFORM(JAVA)
     , m_hostObject(item.m_hostObject)
 #endif
-    , m_identifier(item.m_identifier)
+    , m_itemID(item.m_itemID)
+    , m_frameItemID(item.m_frameItemID)
     , m_uuidIdentifier(WTF::UUID::createVersion4Weak())
     , m_client(item.m_client)
 {
@@ -140,6 +140,8 @@ void HistoryItem::reset()
     m_formContentType = String();
 
     clearChildren();
+
+    m_uuidIdentifier = WTF::UUID::createVersion4Weak();
 }
 
 const String& HistoryItem::urlString() const
@@ -164,25 +166,14 @@ const String& HistoryItem::alternateTitle() const
     return m_displayTitle;
 }
 
+bool HistoryItem::isInBackForwardCache() const
+{
+    return BackForwardCache::singleton().isInBackForwardCache(m_itemID);
+}
+
 bool HistoryItem::hasCachedPageExpired() const
 {
-    return m_cachedPage ? m_cachedPage->hasExpired() : false;
-}
-
-void HistoryItem::setCachedPage(std::unique_ptr<CachedPage>&& cachedPage)
-{
-    bool wasInBackForwardCache = isInBackForwardCache();
-    m_cachedPage = WTFMove(cachedPage);
-    if (wasInBackForwardCache != isInBackForwardCache())
-        notifyChanged();
-}
-
-std::unique_ptr<CachedPage> HistoryItem::takeCachedPage()
-{
-    ASSERT(m_cachedPage);
-    auto cachedPage = std::exchange(m_cachedPage, nullptr);
-    notifyChanged();
-    return cachedPage;
+    return BackForwardCache::singleton().hasCachedPageExpired(m_itemID);
 }
 
 URL HistoryItem::url() const
@@ -248,6 +239,12 @@ void HistoryItem::setTarget(const AtomString& target)
     notifyChanged();
 }
 
+void HistoryItem::setFrameID(std::optional<FrameIdentifier> frameID)
+{
+    m_frameID = frameID;
+    notifyChanged();
+}
+
 const IntPoint& HistoryItem::scrollPosition() const
 {
     return m_scrollPosition;
@@ -287,6 +284,7 @@ void HistoryItem::setPageScaleFactor(float scaleFactor)
 void HistoryItem::setDocumentState(const Vector<AtomString>& state)
 {
     m_documentState = state;
+    notifyChanged();
 }
 
 const Vector<AtomString>& HistoryItem::documentState() const
@@ -309,16 +307,6 @@ ShouldOpenExternalURLsPolicy HistoryItem::shouldOpenExternalURLsPolicy() const
     return m_shouldOpenExternalURLsPolicy;
 }
 
-bool HistoryItem::isTargetItem() const
-{
-    return m_isTargetItem;
-}
-
-void HistoryItem::setIsTargetItem(bool flag)
-{
-    m_isTargetItem = flag;
-}
-
 void HistoryItem::setStateObject(RefPtr<SerializedScriptValue>&& object)
 {
     m_stateObject = WTFMove(object);
@@ -339,7 +327,6 @@ void HistoryItem::addChildItem(Ref<HistoryItem>&& child)
 
 void HistoryItem::setChildItem(Ref<HistoryItem>&& child)
 {
-    ASSERT(!child->isTargetItem());
     unsigned size = m_children.size();
     for (unsigned i = 0; i < size; ++i)  {
         if (m_children[i]->target() == child->target()) {
@@ -388,6 +375,7 @@ const Vector<Ref<HistoryItem>>& HistoryItem::children() const
 void HistoryItem::clearChildren()
 {
     m_children.clear();
+    m_client->clearChildren(*this);
 }
 
 // We do same-document navigation if going to a different item and if either of the following is true:
@@ -396,7 +384,7 @@ void HistoryItem::clearChildren()
 bool HistoryItem::shouldDoSameDocumentNavigationTo(HistoryItem& otherItem) const
 {
     // The following logic must be kept in sync with WebKit::WebBackForwardListItem::itemIsInSameDocument().
-    if (this == &otherItem)
+    if (m_itemID == otherItem.itemID())
         return false;
 
     if (stateObject() || otherItem.stateObject())
@@ -495,12 +483,11 @@ int HistoryItem::showTree() const
 
 int HistoryItem::showTreeWithIndent(unsigned indentLevel) const
 {
-    Vector<char> prefix;
+    StringBuilder prefix;
     for (unsigned i = 0; i < indentLevel; ++i)
-        prefix.append("  "_span);
-    prefix.append('\0');
+        prefix.append("  "_s);
 
-    fprintf(stderr, "%s+-%s (%p)\n", prefix.data(), m_urlString.utf8().data(), this);
+    SAFE_FPRINTF(stderr, "%s+-%s (%p)\n", prefix.toString().utf8(), m_urlString.utf8(), this);
 
     int totalSubItems = 0;
     for (unsigned i = 0; i < m_children.size(); ++i)
@@ -513,7 +500,7 @@ int HistoryItem::showTreeWithIndent(unsigned indentLevel) const
 #if !LOG_DISABLED
 String HistoryItem::logString() const
 {
-    return makeString("HistoryItem current URL "_s, urlString(), ", identifier "_s, m_identifier.toString());
+    return makeString("HistoryItem current URL "_s, urlString(), ", identifier "_s, m_itemID.toString());
 }
 #endif
 

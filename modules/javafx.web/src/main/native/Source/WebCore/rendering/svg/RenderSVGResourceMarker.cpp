@@ -122,7 +122,7 @@ void RenderSVGResourceMarker::applyTransform(TransformationMatrix& transform, co
     style.unapplyTransformOrigin(transform, originTranslate);
 }
 
-LayoutRect RenderSVGResourceMarker::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy, PaintPhase) const
+LayoutRect RenderSVGResourceMarker::overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
     Ref useMarkerElement = markerElement();
 

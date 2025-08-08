@@ -44,6 +44,8 @@
 #include "VirtualRegister.h"
 #include <wtf/TZoneMalloc.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 class GPRTemporary;
@@ -139,7 +141,7 @@ public:
         }
 
         explicit TrustedImmPtr(size_t value)
-            : m_value(bitwise_cast<void*>(value))
+            : m_value(std::bit_cast<void*>(value))
         {
         }
 
@@ -761,6 +763,7 @@ public:
 
     void emitAllocateButterfly(GPRReg storageGPR, GPRReg sizeGPR, GPRReg scratch1, GPRReg scratch2, GPRReg scratch3, JumpList& slowCases);
     void emitInitializeButterfly(GPRReg storageGPR, GPRReg sizeGPR, JSValueRegs emptyValueRegs, GPRReg scratchGPR);
+    void compileAllocateNewArrayWithSize(Node*, GPRReg resultGPR, GPRReg sizeGPR, RegisteredStructure, bool shouldConvertLargeSizeToArrayStorage = true);
     void compileAllocateNewArrayWithSize(Node*, GPRReg resultGPR, GPRReg sizeGPR, IndexingType, bool shouldConvertLargeSizeToArrayStorage = true);
 
     // Called once a node has completed code generation but prior to setting
@@ -1095,6 +1098,7 @@ public:
                 (addRegIfNeeded(spilledRegs, otherSpilledRegs), ...);
             }
 
+
             if (spilledRegs.buildAndValidate().contains(exceptionReg, IgnoreVectors)) {
                 // It would be nice if we could do m_gprs.tryAllocate() but we're possibly on a slow path and register allocation state is
                 // probably garbage.
@@ -1183,14 +1187,6 @@ public:
         if (exceptionReg)
             exceptionCheck(*exceptionReg);
 
-        return call;
-    }
-
-    JITCompiler::Call callThrowOperationWithCallFrameRollback(V_JITOperation_Cb operation, GPRReg codeBlockGPR)
-    {
-        setupArguments<V_JITOperation_Cb>(codeBlockGPR);
-        JITCompiler::Call call = appendCall(operation);
-        exceptionJumpWithCallFrameRollback();
         return call;
     }
 
@@ -1497,7 +1493,10 @@ public:
     void compileMapIteratorNext(Node*);
     void compileMapIteratorKey(Node*);
     void compileMapIteratorValue(Node*);
+    template<typename Operation>
+    ALWAYS_INLINE void compileMapStorageImpl(Node*, Operation, Operation);
     void compileMapStorage(Node*);
+    void compileMapStorageOrSentinel(Node*);
     void compileMapIterationNext(Node*);
     void compileMapIterationEntry(Node*);
     void compileMapIterationEntryKey(Node*);
@@ -1612,6 +1611,7 @@ public:
     void compileArithUnary(Node*);
     void compileArithSqrt(Node*);
     void compileArithMinMax(Node*);
+    void compilePurifyNaN(Node*);
     void compileConstantStoragePointer(Node*);
     void compileGetIndexedPropertyStorage(Node*);
     void compileResolveRope(Node*);
@@ -1677,8 +1677,8 @@ public:
     void compileNewArrayWithSpread(Node*);
     void compileGetRestLength(Node*);
     void compileArraySlice(Node*);
-    void compileArraySpliceExtract(Node*);
-    void compileArrayIndexOf(Node*);
+    void compileArraySplice(Node*);
+    void compileArrayIndexOfOrArrayIncludes(Node*);
     void compileArrayPush(Node*);
     void compileNotifyWrite(Node*);
     void compileRegExpExec(Node*);
@@ -1705,6 +1705,7 @@ public:
     void compileSetRegExpObjectLastIndex(Node*);
     void compileLazyJSConstant(Node*);
     void compileMaterializeNewObject(Node*);
+    void compileMaterializeNewArrayWithConstantSize(Node*);
     void compileRecordRegExpCachedResult(Node*);
     void compileToObjectOrCallObjectConstructor(Node*);
     void compileResolveScope(Node*);
@@ -1751,8 +1752,10 @@ public:
     void compileStrCat(Node*);
     void compileNewArrayBuffer(Node*);
     void compileNewArrayWithSize(Node*);
+    void compileNewArrayWithConstantSizeImpl(Node*, GPRReg, GPRReg);
     void compileNewArrayWithConstantSize(Node*);
     void compileNewArrayWithSpecies(Node*);
+    void compileNewArrayWithSizeAndStructure(Node*);
     void compileNewTypedArray(Node*);
     void compileToThis(Node*);
     void compileOwnPropertyKeysVariant(Node*);
@@ -1884,10 +1887,10 @@ public:
     void speculateCellType(Edge, GPRReg cellGPR, SpeculatedType, JSType);
 
     void speculateInt32(Edge);
+    void speculateInt32(Edge, JSValueRegs);
 #if USE(JSVALUE64)
     void convertAnyInt(Edge, GPRReg resultGPR);
     void speculateAnyInt(Edge);
-    void speculateInt32(Edge, JSValueRegs);
     void speculateDoubleRepAnyInt(Edge);
 #endif // USE(JSVALUE64)
 #if USE(BIGINT32)
@@ -3037,5 +3040,7 @@ private:
     DFG_TYPE_CHECK_WITH_EXIT_KIND(BadType, source, edge, typesPassedThrough, jumpToFail)
 
 } } // namespace JSC::DFG
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

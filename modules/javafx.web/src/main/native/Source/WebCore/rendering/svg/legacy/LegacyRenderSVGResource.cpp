@@ -3,7 +3,7 @@
  * Copyright (C) 2007 Rob Buis <buis@kde.org>
  * Copyright (C) 2008 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -66,7 +66,7 @@ static inline LegacyRenderSVGResource* requestPaintingResource(RenderSVGResource
 
         // But always use the initial fill paint server.
         LegacyRenderSVGResourceSolidColor* colorResource = LegacyRenderSVGResource::sharedSolidPaintingResource();
-        colorResource->setColor(SVGRenderStyle::initialFillPaintColor().absoluteColor());
+        colorResource->setColor(SVGRenderStyle::initialFillPaintColor().resolvedColor());
         return colorResource;
     }
 
@@ -264,7 +264,7 @@ void LegacyRenderSVGResource::markForLayoutAndParentResourceInvalidationIfNeeded
     }
 }
 
-void LegacyRenderSVGResource::fillAndStrokePathOrShape(GraphicsContext& context, OptionSet<RenderSVGResourceMode> resourceMode, const Path* path, const RenderElement* shape) const
+void LegacyRenderSVGResource::fillAndStrokePathOrShape(GraphicsContext& context, OptionSet<RenderSVGResourceMode> resourceMode, const Path* path, const RenderElement* shape)
 {
     if (shape) {
         ASSERT(shape->isRenderOrLegacyRenderSVGShape());

@@ -35,8 +35,12 @@
 #include "NodeRenderStyle.h"
 #include "RenderView.h"
 #include "ScriptElementCachedScriptFetcher.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PreloadRequest);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLResourcePreloader);
 
 URL PreloadRequest::completeURL(Document& document)
 {
@@ -64,7 +68,7 @@ CachedResourceRequest PreloadRequest::resourceRequest(Document& document)
     }
     if (m_resourceType == CachedResource::Type::Script || m_resourceType == CachedResource::Type::ImageResource)
         options.referrerPolicy = m_referrerPolicy;
-    options.fetchPriorityHint = m_fetchPriorityHint;
+    options.fetchPriority = m_fetchPriority;
     auto request = createPotentialAccessControlRequest(completeURL(document), WTFMove(options), document, crossOriginMode);
     request.setInitiatorType(m_initiatorType);
 

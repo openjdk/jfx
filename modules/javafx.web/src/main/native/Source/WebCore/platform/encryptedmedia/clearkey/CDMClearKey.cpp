@@ -42,10 +42,15 @@
 #include <iterator>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CDMFactoryClearKey);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CDMPrivateClearKey);
 
 static std::optional<Vector<RefPtr<KeyHandle>>> parseLicenseFormat(const JSON::Object& root)
 {
@@ -148,7 +153,7 @@ static std::pair<unsigned, unsigned> extractKeyidsLocationFromCencInitData(const
     while (true) {
 
         // Check the overflow InitData.
-        if (index + 12 + ClearKey::cencSystemIdSize >= initDataSize)
+        if (index + 12 + ClearKey::cencSystemId.size() >= initDataSize)
             return keyIdsMap;
 
         psshSize = data[index + 2] * 256 + data[index + 3];
@@ -158,7 +163,7 @@ static std::pair<unsigned, unsigned> extractKeyidsLocationFromCencInitData(const
             return keyIdsMap;
 
         // 12 = BMFF box header + Full box header.
-        if (!memcmp(&data[index + 12], ClearKey::cencSystemId, ClearKey::cencSystemIdSize)) {
+        if (spanHasPrefix(data.subspan(index + 12), std::span { ClearKey::cencSystemId })) {
             foundPssh = true;
             break;
         }
@@ -169,7 +174,7 @@ static std::pair<unsigned, unsigned> extractKeyidsLocationFromCencInitData(const
     if (!foundPssh)
         return keyIdsMap;
 
-    index += (12 + ClearKey::cencSystemIdSize); // 12 (BMFF box header + Full box header) + SystemID size.
+    index += (12 + ClearKey::cencSystemId.size()); // 12 (BMFF box header + Full box header) + SystemID size.
 
     // Check the overflow.
     if (index + 3 >= initDataSize)
@@ -253,9 +258,10 @@ CDMFactoryClearKey& CDMFactoryClearKey::singleton()
 CDMFactoryClearKey::CDMFactoryClearKey() = default;
 CDMFactoryClearKey::~CDMFactoryClearKey() = default;
 
-std::unique_ptr<CDMPrivate> CDMFactoryClearKey::createCDM(const String& keySystem, const CDMPrivateClient&)
+std::unique_ptr<CDMPrivate> CDMFactoryClearKey::createCDM(const String& keySystem, const String& mediaKeysHashSalt, const CDMPrivateClient&)
 {
     ASSERT_UNUSED(keySystem, supportsKeySystem(keySystem));
+    UNUSED_PARAM(mediaKeysHashSalt);
     return makeUnique<CDMPrivateClearKey>();
 }
 
@@ -442,10 +448,20 @@ RefPtr<CDMInstanceSession> CDMInstanceClearKey::createSession()
 
 void CDMInstanceSessionClearKey::requestLicense(LicenseType, KeyGroupingStrategy, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&& callback)
 {
-    static uint32_t s_sessionIdValue = 0;
-    ++s_sessionIdValue;
+    RefPtr parentInstance = protectedParentInstance();
+    if (!parentInstance) {
+        LOG(EME, "EME - ClearKey - session %s is in an invalid state", sessionId.utf8().data());
+        callOnMainThread(
+            [weakThis = WeakPtr { *this }, callback = WTFMove(callback), initData = WTFMove(initData)]() mutable {
+                if (!weakThis)
+                    return;
 
-    m_sessionID = String::number(s_sessionIdValue);
+                callback(WTFMove(initData), weakThis->m_sessionID, false, Failed);
+            });
+        return;
+    }
+
+    m_sessionID = String::number(parentInstance->getNextSessionIdValue());
 
     if (equalLettersIgnoringASCIICase(initDataType, "cenc"_s))
         initData = extractKeyidsFromCencInitData(initData.get());
@@ -487,6 +503,14 @@ void CDMInstanceSessionClearKey::updateLicense(const String& sessionId, LicenseT
         return;
     }
 
+    RefPtr parentInstance = protectedParentInstance();
+    if (!parentInstance) {
+        LOG(EME, "EME - ClearKey - session %s is in an invalid state", sessionId.utf8().data());
+        dispatchCallback(false, std::nullopt, SuccessValue::Failed);
+        return;
+    }
+
+
     LOG(EME, "EME - ClearKey - updating license for session %s which currently contains %u keys", sessionId.utf8().data(), m_keyStore.numKeys());
 
     if (auto decodedKeys = parseLicenseFormat(*root)) {
@@ -497,7 +521,7 @@ void CDMInstanceSessionClearKey::updateLicense(const String& sessionId, LicenseT
         std::optional<KeyStatusVector> changedKeys;
         if (keysChanged) {
             LOG(EME, "EME - ClearKey - session %s has changed keys", sessionId.utf8().data());
-            parentInstance().mergeKeysFrom(m_keyStore);
+            parentInstance->mergeKeysFrom(m_keyStore);
             changedKeys = m_keyStore.convertToJSKeyStatusVector();
         }
 
@@ -507,7 +531,7 @@ void CDMInstanceSessionClearKey::updateLicense(const String& sessionId, LicenseT
 
     if (parseLicenseReleaseAcknowledgementFormat(*root)) {
         LOG(EME, "EME - ClearKey - session %s release acknowledged, clearing all known keys", sessionId.utf8().data());
-        parentInstance().unrefAllKeysFrom(m_keyStore);
+        parentInstance->unrefAllKeysFrom(m_keyStore);
         m_keyStore.clear();
         dispatchCallback(true, std::nullopt, SuccessValue::Succeeded);
         return;
@@ -585,11 +609,9 @@ void CDMInstanceSessionClearKey::storeRecordOfKeyUsage(const String&)
 {
 }
 
-CDMInstanceClearKey& CDMInstanceSessionClearKey::parentInstance() const
+RefPtr<CDMInstanceClearKey> CDMInstanceSessionClearKey::protectedParentInstance() const
 {
-    auto instance = cdmInstanceProxy();
-    ASSERT(instance);
-    return static_cast<CDMInstanceClearKey&>(*instance);
+    return dynamicDowncast<CDMInstanceClearKey>(cdmInstanceProxy().get());
 }
 
 } // namespace WebCore

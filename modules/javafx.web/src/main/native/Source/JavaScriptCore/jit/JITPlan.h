@@ -48,7 +48,7 @@ protected:
     JITPlan(JITCompilationMode, CodeBlock*);
 
 public:
-    virtual ~JITPlan() { }
+    virtual ~JITPlan();
 
     VM* vm() const { return m_vm; }
     CodeBlock* codeBlock() const { return m_codeBlock; }
@@ -93,9 +93,10 @@ public:
 
     virtual bool isKnownToBeLiveAfterGC();
     virtual bool isKnownToBeLiveDuringGC(AbstractSlotVisitor&);
-    virtual bool iterateCodeBlocksForGC(AbstractSlotVisitor&, const Function<void(CodeBlock*)>&);
+    virtual bool iterateCodeBlocksForGC(AbstractSlotVisitor&, NOESCAPE const Function<void(CodeBlock*)>&);
     virtual bool checkLivenessAndVisitChildren(AbstractSlotVisitor&);
 
+    bool isInSafepoint() const;
     bool safepointKeepsDependenciesLive() const;
 
     template<typename Functor>

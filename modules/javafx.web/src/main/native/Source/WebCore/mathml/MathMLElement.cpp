@@ -247,7 +247,7 @@ void MathMLElement::defaultEventHandler(Event& event)
             const auto& href = attributeWithoutSynchronization(hrefAttr);
             event.setDefaultHandled();
             if (RefPtr frame = document().frame())
-                frame->checkedLoader()->changeLocation(document().completeURL(href), selfTargetFrameName(), &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
+                frame->protectedLoader()->changeLocation(document().completeURL(href), selfTargetFrameName(), &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
             return;
         }
     }
@@ -268,8 +268,10 @@ bool MathMLElement::isKeyboardFocusable(KeyboardEvent* event) const
     if (isFocusable() && StyledElement::supportsFocus())
         return StyledElement::isKeyboardFocusable(event);
 
-    if (isLink())
-        return document().frame()->eventHandler().tabsToLinks(event);
+    if (isLink()) {
+        RefPtr frame = document().frame();
+        return frame && frame->eventHandler().tabsToLinks(event);
+    }
 
     return StyledElement::isKeyboardFocusable(event);
 }

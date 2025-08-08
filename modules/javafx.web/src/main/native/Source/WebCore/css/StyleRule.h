@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2002-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -70,6 +70,7 @@ public:
     bool isPageRule() const { return type() == StyleRuleType::Page; }
     bool isStyleRule() const { return type() == StyleRuleType::Style || type() == StyleRuleType::StyleWithNesting; }
     bool isStyleRuleWithNesting() const { return type() == StyleRuleType::StyleWithNesting; }
+    bool isNestedDeclarationsRule() const { return type() == StyleRuleType::NestedDeclarations; }
     bool isGroupRule() const { return type() == StyleRuleType::Media || type() == StyleRuleType::Supports || type() == StyleRuleType::LayerBlock || type() == StyleRuleType::Container || type() == StyleRuleType::Scope || type() == StyleRuleType::StartingStyle; }
     bool isSupportsRule() const { return type() == StyleRuleType::Supports; }
     bool isImportRule() const { return type() == StyleRuleType::Import; }
@@ -79,6 +80,7 @@ public:
     bool isScopeRule() const { return type() == StyleRuleType::Scope; }
     bool isStartingStyleRule() const { return type() == StyleRuleType::StartingStyle; }
     bool isViewTransitionRule() const { return type() == StyleRuleType::ViewTransition; }
+    bool isPositionTryRule() const { return type() == StyleRuleType::PositionTry; }
 
     Ref<StyleRuleBase> copy() const;
 
@@ -188,6 +190,18 @@ private:
     CSSSelectorList m_originalSelectorList;
 };
 
+class StyleRuleNestedDeclarations final : public StyleRule {
+public:
+    static Ref<StyleRuleNestedDeclarations> create(Ref<StyleProperties>&& properties) { return adoptRef(*new StyleRuleNestedDeclarations(WTFMove(properties))); }
+    ~StyleRuleNestedDeclarations() = default;
+    Ref<StyleRuleNestedDeclarations> copy() const { return adoptRef(*new StyleRuleNestedDeclarations(*this)); }
+
+    String debugDescription() const;
+private:
+    explicit StyleRuleNestedDeclarations(Ref<StyleProperties>&&);
+    StyleRuleNestedDeclarations(const StyleRuleNestedDeclarations&) = default;
+};
+
 class StyleRuleFontFace final : public StyleRuleBase {
 public:
     static Ref<StyleRuleFontFace> create(Ref<StyleProperties>&& properties) { return adoptRef(*new StyleRuleFontFace(WTFMove(properties))); }
@@ -268,7 +282,26 @@ private:
     Ref<FontFeatureValues> m_value;
 };
 
-class StyleRulePage final : public StyleRuleBase {
+class StyleRuleGroup : public StyleRuleBase {
+public:
+    const Vector<Ref<StyleRuleBase>>& childRules() const;
+
+    void wrapperInsertRule(unsigned, Ref<StyleRuleBase>&&);
+    void wrapperRemoveRule(unsigned);
+
+    friend class CSSGroupingRule;
+    friend class CSSStyleSheet;
+
+    String debugDescription() const;
+protected:
+    StyleRuleGroup(StyleRuleType, Vector<Ref<StyleRuleBase>>&&);
+    StyleRuleGroup(const StyleRuleGroup&);
+
+private:
+    mutable Vector<Ref<StyleRuleBase>> m_childRules;
+};
+
+class StyleRulePage final : public StyleRuleGroup {
 public:
     static Ref<StyleRulePage> create(Ref<StyleProperties>&&, CSSSelectorList&&);
 
@@ -288,25 +321,6 @@ private:
 
     Ref<StyleProperties> m_properties;
     CSSSelectorList m_selectorList;
-};
-
-class StyleRuleGroup : public StyleRuleBase {
-public:
-    const Vector<Ref<StyleRuleBase>>& childRules() const;
-
-    void wrapperInsertRule(unsigned, Ref<StyleRuleBase>&&);
-    void wrapperRemoveRule(unsigned);
-
-    friend class CSSGroupingRule;
-    friend class CSSStyleSheet;
-
-    String debugDescription() const;
-protected:
-    StyleRuleGroup(StyleRuleType, Vector<Ref<StyleRuleBase>>&&);
-    StyleRuleGroup(const StyleRuleGroup&);
-
-private:
-    mutable Vector<Ref<StyleRuleBase>> m_childRules;
 };
 
 class StyleRuleMedia final : public StyleRuleGroup {
@@ -514,6 +528,10 @@ SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleWithNesting)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isStyleRuleWithNesting(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleNestedDeclarations)
+    static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isNestedDeclarationsRule(); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleGroup)

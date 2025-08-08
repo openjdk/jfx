@@ -65,12 +65,15 @@
 #include "Widget.h"
 #include <limits>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FocusController);
+
 using namespace HTMLNames;
 
-static HTMLFormControlElement* invokerForOpenPopover(const Node* candidatePopover)
+static HTMLElement* invokerForOpenPopover(const Node* candidatePopover)
 {
     RefPtr popover = dynamicDowncast<HTMLElement>(candidatePopover);
     if (popover && popover->isPopoverShowing())
@@ -467,6 +470,11 @@ void FocusController::setFocusedFrame(Frame* frame, BroadcastFocusedFrame broadc
         } while (frame);
     }
 
+#if PLATFORM(IOS_FAMILY)
+    if (oldFrame)
+        oldFrame->eventHandler().cancelSelectionAutoscroll();
+#endif
+
     if (newFrame && newFrame->view() && isFocused()) {
         newFrame->selection().setFocused(true);
         newFrame->document()->dispatchWindowEvent(Event::create(eventNames().focusEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -488,8 +496,8 @@ LocalFrame* FocusController::focusedOrMainFrame() const
 {
     if (auto* frame = focusedLocalFrame())
         return frame;
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame()))
-        return localMainFrame;
+    if (RefPtr localMainFrame = m_page->localMainFrame())
+        return localMainFrame.get();
     ASSERT(m_page->settings().siteIsolationEnabled());
     return nullptr;
 }
@@ -544,7 +552,7 @@ bool FocusController::setInitialFocus(FocusDirection direction, KeyboardEvent* p
     // of handleFocusedUIElementChanged, because this will send the notification even if the element is the same.
     RefPtr focusedOrMainFrame = this->focusedOrMainFrame();
     if (CheckedPtr cache = focusedOrMainFrame ? focusedOrMainFrame->document()->existingAXObjectCache() : nullptr)
-        cache->postNotification(focusedOrMainFrame->document(), AXObjectCache::AXFocusedUIElementChanged);
+        cache->postNotification(focusedOrMainFrame->document(), AXNotification::FocusedUIElementChanged);
 
     return didAdvanceFocus;
 }
@@ -615,10 +623,10 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
         }
 
         // Chrome doesn't want focus, so we should wrap focus.
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
-        if (!localMainFrame)
+        RefPtr localTopDocument = m_page->localTopDocument();
+        if (!localTopDocument)
             return false;
-        element = findFocusableElementAcrossFocusScope(direction, FocusNavigationScope::scopeOf(*localMainFrame->protectedDocument()), nullptr, event);
+        element = findFocusableElementAcrossFocusScope(direction, FocusNavigationScope::scopeOf(*localTopDocument), nullptr, event);
 
         if (!element)
             return false;
@@ -700,13 +708,12 @@ Element* FocusController::findFocusableElementAcrossFocusScope(FocusDirection di
         if (direction == FocusDirection::Backward && isFocusableScopeOwner(*owner, event))
             return findFocusableElementDescendingIntoSubframes(direction, owner.get(), event);
 
-        auto outerScope = FocusNavigationScope::scopeOf(*owner);
-
         // If we're getting out of a popover backwards, focus the invoker itself instead of the node preceding it, if possible.
         RefPtr invoker = invokerForOpenPopover(owner.get());
         if (invoker && direction == FocusDirection::Backward && invoker->isKeyboardFocusable(event))
             return invoker.get();
 
+        auto outerScope = FocusNavigationScope::scopeOf(invoker ? *invoker : *owner);
         if (auto* candidateInOuterScope = findFocusableElementWithinScope(direction, outerScope, invoker ? invoker.get() : owner.get(), event))
             return candidateInOuterScope;
         owner = outerScope.owner();
@@ -958,8 +965,6 @@ bool FocusController::setFocusedElement(Element* element, LocalFrame& newFocused
     if (oldFocusedElement && oldFocusedElement->isRootEditableElement() && !relinquishesEditingFocus(*oldFocusedElement))
         return false;
 
-    page->editorClient().willSetInputMethodState();
-
     if (shouldClearSelectionWhenChangingFocusedElement(page, WTFMove(oldFocusedElement), element))
         clearSelectionIfNeeded(oldFocusedFrame.get(), &newFocusedFrame, element);
 
@@ -1025,7 +1030,7 @@ void FocusController::setActive(bool active)
 
 void FocusController::setActiveInternal(bool active)
 {
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(m_page->mainFrame());
+    RefPtr localMainFrame = m_page->localMainFrame();
     if (!localMainFrame)
         return;
     if (RefPtr view = localMainFrame->view()) {
@@ -1060,7 +1065,7 @@ void FocusController::setIsVisibleAndActiveInternal(bool contentIsVisible)
 
     contentAreaDidShowOrHide(view.get(), contentIsVisible);
 
-    for (auto* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (RefPtr frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2014 Apple Inc. All rights reserved.
+# Copyright (c) 2014-2025 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -72,6 +72,11 @@ _FRAMEWORK_CONFIG_MAP = {
         "objc_protocol_group": "WD",
         "objc_prefix": "WD",
     },
+    "WebDriverBidi": {
+        "cpp_protocol_group": "WebDriverBidi",
+        "objc_protocol_group": "WD",
+        "objc_prefix": "WD",
+    },
     "WebInspector": {
         "objc_protocol_group": "RWI",
         "objc_prefix": "RWI",
@@ -118,6 +123,9 @@ class Framework:
         if frameworkString == "WebKit":
             return Frameworks.WebKit
 
+        if frameworkString == "WebDriverBidi":
+            return Frameworks.WebDriverBidi
+
         if frameworkString == "WebInspector":
             return Frameworks.WebInspector
 
@@ -134,6 +142,7 @@ class Frameworks:
     Global = Framework("Global")
     JavaScriptCore = Framework("JavaScriptCore")
     WebKit = Framework("WebKit")
+    WebDriverBidi = Framework("WebDriverBidi")
     WebInspector = Framework("WebInspector")
     WebInspectorUI = Framework("WebInspectorUI")
     Test = Framework("Test")

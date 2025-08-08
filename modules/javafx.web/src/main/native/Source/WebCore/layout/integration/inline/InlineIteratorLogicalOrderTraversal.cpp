@@ -27,6 +27,7 @@
 #include "InlineIteratorLogicalOrderTraversal.h"
 
 #include "InlineIteratorLineBox.h"
+#include <algorithm>
 
 namespace WebCore {
 namespace InlineIterator {
@@ -71,7 +72,7 @@ std::pair<TextBoxIterator, TextLogicalOrderCache> firstTextBoxInLogicalOrderFor(
     if (auto cache = makeTextLogicalOrderCacheIfNeeded(text))
         return { cache->boxes.first(), WTFMove(cache) };
 
-    return { firstTextBoxFor(text), nullptr };
+    return { lineLeftmostTextBoxFor(text), nullptr };
 }
 
 TextBoxIterator nextTextBoxInLogicalOrder(const TextBoxIterator& textBox, TextLogicalOrderCache& cache)
@@ -94,8 +95,8 @@ static LineLogicalOrderCache makeLineLogicalOrderCache(const LineBoxIterator& li
     auto cache = makeUnique<LineLogicalOrderCacheData>();
 
     cache->lineBox = lineBox;
-    cache->boxes = leafBoxesInLogicalOrder(lineBox, [](auto first, auto last) {
-        std::reverse(first, last);
+    cache->boxes = leafBoxesInLogicalOrder(lineBox, [](auto span) {
+        std::ranges::reverse(span);
     });
 
     return cache;

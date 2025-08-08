@@ -28,28 +28,31 @@
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "Pattern.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FETileSoftwareApplier);
+
 bool FETileSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
     RefPtr resultImage = result.imageBuffer();
-    RefPtr inputImage = input.imageBuffer();
+    RefPtr inputImage = input->imageBuffer();
     if (!resultImage || !inputImage)
         return false;
 
-    auto inputImageRect = input.absoluteImageRect();
+    auto inputImageRect = input->absoluteImageRect();
     auto resultImageRect = result.absoluteImageRect();
 
-    auto tileRect = input.maxEffectRect(filter);
+    auto tileRect = input->maxEffectRect(filter);
     tileRect.scale(filter.filterScale());
 
     auto maxResultRect = result.maxEffectRect(filter);
     maxResultRect.scale(filter.filterScale());
 
-    auto tileImage = ImageBuffer::create(tileRect.size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8, bufferOptionsForRendingMode(filter.renderingMode()));
+    auto tileImage = ImageBuffer::create(tileRect.size(), filter.renderingMode(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!tileImage)
         return false;
 

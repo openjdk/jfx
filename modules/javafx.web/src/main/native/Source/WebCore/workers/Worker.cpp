@@ -56,9 +56,6 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
-#if USE(SKIA)
-#include "JSImageBitmap.h"
-#endif
 
 namespace WebCore {
 
@@ -145,14 +142,8 @@ Worker::~Worker()
 
 ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
-#if USE(SKIA)
     // When using skia, transferring ownership of accelerated ImageBitmaps causes GrDirectContext mismatches,
     // threfore, we need to let ImageBitmap know so that it can act accordingly.
-    for (const auto& transferItem : options.transfer) {
-        if (auto* imageBitmap = JSImageBitmap::toWrapped(state.vm(), transferItem.get()))
-            imageBitmap->prepareForCrossThreadTransfer();
-    }
-#endif
 
     Vector<Ref<MessagePort>> ports;
     auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
@@ -200,7 +191,7 @@ bool Worker::virtualHasPendingActivity() const
     return m_scriptLoader || (m_didStartWorkerGlobalScope && !m_contextProxy.askedToTerminate());
 }
 
-void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIdentifier, std::optional<ResourceLoaderIdentifier> identifier, const ResourceResponse& response)
 {
     const URL& responseURL = response.url();
     if (!responseURL.protocolIsBlob() && !responseURL.protocolIsFile() && !SecurityOrigin::create(responseURL)->isOpaque())
@@ -208,12 +199,12 @@ void Worker::didReceiveResponse(ScriptExecutionContextIdentifier mainContextIden
 
     if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
         ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier] (auto& mainContext) {
-            InspectorInstrumentation::didReceiveScriptResponse(mainContext, identifier);
+            InspectorInstrumentation::didReceiveScriptResponse(mainContext, *identifier);
         });
     }
 }
 
-void Worker::notifyFinished(ScriptExecutionContextIdentifier mainContextIdentifier)
+void Worker::notifyFinished(std::optional<ScriptExecutionContextIdentifier> mainContextIdentifier)
 {
     auto clearLoader = makeScopeExit([this] {
         m_scriptLoader = nullptr;
@@ -247,7 +238,7 @@ void Worker::notifyFinished(ScriptExecutionContextIdentifier mainContextIdentifi
     m_contextProxy.startWorkerGlobalScope(m_scriptLoader->responseURL(), *sessionID, m_options.name, WTFMove(initializationData), m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_scriptLoader->crossOriginEmbedderPolicy(), m_workerCreationTime, referrerPolicy, m_options.type, m_options.credentials, m_runtimeFlags);
 
     if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
-        ScriptExecutionContext::ensureOnContextThread(mainContextIdentifier, [identifier = m_scriptLoader->identifier(), script = m_scriptLoader->script().isolatedCopy()] (auto& mainContext) {
+        ScriptExecutionContext::ensureOnContextThread(*mainContextIdentifier, [identifier = m_scriptLoader->identifier(), script = m_scriptLoader->script().isolatedCopy()] (auto& mainContext) {
             InspectorInstrumentation::scriptImported(mainContext, identifier, script.toString());
         });
     }
@@ -298,7 +289,7 @@ void Worker::postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>
     m_contextProxy.postTaskToWorkerGlobalScope(WTFMove(task));
 }
 
-void Worker::forEachWorker(const Function<Function<void(ScriptExecutionContext&)>()>& callback)
+void Worker::forEachWorker(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>& callback)
 {
     Locker locker { allWorkersLock };
     for (auto& contextIdentifier : allWorkerContexts())

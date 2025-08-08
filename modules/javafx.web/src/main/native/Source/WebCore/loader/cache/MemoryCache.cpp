@@ -239,7 +239,7 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
     pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
-void MemoryCache::forEachResource(const Function<void(CachedResource&)>& function)
+void MemoryCache::forEachResource(NOESCAPE const Function<void(CachedResource&)>& function)
 {
     RELEASE_ASSERT(isMainThread());
     Vector<WeakPtr<CachedResource>> allResources;
@@ -253,7 +253,7 @@ void MemoryCache::forEachResource(const Function<void(CachedResource&)>& functio
     }
 }
 
-void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const Function<void(CachedResource&)>& function)
+void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, NOESCAPE const Function<void(CachedResource&)>& function)
 {
     RELEASE_ASSERT(isMainThread());
     RELEASE_ASSERT(m_sessionResources.isValidKey(sessionID));
@@ -551,7 +551,7 @@ void MemoryCache::removeResourcesWithOrigin(const SecurityOrigin& origin, const 
                 continue;
             }
             auto resourceOrigin = SecurityOrigin::create(resource.url());
-            if (resourceOrigin->equal(&origin))
+            if (resourceOrigin->equal(origin))
                 resourcesWithOrigin.append(resource);
         }
     }
@@ -583,7 +583,7 @@ void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const Has
     if (!resourceMap)
         return;
 
-    HashSet<String> originPartitions;
+    UncheckedKeyHashSet<String> originPartitions;
 
     for (auto& origin : origins)
         originPartitions.add(ResourceRequest::partitionName(origin->host()));
@@ -621,11 +621,11 @@ void MemoryCache::getOriginsWithCache(SecurityOriginSet& origins)
     }
 }
 
-HashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID sessionID) const
+UncheckedKeyHashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID sessionID) const
 {
     RELEASE_ASSERT(isMainThread());
 
-    HashSet<RefPtr<SecurityOrigin>> origins;
+    UncheckedKeyHashSet<RefPtr<SecurityOrigin>> origins;
 
     auto it = m_sessionResources.find(sessionID);
     if (it != m_sessionResources.end()) {
@@ -700,10 +700,10 @@ void MemoryCache::removeRequestFromSessionCaches(ScriptExecutionContext& context
         return;
     }
 
-    auto& memoryCache = MemoryCache::singleton();
-    for (auto& resources : memoryCache.m_sessionResources) {
-        if (CachedResourceHandle resource = memoryCache.resourceForRequestImpl(request, *resources.value))
-            memoryCache.remove(*resource);
+    Ref memoryCache = MemoryCache::singleton();
+    for (auto& resources : memoryCache->m_sessionResources) {
+        if (CachedResourceHandle resource = memoryCache->resourceForRequestImpl(request, *resources.value))
+            memoryCache->remove(*resource);
     }
 }
 

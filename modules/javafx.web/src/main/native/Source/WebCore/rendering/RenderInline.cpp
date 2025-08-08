@@ -113,7 +113,7 @@ void RenderInline::willBeDestroyed()
             parent->dirtyLineFromChangedChild();
     }
 
-    m_lineBoxes.deleteLineBoxes();
+    m_legacyLineBoxes.deleteLineBoxes();
 
     RenderBoxModelObject::willBeDestroyed();
 }
@@ -226,11 +226,8 @@ bool RenderInline::mayAffectLayout() const
 
 void RenderInline::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this)) {
+    if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this))
         lineLayout->paint(paintInfo, paintOffset, this);
-        return;
-    }
-    m_lineBoxes.paint(this, paintInfo, paintOffset);
 }
 
 template<typename GeneratorContext>
@@ -352,7 +349,7 @@ static LayoutUnit computeMargin(const RenderInline* renderer, const Length& marg
     if (margin.isFixed())
         return LayoutUnit(margin.value());
     if (margin.isPercentOrCalculated())
-        return minimumValueForLength(margin, std::max<LayoutUnit>(0, renderer->containingBlock()->availableLogicalWidth()));
+        return minimumValueForLength(margin, std::max<LayoutUnit>(0, renderer->containingBlock()->contentBoxLogicalWidth()));
     return 0;
 }
 
@@ -376,24 +373,24 @@ LayoutUnit RenderInline::marginBottom() const
     return computeMargin(this, style().marginBottom());
 }
 
-LayoutUnit RenderInline::marginStart(const RenderStyle* otherStyle) const
+LayoutUnit RenderInline::marginStart(const WritingMode writingMode) const
 {
-    return computeMargin(this, style().marginStartUsing(otherStyle ? otherStyle : &style()));
+    return computeMargin(this, style().marginStart(writingMode));
 }
 
-LayoutUnit RenderInline::marginEnd(const RenderStyle* otherStyle) const
+LayoutUnit RenderInline::marginEnd(const WritingMode writingMode) const
 {
-    return computeMargin(this, style().marginEndUsing(otherStyle ? otherStyle : &style()));
+    return computeMargin(this, style().marginEnd(writingMode));
 }
 
-LayoutUnit RenderInline::marginBefore(const RenderStyle* otherStyle) const
+LayoutUnit RenderInline::marginBefore(const WritingMode writingMode) const
 {
-    return computeMargin(this, style().marginBeforeUsing(otherStyle ? otherStyle : &style()));
+    return computeMargin(this, style().marginBefore(writingMode));
 }
 
-LayoutUnit RenderInline::marginAfter(const RenderStyle* otherStyle) const
+LayoutUnit RenderInline::marginAfter(const WritingMode writingMode) const
 {
-    return computeMargin(this, style().marginAfterUsing(otherStyle ? otherStyle : &style()));
+    return computeMargin(this, style().marginAfter(writingMode));
 }
 
 ASCIILiteral RenderInline::renderName() const
@@ -416,7 +413,7 @@ bool RenderInline::nodeAtPoint(const HitTestRequest& request, HitTestResult& res
     ASSERT(layer());
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*this))
         return lineLayout->hitTest(request, result, locationInContainer, accumulatedOffset, hitTestAction, this);
-    return m_lineBoxes.hitTest(this, request, result, locationInContainer, accumulatedOffset, hitTestAction);
+    return false;
 }
 
 VisiblePosition RenderInline::positionForPoint(const LayoutPoint& point, HitTestSource source, const RenderFragmentContainer* fragment)
@@ -456,15 +453,15 @@ LayoutUnit RenderInline::innerPaddingBoxWidth() const
     auto lastInlineBoxPaddingBoxRight = LayoutUnit { };
 
     if (LayoutIntegration::LineLayout::containing(*this)) {
-        if (auto inlineBox = InlineIterator::firstInlineBoxFor(*this)) {
-            if (style().isLeftToRightDirection()) {
+        if (auto inlineBox = InlineIterator::lineLeftmostInlineBoxFor(*this)) {
+            if (writingMode().isBidiLTR()) {
             firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderStart();
-            for (; inlineBox->nextInlineBox(); inlineBox.traverseNextInlineBox()) { }
+                for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
             ASSERT(inlineBox);
             lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderEnd();
             } else {
                 lastInlineBoxPaddingBoxRight = inlineBox->logicalRightIgnoringInlineDirection() - borderStart();
-                for (; inlineBox->nextInlineBox(); inlineBox.traverseNextInlineBox()) { }
+                for (; inlineBox->nextInlineBoxLineRightward(); inlineBox.traverseInlineBoxLineRightward()) { }
                 ASSERT(inlineBox);
                 firstInlineBoxPaddingBoxLeft = inlineBox->logicalLeftIgnoringInlineDirection() + borderEnd();
             }
@@ -478,7 +475,7 @@ LayoutUnit RenderInline::innerPaddingBoxWidth() const
     if (!firstInlineBox || !lastInlineBox)
         return { };
 
-    if (style().isLeftToRightDirection()) {
+    if (writingMode().isBidiLTR()) {
         firstInlineBoxPaddingBoxLeft = firstInlineBox->logicalLeft();
         lastInlineBoxPaddingBoxRight = lastInlineBox->logicalRight();
     } else {
@@ -504,6 +501,16 @@ IntRect RenderInline::linesBoundingBox() const
             ASSERT(needsLayout());
             return { };
         }
+        if (isRenderSVGInline()) {
+            // FIXME: Always build the bounding box like this. LineLayouyt::enclosingBorderBoxRectFor does not include
+            // any post-layout box adjustments.
+            FloatRect result;
+            for (auto box = InlineIterator::lineLeftmostInlineBoxFor(*this); box; box.traverseInlineBoxLineRightward()) {
+                auto rect = box->visualRectIgnoringBlockDirection();
+                result.unite(rect);
+            }
+            return enclosingIntRect(result);
+        }
         return enclosingIntRect(layout->enclosingBorderBoxRectFor(*this));
     }
 
@@ -523,7 +530,7 @@ IntRect RenderInline::linesBoundingBox() const
                 logicalRightSide = curr->logicalRight();
         }
 
-        bool isHorizontal = style().isHorizontalWritingMode();
+        bool isHorizontal = writingMode().isHorizontal();
 
         float x = isHorizontal ? logicalLeftSide : firstLegacyInlineBox()->x();
         float y = isHorizontal ? firstLegacyInlineBox()->y() : logicalLeftSide;
@@ -543,7 +550,7 @@ LayoutRect RenderInline::linesVisualOverflowBoundingBox() const
             ASSERT(needsLayout());
             return { };
         }
-        return layout->visualOverflowBoundingBoxRectFor(*this);
+        return layout->inkOverflowBoundingBoxRectFor(*this);
     }
 
     if (!firstLegacyInlineBox() || !lastLegacyInlineBox())
@@ -565,7 +572,7 @@ LayoutRect RenderInline::linesVisualOverflowBoundingBox() const
     LayoutUnit logicalHeight = lastLegacyInlineBox()->logicalBottomVisualOverflow(lastRootBox.lineBottom()) - logicalTop;
 
     LayoutRect rect(logicalLeftSide, logicalTop, logicalWidth, logicalHeight);
-    if (!style().isHorizontalWritingMode())
+    if (!writingMode().isHorizontal())
         rect = rect.transposedRect();
     return rect;
 }
@@ -728,7 +735,7 @@ LayoutSize RenderInline::offsetFromContainer(RenderElement& container, const Lay
         offset -= toLayoutSize(box->scrollPosition());
 
     if (offsetDependsOnPoint)
-        *offsetDependsOnPoint = (is<RenderBox>(container) && container.style().isFlippedBlocksWritingMode()) || is<RenderFragmentedFlow>(container);
+        *offsetDependsOnPoint = (is<RenderBox>(container) && container.writingMode().isBlockFlipped()) || is<RenderFragmentedFlow>(container);
 
     return offset;
 }
@@ -754,7 +761,7 @@ void RenderInline::mapLocalToContainer(const RenderLayerModelObject* ancestorCon
 
     if (mode.contains(ApplyContainerFlip)) {
         if (CheckedPtr box = dynamicDowncast<RenderBox>(*container)) {
-        if (container->style().isFlippedBlocksWritingMode()) {
+            if (container->writingMode().isBlockFlipped()) {
             LayoutPoint centerPoint(transformState.mappedPoint());
                 transformState.move(box->flipForWritingMode(centerPoint) - centerPoint);
         }
@@ -785,7 +792,7 @@ const RenderObject* RenderInline::pushMappingToContainer(const RenderLayerModelO
     return ancestorSkipped ? ancestorToStopAt : container;
 }
 
-void RenderInline::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
+void RenderInline::updateHitTestResult(HitTestResult& result, const LayoutPoint& point) const
 {
     if (result.innerNode())
         return;
@@ -806,19 +813,9 @@ void RenderInline::updateHitTestResult(HitTestResult& result, const LayoutPoint&
     }
 }
 
-void RenderInline::dirtyLineBoxes(bool fullLayout)
+void RenderInline::deleteLegacyLineBoxes()
 {
-    if (fullLayout) {
-        m_lineBoxes.deleteLineBoxes();
-        return;
-    }
-
-    m_lineBoxes.dirtyLineBoxes();
-}
-
-void RenderInline::deleteLines()
-{
-    m_lineBoxes.deleteLineBoxTree();
+    m_legacyLineBoxes.deleteLineBoxes();
 }
 
 std::unique_ptr<LegacyInlineFlowBox> RenderInline::createInlineFlowBox()
@@ -830,7 +827,7 @@ LegacyInlineFlowBox* RenderInline::createAndAppendInlineFlowBox()
 {
     auto newFlowBox = createInlineFlowBox();
     auto flowBox = newFlowBox.get();
-    m_lineBoxes.appendLineBox(WTFMove(newFlowBox));
+    m_legacyLineBoxes.appendLineBox(WTFMove(newFlowBox));
     return flowBox;
 }
 
@@ -853,7 +850,7 @@ LayoutSize RenderInline::offsetForInFlowPositionedInline(const RenderBox* child)
 
     ASSERT(isInFlowPositioned());
     if (!isInFlowPositioned())
-        return LayoutSize();
+        return { };
 
     // When we have an enclosing relpositioned inline, we need to add in the offset of the first line
     // box from the rest of the content, but only in the cases where we know we're positioned
@@ -867,24 +864,29 @@ LayoutSize RenderInline::offsetForInFlowPositionedInline(const RenderBox* child)
         if (!layoutBox()) {
             // Repaint may be issued on subtrees during content mutation with newly inserted renderers.
             ASSERT(needsLayout());
-            return LayoutSize();
+            return { };
         }
-        if (auto inlineBox = InlineIterator::firstInlineBoxFor(*this)) {
+        if (auto inlineBox = InlineIterator::lineLeftmostInlineBoxFor(*this)) {
             inlinePosition = LayoutUnit::fromFloatRound(inlineBox->logicalLeftIgnoringInlineDirection());
             blockPosition = inlineBox->logicalTop();
+        } else if (auto* blockContainer = containingBlock()) {
+            // This must be a block with no in-flow content e.g. <div><span><abs pos box></span></div> where we don't construct any display box at all.
+            auto contentBoxLocation = blockContainer->contentBoxLocation();
+            inlinePosition = contentBoxLocation.x();
+            blockPosition = contentBoxLocation.y();
         }
     }
 
     // Per http://www.w3.org/TR/CSS2/visudet.html#abs-non-replaced-width an absolute positioned box with a static position
     // should locate itself as though it is a normal flow box in relation to its containing block.
     LayoutSize logicalOffset;
-    if (!child->style().hasStaticInlinePosition(style().isHorizontalWritingMode()))
+    if (!child->style().hasStaticInlinePosition(writingMode().isHorizontal()))
         logicalOffset.setWidth(inlinePosition);
 
-    if (!child->style().hasStaticBlockPosition(style().isHorizontalWritingMode()))
+    if (!child->style().hasStaticBlockPosition(writingMode().isHorizontal()))
         logicalOffset.setHeight(blockPosition);
 
-    return style().isHorizontalWritingMode() ? logicalOffset : logicalOffset.transposedSize();
+    return writingMode().isHorizontal() ? logicalOffset : logicalOffset.transposedSize();
 }
 
 void RenderInline::imageChanged(WrappedImagePtr, const IntRect*)
@@ -935,20 +937,20 @@ void RenderInline::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoin
     }
 }
 
-void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
+void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOffset) const
 {
     if (!hasOutline())
         return;
 
     auto& styleToUse = style();
     // Only paint the focus ring by hand if the theme isn't able to draw it.
-    if (styleToUse.outlineStyleIsAuto() == OutlineIsAuto::On && !theme().supportsFocusRing(styleToUse)) {
+    if (styleToUse.outlineStyleIsAuto() == OutlineIsAuto::On && !theme().supportsFocusRing(*this, styleToUse)) {
         Vector<LayoutRect> focusRingRects;
         addFocusRingRects(focusRingRects, paintOffset, paintInfo.paintContainer);
         paintFocusRing(paintInfo, styleToUse, focusRingRects);
     }
 
-    if (hasOutlineAnnotation() && styleToUse.outlineStyleIsAuto() == OutlineIsAuto::Off && !theme().supportsFocusRing(styleToUse))
+    if (hasOutlineAnnotation() && styleToUse.outlineStyleIsAuto() == OutlineIsAuto::Off && !theme().supportsFocusRing(*this, styleToUse))
         addPDFURLRect(paintInfo, paintOffset);
 
     GraphicsContext& graphicsContext = paintInfo.context();
@@ -965,9 +967,9 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
     auto isHorizontalWritingMode = this->isHorizontalWritingMode();
     auto& containingBlock = *this->containingBlock();
-    auto isFlippedBlocksWritingMode = containingBlock.style().isFlippedBlocksWritingMode();
+    auto isFlipped = containingBlock.writingMode().isBlockFlipped();
     Vector<LayoutRect> rects;
-    for (auto box = InlineIterator::firstInlineBoxFor(*this); box; box.traverseNextInlineBox()) {
+    for (auto box = InlineIterator::lineLeftmostInlineBoxFor(*this); box; box.traverseInlineBoxLineRightward()) {
         auto lineBox = box->lineBox();
         auto logicalTop = std::max(lineBox->contentLogicalTop(), box->logicalTop());
         auto logicalBottom = std::min(lineBox->contentLogicalBottom(), box->logicalBottom());
@@ -976,7 +978,7 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
         if (!isHorizontalWritingMode)
             enclosingVisualRect = enclosingVisualRect.transposedRect();
 
-        if (isFlippedBlocksWritingMode)
+        if (isFlipped)
             containingBlock.flipForWritingMode(enclosingVisualRect);
 
         rects.append(LayoutRect { enclosingVisualRect });

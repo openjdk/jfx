@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #include "FunctionPrototype.h"
 #include "JSCInlines.h"
 #include "VMTrapsInlines.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -196,7 +198,7 @@ JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, J
             for (unsigned index = 0, size = args.size(); index < size; ++index)
                 boundArgs[index] = args.at(index);
         } else {
-            JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), args.size());
+            JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructure(CopyOnWriteArrayWithContiguous), args.size());
             if (UNLIKELY(!butterfly)) {
                 throwOutOfMemoryError(globalObject, scope);
                 return nullptr;
@@ -287,7 +289,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
     }
 
     if (nestingCount) {
-        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+        StringBuilder builder(OverflowPolicy::RecordOverflow);
         for (unsigned i = 0; i < nestingCount; ++i)
             builder.append("bound "_s);
         auto terminalString = terminal->value(globalObject); // Resolving rope.
@@ -317,7 +319,7 @@ JSString* JSBoundFunction::nameSlow(VM& vm)
 
 String JSBoundFunction::nameStringWithoutGCSlow(VM& vm)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     unsigned nestingCount = 0;
     JSObject* cursor = m_targetFunction.get();
     String terminal;
@@ -339,7 +341,7 @@ String JSBoundFunction::nameStringWithoutGCSlow(VM& vm)
     if (!nestingCount)
         return terminal;
 
-    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     for (unsigned i = 0; i < nestingCount; ++i)
         builder.append("bound "_s);
     builder.append(WTFMove(terminal));
@@ -433,3 +435,5 @@ void JSBoundFunction::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 DEFINE_VISIT_CHILDREN(JSBoundFunction);
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

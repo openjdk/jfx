@@ -122,24 +122,24 @@ static LayoutRect clipRectForNinePieceImageStrip(const InlineIterator::InlineBox
     LayoutRect clipRect(paintRect);
     auto& style = box.renderer().style();
     LayoutBoxExtent outsets = style.imageOutsets(image);
-    auto [hasClosedLeftEdge, hasClosedRightEdge] = box.hasClosedLeftAndRightEdge();
+    auto closedEdges = box.closedEdges();
     if (box.isHorizontal()) {
         clipRect.setY(paintRect.y() - outsets.top());
         clipRect.setHeight(paintRect.height() + outsets.top() + outsets.bottom());
-        if (hasClosedLeftEdge) {
+        if (closedEdges.left()) {
             clipRect.setX(paintRect.x() - outsets.left());
             clipRect.setWidth(paintRect.width() + outsets.left());
         }
-        if (hasClosedRightEdge)
+        if (closedEdges.right())
             clipRect.setWidth(clipRect.width() + outsets.right());
     } else {
         clipRect.setX(paintRect.x() - outsets.left());
         clipRect.setWidth(paintRect.width() + outsets.left() + outsets.right());
-        if (hasClosedLeftEdge) {
+        if (closedEdges.top()) {
             clipRect.setY(paintRect.y() - outsets.top());
             clipRect.setHeight(paintRect.height() + outsets.top());
         }
-        if (hasClosedRightEdge)
+        if (closedEdges.bottom())
             clipRect.setHeight(clipRect.height() + outsets.bottom());
     }
     return clipRect;
@@ -185,20 +185,18 @@ void InlineBoxPainter::paintMask()
         return; // Don't paint anything while we wait for the image to load.
     }
 
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
-
     BorderPainter borderPainter { renderer(), m_paintInfo };
 
-    if (hasSingleLine)
+    if (!m_inlineBox.isSplit())
         borderPainter.paintNinePieceImage(LayoutRect(adjustedPaintOffset, localRect.size()), renderer().style(), maskNinePieceImage, compositeOp);
     else {
         // We have a mask image that spans multiple lines.
         // We need to adjust _tx and _ty by the width of all previous lines.
         LayoutUnit logicalOffsetOnLine;
-        for (auto box = m_inlineBox.previousInlineBox(); box; box.traversePreviousInlineBox())
+        for (auto box = m_inlineBox.nextInlineBoxLineLeftward(); box; box.traverseInlineBoxLineLeftward())
             logicalOffsetOnLine += box->logicalWidth();
         LayoutUnit totalLogicalWidth = logicalOffsetOnLine;
-        for (auto box = m_inlineBox.iterator(); box; box.traverseNextInlineBox())
+        for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineRightward())
             totalLogicalWidth += box->logicalWidth();
         LayoutUnit stripX = adjustedPaintOffset.x() - (isHorizontal() ? logicalOffsetOnLine : 0_lu);
         LayoutUnit stripY = adjustedPaintOffset.y() - (isHorizontal() ? 0_lu : logicalOffsetOnLine);
@@ -235,7 +233,7 @@ void InlineBoxPainter::paintDecorations()
     GraphicsContext& context = m_paintInfo.context();
     LayoutRect paintRect = LayoutRect(adjustedPaintoffset, localRect.size());
     // Shadow comes first and is behind the background and border.
-    if (!BackgroundPainter::boxShadowShouldBeAppliedToBackground(renderer(), adjustedPaintoffset, BackgroundBleedNone, m_inlineBox))
+    if (!BackgroundPainter::boxShadowShouldBeAppliedToBackground(renderer(), adjustedPaintoffset, BleedAvoidance::None, m_inlineBox))
         paintBoxShadow(ShadowStyle::Normal, paintRect);
 
     auto color = style.visitedDependentColor(CSSPropertyBackgroundColor, m_paintInfo.paintBehavior);
@@ -259,10 +257,9 @@ void InlineBoxPainter::paintDecorations()
 
     BorderPainter borderPainter { renderer(), m_paintInfo };
 
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
-    if (!hasBorderImage || hasSingleLine) {
-        auto [hasClosedLeftEdge, hasClosedRightEdge] = m_inlineBox.hasClosedLeftAndRightEdge();
-        borderPainter.paintBorder(paintRect, style, BackgroundBleedNone, hasClosedLeftEdge, hasClosedRightEdge);
+    if (!hasBorderImage || !m_inlineBox.isSplit()) {
+        auto closedEdges = m_inlineBox.closedEdges();
+        borderPainter.paintBorder(paintRect, style, BleedAvoidance::None, closedEdges);
         return;
     }
 
@@ -275,10 +272,10 @@ void InlineBoxPainter::paintDecorations()
     // FIXME: What the heck do we do with RTL here? The math we're using is obviously not right,
     // but it isn't even clear how this should work at all.
     LayoutUnit logicalOffsetOnLine;
-    for (auto box = m_inlineBox.previousInlineBox(); box; box.traversePreviousInlineBox())
+    for (auto box = m_inlineBox.nextInlineBoxLineLeftward(); box; box.traverseInlineBoxLineLeftward())
         logicalOffsetOnLine += box->logicalWidth();
     LayoutUnit totalLogicalWidth = logicalOffsetOnLine;
-    for (auto box = m_inlineBox.iterator(); box; box.traverseNextInlineBox())
+    for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineRightward())
         totalLogicalWidth += box->logicalWidth();
 
     LayoutUnit stripX = adjustedPaintoffset.x() - (isHorizontal() ? logicalOffsetOnLine : 0_lu);
@@ -307,19 +304,18 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
     auto* image = fillLayer.image();
     bool hasFillImage = image && image->canRender(&renderer(), renderer().style().usedZoom());
     bool hasFillImageOrBorderRadious = hasFillImage || renderer().style().hasBorderRadius();
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
 
     BackgroundPainter backgroundPainter { renderer(), m_paintInfo };
 
-    if (!hasFillImageOrBorderRadious || hasSingleLine || m_isRootInlineBox) {
-        backgroundPainter.paintFillLayer(color, fillLayer, rect, BackgroundBleedNone, m_inlineBox, { }, op);
+    if (!hasFillImageOrBorderRadious || !m_inlineBox.isSplit() || m_isRootInlineBox) {
+        backgroundPainter.paintFillLayer(color, fillLayer, rect, BleedAvoidance::None, m_inlineBox, { }, op);
         return;
     }
 
     if (renderer().style().boxDecorationBreak() == BoxDecorationBreak::Clone) {
         GraphicsContextStateSaver stateSaver(m_paintInfo.context());
         m_paintInfo.context().clip({ rect.location(), m_inlineBox.visualRectIgnoringBlockDirection().size() });
-        backgroundPainter.paintFillLayer(color, fillLayer, rect, BackgroundBleedNone, m_inlineBox, { }, op);
+        backgroundPainter.paintFillLayer(color, fillLayer, rect, BleedAvoidance::None, m_inlineBox, { }, op);
         return;
     }
 
@@ -331,17 +327,17 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
     // the previous line left off.
     LayoutUnit logicalOffsetOnLine;
     LayoutUnit totalLogicalWidth;
-    if (renderer().style().direction() == TextDirection::LTR) {
-        for (auto box = m_inlineBox.previousInlineBox(); box; box.traversePreviousInlineBox())
+    if (renderer().writingMode().isBidiLTR()) {
+        for (auto box = m_inlineBox.nextInlineBoxLineLeftward(); box; box.traverseInlineBoxLineLeftward())
             logicalOffsetOnLine += box->logicalWidth();
         totalLogicalWidth = logicalOffsetOnLine;
-        for (auto box = m_inlineBox.iterator(); box; box.traverseNextInlineBox())
+        for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineRightward())
             totalLogicalWidth += box->logicalWidth();
     } else {
-        for (auto box = m_inlineBox.nextInlineBox(); box; box.traverseNextInlineBox())
+        for (auto box = m_inlineBox.nextInlineBoxLineRightward(); box; box.traverseInlineBoxLineRightward())
             logicalOffsetOnLine += box->logicalWidth();
         totalLogicalWidth = logicalOffsetOnLine;
-        for (auto box = m_inlineBox.iterator(); box; box.traversePreviousInlineBox())
+        for (auto box = m_inlineBox.iterator(); box; box.traverseInlineBoxLineLeftward())
             totalLogicalWidth += box->logicalWidth();
     }
     LayoutRect backgroundImageStrip {
@@ -353,23 +349,22 @@ void InlineBoxPainter::paintFillLayer(const Color& color, const FillLayer& fillL
 
     GraphicsContextStateSaver stateSaver(m_paintInfo.context());
     m_paintInfo.context().clip(FloatRect { rect });
-    backgroundPainter.paintFillLayer(color, fillLayer, rect, BackgroundBleedNone, m_inlineBox, backgroundImageStrip, op);
+    backgroundPainter.paintFillLayer(color, fillLayer, rect, BleedAvoidance::None, m_inlineBox, backgroundImageStrip, op);
 }
 
 void InlineBoxPainter::paintBoxShadow(ShadowStyle shadowStyle, const LayoutRect& paintRect)
 {
     BackgroundPainter backgroundPainter { renderer(), m_paintInfo };
 
-    bool hasSingleLine = !m_inlineBox.previousInlineBox() && !m_inlineBox.nextInlineBox();
-    if (hasSingleLine || m_isRootInlineBox) {
+    if (!m_inlineBox.isSplit() || m_isRootInlineBox) {
         backgroundPainter.paintBoxShadow(paintRect, style(), shadowStyle);
         return;
     }
 
     // FIXME: We can do better here in the multi-line case. We want to push a clip so that the shadow doesn't
     // protrude incorrectly at the edges, and we want to possibly include shadows cast from the previous/following lines
-    auto [hasClosedLeftEdge, hasClosedRightEdge] = m_inlineBox.hasClosedLeftAndRightEdge();
-    backgroundPainter.paintBoxShadow(paintRect, style(), shadowStyle, hasClosedLeftEdge, hasClosedRightEdge);
+    auto closedEdges = m_inlineBox.closedEdges();
+    backgroundPainter.paintBoxShadow(paintRect, style(), shadowStyle, closedEdges);
 }
 
 const RenderStyle& InlineBoxPainter::style() const

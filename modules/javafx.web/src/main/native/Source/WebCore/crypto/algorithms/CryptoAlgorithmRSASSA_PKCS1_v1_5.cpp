@@ -38,7 +38,6 @@ namespace WebCore {
 
 namespace CryptoAlgorithmRSASSA_PKCS1_v1_5Internal {
 static constexpr auto ALG1 = "RS1"_s;
-static constexpr auto ALG224 = "RS224"_s;
 static constexpr auto ALG256 = "RS256"_s;
 static constexpr auto ALG384 = "RS384"_s;
 static constexpr auto ALG512 = "RS512"_s;
@@ -100,7 +99,7 @@ void CryptoAlgorithmRSASSA_PKCS1_v1_5::generateKey(const CryptoAlgorithmParamete
     CryptoKeyRSA::generatePair(CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5, rsaParameters.hashIdentifier, true, rsaParameters.modulusLength, rsaParameters.publicExponentVector(), extractable, usages, WTFMove(keyPairCallback), WTFMove(failureCallback), &context);
 }
 
-void CryptoAlgorithmRSASSA_PKCS1_v1_5::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
+void CryptoAlgorithmRSASSA_PKCS1_v1_5::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
     using namespace CryptoAlgorithmRSASSA_PKCS1_v1_5Internal;
 
@@ -124,9 +123,6 @@ void CryptoAlgorithmRSASSA_PKCS1_v1_5::importKey(CryptoKeyFormat format, KeyData
         switch (rsaParameters.hashIdentifier) {
         case CryptoAlgorithmIdentifier::SHA_1:
             isMatched = key.alg.isNull() || key.alg == ALG1;
-            break;
-        case CryptoAlgorithmIdentifier::SHA_224:
-            isMatched = key.alg.isNull() || key.alg == ALG224;
             break;
         case CryptoAlgorithmIdentifier::SHA_256:
             isMatched = key.alg.isNull() || key.alg == ALG256;
@@ -178,7 +174,7 @@ void CryptoAlgorithmRSASSA_PKCS1_v1_5::importKey(CryptoKeyFormat format, KeyData
     callback(*result);
 }
 
-void CryptoAlgorithmRSASSA_PKCS1_v1_5::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
+void CryptoAlgorithmRSASSA_PKCS1_v1_5::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
     using namespace CryptoAlgorithmRSASSA_PKCS1_v1_5Internal;
     const auto& rsaKey = downcast<CryptoKeyRSA>(key.get());
@@ -195,9 +191,6 @@ void CryptoAlgorithmRSASSA_PKCS1_v1_5::exportKey(CryptoKeyFormat format, Ref<Cry
         switch (rsaKey.hashAlgorithmIdentifier()) {
         case CryptoAlgorithmIdentifier::SHA_1:
             jwk.alg = String(ALG1);
-            break;
-        case CryptoAlgorithmIdentifier::SHA_224:
-            jwk.alg = String(ALG224);
             break;
         case CryptoAlgorithmIdentifier::SHA_256:
             jwk.alg = String(ALG256);

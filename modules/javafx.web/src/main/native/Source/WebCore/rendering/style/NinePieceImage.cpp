@@ -218,6 +218,9 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, const RenderElement
     if (!image)
         return;
 
+    // FIXME: <http://webkit.org/b/288163> Allow HDR display for background images when CSS HDR images are able to set GraphicsLayer::drawHDRContent.
+    auto headroom = Headroom::None;
+
     InterpolationQualityMaintainer interpolationMaintainer(graphicsContext, ImageQualityController::interpolationQualityFromStyle(style));
     for (ImagePiece piece = MinPiece; piece < MaxPiece; ++piece) {
         if ((piece == MiddlePiece && !fill()) || isEmptyPieceRect(piece, destinationRects, sourceRects))
@@ -230,7 +233,7 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, const RenderElement
 
         Image::TileRule hRule = isHorizontalPiece(piece) ? static_cast<Image::TileRule>(horizontalRule()) : Image::StretchTile;
         Image::TileRule vRule = isVerticalPiece(piece) ? static_cast<Image::TileRule>(verticalRule()) : Image::StretchTile;
-        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::Orientation::FromImage });
+        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::Orientation::FromImage, headroom });
     }
 }
 

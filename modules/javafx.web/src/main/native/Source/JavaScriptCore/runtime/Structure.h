@@ -213,6 +213,7 @@ public:
 
     static constexpr int s_maxTransitionLength = 64;
     static constexpr int s_maxTransitionLengthForNonEvalPutById = 512;
+    static constexpr int s_maxTransitionLengthForRemove = 4096; // Picked from benchmarking measurement.
 
     using SeenProperties = TinyBloomFilter<CompactPtr<UniquedStringImpl>::StorageType>;
 
@@ -284,6 +285,22 @@ public:
         return transitionCountEstimate() > maxTransitionLength;
     }
 
+    inline bool shouldDoCacheableDictionaryTransitionForRemoveAndAttributeChange()
+    {
+        return transitionCountEstimate() > s_maxTransitionLengthForRemove || transitionCountHasOverflowed();
+    }
+
+    ALWAYS_INLINE bool transitionCountHasOverflowed() const
+    {
+        int transitionCount = 0;
+        for (auto* structure = this; structure; structure = structure->previousID()) {
+            if (++transitionCount > s_maxTransitionLength)
+                return true;
+        }
+
+        return false;
+    }
+
     JS_EXPORT_PRIVATE static Structure* addPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* addNewPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, PropertyOffset&, PutPropertySlot::Context = PutPropertySlot::UnknownContext, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* addPropertyTransitionToExistingStructureConcurrently(Structure*, UniquedStringImpl* uid, unsigned attributes, PropertyOffset&);
@@ -313,7 +330,7 @@ public:
 
     JS_EXPORT_PRIVATE Structure* flattenDictionaryStructure(VM&, JSObject*);
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     // Versions that take a func will call it after making the change but while still holding
@@ -1015,17 +1032,6 @@ private:
             rareData()->clearPreviousID();
         else
             m_previousOrRareData.clear();
-    }
-
-    ALWAYS_INLINE bool transitionCountHasOverflowed() const
-    {
-        int transitionCount = 0;
-        for (auto* structure = this; structure; structure = structure->previousID()) {
-            if (++transitionCount > s_maxTransitionLength)
-                return true;
-        }
-
-        return false;
     }
 
     bool isValid(JSGlobalObject*, StructureChain* cachedPrototypeChain, JSObject* base) const;

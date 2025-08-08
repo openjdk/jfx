@@ -27,6 +27,7 @@
 #include "IsoMemoryAllocatorBase.h"
 
 #include "MarkedBlock.h"
+#include <wtf/text/CString.h>
 
 namespace JSC {
 

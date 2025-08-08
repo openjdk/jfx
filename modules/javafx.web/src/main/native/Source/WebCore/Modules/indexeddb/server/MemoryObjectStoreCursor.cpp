@@ -29,12 +29,15 @@
 #include "IDBGetResult.h"
 #include "Logging.h"
 #include "MemoryObjectStore.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace IDBServer {
 
-MemoryObjectStoreCursor::MemoryObjectStoreCursor(MemoryObjectStore& objectStore, const IDBCursorInfo& info)
-    : MemoryCursor(info)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MemoryObjectStoreCursor);
+
+MemoryObjectStoreCursor::MemoryObjectStoreCursor(MemoryObjectStore& objectStore, const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
+    : MemoryCursor(info, transaction)
     , m_objectStore(objectStore)
     , m_remainingRange(info.range())
 {
@@ -191,8 +194,9 @@ void MemoryObjectStoreCursor::currentData(IDBGetResult& data)
     if (m_info.cursorType() == IndexedDB::CursorType::KeyOnly)
         data = { m_currentPositionKey, m_currentPositionKey };
     else {
-        IDBValue value = { m_objectStore.valueForKeyRange(m_currentPositionKey), { }, { } };
-        data = { m_currentPositionKey, m_currentPositionKey, WTFMove(value), m_objectStore.info().keyPath() };
+        Ref objectStore = m_objectStore.get();
+        IDBValue value = { objectStore->valueForKeyRange(m_currentPositionKey), { }, { } };
+        data = { m_currentPositionKey, m_currentPositionKey, WTFMove(value), objectStore->info().keyPath() };
     }
 }
 
@@ -318,19 +322,22 @@ void MemoryObjectStoreCursor::iterate(const IDBKeyData& key, const IDBKeyData& p
 
     ASSERT_UNUSED(primaryKeyData, primaryKeyData.isNull());
 
-    if (!m_objectStore.orderedKeys()) {
+    Ref objectStore = m_objectStore.get();
+    if (!objectStore->orderedKeys()) {
         m_currentPositionKey = { };
+        m_iterator = std::nullopt;
         outData = { };
         return;
     }
 
     if (key.isValid() && !m_info.range().containsKey(key)) {
         m_currentPositionKey = { };
+        m_iterator = std::nullopt;
         outData = { };
         return;
     }
 
-    auto* set = m_objectStore.orderedKeys();
+    auto* set = objectStore->orderedKeys();
     if (set) {
         if (m_info.isDirectionForward())
             incrementForwardIterator(*set, key, count);

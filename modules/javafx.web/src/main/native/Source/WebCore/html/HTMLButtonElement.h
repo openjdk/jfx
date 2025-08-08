@@ -40,11 +40,15 @@ public:
 
     const AtomString& value() const;
 
+    RefPtr<Element> commandForElement() const;
+
     bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     RenderButton* renderer() const;
 
     bool isExplicitlySetSubmitButton() const;
+
+    bool isDevolvableWidget() const override { return true; }
 
 private:
     HTMLButtonElement(const QualifiedName& tagName, Document&, HTMLFormElement*);
@@ -60,6 +64,9 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void defaultEventHandler(Event&) final;
+
+    CommandType commandType() const;
+    void handleCommand();
 
     bool appendFormData(DOMFormData&) final;
 

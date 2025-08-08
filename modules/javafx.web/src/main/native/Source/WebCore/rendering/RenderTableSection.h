@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -97,9 +98,6 @@ public:
     const BorderValue& borderAdjoiningStartCell(const RenderTableCell&) const;
     const BorderValue& borderAdjoiningEndCell(const RenderTableCell&) const;
 
-    const RenderTableCell* firstRowCellAdjoiningTableStart() const;
-    const RenderTableCell* firstRowCellAdjoiningTableEnd() const;
-
     CellStruct& cellAt(unsigned row,  unsigned col);
     const CellStruct& cellAt(unsigned row, unsigned col) const;
     RenderTableCell* primaryCellAt(unsigned row, unsigned col);
@@ -119,10 +117,10 @@ public:
     LayoutUnit outerBorderStart() const { return m_outerBorderStart; }
     LayoutUnit outerBorderEnd() const { return m_outerBorderEnd; }
 
-    inline LayoutUnit outerBorderLeft(const RenderStyle* styleForCellFlow) const;
-    inline LayoutUnit outerBorderRight(const RenderStyle* styleForCellFlow) const;
-    inline LayoutUnit outerBorderTop(const RenderStyle* styleForCellFlow) const;
-    inline LayoutUnit outerBorderBottom(const RenderStyle* styleForCellFlow) const;
+    inline LayoutUnit outerBorderLeft(const WritingMode) const;
+    inline LayoutUnit outerBorderRight(const WritingMode) const;
+    inline LayoutUnit outerBorderTop(const WritingMode) const;
+    inline LayoutUnit outerBorderBottom(const WritingMode) const;
 
     unsigned numRows() const;
     unsigned numColumns() const;
@@ -152,6 +150,11 @@ public:
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
 
+    // Whether a row has opaque background depends on many factors, e.g. border spacing, border collapsing, missing cells, etc.
+    // For simplicity, just conservatively assume all table rows are not opaque.
+    bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect&, unsigned) const override { return false; }
+    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const override { return false; }
+
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
@@ -179,6 +182,8 @@ private:
     LayoutUnit offsetTopForRowGroupBorder(RenderTableCell*, BoxSide borderSide, unsigned row);
     LayoutUnit verticalRowGroupBorderHeight(RenderTableCell*, const LayoutRect& rowGroupRect, unsigned row);
     LayoutUnit horizontalRowGroupBorderWidth(RenderTableCell*, const LayoutRect& rowGroupRect, unsigned row, unsigned column);
+
+    void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { }
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
 
@@ -237,7 +242,7 @@ private:
 
     // This map holds the collapsed border values for cells with collapsed borders.
     // It is held at RenderTableSection level to spare memory consumption by table cells.
-    HashMap<std::pair<const RenderTableCell*, int>, CollapsedBorderValue > m_cellsCollapsedBorders;
+    UncheckedKeyHashMap<std::pair<const RenderTableCell*, int>, CollapsedBorderValue > m_cellsCollapsedBorders;
 
     bool m_forceSlowPaintPathWithOverflowingCell { false };
     bool m_hasMultipleCellLevels { false };

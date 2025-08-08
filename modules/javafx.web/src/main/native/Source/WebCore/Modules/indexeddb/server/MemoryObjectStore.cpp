@@ -58,10 +58,22 @@ MemoryObjectStore::~MemoryObjectStore()
     m_writeTransaction = nullptr;
 }
 
-MemoryIndex* MemoryObjectStore::indexForIdentifier(uint64_t identifier)
+MemoryIndex* MemoryObjectStore::indexForIdentifier(IDBIndexIdentifier identifier)
 {
-    ASSERT(identifier);
     return m_indexesByIdentifier.get(identifier);
+}
+
+void MemoryObjectStore::transactionFinished(MemoryBackingStoreTransaction& transaction)
+{
+    if (transaction.isWriting())
+        writeTransactionFinished(transaction);
+
+    m_cursors.removeIf([&](auto& pair) {
+        return pair.value->transaction() == &transaction;
+    });
+
+    for (auto& index : m_indexesByIdentifier.values())
+        index->transactionFinished(transaction);
 }
 
 void MemoryObjectStore::writeTransactionStarted(MemoryBackingStoreTransaction& transaction)
@@ -80,6 +92,11 @@ void MemoryObjectStore::writeTransactionFinished(MemoryBackingStoreTransaction& 
     m_writeTransaction = nullptr;
 }
 
+MemoryBackingStoreTransaction* MemoryObjectStore::writeTransaction()
+{
+    return m_writeTransaction.get();
+}
+
 IDBError MemoryObjectStore::createIndex(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& info)
 {
     LOG(IndexedDB, "MemoryObjectStore::createIndex");
@@ -88,8 +105,10 @@ IDBError MemoryObjectStore::createIndex(MemoryBackingStoreTransaction& transacti
         return IDBError(ExceptionCode::ConstraintError);
 
     ASSERT(!m_indexesByIdentifier.contains(info.identifier()));
-    auto index = MemoryIndex::create(info, *this);
+    if (m_indexesByIdentifier.contains(info.identifier()))
+        return IDBError { ExceptionCode::UnknownError, "Index with identifier already exists"_s };
 
+    auto index = MemoryIndex::create(info, *this);
     // If there was an error populating the new index, then the current records in the object store violate its contraints
     auto error = populateIndexWithExistingRecords(index.get());
     if (!error.isNull())
@@ -123,7 +142,7 @@ void MemoryObjectStore::maybeRestoreDeletedIndex(Ref<MemoryIndex>&& index)
     registerIndex(WTFMove(index));
 }
 
-RefPtr<MemoryIndex> MemoryObjectStore::takeIndexByIdentifier(uint64_t indexIdentifier)
+RefPtr<MemoryIndex> MemoryObjectStore::takeIndexByIdentifier(IDBIndexIdentifier indexIdentifier)
 {
     auto indexByIdentifier = m_indexesByIdentifier.take(indexIdentifier);
     if (!indexByIdentifier)
@@ -135,7 +154,7 @@ RefPtr<MemoryIndex> MemoryObjectStore::takeIndexByIdentifier(uint64_t indexIdent
     return index;
 }
 
-IDBError MemoryObjectStore::deleteIndex(MemoryBackingStoreTransaction& transaction, uint64_t indexIdentifier)
+IDBError MemoryObjectStore::deleteIndex(MemoryBackingStoreTransaction& transaction, IDBIndexIdentifier indexIdentifier)
 {
     LOG(IndexedDB, "MemoryObjectStore::deleteIndex");
 
@@ -361,12 +380,12 @@ IDBError MemoryObjectStore::populateIndexWithExistingRecords(MemoryIndex& index)
     return IDBError { };
 }
 
-uint64_t MemoryObjectStore::countForKeyRange(uint64_t indexIdentifier, const IDBKeyRangeData& inRange) const
+uint64_t MemoryObjectStore::countForKeyRange(std::optional<IDBIndexIdentifier> indexIdentifier, const IDBKeyRangeData& inRange) const
 {
     LOG(IndexedDB, "MemoryObjectStore::countForKeyRange");
 
     if (indexIdentifier) {
-        auto* index = m_indexesByIdentifier.get(indexIdentifier);
+        auto* index = m_indexesByIdentifier.get(*indexIdentifier);
         ASSERT(index);
         return index->countForKeyRange(inRange);
     }
@@ -436,7 +455,7 @@ void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, std::
     }
 }
 
-IDBGetResult MemoryObjectStore::indexValueForKeyRange(uint64_t indexIdentifier, IndexedDB::IndexRecordType recordType, const IDBKeyRangeData& range) const
+IDBGetResult MemoryObjectStore::indexValueForKeyRange(IDBIndexIdentifier indexIdentifier, IndexedDB::IndexRecordType recordType, const IDBKeyRangeData& range) const
 {
     LOG(IndexedDB, "MemoryObjectStore::indexValueForKeyRange");
 
@@ -495,13 +514,16 @@ void MemoryObjectStore::unregisterIndex(MemoryIndex& index)
     m_indexesByIdentifier.remove(index.info().identifier());
 }
 
-MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info)
+MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
 {
+    if (transaction.isWriting() && m_writeTransaction != &transaction)
+        return nullptr;
+
     auto result = m_cursors.add(info.identifier(), nullptr);
     if (!result.isNewEntry)
         return nullptr;
 
-    result.iterator->value = makeUnique<MemoryObjectStoreCursor>(*this, info);
+    result.iterator->value = makeUnique<MemoryObjectStoreCursor>(*this, info, transaction);
     return result.iterator->value.get();
 }
 

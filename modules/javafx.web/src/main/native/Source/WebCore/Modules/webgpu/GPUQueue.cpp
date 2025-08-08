@@ -43,12 +43,23 @@
 #include "PixelBuffer.h"
 #include "VideoFrame.h"
 #include "WebCodecsVideoFrame.h"
+#include "WebGPUDevice.h"
+#include <wtf/MallocSpan.h>
 
 #if PLATFORM(COCOA)
+#include <Accelerate/Accelerate.h>
+#include <wtf/cf/VectorCF.h>
+
 #include "CoreVideoSoftLink.h"
 #endif
 
 namespace WebCore {
+
+GPUQueue::GPUQueue(Ref<WebGPU::Queue>&& backing, WebGPU::Device& device)
+    : m_backing(WTFMove(backing))
+    , m_device(&device)
+{
+}
 
 String GPUQueue::label() const
 {
@@ -62,10 +73,15 @@ void GPUQueue::setLabel(String&& label)
 
 void GPUQueue::submit(Vector<Ref<GPUCommandBuffer>>&& commandBuffers)
 {
-    auto result = WTF::map(commandBuffers, [](auto& commandBuffer) -> std::reference_wrapper<WebGPU::CommandBuffer> {
+    auto result = WTF::map(commandBuffers, [](auto& commandBuffer) -> Ref<WebGPU::CommandBuffer> {
             return commandBuffer->backing();
     });
     m_backing->submit(WTFMove(result));
+
+    if (RefPtr device = m_device.get()) {
+        for (Ref commandBuffer : commandBuffers)
+            commandBuffer->setBacking(device->invalidCommandEncoder(), device->invalidCommandBuffer());
+    }
 }
 
 void GPUQueue::onSubmittedWorkDone(OnSubmittedWorkDonePromise&& promise)
@@ -357,29 +373,47 @@ static void getImageBytesFromImageBuffer(const RefPtr<ImageBuffer>& imageBuffer,
 }
 
 #if PLATFORM(COCOA) && ENABLE(VIDEO) && ENABLE(WEB_CODECS)
-static void getImageBytesFromVideoFrame(const RefPtr<VideoFrame>& videoFrame, ImageDataCallback&& callback)
+static void getImageBytesFromVideoFrame(WebGPU::Queue& backing, const RefPtr<VideoFrame>& videoFrame, ImageDataCallback&& callback)
 {
-    if (!videoFrame.get() || !videoFrame->pixelBuffer())
+    if (!videoFrame.get())
         return callback({ }, 0, 0);
 
-    auto pixelBuffer = videoFrame->pixelBuffer();
-    if (!pixelBuffer)
+    RefPtr<NativeImage> nativeImage = backing.getNativeImage(*videoFrame.get());
+    if (!nativeImage)
         return callback({ }, 0, 0);
 
-    auto columns = CVPixelBufferGetWidth(pixelBuffer);
-    auto rows = CVPixelBufferGetHeight(pixelBuffer);
-    auto sizeInBytes = rows * CVPixelBufferGetBytesPerRow(pixelBuffer);
+    RetainPtr platformImage = nativeImage->platformImage();
+    if (!platformImage)
+        return callback({ }, 0, 0);
+    RetainPtr pixelDataCfData = adoptCF(CGDataProviderCopyData(CGImageGetDataProvider(platformImage.get())));
+    if (!pixelDataCfData)
+        return callback({ }, 0, 0);
 
-    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    callback({ reinterpret_cast<uint8_t*>(CVPixelBufferGetBaseAddress(pixelBuffer)), sizeInBytes }, columns, rows);
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    auto width = CGImageGetWidth(platformImage.get());
+    auto height = CGImageGetHeight(platformImage.get());
+    if (!width || !height)
+        return callback({ }, 0, 0);
+
+    auto sizeInBytes = height * CGImageGetBytesPerRow(platformImage.get());
+    auto byteSpan = span(pixelDataCfData.get());
+    vImage_Buffer bgra {
+        .data = const_cast<unsigned char*>(&byteSpan[0]),
+        .height = height,
+        .width = width,
+        .rowBytes = byteSpan.size() / height
+    };
+    uint8_t permuteMap[4] = { 2, 1, 0, 3 };
+    vImagePermuteChannels_ARGB8888(&bgra, &bgra, permuteMap, kvImageNoFlags);
+
+    return callback(byteSpan.first(sizeInBytes), width, height);
 }
 #endif
 
-static void imageBytesForSource(const auto& sourceDescriptor, const auto& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, ImageDataCallback&& callback)
+static void imageBytesForSource(WebGPU::Queue& backing, const auto& sourceDescriptor, const auto& destination, bool& needsYFlip, bool& needsPremultipliedAlpha, ImageDataCallback&& callback)
 {
     UNUSED_PARAM(needsYFlip);
     UNUSED_PARAM(needsPremultipliedAlpha);
+    UNUSED_PARAM(backing);
 
     const auto& source = sourceDescriptor.source;
     using ResultType = void;
@@ -387,6 +421,8 @@ static void imageBytesForSource(const auto& sourceDescriptor, const auto& destin
         return getImageBytesFromImageBuffer(imageBitmap->buffer(), destination, needsPremultipliedAlpha, WTFMove(callback));
 #if ENABLE(VIDEO) && ENABLE(WEB_CODECS)
     }, [&](const RefPtr<ImageData> imageData) -> ResultType {
+        if (!imageData)
+            return callback({ }, 0, 0);
         callback(imageData->pixelBuffer()->bytes(), imageData->width(), imageData->height());
     }, [&](const RefPtr<HTMLImageElement> imageElement) -> ResultType {
 #if PLATFORM(COCOA)
@@ -414,33 +450,33 @@ static void imageBytesForSource(const auto& sourceDescriptor, const auto& destin
             return callback({ }, 0, 0);
 
                         auto sizeInBytes = height * CGImageGetBytesPerRow(platformImage.get());
-                        auto bytePointer = reinterpret_cast<const uint8_t*>(CFDataGetBytePtr(pixelDataCfData.get()));
+        auto byteSpan = span(pixelDataCfData.get());
                         auto requiredSize = width * height * 4;
         auto alphaInfo = CGImageGetAlphaInfo(platformImage.get());
         bool channelLayoutIsRGB = false;
         bool isBGRA = toPixelFormat(destination.texture->format()) == PixelFormat::BGRA8;
-        constexpr int channelsRGBX[] = { 0, 1, 2, 3 };
-        constexpr int channelsBGRX[] = { 2, 1, 0, 3 };
-        constexpr int channelsXRGB[] = { 3, 0, 1, 2 };
-        constexpr int channelsXBGR[] = { 3, 2, 1, 0 };
-        const int* channels = channelsRGBX;
+        static constexpr std::array channelsRGBX { 0, 1, 2, 3 };
+        static constexpr std::array channelsBGRX { 2, 1, 0, 3 };
+        static constexpr std::array channelsXRGB { 3, 0, 1, 2 };
+        static constexpr std::array channelsXBGR { 3, 2, 1, 0 };
+        auto& channels = [&] -> const std::array<int, 4>& {
         switch (alphaInfo) {
         case kCGImageAlphaNone:               /* For example, RGB. */
         case kCGImageAlphaPremultipliedLast:  /* For example, premultiplied RGBA */
         case kCGImageAlphaLast:               /* For example, non-premultiplied RGBA */
         case kCGImageAlphaNoneSkipLast:       /* For example, RGBX. */
             channelLayoutIsRGB = true;
-            channels = isBGRA ? channelsBGRX : channelsRGBX;
-            break;
+                return isBGRA ? channelsBGRX : channelsRGBX;
         case kCGImageAlphaPremultipliedFirst: /* For example, premultiplied ARGB */
         case kCGImageAlphaFirst:              /* For example, non-premultiplied ARGB */
         case kCGImageAlphaNoneSkipFirst:      /* For example, XRGB. */
         case kCGImageAlphaOnly:                /* No color data, alpha data only */
-            channels = isBGRA ? channelsXBGR : channelsXRGB;
-            break;
+                return isBGRA ? channelsXBGR : channelsXRGB;
         }
+        }();
+
         if (sizeInBytes == requiredSize && channelLayoutIsRGB)
-            return callback({ bytePointer, sizeInBytes }, width, height);
+            return callback(byteSpan.first(sizeInBytes), width, height);
 
                         auto bytesPerRow = CGImageGetBytesPerRow(platformImage.get());
                         Vector<uint8_t> tempBuffer(requiredSize, 255);
@@ -454,7 +490,7 @@ static void imageBytesForSource(const auto& sourceDescriptor, const auto& destin
                 // FIXME: These pixel values are probably incorrect after only copying 4 if bytesPerPixel is not 4.
                 for (size_t c = 0; c < bytesToCopy; ++c) {
                     // FIXME: These pixel values are probably incorrect after only copying 4 if bytesPerPixel is not 4.
-                    tempBuffer[y * (width * 4) + x * 4 + channels[c]] = bytePointer[y * bytesPerRow + x * bytesPerPixel + c];
+                    tempBuffer[y * (width * 4) + x * 4 + channels[c]] = byteSpan[y * bytesPerRow + x * bytesPerPixel + c];
                 }
             }
         }
@@ -467,14 +503,14 @@ static void imageBytesForSource(const auto& sourceDescriptor, const auto& destin
     }, [&](const RefPtr<HTMLVideoElement> videoElement) -> ResultType {
 #if PLATFORM(COCOA)
         if (RefPtr player = videoElement ? videoElement->player() : nullptr; player && player->isVideoPlayer())
-            return getImageBytesFromVideoFrame(player->videoFrameForCurrentTime(), WTFMove(callback));
+            return getImageBytesFromVideoFrame(backing, player->videoFrameForCurrentTime(), WTFMove(callback));
 #else
         UNUSED_PARAM(videoElement);
 #endif
         return callback({ }, 0, 0);
     }, [&](const RefPtr<WebCodecsVideoFrame> webCodecsFrame) -> ResultType {
 #if PLATFORM(COCOA)
-        return getImageBytesFromVideoFrame(webCodecsFrame->internalFrame(), WTFMove(callback));
+        return getImageBytesFromVideoFrame(backing, webCodecsFrame->internalFrame(), WTFMove(callback));
 #else
         UNUSED_PARAM(webCodecsFrame);
         return callback({ }, 0, 0);
@@ -672,46 +708,38 @@ static void populdateXYFromOrigin(const GPUOrigin2D& origin2D, uint32_t& x, uint
     });
 }
 
-static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat format, size_t& sizeInBytes, bool& supportedFormat, size_t rows, bool flipY, bool premultiplyAlpha, const std::optional<GPUOrigin2D>& sourceOrigin)
+static MallocSpan<uint8_t> copyToDestinationFormat(std::span<const uint8_t> rgbaBytes, GPUTextureFormat format, bool& supportedFormat, size_t rows, bool flipY, bool premultiplyAlpha, const std::optional<GPUOrigin2D>& sourceOrigin)
 {
     uint32_t sourceX = 0, sourceY = 0;
     if (sourceOrigin)
         populdateXYFromOrigin(*sourceOrigin, sourceX, sourceY);
 
 #if PLATFORM(COCOA)
-    auto flipAndPremultiply = [&](auto* bytes, bool flipY, bool premultiplyAlpha, auto oneValue) {
+    auto sizeInBytes = rgbaBytes.size();
+    auto flipAndPremultiply = [&](auto& data, bool flipY, bool premultiplyAlpha, auto oneValue) {
         if (!rows || (!flipY && !premultiplyAlpha))
-            return bytes;
+            return;
 
-        size_t widthInBytes = sizeInBytes / rows;
-        size_t widthInElements = widthInBytes / sizeof(decltype(*bytes));
-        auto* typedBytes = static_cast<decltype(bytes)>(bytes);
-        auto oneForAlpha = premultiplyAlpha ? 1 : 0;
+        auto typedBytes = data.mutableSpan();
+        size_t widthInElements = typedBytes.size() / rows;
         if (premultiplyAlpha) {
             RELEASE_ASSERT(!(widthInElements % 4));
-            for (size_t y = 0, y0 = rows - 1; y < y0 + oneForAlpha; ++y, --y0) {
-                for (size_t x = 0; x < widthInElements; x += 4) {
-                    auto alpha = typedBytes[y * widthInElements + x + 3];
-                    auto alpha0 = typedBytes[y0 * widthInElements + x + 3];
-                    for (size_t c = 0; c < 3; ++c) {
-                        float f = static_cast<float>(typedBytes[y0 * widthInElements + x + c]);
-                        f = f * alpha0 / static_cast<float>(oneValue);
-                        typedBytes[y0 * widthInElements + x + c] = static_cast<decltype(oneValue)>(f);
-                        f = static_cast<float>(typedBytes[y * widthInElements + x + c]);
-                        f = f * alpha / static_cast<float>(oneValue);
-                        typedBytes[y * widthInElements + x + c] = static_cast<decltype(oneValue)>(f);
-                        if (flipY)
-                            std::swap(typedBytes[y0 * widthInElements + x + c], typedBytes[y * widthInElements + x + c]);
-                    }
+            using T = decltype(oneValue);
+            float invOneValue = 1.f / oneValue;
+            for (size_t i = 0; i < sizeInBytes; i += 4) {
+                float alpha = typedBytes[i + 3];
+                typedBytes[i] = static_cast<T>(typedBytes[i] * alpha * invOneValue);
+                typedBytes[i + 1] = static_cast<T>(typedBytes[i + 1] * alpha * invOneValue);
+                typedBytes[i + 2] = static_cast<T>(typedBytes[i + 2] * alpha * invOneValue);
                 }
             }
-        } else if (flipY) {
-            for (size_t y = 0, y0 = rows - 1; y < y0 + oneForAlpha; ++y, --y0) {
+
+        if (flipY && sourceY < rows && !sourceY && !sourceX) {
+            for (size_t y = 0, y0 = rows - 1 - sourceY; y < y0; ++y, --y0) {
                 for (size_t x = 0; x < widthInElements; ++x)
                     std::swap(typedBytes[y0 * widthInElements + x], typedBytes[y * widthInElements + x]);
             }
         }
-        return bytes;
     };
 #endif
 
@@ -719,7 +747,7 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
 #if PLATFORM(COCOA)
     switch (format) {
     case GPUTextureFormat::R8unorm: {
-        uint8_t* data = (uint8_t*)malloc(sizeInBytes / 4);
+        auto data = MallocSpan<uint8_t>::malloc(sizeInBytes / 4);
         if (premultiplyAlpha) {
             for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
                 data[i0] = static_cast<uint8_t>((rgbaBytes[i] * static_cast<uint32_t>(rgbaBytes[i + 3])) / 255);
@@ -728,13 +756,13 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
             data[i0] = rgbaBytes[i];
         }
 
-        sizeInBytes = sizeInBytes / 4;
-        return flipAndPremultiply(data, flipY, false, 255);
+        flipAndPremultiply(data, flipY, false, 255);
+        return data;
     }
 
     // 16-bit formats
     case GPUTextureFormat::R16float: {
-        __fp16* data = (__fp16*)malloc(sizeInBytes / 2);
+        auto data = MallocSpan<__fp16>::malloc(sizeInBytes / 2);
         if (premultiplyAlpha) {
             for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
                 data[i0] = (rgbaBytes[i] / 255.f) * (rgbaBytes[i + 3] / 255.f);
@@ -743,12 +771,12 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
             data[i0] = rgbaBytes[i] / 255.f;
         }
 
-        sizeInBytes = sizeInBytes / 2;
-        return flipAndPremultiply(data, flipY, false, 1.f);
+        flipAndPremultiply(data, flipY, false, 1.f);
+        return data;
     }
 
     case GPUTextureFormat::Rg8unorm: {
-        uint8_t* data = (uint8_t*)malloc(sizeInBytes / 2);
+        auto data = MallocSpan<uint8_t>::malloc(sizeInBytes / 2);
         if (premultiplyAlpha) {
             for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, i0 += 2) {
                 data[i0] = static_cast<uint8_t>((rgbaBytes[i] * static_cast<uint32_t>(rgbaBytes[i + 3])) / 255);
@@ -761,13 +789,13 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
         }
         }
 
-        sizeInBytes = sizeInBytes / 2;
-        return flipAndPremultiply(data, flipY, false, 255);
+        flipAndPremultiply(data, flipY, false, 255);
+        return data;
     }
 
     // 32-bit formats
     case GPUTextureFormat::R32float: {
-        float* data = (float*)malloc(sizeInBytes);
+        auto data = MallocSpan<float>::malloc(sizeInBytes);
         if (premultiplyAlpha) {
             for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
                 data[i0] = (rgbaBytes[i] / 255.f) * (rgbaBytes[i + 3] / 255.f);
@@ -776,11 +804,12 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
             data[i0] = rgbaBytes[i] / 255.f;
         }
 
-        return flipAndPremultiply(data, flipY, false, 1.f);
+        flipAndPremultiply(data, flipY, false, 1.f);
+        return data;
     }
 
     case GPUTextureFormat::Rg16float: {
-        __fp16* data = (__fp16*)malloc(sizeInBytes);
+        auto data = MallocSpan<__fp16>::malloc(sizeInBytes);
         if (premultiplyAlpha) {
             for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, i0 += 2) {
                 data[i0] = (rgbaBytes[i] / 255.f) * (rgbaBytes[i + 3] / 255.f);
@@ -793,7 +822,8 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
         }
         }
 
-        return flipAndPremultiply(data, flipY, false, 1.f);
+        flipAndPremultiply(data, flipY, false, 1.f);
+        return data;
     }
 
     case GPUTextureFormat::Rgba8unorm:
@@ -801,24 +831,32 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
     case GPUTextureFormat::Bgra8unorm:
     case GPUTextureFormat::Bgra8unormSRGB: {
         if (flipY || premultiplyAlpha || sourceX || sourceY) {
-            uint8_t* data = (uint8_t*)malloc(sizeInBytes);
-            memcpy(data, rgbaBytes, sizeInBytes);
+            auto data = MallocSpan<uint8_t>::malloc(sizeInBytes);
+            memcpySpan(data.mutableSpan(), rgbaBytes);
             flipAndPremultiply(data, flipY, premultiplyAlpha, 255);
             return data;
         }
-        return nullptr;
+        return { };
     }
     case GPUTextureFormat::Rgb10a2unorm: {
-        uint32_t* data = (uint32_t*)malloc(sizeInBytes);
+        auto data = MallocSpan<uint32_t>::malloc(sizeInBytes);
+        if (flipY || premultiplyAlpha || sourceX || sourceY) {
+            auto copySpan = MallocSpan<uint8_t>::malloc(sizeInBytes);
+            memcpySpan(copySpan.mutableSpan(), rgbaBytes);
+            flipAndPremultiply(copySpan, flipY, premultiplyAlpha, 255);
+            for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
+                data[i0] = convertRGBA8888ToRGB10A2(copySpan[i], copySpan[i + 1], copySpan[i + 2], copySpan[i + 3]);
+        } else {
         for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, ++i0)
             data[i0] = convertRGBA8888ToRGB10A2(rgbaBytes[i], rgbaBytes[i + 1], rgbaBytes[i + 2], rgbaBytes[i + 3]);
+        }
 
         return data;
     }
 
     // 64-bit formats
     case GPUTextureFormat::Rg32float: {
-        float* data = (float*)malloc((sizeInBytes / 2) * sizeof(float));
+        auto data = MallocSpan<float>::malloc((sizeInBytes / 2) * sizeof(float));
         if (premultiplyAlpha) {
         for (size_t i = 0, i0 = 0; i < sizeInBytes; i += 4, i0 += 2) {
                 data[i0] = (rgbaBytes[i] / 255.f) * (rgbaBytes[i + 3] / 255.f);
@@ -831,27 +869,27 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
             }
         }
 
-        sizeInBytes = (sizeInBytes / 2) * sizeof(float);
-        return flipAndPremultiply(data, flipY, false, 1.f);
+        flipAndPremultiply(data, flipY, false, 1.f);
+        return data;
     }
 
     case GPUTextureFormat::Rgba16float: {
-        __fp16* data = (__fp16*)malloc(sizeInBytes * sizeof(__fp16));
+        auto data = MallocSpan<__fp16>::malloc(sizeInBytes * sizeof(__fp16));
         for (size_t i = 0; i < sizeInBytes; ++i)
             data[i] = rgbaBytes[i] / 255.f;
 
-        sizeInBytes = sizeInBytes * sizeof(__fp16);
-        return flipAndPremultiply(data, flipY, premultiplyAlpha, 1.f);
+        flipAndPremultiply(data, flipY, premultiplyAlpha, 1.f);
+        return data;
     }
 
     // 128-bit formats
     case GPUTextureFormat::Rgba32float: {
-        float* data = (float*)malloc(sizeInBytes * sizeof(float));
+        auto data = MallocSpan<float>::malloc(sizeInBytes * sizeof(float));
         for (size_t i = 0; i < sizeInBytes; ++i)
             data[i] = rgbaBytes[i] / 255.f;
 
-        sizeInBytes = sizeInBytes * sizeof(float);
-        return flipAndPremultiply(data, flipY, premultiplyAlpha, 1.f);
+        flipAndPremultiply(data, flipY, premultiplyAlpha, 1.f);
+        return data;
     }
 
     // Formats which are not allowed
@@ -938,19 +976,18 @@ static void* copyToDestinationFormat(const uint8_t* rgbaBytes, GPUTextureFormat 
     case GPUTextureFormat::Astc12x12Unorm:
     case GPUTextureFormat::Astc12x12UnormSRGB:
         supportedFormat = false;
-        return nullptr;
+        return { };
     }
 
-    return nullptr;
+    return { };
 #else
     UNUSED_PARAM(format);
-    UNUSED_PARAM(sizeInBytes);
     UNUSED_PARAM(rgbaBytes);
     UNUSED_PARAM(rows);
     UNUSED_PARAM(flipY);
     UNUSED_PARAM(premultiplyAlpha);
 
-    return nullptr;
+    return { };
 #endif
 }
 
@@ -966,7 +1003,7 @@ ExceptionOr<void> GPUQueue::copyExternalImageToTexture(ScriptExecutionContext& c
     bool callbackScopeIsSafe { true };
     bool needsYFlip = source.flipY;
     bool needsPremultipliedAlpha = destination.premultipliedAlpha;
-    imageBytesForSource(source, destination, needsYFlip, needsPremultipliedAlpha, [&](std::span<const uint8_t> imageBytes, size_t columns, size_t rows) {
+    imageBytesForSource(m_backing.get(), source, destination, needsYFlip, needsPremultipliedAlpha, [&](std::span<const uint8_t> imageBytes, size_t columns, size_t rows) {
         RELEASE_ASSERT(callbackScopeIsSafe);
         auto destinationTexture = destination.texture;
         auto sizeInBytes = imageBytes.size();
@@ -974,22 +1011,27 @@ ExceptionOr<void> GPUQueue::copyExternalImageToTexture(ScriptExecutionContext& c
             return;
 
         bool supportedFormat;
-        uint8_t* newImageBytes = static_cast<uint8_t*>(copyToDestinationFormat(imageBytes.data(), destination.texture->format(), sizeInBytes, supportedFormat, rows, needsYFlip, needsPremultipliedAlpha, source.origin));
+        auto newImageBytes = copyToDestinationFormat(imageBytes, destination.texture->format(), supportedFormat, rows, needsYFlip, needsPremultipliedAlpha, source.origin);
         uint32_t sourceX = 0, sourceY = 0;
-        auto widthInBytes = sizeInBytes / rows;
+        auto widthInBytes = (newImageBytes ? newImageBytes.sizeInBytes() : sizeInBytes) / rows;
         auto channels = widthInBytes / columns;
         GPUImageDataLayout dataLayout { 0, widthInBytes, rows };
 
-        if (source.origin) {
+        if (source.origin && supportedFormat) {
             populdateXYFromOrigin(*source.origin, sourceX, sourceY);
+
             if (sourceX || sourceY) {
                 RELEASE_ASSERT(newImageBytes);
-                for (size_t y = sourceY, y0 = 0; y < rows; ++y, ++y0) {
-                    for (size_t x = sourceX, x0 = 0; x < columns; ++x, ++x0) {
+                auto copySizeWidth = dimension(copySize, 0);
+                auto copySizeHeight = dimension(copySize, 1);
+                for (size_t y = 0; y < copySizeHeight; ++y) {
+                    auto targetY = !needsYFlip ? (sourceY + y) : (sourceY + (copySizeHeight - 1 - y));
+                    for (size_t x = sourceX, x0 = 0; x0 < copySizeWidth; ++x, ++x0) {
                         for (size_t c = 0; c < channels; ++c)
-                            newImageBytes[y0 * widthInBytes + x0 * channels + c] = newImageBytes[y * widthInBytes + x * channels + c];
+                            newImageBytes[y * widthInBytes + x0 * channels + c] = newImageBytes[targetY * widthInBytes + x * channels + c];
                     }
                 }
+                needsYFlip = false;
             }
         }
 
@@ -1000,8 +1042,7 @@ ExceptionOr<void> GPUQueue::copyExternalImageToTexture(ScriptExecutionContext& c
         if (!supportedFormat || !(destinationTexture->usage() & GPUTextureUsage::RENDER_ATTACHMENT))
             copyDestination.mipLevel = INT_MAX;
 
-        m_backing->writeTexture(copyDestination, newImageBytes ? std::span { newImageBytes, sizeInBytes } : imageBytes, dataLayout.convertToBacking(), convertToBacking(copySize));
-            free(newImageBytes);
+        m_backing->writeTexture(copyDestination, newImageBytes ? newImageBytes.span() : imageBytes, dataLayout.convertToBacking(), convertToBacking(copySize));
     });
     callbackScopeIsSafe = false;
 

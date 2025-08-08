@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #ifndef UIScriptContext_h
 #define UIScriptContext_h
-
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/Ref.h>
@@ -43,6 +42,7 @@ class UIScriptController;
 
 class UIScriptContextDelegate {
 public:
+
     virtual void uiScriptDidComplete(const String& result, unsigned callbackID) = 0;
 };
 
@@ -78,6 +78,7 @@ public:
     using UIScriptControllerFactory = Ref<UIScriptController> (*)(UIScriptContext&);
 
     UIScriptContext(UIScriptContextDelegate&, UIScriptControllerFactory);
+
     ~UIScriptContext();
 
     void runUIScript(const String& script, unsigned scriptCallbackID);
@@ -100,6 +101,7 @@ public:
     JSGlobalContextRef jsContext() const { return m_context.get(); }
 
 private:
+
     JSRetainPtr<JSGlobalContextRef> m_context;
 
     bool hasOutstandingAsyncTasks() const { return !m_callbacks.isEmpty(); }
@@ -122,5 +124,4 @@ private:
 };
 
 }
-
 #endif // UIScriptContext_h

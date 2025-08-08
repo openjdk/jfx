@@ -42,6 +42,7 @@
 
 namespace JSC {
 class JSGlobalObject;
+class JSValue;
 }
 
 namespace WebCore {
@@ -63,9 +64,9 @@ class ElementData;
 class ElementRareData;
 class FormAssociatedCustomElement;
 class FormListedElement;
+class HTMLButtonElement;
 class HTMLDocument;
 class HTMLElement;
-class HTMLFormControlElement;
 class IntSize;
 class JSCustomElementInterface;
 class KeyframeEffectStack;
@@ -136,7 +137,7 @@ struct SecurityPolicyViolationEventInit;
 struct ShadowRootInit;
 
 using ElementName = NodeName;
-using ExplicitlySetAttrElementsMap = HashMap<QualifiedName, Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>>;
+using ExplicitlySetAttrElementsMap = UncheckedKeyHashMap<QualifiedName, Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>>;
 using TrustedTypeOrString = std::variant<RefPtr<TrustedHTML>, RefPtr<TrustedScript>, RefPtr<TrustedScriptURL>, AtomString>;
 
 // https://drafts.csswg.org/css-contain/#relevant-to-the-user
@@ -146,6 +147,14 @@ enum class ContentRelevancy : uint8_t {
     IsInTopLayer = 1 << 2,
     Selected = 1 << 3,
 };
+
+namespace Calculation {
+class RandomKeyMap;
+}
+
+namespace CSS {
+struct SerializationContext;
+}
 
 namespace Style {
 class Resolver;
@@ -179,12 +188,15 @@ public:
     WEBCORE_EXPORT void setIntegralAttribute(const QualifiedName& attributeName, int value);
     WEBCORE_EXPORT unsigned getUnsignedIntegralAttribute(const QualifiedName& attributeName) const;
     WEBCORE_EXPORT void setUnsignedIntegralAttribute(const QualifiedName& attributeName, unsigned value);
-    WEBCORE_EXPORT RefPtr<Element> getElementAttribute(const QualifiedName& attributeName) const;
+    WEBCORE_EXPORT RefPtr<Element> getElementAttributeForBindings(const QualifiedName& attributeName) const;
     WEBCORE_EXPORT void setElementAttribute(const QualifiedName& attributeName, Element* value);
-    WEBCORE_EXPORT std::optional<Vector<Ref<Element>>> getElementsArrayAttribute(const QualifiedName& attributeName) const;
+    WEBCORE_EXPORT std::optional<Vector<Ref<Element>>> getElementsArrayAttributeForBindings(const QualifiedName& attributeName) const;
     WEBCORE_EXPORT void setElementsArrayAttribute(const QualifiedName& attributeName, std::optional<Vector<Ref<Element>>>&& value);
     static bool isElementReflectionAttribute(const Settings&, const QualifiedName&);
     static bool isElementsArrayReflectionAttribute(const QualifiedName&);
+
+    WEBCORE_EXPORT void setUserInfo(JSC::JSGlobalObject&, JSC::JSValue);
+    WEBCORE_EXPORT String userInfo() const;
 
     // Call this to get the value of an attribute that is known not to be the style
     // attribute or one of the SVG animatable attributes.
@@ -213,6 +225,8 @@ public:
     WEBCORE_EXPORT const AtomString& getAttributeNS(const AtomString& namespaceURI, const AtomString& localName) const;
     AtomString getAttributeForBindings(const AtomString& qualifiedName, ResolveURLs = ResolveURLs::NoExcludingURLsForPrivacy) const;
     inline AtomString getAttributeNSForBindings(const AtomString& namespaceURI, const AtomString& localName, ResolveURLs = ResolveURLs::NoExcludingURLsForPrivacy) const;
+    RefPtr<Element> elementForAttributeInternal(const QualifiedName& attributeName) const;
+    std::optional<Vector<Ref<Element>>> elementsArrayForAttributeInternal(const QualifiedName& attributeName) const;
 
     WEBCORE_EXPORT ExceptionOr<void> setAttribute(const AtomString& qualifiedName, const AtomString& value);
     ExceptionOr<void> setAttribute(const AtomString& qualifiedName, const TrustedTypeOrString& value);
@@ -235,7 +249,7 @@ public:
 
     // Internal methods that assume the existence of attribute storage, one should use hasAttributes()
     // before calling them.
-    inline AttributeIteratorAccessor attributesIterator() const;
+    inline std::span<const Attribute> attributes() const;
     inline unsigned attributeCount() const;
     inline const Attribute& attributeAt(unsigned index) const;
     inline const Attribute* findAttributeByName(const QualifiedName&) const;
@@ -340,15 +354,15 @@ public:
 
     String nodeName() const override;
 
-    Ref<Element> cloneElementWithChildren(Document&);
-    Ref<Element> cloneElementWithoutChildren(Document&);
+    Ref<Element> cloneElementWithChildren(Document&, CustomElementRegistry*);
+    Ref<Element> cloneElementWithoutChildren(Document&, CustomElementRegistry*);
 
     void normalizeAttributes();
 
     WEBCORE_EXPORT void setBooleanAttribute(const QualifiedName& name, bool);
 
     // For exposing to DOM only.
-    WEBCORE_EXPORT NamedNodeMap& attributes() const;
+    WEBCORE_EXPORT NamedNodeMap& attributesMap() const;
 
     enum class AttributeModificationReason : uint8_t { Directly, ByCloning, Parser };
     // This function is called whenever an attribute is added, changed or removed.
@@ -391,14 +405,19 @@ public:
 
     virtual RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&);
     virtual bool rendererIsNeeded(const RenderStyle&);
+    virtual bool isReplaced(const RenderStyle&) const { return false; }
 
     inline ShadowRoot* shadowRoot() const; // Defined in ElementRareData.h
     RefPtr<ShadowRoot> shadowRootForBindings(JSC::JSGlobalObject&) const;
+    RefPtr<Element> resolveReferenceTarget() const;
+    RefPtr<Element> retargetReferenceTargetForBindings(RefPtr<Element>) const;
 
-    WEBCORE_EXPORT ExceptionOr<ShadowRoot&> attachShadow(const ShadowRootInit&);
-    ExceptionOr<ShadowRoot&> attachDeclarativeShadow(ShadowRootMode, ShadowRootDelegatesFocus, ShadowRootClonable, ShadowRootSerializable);
+    enum class CustomElementRegistryKind : bool { Window, Null };
 
-    ShadowRoot* userAgentShadowRoot() const;
+    WEBCORE_EXPORT ExceptionOr<ShadowRoot&> attachShadow(const ShadowRootInit&, CustomElementRegistryKind = CustomElementRegistryKind::Window);
+    ExceptionOr<ShadowRoot&> attachDeclarativeShadow(ShadowRootMode, ShadowRootDelegatesFocus, ShadowRootClonable, ShadowRootSerializable, String referenceTarget, CustomElementRegistryKind);
+
+    WEBCORE_EXPORT ShadowRoot* userAgentShadowRoot() const;
     RefPtr<ShadowRoot> protectedUserAgentShadowRoot() const;
     WEBCORE_EXPORT ShadowRoot& ensureUserAgentShadowRoot();
     WEBCORE_EXPORT ShadowRoot& createUserAgentShadowRoot();
@@ -410,6 +429,7 @@ public:
     void setIsCustomElementUpgradeCandidate();
     void enqueueToUpgrade(JSCustomElementInterface&);
     CustomElementReactionQueue* reactionQueue() const;
+    CustomElementRegistry* customElementRegistry() const;
 
     CustomElementDefaultARIA& customElementDefaultARIA();
     CheckedRef<CustomElementDefaultARIA> checkedCustomElementDefaultARIA();
@@ -502,7 +522,7 @@ public:
     virtual bool attributeContainsURL(const Attribute& attribute) const { return isURLAttribute(attribute); }
     String resolveURLStringIfNeeded(const String& urlString, ResolveURLs = ResolveURLs::Yes, const URL& base = URL()) const;
     virtual String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const;
-    virtual Attribute replaceURLsInAttributeValue(const Attribute&, const HashMap<String, String>&) const;
+    virtual Attribute replaceURLsInAttributeValue(const Attribute&, const CSS::SerializationContext&) const;
     virtual bool isHTMLContentAttribute(const Attribute&) const { return false; }
 
     WEBCORE_EXPORT URL getURLAttribute(const QualifiedName&) const;
@@ -585,7 +605,6 @@ public:
 
     virtual bool isFormListedElement() const { return false; }
     virtual bool isValidatedFormListedElement() const { return false; }
-    virtual bool isFormControlElement() const { return false; }
     virtual bool isMaybeFormAssociatedCustomElement() const { return false; }
     virtual bool isSpinButtonElement() const { return false; }
     virtual bool isTextFormControlElement() const { return false; }
@@ -599,6 +618,8 @@ public:
     virtual bool isSliderContainerElement() const { return false; }
     virtual bool isSliderThumbElement() const { return false; }
     virtual bool isHTMLTablePartElement() const { return false; }
+
+    virtual bool isDevolvableWidget() const { return false; }
 
     bool canContainRangeEndPoint() const override;
 
@@ -656,7 +677,7 @@ public:
     bool isPopoverShowing() const;
 
     virtual bool isValidCommandType(const CommandType) { return false; }
-    virtual bool handleCommandInternal(const HTMLFormControlElement&, const CommandType&) { return false; }
+    virtual bool handleCommandInternal(const HTMLButtonElement&, const CommandType&) { return false; }
 
     ExceptionOr<void> setPointerCapture(int32_t);
     ExceptionOr<void> releasePointerCapture(int32_t);
@@ -759,6 +780,7 @@ public:
     void invalidateStyleForAnimation();
     void invalidateStyleForSubtreeInternal();
     void invalidateForQueryContainerSizeChange();
+    void invalidateForAnchorRectChange();
     void invalidateForResumingQueryContainerResolution();
     void invalidateForResumingAnchorPositionedElementResolution();
 
@@ -817,8 +839,17 @@ public:
     bool hasCustomState(const AtomString& state) const;
     CustomStateSet& ensureCustomStateSet();
 
-    bool hasDirectionAuto() const;
-    std::optional<TextDirection> directionalityIfDirIsAuto() const;
+    bool hasValidTextDirectionState() const;
+    bool hasAutoTextDirectionState() const;
+
+    void updateEffectiveTextDirection();
+    void updateEffectiveTextDirectionIfNeeded();
+
+    AtomString viewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&) const;
+    void setViewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&, AtomString);
+
+    Ref<Calculation::RandomKeyMap> randomKeyMap(const std::optional<Style::PseudoElementIdentifier>&) const;
+    bool hasRandomKeyMap() const;
 
 protected:
     Element(const QualifiedName&, Document&, OptionSet<TypeFlag>);
@@ -847,9 +878,6 @@ protected:
 
     void disconnectFromIntersectionObservers();
     static AtomString makeTargetBlankIfHasDanglingMarkup(const AtomString& target);
-
-    void updateTextDirectionalityAfterInputTypeChange();
-    void updateEffectiveDirectionalityOfDirAuto();
 
 private:
     LocalFrame* documentFrameWithNonNullView() const;
@@ -914,9 +942,9 @@ private:
     void disconnectFromResizeObserversSlow(ResizeObserverData&);
 
     // The cloneNode function is private so that non-virtual cloneElementWith/WithoutChildren are used instead.
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
-    void cloneShadowTreeIfPossible(Element& newHost);
-    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&);
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) override;
+    void cloneShadowTreeIfPossible(Element& newHost, CustomElementRegistry*);
+    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*);
 
     inline void removeShadowRoot(); // Defined in ElementRareData.h.
     void removeShadowRootSlow(ShadowRoot&);
@@ -948,16 +976,7 @@ private:
     WEBCORE_EXPORT bool fastAttributeLookupAllowed(const QualifiedName&) const;
 #endif
 
-    void dirAttributeChanged(const AtomString&);
-    void updateEffectiveDirectionality(std::optional<TextDirection>);
-    void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
-    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
-
-    struct TextDirectionWithStrongDirectionalityNode {
-        TextDirection direction;
-        RefPtr<Node> strongDirectionalityNode;
-    };
-    TextDirectionWithStrongDirectionalityNode computeDirectionalityFromText() const;
+    void dirAttributeChanged(const AtomString& newValue);
 
     bool hasEffectiveLangState() const;
     void updateEffectiveLangState();

@@ -27,6 +27,7 @@
 #include "DatagramSource.h"
 
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -34,15 +35,25 @@ DatagramSource::DatagramSource() = default;
 
 DatagramSource::~DatagramSource() = default;
 
-void DatagramSource::receiveDatagram(std::span<const uint8_t> datagram)
+void DatagramSource::receiveDatagram(std::span<const uint8_t> datagram, bool withFin, std::optional<Exception>&& exception)
 {
-    if (m_isCancelled)
+    if (m_isCancelled || m_isClosed)
         return;
+    if (exception) {
+        controller().error(*exception);
+        clean();
+        return;
+    }
     auto arrayBuffer = ArrayBuffer::tryCreateUninitialized(datagram.size(), 1);
     if (arrayBuffer)
-        memcpy(static_cast<uint8_t*>(arrayBuffer->data()), datagram.data(), datagram.size());
+        memcpySpan(arrayBuffer->mutableSpan(), datagram);
     if (!controller().enqueue(WTFMove(arrayBuffer)))
         doCancel();
+    if (withFin) {
+        m_isClosed = true;
+        controller().close();
+        clean();
+    }
 }
 
 void DatagramSource::doCancel()

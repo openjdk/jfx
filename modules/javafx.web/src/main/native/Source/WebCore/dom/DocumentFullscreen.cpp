@@ -28,11 +28,43 @@
 
 #if ENABLE(FULLSCREEN_API)
 #include "DocumentInlines.h"
+#include "Document.h"
 #include "Element.h"
 #include "EventLoop.h"
+#include "FullscreenManager.h"
 #include "JSDOMPromiseDeferred.h"
 
 namespace WebCore {
+
+bool DocumentFullscreen::webkitFullscreenEnabled(Document& document)
+{
+    return document.fullscreenManager().isFullscreenEnabled();
+}
+
+Element* DocumentFullscreen::webkitFullscreenElement(Document& document)
+{
+    return document.ancestorElementInThisScope(document.fullscreenManager().protectedFullscreenElement().get());
+}
+
+bool DocumentFullscreen::webkitIsFullScreen(Document& document)
+{
+    return document.fullscreenManager().isFullscreen();
+}
+
+bool DocumentFullscreen::webkitFullScreenKeyboardInputAllowed(Document& document)
+{
+    return document.fullscreenManager().isFullscreenKeyboardInputAllowed();
+}
+
+Element* DocumentFullscreen::webkitCurrentFullScreenElement(Document& document)
+{
+    return document.ancestorElementInThisScope(document.fullscreenManager().protectedFullscreenElement().get());
+}
+
+void DocumentFullscreen::webkitCancelFullScreen(Document& document)
+{
+    document.fullscreenManager().fullyExitFullscreen();
+}
 
 // https://fullscreen.spec.whatwg.org/#exit-fullscreen
 void DocumentFullscreen::exitFullscreen(Document& document, RefPtr<DeferredPromise>&& promise)
@@ -41,13 +73,20 @@ void DocumentFullscreen::exitFullscreen(Document& document, RefPtr<DeferredPromi
         promise->reject(Exception { ExceptionCode::TypeError, "Not in fullscreen"_s });
         return;
     }
-    document.checkedFullscreenManager()->exitFullscreen(WTFMove(promise));
+    document.checkedFullscreenManager()->exitFullscreen([promise = WTFMove(promise)] (auto result) {
+        if (!promise)
+            return;
+        if (result.hasException())
+            promise->reject(result.releaseException());
+        else
+            promise->resolve();
+    });
 }
 
 void DocumentFullscreen::webkitExitFullscreen(Document& document)
 {
     if (document.fullscreenManager().fullscreenElement())
-        document.checkedFullscreenManager()->exitFullscreen(nullptr);
+        document.checkedFullscreenManager()->exitFullscreen([] (auto) { });
 }
 
 // https://fullscreen.spec.whatwg.org/#dom-document-fullscreenenabled

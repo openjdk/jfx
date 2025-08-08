@@ -74,7 +74,7 @@ public:
 
     static StructureRareData* create(VM&, Structure*);
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     DECLARE_VISIT_CHILDREN;
@@ -106,7 +106,7 @@ public:
     void setSharedPolyProtoWatchpoint(Box<InlineWatchpointSet>&& sharedPolyProtoWatchpoint) { m_polyProtoWatchpoint = WTFMove(sharedPolyProtoWatchpoint); }
     bool hasSharedPolyProtoWatchpoint() const { return static_cast<bool>(m_polyProtoWatchpoint); }
 
-    static JSImmutableButterfly* cachedPropertyNamesSentinel() { return bitwise_cast<JSImmutableButterfly*>(static_cast<uintptr_t>(1)); }
+    static JSImmutableButterfly* cachedPropertyNamesSentinel() { return std::bit_cast<JSImmutableButterfly*>(static_cast<uintptr_t>(1)); }
 
     static constexpr ptrdiff_t offsetOfCachedPropertyNames(CachedPropertyNamesKind kind)
     {
@@ -169,7 +169,7 @@ private:
     FixedVector<StructureChainInvalidationWatchpoint> m_cachedPropertyNameEnumeratorWatchpoints;
     WriteBarrier<JSImmutableButterfly> m_cachedPropertyNames[numberOfCachedPropertyNames] { };
 
-    typedef HashMap<PropertyOffset, RefPtr<WatchpointSet>, WTF::IntHash<PropertyOffset>, WTF::UnsignedWithZeroKeyHashTraits<PropertyOffset>> PropertyWatchpointMap;
+    typedef UncheckedKeyHashMap<PropertyOffset, RefPtr<WatchpointSet>, WTF::IntHash<PropertyOffset>, WTF::UnsignedWithZeroKeyHashTraits<PropertyOffset>> PropertyWatchpointMap;
 #ifdef NDEBUG
     static_assert(sizeof(PropertyWatchpointMap) == sizeof(void*), "StructureRareData should remain small");
 #endif

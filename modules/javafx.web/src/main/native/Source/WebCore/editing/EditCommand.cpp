@@ -159,9 +159,8 @@ EditAction EditCommand::editingAction() const
 
 static RefPtr<EditCommandComposition> compositionIfPossible(EditCommand& command)
 {
-    if (!command.isCompositeEditCommand())
-        return nullptr;
-    return static_cast<CompositeEditCommand&>(command).composition();
+    auto* compositeCommand = dynamicDowncast<CompositeEditCommand>(command);
+    return compositeCommand ? compositeCommand->composition() : nullptr;
 }
 
 bool EditCommand::isEditingTextAreaOrTextInput() const
@@ -231,7 +230,7 @@ void SimpleEditCommand::doReapply()
 }
 
 #ifndef NDEBUG
-void SimpleEditCommand::addNodeAndDescendants(Node* startNode, HashSet<Ref<Node>>& nodes)
+void SimpleEditCommand::addNodeAndDescendants(Node* startNode, NodeSet& nodes)
 {
     for (RefPtr node = startNode; node; node = NodeTraversal::next(*node, startNode))
         nodes.add(*node);

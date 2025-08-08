@@ -117,7 +117,7 @@ void RenderSVGForeignObject::layout()
     repainter.repaintAfterLayout();
 }
 
-LayoutRect RenderSVGForeignObject::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy, PaintPhase) const
+LayoutRect RenderSVGForeignObject::overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
     return enclosingLayoutRect(LayoutRect { location, m_viewport.size() });
 }

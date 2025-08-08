@@ -57,9 +57,7 @@ private:
         void requestFrame() { m_shouldEmitFrame = true; }
         std::optional<double> frameRequestRate() const { return m_frameRequestRate; }
 
-        void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Source, WTF::DestructionThread::MainRunLoop>::ref(); }
-        void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Source, WTF::DestructionThread::MainRunLoop>::deref(); }
-        ThreadSafeWeakPtrControlBlock& controlBlock() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Source, WTF::DestructionThread::MainRunLoop>::controlBlock(); }
+        WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
 
     private:
         Source(HTMLCanvasElement&, std::optional<double>&&);

@@ -52,7 +52,7 @@ Ref<WebFakeXRInputController> WebFakeXRInputController::create(PlatformXR::Input
 
 WebFakeXRInputController::WebFakeXRInputController(PlatformXR::InputSourceHandle handle, const FakeXRInputSourceInit& init)
     : m_handle(handle)
-    , m_handeness(init.handedness)
+    , m_handedness(init.handedness)
     , m_targetRayMode(init.targetRayMode)
     , m_profiles(init.profiles)
     , m_primarySelected(init.selectionStarted)
@@ -110,7 +110,7 @@ InputSource WebFakeXRInputController::getFrameData()
 {
     InputSource state;
     state.handle = m_handle;
-    state.handeness = m_handeness;
+    state.handedness = m_handedness;
     state.targetRayMode = m_targetRayMode;
     state.profiles = m_profiles;
     state.pointerOrigin = m_pointerOrigin;
@@ -170,11 +170,11 @@ WebFakeXRInputController::ButtonOrPlaceholder WebFakeXRInputController::getButto
         // Devices that lack one of the optional inputs listed in the tables above MUST preserve their place in the
         // buttons or axes array, reporting a placeholder button or placeholder axis, respectively.
         if (buttonType != ButtonType::OptionalButton && buttonType != ButtonType::OptionalThumbstick) {
-            auto priority = std::find(XR_STANDARD_BUTTONS.begin(), XR_STANDARD_BUTTONS.end(), buttonType);
-            ASSERT(priority != XR_STANDARD_BUTTONS.end());
+            size_t priority = std::find(XR_STANDARD_BUTTONS.begin(), XR_STANDARD_BUTTONS.end(), buttonType) - XR_STANDARD_BUTTONS.begin();
+            ASSERT(priority != XR_STANDARD_BUTTONS.size());
 
-            for (auto it = priority + 1; it != XR_STANDARD_BUTTONS.end(); ++it) {
-                if (m_buttons.contains(*it)) {
+            for (size_t i = priority + 1; i < XR_STANDARD_BUTTONS.size(); ++i) {
+                if (m_buttons.contains(XR_STANDARD_BUTTONS[i])) {
                     result.button = InputSourceButton();
                     break;
                 }

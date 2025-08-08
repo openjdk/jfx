@@ -29,11 +29,12 @@
 
 #include "LibWebRTCMacros.h"
 #include <wtf/Function.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <webrtc/rtc_base/logging.h>
-ALLOW_UNUSED_PARAMETERS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 class LibWebRTCLogSink;
@@ -42,7 +43,7 @@ class LibWebRTCLogSink;
 namespace WebCore {
 
 class LibWebRTCLogSink final : rtc::LogSink {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCLogSink);
 public:
     using LogCallback = Function<void(rtc::LoggingSeverity, const std::string&)>;
     explicit LibWebRTCLogSink(LogCallback&&);

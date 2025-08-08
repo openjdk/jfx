@@ -28,10 +28,13 @@
 
 #include "KeyedCoding.h"
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBKeyData);
 
 IDBKeyData::IDBKeyData(const IDBKey* key)
 {
@@ -68,7 +71,9 @@ IDBKeyData::IDBKeyData(const IDBKey* key)
 }
 
 IDBKeyData::IDBKeyData(const IDBKeyData& data, IsolatedCopyTag)
-    : m_value(crossThreadCopy(data.m_value))
+    : m_isDeletedValue(data.m_isDeletedValue)
+    , m_isPlaceholder(data.m_isPlaceholder)
+    , m_value(crossThreadCopy(data.m_value))
 {
 }
 
@@ -132,7 +137,7 @@ RefPtr<IDBKey> IDBKeyData::maybeCreateIDBKey() const
 
 IDBKeyData IDBKeyData::isolatedCopy() const
 {
-    return { crossThreadCopy(m_value) };
+    return { *this, IsolatedCopy };
 }
 
 void IDBKeyData::encode(KeyedEncoder& encoder) const
@@ -148,7 +153,7 @@ void IDBKeyData::encode(KeyedEncoder& encoder) const
         return;
     case IndexedDB::KeyType::Array: {
         auto& array = std::get<Vector<IDBKeyData>>(m_value);
-        encoder.encodeObjects("array"_s, array.begin(), array.end(), [](KeyedEncoder& encoder, const IDBKeyData& key) {
+        encoder.encodeObjects("array"_s, array, [](KeyedEncoder& encoder, const IDBKeyData& key) {
             key.encode(encoder);
         });
         return;
@@ -309,7 +314,6 @@ int IDBKeyData::compare(const IDBKeyData& other) const
     return 0;
 }
 
-#if !LOG_DISABLED
 String IDBKeyData::loggingString() const
 {
     if (isNull())
@@ -366,7 +370,6 @@ String IDBKeyData::loggingString() const
 
     return result;
 }
-#endif
 
 void IDBKeyData::setArrayValue(const Vector<IDBKeyData>& value)
 {

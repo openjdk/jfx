@@ -48,6 +48,7 @@
 #include "TextIterator.h"
 #include "VisibleSelection.h"
 #include <unicode/ubrk.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextBreakIterator.h>
 
@@ -422,7 +423,7 @@ static void prepend(Vector<UChar, 1024>& buffer, StringView string)
     unsigned oldSize = buffer.size();
     unsigned length = string.length();
     buffer.grow(oldSize + length);
-    memmove(buffer.data() + length, buffer.data(), oldSize * sizeof(UChar));
+    memmoveSpan(buffer.mutableSpan().subspan(length), buffer.span().first(oldSize));
     for (unsigned i = 0; i < length; ++i)
         buffer[i] = string[i];
 }
@@ -431,7 +432,7 @@ static void prependRepeatedCharacter(Vector<UChar, 1024>& buffer, UChar characte
 {
     unsigned oldSize = buffer.size();
     buffer.grow(oldSize + count);
-    memmove(buffer.data() + count, buffer.data(), oldSize * sizeof(UChar));
+    memmoveSpan(buffer.mutableSpan().subspan(count), buffer.span().first(oldSize));
     for (unsigned i = 0; i < count; ++i)
         buffer[i] = character;
 }
@@ -754,7 +755,7 @@ static VisiblePosition startPositionForLine(const VisiblePosition& c, LineEndpoi
     InlineIterator::LineLogicalOrderCache orderCache;
 
     RefPtr<Node> startNode;
-    auto startBox = mode == UseLogicalOrdering ? InlineIterator::firstLeafOnLineInLogicalOrderWithNode(lineBox, orderCache) : lineBox->firstLeafBox();
+    auto startBox = mode == UseLogicalOrdering ? InlineIterator::firstLeafOnLineInLogicalOrderWithNode(lineBox, orderCache) : lineBox->lineLeftmostLeafBox();
     // Generated content (e.g. list markers and CSS :before and :after pseudoelements) have no corresponding DOM element,
     // and so cannot be represented by a VisiblePosition. Use whatever follows instead.
     while (true) {
@@ -768,7 +769,7 @@ static VisiblePosition startPositionForLine(const VisiblePosition& c, LineEndpoi
         if (mode == UseLogicalOrdering)
             startBox = InlineIterator::nextLeafOnLineInLogicalOrder(startBox, orderCache);
         else
-            startBox.traverseNextOnLine();
+            startBox.traverseLineRightwardOnLine();
     }
 
     RefPtr startTextNode = dynamicDowncast<Text>(*startNode);
@@ -827,7 +828,7 @@ static VisiblePosition endPositionForLine(const VisiblePosition& c, LineEndpoint
     InlineIterator::LineLogicalOrderCache orderCache;
 
     RefPtr<Node> endNode;
-    auto endBox = mode == UseLogicalOrdering ? InlineIterator::lastLeafOnLineInLogicalOrder(lineBox, orderCache) : lineBox->lastLeafBox();
+    auto endBox = mode == UseLogicalOrdering ? InlineIterator::lastLeafOnLineInLogicalOrder(lineBox, orderCache) : lineBox->lineRightmostLeafBox();
     // Generated content (e.g. list markers and CSS :before and :after pseudoelements) have no corresponding DOM element,
     // and so cannot be represented by a VisiblePosition. Use whatever precedes instead.
     while (true) {
@@ -841,7 +842,7 @@ static VisiblePosition endPositionForLine(const VisiblePosition& c, LineEndpoint
         if (mode == UseLogicalOrdering)
             endBox = InlineIterator::previousLeafOnLineInLogicalOrder(endBox, orderCache);
         else
-            endBox.traversePreviousOnLine();
+            endBox.traverseLineLeftwardOnLine();
     }
 
     Position pos;
@@ -976,7 +977,7 @@ VisiblePosition previousLinePosition(const VisiblePosition& visiblePosition, Lay
         lineBox = box->lineBox()->previous();
         // We want to skip zero height boxes.
         // This could happen in case it is a LegacyRootInlineBox with trailing floats.
-        if (!lineBox || !lineBox->logicalHeight() || !lineBox->firstLeafBox())
+        if (!lineBox || !lineBox->logicalHeight() || !lineBox->lineLeftmostLeafBox())
             lineBox = { };
     }
 
@@ -1031,7 +1032,7 @@ VisiblePosition nextLinePosition(const VisiblePosition& visiblePosition, LayoutU
         lineBox = box->lineBox()->next();
         // We want to skip zero height boxes.
         // This could happen in case it is a LegacyRootInlineBox with trailing floats.
-        if (!lineBox || !lineBox->logicalHeight() || !lineBox->firstLeafBox())
+        if (!lineBox || !lineBox->logicalHeight() || !lineBox->lineLeftmostLeafBox())
             lineBox = { };
     }
 
@@ -1836,7 +1837,7 @@ std::ptrdiff_t distanceBetweenPositions(const VisiblePosition& a, const VisibleP
 void charactersAroundPosition(const VisiblePosition& position, char32_t& oneAfter, char32_t& oneBefore, char32_t& twoBefore)
 {
     const int maxCharacters = 3;
-    char32_t characters[maxCharacters] = { 0 };
+    std::array<char32_t, maxCharacters> characters = { };
 
     if (position.isNull() || isStartOfDocument(position))
         return;

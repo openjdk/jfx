@@ -38,6 +38,7 @@
 #include <wtf/Deque.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -51,7 +52,7 @@ class WheelEventTestMonitor;
 struct ScrollExtents;
 
 class ScrollingEffectsControllerTimer : public RunLoop::TimerBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScrollingEffectsControllerTimer);
 public:
     ScrollingEffectsControllerTimer(RunLoop& runLoop, Function<void()>&& callback)
         : RunLoop::TimerBase(runLoop)
@@ -147,7 +148,7 @@ public:
 
     void stopKeyboardScrolling();
 
-    bool startMomentumScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, const Function<FloatPoint(const FloatPoint&)>& destinationModifier);
+    bool startMomentumScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, NOESCAPE const Function<FloatPoint(const FloatPoint&)>& destinationModifier);
 
     void willBeginKeyboardScrolling();
     void didStopKeyboardScrolling();
@@ -239,6 +240,8 @@ private:
     FloatPoint scrollOffset(ScrollAnimation&) final;
 
     void adjustDeltaForSnappingIfNeeded(float& deltaX, float& deltaY);
+
+    void clampDeltaForAllowedAxes(const PlatformWheelEvent&, FloatSize&);
 
 #if ENABLE(KINETIC_SCROLLING) && !PLATFORM(MAC)
     // Returns true if handled.

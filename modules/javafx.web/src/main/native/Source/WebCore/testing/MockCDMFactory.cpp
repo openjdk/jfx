@@ -33,11 +33,14 @@
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/Algorithms.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MockCDM);
 
 MockCDMFactory::MockCDMFactory()
     : m_supportedSessionTypes({ MediaKeySessionType::Temporary, MediaKeySessionType::PersistentUsageRecord, MediaKeySessionType::PersistentLicense })
@@ -113,13 +116,14 @@ void MockCDMFactory::setSupportedDataTypes(Vector<String>&& types)
         m_supportedDataTypes.append(type);
 }
 
-std::unique_ptr<CDMPrivate> MockCDMFactory::createCDM(const String&, const CDMPrivateClient&)
+std::unique_ptr<CDMPrivate> MockCDMFactory::createCDM(const String&, const String& mediaKeysHashSalt, const CDMPrivateClient&)
 {
-    return makeUnique<MockCDM>(*this);
+    return makeUnique<MockCDM>(*this, mediaKeysHashSalt);
 }
 
-MockCDM::MockCDM(WeakPtr<MockCDMFactory> factory)
+MockCDM::MockCDM(WeakPtr<MockCDMFactory> factory, const String& mediaKeysHashSalt)
     : m_factory(WTFMove(factory))
+    , m_mediaKeysHashSalt { mediaKeysHashSalt }
 {
 }
 
@@ -329,7 +333,7 @@ void MockCDMInstanceSession::requestLicense(LicenseType licenseType, KeyGrouping
     String sessionID = createVersion4UUIDString();
     factory->addKeysToSessionWithID(sessionID, WTFMove(keyIDs.value()));
 
-    CString license { "license" };
+    CString license { "license"_s };
     callback(SharedBuffer::create(license.span()), sessionID, false, SuccessValue::Succeeded);
 }
 
@@ -374,7 +378,7 @@ void MockCDMInstanceSession::loadSession(LicenseType, const String&, const Strin
 
     // FIXME: Key status and expiration handling should be implemented once the relevant algorithms are supported.
 
-    CString messageData { "session loaded" };
+    CString messageData { "session loaded"_s };
     Message message { MessageType::LicenseRenewal, SharedBuffer::create(messageData.span()) };
 
     callback(std::nullopt, std::nullopt, WTFMove(message), SuccessValue::Succeeded, SessionLoadFailure::None);
@@ -405,7 +409,7 @@ void MockCDMInstanceSession::removeSessionData(const String& id, LicenseType, Re
         return std::pair { WTFMove(key), KeyStatus::Released };
     });
 
-    CString message { "remove-message" };
+    CString message { "remove-message"_s };
     callback(WTFMove(keyStatusVector), SharedBuffer::create(message.span()), SuccessValue::Succeeded);
 }
 

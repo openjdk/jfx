@@ -33,7 +33,7 @@ namespace WebCore {
 
 class StyleCustomPropertyData : public RefCounted<StyleCustomPropertyData> {
 private:
-    using CustomPropertyValueMap = HashMap<AtomString, RefPtr<const CSSCustomPropertyValue>>;
+    using CustomPropertyValueMap = UncheckedKeyHashMap<AtomString, RefPtr<const CSSCustomPropertyValue>>;
 
 public:
     static Ref<StyleCustomPropertyData> create() { return adoptRef(*new StyleCustomPropertyData); }
@@ -41,13 +41,17 @@ public:
 
     bool operator==(const StyleCustomPropertyData&) const;
 
+#if !LOG_DISABLED
+    void dumpDifferences(TextStream&, const StyleCustomPropertyData&) const;
+#endif
+
     const CSSCustomPropertyValue* get(const AtomString&) const;
     void set(const AtomString&, Ref<const CSSCustomPropertyValue>&&);
 
     unsigned size() const { return m_size; }
     bool mayHaveAnimatableProperties() const { return m_mayHaveAnimatableProperties; }
 
-    void forEach(const Function<IterationStatus(const KeyValuePair<AtomString, RefPtr<const CSSCustomPropertyValue>>&)>&) const;
+    void forEach(NOESCAPE const Function<IterationStatus(const KeyValuePair<AtomString, RefPtr<const CSSCustomPropertyValue>>&)>&) const;
     AtomString findKeyAtIndex(unsigned) const;
 
 private:

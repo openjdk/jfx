@@ -53,6 +53,7 @@ class CSSValuePool;
 class CacheStorageConnection;
 class ContentSecurityPolicyResponseHeaders;
 class Crypto;
+class CryptoKey;
 class FileSystemStorageConnection;
 class FontFaceSet;
 class MessagePortChannelProvider;
@@ -89,6 +90,7 @@ public:
     virtual Type type() const = 0;
 
     const URL& url() const final { return m_url; }
+    const URL& cookieURL() const final { return url(); }
     const URL& ownerURL() const { return m_ownerURL; }
     String origin() const;
     const String& inspectorIdentifier() const { return m_inspectorIdentifier; }
@@ -99,9 +101,8 @@ public:
     GraphicsClient* graphicsClient() final;
 
 
-    using EventTarget::weakPtrFactory;
-    using EventTarget::WeakValueType;
-    using EventTarget::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     WorkerStorageConnection& storageConnection();
     static void postFileSystemStorageTask(Function<void()>&&);
     WorkerFileSystemStorageConnection& getFileSystemStorageConnection(Ref<FileSystemStorageConnection>&&);
@@ -113,6 +114,7 @@ public:
     void updateServiceWorkerClientData() final;
 
     WorkerThread& thread() const;
+    Ref<WorkerThread> protectedThread() const;
 
     using ScriptExecutionContext::hasPendingActivity;
 
@@ -206,14 +208,20 @@ private:
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     bool shouldBypassMainWorldContentSecurityPolicy() const final { return m_shouldBypassMainWorldContentSecurityPolicy; }
-
+#if !PLATFORM(JAVA)
+    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key) final;
+    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) final;
+    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey) final;
+#else
     std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key);
+    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&);
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey);
+#endif
 
     // ReportingClient.
-    void notifyReportObservers(Ref<Report>&&) override;
-    String endpointURIForToken(const String&) const override;
-    void sendReportToEndpoints(const URL& baseURL, const Vector<String>& endpointURIs, const Vector<String>& endpointTokens, Ref<FormData>&& report, ViolationReportType) override;
+    void notifyReportObservers(Ref<Report>&&) final;
+    String endpointURIForToken(const String&) const final;
+    void sendReportToEndpoints(const URL& baseURL, const Vector<String>& endpointURIs, const Vector<String>& endpointTokens, Ref<FormData>&& report, ViolationReportType) final;
     String httpUserAgent() const final { return m_userAgent; }
 
     URL m_url;

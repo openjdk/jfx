@@ -343,8 +343,7 @@ void InPlaceAbstractState::activateVariable(size_t variableIndex)
 
 bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
 {
-    if (DFGInPlaceAbstractStateInternal::verbose)
-        dataLog("   Merging from ", pointerDump(from), " to ", pointerDump(to), "\n");
+    dataLogLnIf(DFGInPlaceAbstractStateInternal::verbose, "   Merging from ", pointerDump(from), " to ", pointerDump(to));
     ASSERT(from->variablesAtTail.numberOfArguments() == to->variablesAtHead.numberOfArguments());
     ASSERT(from->variablesAtTail.numberOfLocals() == to->variablesAtHead.numberOfLocals());
     ASSERT(from->variablesAtTail.numberOfTmps() == to->variablesAtHead.numberOfTmps());
@@ -370,8 +369,7 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
 
         for (NodeAbstractValuePair& entry : to->ssa->valuesAtHead) {
             NodeFlowProjection node = entry.node;
-            if (DFGInPlaceAbstractStateInternal::verbose)
-                dataLog("      Merging for ", node, ": from ", forNode(node), " to ", entry.value, "\n");
+            dataLogLnIf(DFGInPlaceAbstractStateInternal::verbose, "      Merging for ", node, ": from ", forNode(node), " to ", entry.value);
 #ifndef NDEBUG
             unsigned valueCountInFromBlock = 0;
             for (NodeAbstractValuePair& fromBlockValueAtTail : from->ssa->valuesAtTail) {
@@ -389,8 +387,7 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
             if (!node->isTuple())
             changed |= entry.value.merge(forNode(node));
 
-            if (DFGInPlaceAbstractStateInternal::verbose)
-                dataLog("         Result: ", entry.value, "\n");
+            dataLogLnIf(DFGInPlaceAbstractStateInternal::verbose, "         Result: ", entry.value);
         }
         break;
     }
@@ -403,8 +400,7 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
     if (!to->cfaHasVisited)
         changed = true;
 
-    if (DFGInPlaceAbstractStateInternal::verbose)
-        dataLog("      Will revisit: ", changed, "\n");
+    dataLogLnIf(DFGInPlaceAbstractStateInternal::verbose, "      Will revisit: ", changed);
     to->cfaShouldRevisit |= changed;
 
     return changed;

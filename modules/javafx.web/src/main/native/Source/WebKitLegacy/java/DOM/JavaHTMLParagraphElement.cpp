@@ -28,6 +28,7 @@
 
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLParagraphElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>

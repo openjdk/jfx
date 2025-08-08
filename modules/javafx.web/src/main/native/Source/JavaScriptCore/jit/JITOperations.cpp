@@ -26,6 +26,8 @@
 #include "config.h"
 #include "JITOperations.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #if ENABLE(JIT)
 
 #include "ArithProfile.h"
@@ -2385,8 +2387,10 @@ JSC_DEFINE_JIT_OPERATION(operationPutByValSetPrivateFieldGeneric, void, (JSGloba
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
@@ -2396,8 +2400,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppy, EncodedJSValue, (void* f
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
@@ -2407,8 +2413,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrict, EncodedJSValue, (void* f
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
@@ -2418,8 +2426,10 @@ JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalSloppyTaintedByWithScope, Encode
 JSC_DEFINE_JIT_OPERATION(operationCallDirectEvalStrictTaintedByWithScope, EncodedJSValue, (void* frame, JSScope* callerScopeChain, EncodedJSValue encodedThisValue))
 {
     CallFrame* calleeFrame = reinterpret_cast<CallFrame*>(frame);
+    CallFrame* callFrame = calleeFrame->callerFrame();
     // We can't trust our callee since it could be garbage but our caller's should be ok.
-    VM& vm = calleeFrame->callerFrame()->deprecatedVM();
+    VM& vm = callFrame->deprecatedVM();
+    JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     calleeFrame->setCodeBlock(nullptr);
 
@@ -2437,13 +2447,13 @@ JSC_DEFINE_JIT_OPERATION(operationPolymorphicCall, UCPURegister, (CallFrame* cal
     JSCell* calleeAsFunctionCell;
     void* callTarget = virtualForWithFunction(vm, owner, calleeFrame, callLinkInfo, calleeAsFunctionCell);
     if (UNLIKELY(scope.exception()))
-        OPERATION_RETURN(scope, bitwise_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
+        OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
     linkPolymorphicCall(vm, owner, calleeFrame, *callLinkInfo, CallVariant(calleeAsFunctionCell));
     // Keep owner alive explicitly. Now this function can be called from tail-call. This means that CallFrame for that owner already goes away, so we should keep it alive if we would like to use it.
     ensureStillAliveHere(owner);
     if (UNLIKELY(scope.exception()))
-        OPERATION_RETURN(scope, bitwise_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
-    OPERATION_RETURN(scope, static_cast<UCPURegister>(bitwise_cast<uintptr_t>(callTarget)));
+        OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
+    OPERATION_RETURN(scope, static_cast<UCPURegister>(std::bit_cast<uintptr_t>(callTarget)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationVirtualCall, UCPURegister, (CallFrame* calleeFrame, CallLinkInfo* callLinkInfo))
@@ -2459,8 +2469,8 @@ JSC_DEFINE_JIT_OPERATION(operationVirtualCall, UCPURegister, (CallFrame* calleeF
     // Keep owner alive explicitly. Now this function can be called from tail-call. This means that CallFrame for that owner already goes away, so we should keep it alive if we would like to use it.
     ensureStillAliveHere(owner);
     if (UNLIKELY(scope.exception()))
-        OPERATION_RETURN(scope, bitwise_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
-    OPERATION_RETURN(scope, bitwise_cast<UCPURegister>(bitwise_cast<uintptr_t>(callTarget)));
+        OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
+    OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(std::bit_cast<uintptr_t>(callTarget)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationDefaultCall, UCPURegister, (CallFrame* calleeFrame, CallLinkInfo* callLinkInfo))
@@ -2475,8 +2485,8 @@ JSC_DEFINE_JIT_OPERATION(operationDefaultCall, UCPURegister, (CallFrame* calleeF
     // Keep owner alive explicitly. Now this function can be called from tail-call. This means that CallFrame for that owner already goes away, so we should keep it alive if we would like to use it.
     ensureStillAliveHere(owner);
     if (UNLIKELY(scope.exception()))
-        OPERATION_RETURN(scope, bitwise_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
-    OPERATION_RETURN(scope, bitwise_cast<UCPURegister>(bitwise_cast<uintptr_t>(callTarget)));
+        OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(vm.getCTIStub(CommonJITThunkID::ThrowExceptionFromCall).template retagged<JSEntryPtrTag>().code().taggedPtr()));
+    OPERATION_RETURN(scope, std::bit_cast<UCPURegister>(std::bit_cast<uintptr_t>(callTarget)));
 }
 
 JSC_DEFINE_JIT_OPERATION(operationCompareLess, size_t, (JSGlobalObject* globalObject, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2))
@@ -2948,7 +2958,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, UGPRPair, (VM* vmPointer, uint32_t b
     if (UNLIKELY(Options::verboseOSR())) {
         dataLog(
             *codeBlock, ": Entered optimize with bytecodeIndex = ", bytecodeIndex,
-            ", executeCounter = ", codeBlock->jitExecuteCounter(),
+            ", executeCounter = ", codeBlock->baselineExecuteCounter(),
             ", optimizationDelayCounter = ", codeBlock->reoptimizationRetryCounter(),
             ", exitCounter = ");
         if (codeBlock->hasOptimizedReplacement())
@@ -2959,7 +2969,7 @@ JSC_DEFINE_JIT_OPERATION(operationOptimize, UGPRPair, (VM* vmPointer, uint32_t b
     }
 
     if (!codeBlock->checkIfOptimizationThresholdReached()) {
-        CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("counter = ", codeBlock->jitExecuteCounter()));
+        CODEBLOCK_LOG_EVENT(codeBlock, "delayOptimizeToDFG", ("counter = ", codeBlock->baselineExecuteCounter()));
         codeBlock->updateAllPredictions();
         dataLogLnIf(Options::verboseOSR(), "Choosing not to optimize ", *codeBlock, " yet, because the threshold hasn't been reached.");
         OPERATION_RETURN(scope, encodeResult(nullptr, nullptr));
@@ -3306,7 +3316,7 @@ JSC_DEFINE_JIT_OPERATION(operationIteratorNextTryFast, UGPRPair, (JSGlobalObject
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto& metadata = *bitwise_cast<OpIteratorNext::Metadata*>(metadataPointer);
+    auto& metadata = *std::bit_cast<OpIteratorNext::Metadata*>(metadataPointer);
     metadata.m_iterableProfile.observeStructureID(array->structureID());
     metadata.m_iterationMetadata.seenModes = metadata.m_iterationMetadata.seenModes | IterationMode::FastArray;
 
@@ -4380,11 +4390,18 @@ JSC_DEFINE_JIT_OPERATION(operationSwitchStringWithUnknownKeyType, char*, (JSGlob
     const StringJumpTable& linkedTable = codeBlock->baselineStringSwitchJumpTable(tableIndex);
 
     if (key.isString()) {
-        auto value = asString(key)->value(globalObject);
+        const UnlinkedStringJumpTable& unlinkedTable = codeBlock->unlinkedStringSwitchJumpTable(tableIndex);
+        auto* string = asString(key);
+
+        unsigned length = string->length();
+        if (length < unlinkedTable.minLength() || length > unlinkedTable.maxLength())
+            result = linkedTable.ctiDefault().taggedPtr();
+        else {
+            auto value = string->value(globalObject);
         OPERATION_RETURN_IF_EXCEPTION(scope, nullptr);
 
-        const UnlinkedStringJumpTable& unlinkedTable = codeBlock->unlinkedStringSwitchJumpTable(tableIndex);
         result = linkedTable.ctiForValue(unlinkedTable, value.data.impl()).taggedPtr();
+        }
     } else
         result = linkedTable.ctiDefault().taggedPtr();
 
@@ -5185,3 +5202,5 @@ JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationRetrieveAndClearExceptionIfCatchable,
 IGNORE_WARNINGS_END
 
 #endif // ENABLE(JIT)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

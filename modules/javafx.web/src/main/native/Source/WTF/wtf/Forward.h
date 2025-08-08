@@ -23,6 +23,13 @@
 #include <stddef.h>
 #include <wtf/Platform.h>
 
+#if defined(__has_feature)
+#if __has_feature(objc_arc)
+#define OSObjectPtr OSObjectPtrArc
+#define RetainPtr RetainPtrArc
+#endif
+#endif
+
 namespace WTF {
 
 class ASCIILiteral;
@@ -45,7 +52,7 @@ class PrintStream;
 class SHA1;
 class Seconds;
 class SerialFunctionDispatcher;
-class RefCountedSerialFunctionDispatcher;
+class GuaranteedSerialFunctionDispatcher;
 class String;
 class StringBuilder;
 class StringImpl;
@@ -72,8 +79,10 @@ template<typename> class ArrayOf;
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 struct VectorBufferMalloc;
+struct EmbeddedFixedVectorMalloc;
 #else
 using VectorBufferMalloc = FastMalloc;
+using EmbeddedFixedVectorMalloc = FastMalloc;
 #endif
 
 template<typename> struct DefaultRefDerefTraits;
@@ -82,18 +91,17 @@ template<typename> class CompactPtr;
 template<typename> class CompletionHandler;
 template<typename, size_t = 0> class Deque;
 template<typename Key, typename, Key> class EnumeratedArray;
-template<typename> class FixedVector;
+template<typename, typename = WTF::EmbeddedFixedVectorMalloc> class FixedVector;
 template<typename> class Function;
+template<typename> struct FlatteningVariantTraits;
+template<typename> struct IsSmartPtr;
 template<typename, typename = AnyThreadsAccessTraits> class LazyNeverDestroyed;
 template<typename T, typename Traits = typename T::MarkableTraits> class Markable;
 template<typename, typename = AnyThreadsAccessTraits> class NeverDestroyed;
 template<typename> class OSObjectPtr;
-enum class SupportsObjectIdentifierNullState : bool { No, Yes };
-template<typename, typename, typename, SupportsObjectIdentifierNullState> class ObjectIdentifierGeneric;
-template<typename T, typename RawValue = uint64_t> using ObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::No>;
-template<typename T, typename RawValue = uint64_t> using AtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::No>;
-template<typename T, typename RawValue = uint64_t> using LegacyNullableObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::Yes>;
-template<typename T, typename RawValue = uint64_t> using LegacyNullableAtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits<RawValue>, RawValue, SupportsObjectIdentifierNullState::Yes>;
+template<typename, typename, typename> class ObjectIdentifierGeneric;
+template<typename T, typename RawValue = uint64_t> using ObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits<RawValue>, RawValue>;
+template<typename T, typename RawValue = uint64_t> using AtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits<RawValue>, RawValue>;
 template<typename> class Observer;
 template<typename> class OptionSet;
 template<typename> class Packed;
@@ -110,6 +118,10 @@ template<typename> class StringParsingBuffer;
 template<typename, typename = void> class StringTypeAdapter;
 template<typename> class UniqueRef;
 template<typename T, class... Args> UniqueRef<T> makeUniqueRef(Args&&...);
+template<typename, size_t = 0> class VariantList;
+template<typename, size_t = 0> struct VariantListConstIterator;
+template<typename> struct VariantListProxy;
+template<typename> struct VariantListSizer;
 template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16, typename = VectorBufferMalloc> class Vector;
 template<typename, typename WeakPtrImpl = DefaultWeakPtrImpl, typename = RawPtrTraits<WeakPtrImpl>> class WeakPtr;
 template<typename, typename = DefaultWeakPtrImpl> class WeakRef;
@@ -133,10 +145,15 @@ struct IdentityExtractor;
 template<typename T> struct KeyValuePairKeyExtractor;
 template<typename KeyTraits, typename MappedTraits> struct KeyValuePairTraits;
 template<typename KeyTypeArg, typename ValueTypeArg> struct KeyValuePair;
-template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits> class HashTable;
+enum class ShouldValidateKey : bool { No, Yes };
+template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits, ShouldValidateKey shouldValidateKey = ShouldValidateKey::Yes> class HashTable;
 template<typename Value, typename = DefaultHash<Value>, typename = HashTraits<Value>> class HashCountedSet;
-template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits> class HashMap;
-template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits> class HashSet;
+template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashMap;
+template<typename KeyArg, typename MappedArg, typename KeyHash = DefaultHash<KeyArg>, typename KeyTraits = HashTraits<KeyArg>, typename MappedTraits = HashTraits<MappedArg>, typename HashTraits = HashTableTraits>
+using UncheckedKeyHashMap = HashMap<KeyArg, MappedArg, KeyHash, KeyTraits, MappedTraits, HashTraits, ShouldValidateKey::No>;
+template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits, ShouldValidateKey = ShouldValidateKey::Yes> class HashSet;
+template<typename ValueArg, typename HashArg = DefaultHash<ValueArg>, typename TraitsArg = HashTraits<ValueArg>, typename TableTraitsArg = HashTableTraits>
+using UncheckedKeyHashSet = HashSet<ValueArg, HashArg, TraitsArg, TableTraitsArg, ShouldValidateKey::No>;
 template<typename ResolveValueT, typename RejectValueT, unsigned options = 0> class NativePromise;
 using GenericPromise = NativePromise<void, void>;
 using GenericNonExclusivePromise = NativePromise<void, void, 1>;
@@ -173,8 +190,6 @@ using WTF::HashMap;
 using WTF::HashSet;
 using WTF::Hasher;
 using WTF::LazyNeverDestroyed;
-using WTF::LegacyNullableAtomicObjectIdentifier;
-using WTF::LegacyNullableObjectIdentifier;
 using WTF::Lock;
 using WTF::Logger;
 using WTF::MachSendRight;
@@ -194,7 +209,7 @@ using WTF::PrintStream;
 using WTF::RawPtrTraits;
 using WTF::RawValueTraits;
 using WTF::Ref;
-using WTF::RefCountedSerialFunctionDispatcher;
+using WTF::GuaranteedSerialFunctionDispatcher;
 using WTF::RefPtr;
 using WTF::RetainPtr;
 using WTF::SHA1;
@@ -206,11 +221,12 @@ using WTF::StringBuilder;
 using WTF::StringImpl;
 using WTF::StringParsingBuffer;
 using WTF::StringView;
-using WTF::SupportsObjectIdentifierNullState;
 using WTF::SuspendableWorkQueue;
 using WTF::TextPosition;
 using WTF::TextStream;
 using WTF::URL;
+using WTF::UncheckedKeyHashMap;
+using WTF::UncheckedKeyHashSet;
 using WTF::UniqueRef;
 using WTF::Vector;
 using WTF::WeakPtr;

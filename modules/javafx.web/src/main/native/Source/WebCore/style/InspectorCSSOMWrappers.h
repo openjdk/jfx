@@ -56,8 +56,8 @@ private:
     void collectFromStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&);
     void maybeCollectFromStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&);
 
-    HashMap<const StyleRule*, RefPtr<CSSStyleRule>> m_styleRuleToCSSOMWrapperMap;
-    HashSet<RefPtr<CSSStyleSheet>> m_styleSheetCSSOMWrapperSet;
+    UncheckedKeyHashMap<const StyleRule*, RefPtr<CSSStyleRule>> m_styleRuleToCSSOMWrapperMap;
+    UncheckedKeyHashSet<RefPtr<CSSStyleSheet>> m_styleSheetCSSOMWrapperSet;
 };
 
 } // namespace Style

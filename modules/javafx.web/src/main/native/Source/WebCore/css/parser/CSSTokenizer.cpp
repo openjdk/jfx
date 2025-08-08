@@ -386,7 +386,7 @@ CSSParserToken CSSTokenizer::endOfFile(UChar)
     return CSSParserToken(EOFToken);
 }
 
-const CSSTokenizer::CodePoint CSSTokenizer::codePoints[128] = {
+const std::array<CSSTokenizer::CodePoint, 128> CSSTokenizer::codePoints {
     &CSSTokenizer::endOfFile,
     0,
     0,

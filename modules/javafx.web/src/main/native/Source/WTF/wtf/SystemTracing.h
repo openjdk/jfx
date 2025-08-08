@@ -251,7 +251,7 @@ WTF_EXTERN_C_BEGIN
 WTF_EXPORT_PRIVATE extern bool WTFSignpostIndirectLoggingEnabled;
 
 WTF_EXPORT_PRIVATE os_log_t WTFSignpostLogHandle();
-WTF_EXPORT_PRIVATE bool WTFSignpostHandleIndirectLog(os_log_t, pid_t, const char* line);
+WTF_EXPORT_PRIVATE bool WTFSignpostHandleIndirectLog(os_log_t, pid_t, std::span<const char> nullTerminatedLogString);
 
 WTF_EXPORT_PRIVATE uint64_t WTFCurrentContinuousTime(Seconds deltaFromNow);
 
@@ -262,10 +262,13 @@ WTF_EXTERN_C_END
     M(NavigationAndPaintTiming) \
     M(ExecuteScriptElement) \
     M(RegisterImportMap) \
+    M(JSCGarbageCollector) \
     M(JSCJITCompiler) \
     M(JSCJSGlobalObject) \
     M(IPCConnection) \
     M(StreamClientConnection) \
+    M(ScrollingPerformanceTestFingerDownInterval) \
+    M(ScrollingPerformanceTestMomentumInterval) \
 
 #define DECLARE_WTF_SIGNPOST_NAME_ENUM(name) WTFOSSignpostName ## name,
 

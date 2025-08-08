@@ -36,6 +36,7 @@
 #include "ScriptWrappable.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -46,8 +47,8 @@ namespace DisplayList {
 class DrawingContext;
 }
 
-class CustomPaintCanvas final : public RefCounted<CustomPaintCanvas>, public CanvasBase, private ContextDestructionObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+class CustomPaintCanvas final : public CanvasBase, public RefCounted<CustomPaintCanvas>, private ContextDestructionObserver {
+    WTF_MAKE_TZONE_ALLOCATED(CustomPaintCanvas);
 public:
 
     static Ref<CustomPaintCanvas> create(ScriptExecutionContext&, unsigned width, unsigned height);
@@ -70,14 +71,12 @@ public:
 
     const CSSParserContext& cssParserContext() const final;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     CustomPaintCanvas(ScriptExecutionContext&, unsigned width, unsigned height);
 
-    void refCanvasBase() const final { ref(); }
-    void derefCanvasBase() const final { deref(); }
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
     std::unique_ptr<PaintRenderingContext2D> m_context;

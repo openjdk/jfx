@@ -43,10 +43,12 @@ namespace WebCore {
 class CSSStyleSheet;
 class CSSStyleSheetObservableArray;
 class ContainerNode;
+class CustomElementRegistry;
 class Document;
 class Element;
 class FloatPoint;
 class JSDOMGlobalObject;
+class HTMLAnchorElement;
 class HTMLImageElement;
 class HTMLLabelElement;
 class HTMLMapElement;
@@ -54,6 +56,7 @@ class LayoutPoint;
 class LegacyRenderSVGResourceContainer;
 class IdTargetObserverRegistry;
 class Node;
+class QualifiedName;
 class RadioButtonGroups;
 class SVGElement;
 class ShadowRoot;
@@ -68,15 +71,19 @@ public:
     TreeScope* parentTreeScope() const { return m_parentTreeScope; }
     void setParentTreeScope(TreeScope&);
 
-    void ref() const;
-    void deref() const;
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
 
     Element* focusedElementInScope();
     Element* pointerLockElement() const;
 
+    void setCustomElementRegistry(Ref<CustomElementRegistry>&&);
+    CustomElementRegistry* customElementRegistry() const { return m_customElementRegistry.get(); }
+
     WEBCORE_EXPORT RefPtr<Element> getElementById(const AtomString&) const;
     WEBCORE_EXPORT RefPtr<Element> getElementById(const String&) const;
     RefPtr<Element> getElementById(StringView) const;
+    RefPtr<Element> elementByIdResolvingReferenceTarget(const AtomString&) const;
     const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* getAllElementsById(const AtomString&) const;
     inline bool hasElementWithId(const AtomString&) const; // Defined in TreeScopeInlines.h.
     inline bool containsMultipleElementsWithId(const AtomString& id) const; // Defined in TreeScopeInlines.h.
@@ -122,6 +129,7 @@ public:
     // Anchor name matching is case sensitive in strict mode and not case sensitive in
     // quirks mode for historical compatibility reasons.
     RefPtr<Element> findAnchor(StringView name);
+    bool isMatchingAnchor(HTMLAnchorElement&, StringView name);
 
     inline ContainerNode& rootNode() const; // Defined in ContainerNode.h
     Ref<ContainerNode> protectedRootNode() const;
@@ -149,7 +157,7 @@ public:
     RefPtr<SVGElement> takeElementFromPendingSVGResourcesForRemovalMap(const AtomString&);
 
 protected:
-    TreeScope(ShadowRoot&, Document&);
+    TreeScope(ShadowRoot&, Document&, RefPtr<CustomElementRegistry>&&);
     explicit TreeScope(Document&);
     ~TreeScope();
 
@@ -171,6 +179,8 @@ private:
     CheckedRef<ContainerNode> m_rootNode;
     std::reference_wrapper<Document> m_documentScope;
     TreeScope* m_parentTreeScope;
+
+    RefPtr<CustomElementRegistry> m_customElementRegistry;
 
     std::unique_ptr<TreeScopeOrderedMap> m_elementsById;
     std::unique_ptr<TreeScopeOrderedMap> m_elementsByName;

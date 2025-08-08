@@ -27,13 +27,13 @@
 #include "HTMLParserIdioms.h"
 
 #include "Decimal.h"
-#include "ParsingUtilities.h"
 #include "QualifiedName.h"
 #include <limits>
 #include <wtf/MathExtras.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/dtoa.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
@@ -130,20 +130,18 @@ double parseToDoubleForNumberType(StringView string)
 template <typename CharacterType>
 static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(std::span<const CharacterType> data)
 {
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
     if (data.empty())
         return makeUnexpected(HTMLIntegerParsingError::Other);
 
     bool isNegative = false;
-    if (data.front() == '-') {
+    if (skipExactly(data, '-'))
         isNegative = true;
-        data = data.subspan(1);
-    } else if (data.front() == '+')
-        data = data.subspan(1);
+    else
+        skipExactly(data, '+');
 
-    if (data.empty() || !isASCIIDigit(data.front()))
+    if (data.empty() || !isASCIIDigit(data[0]))
         return makeUnexpected(HTMLIntegerParsingError::Other);
 
     constexpr int intMax = std::numeric_limits<int>::max();
@@ -152,14 +150,13 @@ static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(std::span
 
     unsigned result = 0;
     do {
-        int digitValue = data.front() - '0';
+        int digitValue = consume(data) - '0';
 
         if (result > maxMultiplier || (result == maxMultiplier && digitValue > (intMax % base) + isNegative))
             return makeUnexpected(isNegative ? HTMLIntegerParsingError::NegativeOverflow : HTMLIntegerParsingError::PositiveOverflow);
 
         result = base * result + digitValue;
-        data = data.subspan(1);
-    } while (!data.empty() && isASCIIDigit(data.front()));
+    } while (!data.empty() && isASCIIDigit(data[0]));
 
     return isNegative ? -result : result;
 }
@@ -244,17 +241,17 @@ std::optional<double> parseValidHTMLFloatingPointNumber(StringView input)
 template <typename CharacterType>
 static double parseHTMLFloatingPointNumberValueInternal(std::span<const CharacterType> data, size_t length, double fallbackValue)
 {
-    auto position = data.data();
+    auto position = data;
     size_t leadingSpacesLength = 0;
     while (leadingSpacesLength < length && isASCIIWhitespace(position[leadingSpacesLength]))
         ++leadingSpacesLength;
 
-    position += leadingSpacesLength;
-    if (leadingSpacesLength == length || (*position != '+' && *position != '-' && *position != '.' && !isASCIIDigit(*position)))
+    skip(position, leadingSpacesLength);
+    if (leadingSpacesLength == length || (position[0] != '+' && position[0] != '-' && position[0] != '.' && !isASCIIDigit(position[0])))
         return fallbackValue;
 
     size_t parsedLength;
-    double number = parseDouble(std::span { position, length - leadingSpacesLength }, parsedLength);
+    double number = parseDouble(position.first(length - leadingSpacesLength), parsedLength);
 
     // The following expression converts -0 to +0.
     return number ? number : 0;
@@ -269,7 +266,8 @@ double parseHTMLFloatingPointNumberValue(StringView input, double fallbackValue)
     return parseHTMLFloatingPointNumberValueInternal(input.span16(), input.length(), fallbackValue);
 }
 
-static inline bool isHTMLSpaceOrDelimiter(UChar character)
+template<typename CharacterType>
+static inline bool isHTMLSpaceOrDelimiter(CharacterType character)
 {
     return isASCIIWhitespace(character) || character == ',' || character == ';';
 }
@@ -279,6 +277,12 @@ static inline bool isNumberStart(UChar character)
     return isASCIIDigit(character) || character == '.' || character == '-';
 }
 
+template<typename CharacterType>
+static inline bool isHTMLSpaceOrDelimiterOrNumberStart(CharacterType character)
+{
+    return isHTMLSpaceOrDelimiter(character) || isNumberStart(character);
+}
+
 // https://html.spec.whatwg.org/multipage/infrastructure.html#rules-for-parsing-floating-point-number-values
 template <typename CharacterType>
 static Vector<double> parseHTMLListOfOfFloatingPointNumberValuesInternal(std::span<const CharacterType> data)
@@ -286,25 +290,21 @@ static Vector<double> parseHTMLListOfOfFloatingPointNumberValuesInternal(std::sp
     Vector<double> numbers;
 
     // This skips past any leading delimiters.
-    while (!data.empty() && isHTMLSpaceOrDelimiter(data.front()))
-        data = data.subspan(1);
+    skipWhile<isHTMLSpaceOrDelimiter>(data);
 
     while (!data.empty()) {
         // This skips past leading garbage.
-        while (!data.empty() && !(isHTMLSpaceOrDelimiter(data.front()) || isNumberStart(data.front())))
-            data = data.subspan(1);
+        skipUntil<isHTMLSpaceOrDelimiterOrNumberStart>(data);
 
-        auto* numberStart = data.data();
-        while (!data.empty() && !isHTMLSpaceOrDelimiter(data.front()))
-            data = data.subspan(1);
+        auto numberStart = data;
+        skipUntil<isHTMLSpaceOrDelimiter>(data);
 
         size_t parsedLength = 0;
-        double number = parseDouble(std::span { numberStart, data.data() }, parsedLength);
+        double number = parseDouble(numberStart.first(data.data() - numberStart.data()), parsedLength);
         numbers.append(parsedLength > 0 && std::isfinite(number) ? number : 0);
 
         // This skips past the delimiter.
-        while (!data.empty() && isHTMLSpaceOrDelimiter(data.front()))
-            data = data.subspan(1);
+        skipWhile<isHTMLSpaceOrDelimiter>(data);
     }
 
     return numbers;
@@ -340,22 +340,32 @@ String parseCORSSettingsAttribute(const AtomString& value)
     return "anonymous"_s;
 }
 
+template<typename CharacterType>
+static bool isASCIIDigitOrPeriod(CharacterType character)
+{
+    return isASCIIDigit(character) || character == '.';
+}
+
+template<typename CharacterType>
+static bool isSemicolonOrComma(CharacterType character)
+{
+    return character == ';' || character == ',';
+}
+
 // https://html.spec.whatwg.org/multipage/semantics.html#attr-meta-http-equiv-refresh
 template <typename CharacterType>
 static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double& parsedDelay, String& parsedURL)
 {
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
     unsigned time = 0;
 
-    auto* numberStart = data.data();
-    while (!data.empty() && isASCIIDigit(data.front()))
-        data = data.subspan(1);
+    auto numberStart = data;
+    skipWhile<isASCIIDigit>(data);
 
-    StringView timeString(std::span(numberStart, data.data()));
+    StringView timeString(numberStart.first(data.data() - numberStart.data()));
     if (timeString.isEmpty()) {
-        if (data.empty() || data.front() != '.')
+        if (data.empty() || data[0] != '.')
             return false;
     } else {
         auto optionalNumber = parseHTMLNonNegativeInteger(timeString);
@@ -364,69 +374,56 @@ static bool parseHTTPRefreshInternal(std::span<const CharacterType> data, double
         time = optionalNumber.value();
     }
 
-    while (!data.empty() && (isASCIIDigit(data.front()) || data.front() == '.'))
-        data = data.subspan(1);
+    skipWhile<isASCIIDigitOrPeriod>(data);
 
     if (data.empty()) {
         parsedDelay = time;
         return true;
     }
 
-    if (data.front() != ';' && data.front() != ',' && !isASCIIWhitespace(data.front()))
+    if (data[0] != ';' && data[0] != ',' && !isASCIIWhitespace(data[0]))
         return false;
 
     parsedDelay = time;
 
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
-    if (!data.empty() && (data.front() == ';' || data.front() == ','))
-        data = data.subspan(1);
+    skipExactly<isSemicolonOrComma>(data);
 
-    while (!data.empty() && isASCIIWhitespace(data.front()))
-        data = data.subspan(1);
+    skipWhile<isASCIIWhitespace>(data);
 
     if (data.empty())
         return true;
 
-    if (data.front() == 'U' || data.front() == 'u') {
+    if (data[0] == 'U' || data[0] == 'u') {
         StringView url(data);
 
-        data = data.subspan(1);
+        skip(data, 1);
 
-        if (!data.empty() && (data.front() == 'R' || data.front() == 'r'))
-            data = data.subspan(1);
-        else {
+        if (!skipExactly(data, 'R') && !skipExactly(data, 'r')) {
             parsedURL = url.toString();
             return true;
         }
 
-        if (!data.empty() && (data.front() == 'L' || data.front() == 'l'))
-            data = data.subspan(1);
-        else {
+        if (!skipExactly(data, 'L') && !skipExactly(data, 'l')) {
             parsedURL = url.toString();
             return true;
         }
 
-        while (!data.empty() && isASCIIWhitespace(data.front()))
-            data = data.subspan(1);
+        skipWhile<isASCIIWhitespace>(data);
 
-        if (!data.empty() && data.front() == '=')
-            data = data.subspan(1);
-        else {
+        if (!skipExactly(data, '=')) {
             parsedURL = url.toString();
             return true;
         }
 
-        while (!data.empty() && isASCIIWhitespace(data.front()))
-            data = data.subspan(1);
+        skipWhile<isASCIIWhitespace>(data);
     }
 
     CharacterType quote;
-    if (!data.empty() && (data.front() == '\'' || data.front() == '"')) {
-        quote = data.front();
-        data = data.subspan(1);
-    } else
+    if (!data.empty() && (data[0] == '\'' || data[0] == '"'))
+        quote = consume(data);
+    else
         quote = '\0';
 
     StringView url(data);
@@ -473,16 +470,16 @@ static std::optional<HTMLDimensionParsingResult> parseHTMLDimensionNumber(std::s
     if (data.empty())
         return std::nullopt;
 
-    auto* start = data.data();
+    auto start = data;
     skipWhile<isASCIIDigit>(data);
-    if (start == data.data())
+    if (start.data() == data.data())
         return std::nullopt;
 
     if (skipExactly(data, '.'))
         skipWhile<isASCIIDigit>(data);
 
     size_t parsedLength = 0;
-    double number = parseDouble(std::span { start, data.data() }, parsedLength);
+    double number = parseDouble(start.first(data.data() - start.data()), parsedLength);
     if (!(parsedLength && std::isfinite(number)))
         return std::nullopt;
 

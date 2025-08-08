@@ -448,13 +448,13 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
             return result.releaseException();
     }
 
-        HashSet<Ref<Element>> elementSet;
-        for (auto& element : customElementsReactionHoldingTank.takeElements())
+        UncheckedKeyHashSet<Ref<Element>> elementSet;
+        for (Ref element : customElementsReactionHoldingTank.takeElements())
             elementSet.add(element.get());
         if (!elementSet.isEmpty()) {
-            for (auto& element : descendantsOfType<Element>(*fragment)) {
-                if (elementSet.contains(element))
-                    elementsToUpgrade.append(element);
+            for (Ref element : descendantsOfType<Element>(*fragment)) {
+                if (elementSet.contains(element.get()))
+                    elementsToUpgrade.append(element.get());
             }
         }
     }
@@ -603,7 +603,7 @@ ExceptionOr<RefPtr<Node>> processAncestorsAndTheirSiblings(Range::ActionType act
         ancestors.append(*ancestor);
 
     RefPtr firstChildInAncestorToProcess = direction == ProcessContentsForward ? container->nextSibling() : container->previousSibling();
-    for (auto& ancestor : ancestors) {
+    for (Ref ancestor : ancestors) {
         if (action == Range::Extract || action == Range::Clone) {
             if (auto shadowRoot = dynamicDowncast<ShadowRoot>(ancestor.get())) {
                 if (!shadowRoot->isClonable())
@@ -628,21 +628,21 @@ ExceptionOr<RefPtr<Node>> processAncestorsAndTheirSiblings(Range::ActionType act
             child = (direction == ProcessContentsForward) ? child->nextSibling() : child->previousSibling())
             nodes.append(*child);
 
-        for (auto& child : nodes) {
+        for (Ref child : nodes) {
             switch (action) {
             case Range::Delete: {
-                auto result = ancestor->removeChild(child);
+                auto result = ancestor->removeChild(child.get());
                 if (result.hasException())
                     return result.releaseException();
                 break;
             }
             case Range::Extract: // will remove child from ancestor
                 if (direction == ProcessContentsForward) {
-                    auto result = clonedContainer->appendChild(child);
+                    auto result = clonedContainer->appendChild(child.get());
                     if (result.hasException())
                         return result.releaseException();
                 } else {
-                    auto result = clonedContainer->insertBefore(child, clonedContainer->protectedFirstChild());
+                    auto result = clonedContainer->insertBefore(child.get(), clonedContainer->protectedFirstChild());
                     if (result.hasException())
                         return result.releaseException();
                 }
@@ -719,7 +719,7 @@ ExceptionOr<void> Range::insertNode(Ref<Node>&& node)
         return removeResult.releaseException();
 
     unsigned newOffset = referenceNode ? referenceNode->computeNodeIndex() : parent->countChildNodes();
-    if (auto* fragment = dynamicDowncast<DocumentFragment>(node.get()))
+    if (RefPtr fragment = dynamicDowncast<DocumentFragment>(node.get()))
         newOffset += fragment->countChildNodes();
     else
         ++newOffset;
@@ -739,7 +739,7 @@ String Range::toString() const
     auto range = makeSimpleRange(*this);
     StringBuilder builder;
     for (Ref node : intersectingNodes(range)) {
-        if (auto* text = dynamicDowncast<Text>(node.get())) {
+        if (RefPtr text = dynamicDowncast<Text>(node.get())) {
             auto offsetRange = characterDataOffsetRange(range, node);
             builder.appendSubstring(text->data(), offsetRange.start, offsetRange.end - offsetRange.start);
         }
@@ -886,7 +886,7 @@ ExceptionOr<void> Range::surroundContents(Node& newParent)
         return fragment.releaseException();
 
     // Step 4: If newParent has children, replace all with null within newParent.
-    if (auto* containerNode = dynamicDowncast<ContainerNode>(newParent); containerNode && containerNode->hasChildNodes())
+    if (RefPtr containerNode = dynamicDowncast<ContainerNode>(newParent); containerNode && containerNode->hasChildNodes())
         containerNode->replaceAll(nullptr);
 
     // Step 5: Insert newParent into context object.
@@ -1108,8 +1108,13 @@ Ref<DOMRectList> Range::getClientRects() const
 
 Ref<DOMRect> Range::getBoundingClientRect() const
 {
-    startContainer().protectedDocument()->updateLayout();
-    return DOMRect::create(unionRectIgnoringZeroRects(RenderObject::clientBorderAndTextRects(makeSimpleRange(*this))));
+    return boundingClientRect(makeSimpleRange(*this));
+}
+
+Ref<DOMRect> Range::boundingClientRect(const SimpleRange& simpleRange)
+{
+    simpleRange.startContainer().protectedDocument()->updateLayout();
+    return DOMRect::create(unionRectIgnoringZeroRects(RenderObject::clientBorderAndTextRects(simpleRange)));
 }
 
 static void setBothEndpoints(Range& range, const SimpleRange& value)
@@ -1182,7 +1187,7 @@ void Range::visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const
 void showTree(const WebCore::Range* range)
 {
     if (range) {
-        range->startContainer().showTreeAndMark(&range->startContainer(), "S", &range->endContainer(), "E");
+        range->startContainer().showTreeAndMark(&range->startContainer(), "S"_s, &range->endContainer(), "E"_s);
         fprintf(stderr, "start offset: %d, end offset: %d\n", range->startOffset(), range->endOffset());
     }
 }

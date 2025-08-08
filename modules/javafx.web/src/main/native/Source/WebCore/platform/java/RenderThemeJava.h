@@ -64,7 +64,7 @@ protected:
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
-    bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSearchField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustMenuListStyle(RenderStyle&, const Element*) const override;
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
@@ -74,7 +74,7 @@ protected:
 
     void adjustTextAreaStyle(RenderStyle&, const Element* e) const override;
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
-    bool supportsFocusRing(const RenderStyle&) const override;
+    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const override;
 
     Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;
     Color platformInactiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const override;

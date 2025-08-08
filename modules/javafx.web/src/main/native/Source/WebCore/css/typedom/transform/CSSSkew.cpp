@@ -51,15 +51,15 @@ ExceptionOr<Ref<CSSSkew>> CSSSkew::create(Ref<CSSNumericValue> ax, Ref<CSSNumeri
     return adoptRef(*new CSSSkew(WTFMove(ax), WTFMove(ay)));
 }
 
-ExceptionOr<Ref<CSSSkew>> CSSSkew::create(CSSFunctionValue& cssFunctionValue)
+ExceptionOr<Ref<CSSSkew>> CSSSkew::create(Ref<const CSSFunctionValue> cssFunctionValue)
 {
-    if (cssFunctionValue.name() != CSSValueSkew) {
+    if (cssFunctionValue->name() != CSSValueSkew) {
         ASSERT_NOT_REACHED();
         return CSSSkew::create(CSSNumericFactory::deg(0), CSSNumericFactory::deg(0));
     }
 
     Vector<Ref<CSSNumericValue>> components;
-    for (auto& componentCSSValue : cssFunctionValue) {
+    for (auto& componentCSSValue : cssFunctionValue.get()) {
         auto valueOrException = CSSStyleValueFactory::reifyValue(componentCSSValue, std::nullopt);
         if (valueOrException.hasException())
             return valueOrException.releaseException();

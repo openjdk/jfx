@@ -74,9 +74,9 @@ private:
 
     using ElementAttributePair = std::pair<SVGElement*, QualifiedName>;
     using AnimationsVector = Vector<SVGSMILElement*>;
-    using GroupedAnimationsMap = HashMap<ElementAttributePair, AnimationsVector>;
+    using GroupedAnimationsMap = UncheckedKeyHashMap<ElementAttributePair, AnimationsVector>;
 
-    void processScheduledAnimations(const Function<void(SVGSMILElement&)>&);
+    void processScheduledAnimations(NOESCAPE const Function<void(SVGSMILElement&)>&);
     void updateDocumentOrderIndexes();
     void sortByPriority(AnimationsVector& smilElements, SMILTime elapsed);
 

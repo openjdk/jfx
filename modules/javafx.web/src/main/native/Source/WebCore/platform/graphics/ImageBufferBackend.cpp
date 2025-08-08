@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,31 @@
 #include "ImageBufferBackend.h"
 
 #include "GraphicsContext.h"
-#include "Image.h"
+#include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include "PixelBufferConversion.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadSafeImageBufferFlusher);
+
+IntSize ImageBufferBackend::calculateSafeBackendSize(const Parameters& parameters)
+{
+    IntSize backendSize = parameters.backendSize;
+    if (backendSize.isEmpty())
+        return backendSize;
+
+    auto bytesPerRow = 4 * CheckedUint32(backendSize.width());
+    if (bytesPerRow.hasOverflowed())
+        return { };
+
+    CheckedSize numBytes = CheckedUint32(backendSize.height()) * bytesPerRow;
+    if (numBytes.hasOverflowed())
+        return { };
+
+    return backendSize;
+}
 
 size_t ImageBufferBackend::calculateMemoryCost(const IntSize& backendSize, unsigned bytesPerRow)
 {
@@ -76,7 +96,7 @@ void ImageBufferBackend::convertToLuminanceMask()
     putPixelBuffer(*pixelBuffer, sourceRect, IntPoint::zero(), AlphaPremultiplication::Premultiplied);
 }
 
-void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, const uint8_t* sourceData, PixelBuffer& destinationPixelBuffer)
+void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, std::span<const uint8_t> sourceData, PixelBuffer& destinationPixelBuffer)
 {
     IntRect backendRect { { }, size() };
     auto sourceRectClipped = intersection(backendRect, sourceRect);
@@ -95,19 +115,23 @@ void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, const uint8_t
     ConstPixelBufferConversionView source {
         { AlphaPremultiplication::Premultiplied, convertToPixelFormat(pixelFormat()), colorSpace() },
         sourceBytesPerRow,
-        sourceData + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
+        sourceData.subspan(sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4)
     };
     unsigned destinationBytesPerRow = static_cast<unsigned>(4u * sourceRect.width());
+    size_t offset = destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4;
+    if (offset > destinationPixelBuffer.bytes().size())
+        return;
+
     PixelBufferConversionView destination {
         destinationPixelBuffer.format(),
         destinationBytesPerRow,
-        destinationPixelBuffer.bytes().data() + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
+        destinationPixelBuffer.bytes().subspan(offset)
     };
 
     convertImagePixels(source, destination, destinationRect.size());
 }
 
-void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, uint8_t* destinationData)
+void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, std::span<uint8_t> destinationData)
 {
     IntRect backendRect { { }, size() };
     auto sourceRectClipped = intersection({ IntPoint::zero(), sourcePixelBuffer.size() }, sourceRect);
@@ -127,16 +151,21 @@ void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, co
     ConstPixelBufferConversionView source {
         sourcePixelBuffer.format(),
         sourceBytesPerRow,
-        sourcePixelBuffer.bytes().data() + sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4
+        sourcePixelBuffer.bytes().subspan(sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4)
     };
     unsigned destinationBytesPerRow = bytesPerRow();
     PixelBufferConversionView destination {
         { destinationAlphaFormat, convertToPixelFormat(pixelFormat()), colorSpace() },
         destinationBytesPerRow,
-        destinationData + destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4
+        destinationData.subspan(destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4)
     };
 
     convertImagePixels(source, destination, destinationRect.size());
+}
+
+RefPtr<SharedBuffer> ImageBufferBackend::sinkIntoPDFDocument()
+{
+    return nullptr;
 }
 
 AffineTransform ImageBufferBackend::calculateBaseTransform(const Parameters& parameters)

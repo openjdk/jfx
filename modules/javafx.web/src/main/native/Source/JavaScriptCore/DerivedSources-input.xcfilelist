@@ -42,14 +42,15 @@ $(PROJECT_DIR)/builtins/ArrayPrototype.js
 $(PROJECT_DIR)/builtins/AsyncFromSyncIteratorPrototype.js
 $(PROJECT_DIR)/builtins/AsyncFunctionPrototype.js
 $(PROJECT_DIR)/builtins/AsyncGeneratorPrototype.js
-$(PROJECT_DIR)/builtins/AsyncIteratorPrototype.js
 $(PROJECT_DIR)/builtins/FunctionPrototype.js
 $(PROJECT_DIR)/builtins/GeneratorPrototype.js
 $(PROJECT_DIR)/builtins/GlobalObject.js
 $(PROJECT_DIR)/builtins/GlobalOperations.js
 $(PROJECT_DIR)/builtins/InternalPromiseConstructor.js
 $(PROJECT_DIR)/builtins/IteratorHelpers.js
-$(PROJECT_DIR)/builtins/IteratorPrototype.js
+$(PROJECT_DIR)/builtins/JSIteratorConstructor.js
+$(PROJECT_DIR)/builtins/JSIteratorHelperPrototype.js
+$(PROJECT_DIR)/builtins/JSIteratorPrototype.js
 $(PROJECT_DIR)/builtins/MapConstructor.js
 $(PROJECT_DIR)/builtins/MapIteratorPrototype.js
 $(PROJECT_DIR)/builtins/MapPrototype.js
@@ -72,6 +73,7 @@ $(PROJECT_DIR)/builtins/StringPrototype.js
 $(PROJECT_DIR)/builtins/TypedArrayConstructor.js
 $(PROJECT_DIR)/builtins/TypedArrayPrototype.js
 $(PROJECT_DIR)/builtins/WebAssembly.js
+$(PROJECT_DIR)/builtins/WrapForValidIteratorPrototype.js
 $(PROJECT_DIR)/bytecode/BytecodeList.rb
 $(PROJECT_DIR)/create_hash_table
 $(PROJECT_DIR)/generator/Argument.rb
@@ -91,7 +93,6 @@ $(PROJECT_DIR)/generator/Wasm.rb
 $(PROJECT_DIR)/generator/main.rb
 $(PROJECT_DIR)/inspector/InjectedScriptSource.js
 $(PROJECT_DIR)/inspector/protocol/Animation.json
-$(PROJECT_DIR)/inspector/protocol/ApplicationCache.json
 $(PROJECT_DIR)/inspector/protocol/Audit.json
 $(PROJECT_DIR)/inspector/protocol/Browser.json
 $(PROJECT_DIR)/inspector/protocol/CPUProfiler.json
@@ -101,7 +102,6 @@ $(PROJECT_DIR)/inspector/protocol/Console.json
 $(PROJECT_DIR)/inspector/protocol/DOM.json
 $(PROJECT_DIR)/inspector/protocol/DOMDebugger.json
 $(PROJECT_DIR)/inspector/protocol/DOMStorage.json
-$(PROJECT_DIR)/inspector/protocol/Database.json
 $(PROJECT_DIR)/inspector/protocol/Debugger.json
 $(PROJECT_DIR)/inspector/protocol/GenericTypes.json
 $(PROJECT_DIR)/inspector/protocol/Heap.json
@@ -170,6 +170,7 @@ $(PROJECT_DIR)/runtime/IntlSegmentsPrototype.cpp
 $(PROJECT_DIR)/runtime/JSDataViewPrototype.cpp
 $(PROJECT_DIR)/runtime/JSGlobalObject.cpp
 $(PROJECT_DIR)/runtime/JSInternalPromiseConstructor.cpp
+$(PROJECT_DIR)/runtime/JSIteratorHelperPrototype.cpp
 $(PROJECT_DIR)/runtime/JSModuleLoader.cpp
 $(PROJECT_DIR)/runtime/JSONObject.cpp
 $(PROJECT_DIR)/runtime/JSPromiseConstructor.cpp

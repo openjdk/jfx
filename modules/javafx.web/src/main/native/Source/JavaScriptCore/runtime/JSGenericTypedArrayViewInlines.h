@@ -37,6 +37,8 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/MakeString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 template<typename Adaptor>
@@ -140,6 +142,18 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(VM& v
         JSGenericTypedArrayView(vm, context);
     result->finishCreation(vm);
     return result;
+}
+
+template<typename Adaptor>
+JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::tryCreate(JSGlobalObject* globalObject, Structure* structure, RefPtr<typename Adaptor::ViewType>&& impl)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    if (!impl->possiblySharedBuffer()) {
+        throwTypeError(globalObject, scope, typedArrayBufferHasBeenDetachedErrorMessage);
+        return nullptr;
+    }
+    return create(vm, structure, WTFMove(impl));
 }
 
 template<typename Adaptor>
@@ -284,7 +298,7 @@ bool JSGenericTypedArrayView<Adaptor>::setFromTypedArray(JSGlobalObject* globalO
             return false;
 
         RELEASE_ASSERT(JSC::elementSize(Adaptor::typeValue) == JSC::elementSize(other->type()));
-        memmove(typedVector() + offset, bitwise_cast<typename Adaptor::Type*>(other->vector()) + objectOffset, length * elementSize);
+        memmove(typedVector() + offset, std::bit_cast<typename Adaptor::Type*>(other->vector()) + objectOffset, length * elementSize);
         return true;
     };
 
@@ -358,15 +372,15 @@ void JSGenericTypedArrayView<Adaptor>::copyFromInt32ShapeArray(size_t offset, JS
     // 1. int32_t -> uint32_t conversion does not change any bit representation. So we can simply copy them.
     // 2. Hole is represented as JSEmpty in Int32Shape, which lower 32bits is zero. And we expect 0 for undefined, thus this copying simply works.
     if constexpr (Adaptor::typeValue == TypeUint8 || Adaptor::typeValue == TypeInt8) {
-        WTF::copyElements(bitwise_cast<uint8_t*>(typedVector() + offset), bitwise_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length);
+        WTF::copyElements(byteCast<uint8_t>(typedSpan().subspan(offset)), std::span { std::bit_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length });
         return;
     }
     if constexpr (Adaptor::typeValue == TypeUint16 || Adaptor::typeValue == TypeInt16) {
-        WTF::copyElements(bitwise_cast<uint16_t*>(typedVector() + offset), bitwise_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length);
+        WTF::copyElements(spanReinterpretCast<uint16_t>(typedSpan().subspan(offset)), std::span { std::bit_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length });
         return;
     }
     if constexpr (Adaptor::typeValue == TypeUint32 || Adaptor::typeValue == TypeInt32) {
-        WTF::copyElements(bitwise_cast<uint32_t*>(typedVector() + offset), bitwise_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length);
+        WTF::copyElements(spanReinterpretCast<uint32_t>(typedSpan().subspan(offset)), std::span { std::bit_cast<const uint64_t*>(array->butterfly()->contiguous().data() + objectOffset), length });
         return;
     }
     for (size_t i = 0; i < length; ++i) {
@@ -389,7 +403,7 @@ void JSGenericTypedArrayView<Adaptor>::copyFromDoubleShapeArray(size_t offset, J
 
     if constexpr (Adaptor::typeValue == TypeFloat64) {
         // Double to double copy. Thus we can use memcpy (since Array will never overlap with TypedArrays' backing store).
-        WTF::copyElements(typedVector() + offset, array->butterfly()->contiguousDouble().data() + objectOffset, length);
+        WTF::copyElements(typedSpan().subspan(offset), std::span<const double> { array->butterfly()->contiguousDouble().data() + objectOffset, length });
         return;
     }
     for (size_t i = 0; i < length; ++i) {
@@ -771,12 +785,12 @@ template<typename Adaptor> inline size_t JSGenericTypedArrayView<Adaptor>::byteL
 
 template<typename Adaptor> inline const typename Adaptor::Type* JSGenericTypedArrayView<Adaptor>::typedVector() const
 {
-    return bitwise_cast<const typename Adaptor::Type*>(vector());
+    return std::bit_cast<const typename Adaptor::Type*>(vector());
 }
 
 template<typename Adaptor> inline typename Adaptor::Type* JSGenericTypedArrayView<Adaptor>::typedVector()
 {
-    return bitwise_cast<typename Adaptor::Type*>(vector());
+    return std::bit_cast<typename Adaptor::Type*>(vector());
 }
 
 template<typename Adaptor> inline bool JSGenericTypedArrayView<Adaptor>::inBounds(size_t i) const
@@ -870,12 +884,12 @@ template<typename Adaptor> inline auto JSGenericTypedArrayView<Adaptor>::sort() 
 
         size_t length = lengthValue.value();
 
-    ElementType* originalArray = typedVector();
-    ElementType* array = originalArray;
+    auto originalSpan = typedSpan();
+    auto array = originalSpan.data();
     if (isShared()) {
         if (UNLIKELY(!forShared.tryGrow(length)))
             return SortResult::OutOfMemory;
-        WTF::copyElements(forShared.data(), originalArray, length);
+        WTF::copyElements(forShared.mutableSpan(), spanConstCast<const typename Adaptor::Type>(originalSpan.first(length)));
         array = forShared.data();
     }
 
@@ -895,7 +909,7 @@ template<typename Adaptor> inline auto JSGenericTypedArrayView<Adaptor>::sort() 
     }
 
     if (isShared())
-        WTF::copyElements(originalArray, forShared.data(), length);
+        WTF::copyElements(originalSpan, forShared.span().first(length));
 
     return SortResult::Success;
 }
@@ -1011,4 +1025,17 @@ template<typename PassedAdaptor> inline Structure* JSGenericResizableOrGrowableS
     return Structure::create(vm, globalObject, prototype, TypeInfo(typeForTypedArrayType(Base::Adaptor::typeValue), StructureFlags), info(), NonArray);
 }
 
+template<typename PassedAdaptor> inline bool JSGenericResizableOrGrowableSharedTypedArrayView<PassedAdaptor>::preventExtensions(JSObject* cell, JSGlobalObject* globalObject)
+{
+    // https://tc39.es/ecma262/#sec-typedarray-preventextensions
+    auto* object = jsCast<JSGenericResizableOrGrowableSharedTypedArrayView<PassedAdaptor>*>(cell);
+    if (object->isAutoLength())
+        return false;
+    if (object->isResizableNonShared())
+        return false;
+    return Base::preventExtensions(object, globalObject);
+}
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

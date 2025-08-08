@@ -25,6 +25,7 @@
 
 #pragma once
 
+#if ENABLE(DAMAGE_TRACKING) || PLATFORM(JAVA)
 #include "FloatRect.h"
 #include "Region.h"
 #include <wtf/ForbidHeapAllocation.h>
@@ -37,15 +38,23 @@ class Damage {
 public:
     using Rects = Vector<IntRect, 1>;
 
+#if PLATFORM(JAVA)
     enum class ShouldPropagate : bool {
         No,
         Yes,
+    };
+#endif
+    enum class Propagation : uint8_t {
+        None,
+        Region,
+        Unified,
     };
 
     Damage() = default;
     Damage(Damage&&) = default;
     Damage(const Damage&) = default;
     Damage& operator=(const Damage&) = default;
+    Damage& operator=(Damage&&) = default;
 
     static const Damage& invalid()
     {
@@ -62,6 +71,7 @@ public:
     void invalidate()
     {
         m_invalid = true;
+        m_region = Region();
     }
 
     ALWAYS_INLINE void add(const Region& region)
@@ -92,7 +102,7 @@ public:
     }
 
 private:
-    bool m_invalid;
+    bool m_invalid { false };
     Region m_region;
 
     // From RenderView.cpp::repaintViewRectangle():
@@ -105,14 +115,22 @@ private:
         if (UNLIKELY(m_region.gridSize() > maximumGridSize))
             m_region = Region(m_region.bounds());
     }
-
+#if !PLATFORM(JAVA)
+    explicit Damage(bool invalid)
+        : m_invalid(invalid)
+    {
+    }
+#else
     explicit Damage(bool invalid, Region&& region = { })
         : m_invalid(invalid)
         , m_region(WTFMove(region))
     {
     }
+#endif
 
     friend struct IPC::ArgumentCoder<Damage, void>;
+
+    friend bool operator==(const Damage&, const Damage&) = default;
 };
 
 static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& damage)
@@ -123,3 +141,5 @@ static inline WTF::TextStream& operator<<(WTF::TextStream& ts, const Damage& dam
 }
 
 };
+
+#endif // ENABLE(DAMAGE_TRACKING)

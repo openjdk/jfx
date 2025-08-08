@@ -26,6 +26,8 @@
 #include "config.h"
 #include "InteractionRegion.h"
 
+#include "AccessibilityObject.h"
+#include "BorderShape.h"
 #include "Document.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
@@ -40,6 +42,7 @@
 #include "HTMLInputElement.h"
 #include "HTMLLabelElement.h"
 #include "HitTestResult.h"
+#include "LayoutShape.h"
 #include "LegacyRenderSVGShape.h"
 #include "LegacyRenderSVGShapeInlines.h"
 #include "LocalFrame.h"
@@ -54,7 +57,6 @@
 #include "RenderLayerBacking.h"
 #include "RenderVideo.h"
 #include "SVGSVGElement.h"
-#include "Shape.h"
 #include "SimpleRange.h"
 #include "SliderThumbElement.h"
 #include "StyleResolver.h"
@@ -111,7 +113,6 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
     case AccessibilityRole::Link:
     case AccessibilityRole::WebCoreLink:
     case AccessibilityRole::ListBoxOption:
-    case AccessibilityRole::MenuButton:
     case AccessibilityRole::MenuItem:
     case AccessibilityRole::MenuItemCheckbox:
     case AccessibilityRole::MenuItemRadio:
@@ -427,7 +428,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
         return std::nullopt;
     }
 
-    bool isInlineNonBlock = renderer.isInline() && !renderer.isReplacedOrInlineBlock();
+    bool isInlineNonBlock = renderer.isInline() && !renderer.isReplacedOrAtomicInline();
     bool isPhoto = false;
 
     float minimumContentHintArea = 200 * 200;
@@ -500,8 +501,8 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
     } else if (iconImage && originalElement) {
         auto size = boundingSize(regionRenderer, transform);
         LayoutRect imageRect(FloatPoint(), size);
-        Ref shape = Shape::createRasterShape(iconImage.get(), 0, imageRect, imageRect, WritingMode::HorizontalTb, 0);
-        Shape::DisplayPaths paths;
+        Ref shape = LayoutShape::createRasterShape(iconImage.get(), 0, imageRect, imageRect, WritingMode(), 0);
+        LayoutShape::DisplayPaths paths;
         shape->buildDisplayPaths(paths);
         auto path = paths.shape;
 
@@ -536,8 +537,8 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
 
         clipPath = path;
     } else if (const auto& renderBox = dynamicDowncast<RenderBox>(regionRenderer)) {
-        auto roundedRect = renderBox->borderRoundedRect();
-        auto borderRadii = roundedRect.radii();
+        auto borderShape = BorderShape::shapeForBorderRect(renderBox->style(), renderBox->borderBoxRect());
+        auto borderRadii = borderShape.radii();
         auto minRadius = borderRadii.minimumRadius();
         auto maxRadius = borderRadii.maximumRadius();
 
@@ -563,11 +564,8 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
                 maskedCorners.add(InteractionRegion::CornerMask::MinXMaxYCorner);
             if (borderRadii.bottomRight().minDimension() == maxRadius)
                 maskedCorners.add(InteractionRegion::CornerMask::MaxXMaxYCorner);
-        } else {
-            Path path;
-            path.addRoundedRect(roundedRect);
-            clipPath = path;
-        }
+        } else
+            clipPath = borderShape.pathForOuterShape(renderBox->document().deviceScaleFactor());
         }
 
     bool canTweakShape = !isPhoto

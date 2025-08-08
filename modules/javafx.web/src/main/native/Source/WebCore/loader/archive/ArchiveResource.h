@@ -32,7 +32,7 @@
 #include "SubstituteResource.h"
 
 namespace WebCore {
-using namespace WTF::FileSystemImpl;
+
 class ArchiveResource : public SubstituteResource {
 public:
     static RefPtr<ArchiveResource> create(RefPtr<FragmentedSharedBuffer>&&, const URL&, const ResourceResponse&);

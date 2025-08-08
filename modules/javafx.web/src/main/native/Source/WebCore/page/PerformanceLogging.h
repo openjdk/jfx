@@ -27,6 +27,7 @@
 
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -35,7 +36,7 @@ class Page;
 enum class ShouldIncludeExpensiveComputations : bool { No, Yes };
 
 class PerformanceLogging {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PerformanceLogging);
     WTF_MAKE_NONCOPYABLE(PerformanceLogging);
 public:
     explicit PerformanceLogging(Page&);
@@ -47,7 +48,7 @@ public:
 
     void didReachPointOfInterest(PointOfInterest);
 
-    WEBCORE_EXPORT static HashCountedSet<const char*> javaScriptObjectCounts();
+    WEBCORE_EXPORT static HashCountedSet<ASCIILiteral> javaScriptObjectCounts();
     WEBCORE_EXPORT static Vector<std::pair<ASCIILiteral, size_t>> memoryUsageStatistics(ShouldIncludeExpensiveComputations);
     WEBCORE_EXPORT static std::optional<uint64_t> physicalFootprint();
 

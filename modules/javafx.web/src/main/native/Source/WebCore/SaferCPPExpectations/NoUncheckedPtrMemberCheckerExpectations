@@ -1,0 +1,12 @@
+Modules/websockets/WorkerThreadableWebSocketChannel.h
+html/parser/HTMLTreeBuilder.h
+loader/WorkerThreadableLoader.h
+page/scrolling/ScrollAnchoringController.h
+platform/ScrollAnimator.h
+platform/Scrollbar.h
+platform/ScrollbarsController.h
+platform/ios/PlaybackSessionInterfaceIOS.h
+rendering/RenderAncestorIterator.h
+svg/properties/SVGPropertyOwnerRegistry.h
+workers/DedicatedWorkerThread.h
+workers/service/context/ServiceWorkerThread.h

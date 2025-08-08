@@ -43,9 +43,13 @@
 #include "UserStyleSheetTypes.h"
 #include <JavaScriptCore/JSObjectInlines.h>
 #include <wtf/Language.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/Collator.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CaptionUserPreferences);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CaptionUserPreferencesTestingModeToken);
 
 Ref<CaptionUserPreferences> CaptionUserPreferences::create(PageGroup& group)
 {
@@ -254,7 +258,7 @@ MediaSelectionOption CaptionUserPreferences::mediaSelectionOptionForTrack(TextTr
     return { mediaType, displayNameForTrack(track), legibleType };
 }
 
-Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList, HashSet<TextTrack::Kind> kinds)
+Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList, UncheckedKeyHashSet<TextTrack::Kind> kinds)
 {
     ASSERT(trackList);
 

@@ -28,6 +28,7 @@
 #if ENABLE(OFFSCREEN_CANVAS)
 
 #include "CanvasRenderingContext.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 
@@ -37,21 +38,24 @@ class PlaceholderRenderingContext;
 
 // Thread-safe interface to submit frames from worker to the placeholder rendering context.
 class PlaceholderRenderingContextSource : public ThreadSafeRefCounted<PlaceholderRenderingContextSource> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PlaceholderRenderingContextSource);
     WTF_MAKE_NONCOPYABLE(PlaceholderRenderingContextSource);
 public:
     static Ref<PlaceholderRenderingContextSource> create(PlaceholderRenderingContext&);
     virtual ~PlaceholderRenderingContextSource() = default;
 
     // Called by the offscreen context to submit the frame.
-    virtual void setPlaceholderBuffer(ImageBuffer&);
+    void setPlaceholderBuffer(ImageBuffer&);
 
     // Called by the placeholder context to attach to compositor layer.
-    virtual void setContentsToLayer(GraphicsLayer&) = 0;
+    void setContentsToLayer(GraphicsLayer&);
 
-protected:
-    PlaceholderRenderingContextSource(PlaceholderRenderingContext&);
+private:
+    explicit PlaceholderRenderingContextSource(PlaceholderRenderingContext&);
+
     WeakPtr<PlaceholderRenderingContext> m_placeholder; // For main thread use.
+    Lock m_lock;
+    RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> m_delegate WTF_GUARDED_BY_LOCK(m_lock);
 };
 
 class PlaceholderRenderingContext final : public CanvasRenderingContext {
@@ -67,8 +71,6 @@ public:
 
 private:
     PlaceholderRenderingContext(HTMLCanvasElement&);
-    bool isPlaceholder() const final { return true; }
-    bool delegatesDisplay() const final { return true; }
     void setContentsToLayer(GraphicsLayer&) final;
 
     Ref<PlaceholderRenderingContextSource> m_source;

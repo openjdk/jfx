@@ -36,6 +36,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "LocalFrameViewLayoutContext.h"
+#include "RenderBlockInlines.h"
 #include "RenderButton.h"
 #include "RenderCounter.h"
 #include "RenderDescendantIterator.h"
@@ -88,14 +89,14 @@ static void invalidateLineLayout(RenderObject& renderer, IsRemoval isRemoval)
     CheckedPtr container = LayoutIntegration::LineLayout::blockContainer(renderer);
     if (!container)
         return;
-    auto shouldInvalidateLineLayoutPath = [&](auto& inlinLayout) {
-        if (LayoutIntegration::LineLayout::shouldInvalidateLineLayoutPathAfterTreeMutation(*container, renderer, inlinLayout, isRemoval == IsRemoval::Yes))
+    auto shouldInvalidateLineLayoutPath = [&](auto& inlineLayout) {
+        if (LayoutIntegration::LineLayout::shouldInvalidateLineLayoutPathAfterTreeMutation(*container, renderer, inlineLayout, isRemoval == IsRemoval::Yes))
             return true;
         if (isRemoval == IsRemoval::Yes)
-            return !inlinLayout.removedFromTree(*renderer.parent(), renderer);
-        return !inlinLayout.insertedIntoTree(*renderer.parent(), renderer);
+            return !inlineLayout.removedFromTree(*renderer.parent(), renderer);
+        return !inlineLayout.insertedIntoTree(*renderer.parent(), renderer);
     };
-    if (auto* inlinLayout = container->modernLineLayout(); inlinLayout && shouldInvalidateLineLayoutPath(*inlinLayout))
+    if (auto* inlineLayout = container->inlineLayout(); inlineLayout && shouldInvalidateLineLayoutPath(*inlineLayout))
         container->invalidateLineLayoutPath(RenderBlockFlow::InvalidationReason::InsertionOrRemoval);
 }
 
@@ -475,18 +476,27 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
 
     if (!parent.normalChildNeedsLayout()) {
         if (isOutOfFlowBox) {
+            auto isEligibleForStaticPositionLayoutOnly = [&] {
             // setNeedsLayoutAndPrefWidthsRecalc above already takes care of propagating dirty bits on the ancestor chain, but
             // in order to compute static position for out of flow boxes, the parent has to run normal flow layout as well (as opposed to simplified)
+                if (newChild->containingBlock() != &parent)
+                    return false;
+#if ENABLE(VIDEO)
+                // FIXME: RenderVideo's setNeedsLayout pattern does not play well with this optimization: see webkit.org/b/276253
+                if (is<RenderVideo>(*newChild))
+                    return false;
+#endif
+                // Since we can't actually run static position only layout for a block container (RenderBlockFlow::layoutBlock() does not have such fine grained layout flow)
+                // floats get rebuilt which assumes (see intruding floats) parent block containers do the same.
+                if (auto* renderBlock = dynamicDowncast<RenderBlock>(parent))
+                    return !renderBlock->containsFloats();
+                return true;
+            };
+            if (isEligibleForStaticPositionLayoutOnly()) {
             // FIXME: Introduce a dirty bit to bridge the gap between parent and containing block which would
             // not trigger layout but a simple traversal all the way to the direct parent and also expand it non-direct parent cases.
-            // FIXME: RenderVideo's setNeedsLayout pattern does not play well with this optimization: see webkit.org/b/276253
-            if (newChild->containingBlock() == &parent
-#if ENABLE(VIDEO)
-                && !is<RenderVideo>(*newChild)
-#endif // ENABLE(VIDEO)
-            )
                 parent.setOutOfFlowChildNeedsStaticPositionLayout();
-            else
+            } else
                 parent.setChildNeedsLayout();
         } else
             parent.setChildNeedsLayout();
@@ -642,7 +652,7 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
             }
             auto movingOutOfMulticolumn = !wasOutOfFlowPositioned && isOutOfFlowPositioned;
             if (movingOutOfMulticolumn) {
-                multiColumnBuilder().restoreColumnSpannersForContainer(renderer, *enclosingFragmentedFlow);
+                multiColumnBuilder().restoreColumnSpannersForContainer(*enclosingFragmentedFlow, renderer);
                 return;
             }
 
@@ -657,7 +667,7 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
             for (auto& containingBlock : spannerContainingBlockSet) {
                 if (!oldEnclosingFragmentedFlow)
                     break;
-                multiColumnBuilder().restoreColumnSpannersForContainer(containingBlock, *oldEnclosingFragmentedFlow);
+                multiColumnBuilder().restoreColumnSpannersForContainer(*oldEnclosingFragmentedFlow, containingBlock);
             }
         }
     };
@@ -716,7 +726,7 @@ void RenderTreeBuilder::createAnonymousWrappersForInlineContent(RenderBlock& par
     // means that we cannot coalesce inlines before |insertionPoint| with inlines following
     // |insertionPoint|, because the new child is going to be inserted in between the inlines,
     // splitting them.
-    ASSERT(parent.isInlineBlockOrInlineTable() || !parent.isInline());
+    ASSERT(parent.isNonReplacedAtomicInline() || !parent.isInline());
     ASSERT(!insertionPoint || insertionPoint->parent() == &parent);
 
     parent.setChildrenInline(false);
@@ -991,8 +1001,8 @@ static void resetRendererStateOnDetach(RenderElement& parent, RenderObject& chil
         child.setNeedsLayoutAndPrefWidthsRecalc();
 
     // If we have a line box wrapper, delete it.
-    if (CheckedPtr textRenderer = dynamicDowncast<RenderText>(child))
-        textRenderer->removeAndDestroyTextBoxes();
+    if (CheckedPtr textRenderer = dynamicDowncast<RenderSVGInlineText>(child))
+        textRenderer->removeAndDestroyLegacyTextBoxes();
 
     if (CheckedPtr listItemRenderer = dynamicDowncast<RenderListItem>(child); listItemRenderer && isInternalMove == RenderTreeBuilder::IsInternalMove::No)
         listItemRenderer->updateListMarkerNumbers();

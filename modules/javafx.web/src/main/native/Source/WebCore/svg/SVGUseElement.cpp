@@ -132,7 +132,7 @@ void SVGUseElement::removedFromAncestor(RemovalType removalType, ContainerNode& 
     // and SVGUseElement::updateExternalDocument which calls invalidateShadowTree().
     if (removalType.disconnectedFromDocument) {
         if (m_shadowTreeNeedsUpdate) {
-            RefAllowingPartiallyDestroyed<Document> document = this->document();
+            Ref<Document> document = this->document();
             document->removeElementWithPendingUserAgentShadowTreeUpdate(*this);
         }
     }
@@ -296,7 +296,7 @@ void SVGUseElement::updateUserAgentShadowTree()
 RefPtr<SVGElement> SVGUseElement::targetClone() const
 {
     RefPtr root = userAgentShadowRoot();
-    return root ? childrenOfType<SVGElement>(*root).first() : nullptr;
+    return root ? downcast<SVGElement>(root->firstChild()) : nullptr;
 }
 
 RenderPtr<RenderElement> SVGUseElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
@@ -483,7 +483,7 @@ RefPtr<SVGElement> SVGUseElement::findTarget(AtomString* targetID) const
 
 void SVGUseElement::cloneTarget(ContainerNode& container, SVGElement& target) const
 {
-    Ref targetClone = static_cast<SVGElement&>(target.cloneElementWithChildren(protectedDocument()).get());
+    Ref targetClone = static_cast<SVGElement&>(target.cloneElementWithChildren(protectedDocument(), nullptr).get());
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { targetClone };
     associateClonesWithOriginals(targetClone.get(), target);
     removeDisallowedElementsFromSubtree(targetClone.get());
@@ -499,7 +499,7 @@ static void cloneDataAndChildren(SVGElement& replacementClone, SVGElement& origi
     ASSERT(!replacementClone.parentNode());
 
     replacementClone.cloneDataFromElement(originalClone);
-    originalClone.cloneChildNodes(replacementClone);
+    originalClone.cloneChildNodes(replacementClone.document(), nullptr, replacementClone);
     associateReplacementClonesWithOriginals(replacementClone, originalClone);
     removeDisallowedElementsFromSubtree(replacementClone);
 }
@@ -581,7 +581,7 @@ void SVGUseElement::invalidateShadowTree()
     invalidateStyleAndRenderersForSubtree();
     invalidateDependentShadowTrees();
     if (isConnected()) {
-        RefAllowingPartiallyDestroyed<Document> document = this->document();
+        Ref<Document> document = this->document();
         document->addElementWithPendingUserAgentShadowTreeUpdate(*this);
     }
 }
@@ -617,7 +617,10 @@ void SVGUseElement::notifyFinished(CachedResource& resource, const NetworkLoadMe
 void SVGUseElement::updateExternalDocument()
 {
     URL externalDocumentURL;
-    RefAllowingPartiallyDestroyed<Document> document = this->document();
+    Ref<Document> document = this->document();
+    // FIXME: This early exit should be removed once the ASSERT(!url.protocolIsData()) is removed from isExternalURIReference().
+    if (document->completeURL(href()).protocolIsData())
+        return;
     if (isConnected() && isExternalURIReference(href(), document)) {
         externalDocumentURL = document->completeURL(href());
         if (!externalDocumentURL.hasFragmentIdentifier())
@@ -637,6 +640,7 @@ void SVGUseElement::updateExternalDocument()
         options.contentSecurityPolicyImposition = isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
         options.mode = FetchOptions::Mode::SameOrigin;
         options.destination = FetchOptions::Destination::Image;
+        options.sniffContent = ContentSniffingPolicy::DoNotSniffContent;
         CachedResourceRequest request { ResourceRequest { externalDocumentURL }, options };
         request.setInitiator(*this);
         m_externalDocument = document->protectedCachedResourceLoader()->requestSVGDocument(WTFMove(request)).value_or(nullptr);

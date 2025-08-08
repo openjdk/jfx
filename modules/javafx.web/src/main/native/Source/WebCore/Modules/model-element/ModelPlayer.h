@@ -34,23 +34,33 @@
 #include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
+
+#if ENABLE(MODEL_PROCESS)
+#include "ModelPlayerIdentifier.h"
+#include <WebCore/StageModeOperations.h>
+#endif
 
 namespace WebCore {
 
 class Color;
 class Model;
+class SharedBuffer;
 class TransformationMatrix;
 
 class WEBCORE_EXPORT ModelPlayer : public RefCounted<ModelPlayer> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ModelPlayer, WEBCORE_EXPORT);
 public:
     virtual ~ModelPlayer();
+
+#if ENABLE(MODEL_PROCESS)
+    virtual ModelPlayerIdentifier identifier() const = 0;
+#endif
 
     virtual void load(Model&, LayoutSize) = 0;
     virtual void sizeDidChange(LayoutSize) = 0;
     virtual PlatformLayer* layer() = 0;
     virtual std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() = 0;
-    virtual void setBackgroundColor(Color);
     virtual void setEntityTransform(TransformationMatrix);
     virtual void enterFullscreen() = 0;
     virtual bool supportsMouseInteraction();
@@ -75,6 +85,22 @@ public:
     virtual String inlinePreviewUUIDForTesting() const;
 #if PLATFORM(COCOA)
     virtual Vector<RetainPtr<id>> accessibilityChildren() = 0;
+#endif
+#if ENABLE(MODEL_PROCESS)
+    virtual void setAutoplay(bool);
+    virtual void setLoop(bool);
+    virtual void setPlaybackRate(double, CompletionHandler<void(double effectivePlaybackRate)>&&);
+    virtual double duration() const;
+    virtual bool paused() const;
+    virtual void setPaused(bool, CompletionHandler<void(bool succeeded)>&&);
+    virtual Seconds currentTime() const;
+    virtual void setCurrentTime(Seconds, CompletionHandler<void()>&&);
+    virtual void setEnvironmentMap(Ref<SharedBuffer>&& data);
+    virtual void setHasPortal(bool);
+    virtual void setStageMode(StageModeOperation);
+    virtual void beginStageModeTransform(const TransformationMatrix&);
+    virtual void updateStageModeTransform(const TransformationMatrix&);
+    virtual void endStageModeInteraction();
 #endif
 };
 

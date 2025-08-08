@@ -75,8 +75,7 @@ static CompilationResult compileImpl(
     ASSERT(JITCode::isBaselineCode(codeBlock->alternative()->jitType()));
     ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITType::DFGJIT);
 
-    if (logCompilationChanges(mode))
-        dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", instructions size = ", codeBlock->instructionsSize(), "\n");
+    dataLogLnIf(logCompilationChanges(mode), "DFG(Driver) compiling ", *codeBlock, " with ", mode, ", instructions size = ", codeBlock->instructionsSize());
 
     if (vm.typeProfiler())
         vm.typeProfilerLog()->processLogEntries(vm, "Preparing for DFG compilation."_s);

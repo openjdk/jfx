@@ -39,22 +39,10 @@ public:
     float virtualLogicalHeight() const override { return m_logicalHeight; }
     void setLogicalHeight(float height) { m_logicalHeight = height; }
 
-    void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
-
-    void computePerCharacterLayoutInformation();
-
-    LegacyInlineBox* closestLeafChildForPosition(const LayoutPoint&);
-
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) final;
-
 private:
     RenderSVGText& renderSVGText() const;
 
     bool isSVGRootInlineBox() const override { return true; }
-    void reorderValueListsToLogicalOrder(Vector<SVGTextLayoutAttributes*>&);
-    void layoutCharactersInTextBoxes(LegacyInlineFlowBox*, SVGTextLayoutEngine&);
-    void layoutChildBoxes(LegacyInlineFlowBox*, FloatRect* = nullptr);
-    void layoutRootBox(const FloatRect&);
 
     float m_logicalHeight;
 };

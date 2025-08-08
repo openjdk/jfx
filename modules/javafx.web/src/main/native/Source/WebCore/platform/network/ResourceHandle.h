@@ -32,6 +32,7 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 #if PLATFORM(COCOA)

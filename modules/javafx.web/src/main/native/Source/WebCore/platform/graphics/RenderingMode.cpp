@@ -37,7 +37,6 @@ TextStream& operator<<(TextStream& ts, RenderingPurpose purpose)
     case RenderingPurpose::Canvas: ts << "Canvas"; break;
     case RenderingPurpose::DOM: ts << "DOM"; break;
     case RenderingPurpose::LayerBacking: ts << "LayerBacking"; break;
-    case RenderingPurpose::BitmapOnlyLayerBacking: ts << "BitmapOnlyLayerBacking"; break;
     case RenderingPurpose::Snapshot: ts << "Snapshot"; break;
     case RenderingPurpose::ShareableSnapshot: ts << "ShareableSnapshot"; break;
     case RenderingPurpose::ShareableLocalSnapshot: ts << "ShareableLocalSnapshot"; break;
@@ -51,6 +50,8 @@ TextStream& operator<<(TextStream& ts, RenderingMode mode)
     switch (mode) {
     case RenderingMode::Unaccelerated: ts << "Unaccelerated"; break;
     case RenderingMode::Accelerated: ts << "Accelerated"; break;
+    case RenderingMode::PDFDocument: ts << "PDFDocument"; break;
+    case RenderingMode::DisplayList: ts << "DisplayList"; break;
     }
     return ts;
 }

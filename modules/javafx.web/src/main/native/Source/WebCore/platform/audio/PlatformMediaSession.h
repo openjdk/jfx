@@ -31,6 +31,8 @@
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/ProcessID.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -130,7 +132,7 @@ class PlatformMediaSession
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PlatformMediaSession);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PlatformMediaSession);
 public:
     static std::unique_ptr<PlatformMediaSession> create(PlatformMediaSessionManager&, PlatformMediaSessionClient&);
@@ -229,7 +231,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
-    const void* logIdentifier() const final;
+    uint64_t logIdentifier() const final;
     ASCIILiteral logClassName() const override { return "PlatformMediaSession"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -249,6 +251,8 @@ public:
 
     bool isActiveNowPlayingSession() const { return m_isActiveNowPlayingSession; }
     void setActiveNowPlayingSession(bool);
+
+    ProcessID presentingApplicationPID() const;
 
 #if !RELEASE_LOG_DISABLED
     virtual String description() const;
@@ -316,7 +320,7 @@ public:
 
     virtual bool isPlayingOnSecondScreen() const { return false; }
 
-    virtual MediaSessionGroupIdentifier mediaSessionGroupIdentifier() const = 0;
+    virtual std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier() const = 0;
 
     virtual bool hasMediaStreamSource() const { return false; }
 
@@ -330,9 +334,11 @@ public:
 
     virtual void isActiveNowPlayingSessionChanged() = 0;
 
+    virtual ProcessID presentingApplicationPID() const = 0;
+
 #if !RELEASE_LOG_DISABLED
     virtual const Logger& logger() const = 0;
-    virtual const void* logIdentifier() const = 0;
+    virtual uint64_t logIdentifier() const = 0;
 #endif
 
 protected:

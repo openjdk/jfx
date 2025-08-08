@@ -29,6 +29,7 @@
 #include "Logging.h"
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/TextStream.h>
 
@@ -37,6 +38,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ViewportConfiguration);
 
 static inline bool viewportArgumentValueIsValid(float value)
 {
@@ -145,7 +148,17 @@ bool ViewportConfiguration::setContentsSize(const IntSize& contentSize)
 bool ViewportConfiguration::setViewLayoutSize(const FloatSize& viewLayoutSize, std::optional<double>&& scaleFactor, std::optional<double>&& minimumEffectiveDeviceWidthFromClient)
 {
     double newScaleFactor = scaleFactor.value_or(m_layoutSizeScaleFactor);
-    double newEffectiveWidth = minimumEffectiveDeviceWidthFromClient.value_or(m_minimumEffectiveDeviceWidthForView);
+    double newEffectiveWidth = [&] {
+        if (!m_configuration.shouldHonorMinimumEffectiveDeviceWidthFromClient)
+            return m_minimumEffectiveDeviceWidthForView;
+
+        if (!minimumEffectiveDeviceWidthFromClient)
+            return m_minimumEffectiveDeviceWidthForView;
+
+        m_minimumEffectiveDeviceWidthWasSetByClient = true;
+        return *minimumEffectiveDeviceWidthFromClient;
+    }();
+
     if (m_viewLayoutSize == viewLayoutSize && m_layoutSizeScaleFactor == newScaleFactor && newEffectiveWidth == m_minimumEffectiveDeviceWidthForView)
         return false;
 
@@ -518,6 +531,9 @@ void ViewportConfiguration::updateConfiguration()
         m_configuration.heightIsSet = viewportArgumentsOverridesHeight;
     }
 
+    if (!m_configuration.shouldHonorMinimumEffectiveDeviceWidthFromClient && std::exchange(m_minimumEffectiveDeviceWidthWasSetByClient, false))
+        m_minimumEffectiveDeviceWidthForView = 0;
+
     if (m_configuration.initialScaleIsSet && m_minimumEffectiveDeviceWidthForView > m_viewLayoutSize.width())
         m_configuration.ignoreInitialScaleForLayoutWidth = true;
 
@@ -529,8 +545,12 @@ void ViewportConfiguration::updateConfiguration()
     else if (booleanViewportArgumentIsSet(m_viewportArguments.shrinkToFit))
         m_configuration.allowsShrinkToFit = m_viewportArguments.shrinkToFit != 0.;
 
-    if (canOverrideConfigurationParameters() && !viewportArgumentsOverridesWidth)
+    if (canOverrideConfigurationParameters()) {
+        if (!viewportArgumentsOverridesWidth)
         m_configuration.width = m_minimumLayoutSize.width();
+        else if (layoutSizeIsExplicitlyScaled() && m_viewportArguments.width > 0)
+            m_configuration.width /= effectiveLayoutScale;
+    }
 
     m_configuration.avoidsUnsafeArea = m_viewportArguments.viewportFit != ViewportFit::Cover;
     m_configuration.initialScaleIgnoringLayoutScaleFactor = m_configuration.initialScale;
@@ -694,6 +714,8 @@ TextStream& operator<<(TextStream& ts, const ViewportConfiguration::Parameters& 
     ts.dumpProperty("allowsUserScaling", parameters.allowsUserScaling);
     ts.dumpProperty("allowsShrinkToFit", parameters.allowsShrinkToFit);
     ts.dumpProperty("avoidsUnsafeArea", parameters.avoidsUnsafeArea);
+    ts.dumpProperty("ignoreInitialScaleForLayoutWidth", parameters.ignoreInitialScaleForLayoutWidth);
+    ts.dumpProperty("shouldHonorMinimumEffectiveDeviceWidthFromClient", parameters.shouldHonorMinimumEffectiveDeviceWidthFromClient);
 
     return ts;
 }

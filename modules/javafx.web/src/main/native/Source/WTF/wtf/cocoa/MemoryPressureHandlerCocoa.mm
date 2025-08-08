@@ -64,7 +64,7 @@ static OSObjectPtr<dispatch_source_t>& timerEventSource()
 // One token for each of the memory pressure/memory warning notifications we listen for.
 // notifyutil -p org.WebKit.lowMemory[.begin/.end]
 // notifyutil -p org.WebKit.memoryWarning[.begin/.end]
-static int notifyTokens[6];
+static std::array<int, 6> notifyTokens;
 
 // Disable memory event reception for a minimum of s_minimumHoldOffTime
 // seconds after receiving an event. Don't let events fire any sooner than
@@ -232,7 +232,6 @@ void MemoryPressureHandler::respondToMemoryPressure(Critical critical, Synchrono
 
 std::optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
 {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101100
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
     kern_return_t err = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &vmInfo, &count);
@@ -240,9 +239,6 @@ std::optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHa
         return std::nullopt;
 
     return MemoryUsage {static_cast<size_t>(vmInfo.internal), static_cast<size_t>(vmInfo.phys_footprint)};
-#else
-    return std::nullopt;
-#endif
 }
 
 } // namespace WTF

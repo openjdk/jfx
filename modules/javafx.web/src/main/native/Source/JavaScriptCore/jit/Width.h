@@ -32,7 +32,7 @@
 namespace JSC {
 
 enum class Width : uint8_t {
-    Width8,
+    Width8 = 0,
     Width16,
     Width32,
     Width64,
@@ -74,20 +74,7 @@ ALWAYS_INLINE constexpr Width widthForBytes(unsigned bytes)
 
 ALWAYS_INLINE constexpr unsigned bytesForWidth(Width width)
 {
-    switch (width) {
-    case Width8:
-        return 1;
-    case Width16:
-        return 2;
-    case Width32:
-        return 4;
-    case Width64:
-        return 8;
-    case Width128:
-        return 16;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return 1 << static_cast<uint8_t>(width);
 }
 
 ALWAYS_INLINE constexpr unsigned alignmentForWidth(Width width)

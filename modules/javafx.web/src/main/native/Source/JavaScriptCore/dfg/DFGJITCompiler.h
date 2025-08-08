@@ -167,8 +167,6 @@ public:
         call(address, OperationPtrTag);
     }
 
-    void exceptionJumpWithCallFrameRollback();
-
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
     {
         OSRExitCompilationInfo info;

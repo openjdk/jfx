@@ -30,15 +30,14 @@
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCUtils.h"
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+// See Bug 274508: Disable thread-safety-reference-return warnings in libwebrtc
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
 #include <webrtc/api/peer_connection_interface.h>
+IGNORE_CLANG_WARNINGS_END
 
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 

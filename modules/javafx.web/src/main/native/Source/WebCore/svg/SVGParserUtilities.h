@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include "ParsingUtilities.h"
 #include <wtf/Forward.h>
+#include <wtf/text/ParsingUtilities.h>
 
 typedef std::pair<char32_t, char32_t> UnicodeRange;
 typedef Vector<UnicodeRange> UnicodeRanges;
@@ -52,8 +52,8 @@ std::optional<FloatRect> parseRect(StringView);
 std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<LChar>&);
 std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<UChar>&);
 
-std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeString(StringView);
-std::optional<HashSet<String>> parseGlyphName(StringView);
+std::optional<std::pair<UnicodeRanges, UncheckedKeyHashSet<String>>> parseKerningUnicodeString(StringView);
+std::optional<UncheckedKeyHashSet<String>> parseGlyphName(StringView);
 
 template<typename CharacterType> constexpr bool isSVGSpaceOrComma(CharacterType c)
 {

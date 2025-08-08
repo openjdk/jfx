@@ -99,6 +99,16 @@ TextStream& operator<<(TextStream& ts, ScrollElasticity behavior)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, RubberBandingBehavior behavior)
+{
+    switch (behavior) {
+    case RubberBandingBehavior::Always: ts << "always"; break;
+    case RubberBandingBehavior::Never: ts << "never"; break;
+    case RubberBandingBehavior::BasedOnSize: ts << "based on size"; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, ScrollbarMode behavior)
 {
     switch (behavior) {

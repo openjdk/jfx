@@ -47,8 +47,11 @@ typedef Vector<Node*, 8> BlockNodeList;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BasicBlock);
 
-struct BasicBlock : RefCounted<BasicBlock> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BasicBlock);
+class BasicBlock {
+    WTF_MAKE_NONCOPYABLE(BasicBlock);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BasicBlock);
+public:
+
     BasicBlock(
         BytecodeIndex bytecodeBegin, unsigned numArguments, unsigned numLocals, unsigned numTmps,
         float executionCount);
@@ -162,6 +165,8 @@ struct BasicBlock : RefCounted<BasicBlock> {
 
     void removePredecessor(BasicBlock* block);
     void replacePredecessor(BasicBlock* from, BasicBlock* to);
+
+    inline Node* cloneAndAppend(Graph&, const Node*);
 
     template<typename... Params>
     Node* appendNode(Graph&, SpeculatedType, Params...);

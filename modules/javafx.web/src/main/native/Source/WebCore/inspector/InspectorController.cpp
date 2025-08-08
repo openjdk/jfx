@@ -37,21 +37,17 @@
 #include "DOMWrapperWorld.h"
 #include "GraphicsContext.h"
 #include "InspectorAnimationAgent.h"
-#include "InspectorApplicationCacheAgent.h"
 #include "InspectorCPUProfilerAgent.h"
 #include "InspectorCSSAgent.h"
 #include "InspectorClient.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorDOMStorageAgent.h"
-#include "InspectorDatabaseAgent.h"
-#include "InspectorDatabaseResource.h"
 #include "InspectorFrontendClient.h"
 #include "InspectorIndexedDBAgent.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorLayerTreeAgent.h"
 #include "InspectorMemoryAgent.h"
 #include "InspectorPageAgent.h"
-#include "InspectorTimelineAgent.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMWindow.h"
@@ -68,6 +64,7 @@
 #include "PageHeapAgent.h"
 #include "PageNetworkAgent.h"
 #include "PageRuntimeAgent.h"
+#include "PageTimelineAgent.h"
 #include "PageWorkerAgent.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
@@ -82,6 +79,7 @@
 #include <JavaScriptCore/InspectorScriptProfilerAgent.h>
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 #include "PageDebuggable.h"
@@ -92,14 +90,16 @@ namespace WebCore {
 using namespace JSC;
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorController);
+
 InspectorController::InspectorController(Page& page, std::unique_ptr<InspectorClient>&& inspectorClient)
-    : m_instrumentingAgents(InstrumentingAgents::create(*this))
+    : m_page(page)
+    , m_instrumentingAgents(InstrumentingAgents::create(*this))
     , m_injectedScriptManager(makeUnique<WebInjectedScriptManager>(*this, WebInjectedScriptHost::create()))
     , m_frontendRouter(FrontendRouter::create())
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
-    , m_overlay(makeUnique<InspectorOverlay>(page, inspectorClient.get()))
+    , m_overlay(makeUniqueRefWithoutRefCountedCheck<InspectorOverlay>(*this, inspectorClient.get()))
     , m_executionStopwatch(Stopwatch::create())
-    , m_page(page)
     , m_inspectorClient(WTFMove(inspectorClient))
 {
     ASSERT_ARG(inspectorClient, m_inspectorClient);
@@ -115,6 +115,16 @@ InspectorController::~InspectorController()
 {
     m_instrumentingAgents->reset();
     ASSERT(!m_inspectorClient);
+}
+
+void InspectorController::ref() const
+{
+    m_page->ref();
+}
+
+void InspectorController::deref() const
+{
+    m_page->deref();
 }
 
 PageAgentContext InspectorController::pageAgentContext()
@@ -165,11 +175,9 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<InspectorCSSAgent>(pageContext));
     ensureDOMAgent();
     m_agents.append(makeUnique<PageDOMDebuggerAgent>(pageContext, debuggerAgentPtr));
-    m_agents.append(makeUnique<InspectorApplicationCacheAgent>(pageContext));
     m_agents.append(makeUnique<InspectorLayerTreeAgent>(pageContext));
     m_agents.append(makeUnique<PageWorkerAgent>(pageContext));
     m_agents.append(makeUnique<InspectorDOMStorageAgent>(pageContext));
-    m_agents.append(makeUnique<InspectorDatabaseAgent>(pageContext));
     m_agents.append(makeUnique<InspectorIndexedDBAgent>(pageContext));
 
     auto scriptProfilerAgentPtr = makeUnique<InspectorScriptProfilerAgent>(pageContext);
@@ -183,7 +191,7 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<PageHeapAgent>(pageContext));
     m_agents.append(makeUnique<PageAuditAgent>(pageContext));
     m_agents.append(makeUnique<PageCanvasAgent>(pageContext));
-    m_agents.append(makeUnique<InspectorTimelineAgent>(pageContext));
+    m_agents.append(makeUnique<PageTimelineAgent>(pageContext));
     m_agents.append(makeUnique<InspectorAnimationAgent>(pageContext));
 
     if (auto& commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())
@@ -225,7 +233,7 @@ unsigned InspectorController::inspectionLevel() const
 
 void InspectorController::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    if (&world != &mainThreadNormalWorld())
+    if (&world != &mainThreadNormalWorldSingleton())
         return;
 
     if (frame.isMainFrame())
@@ -242,7 +250,7 @@ void InspectorController::connectFrontend(Inspector::FrontendChannel& frontendCh
     ASSERT(m_inspectorClient);
 
     // If a frontend has connected enable the developer extras and keep them enabled.
-    m_page.settings().setDeveloperExtrasEnabled(true);
+    m_page->settings().setDeveloperExtrasEnabled(true);
 
     createLazyAgents();
 
@@ -263,7 +271,7 @@ void InspectorController::connectFrontend(Inspector::FrontendChannel& frontendCh
 
 #if ENABLE(REMOTE_INSPECTOR)
     if (hasLocalFrontend())
-        m_page.remoteInspectorInformationDidChange();
+        m_page->remoteInspectorInformationDidChange();
 #endif
 }
 
@@ -292,7 +300,7 @@ void InspectorController::disconnectFrontend(FrontendChannel& frontendChannel)
 
 #if ENABLE(REMOTE_INSPECTOR)
     if (disconnectedLastFrontend)
-        m_page.remoteInspectorInformationDidChange();
+        m_page->remoteInspectorInformationDidChange();
 #endif
 }
 
@@ -328,7 +336,7 @@ void InspectorController::disconnectAllFrontends()
     m_inspectorClient->frontendCountChanged(m_frontendRouter->frontendCount());
 
 #if ENABLE(REMOTE_INSPECTOR)
-    m_page.remoteInspectorInformationDidChange();
+    m_page->remoteInspectorInformationDidChange();
 #endif
 }
 
@@ -358,11 +366,6 @@ void InspectorController::drawHighlight(GraphicsContext& context) const
 void InspectorController::getHighlight(InspectorOverlay::Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem) const
 {
     m_overlay->getHighlight(highlight, coordinateSystem);
-}
-
-bool InspectorController::isUnderTest() const
-{
-    return m_isUnderTest;
 }
 
 unsigned InspectorController::gridOverlayCount() const
@@ -473,7 +476,7 @@ InspectorPageAgent& InspectorController::ensurePageAgent()
 
 bool InspectorController::developerExtrasEnabled() const
 {
-    return m_page.settings().developerExtrasEnabled();
+    return m_page->settings().developerExtrasEnabled();
 }
 
 bool InspectorController::canAccessInspectedScriptState(JSC::JSGlobalObject* lexicalGlobalObject) const
@@ -507,7 +510,7 @@ void InspectorController::frontendInitialized()
 
 #if ENABLE(REMOTE_INSPECTOR)
     if (m_isAutomaticInspection)
-        m_page.inspectorDebuggable().unpauseForInitializedInspector();
+        m_page->inspectorDebuggable().unpauseForInitializedInspector();
 #endif
 }
 

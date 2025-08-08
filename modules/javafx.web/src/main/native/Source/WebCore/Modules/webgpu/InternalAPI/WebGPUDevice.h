@@ -36,6 +36,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -55,8 +56,10 @@ class BindGroupLayout;
 struct BindGroupLayoutDescriptor;
 class Buffer;
 struct BufferDescriptor;
+class CommandBuffer;
 class CommandEncoder;
 struct CommandEncoderDescriptor;
+class ComputePassEncoder;
 class ComputePipeline;
 struct ComputePipelineDescriptor;
 class ExternalTexture;
@@ -71,6 +74,7 @@ struct QuerySetDescriptor;
 class Queue;
 class RenderBundleEncoder;
 struct RenderBundleEncoderDescriptor;
+class RenderPassEncoder;
 class RenderPipeline;
 struct RenderPipelineDescriptor;
 class Sampler;
@@ -82,7 +86,7 @@ class Texture;
 struct TextureDescriptor;
 class XRBinding;
 
-class Device : public RefCounted<Device>, public CanMakeWeakPtr<Device> {
+class Device : public RefCountedAndCanMakeWeakPtr<Device> {
 public:
     virtual ~Device() = default;
 
@@ -131,12 +135,13 @@ public:
     virtual void popErrorScope(CompletionHandler<void(bool, std::optional<Error>&&)>&&) = 0;
     virtual void resolveUncapturedErrorEvent(CompletionHandler<void(bool, std::optional<Error>&&)>&&) = 0;
     virtual void resolveDeviceLostPromise(CompletionHandler<void(WebCore::WebGPU::DeviceLostReason)>&&) = 0;
-    class DeviceLostClient {
-        virtual ~DeviceLostClient() = default;
-        virtual void deviceLost() = 0;
-    };
-    void registerDeviceLostClient(DeviceLostClient& client) { m_deviceLostClients.add(&client); }
-    void unregisterDeviceLostClient(DeviceLostClient& client) { m_deviceLostClients.remove(&client); }
+    virtual Ref<CommandEncoder> invalidCommandEncoder() = 0;
+    virtual Ref<CommandBuffer> invalidCommandBuffer() = 0;
+    virtual Ref<RenderPassEncoder> invalidRenderPassEncoder() = 0;
+    virtual Ref<ComputePassEncoder> invalidComputePassEncoder() = 0;
+    virtual void pauseAllErrorReporting(bool pause) = 0;
+
+    virtual bool isRemoteDeviceProxy() const { return false; }
 
 protected:
     Device(Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits)
@@ -154,7 +159,6 @@ private:
     virtual void setLabelInternal(const String&) = 0;
 
     String m_label;
-    HashSet<DeviceLostClient*> m_deviceLostClients;
     Ref<SupportedFeatures> m_features;
     Ref<SupportedLimits> m_limits;
 };

@@ -40,10 +40,13 @@
 #include "MediaImage.h"
 #include "MediaMetadataInit.h"
 #include "SpaceSplitString.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ArtworkImageLoader);
 
 ArtworkImageLoader::ArtworkImageLoader(Document& document, const String& src, ArtworkImageLoaderCallback&& callback)
     : m_document(document)
@@ -62,11 +65,12 @@ void ArtworkImageLoader::requestImageResource()
 {
     ASSERT(!m_cachedImage, "Can only call requestImageResource once");
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    options.contentSecurityPolicyImposition = m_document.isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
+    Ref document = m_document.get();
+    options.contentSecurityPolicyImposition = document->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
 
-    CachedResourceRequest request(ResourceRequest(m_document.completeURL(m_src)), options);
-    request.setInitiatorType(AtomString { m_document.documentURI() });
-    m_cachedImage = m_document.protectedCachedResourceLoader()->requestImage(WTFMove(request)).value_or(nullptr);
+    CachedResourceRequest request(ResourceRequest(document->completeURL(m_src)), options);
+    request.setInitiatorType(AtomString { document->documentURI() });
+    m_cachedImage = document->protectedCachedResourceLoader()->requestImage(WTFMove(request)).value_or(nullptr);
 
     if (m_cachedImage)
         m_cachedImage->addClient(*this);

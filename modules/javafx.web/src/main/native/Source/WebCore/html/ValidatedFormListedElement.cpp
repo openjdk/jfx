@@ -50,10 +50,13 @@
 #include "ValidationMessage.h"
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ValidatedFormListedElement);
 
 using namespace HTMLNames;
 
@@ -84,12 +87,8 @@ bool ValidatedFormListedElement::willValidate() const
 bool ValidatedFormListedElement::computeWillValidate() const
 {
     if (m_isInsideDataList == TriState::Indeterminate) {
-#if ENABLE(DATALIST_ELEMENT)
         const HTMLElement& element = asHTMLElement();
         m_isInsideDataList = triState(element.document().hasDataListElements() && ancestorsOfType<HTMLDataListElement>(element).first());
-#else
-        m_isInsideDataList = TriState::False;
-#endif
     }
     // readonly bars constraint validation for *all* <input> elements, regardless of the <input> type, for compat reasons.
     return m_isInsideDataList == TriState::False && !isDisabled() && !(m_hasReadOnlyAttribute && readOnlyBarsFromConstraintValidation());
@@ -104,7 +103,7 @@ void ValidatedFormListedElement::updateVisibleValidationMessage(Ref<HTMLElement>
     if (element.renderer() && willValidate())
         message = validationMessage().trim(deprecatedIsSpaceOrNewline);
     if (!m_validationMessage)
-        m_validationMessage = makeUnique<ValidationMessage>(validationAnchor);
+        m_validationMessage = ValidationMessage::create(validationAnchor);
     m_validationMessage->updateValidationMessage(validationAnchor, message);
 }
 

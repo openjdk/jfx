@@ -93,8 +93,11 @@ NetworkStorageSession::~NetworkStorageSession()
 {
 }
 
-void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, const String& value, ShouldRelaxThirdPartyCookieBlocking) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, WebCore::RequiresScriptTelemetry telemetry, const String& value, ShouldRelaxThirdPartyCookieBlocking) const
 {
+    if (telemetry == WebCore::RequiresScriptTelemetry::No) {
+            // handle No case
+    }
     using namespace CookieInternalJava;
     JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
@@ -157,9 +160,11 @@ void NetworkStorageSession::deleteCookie(const Cookie&, CompletionHandler<void()
     // FIXME: Implement for WebKit to use.
 }
 
-void NetworkStorageSession::deleteCookie(const URL&, const String&,CompletionHandler<void()>&&) const
+void NetworkStorageSession::deleteCookie(const URL& firstParty, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler) const
 {
-    // FIXME: Implement for WebKit to use.
+    // FIXME: Implement the actual cookie deletion here.
+    // For now, just call completion handler to avoid linker errors.
+    completionHandler();
 }
 
 Vector<Cookie> NetworkStorageSession::getAllCookies()

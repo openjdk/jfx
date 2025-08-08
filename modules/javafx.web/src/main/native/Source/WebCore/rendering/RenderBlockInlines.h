@@ -20,34 +20,20 @@
 #pragma once
 
 #include "RenderBlock.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 
 namespace WebCore {
 
-inline LayoutUnit RenderBlock::endOffsetForContent() const { return !style().isLeftToRightDirection() ? logicalLeftOffsetForContent() : logicalWidth() - logicalRightOffsetForContent(); }
-inline LayoutUnit RenderBlock::endOffsetForContent(LayoutUnit blockOffset) const { return endOffsetForContent(fragmentAtBlockOffset(blockOffset)); }
-inline LayoutUnit RenderBlock::logicalLeftOffsetForContent() const { return isHorizontalWritingMode() ? borderLeft() + paddingLeft() : borderTop() + paddingTop(); }
+inline LayoutUnit RenderBlock::endOffsetForContent() const { return !writingMode().isLogicalLeftInlineStart() ? logicalLeftOffsetForContent() : logicalWidth() - logicalRightOffsetForContent(); }
 inline LayoutUnit RenderBlock::logicalMarginBoxHeightForChild(const RenderBox& child) const { return isHorizontalWritingMode() ? child.marginBoxRect().height() : child.marginBoxRect().width(); }
-inline LayoutUnit RenderBlock::logicalRightOffsetForContent() const { return logicalLeftOffsetForContent() + availableLogicalWidth(); }
-inline LayoutUnit RenderBlock::startOffsetForContent() const { return style().isLeftToRightDirection() ? logicalLeftOffsetForContent() : logicalWidth() - logicalRightOffsetForContent(); }
-inline LayoutUnit RenderBlock::startOffsetForContent(LayoutUnit blockOffset) const { return startOffsetForContent(fragmentAtBlockOffset(blockOffset)); }
-
-inline LayoutUnit RenderBlock::endOffsetForContent(RenderFragmentContainer* fragment) const
-{
-    return !style().isLeftToRightDirection() ? logicalLeftOffsetForContent(fragment) : logicalWidth() - logicalRightOffsetForContent(fragment);
-}
+inline LayoutUnit RenderBlock::startOffsetForContent() const { return writingMode().isLogicalLeftInlineStart() ? logicalLeftOffsetForContent() : logicalWidth() - logicalRightOffsetForContent(); }
+inline LayoutUnit RenderBlock::logicalRightOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const { return adjustLogicalRightOffsetForLine(logicalRightFloatOffsetForLine(position, logicalRightOffsetForContent(), logicalHeight)); }
+inline LayoutUnit RenderBlock::logicalLeftOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const { return adjustLogicalLeftOffsetForLine(logicalLeftFloatOffsetForLine(position, logicalLeftOffsetForContent(), logicalHeight)); }
 
 inline LayoutUnit RenderBlock::endOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const
 {
-    return !style().isLeftToRightDirection() ? logicalLeftOffsetForLine(position, logicalHeight)
-        : logicalWidth() - logicalRightOffsetForLine(position, logicalHeight);
-}
-
-inline LayoutUnit RenderBlock::endOffsetForLineInFragment(LayoutUnit position, RenderFragmentContainer* fragment, LayoutUnit logicalHeight) const
-{
-    return !style().isLeftToRightDirection()
-        ? logicalLeftOffsetForLineInFragment(position, fragment, logicalHeight)
-        : logicalWidth() - logicalRightOffsetForLineInFragment(position, fragment, logicalHeight);
+    return !writingMode().isLogicalLeftInlineStart() ? logicalLeftOffsetForLine(position, logicalHeight) : logicalWidth() - logicalRightOffsetForLine(position, logicalHeight);
 }
 
 inline bool RenderBlock::shouldSkipCreatingRunsForObject(RenderObject& object)
@@ -55,22 +41,34 @@ inline bool RenderBlock::shouldSkipCreatingRunsForObject(RenderObject& object)
     return object.isFloating() || (object.isOutOfFlowPositioned() && !object.style().isOriginalDisplayInlineType() && !object.container()->isRenderInline());
 }
 
-inline LayoutUnit RenderBlock::startOffsetForContent(RenderFragmentContainer* fragment) const
-{
-    return style().isLeftToRightDirection() ? logicalLeftOffsetForContent(fragment) : logicalWidth() - logicalRightOffsetForContent(fragment);
-}
-
 inline LayoutUnit RenderBlock::startOffsetForLine(LayoutUnit position, LayoutUnit logicalHeight) const
 {
-    return style().isLeftToRightDirection() ? logicalLeftOffsetForLine(position, logicalHeight)
+    return writingMode().isLogicalLeftInlineStart() ? logicalLeftOffsetForLine(position, logicalHeight)
         : logicalWidth() - logicalRightOffsetForLine(position, logicalHeight);
 }
 
-inline LayoutUnit RenderBlock::startOffsetForLineInFragment(LayoutUnit position, RenderFragmentContainer* fragment, LayoutUnit logicalHeight) const
+inline RenderPtr<RenderBlock> RenderBlock::createAnonymousWithParentRendererAndDisplay(const RenderBox& parent, DisplayType display)
 {
-    return style().isLeftToRightDirection()
-        ? logicalLeftOffsetForLineInFragment(position, fragment, logicalHeight)
-        : logicalWidth() - logicalRightOffsetForLineInFragment(position, fragment, logicalHeight);
+    return createAnonymousBlockWithStyleAndDisplay(parent.protectedDocument(), parent.style(), display);
+}
+
+inline RenderPtr<RenderBox> RenderBlock::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
+{
+    return createAnonymousBlockWithStyleAndDisplay(protectedDocument(), renderer.style(), style().display());
+}
+
+inline RenderPtr<RenderBlock> RenderBlock::createAnonymousBlock(DisplayType display) const
+{
+    return createAnonymousBlockWithStyleAndDisplay(protectedDocument(), style(), display);
+}
+
+// Versions that can compute line offsets with the fragment and page offset passed in. Used for speed to avoid having to
+// compute the fragment all over again when you already know it.
+inline LayoutUnit RenderBlock::availableLogicalWidthForLine(LayoutUnit position, LayoutUnit logicalHeight) const
+{
+    auto logicalRightOffsetForLine = adjustLogicalRightOffsetForLine(logicalRightFloatOffsetForLine(position, logicalRightOffsetForContent(), logicalHeight));
+    auto logicalLeftOffsetForLine = adjustLogicalLeftOffsetForLine(logicalLeftFloatOffsetForLine(position, logicalLeftOffsetForContent(), logicalHeight));
+    return std::max(0_lu, logicalRightOffsetForLine - logicalLeftOffsetForLine);
 }
 
 } // namespace WebCore

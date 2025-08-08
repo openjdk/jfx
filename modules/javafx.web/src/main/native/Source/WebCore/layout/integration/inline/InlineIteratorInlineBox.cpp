@@ -39,25 +39,28 @@ InlineBox::InlineBox(PathVariant&& path)
 {
 }
 
-std::pair<bool, bool> InlineBox::hasClosedLeftAndRightEdge() const
+RectEdges<bool> InlineBox::closedEdges() const
 {
     // FIXME: Layout knows the answer to this question so we should consult it.
+    RectEdges<bool> closedEdges { true };
     if (style().boxDecorationBreak() == BoxDecorationBreak::Clone)
-        return { true, true };
-    bool isLTR = style().isLeftToRightDirection();
-    bool isFirst = !previousInlineBox() && !renderer().isContinuation();
-    bool isLast = !nextInlineBox() && !renderer().continuation();
-    return { isLTR ? isFirst : isLast, isLTR ? isLast : isFirst };
+        return closedEdges;
+    auto writingMode = style().writingMode();
+    bool isFirst = !nextInlineBoxLineLeftward() && !renderer().isContinuation();
+    bool isLast = !nextInlineBoxLineRightward() && !renderer().continuation();
+    closedEdges.setStart(isFirst, writingMode);
+    closedEdges.setEnd(isLast, writingMode);
+    return closedEdges;
 };
 
-InlineBoxIterator InlineBox::nextInlineBox() const
+InlineBoxIterator InlineBox::nextInlineBoxLineRightward() const
 {
-    return InlineBoxIterator(*this).traverseNextInlineBox();
+    return InlineBoxIterator(*this).traverseInlineBoxLineRightward();
 }
 
-InlineBoxIterator InlineBox::previousInlineBox() const
+InlineBoxIterator InlineBox::nextInlineBoxLineLeftward() const
 {
-    return InlineBoxIterator(*this).traversePreviousInlineBox();
+    return InlineBoxIterator(*this).traverseInlineBoxLineLeftward();
 }
 
 LeafBoxIterator InlineBox::firstLeafBox() const
@@ -77,8 +80,19 @@ LeafBoxIterator InlineBox::lastLeafBox() const
 LeafBoxIterator InlineBox::endLeafBox() const
 {
     if (auto last = lastLeafBox())
-        return last->nextOnLine();
+        return last->nextLineRightwardOnLine();
     return { };
+}
+
+IteratorRange<BoxIterator> InlineBox::descendants() const
+{
+    BoxIterator begin(*this);
+    begin.traverseLineRightwardOnLine();
+
+    BoxIterator end(*this);
+    end.traverseLineRightwardOnLineSkippingChildren();
+
+    return { begin, end };
 }
 
 InlineBoxIterator::InlineBoxIterator(Box::PathVariant&& pathVariant)
@@ -91,7 +105,7 @@ InlineBoxIterator::InlineBoxIterator(const Box& box)
 {
 }
 
-InlineBoxIterator& InlineBoxIterator::traverseNextInlineBox()
+InlineBoxIterator& InlineBoxIterator::traverseInlineBoxLineRightward()
 {
     WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
         path.traverseNextInlineBox();
@@ -99,7 +113,7 @@ InlineBoxIterator& InlineBoxIterator::traverseNextInlineBox()
     return *this;
 }
 
-InlineBoxIterator& InlineBoxIterator::traversePreviousInlineBox()
+InlineBoxIterator& InlineBoxIterator::traverseInlineBoxLineLeftward()
 {
     WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
         path.traversePreviousInlineBox();
@@ -107,7 +121,7 @@ InlineBoxIterator& InlineBoxIterator::traversePreviousInlineBox()
     return *this;
 }
 
-InlineBoxIterator firstInlineBoxFor(const RenderInline& renderInline)
+InlineBoxIterator lineLeftmostInlineBoxFor(const RenderInline& renderInline)
 {
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(renderInline))
         return lineLayout->firstInlineBoxFor(renderInline);
@@ -116,7 +130,7 @@ InlineBoxIterator firstInlineBoxFor(const RenderInline& renderInline)
 
 InlineBoxIterator firstRootInlineBoxFor(const RenderBlockFlow& block)
 {
-    if (auto* lineLayout = block.modernLineLayout())
+    if (auto* lineLayout = block.inlineLayout())
         return lineLayout->firstRootInlineBox();
     return { BoxLegacyPath { block.legacyRootBox() } };
 }

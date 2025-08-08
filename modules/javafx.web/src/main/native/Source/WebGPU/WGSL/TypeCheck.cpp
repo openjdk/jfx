@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Apple Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -250,6 +250,7 @@ private:
     Vector<Error> m_errors;
     Vector<BreakTarget> m_breakTargetStack;
     HashMap<String, OverloadedDeclaration> m_overloadedOperations;
+    HashMap<String, AST::IdentifierExpression*> m_arrayCountOverrides;
 };
 
 TypeChecker::TypeChecker(ShaderModule& shaderModule)
@@ -407,9 +408,7 @@ TypeChecker::TypeChecker(ShaderModule& shaderModule)
     introduceValue(AST::Identifier::make("write"_s), m_types.accessModeType());
     introduceValue(AST::Identifier::make("read_write"_s), m_types.accessModeType());
 
-    if (m_shaderModule.hasFeature("bgra8unorm-storage"_s))
         introduceValue(AST::Identifier::make("bgra8unorm"_s), m_types.texelFormatType());
-
     introduceValue(AST::Identifier::make("r32float"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32sint"_s), m_types.texelFormatType());
     introduceValue(AST::Identifier::make("r32uint"_s), m_types.texelFormatType());
@@ -1676,6 +1675,9 @@ void TypeChecker::visit(AST::UnaryExpression& unary)
         auto* type = infer(unary.expression(), Evaluation::Runtime);
         auto* pointer = std::get_if<Types::Pointer>(type);
         if (!pointer) {
+            if (isBottom(type))
+                inferred(type);
+            else
             typeError(unary.span(), "cannot dereference expression of type '"_s, *type, '\'');
             return;
         }
@@ -1767,8 +1769,20 @@ void TypeChecker::visit(AST::ArrayTypeExpression& array)
                 }
             }
             size = { static_cast<unsigned>(elementCount) };
-        } else
-            size = { array.maybeElementCount() };
+        } else {
+            auto* countExpression = array.maybeElementCount();
+            if (auto* identifier = dynamicDowncast<AST::IdentifierExpression>(countExpression)) {
+                auto result = m_arrayCountOverrides.add(identifier->identifier().id(), identifier);
+                countExpression = result.iterator->value;
+            }
+
+            m_shaderModule.addOverrideValidation(*countExpression, [&](const ConstantValue& elementCount) -> std::optional<String> {
+                if (elementCount.integerValue() < 1)
+                    return { "array count must be greater than 0"_s };
+                return std::nullopt;
+            });
+            size = { countExpression };
+        }
     }
 
     inferred(m_types.arrayType(elementType, size));
@@ -1970,6 +1984,9 @@ const Type* TypeChecker::chooseOverload(ASCIILiteral kind, const SourceSpan& spa
             auto& call = uncheckedDowncast<AST::CallExpression>(*expression);
             call.m_isConstructor = it->value.kind == OverloadedDeclaration::Constructor;
             call.m_visibility = it->value.visibility;
+
+            if (call.isFloatToIntConversion(overload->result))
+                m_shaderModule.setUsesFtoi();
         }
 
         unsigned argumentCount = callArguments.size();
@@ -2027,6 +2044,11 @@ const Type* TypeChecker::chooseOverload(ASCIILiteral kind, const SourceSpan& spa
 
 const Type* TypeChecker::infer(AST::Expression& expression, Evaluation evaluation, DiscardResult discardResult)
 {
+    if (evaluation > m_evaluation) {
+        typeError(InferBottom::No, expression.span(), "cannot use "_s, evaluationToString(evaluation), " value in "_s, evaluationToString(m_evaluation), " expression"_s);
+        return m_types.bottomType();
+    }
+
     auto discardResultScope = SetForScope(m_discardResult, discardResult);
     auto evaluationScope = SetForScope(m_evaluation, evaluation);
 
@@ -2174,7 +2196,7 @@ Behaviors TypeChecker::analyze(AST::LoopStatement& statement)
         m_breakTargetStack.append(&continuing.value());
         behaviors.add(analyzeStatements(continuing->body));
         m_breakTargetStack.removeLast();
-        if (auto* breakIf = continuing->breakIf)
+        if (continuing->breakIf)
             behaviors.add({ Behavior::Break, Behavior::Continue });
     }
     m_breakTargetStack.removeLast();
@@ -2231,6 +2253,8 @@ Behaviors TypeChecker::analyzeStatements(AST::Statement::List& statements)
 const Type* TypeChecker::check(AST::Expression& expression, Constraint constraint, Evaluation evaluation)
 {
     auto* type = infer(expression, evaluation);
+    if (isBottom(type))
+        return type;
     type = satisfyOrPromote(type, constraint, m_types);
     if (!type)
         return nullptr;

@@ -57,7 +57,7 @@ assembler/MacroAssemblerARMv7.cpp @no-unify
 assembler/MacroAssemblerCodeRef.cpp
 assembler/MacroAssemblerPrinter.cpp
 assembler/MacroAssemblerRISCV64.cpp @no-unify
-assembler/MacroAssemblerX86Common.cpp @no-unify
+assembler/MacroAssemblerX86_64.cpp @no-unify
 assembler/PerfLog.cpp
 assembler/Printer.cpp
 assembler/ProbeContext.cpp
@@ -67,6 +67,7 @@ assembler/SecureARM64EHashPins.cpp
 b3/air/AirAllocateRegistersAndStackAndGenerateCode.cpp
 b3/air/AirAllocateRegistersAndStackByLinearScan.cpp
 b3/air/AirAllocateRegistersByGraphColoring.cpp
+b3/air/AirAllocateRegistersByGreedy.cpp
 b3/air/AirAllocateStackByGraphColoring.cpp
 b3/air/AirArg.cpp
 b3/air/AirBasicBlock.cpp
@@ -108,7 +109,6 @@ b3/air/AirStackSlot.cpp
 b3/air/AirStackSlotKind.cpp
 b3/air/AirTmp.cpp
 b3/air/AirTmpWidth.cpp
-b3/air/AirTZoneImpls.cpp
 b3/air/AirValidate.cpp
 
 b3/B3ArgumentRegValue.cpp
@@ -389,6 +389,7 @@ dfg/DFGLazyJSValue.cpp
 dfg/DFGLazyNode.cpp
 dfg/DFGLivenessAnalysisPhase.cpp
 dfg/DFGLoopPreHeaderCreationPhase.cpp
+dfg/DFGLoopUnrollingPhase.cpp
 dfg/DFGMayExit.cpp
 dfg/DFGMinifiedGraph.cpp
 dfg/DFGMinifiedNode.cpp
@@ -562,7 +563,6 @@ heap/IsoCellSet.cpp
 heap/IsoHeapCellType.cpp
 heap/IsoMemoryAllocatorBase.cpp
 heap/IsoSubspace.cpp
-heap/IsoSubspacePerVM.cpp
 heap/JITStubRoutineSet.cpp
 heap/PreciseAllocation.cpp
 heap/LocalAllocator.cpp
@@ -576,6 +576,7 @@ heap/MarkingConstraintSet.cpp
 heap/MarkingConstraintSolver.cpp
 heap/MutatorScheduler.cpp
 heap/MutatorState.cpp
+heap/PreciseSubspace.cpp
 heap/RootMarkReason.cpp
 heap/SimpleMarkingConstraint.cpp
 heap/SlotVisitor.cpp
@@ -743,7 +744,6 @@ profiler/ProfilerOSRExitSite.cpp
 profiler/ProfilerOrigin.cpp
 profiler/ProfilerOriginStack.cpp
 profiler/ProfilerProfiledBytecodes.cpp
-profiler/ProfilerUID.cpp
 profiler/ProfilerTZoneImpls.cpp
 
 runtime/AbstractModuleRecord.cpp
@@ -889,13 +889,13 @@ runtime/IntlSegmentsPrototype.cpp
 runtime/IntlWorkaround.cpp @no-unify // Confine U_HIDE_DRAFT_API's effect to this file.
 runtime/ISO8601.cpp
 runtime/IteratorOperations.cpp
-runtime/IteratorPrototype.cpp
 runtime/JSArray.cpp
 runtime/JSArrayBuffer.cpp
 runtime/JSArrayBufferConstructor.cpp
 runtime/JSArrayBufferPrototype.cpp
 runtime/JSArrayBufferView.cpp
 runtime/JSAsyncFunction.cpp
+runtime/JSAsyncFromSyncIterator.cpp
 runtime/JSAsyncGenerator.cpp
 runtime/JSAsyncGeneratorFunction.cpp
 runtime/JSArrayIterator.cpp
@@ -928,6 +928,11 @@ runtime/JSImmutableButterfly.cpp
 runtime/JSInternalPromise.cpp
 runtime/JSInternalPromiseConstructor.cpp
 runtime/JSInternalPromisePrototype.cpp
+runtime/JSIterator.cpp
+runtime/JSIteratorConstructor.cpp
+runtime/JSIteratorHelper.cpp
+runtime/JSIteratorHelperPrototype.cpp
+runtime/JSIteratorPrototype.cpp
 runtime/JSLexicalEnvironment.cpp
 runtime/JSLock.cpp
 runtime/JSMap.cpp
@@ -944,6 +949,8 @@ runtime/JSPromise.cpp
 runtime/JSPromiseConstructor.cpp
 runtime/JSPromisePrototype.cpp
 runtime/JSPropertyNameEnumerator.cpp
+runtime/JSRawJSONObject.cpp
+runtime/JSRegExpStringIterator.cpp
 runtime/JSRemoteFunction.cpp
 runtime/JSRunLoopTimer.cpp
 runtime/JSScope.cpp
@@ -968,6 +975,7 @@ runtime/JSWeakMap.cpp
 runtime/JSWeakObjectRef.cpp
 runtime/JSWeakSet.cpp
 runtime/JSWithScope.cpp
+runtime/JSWrapForValidIterator.cpp
 runtime/JSWrapperObject.cpp
 runtime/LazyClassStructure.cpp
 runtime/LeafExecutable.cpp
@@ -1026,6 +1034,7 @@ runtime/RegExpMatchesArray.cpp
 runtime/RegExpObject.cpp
 runtime/RegExpPrototype.cpp
 runtime/RegExpStringIteratorPrototype.cpp
+runtime/RegExpSubstringGlobalAtomCache.cpp
 runtime/ResourceExhaustion.cpp
 runtime/RuntimeTZoneImpls.cpp
 runtime/RuntimeType.cpp
@@ -1106,6 +1115,7 @@ runtime/WeakObjectRefPrototype.cpp
 runtime/WeakSetConstructor.cpp
 runtime/WeakSetPrototype.cpp
 runtime/WideningNumberPredictionFuzzerAgent.cpp
+runtime/WrapForValidIteratorPrototype.cpp
 
 tools/CellList.cpp
 tools/CharacterPropertyDataGenerator.cpp
@@ -1129,7 +1139,6 @@ wasm/WasmBranchHintsSectionParser.cpp
 wasm/WasmCallee.cpp
 wasm/WasmCalleeGroup.cpp
 wasm/WasmCallingConvention.cpp
-wasm/WasmCompilationContext.cpp
 wasm/WasmCompilationMode.cpp
 wasm/WasmConstExprGenerator.cpp
 wasm/WasmContext.cpp
@@ -1158,7 +1167,6 @@ wasm/WasmOSREntryPlan.cpp
 wasm/WasmOpcodeOrigin.cpp
 wasm/WasmOperations.cpp
 wasm/WasmPlan.cpp
-wasm/WasmCallsiteCollection.cpp
 wasm/WasmSectionParser.cpp
 wasm/WasmTypeDefinition.cpp
 wasm/WasmOpcodeCounter.cpp

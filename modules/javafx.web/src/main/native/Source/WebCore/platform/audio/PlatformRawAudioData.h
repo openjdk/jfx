@@ -19,18 +19,24 @@
 
 #pragma once
 
+#include "MediaPlayer.h"
 #include <span>
-#include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeRefCounted.h>
+
+#if ENABLE(WEB_CODECS)
 
 namespace WebCore {
 
 enum class AudioSampleFormat;
+class MediaSample;
 
 class PlatformRawAudioData : public ThreadSafeRefCounted<PlatformRawAudioData> {
 public:
     virtual ~PlatformRawAudioData() = default;
     static RefPtr<PlatformRawAudioData> create(std::span<const uint8_t>, AudioSampleFormat, float sampleRate, int64_t timestamp, size_t numberOfFrames, size_t numberOfChannels);
+    static Ref<PlatformRawAudioData> create(Ref<MediaSample>&&);
+
+    virtual constexpr MediaPlatformType platformType() const = 0;
 
     virtual AudioSampleFormat format() const = 0;
     virtual size_t sampleRate() const = 0;
@@ -43,7 +49,12 @@ public:
 
     void copyTo(std::span<uint8_t>, AudioSampleFormat, size_t planeIndex, std::optional<size_t> frameOffset, std::optional<size_t> frameCount, unsigned long copyElementCount);
 
-    virtual bool isGStreamer() const { return false; }
+    using PlaneData = std::variant<Vector<std::span<uint8_t>>, Vector<std::span<int16_t>>, Vector<std::span<int32_t>>, Vector<std::span<float>>>;
+
+private:
+    void copyToInterleaved(PlaneData source, std::span<uint8_t> destination, AudioSampleFormat, unsigned long copyElementCount);
 };
 
 } // namespace WebCore
+
+#endif // ENABLE(WEB_CODECS)

@@ -355,12 +355,13 @@ void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float of
     }
 }
 
-void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool, bool, StrokeStyle stroke) {
+void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thickness,
+std::span<const FloatSegment> lineSegments, bool printing, bool, StrokeStyle stroke) {
 
     if (paintingDisabled())
         return;
 
-    if (widths.size() == 0)
+    if (lineSegments.empty())
         return;
 
     // This is a workaround for http://bugs.webkit.org/show_bug.cgi?id=15659
@@ -370,19 +371,20 @@ void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thick
     setStrokeThickness(thickness);
 
     FloatPoint startPoint = origin + FloatPoint(0, thickness / 2);
-    FloatPoint endPoint = startPoint + FloatPoint(widths.last(), 0);
+    const FloatSegment& last = lineSegments.back();
+    FloatPoint endPoint = startPoint + FloatPoint(last.end, 0);
     drawLine(
         IntPoint(startPoint.x(), startPoint.y()),
         IntPoint(endPoint.x(), endPoint.y()));
-
     setStrokeStyle(savedStrokeStyle);
     setStrokeThickness(savedStrokeThickness);
 
 }
 
-void GraphicsContextJava::drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke)
+void GraphicsContextJava::drawLineForText(const FloatRect& rect, bool isPrinting, bool doubleLines, StrokeStyle stroke)
 {
-    drawLinesForText(rect.location(), rect.height(), { rect.width() }, printing, doubleLines, stroke);
+    FloatSegment line[1] { { 0, rect.width() } };
+    drawLinesForText(rect.location(), rect.height(), line, isPrinting, doubleLines, stroke);
 }
 
 static inline void drawLineTo(GraphicsContext &gc, IntPoint &curPos, double x, double y)

@@ -41,6 +41,10 @@ public:
 
     bool operator==(const StyleTransformData&) const;
 
+#if !LOG_DISABLED
+    void dumpDifferences(TextStream&, const StyleTransformData&) const;
+#endif
+
     bool hasTransform() const { return operations.size(); }
 
     LengthPoint originXY() const { return { x, y }; }

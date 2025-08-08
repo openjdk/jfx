@@ -60,29 +60,30 @@ public:
     void mapFillYPosition(CSSPropertyID, FillLayer&, const CSSValue&);
     static void mapFillMaskMode(CSSPropertyID, FillLayer&, const CSSValue&);
 
-    static void mapAnimationDelay(Animation&, const CSSValue&);
+    void mapAnimationDelay(Animation&, const CSSValue&);
     static void mapAnimationDirection(Animation&, const CSSValue&);
-    static void mapAnimationDuration(Animation&, const CSSValue&);
+    void mapAnimationDuration(Animation&, const CSSValue&);
     static void mapAnimationFillMode(Animation&, const CSSValue&);
-    static void mapAnimationIterationCount(Animation&, const CSSValue&);
+    void mapAnimationIterationCount(Animation&, const CSSValue&);
     void mapAnimationName(Animation&, const CSSValue&);
     static void mapAnimationPlayState(Animation&, const CSSValue&);
     static void mapAnimationProperty(Animation&, const CSSValue&);
-    static void mapAnimationTimeline(Animation&, const CSSValue&);
-    static void mapAnimationTimingFunction(Animation&, const CSSValue&);
+    void mapAnimationTimeline(Animation&, const CSSValue&);
+    void mapAnimationTimingFunction(Animation&, const CSSValue&);
     static void mapAnimationCompositeOperation(Animation&, const CSSValue&);
     static void mapAnimationAllowsDiscreteTransitions(Animation&, const CSSValue&);
+    void mapAnimationRangeStart(Animation&, const CSSValue&);
+    void mapAnimationRangeEnd(Animation&, const CSSValue&);
 
     void mapNinePieceImage(const CSSValue*, NinePieceImage&);
-    static void mapNinePieceImageSlice(const CSSValue&, NinePieceImage&);
-    static void mapNinePieceImageSlice(const CSSBorderImageSliceValue&, NinePieceImage&);
+    void mapNinePieceImageSlice(const CSSValue&, NinePieceImage&);
+    void mapNinePieceImageSlice(const CSSBorderImageSliceValue&, NinePieceImage&);
     void mapNinePieceImageWidth(const CSSValue&, NinePieceImage&);
     void mapNinePieceImageWidth(const CSSBorderImageWidthValue&, NinePieceImage&);
     LengthBox mapNinePieceImageQuad(const CSSValue&);
     static void mapNinePieceImageRepeat(const CSSValue&, NinePieceImage&);
 
 private:
-    RenderStyle* style() const;
     RefPtr<StyleImage> styleImage(const CSSValue&);
     LengthBox mapNinePieceImageQuad(const Quad&);
     Length mapNinePieceImageSide(const CSSValue&);
