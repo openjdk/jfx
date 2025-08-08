@@ -28,6 +28,7 @@
 
 #import "GlassMenu.h"
 #import "GlassView.h"
+#import "GlassView3D.h"
 
 // normal Glass window delegate
 @interface GlassWindow : NSObject <NSWindowDelegate>
@@ -39,7 +40,7 @@
     NSWindow            *nsWindow;
 
     NSWindow            *owner;
-    NSView<GlassView>   *view;
+    GlassView3D<GlassView>   *view;
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
     NSRect              preZoomedRect;

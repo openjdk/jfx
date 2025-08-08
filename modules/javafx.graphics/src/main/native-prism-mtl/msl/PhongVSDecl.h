@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,27 +23,19 @@
  * questions.
  */
 
-#import <Foundation/Foundation.h>
+#define MAX_NUM_LIGHTS 3
 
-#import <OpenGL/gl.h>
-#import <OpenGL/OpenGL.h>
+struct VS_PHONG_INPUT {
+    packed_float3 position;
+    packed_float2 texCoord;
+    packed_float4 normal;
+};
 
-#import "GlassOffscreen.h"
-
-@interface GlassFrameBufferObject : NSObject <GlassOffscreenProtocol>
-{
-    GLuint _width;
-    GLuint _height;
-
-    GLuint _texture;
-    GLuint _fbo;
-    GLuint _fboToRestore;
-    BOOL   _isSwPipe;
-}
-
-- (void)blitFromFBO:(GlassFrameBufferObject*)other_fbo;
-- (GLuint)texture;
-- (GLuint)fbo;
-- (void)setIsSwPipe:(BOOL)isSwPipe;
-
-@end
+struct VS_PHONG_UNIFORMS {
+    simd_float4x4 mvp_matrix;
+    simd_float4x4 world_matrix;
+    packed_float4 cameraPos;
+    packed_float3 lightsPosition[MAX_NUM_LIGHTS];
+    packed_float3 lightsNormDirection[MAX_NUM_LIGHTS];
+    float numLights;
+};
