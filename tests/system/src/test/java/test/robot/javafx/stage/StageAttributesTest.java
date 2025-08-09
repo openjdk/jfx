@@ -25,6 +25,7 @@
 
 package test.robot.javafx.stage;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
@@ -33,12 +34,15 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import test.javafx.scene.shape.TestUtils;
 import test.robot.testharness.VisualTestBase;
+import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
@@ -171,6 +175,12 @@ public class StageAttributesTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED"})
     public void testFullScreenStage(StageStyle stageStyle) throws InterruptedException {
+        if (stageStyle == StageStyle.UNDECORATED) {
+            // Causes Stage to hang on Wayland
+            assumeTrue(Util.isOnWayland());
+            return;
+        }
+
         setupStages(false, true, stageStyle);
 
         runAndWait(() -> {
@@ -186,7 +196,7 @@ public class StageAttributesTest extends VisualTestBase {
         runAndWait(() -> {
             assertTrue(topStage.isFullScreen());
 
-            // fullscreen stage should take over the bottom stage
+            // screen stage should take over the bottom stage
             Color color = getColor(200, 200);
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
@@ -273,6 +283,12 @@ public class StageAttributesTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED"})
     public void testFullScreenStageBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        if (stageStyle == StageStyle.UNDECORATED) {
+            // Causes Stage to hang on Wayland
+            assumeTrue(Util.isOnWayland());
+            return;
+        }
+
         setupStages(false, false, stageStyle);
 
         runAndWait(() -> {

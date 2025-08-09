@@ -24,6 +24,7 @@
  */
 package test.javafx.stage;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.scene.Scene;
@@ -153,6 +154,9 @@ class SizingTest extends StageTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
     void minSize(StageStyle stageStyle) {
+        // JDK-8364547
+        assertTrue(PlatformUtil.isWindows());
+
         setupStageWithStyle(stageStyle, s -> {
             s.setMinWidth(MIN_WIDTH);
             s.setMinHeight(MIN_HEIGHT);

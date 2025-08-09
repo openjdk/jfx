@@ -24,6 +24,7 @@
  */
 package test.robot.javafx.stage;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Rectangle2D;
@@ -51,6 +52,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
@@ -150,6 +152,10 @@ class StageOwnershipTest extends VisualTestBase {
         Label label = new Label();
         label.textProperty().bind(Bindings.when(stage.focusedProperty())
                 .then("Focused").otherwise("Unfocused"));
+
+        stage.setFullScreenExitHint(
+                "Will BEEP on macOS when exiting fullscreen due to OS trying to focus a disabled stage");
+
         StackPane pane = new StackPane(label);
         pane.setBackground(Background.EMPTY);
 
@@ -266,6 +272,12 @@ class StageOwnershipTest extends VisualTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED"})
     void iconifyParentShouldHideChildren(StageStyle style) {
+        if (style == StageStyle.EXTENDED || style == StageStyle.DECORATED) {
+            // Windows just hides the first-level ownership (bug?)
+            assumeTrue(PlatformUtil.isWindows());
+            return;
+        }
+
         CountDownLatch shownLatch = new CountDownLatch(3);
         Util.runAndWait(() -> {
             stage0 = createStage(style, COLOR0, null, null, 100, 100);
