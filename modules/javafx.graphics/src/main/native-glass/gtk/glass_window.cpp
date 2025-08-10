@@ -700,7 +700,6 @@ bool WindowContext::set_view(jobject view) {
 
     if (view) {
         jview = mainEnv->NewGlobalRef(view);
-        view_size.reset({-1, -1});
     } else {
         jview = nullptr;
     }
