@@ -77,7 +77,7 @@ ExceptionOr<RefPtr<Uint8Array>> CompressionStreamEncoder::flush()
 bool CompressionStreamEncoder::didDeflateFinish(int result) const
 {
 #if !PLATFORM(JAVA)
-    return !m_zstream.avail_in && (!m_didFinish || (m_didFinish && result == Z_STREAM_END));
+    return !m_zstream.getPlatformStream().avail_in && (!m_didFinish || (m_didFinish && result == Z_STREAM_END));
 #endif
     return true;
 }
@@ -88,6 +88,7 @@ static bool didDeflateFail(int result)
 #if !PLATFORM(JAVA)
     return result != Z_OK && result != Z_STREAM_END && result != Z_BUF_ERROR;
 #endif
+    return true;
 }
 ExceptionOr<Ref<JSC::ArrayBuffer>> CompressionStreamEncoder::compress(std::span<const uint8_t> input)
 {
