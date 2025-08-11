@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-#import "GlassFrameBufferObject.h"
+#import "GlassCGLFrameBufferObject.h"
 #import "GlassMacros.h"
 #import "GlassApplication.h"
 
@@ -40,7 +40,7 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-@implementation GlassFrameBufferObject
+@implementation GlassCGLFrameBufferObject
 
 - (CGLContextObj)_assertContext
 {
@@ -120,7 +120,7 @@
         {
             glActiveTextureARB(GL_TEXTURE0);
             glGenTextures(1, &self->_texture);
-            LOG("           GlassFrameBufferObject created Texture: %d", self->_texture);
+            LOG("           GlassCGLFrameBufferObject created Texture: %d", self->_texture);
             glBindTexture(TARGET, self->_texture);
             glTexParameteri(TARGET, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             glTexParameteri(TARGET, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -138,7 +138,7 @@
             }
 
             glGenFramebuffersEXT(1, &self->_fbo);
-            LOG("           GlassFrameBufferObject created FBO: %d", self->_fbo);
+            LOG("           GlassCGLFrameBufferObject created FBO: %d", self->_fbo);
             glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, self->_fbo);
             {
                 GLenum target = GL_FRAMEBUFFER_EXT;
@@ -224,7 +224,7 @@
 
 - (void)bindForWidth:(GLuint)width andHeight:(GLuint)height
 {
-    LOG("           GlassFrameBufferObject bindForWidth:%d andHeight:%d", width, height);
+    LOG("           GlassCGLFrameBufferObject bindForWidth:%d andHeight:%d", width, height);
     LOG("               context:%p", CGLGetCurrentContext());
     [self _assertContext];
     {
@@ -255,7 +255,7 @@
 {
     if (self->_isSwPipe)
     {
-        LOG("           GlassFrameBufferObject unbind");
+        LOG("           GlassCGLFrameBufferObject unbind");
         [self _assertContext];
         {
             GLint framebufferCurrent = 0;
@@ -279,7 +279,7 @@
 
 - (void)blitForWidth:(GLuint)width andHeight:(GLuint)height
 {
-    LOG("           GlassFrameBufferObject blitForWidth:%d andHeight:%d [%p]", width, height, self);
+    LOG("           GlassCGLFrameBufferObject blitForWidth:%d andHeight:%d [%p]", width, height, self);
     if (self->_texture != 0)
     {
         glMatrixMode(GL_PROJECTION);
@@ -312,7 +312,7 @@
     }
 }
 
-- (void)blitFromFBO:(GlassFrameBufferObject*)other_fbo
+- (void)blitFromFBO:(GlassCGLFrameBufferObject*)other_fbo
 {
     self->_fboToRestore = 0; // default to screen
     glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, (GLint*)&self->_fboToRestore);

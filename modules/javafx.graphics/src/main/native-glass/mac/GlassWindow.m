@@ -37,7 +37,6 @@
 #import "GlassView.h"
 #import "GlassScreen.h"
 #import "GlassApplication.h"
-#import "GlassLayer3D.h"
 #import "GlassHelper.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -93,13 +92,13 @@ static inline GlassWindow *getGlassWindow(JNIEnv *env, jlong jPtr)
     return (GlassWindow*)[nsWindow delegate];
 }
 
-static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
+static inline GlassView3D<GlassView> *getMacView(JNIEnv *env, jobject jview)
 {
     if (jview != NULL)
     {
         jfieldID jfID = (*env)->GetFieldID(env, jViewClass, "ptr", "J");
         GLASS_CHECK_EXCEPTION(env);
-        return (NSView<GlassView>*)jlong_to_ptr((*env)->GetLongField(env, jview, jfID));
+        return (GlassView3D<GlassView>*)jlong_to_ptr((*env)->GetLongField(env, jview, jfID));
     }
     else
     {
@@ -836,8 +835,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
 
         if (window->view != nil)
         {
-            CALayer *layer = [window->view layer];
-            if (([layer isKindOfClass:[CAOpenGLLayer class]] == YES) &&
+            CALayer *layer = [window->view getLayer];
+            LOG("   layer: %p", layer);
+            // TODO : Move below logic to CGL specific View/Layer class
+            if (([layer.sublayers[0] isKindOfClass:[CAOpenGLLayer class]] == YES) &&
                 (([window->nsWindow styleMask] & NSWindowStyleMaskTexturedBackground) == NO))
             {
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
