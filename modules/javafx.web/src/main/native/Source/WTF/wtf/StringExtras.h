@@ -27,22 +27,9 @@
 #pragma once
 
 #include <string.h>
+#include <wtf/Compiler.h>
 
-#if !HAVE(STRNSTR)
-
-inline char* strnstr(const char* buffer, const char* target, size_t bufferLength)
-{
-    size_t targetLength = strlen(target);
-    if (targetLength == 0)
-        return const_cast<char*>(buffer);
-    for (const char* start = buffer; *start && start + targetLength <= buffer + bufferLength; start++) {
-        if (*start == *target && strncmp(start + 1, target + 1, targetLength - 1) == 0)
-            return const_cast<char*>(start);
-    }
-    return nullptr;
-}
-
-#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if !HAVE(MEMMEM)
 
@@ -59,3 +46,5 @@ inline const void* memmem(const void* haystack, size_t haystackLength, const voi
 }
 
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

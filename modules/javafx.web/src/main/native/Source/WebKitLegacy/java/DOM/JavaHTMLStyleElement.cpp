@@ -28,6 +28,7 @@
 
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLStyleElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/StyleSheet.h>
 #include <WebCore/JSExecState.h>
 

@@ -28,12 +28,14 @@
 
 #include "ContentSecurityPolicyDirective.h"
 #include "ContentSecurityPolicySourceList.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ContentSecurityPolicyDirectiveList;
 
 class ContentSecurityPolicySourceListDirective : public ContentSecurityPolicyDirective {
+    WTF_MAKE_TZONE_ALLOCATED(ContentSecurityPolicySourceListDirective);
 public:
     ContentSecurityPolicySourceListDirective(const ContentSecurityPolicyDirectiveList&, const String& name, const String& value);
 
@@ -48,6 +50,7 @@ public:
     bool allowWasmEval() const { return m_sourceList.allowWasmEval(); }
     bool allowNonParserInsertedScripts() const { return m_sourceList.allowNonParserInsertedScripts(); }
     bool shouldReportSample() const { return m_sourceList.shouldReportSample(); }
+    HashAlgorithmSet reportHash() const { return m_sourceList.reportHash(); }
 
     OptionSet<ContentSecurityPolicyHashAlgorithm> hashAlgorithmsUsed() const { return m_sourceList.hashAlgorithmsUsed(); }
 

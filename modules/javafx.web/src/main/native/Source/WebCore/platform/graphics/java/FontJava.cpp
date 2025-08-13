@@ -187,4 +187,8 @@ ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariant
     return ResolvedEmojiPolicy::NoPreference;
 }
 
+RefPtr<Font> Font::platformCreateHalfWidthFont() const
+{
+     return nullptr;
+}
 }

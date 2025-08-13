@@ -1279,7 +1279,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     @RepeatedTest(50)
-    @Test
     public void cancelCalledFromOnSucceeded() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> {
@@ -1424,7 +1423,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     }
 
     @RepeatedTest(50)
-    @Test
     public void cancelCalledFromOnFailed() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> {

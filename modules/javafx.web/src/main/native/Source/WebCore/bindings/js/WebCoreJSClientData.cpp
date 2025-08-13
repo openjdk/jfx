@@ -58,6 +58,10 @@
 #include <mutex>
 #include <wtf/MainThread.h>
 
+#if PLATFORM(COCOA)
+#include "objc_runtime.h"
+#endif
+
 namespace WebCore {
 using namespace JSC;
 
@@ -65,6 +69,9 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(JSHeapData);
 
 JSHeapData::JSHeapData(Heap& heap)
     : m_runtimeArrayHeapCellType(JSC::IsoHeapCellType::Args<RuntimeArray>())
+#if PLATFORM(COCOA)
+    , m_objcFallbackObjectImpHeapCellType(JSC::IsoHeapCellType::Args<JSC::Bindings::ObjcFallbackObjectImp>())
+#endif
     , m_observableArrayHeapCellType(JSC::IsoHeapCellType::Args<JSObservableArray>())
     , m_runtimeObjectHeapCellType(JSC::IsoHeapCellType::Args<JSC::Bindings::RuntimeObject>())
     , m_windowProxyHeapCellType(JSC::IsoHeapCellType::Args<JSWindowProxy>())
@@ -85,6 +92,9 @@ JSHeapData::JSHeapData(Heap& heap)
     , m_domNamespaceObjectSpace ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, JSDOMObject)
     , m_domWindowPropertiesSpace ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, JSDOMWindowProperties)
     , m_runtimeArraySpace ISO_SUBSPACE_INIT(heap, m_runtimeArrayHeapCellType, RuntimeArray)
+#if PLATFORM(COCOA)
+    , m_objcFallbackObjectImpSpace ISO_SUBSPACE_INIT(heap, m_objcFallbackObjectImpHeapCellType, JSC::Bindings::ObjcFallbackObjectImp)
+#endif
     , m_observableArraySpace ISO_SUBSPACE_INIT(heap, m_observableArrayHeapCellType, JSObservableArray)
     , m_runtimeMethodSpace ISO_SUBSPACE_INIT(heap, heap.cellHeapCellType, RuntimeMethod) // Hash:0xf70c4a85
     , m_runtimeObjectSpace ISO_SUBSPACE_INIT(heap, m_runtimeObjectHeapCellType, JSC::Bindings::RuntimeObject)
@@ -120,6 +130,9 @@ JSVMClientData::JSVMClientData(VM& vm)
     , CLIENT_ISO_SUBSPACE_INIT(m_domNamespaceObjectSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_domWindowPropertiesSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_runtimeArraySpace)
+#if PLATFORM(COCOA)
+    , CLIENT_ISO_SUBSPACE_INIT(m_objcFallbackObjectImpSpace)
+#endif
     , CLIENT_ISO_SUBSPACE_INIT(m_observableArraySpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_runtimeMethodSpace)
     , CLIENT_ISO_SUBSPACE_INIT(m_runtimeObjectSpace)
@@ -155,7 +168,7 @@ void JSVMClientData::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
     // is ready to start evaluating JavaScript. For example, Web Inspector waits for the main world
     // change to clear any injected scripts and debugger/breakpoint state.
 
-    auto& mainNormalWorld = mainThreadNormalWorld();
+    auto& mainNormalWorld = mainThreadNormalWorldSingleton();
 
     // Add main normal world.
     if (m_worldSet.contains(&mainNormalWorld))

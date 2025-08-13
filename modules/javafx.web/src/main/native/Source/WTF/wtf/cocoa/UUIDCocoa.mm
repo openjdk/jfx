@@ -27,6 +27,7 @@
 #import "UUID.h"
 
 #import "RetainPtr.h"
+#import "TypeCastsCocoa.h"
 
 namespace WTF {
 
@@ -46,4 +47,3 @@ std::optional<UUID> UUID::fromNSUUID(NSUUID *nsUUID)
 }
 
 }
-

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSColorValue.h"
+#include "CSSOMColorValue.h"
 #include "ExceptionOr.h"
 
 namespace WebCore {
@@ -33,7 +33,7 @@ namespace WebCore {
 using CSSColorRGBComp = std::variant<double, RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
 using RectifiedCSSColorRGBComp = std::variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>;
 
-class CSSRGB final : public CSSColorValue {
+class CSSRGB final : public CSSOMColorValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSRGB);
 public:
     static ExceptionOr<Ref<CSSRGB>> create(CSSColorRGBComp&&, CSSColorRGBComp&&, CSSColorRGBComp&&, CSSColorPercent&&);

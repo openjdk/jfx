@@ -1,5 +1,7 @@
 list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/adwaita"
+
+    "${WEBCORE_DIR}/platform/graphics/adwaita"
 )
 
 list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
@@ -10,6 +12,18 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/adwaita/ScrollbarThemeAdwaita.h
     platform/adwaita/ThemeAdwaita.h
 
+    platform/graphics/adwaita/Adwaita.h
+    platform/graphics/adwaita/ButtonControlAdwaita.h
+    platform/graphics/adwaita/ControlAdwaita.h
+    platform/graphics/adwaita/ControlFactoryAdwaita.h
+    platform/graphics/adwaita/InnerSpinButtonAdwaita.h
+    platform/graphics/adwaita/MenuListAdwaita.h
+    platform/graphics/adwaita/ProgressBarAdwaita.h
+    platform/graphics/adwaita/SliderThumbAdwaita.h
+    platform/graphics/adwaita/SliderTrackAdwaita.h
+    platform/graphics/adwaita/TextFieldAdwaita.h
+    platform/graphics/adwaita/ToggleButtonAdwaita.h
+
     rendering/adwaita/RenderThemeAdwaita.h
 )
 
@@ -17,19 +31,13 @@ list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
     ${WEBCORE_DIR}/css/themeAdwaita.css
 )
 
-if (ENABLE_MODERN_MEDIA_CONTROLS)
-    list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
+list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
     ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.css
-    )
+)
 
-    list(APPEND WebCore_USER_AGENT_SCRIPTS
+list(APPEND WebCore_USER_AGENT_SCRIPTS
     ${WebCore_DERIVED_SOURCES_DIR}/ModernMediaControls.js
-    )
-else ()
-    list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
-        ${WEBCORE_DIR}/css/mediaControls.css
-    )
-endif ()
+)
 
 set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/rendering/adwaita/RenderThemeAdwaita.cpp)
 

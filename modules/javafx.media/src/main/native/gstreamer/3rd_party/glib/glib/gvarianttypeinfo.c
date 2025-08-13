@@ -22,6 +22,7 @@
 
 #include "config.h"
 
+#include "gvarianttype-private.h"
 #include "gvarianttypeinfo.h"
 
 #include <glib/gtestutils.h>
@@ -30,6 +31,7 @@
 #include <glib/ghash.h>
 #include <glib/grefcount.h>
 
+#include "glib-private.h"
 #include "glib_trace.h"
 
 /* < private >
@@ -161,7 +163,7 @@ static void
 g_variant_type_info_check (const GVariantTypeInfo *info,
                            char                    container_class)
 {
-#ifndef G_DISABLE_ASSERT
+#if defined(G_ENABLE_DEBUG) && !defined(G_DISABLE_ASSERT)
   g_assert (!container_class || info->container_class == container_class);
 
   /* alignment can only be one of these */
@@ -190,7 +192,7 @@ g_variant_type_info_check (const GVariantTypeInfo *info,
       g_assert (0 <= index && index < 24);
       g_assert (g_variant_type_info_basic_chars[index][0] != ' ');
     }
-#endif  /* !G_DISABLE_ASSERT */
+#endif /* G_ENABLE_DEBUG && !G_DISABLE_ASSERT */
 }
 
 /* < private >
@@ -749,6 +751,36 @@ g_variant_type_info_member_info (GVariantTypeInfo *info,
 /* == new/ref/unref == */
 static GRecMutex g_variant_type_info_lock;
 static GHashTable *g_variant_type_info_table;
+static GPtrArray *g_variant_type_info_gc;
+
+#define GC_THRESHOLD 32
+
+static void
+gc_while_locked (void)
+{
+  while (g_variant_type_info_gc->len > 0)
+    {
+      GVariantTypeInfo *info = g_ptr_array_steal_index_fast (g_variant_type_info_gc, 0);
+      ContainerInfo *container = (ContainerInfo *)info;
+
+      if (g_atomic_ref_count_dec (&container->ref_count))
+        {
+          TRACE(GLIB_VARIANT_TYPE_INFO_FREE(info));
+
+          g_hash_table_remove (g_variant_type_info_table,
+                               container->type_string);
+
+          g_free (container->type_string);
+
+          if (info->container_class == GV_ARRAY_INFO_CLASS)
+            array_info_free (info);
+          else if (info->container_class == GV_TUPLE_INFO_CLASS)
+            tuple_info_free (info);
+          else
+            g_assert_not_reached ();
+        }
+    }
+}
 
 /* < private >
  * g_variant_type_info_get:
@@ -766,9 +798,8 @@ static GHashTable *g_variant_type_info_table;
 GVariantTypeInfo *
 g_variant_type_info_get (const GVariantType *type)
 {
-  char type_char;
-
-  type_char = g_variant_type_peek_string (type)[0];
+  const gchar *type_string = g_variant_type_peek_string (type);
+  const char type_char = type_string[0];
 
   if (type_char == G_VARIANT_TYPE_INFO_CHAR_MAYBE ||
       type_char == G_VARIANT_TYPE_INFO_CHAR_ARRAY ||
@@ -776,15 +807,15 @@ g_variant_type_info_get (const GVariantType *type)
       type_char == G_VARIANT_TYPE_INFO_CHAR_DICT_ENTRY)
     {
       GVariantTypeInfo *info;
-      gchar *type_string;
-
-      type_string = g_variant_type_dup_string (type);
 
       g_rec_mutex_lock (&g_variant_type_info_lock);
 
       if (g_variant_type_info_table == NULL)
-        g_variant_type_info_table = g_hash_table_new (g_str_hash,
-                                                      g_str_equal);
+        {
+          g_variant_type_info_table = g_hash_table_new ((GHashFunc)_g_variant_type_hash,
+                                                        (GEqualFunc)_g_variant_type_equal);
+          g_ignore_leak (g_variant_type_info_table);
+        }
       info = g_hash_table_lookup (g_variant_type_info_table, type_string);
 
       if (info == NULL)
@@ -802,20 +833,19 @@ g_variant_type_info_get (const GVariantType *type)
             }
 
           info = (GVariantTypeInfo *) container;
-          container->type_string = type_string;
+          container->type_string = g_variant_type_dup_string (type);
           g_atomic_ref_count_init (&container->ref_count);
 
           TRACE(GLIB_VARIANT_TYPE_INFO_NEW(info, container->type_string));
 
-          g_hash_table_insert (g_variant_type_info_table, type_string, info);
-          type_string = NULL;
+          g_hash_table_replace (g_variant_type_info_table,
+                                container->type_string, info);
         }
       else
         g_variant_type_info_ref (info);
 
       g_rec_mutex_unlock (&g_variant_type_info_lock);
       g_variant_type_info_check (info, 0);
-      g_free (type_string);
 
       return info;
     }
@@ -878,36 +908,36 @@ g_variant_type_info_unref (GVariantTypeInfo *info)
       g_rec_mutex_lock (&g_variant_type_info_lock);
       if (g_atomic_ref_count_dec (&container->ref_count))
         {
-
-          TRACE(GLIB_VARIANT_TYPE_INFO_FREE(info));
-
-          g_hash_table_remove (g_variant_type_info_table,
-                               container->type_string);
-          if (g_hash_table_size (g_variant_type_info_table) == 0)
+          if (g_variant_type_info_gc == NULL)
             {
-              g_hash_table_unref (g_variant_type_info_table);
-              g_variant_type_info_table = NULL;
+              g_variant_type_info_gc = g_ptr_array_new ();
+              g_ignore_leak (g_variant_type_info_gc);
             }
-          g_rec_mutex_unlock (&g_variant_type_info_lock);
 
-          g_free (container->type_string);
+          /* Steal this instance and place it onto the GC queue.
+           * We may bring it back to life before the next GC.
+           */
+          g_atomic_ref_count_init (&container->ref_count);
+          g_ptr_array_add (g_variant_type_info_gc, info);
 
-          if (info->container_class == GV_ARRAY_INFO_CLASS)
-            array_info_free (info);
-
-          else if (info->container_class == GV_TUPLE_INFO_CLASS)
-            tuple_info_free (info);
-
-          else
-            g_assert_not_reached ();
+          if (g_variant_type_info_gc->len > GC_THRESHOLD)
+            gc_while_locked ();
         }
-      else
-        g_rec_mutex_unlock (&g_variant_type_info_lock);
+      g_rec_mutex_unlock (&g_variant_type_info_lock);
     }
 }
 
 void
 g_variant_type_info_assert_no_infos (void)
 {
-  g_assert (g_variant_type_info_table == NULL);
+  G_GNUC_UNUSED gboolean empty;
+
+  g_rec_mutex_lock (&g_variant_type_info_lock);
+  if (g_variant_type_info_table != NULL)
+    gc_while_locked ();
+  empty = (g_variant_type_info_table == NULL ||
+           g_hash_table_size (g_variant_type_info_table) == 0);
+  g_rec_mutex_unlock (&g_variant_type_info_lock);
+
+  g_assert (empty);
 }

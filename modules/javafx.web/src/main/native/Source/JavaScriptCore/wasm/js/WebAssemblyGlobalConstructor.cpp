@@ -102,7 +102,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         if (!argument.isUndefined()) {
             int32_t value = argument.toInt32(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-            initialValue = static_cast<uint64_t>(bitwise_cast<uint32_t>(value));
+            initialValue = static_cast<uint64_t>(std::bit_cast<uint32_t>(value));
         }
         break;
     }
@@ -118,7 +118,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         if (!argument.isUndefined()) {
             float value = argument.toFloat(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-            initialValue = static_cast<uint64_t>(bitwise_cast<uint32_t>(value));
+            initialValue = static_cast<uint64_t>(std::bit_cast<uint32_t>(value));
         }
         break;
     }
@@ -126,7 +126,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         if (!argument.isUndefined()) {
             double value = argument.toNumber(globalObject);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-            initialValue = bitwise_cast<uint64_t>(value);
+            initialValue = std::bit_cast<uint64_t>(value);
         }
         break;
     }
@@ -152,8 +152,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
     }
 
     Ref<Wasm::Global> wasmGlobal = Wasm::Global::create(type, mutability, initialValue);
-    JSWebAssemblyGlobal* jsWebAssemblyGlobal = JSWebAssemblyGlobal::tryCreate(globalObject, vm, webAssemblyGlobalStructure, WTFMove(wasmGlobal));
-    RETURN_IF_EXCEPTION(throwScope, { });
+    JSWebAssemblyGlobal* jsWebAssemblyGlobal = JSWebAssemblyGlobal::create(vm, webAssemblyGlobalStructure, WTFMove(wasmGlobal));
     ensureStillAliveHere(initialValue); // Ensure this is kept alive while creating JSWebAssemblyGlobal.
     return JSValue::encode(jsWebAssemblyGlobal);
 }

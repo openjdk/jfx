@@ -116,11 +116,11 @@ ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, 
 
     auto& context = *scriptExecutionContext();
     // FIXME: Maybe we could use a ScriptExecutionContextIdentifier for service workers too.
-    ServiceWorkerOrClientIdentifier sourceIdentifier;
+    ServiceWorkerOrClientIdentifier sourceIdentifier = [&]() -> ServiceWorkerOrClientIdentifier {
     if (auto* serviceWorker = dynamicDowncast<ServiceWorkerGlobalScope>(context))
-        sourceIdentifier = serviceWorker->thread().identifier();
-    else
-        sourceIdentifier = context.identifier();
+            return serviceWorker->thread().identifier();
+        return context.identifier();
+    }();
 
     MessageWithMessagePorts message { messageData.releaseReturnValue(), portsOrException.releaseReturnValue() };
     swConnection().postMessageToServiceWorker(identifier(), WTFMove(message), sourceIdentifier);

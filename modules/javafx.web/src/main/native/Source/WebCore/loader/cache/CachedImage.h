@@ -97,6 +97,11 @@ public:
     LayoutSize unclampedImageSizeForRenderer(const RenderElement* renderer, float multiplier, SizeType = UsedSize) const;
     void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
+    Headroom headroom() const;
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    bool isHDR() const { return headroom() > Headroom::None; }
+#endif
+
     bool isManuallyCached() const { return m_isManuallyCached; }
     RevalidationDecision makeRevalidationDecision(CachePolicy) const override;
     void load(CachedResourceLoader&) override;
@@ -115,16 +120,12 @@ public:
     bool isVisibleInViewport(const Document&) const;
     bool allowsAnimation(const Image&) const;
 
-    bool layerBasedSVGEngineEnabled() const { return m_layerBasedSVGEngineEnabled; }
-
 private:
     void clear();
 
     CachedImage(CachedImage&, const ResourceRequest&, PAL::SessionID);
 
     void setBodyDataFrom(const CachedResource&) final;
-
-    bool isPDFResource() const;
 
     void createImage();
     void clearImage();
@@ -177,7 +178,7 @@ private:
         void scheduleRenderingUpdate(const Image&) final;
 
         bool allowsAnimation(const Image&) const final;
-        bool layerBasedSVGEngineEnabled() const final { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).m_layerBasedSVGEngineEnabled : false; }
+        const Settings* settings() final { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).m_settings.get() : nullptr; }
 
         WeakHashSet<CachedImage> m_cachedImages;
     };
@@ -212,13 +213,13 @@ private:
     MonotonicTime m_lastUpdateImageDataTime;
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_skippingRevalidationDocument;
+    RefPtr<const Settings> m_settings;
 
     static constexpr unsigned maxUpdateImageDataCount = 4;
     unsigned m_updateImageDataCount : 3;
     bool m_isManuallyCached : 1;
     bool m_shouldPaintBrokenImage : 1;
     bool m_forceUpdateImageDataEnabledForTesting : 1;
-    bool m_layerBasedSVGEngineEnabled : 1 { false };
     bool m_allowsOrientationOverride : 1;
 };
 

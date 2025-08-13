@@ -29,6 +29,7 @@
 #include "FloatSize.h"
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #if PLATFORM(MAC)
@@ -36,6 +37,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BasicWheelEventDeltaFilter);
 
 WheelEventDeltaFilter::WheelEventDeltaFilter() = default;
 

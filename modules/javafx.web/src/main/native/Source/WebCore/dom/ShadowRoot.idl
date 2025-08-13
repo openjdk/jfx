@@ -37,6 +37,9 @@
     [EnabledBySetting=DeclarativeShadowRootsSerializerAPIsEnabled] readonly attribute boolean serializable;
     readonly attribute Element host;
     attribute EventHandler onslotchange;
+    [EnabledBySetting=ShadowRootReferenceTargetEnabled] attribute [AtomString] DOMString referenceTarget;
+
+    [ImplementedAs=registryForBindings, EnabledBySetting=ScopedCustomElementRegistryEnabled] readonly attribute CustomElementRegistry? customElements;
 };
 
 ShadowRoot includes DocumentOrShadowRoot;

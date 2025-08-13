@@ -93,12 +93,6 @@ unsigned RemoteDOMWindow::length() const
     return m_frame->tree().childCount();
 }
 
-void RemoteDOMWindow::setOpener(WindowProxy*)
-{
-    // FIXME: <rdar://118263373> Implement.
-    // JSDOMWindow::setOpener has some security checks. Are they needed here?
-}
-
 ExceptionOr<void> RemoteDOMWindow::postMessage(JSC::JSGlobalObject& lexicalGlobalObject, LocalDOMWindow& incumbentWindow, JSC::JSValue message, WindowPostMessageOptions&& options)
 {
     RefPtr sourceDocument = incumbentWindow.document();
@@ -136,8 +130,9 @@ ExceptionOr<void> RemoteDOMWindow::postMessage(JSC::JSGlobalObject& lexicalGloba
     return { };
 }
 
-void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior historyHandling, SetLocationLocking locking)
+void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior historyHandling, SetLocationLocking locking, CanNavigateState navigationState)
 {
+    ASSERT(navigationState != CanNavigateState::Unchecked);
     // FIXME: Add some or all of the security checks in LocalDOMWindow::setLocation. <rdar://116500603>
     // FIXME: Refactor this duplicate code to share with LocalDOMWindow::setLocation. <rdar://116500603>
 
@@ -146,13 +141,15 @@ void RemoteDOMWindow::setLocation(LocalDOMWindow& activeWindow, const URL& compl
         return;
 
     RefPtr frame = this->frame();
-    if (!activeDocument->canNavigate(frame.get(), completedURL))
+    if (UNLIKELY(navigationState != CanNavigateState::Able))
+        navigationState = activeDocument->canNavigate(frame.get(), completedURL);
+    if (navigationState == CanNavigateState::Unable)
         return;
 
     // We want a new history item if we are processing a user gesture.
     LockHistory lockHistory = (locking != SetLocationLocking::LockHistoryBasedOnGestureState || !UserGestureIndicator::processingUserGesture()) ? LockHistory::Yes : LockHistory::No;
     LockBackForwardList lockBackForwardList = (locking != SetLocationLocking::LockHistoryBasedOnGestureState) ? LockBackForwardList::Yes : LockBackForwardList::No;
-    frame->checkedNavigationScheduler()->scheduleLocationChange(*activeDocument, activeDocument->securityOrigin(),
+    frame->protectedNavigationScheduler()->scheduleLocationChange(*activeDocument, activeDocument->securityOrigin(),
         // FIXME: What if activeDocument()->frame() is 0?
         completedURL, activeDocument->frame()->loader().outgoingReferrer(),
         lockHistory, lockBackForwardList,

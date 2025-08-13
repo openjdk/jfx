@@ -33,7 +33,7 @@
 namespace WebCore {
 
 CSSBackgroundRepeatValue::CSSBackgroundRepeatValue(CSSValueID xValue, CSSValueID yValue)
-    : CSSValue(BackgroundRepeatClass)
+    : CSSValue(ClassType::BackgroundRepeat)
     , m_xValue(xValue)
     , m_yValue(yValue)
 {
@@ -44,7 +44,7 @@ Ref<CSSBackgroundRepeatValue> CSSBackgroundRepeatValue::create(CSSValueID repeat
     return adoptRef(*new CSSBackgroundRepeatValue(repeatXValue, repeatYValue));
 }
 
-String CSSBackgroundRepeatValue::customCSSText() const
+String CSSBackgroundRepeatValue::customCSSText(const CSS::SerializationContext&) const
 {
     // background-repeat/mask-repeat behave a little like a shorthand, but `repeat no-repeat` is transformed to `repeat-x`.
     if (m_xValue != m_yValue) {

@@ -1292,7 +1292,7 @@ is being used to size a border should also be in pixels.
 }
 .text-input:focused {
     -fx-highlight-fill: -fx-accent;
-    -fx-highlight-text-fill: white;
+    -fx-highlight-text-fill: -fx-focused-text-base-color;
     -fx-background-color:
         -fx-focus-color,
         -fx-control-inner-background,

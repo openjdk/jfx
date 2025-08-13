@@ -23,7 +23,6 @@
  * questions.
  */
 
-#include "GlassDraggingSource.h"
 #import "common.h"
 #import "com_sun_glass_events_ViewEvent.h"
 #import "com_sun_glass_events_MouseEvent.h"
@@ -36,15 +35,10 @@
 #import "GlassMacros.h"
 #import "GlassViewDelegate.h"
 #import "GlassKey.h"
-#import "GlassScreen.h"
 #import "GlassWindow.h"
 #import "GlassApplication.h"
-#import "GlassLayer3D.h"
-#import "GlassPasteboard.h"
 #import "GlassHelper.h"
-#import "GlassStatics.h"
 #import "GlassPasteboard.h"
-#import "GlassTouches.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -197,8 +191,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     [self->nativeFullScreenModeWindow release];
     self->nativeFullScreenModeWindow = nil;
-
-    [GlassTouches stopTracking:self];
 
     GET_MAIN_JENV_NOWARN;
 
@@ -416,13 +408,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
         case NSMouseEntered:
             type = com_sun_glass_events_MouseEvent_ENTER;
-            [GlassTouches startTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
         case NSMouseExited:
             type = com_sun_glass_events_MouseEvent_EXIT;
-            [GlassTouches stopTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
 
@@ -676,13 +666,23 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             jKeyChars, jModifiers); \
     GLASS_CHECK_EXCEPTION(env);
 
-- (BOOL)sendJavaKeyEvent:(NSEvent *)theEvent isDown:(BOOL)isDown
+- (BOOL)sendJavaKeyEvent:(NSEvent *)theEvent isDown:(BOOL)isDown character:(unichar)textChar
 {
     GET_MAIN_JENV;
 
     jint jKeyCode = GetJavaKeyCode(theEvent);
-    jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
     jint jModifiers = GetJavaModifiers(theEvent);
+    jcharArray jKeyChars;
+    if (textChar != 0) {
+        jchar jc[1] = { textChar };
+        jKeyChars = (*env)->NewCharArray(env, 1);
+        if (jKeyChars == NULL) {
+            return YES;
+        }
+        (*env)->SetCharArrayRegion(env, jKeyChars, 0, 1, jc);
+    } else {
+        jKeyChars = GetJavaKeyChars(env, theEvent);
+    }
 
     // This routine returns YES if the PRESS event was consumed. This is
     // used to ensure that performKeyEquivalent doesn't allow an event
@@ -1138,6 +1138,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (BOOL)suppressMouseEnterExitOnMouseDown
 {
     return YES;
+}
+
+- (void)performWindowDrag
+{
+    [[nsView window] performWindowDragWithEvent:[NSApp currentEvent]];
 }
 
 static jstring convertNSStringToJString(id aString, int length)

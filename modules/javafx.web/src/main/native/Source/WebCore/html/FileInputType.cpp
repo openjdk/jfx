@@ -26,7 +26,7 @@
 #include "DOMFormData.h"
 #include "DirectoryFileListCreator.h"
 #include "DragData.h"
-#include "ElementChildIteratorInlines.h"
+#include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "File.h"
@@ -58,6 +58,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileInputType);
 
 using namespace HTMLNames;
 
@@ -240,11 +242,8 @@ void FileInputType::createShadowSubtree()
 
 static RefPtr<HTMLInputElement> fileSelectorButton(const Element& element)
 {
-    auto root = element.userAgentShadowRoot();
-    if (!root)
-        return nullptr;
-
-    return childrenOfType<HTMLInputElement>(*root).first();
+    RefPtr root = element.userAgentShadowRoot();
+    return root ? downcast<HTMLInputElement>(root->firstChild()) : nullptr;
 }
 
 void FileInputType::disabledStateChanged()
@@ -481,13 +480,13 @@ bool FileInputType::receiveDroppedFilesWithImageTranscoding(const Vector<String>
         protectedThis->filesChosen(paths, replacementPaths);
     };
 
-    sharedImageTranscodingQueue().dispatch([callFilesChosen = WTFMove(callFilesChosen), transcodingPaths = crossThreadCopy(WTFMove(transcodingPaths)), transcodingUTI = WTFMove(transcodingUTI).isolatedCopy(), transcodingExtension = WTFMove(transcodingExtension).isolatedCopy()]() mutable {
+    sharedImageTranscodingQueueSingleton().dispatch([callFilesChosen = WTFMove(callFilesChosen), transcodingPaths = crossThreadCopy(WTFMove(transcodingPaths)), transcodingUTI = WTFMove(transcodingUTI).isolatedCopy(), transcodingExtension = WTFMove(transcodingExtension).isolatedCopy()]() mutable {
         ASSERT(!RunLoop::isMain());
 
         auto replacementPaths = transcodeImages(transcodingPaths, transcodingUTI, transcodingExtension);
         ASSERT(transcodingPaths.size() == replacementPaths.size());
 
-        RunLoop::main().dispatch([callFilesChosen = WTFMove(callFilesChosen), replacementPaths = crossThreadCopy(WTFMove(replacementPaths))] {
+        RunLoop::protectedMain()->dispatch([callFilesChosen = WTFMove(callFilesChosen), replacementPaths = crossThreadCopy(WTFMove(replacementPaths))] {
             callFilesChosen(replacementPaths);
         });
     });

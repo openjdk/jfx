@@ -25,6 +25,7 @@
 #include "SVGURIReference.h"
 #include "ScriptElement.h"
 #include "XLinkNames.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -34,13 +35,12 @@ class SVGScriptElement final : public SVGElement, public SVGURIReference, public
 public:
     static Ref<SVGScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser);
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGScriptElement, SVGElement, SVGURIReference>;
     using SVGElement::ref;
     using SVGElement::deref;
 
 private:
     SVGScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGScriptElement, SVGElement, SVGURIReference>;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
@@ -53,13 +53,13 @@ private:
     bool isURLAttribute(const Attribute& attribute) const final { return attribute.name() == AtomString { sourceAttributeValue() }; }
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
-    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) final;
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
     bool supportsFocus() const final { return false; }
 
     // ScriptElement
     String sourceAttributeValue() const final { return href(); }
-    String charsetAttributeValue() const final { return String(); }
+    AtomString charsetAttributeValue() const final { return nullAtom(); }
     String typeAttributeValue() const final { return getAttribute(SVGNames::typeAttr).string(); }
     String languageAttributeValue() const final { return String(); }
     bool hasAsyncAttribute() const final { return false; }

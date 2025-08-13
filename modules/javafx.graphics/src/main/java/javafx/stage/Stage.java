@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,10 +39,13 @@ import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HeaderBar;
 
+import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKStage;
@@ -198,6 +201,21 @@ public class Stage extends Window {
             public void setImportant(Stage stage, boolean important) {
                 stage.setImportant(important);
             }
+
+            @Override
+            public void setPrefHeaderButtonHeight(Stage stage, double height) {
+                stage.setPrefHeaderButtonHeight(height);
+            }
+
+            @Override
+            public double getPrefHeaderButtonHeight(Stage stage) {
+                return stage.getPrefHeaderButtonHeight();
+            }
+
+            @Override
+            public ObservableValue<HeaderButtonMetrics> getHeaderButtonMetrics(Stage stage) {
+                return stage.headerButtonMetricsProperty();
+            }
         });
     }
 
@@ -226,6 +244,11 @@ public class Stage extends Window {
         @Override
         public void setAlwaysOnTop(Stage stage, boolean aot) {
             stage.alwaysOnTopPropertyImpl().set(aot);
+        }
+
+        @Override
+        public void setHeaderButtonMetrics(Stage stage, HeaderButtonMetrics metrics) {
+            stage.headerButtonMetricsProperty().set(metrics);
         }
     };
 
@@ -434,9 +457,7 @@ public class Stage extends Window {
     private StageStyle style; // default is set in constructor
 
     /**
-     * Specifies the style for this stage. This must be done prior to making
-     * the stage visible. The style is one of: StageStyle.DECORATED,
-     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, or StageStyle.UTILITY.
+     * Specifies the style for this stage. This must be done prior to making the stage visible.
      *
      * @param style the style for this stage.
      *
@@ -445,7 +466,11 @@ public class Stage extends Window {
      *
      * @defaultValue StageStyle.DECORATED
      */
+    @SuppressWarnings("deprecation")
     public final void initStyle(StageStyle style) {
+        if (style == StageStyle.EXTENDED) {
+            PreviewFeature.STAGE_STYLE_EXTENDED.checkEnabled();
+        }
         if (hasBeenVisible) {
             throw new IllegalStateException("Cannot set style once stage has been set visible");
         }
@@ -1094,6 +1119,7 @@ public class Stage extends Window {
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
+            getPeer().setPrefHeaderButtonHeight(getPrefHeaderButtonHeight());
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
@@ -1258,5 +1284,30 @@ public class Stage extends Window {
 
     public final ObjectProperty<String> fullScreenExitHintProperty() {
         return fullScreenExitHint;
+    }
+
+    private ObjectProperty<HeaderButtonMetrics> headerButtonMetrics;
+
+    private ObjectProperty<HeaderButtonMetrics> headerButtonMetricsProperty() {
+        if (headerButtonMetrics == null) {
+            headerButtonMetrics = new SimpleObjectProperty<>(this, "headerButtonMetrics");
+        }
+
+        return headerButtonMetrics;
+    }
+
+    private double prefHeaderButtonHeight = HeaderBar.USE_DEFAULT_SIZE;
+
+    private double getPrefHeaderButtonHeight() {
+        return prefHeaderButtonHeight;
+    }
+
+    private void setPrefHeaderButtonHeight(double height) {
+        prefHeaderButtonHeight = height;
+
+        TKStage peer = getPeer();
+        if (peer != null) {
+            peer.setPrefHeaderButtonHeight(height);
+        }
     }
 }

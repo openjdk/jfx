@@ -69,6 +69,9 @@ public:
     const_iterator end() const { return m_data.end(); }
     void clear() { m_data.fill(0); }
 
+    template<TemporalUnit unit>
+    std::optional<Int128> totalNanoseconds() const;
+
     Duration operator-() const
     {
         Duration result(*this);
@@ -109,6 +112,14 @@ public:
     int64_t epochMilliseconds() const
     {
         return static_cast<int64_t>(m_epochNanoseconds / ExactTime::nsPerMillisecond);
+    }
+    int64_t floorEpochMilliseconds() const
+    {
+        auto div = m_epochNanoseconds / ExactTime::nsPerMillisecond;
+        auto rem = m_epochNanoseconds % ExactTime::nsPerMillisecond;
+        if (rem && m_epochNanoseconds < 0)
+            div -= 1;
+        return static_cast<int64_t>(div);
     }
     constexpr Int128 epochNanoseconds() const
     {
@@ -167,7 +178,7 @@ private:
     {
         if (value > 9)
             asStringImpl(builder, value / 10);
-        builder.append(static_cast<uint64_t>(value % 10) + '0');
+        builder.append(static_cast<LChar>(static_cast<unsigned>(value % 10) + '0'));
     }
 
     static Int128 round(Int128 quantity, unsigned increment, TemporalUnit, RoundingMode);
@@ -262,7 +273,7 @@ struct CalendarRecord {
 // https://tc39.es/proposal-temporal/#sup-isvalidtimezonename
 std::optional<TimeZoneID> parseTimeZoneName(StringView);
 std::optional<Duration> parseDuration(StringView);
-std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringView);
+std::optional<int64_t> parseUTCOffset(StringView, bool parseSubMinutePrecision = true);
 std::optional<int64_t> parseUTCOffsetInMinutes(StringView);
 enum class ValidateTimeZoneID : bool { No, Yes };
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(StringView);

@@ -145,7 +145,7 @@ bool OSAllocator::tryProtect(void* address, size_t bytes, bool readable, bool wr
         else
             protection = PAGE_READONLY;
     } else {
-    ASSERT(!readable && !writable);
+        ASSERT(!readable && !writable);
         protection = PAGE_NOACCESS;
     }
     return VirtualAlloc(address, bytes, MEM_COMMIT, protection);

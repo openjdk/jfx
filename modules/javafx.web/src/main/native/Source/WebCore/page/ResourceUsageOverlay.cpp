@@ -34,13 +34,17 @@
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResourceUsageOverlay);
 
 Ref<ResourceUsageOverlay> ResourceUsageOverlay::create(Page& page)
 {
     return adoptRef(*new ResourceUsageOverlay(page));
 }
+
 ResourceUsageOverlay::ResourceUsageOverlay(Page& page)
     : m_page(page)
     , m_overlay(PageOverlay::create(*this, PageOverlay::OverlayType::View))
@@ -58,7 +62,6 @@ ResourceUsageOverlay::~ResourceUsageOverlay()
 {
     ASSERT(isMainThread());
     platformDestroy();
-    // FIXME: This is a hack so we don't try to uninstall the PageOverlay during Page destruction.
     if (RefPtr page = m_page.get())
         page->pageOverlayController().uninstallPageOverlay(*m_overlay.copyRef(), PageOverlay::FadeMode::DoNotFade);
 }
@@ -117,10 +120,9 @@ bool ResourceUsageOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent& ev
             newFrame.moveBy(IntPoint(-m_dragPoint.x(), -m_dragPoint.y()));
 
             // Force the frame to stay inside the viewport entirely.
-            if (newFrame.x() < 0)
-                newFrame.setX(0);
-            if (newFrame.y() < page->topContentInset())
-                newFrame.setY(page->topContentInset());
+            auto obscuredContentInsets = page->obscuredContentInsets();
+            newFrame.setX(static_cast<int>(std::max<float>(obscuredContentInsets.left(), newFrame.x())));
+            newFrame.setY(static_cast<int>(std::max<float>(obscuredContentInsets.top(), newFrame.y())));
             auto& frameView = *page->mainFrame().virtualView();
             if (newFrame.maxX() > frameView.width())
                 newFrame.setX(frameView.width() - newFrame.width());

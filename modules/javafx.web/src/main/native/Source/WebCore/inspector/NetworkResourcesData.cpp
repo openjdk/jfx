@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc.  All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,14 +34,17 @@
 #include "InspectorNetworkAgent.h"
 #include "ResourceResponse.h"
 #include "TextResourceDecoder.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkResourcesData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NetworkResourcesData::ResourceData);
+
 using namespace Inspector;
 
-static const size_t maximumResourcesContentSize = 200 * 1000 * 1000; // 200MB
-static const size_t maximumSingleResourceContentSize = 50 * 1000 * 1000; // 50MB
+static const unsigned maximumSingleResourceContentSizeMB = 50; // 50MB
 
 NetworkResourcesData::ResourceData::ResourceData(const String& requestId, const String& loaderId)
     : m_requestId(requestId)
@@ -109,12 +112,11 @@ void NetworkResourcesData::ResourceData::decodeDataToContent()
         m_base64Encoded = true;
         m_content = base64EncodeToString(buffer->span());
     }
-
 }
 
-NetworkResourcesData::NetworkResourcesData()
-    : m_maximumResourcesContentSize(maximumResourcesContentSize)
-    , m_maximumSingleResourceContentSize(maximumSingleResourceContentSize)
+NetworkResourcesData::NetworkResourcesData(uint32_t maximumResourcesContentSize)
+    : m_maximumResourcesContentSize(maximumResourcesContentSize * MB)
+    , m_maximumSingleResourceContentSize(maximumSingleResourceContentSizeMB * MB)
 {
 }
 
@@ -253,12 +255,14 @@ void NetworkResourcesData::maybeDecodeDataToContent(const String& requestId)
 
     auto byteCount = resourceData->dataLength();
     m_contentSize -= byteCount;
+
     resourceData->decodeDataToContent();
     byteCount = resourceData->content().sizeInBytes();
     if (byteCount > m_maximumSingleResourceContentSize) {
         resourceData->evictContent();
         return;
     }
+
     if (ensureFreeSpace(byteCount) && !resourceData->isContentEvicted())
         m_contentSize += byteCount;
 }

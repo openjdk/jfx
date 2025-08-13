@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,14 @@ import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
+import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
@@ -180,5 +187,46 @@ public class UtilsTest {
         assertEquals(70, res.getX(), 1e-1);
         assertEquals(70, res.getY(), 1e-1);
 
+    }
+
+    @Test
+    void testAveragePerceptualBrightness_LinearGradient() {
+        var gradient = new LinearGradient(
+            0, 0, 1, 1, true, CycleMethod.NO_CYCLE,
+            new Stop(0, Color.RED), new Stop(0.5, Color.GREEN), new Stop(1, Color.BLUE));
+
+        double actual = Utils.calculateAverageBrightness(gradient);
+        double expect = (Utils.calculateBrightness(Color.RED)
+            + Utils.calculateBrightness(Color.GREEN)
+            + Utils.calculateBrightness(Color.BLUE)) / 3;
+
+        assertEquals(expect, actual);
+    }
+
+    @Test
+    void testAveragePerceptualBrightness_RadialGradient() {
+        var gradient = new RadialGradient(
+            0, 0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+            new Stop(0, Color.RED), new Stop(0.5, Color.GREEN), new Stop(1, Color.BLUE));
+
+        double actual = Utils.calculateAverageBrightness(gradient);
+        double expect = (Utils.calculateBrightness(Color.RED)
+            + Utils.calculateBrightness(Color.GREEN)
+            + Utils.calculateBrightness(Color.BLUE)) / 3;
+
+        assertEquals(expect, actual);
+    }
+
+    @Test
+    void testAveragePerceptualBrightness_ImagePattern() {
+        var pattern = new ImagePattern(new Image("test"));
+        assertEquals(1, Utils.calculateAverageBrightness(pattern));
+    }
+
+    @Test
+    void testAveragePerceptualBrightness_Color() {
+        var actual = Utils.calculateAverageBrightness(Color.RED);
+        var expect = Utils.calculateBrightness(Color.RED);
+        assertEquals(expect, actual);
     }
 }

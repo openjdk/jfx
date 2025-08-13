@@ -41,6 +41,13 @@ public:
     void reattachColorChooser(const Color&) override;
     void setSelectedColor(const Color&) override;
     void endChooser() override;
+    void ref() const override {
+            // implement reference counting logic here or delegate
+    }
+
+    void deref() const override {
+            // implement deref logic here or delegate
+    }
 
 private:
     ColorChooserClient* m_colorChooserClient;

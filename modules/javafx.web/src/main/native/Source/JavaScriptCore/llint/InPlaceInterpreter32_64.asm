@@ -6,12 +6,12 @@
 
 macro saveIPIntRegisters()
     subp IPIntCalleeSaveSpaceStackAligned, sp
-    store2ia PM, PB, -8[cfr]
+    store2ia MC, PC, -8[cfr]
     storep wasmInstance, -16[cfr]
 end
 
 macro restoreIPIntRegisters()
-    load2ia -8[cfr], PM, PB
+    load2ia -8[cfr], MC, PC
     loadp -16[cfr], wasmInstance
     addp IPIntCalleeSaveSpaceStackAligned, sp
 end
@@ -25,7 +25,7 @@ macro nextIPIntInstruction()
     # bpeq t0, 0, .fine
     # break
 # .fine:
-    loadb [PB, PC, 1], t0
+    loadb [PC], t0
 if ARMv7
     lshiftp 8, t0
     leap (_ipint_unreachable + 1), t1
@@ -132,7 +132,7 @@ macro ipintEntry()
     move sp, t6
     subp t7, sp
     move sp, t7
-    loadp Wasm::IPIntCallee::m_argumINTBytecodePointer[ws0], PM
+    loadp Wasm::IPIntCallee::m_argumINTBytecodePointer[ws0], MC
 
     push csr1, t4, t5
 
@@ -143,15 +143,15 @@ macro ipintEntry()
 end
 
 macro argumINTDispatch()
-    loadb [PM], csr1
-    addp 1, PM
+    loadb [MC], csr1
+    addp 1, MC
     lshiftp 6, csr1
     leap (_argumINT_begin + 1), t7
     addp csr1, t7
     emit "bx r9"
 end
 
-macro argumINTEnd()
+macro argumINTInitializeDefaultLocals()
     # zero out remaining locals
     bpeq argumINTDest, t6, .ipint_entry_finish_zero
     break
@@ -175,12 +175,12 @@ unimplementedInstruction(_try)
 unimplementedInstruction(_catch)
 unimplementedInstruction(_throw)
 unimplementedInstruction(_rethrow)
-reservedOpcode(0xa)
+unimplementedInstruction(_throw_ref)
 
 
 macro uintDispatch()
-    loadb [PM], t6
-    addp 1, PM
+    loadb [MC], t6
+    addp 1, MC
     bilt t6, 5, .safe
     break
 .safe:
@@ -193,14 +193,13 @@ end
 
 instructionLabel(_end)
     #loadp UnboxedWasmCalleeStackSlot[cfr], ws0
-    loadi Wasm::IPIntCallee::m_bytecodeLength[ws0], t0
-    subp 1, t0
+    loadi Wasm::IPIntCallee::m_bytecodeEnd[ws0], t0
     bpeq PC, t0, .ipint_end_ret
     advancePC(1)
     nextIPIntInstruction()
 .ipint_end_ret:
+    loadp Wasm::IPIntCallee::m_uINTBytecodePointer[ws0], MC
     ipintEpilogueOSR(10)
-    addp MC, PM
     uintDispatch()
 
 unimplementedInstruction(_br)
@@ -209,10 +208,10 @@ unimplementedInstruction(_br_table)
 unimplementedInstruction(_return)
 unimplementedInstruction(_call)
 unimplementedInstruction(_call_indirect)
-reservedOpcode(0x12)
-reservedOpcode(0x13)
-reservedOpcode(0x14)
-reservedOpcode(0x15)
+unimplementedInstruction(_return_call)
+unimplementedInstruction(_return_call_indirect)
+unimplementedInstruction(_call_ref)
+unimplementedInstruction(_return_call_ref)
 reservedOpcode(0x16)
 reservedOpcode(0x17)
 unimplementedInstruction(_delegate)
@@ -222,7 +221,7 @@ unimplementedInstruction(_select)
 unimplementedInstruction(_select_t)
 reservedOpcode(0x1d)
 reservedOpcode(0x1e)
-reservedOpcode(0x1f)
+unimplementedInstruction(_try_table)
 
     ###################################
     # 0x20 - 0x26: get and set values #
@@ -456,16 +455,16 @@ reservedOpcode(0xce)
 reservedOpcode(0xcf)
 
     #####################
-    # 0xd0 - 0xd2: refs #
+    # 0xd0 - 0xd6: refs #
     #####################
 
 unimplementedInstruction(_ref_null_t)
 unimplementedInstruction(_ref_is_null)
 unimplementedInstruction(_ref_func)
-reservedOpcode(0xd3)
-reservedOpcode(0xd4)
-reservedOpcode(0xd5)
-reservedOpcode(0xd6)
+unimplementedInstruction(_ref_eq)
+unimplementedInstruction(_ref_as_non_null)
+unimplementedInstruction(_br_on_null)
+unimplementedInstruction(_br_on_non_null)
 reservedOpcode(0xd7)
 reservedOpcode(0xd8)
 reservedOpcode(0xd9)
@@ -502,11 +501,47 @@ reservedOpcode(0xf7)
 reservedOpcode(0xf8)
 reservedOpcode(0xf9)
 reservedOpcode(0xfa)
-reservedOpcode(0xfb)
+unimplementedInstruction(_fb_block)
 unimplementedInstruction(_fc_block)
 unimplementedInstruction(_simd)
 unimplementedInstruction(_atomic)
 reservedOpcode(0xff)
+
+    #######################
+    ## 0xFB instructions ##
+    #######################
+
+unimplementedInstruction(_struct_new)
+unimplementedInstruction(_struct_new_default)
+unimplementedInstruction(_struct_get)
+unimplementedInstruction(_struct_get_s)
+unimplementedInstruction(_struct_get_u)
+unimplementedInstruction(_struct_set)
+unimplementedInstruction(_array_new)
+unimplementedInstruction(_array_new_default)
+unimplementedInstruction(_array_new_fixed)
+unimplementedInstruction(_array_new_data)
+unimplementedInstruction(_array_new_elem)
+unimplementedInstruction(_array_get)
+unimplementedInstruction(_array_get_s)
+unimplementedInstruction(_array_get_u)
+unimplementedInstruction(_array_set)
+unimplementedInstruction(_array_len)
+unimplementedInstruction(_array_fill)
+unimplementedInstruction(_array_copy)
+unimplementedInstruction(_array_init_data)
+unimplementedInstruction(_array_init_elem)
+unimplementedInstruction(_ref_test)
+unimplementedInstruction(_ref_test_nullable)
+unimplementedInstruction(_ref_cast)
+unimplementedInstruction(_ref_cast_nullable)
+unimplementedInstruction(_br_on_cast)
+unimplementedInstruction(_br_on_cast_fail)
+unimplementedInstruction(_any_convert_extern)
+unimplementedInstruction(_extern_convert_any)
+unimplementedInstruction(_ref_i31)
+unimplementedInstruction(_i31_get_s)
+unimplementedInstruction(_i31_get_u)
 
     #######################
     ## 0xFC instructions ##
@@ -994,13 +1029,37 @@ mintAlign(_fa2)
 mintAlign(_fa3)
     break
 
+mintAlign(_fa4)
+    break
+
+mintAlign(_fa5)
+    break
+
+mintAlign(_fa6)
+    break
+
+mintAlign(_fa7)
+    break
+
 mintAlign(_stackzero)
     break
 
 mintAlign(_stackeight)
     break
 
+mintAlign(_tail_stackzero)
+    break
+
+mintAlign(_tail_stackeight)
+    break
+
 mintAlign(_gap)
+    break
+
+mintAlign(_tail_gap)
+    break
+
+mintAlign(_tail_call)
     break
 
 mintAlign(_call)
@@ -1043,7 +1102,22 @@ mintAlign(_fr2)
 mintAlign(_fr3)
     break
 
+mintAlign(_fr4)
+    break
+
+mintAlign(_fr5)
+    break
+
+mintAlign(_fr6)
+    break
+
+mintAlign(_fr7)
+    break
+
 mintAlign(_stack)
+    break
+
+mintAlign(_stack_gap)
     break
 
 mintAlign(_end)
@@ -1056,7 +1130,46 @@ _uint_begin:
 uintAlign(_r1)
     break
 
+uintAlign(_r2)
+    break
+
+uintAlign(_r3)
+    break
+
+uintAlign(_r4)
+    break
+
+uintAlign(_r5)
+    break
+
+uintAlign(_r6)
+    break
+
+uintAlign(_r7)
+    break
+
+uintAlign(_fr0)
+    break
+
 uintAlign(_fr1)
+    break
+
+uintAlign(_fr2)
+    break
+
+uintAlign(_fr3)
+    break
+
+uintAlign(_fr4)
+    break
+
+uintAlign(_fr5)
+    break
+
+uintAlign(_fr6)
+    break
+
+uintAlign(_fr7)
     break
 
 uintAlign(_stack)
@@ -1112,8 +1225,36 @@ argumINTAlign(_fa2)
 argumINTAlign(_fa3)
     break
 
+argumINTAlign(_fa4)
+    break
+
+argumINTAlign(_fa5)
+    break
+
+argumINTAlign(_fa6)
+    break
+
+argumINTAlign(_fa7)
+    break
+
 argumINTAlign(_stack)
     break
 
 argumINTAlign(_end)
     jmp .ipint_entry_end_local
+
+
+_wasm_trampoline_wasm_ipint_call:
+_wasm_trampoline_wasm_ipint_call_wide16:
+_wasm_trampoline_wasm_ipint_call_wide32:
+    break
+
+_wasm_ipint_call_return_location:
+_wasm_ipint_call_return_location_wide16:
+_wasm_ipint_call_return_location_wide32:
+    break
+
+_wasm_trampoline_wasm_ipint_tail_call:
+_wasm_trampoline_wasm_ipint_tail_call_wide16:
+_wasm_trampoline_wasm_ipint_tail_call_wide32:
+    break

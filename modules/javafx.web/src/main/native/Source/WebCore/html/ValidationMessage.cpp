@@ -49,11 +49,19 @@
 #include "Text.h"
 #include "UserAgentParts.h"
 #include "ValidationMessageClient.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ValidationMessage);
+
 using namespace HTMLNames;
+
+Ref<ValidationMessage> ValidationMessage::create(HTMLElement& element)
+{
+    return adoptRef(*new ValidationMessage(element));
+}
 
 ValidationMessage::ValidationMessage(HTMLElement& element)
     : m_element(element)
