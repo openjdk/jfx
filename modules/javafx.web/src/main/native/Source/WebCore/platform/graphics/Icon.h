@@ -66,6 +66,12 @@ public:
     static Ref<Icon> create(HICON hIcon) { return adoptRef(*new Icon(hIcon)); }
 #endif
 
+#if PLATFORM(GTK)
+    WEBCORE_EXPORT static RefPtr<Icon> create(GIcon*);
+
+    GIcon* icon() const { return m_icon.get(); };
+#endif
+
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT static RefPtr<Icon> create(CocoaImage *);
     WEBCORE_EXPORT static RefPtr<Icon> create(PlatformImagePtr&&);

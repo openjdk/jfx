@@ -29,6 +29,7 @@
 #include "FontCascade.h"
 #include "InlineContentBreaker.h"
 #include "InlineFormattingContext.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 namespace Layout {
@@ -77,7 +78,7 @@ std::optional<InlineLayoutUnit> AbstractLineBuilder::eligibleOverflowWidthAsLead
     if (isFirstFormattedLine) {
         auto& usedStyle = overflowingRun.style;
         auto& style = overflowingRun.inlineItem.style();
-        if (&usedStyle != &style && usedStyle.fontCascade() != style.fontCascade()) {
+        if (&usedStyle != &style && !usedStyle.fontCascadeEqual(style)) {
             // We may have the incorrect text width when styles differ. Just re-measure the text content when we place it on the next line.
             return { };
         }

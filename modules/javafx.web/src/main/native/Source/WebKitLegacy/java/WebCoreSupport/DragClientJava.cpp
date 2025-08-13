@@ -95,8 +95,8 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
     // for transfer-to-Java purposes.
     auto actualStoreMode = dataTransfer.storeMode();
     dataTransfer.setStoreMode(DataTransfer::StoreMode::Readonly);
-
-    Vector<String> mimeTypes(dataTransfer.types());
+    auto& localFrameRef = downcast<LocalFrame>(localFrame);
+    Vector<String> mimeTypes(dataTransfer.types(*localFrameRef.document()));
     JLObjectArray jmimeTypes(env->NewObjectArray(mimeTypes.size(), clsString, NULL));
     JLObjectArray jvalues(env->NewObjectArray(mimeTypes.size(), clsObject, NULL));
     WTF::CheckAndClearException(env); // OOME

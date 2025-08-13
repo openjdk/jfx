@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "CSSGroupingRule.h"
 
 #include "CSSParser.h"
+#include "CSSParserImpl.h"
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
 #include "StylePropertiesInlines.h"
@@ -66,16 +67,18 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
     }
 
     CSSStyleSheet* styleSheet = parentStyleSheet();
-    auto isNestedContext = hasStyleRuleAncestor() ? CSSParserEnum::IsNestedContext::Yes : CSSParserEnum::IsNestedContext::No;
-    RefPtr<StyleRuleBase> newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, isNestedContext);
+    RefPtr newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, nestedContext());
     if (!newRule) {
-        // SyntaxError: Raised if the specified rule has a syntax error and is unparsable.
+        if (!hasStyleRuleAncestor())
+            return Exception { ExceptionCode::SyntaxError };
+        newRule = CSSParserImpl::parseNestedDeclarations(parserContext(), ruleString);
+        if (!newRule)
         return Exception { ExceptionCode::SyntaxError };
     }
 
     if (newRule->isImportRule() || newRule->isNamespaceRule()) {
-        // FIXME: an HierarchyRequestError should also be thrown for a @charset or a nested
-        // @media rule. They are currently not getting parsed, resulting in a SyntaxError
+        // FIXME: an HierarchyRequestError should also be thrown for a @charset.
+        // They are currently not getting parsed, resulting in a SyntaxError
         // to get raised above.
 
         // HierarchyRequestError: Raised if the rule cannot be inserted at the specified
@@ -84,8 +87,7 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
         return Exception { ExceptionCode::HierarchyRequestError };
     }
 
-    // Nesting inside style rule only accepts style rule or group rule
-    if (hasStyleRuleAncestor() && !newRule->isStyleRule() && !newRule->isGroupRule())
+    if (hasStyleRuleAncestor() && !newRule->isStyleRule() && !newRule->isGroupRule() && !newRule->isNestedDeclarationsRule())
         return Exception { ExceptionCode::HierarchyRequestError };
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
@@ -138,25 +140,26 @@ void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
 void CSSGroupingRule::cssTextForRules(StringBuilder& rules) const
 {
     auto& childRules = m_groupRule->childRules();
-    for (unsigned index = 0; index < childRules.size(); index++) {
-        auto wrappedRule = item(index);
-        rules.append("\n  "_s, wrappedRule->cssText());
+    for (unsigned index = 0; index < childRules.size(); ++index) {
+        auto ruleText = item(index)->cssText();
+        if (!ruleText.isEmpty())
+            rules.append("\n  "_s, WTFMove(ruleText));
                 }
 }
 
-void CSSGroupingRule::appendCSSTextWithReplacementURLsForItems(StringBuilder& builder, const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+void CSSGroupingRule::appendCSSTextWithReplacementURLsForItems(StringBuilder& builder, const CSS::SerializationContext& context) const
 {
     StringBuilder rules;
-    cssTextForRulesWithReplacementURLs(rules, replacementURLStrings, replacementURLStringsForCSSStyleSheet);
+    cssTextForRulesWithReplacementURLs(rules, context);
     appendCSSTextForItemsInternal(builder, rules);
 }
 
-void CSSGroupingRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>& replacementURLStringsForCSSStyleSheet) const
+void CSSGroupingRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, const CSS::SerializationContext& context) const
 {
     auto& childRules = m_groupRule->childRules();
     for (unsigned index = 0; index < childRules.size(); index++) {
         auto wrappedRule = item(index);
-        rules.append("\n  "_s, wrappedRule->cssTextWithReplacementURLs(replacementURLStrings, replacementURLStringsForCSSStyleSheet));
+        rules.append("\n  "_s, wrappedRule->cssText(context));
     }
 }
 

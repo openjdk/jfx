@@ -32,7 +32,12 @@
 
 namespace WebCore {
 
-class CSSCalcExpressionNode;
+namespace CSSCalc {
+struct Child;
+struct ChildOrNone;
+struct Tree;
+}
+
 class CSSNumericValue;
 class CSSUnitValue;
 class CSSMathSum;
@@ -60,11 +65,11 @@ public:
 
     const CSSNumericType& type() const { return m_type; }
 
-    static ExceptionOr<Ref<CSSNumericValue>> parse(String&&);
+    static ExceptionOr<Ref<CSSNumericValue>> parse(Document&, String&&);
     static Ref<CSSNumericValue> rectifyNumberish(CSSNumberish&&);
 
     // https://drafts.css-houdini.org/css-typed-om/#sum-value-value
-    using UnitMap = HashMap<CSSUnitType, int, WTF::IntHash<CSSUnitType>, WTF::StrongEnumHashTraits<CSSUnitType>>;
+    using UnitMap = UncheckedKeyHashMap<CSSUnitType, int, WTF::IntHash<CSSUnitType>, WTF::StrongEnumHashTraits<CSSUnitType>>;
     struct Addend {
         double value;
         UnitMap units;
@@ -73,9 +78,11 @@ public:
     virtual std::optional<SumValue> toSumValue() const = 0;
     virtual bool equals(const CSSNumericValue&) const = 0;
 
-    virtual RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const = 0;
+    virtual std::optional<CSSCalc::Child> toCalcTreeNode() const = 0;
 
-    static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalcExpressionNode&);
+    static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::Tree&);
+    static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::Child&);
+    static ExceptionOr<Ref<CSSNumericValue>> reifyMathExpression(const CSSCalc::ChildOrNone&);
 
 protected:
     ExceptionOr<Ref<CSSNumericValue>> addInternal(Vector<Ref<CSSNumericValue>>&&);

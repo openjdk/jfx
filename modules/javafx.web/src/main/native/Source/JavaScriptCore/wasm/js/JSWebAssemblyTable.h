@@ -32,7 +32,6 @@
 #include "WasmTable.h"
 #include "WebAssemblyWrapperFunction.h"
 #include "WebAssemblyFunction.h"
-#include <wtf/MallocPtr.h>
 #include <wtf/Ref.h>
 
 namespace JSC {
@@ -40,7 +39,7 @@ namespace JSC {
 class JSWebAssemblyTable final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -49,7 +48,7 @@ public:
         return vm.webAssemblyTableSpace<mode>();
     }
 
-    static JSWebAssemblyTable* tryCreate(JSGlobalObject*, VM&, Structure*, Ref<Wasm::Table>&&);
+    static JSWebAssemblyTable* create(VM&, Structure*, Ref<Wasm::Table>&&);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
@@ -58,10 +57,10 @@ public:
     std::optional<uint32_t> maximum() const { return m_table->maximum(); }
     uint32_t length() const { return m_table->length(); }
     uint32_t allocatedLength() const { return m_table->allocatedLength(length()); }
-    bool grow(uint32_t delta, JSValue defaultValue) WARN_UNUSED_RETURN;
-    JSValue get(uint32_t);
-    void set(uint32_t, WebAssemblyFunctionBase*);
+    std::optional<uint32_t> grow(JSGlobalObject*, uint32_t delta, JSValue defaultValue) WARN_UNUSED_RETURN;
+    JSValue get(JSGlobalObject*, uint32_t);
     void set(uint32_t, JSValue);
+    void set(JSGlobalObject*, uint32_t, JSValue);
     void clear(uint32_t);
     JSObject* type(JSGlobalObject*);
 

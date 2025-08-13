@@ -219,5 +219,6 @@ JSC::JSValue functionCallHandlerFromAnyThread(JSC::JSGlobalObject*, JSC::JSValue
 JSC::JSValue evaluateHandlerFromAnyThread(JSC::JSGlobalObject*, const JSC::SourceCode&, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException);
 
 ScriptExecutionContext* executionContext(JSC::JSGlobalObject*);
+RefPtr<ScriptExecutionContext> protectedExecutionContext(JSC::JSGlobalObject*);
 
 } // namespace WebCore

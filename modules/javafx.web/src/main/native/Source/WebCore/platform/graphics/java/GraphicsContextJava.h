@@ -89,7 +89,7 @@ public:
     void drawEllipse(const FloatRect& rect) override;
     void drawFocusRing(const Path&, float outlineWidth, const Color&) override;
     void drawFocusRing(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color) override;
-    void drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool printing, bool, StrokeStyle) override;
+    void drawLinesForText(const FloatPoint& origin, float thickness, std::span<const FloatSegment> lineSegments, bool printing, bool, StrokeStyle) override;
     void drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke);
     void drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style) override;
     void drawPlatformImage(const PlatformImagePtr& image, const FloatRect& destRect, const FloatRect& srcRect,

@@ -706,7 +706,12 @@ class Instruction
             $asm.putc "#{operands[1].clLValue(:double)} = #{operands[0].dblMemRef};"
         when "stored"
             $asm.putc "#{operands[1].dblMemRef} = #{operands[0].clValue(:double)};"
-
+        when "transferi"
+            $asm.putc "#{operands[1].uint32MemRef} = #{operands[0].uint32MemRef}"
+        when "transferq"
+            $asm.putc "#{operands[1].uint64MemRef} = #{operands[0].uint64MemRef}"
+        when "transferp"
+            $asm.putc "#{operands[1].uintptrMemRef} = #{operands[0].uintptrMemRef}"
         when "addd"
             cloopEmitOperation(operands, :double, "+")
         when "divd"

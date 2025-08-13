@@ -27,12 +27,14 @@
 #pragma once
 
 #include "ScrollAnimation.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FloatPoint;
 class TimingFunction;
 class ScrollAnimationSmooth final: public ScrollAnimation {
+    WTF_MAKE_TZONE_ALLOCATED(ScrollAnimationSmooth);
 public:
     ScrollAnimationSmooth(ScrollAnimationClient&);
     virtual ~ScrollAnimationSmooth();

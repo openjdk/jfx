@@ -33,9 +33,11 @@
 #include "Timer.h"
 #include <wtf/MediaTime.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorderPrivateMock);
 
 MediaRecorderPrivateMock::MediaRecorderPrivateMock(MediaStreamPrivate& stream)
 {
@@ -107,7 +109,7 @@ void MediaRecorderPrivateMock::fetchData(FetchDataCallback&& completionHandler)
     });
 }
 
-const String& MediaRecorderPrivateMock::mimeType() const
+String MediaRecorderPrivateMock::mimeType() const
 {
     static NeverDestroyed<const String> textPlainMimeType(MAKE_STATIC_STRING_IMPL("text/plain"));
     return textPlainMimeType;

@@ -76,7 +76,7 @@ void RenderSVGModelObject::updateFromStyle()
     updateHasSVGTransformFlags();
 }
 
-LayoutRect RenderSVGModelObject::overflowClipRect(const LayoutPoint&, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy, PaintPhase) const
+LayoutRect RenderSVGModelObject::overflowClipRect(const LayoutPoint&, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
     ASSERT_NOT_REACHED();
     return LayoutRect();

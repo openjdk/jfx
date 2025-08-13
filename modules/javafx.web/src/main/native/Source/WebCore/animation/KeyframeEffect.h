@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AcceleratedEffect.h"
+#include "Animation.h"
 #include "AnimationEffect.h"
 #include "AnimationEffectPhase.h"
 #include "BlendingKeyframes.h"
@@ -67,14 +68,16 @@ public:
     static Ref<KeyframeEffect> create(Ref<KeyframeEffect>&&);
     static Ref<KeyframeEffect> create(const Element&, const std::optional<Style::PseudoElementIdentifier>&);
 
+    using KeyframeOffset = std::variant<std::nullptr_t, double, TimelineRangeOffset, String>;
+
     struct BasePropertyIndexedKeyframe {
-        std::variant<std::nullptr_t, Vector<std::optional<double>>, double> offset = Vector<std::optional<double>>();
+        std::variant<std::nullptr_t, Vector<KeyframeOffset>, double, TimelineRangeOffset, String> offset = Vector<KeyframeOffset>();
         std::variant<Vector<String>, String> easing = Vector<String>();
         std::variant<Vector<CompositeOperationOrAuto>, CompositeOperationOrAuto> composite = Vector<CompositeOperationOrAuto>();
     };
 
     struct BaseKeyframe {
-        MarkableDouble offset;
+        KeyframeOffset offset;
         String easing { "linear"_s };
         CompositeOperationOrAuto composite { CompositeOperationOrAuto::Auto };
     };
@@ -95,8 +98,8 @@ public:
     };
 
     struct ComputedKeyframe : BaseComputedKeyframe {
-        HashMap<CSSPropertyID, String> styleStrings;
-        HashMap<AtomString, String> customStyleStrings;
+        UncheckedKeyHashMap<CSSPropertyID, String> styleStrings;
+        UncheckedKeyHashMap<AtomString, String> customStyleStrings;
     };
 
     struct ParsedKeyframe : ComputedKeyframe {
@@ -133,7 +136,6 @@ public:
     OptionSet<AnimationImpact> apply(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds> = std::nullopt);
     void invalidate();
 
-    void animationTimingDidChange();
     void animationRelevancyDidChange();
     void transformRelatedPropertyDidChange();
     enum class RecomputationReason : uint8_t { LogicalPropertyChange, Other };
@@ -156,10 +158,10 @@ public:
 
     void computeStyleOriginatedAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     const BlendingKeyframes& blendingKeyframes() const { return m_blendingKeyframes; }
-    const HashSet<AnimatableCSSProperty>& animatedProperties();
+    const UncheckedKeyHashSet<AnimatableCSSProperty>& animatedProperties();
     bool animatesProperty(const AnimatableCSSProperty&) const;
-    const HashSet<AnimatableCSSProperty>& acceleratedProperties() const { return m_acceleratedProperties; }
-    const HashSet<AnimatableCSSProperty>& acceleratedPropertiesWithImplicitKeyframe() const { return m_acceleratedPropertiesWithImplicitKeyframe; }
+    const UncheckedKeyHashSet<AnimatableCSSProperty>& acceleratedProperties() const { return m_acceleratedProperties; }
+    const UncheckedKeyHashSet<AnimatableCSSProperty>& acceleratedPropertiesWithImplicitKeyframe() const { return m_acceleratedPropertiesWithImplicitKeyframe; }
 
     bool computeExtentOfTransformAnimation(LayoutRect&) const;
     bool computeTransformedExtentViaTransformList(const FloatRect&, const RenderStyle&, LayoutRect&) const;
@@ -226,10 +228,10 @@ private:
     void addPendingAcceleratedAction(AcceleratedAction);
     bool isCompletelyAccelerated() const { return m_acceleratedPropertiesState == AcceleratedProperties::All; }
     void updateAcceleratedActions();
-    void setAnimatedPropertiesInStyle(RenderStyle&, double iterationProgress, double currentIteration);
+    void setAnimatedPropertiesInStyle(RenderStyle&, const ComputedEffectTiming&);
     const TimingFunction* timingFunctionForKeyframeAtIndex(size_t) const;
     const TimingFunction* timingFunctionForBlendingKeyframe(const BlendingKeyframe&) const;
-    Ref<const Animation> backingAnimationForCompositedRenderer() const;
+    Ref<const Animation> backingAnimationForCompositedRenderer();
     void computedNeedsForcedLayout();
     void computeStackingContextImpact();
     void computeSomeKeyframesUseStepsOrLinearTimingFunctionWithPoints();
@@ -246,6 +248,7 @@ private:
     void computeHasReferenceFilter();
     void computeHasSizeDependentTransform();
     void analyzeAcceleratedProperties();
+    void updateIsAssociatedWithProgressBasedTimeline();
 
     void abilityToBeAcceleratedDidChange();
     void updateAcceleratedAnimationIfNecessary();
@@ -254,11 +257,11 @@ private:
     class StackMembershipMutationScope {
         WTF_MAKE_NONCOPYABLE(StackMembershipMutationScope);
     public:
-        StackMembershipMutationScope(KeyframeEffect*);
+        StackMembershipMutationScope(KeyframeEffect&);
         ~StackMembershipMutationScope();
 
     private:
-        KeyframeEffect* m_effect;
+        RefPtr<KeyframeEffect> m_effect;
         RefPtr<Element> m_originalTarget;
         std::optional<Style::PseudoElementIdentifier> m_originalPseudoElementIdentifier;
     };
@@ -273,13 +276,17 @@ private:
     void animationDidChangeTimingProperties() final;
     void animationWasCanceled() final;
     void animationSuspensionStateDidChange(bool) final;
-    void animationTimelineDidChange(AnimationTimeline*) final;
+    void animationTimelineDidChange(const AnimationTimeline*) final;
     void animationDidFinish() final;
     void setAnimation(WebAnimation*) final;
-    Seconds timeToNextTick(const BasicEffectTiming&) const final;
+    Seconds timeToNextTick(const BasicEffectTiming&) final;
     bool ticksContinuouslyWhileActive() const final;
     std::optional<double> progressUntilNextStep(double) const final;
     bool preventsAnimationReadiness() const final;
+    void animationProgressBasedTimelineSourceDidChangeMetrics(const TimelineRange&) final;
+
+    const ViewTimeline* activeViewTimeline();
+    void updateComputedKeyframeOffsetsIfNeeded();
 
     // KeyframeInterpolation
     CompositeOperation compositeOperation() const final { return m_compositeOperation; }
@@ -293,9 +300,9 @@ private:
 
     AtomString m_keyframesName;
     BlendingKeyframes m_blendingKeyframes { emptyAtom() };
-    HashSet<AnimatableCSSProperty> m_animatedProperties;
-    HashSet<AnimatableCSSProperty> m_acceleratedProperties;
-    HashSet<AnimatableCSSProperty> m_acceleratedPropertiesWithImplicitKeyframe;
+    UncheckedKeyHashSet<AnimatableCSSProperty> m_animatedProperties;
+    UncheckedKeyHashSet<AnimatableCSSProperty> m_acceleratedProperties;
+    UncheckedKeyHashSet<AnimatableCSSProperty> m_acceleratedPropertiesWithImplicitKeyframe;
     Vector<ParsedKeyframe> m_parsedKeyframes;
     Vector<AcceleratedAction> m_pendingAcceleratedActions;
     RefPtr<Element> m_target;
@@ -323,6 +330,8 @@ private:
     bool m_hasAcceleratedPropertyOverriddenByCascadeProperty { false };
     bool m_hasReferenceFilter { false };
     bool m_animatesSizeAndSizeDependentTransform { false };
+    bool m_isAssociatedWithProgressBasedTimeline { false };
+    bool m_needsComputedKeyframeOffsetsUpdate { false };
 };
 
 } // namespace WebCore

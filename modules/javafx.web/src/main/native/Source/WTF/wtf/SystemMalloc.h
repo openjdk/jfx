@@ -51,7 +51,9 @@ struct SystemMalloc {
         auto* result = ::malloc(size);
         if (!result)
             CRASH();
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         memset(result, 0, size);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         return result;
     }
 
@@ -60,7 +62,9 @@ struct SystemMalloc {
         auto* result = ::malloc(size);
         if (!result)
             return nullptr;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         memset(result, 0, size);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         return result;
     }
 
@@ -80,6 +84,11 @@ struct SystemMalloc {
     static void free(void* p)
     {
         ::free(p);
+    }
+
+    static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity)
+    {
+        return capacity + capacity / 4 + 1;
     }
 };
 

@@ -130,6 +130,11 @@ public:
 
     size_t execute(BasicBlock* block);
 
+    bool isEmpty()
+    {
+        return m_insertions.isEmpty();
+    }
+
 private:
     void insertSlow(const Insertion&);
 

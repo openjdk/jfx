@@ -71,6 +71,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case BottomValue:
     case PutHint:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewInternalFieldObject:
     case PutStack:
     case KillStack:
@@ -92,6 +93,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case DoubleRep:
     case Int52Rep:
     case ValueRep:
+    case PurifyNaN:
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
     case ClearCatchLocals:
@@ -105,11 +107,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case PutClosureVar:
     case PutInternalField:
     case PutGlobalVariable:
-    case GetByOffset:
-    case GetClosureVar:
     case GetInternalField:
-    case GetGlobalLexicalVariable:
-    case GetGlobalVar:
     case RecordRegExpCachedResult:
     case NukeStructureAndSetButterfly:
     case GetButterfly:
@@ -127,6 +125,15 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case CompareEqPtr:
         break;
 
+    case GetByOffset:
+    case GetClosureVar:
+    case GetGlobalLexicalVariable:
+    case GetGlobalVar: {
+        if (node->hasDoubleResult())
+            return Exits;
+        break;
+    }
+
     case EnumeratorNextUpdatePropertyName:
     case StrCat:
     case Call:
@@ -139,6 +146,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case CreateActivation:
     case MaterializeCreateActivation:
     case MaterializeNewObject:
+    case MaterializeNewArrayWithConstantSize:
     case MaterializeNewInternalFieldObject:
     case NewFunction:
     case NewGeneratorFunction:
@@ -303,6 +311,14 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
             return Exits;
         }
         break;
+
+    case StringReplaceString: {
+        if (node->child3().useKind() == StringUse) {
+            result = ExitsForExceptions;
+            break;
+        }
+        return Exits;
+    }
 
     default:
         // If in doubt, return true.

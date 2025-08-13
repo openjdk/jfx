@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.drt;
 
+import javafx.application.Platform;
 import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.UIClient;
 import com.sun.webkit.WebPage;
@@ -100,7 +101,7 @@ final class UIClientImpl implements UIClient {
             it.remove();
         }
         if (webPage.getMainFrame() != 0) {
-            webPage.dispose();
+            Platform.runLater(() -> webPage.dispose());
         }
     }
 

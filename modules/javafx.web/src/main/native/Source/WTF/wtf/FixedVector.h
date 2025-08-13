@@ -26,13 +26,17 @@
 #pragma once
 
 #include <wtf/EmbeddedFixedVector.h>
+#include <wtf/MallocCommon.h>
 
 namespace WTF {
 
-template<typename T>
+template<typename T, typename Malloc>
 class FixedVector {
+    WTF_MAKE_CONFIGURABLE_ALLOCATED(Malloc);
 public:
-    using Storage = EmbeddedFixedVector<T>;
+
+    using Storage = EmbeddedFixedVector<T, Malloc>;
+    using Self = FixedVector<T, Malloc>;
     using value_type = typename Storage::value_type;
     using pointer = typename Storage::pointer;
     using reference = typename Storage::reference;
@@ -124,40 +128,40 @@ public:
     template<typename... Args>
     static FixedVector createWithSizeAndConstructorArguments(size_t size, Args&&... args)
     {
-        return FixedVector<T> { size ? Storage::createWithSizeAndConstructorArguments(size, std::forward<Args>(args)...).moveToUniquePtr() : std::unique_ptr<Storage> { nullptr } };
+        return Self { size ? Storage::createWithSizeAndConstructorArguments(size, std::forward<Args>(args)...).moveToUniquePtr() : std::unique_ptr<Storage> { nullptr } };
     }
 
     template<std::invocable<size_t> Generator>
-    static FixedVector createWithSizeFromGenerator(size_t size, Generator&& generator)
+    static FixedVector createWithSizeFromGenerator(size_t size, NOESCAPE Generator&& generator)
     {
-        return FixedVector<T> { Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)) };
+        return Self { Storage::createWithSizeFromGenerator(size, std::forward<Generator>(generator)) };
     }
 
     size_t size() const { return m_storage ? m_storage->size() : 0; }
     bool isEmpty() const { return m_storage ? m_storage->isEmpty() : true; }
     size_t byteSize() const { return m_storage ? m_storage->byteSize() : 0; }
 
-    iterator begin() { return m_storage ? m_storage->begin() : nullptr; }
-    iterator end() { return m_storage ? m_storage->end() : nullptr; }
+    iterator begin() LIFETIME_BOUND { return m_storage ? m_storage->begin() : nullptr; }
+    iterator end() LIFETIME_BOUND { return m_storage ? m_storage->end() : nullptr; }
 
-    const_iterator begin() const { return const_cast<FixedVector*>(this)->begin(); }
-    const_iterator end() const { return const_cast<FixedVector*>(this)->end(); }
+    const_iterator begin() const LIFETIME_BOUND { return const_cast<FixedVector*>(this)->begin(); }
+    const_iterator end() const LIFETIME_BOUND { return const_cast<FixedVector*>(this)->end(); }
 
-    reverse_iterator rbegin() { return m_storage ? m_storage->rbegin() : reverse_iterator(nullptr); }
-    reverse_iterator rend() { return m_storage ? m_storage->rend() : reverse_iterator(nullptr); }
-    const_reverse_iterator rbegin() const { return m_storage ? m_storage->rbegin() : const_reverse_iterator(nullptr); }
-    const_reverse_iterator rend() const { return m_storage ? m_storage->rend() : const_reverse_iterator(nullptr); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return m_storage ? m_storage->rbegin() : reverse_iterator(nullptr); }
+    reverse_iterator rend() LIFETIME_BOUND { return m_storage ? m_storage->rend() : reverse_iterator(nullptr); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return m_storage ? m_storage->rbegin() : const_reverse_iterator(nullptr); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return m_storage ? m_storage->rend() : const_reverse_iterator(nullptr); }
 
-    T& at(size_t i) { return m_storage->at(i); }
-    const T& at(size_t i) const { return m_storage->at(i); }
+    T& at(size_t i) LIFETIME_BOUND { return m_storage->at(i); }
+    const T& at(size_t i) const LIFETIME_BOUND { return m_storage->at(i); }
 
-    T& operator[](size_t i) { return m_storage->at(i); }
-    const T& operator[](size_t i) const { return m_storage->at(i); }
+    T& operator[](size_t i) LIFETIME_BOUND { return m_storage->at(i); }
+    const T& operator[](size_t i) const LIFETIME_BOUND { return m_storage->at(i); }
 
-    T& first() { return (*this)[0]; }
-    const T& first() const { return (*this)[0]; }
-    T& last() { return (*this)[size() - 1]; }
-    const T& last() const { return (*this)[size() - 1]; }
+    T& first() LIFETIME_BOUND { return (*this)[0]; }
+    const T& first() const LIFETIME_BOUND { return (*this)[0]; }
+    T& last() LIFETIME_BOUND { return (*this)[size() - 1]; }
+    const T& last() const LIFETIME_BOUND { return (*this)[size() - 1]; }
 
     void clear() { m_storage = nullptr; }
 
@@ -168,7 +172,7 @@ public:
         m_storage->fill(val);
     }
 
-    bool operator==(const FixedVector<T>& other) const
+    bool operator==(const Self& other) const
     {
         if (!m_storage) {
             if (!other.m_storage)
@@ -184,7 +188,7 @@ public:
     template<typename U> size_t find(const U&) const;
     template<typename MatchFunction> size_t findIf(const MatchFunction&) const;
 
-    void swap(FixedVector<T>& other)
+    void swap(Self& other)
     {
         using std::swap;
         swap(m_storage, other.m_storage);
@@ -192,17 +196,17 @@ public:
 
     static constexpr ptrdiff_t offsetOfStorage() { return OBJECT_OFFSETOF(FixedVector, m_storage); }
 
-    Storage* storage() { return m_storage.get(); }
+    Storage* storage() LIFETIME_BOUND { return m_storage.get(); }
 
-    std::span<const T> span() const { return { m_storage ? m_storage->data() : nullptr, size() }; }
-    std::span<T> mutableSpan() { return { m_storage ? m_storage->data() : nullptr, size() }; }
+    std::span<const T> span() const LIFETIME_BOUND { return m_storage ? m_storage->span() : std::span<const T> { }; }
+    std::span<T> mutableSpan() LIFETIME_BOUND { return m_storage ? m_storage->span() : std::span<T> { }; }
 
     Vector<T> subvector(size_t offset, size_t length = std::dynamic_extent) const
     {
         return { span().subspan(offset, length) };
     }
 
-    std::span<const T> subspan(size_t offset, size_t length = std::dynamic_extent) const
+    std::span<const T> subspan(size_t offset, size_t length = std::dynamic_extent) const LIFETIME_BOUND
     {
         return span().subspan(offset, length);
     }
@@ -218,16 +222,16 @@ private:
 };
 static_assert(sizeof(FixedVector<int>) == sizeof(int*));
 
-template<typename T>
+template<typename T, typename Malloc>
 template<typename U>
-bool FixedVector<T>::contains(const U& value) const
+bool FixedVector<T, Malloc>::contains(const U& value) const
 {
     return find(value) != notFound;
 }
 
-template<typename T>
+template<typename T, typename Malloc>
 template<typename MatchFunction>
-size_t FixedVector<T>::findIf(const MatchFunction& matches) const
+size_t FixedVector<T, Malloc>::findIf(const MatchFunction& matches) const
 {
     for (size_t i = 0; i < size(); ++i) {
         if (matches(at(i)))
@@ -236,25 +240,25 @@ size_t FixedVector<T>::findIf(const MatchFunction& matches) const
     return notFound;
 }
 
-template<typename T>
+template<typename T, typename Malloc>
 template<typename U>
-size_t FixedVector<T>::find(const U& value) const
+size_t FixedVector<T, Malloc>::find(const U& value) const
 {
     return findIf([&](auto& item) {
         return item == value;
     });
 }
 
-template<typename T>
-inline void swap(FixedVector<T>& a, FixedVector<T>& b)
+template<typename T, typename Malloc>
+inline void swap(FixedVector<T, Malloc>& a, FixedVector<T, Malloc>& b)
 {
     a.swap(b);
 }
 
-template<typename T, typename MapFunction, typename ReturnType = typename std::invoke_result<MapFunction, const T&>::type>
-FixedVector<ReturnType> map(const FixedVector<T>& source, MapFunction&& mapFunction)
+template<typename T, typename MapFunction, typename Malloc, typename ReturnType = typename std::invoke_result<MapFunction, const T&>::type>
+FixedVector<ReturnType, Malloc> map(const FixedVector<T, Malloc>& source, MapFunction&& mapFunction)
 {
-    FixedVector<ReturnType> result(source.size());
+    FixedVector<ReturnType, Malloc> result(source.size());
 
     size_t resultIndex = 0;
     for (const auto& item : source) {

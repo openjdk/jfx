@@ -31,6 +31,8 @@
 #include "FTLState.h"
 #include "JSCPtrTag.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace FTL {
 
 using namespace B3;
@@ -109,7 +111,7 @@ size_t JITCode::size()
 {
     // We don't know the size of FTL code, yet. Make a wild guess. This is mostly used for
     // GC load estimates.
-    return 1000;
+    return m_size;
 }
 
 bool JITCode::contains(void*)
@@ -183,5 +185,6 @@ std::optional<CodeOrigin> JITCode::findPC(CodeBlock* codeBlock, void* pc)
 
 } } // namespace JSC::FTL
 
-#endif // ENABLE(FTL_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(FTL_JIT)

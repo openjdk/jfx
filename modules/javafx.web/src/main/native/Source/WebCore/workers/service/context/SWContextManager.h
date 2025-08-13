@@ -33,9 +33,11 @@
 #include "ServiceWorkerClientQueryOptions.h"
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerThreadProxy.h"
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URLHash.h>
 
 namespace WebCore {
@@ -49,7 +51,7 @@ class SWContextManager {
 public:
     WEBCORE_EXPORT static SWContextManager& singleton();
 
-    class Connection {
+    class Connection : public AbstractRefCounted {
     public:
         virtual ~Connection() { }
 
@@ -82,8 +84,6 @@ public:
         virtual bool isThrottleable() const = 0;
         virtual PageIdentifier pageIdentifier() const = 0;
 
-        virtual void ref() const = 0;
-        virtual void deref() const = 0;
         virtual void stop() = 0;
 
         virtual void reportConsoleMessage(ServiceWorkerIdentifier, MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier) = 0;
@@ -101,6 +101,7 @@ public:
 
     WEBCORE_EXPORT void setConnection(Ref<Connection>&&);
     WEBCORE_EXPORT Connection* connection() const;
+    RefPtr<Connection> protectedConnection() const { return m_connection; }
 
     WEBCORE_EXPORT void registerServiceWorkerThreadForInstall(Ref<ServiceWorkerThreadProxy>&&);
     WEBCORE_EXPORT ServiceWorkerThreadProxy* serviceWorkerThreadProxy(ServiceWorkerIdentifier) const;
@@ -115,7 +116,7 @@ public:
 
     WEBCORE_EXPORT void terminateWorker(ServiceWorkerIdentifier, Seconds timeout, Function<void()>&&);
 
-    void forEachServiceWorker(const Function<Function<void(ScriptExecutionContext&)>()>&);
+    void forEachServiceWorker(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>&);
 
     WEBCORE_EXPORT bool postTaskToServiceWorker(ServiceWorkerIdentifier, Function<void(ServiceWorkerGlobalScope&)>&&);
 
@@ -151,7 +152,7 @@ private:
     ServiceWorkerCreationCallback* m_serviceWorkerCreationCallback { nullptr };
 
     class ServiceWorkerTerminationRequest {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerTerminationRequest);
     public:
         ServiceWorkerTerminationRequest(SWContextManager&, ServiceWorkerIdentifier, Seconds timeout);
 

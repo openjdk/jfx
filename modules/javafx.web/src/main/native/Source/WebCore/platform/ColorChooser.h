@@ -27,17 +27,17 @@
  *
  */
 
-#ifndef ColorChooser_h
-#define ColorChooser_h
+#pragma once
 
-#if ENABLE(INPUT_TYPE_COLOR)
+#include <wtf/AbstractRefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class Color;
 
-class ColorChooser {
-    WTF_MAKE_FAST_ALLOCATED;
+class ColorChooser : public AbstractRefCounted {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ColorChooser);
 public:
     virtual ~ColorChooser() = default;
 
@@ -47,7 +47,3 @@ public:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INPUT_TYPE_COLOR)
-
-#endif // ColorChooser_h

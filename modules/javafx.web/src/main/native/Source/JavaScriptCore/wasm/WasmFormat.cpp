@@ -35,6 +35,8 @@
 
 namespace JSC { namespace Wasm {
 
+constexpr uintptr_t NullWasmCallee = 0;
+
 Segment::Ptr Segment::create(std::optional<I32InitExpr> offset, uint32_t sizeInBytes, Kind kind)
 {
     CheckedUint32 totalBytesChecked = sizeInBytes;

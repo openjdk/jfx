@@ -30,19 +30,20 @@
 #include "LibWebRTCMacros.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "WebRTCProvider.h"
+#include <wtf/Compiler.h>
+#include <wtf/TZoneMalloc.h>
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+// See Bug 274508: Disable thread-safety-reference-return warnings in libwebrtc
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
 #include <webrtc/api/peer_connection_interface.h>
+IGNORE_CLANG_WARNINGS_END
 #include <webrtc/api/scoped_refptr.h>
 #include <webrtc/api/video_codecs/video_decoder_factory.h>
 #include <webrtc/api/video_codecs/video_encoder_factory.h>
 
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace rtc {
 class NetworkManager;
@@ -63,14 +64,11 @@ class RegistrableDomain;
 struct PeerConnectionFactoryAndThreads;
 
 class WEBCORE_EXPORT LibWebRTCProvider : public WebRTCProvider {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(LibWebRTCProvider, WEBCORE_EXPORT);
 public:
     static UniqueRef<LibWebRTCProvider> create();
 
     virtual ~LibWebRTCProvider();
-
-    static void registerWebKitVP9Decoder();
-    static void registerWebKitVP8Decoder();
 
     static void setRTCLogging(WTFLogLevel);
 

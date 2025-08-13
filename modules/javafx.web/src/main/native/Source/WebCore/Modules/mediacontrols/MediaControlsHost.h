@@ -57,9 +57,7 @@ class MediaControlsHost final
     , public CanMakeWeakPtr<MediaControlsHost> {
     WTF_MAKE_FAST_ALLOCATED(MediaControlsHost);
 public:
-    using CanMakeWeakPtr<MediaControlsHost>::weakPtrFactory;
-    using CanMakeWeakPtr<MediaControlsHost>::WeakValueType;
-    using CanMakeWeakPtr<MediaControlsHost>::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(CanMakeWeakPtr<MediaControlsHost>);
 
     static Ref<MediaControlsHost> create(HTMLMediaElement&);
     ~MediaControlsHost();
@@ -95,6 +93,7 @@ public:
     bool supportsSeeking() const;
     bool inWindowFullscreen() const;
     bool supportsRewind() const;
+    bool needsChromeMediaControlsPseudoElement() const;
 
     enum class ForceUpdate : bool { No, Yes };
     void updateCaptionDisplaySizes(ForceUpdate = ForceUpdate::No);
@@ -113,7 +112,6 @@ public:
 
     static String generateUUID();
 
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     static String shadowRootCSSText();
     static String base64StringForIconNameAndType(const String& iconName, const String& iconType);
     static String formattedStringForDuration(double);
@@ -123,7 +121,6 @@ public:
 
     using SourceType = HTMLMediaElement::SourceType;
     std::optional<SourceType> sourceType() const;
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
     void presentationModeChanged();
 

@@ -48,10 +48,9 @@ DRMDeviceManager::~DRMDeviceManager() = default;
 
 static void drmForeachDevice(Function<bool(drmDevice*)>&& functor)
 {
-    drmDevicePtr devices[64];
-    memset(devices, 0, sizeof(devices));
+    std::array<drmDevicePtr, 64> devices = { };
 
-    int numDevices = drmGetDevices2(0, devices, std::size(devices));
+    int numDevices = drmGetDevices2(0, devices.data(), std::size(devices));
     if (numDevices <= 0)
         return;
 
@@ -59,7 +58,7 @@ static void drmForeachDevice(Function<bool(drmDevice*)>&& functor)
         if (!functor(devices[i]))
             break;
     }
-    drmFreeDevices(devices, numDevices);
+    drmFreeDevices(devices.data(), numDevices);
 }
 
 void DRMDeviceManager::initializeMainDevice(const String& deviceFile)
@@ -71,17 +70,18 @@ void DRMDeviceManager::initializeMainDevice(const String& deviceFile)
         return;
 
     drmForeachDevice([&](drmDevice* device) {
+        const auto nodes = unsafeMakeSpan(device->nodes, DRM_NODE_MAX);
         for (int i = 0; i < DRM_NODE_MAX; ++i) {
             if (!(device->available_nodes & (1 << i)))
                 continue;
 
-            if (String::fromUTF8(device->nodes[i]) == deviceFile) {
+            if (String::fromUTF8(nodes[i]) == deviceFile) {
                 RELEASE_ASSERT(device->available_nodes & (1 << DRM_NODE_PRIMARY));
                 if (device->available_nodes & (1 << DRM_NODE_RENDER)) {
-                    m_mainDevice.primaryNode = DRMDeviceNode::create(CString { device->nodes[DRM_NODE_PRIMARY] });
-                    m_mainDevice.renderNode = DRMDeviceNode::create(CString { device->nodes[DRM_NODE_RENDER] });
+                    m_mainDevice.primaryNode = DRMDeviceNode::create(CString { nodes[DRM_NODE_PRIMARY] });
+                    m_mainDevice.renderNode = DRMDeviceNode::create(CString { nodes[DRM_NODE_RENDER] });
                 } else
-                    m_mainDevice.primaryNode = DRMDeviceNode::create(CString { device->nodes[DRM_NODE_PRIMARY] });
+                    m_mainDevice.primaryNode = DRMDeviceNode::create(CString { nodes[DRM_NODE_PRIMARY] });
                 return false;
             }
         }

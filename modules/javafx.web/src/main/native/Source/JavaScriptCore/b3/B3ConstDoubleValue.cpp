@@ -71,7 +71,7 @@ Value* ConstDoubleValue::bitAndConstant(Procedure& proc, const Value* other) con
 {
     if (!other->hasDouble())
         return nullptr;
-    double result = bitwise_cast<double>(bitwise_cast<uint64_t>(m_value) & bitwise_cast<uint64_t>(other->asDouble()));
+    double result = std::bit_cast<double>(std::bit_cast<uint64_t>(m_value) & std::bit_cast<uint64_t>(other->asDouble()));
     return proc.add<ConstDoubleValue>(origin(), result);
 }
 
@@ -79,7 +79,7 @@ Value* ConstDoubleValue::bitOrConstant(Procedure& proc, const Value* other) cons
 {
     if (!other->hasDouble())
         return nullptr;
-    double result = bitwise_cast<double>(bitwise_cast<uint64_t>(m_value) | bitwise_cast<uint64_t>(other->asDouble()));
+    double result = std::bit_cast<double>(std::bit_cast<uint64_t>(m_value) | std::bit_cast<uint64_t>(other->asDouble()));
     return proc.add<ConstDoubleValue>(origin(), result);
 }
 
@@ -87,14 +87,14 @@ Value* ConstDoubleValue::bitXorConstant(Procedure& proc, const Value* other) con
 {
     if (!other->hasDouble())
         return nullptr;
-    double result = bitwise_cast<double>(bitwise_cast<uint64_t>(m_value) ^ bitwise_cast<uint64_t>(other->asDouble()));
+    double result = std::bit_cast<double>(std::bit_cast<uint64_t>(m_value) ^ std::bit_cast<uint64_t>(other->asDouble()));
     return proc.add<ConstDoubleValue>(origin(), result);
 }
 
 
 Value* ConstDoubleValue::bitwiseCastConstant(Procedure& proc) const
 {
-    return proc.add<Const64Value>(origin(), bitwise_cast<int64_t>(m_value));
+    return proc.add<Const64Value>(origin(), std::bit_cast<int64_t>(m_value));
 }
 
 Value* ConstDoubleValue::doubleToFloatConstant(Procedure& proc) const
@@ -117,9 +117,19 @@ Value* ConstDoubleValue::floorConstant(Procedure& proc) const
     return proc.add<ConstDoubleValue>(origin(), floor(m_value));
 }
 
+Value* ConstDoubleValue::fTruncConstant(Procedure& proc) const
+{
+    return proc.add<ConstDoubleValue>(origin(), Math::truncDouble(m_value));
+}
+
 Value* ConstDoubleValue::sqrtConstant(Procedure& proc) const
 {
     return proc.add<ConstDoubleValue>(origin(), sqrt(m_value));
+}
+
+Value* ConstDoubleValue::purifyNaNConstant(Procedure& proc) const
+{
+    return proc.add<ConstDoubleValue>(origin(), purifyNaN(m_value));
 }
 
 Value* ConstDoubleValue::divConstant(Procedure& proc, const Value* other) const
@@ -206,7 +216,7 @@ TriState ConstDoubleValue::equalOrUnorderedConstant(const Value* other) const
 void ConstDoubleValue::dumpMeta(CommaPrinter& comma, PrintStream& out) const
 {
     out.print(comma);
-    out.printf("%le(%llu)", m_value, static_cast<unsigned long long>(bitwise_cast<uint64_t>(m_value)));
+    out.printf("%le(%llu)", m_value, static_cast<unsigned long long>(std::bit_cast<uint64_t>(m_value)));
 }
 
 } } // namespace JSC::B3

@@ -36,8 +36,11 @@
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderWidget.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FrameView);
 
 int FrameView::headerHeight() const
 {
@@ -57,17 +60,19 @@ int FrameView::footerHeight() const
     return page ? page->footerHeight() : 0;
 }
 
-float FrameView::topContentInset(TopContentInsetType contentInsetTypeToReturn) const
+FloatBoxExtent FrameView::obscuredContentInsets(InsetType type) const
 {
-    if (platformWidget() && contentInsetTypeToReturn == TopContentInsetType::WebCoreOrPlatformContentInset)
-        return platformTopContentInset();
+    if (platformWidget() && type == InsetType::WebCoreOrPlatformInset)
+        return platformContentInsets();
 
     Ref frame = this->frame();
     if (!frame->isMainFrame())
-        return 0;
+        return { };
 
-    Page* page = frame->page();
-    return page ? page->topContentInset() : 0;
+    if (RefPtr page = frame->page())
+        return page->obscuredContentInsets();
+
+    return { };
 }
 
 float FrameView::visibleContentScaleFactor() const

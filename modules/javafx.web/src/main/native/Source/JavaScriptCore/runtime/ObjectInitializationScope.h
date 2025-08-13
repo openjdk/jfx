@@ -49,7 +49,7 @@ private:
     void verifyPropertiesAreInitialized(JSObject*);
 
     VM& m_vm;
-    std::optional<DisallowGC> m_disallowGC;
+    std::optional<AssertNoGC> m_assertNoGC;
     std::optional<DisallowVMEntry> m_disallowVMEntry;
     JSObject* m_object { nullptr };
 };

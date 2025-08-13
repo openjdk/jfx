@@ -50,17 +50,23 @@ public:
     void keyframesRuleDidChange();
     void updateKeyframesIfNeeded(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
 
+    void syncStyleOriginatedTimeline();
+
 private:
     CSSAnimation(const Styleable&, const Animation&);
 
     void syncPropertiesWithBackingAnimation() final;
     Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&) final;
 
+    AnimationTimeline* bindingsTimeline() const final;
+    void setBindingsTimeline(RefPtr<AnimationTimeline>&&) final;
     ExceptionOr<void> bindingsPlay() final;
     ExceptionOr<void> bindingsPause() final;
     void setBindingsEffect(RefPtr<AnimationEffect>&&) final;
-    ExceptionOr<void> setBindingsStartTime(const std::optional<CSSNumberish>&) final;
+    ExceptionOr<void> setBindingsStartTime(const std::optional<WebAnimationTime>&) final;
     ExceptionOr<void> bindingsReverse() final;
+    void setBindingsRangeStart(TimelineRangeValue&&) final;
+    void setBindingsRangeEnd(TimelineRangeValue&&) final;
 
     enum class Property : uint16_t {
         Name = 1 << 0,
@@ -72,11 +78,15 @@ private:
         Delay = 1 << 6,
         FillMode = 1 << 7,
         Keyframes = 1 << 8,
-        CompositeOperation = 1 << 9
+        CompositeOperation = 1 << 9,
+        Timeline = 1 << 10,
+        RangeStart = 1 << 11,
+        RangeEnd = 1 << 12,
     };
 
     String m_animationName;
     OptionSet<Property> m_overriddenProperties;
+    std::optional<AnimationPlayState> m_lastStyleOriginatedPlayState;
 };
 
 } // namespace WebCore

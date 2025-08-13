@@ -48,6 +48,8 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace B3 {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Value);
@@ -121,7 +123,7 @@ void DeepValueDump::dump(PrintStream& out) const
 Value::~Value()
 {
     if (m_numChildren == VarArgs)
-        bitwise_cast<Vector<Value*, 3> *>(childrenAlloc())->Vector<Value*, 3>::~Vector();
+        std::bit_cast<Vector<Value*, 3> *>(childrenAlloc())->Vector<Value*, 3>::~Vector();
 }
 
 void Value::replaceWithIdentity(Value* value)
@@ -258,7 +260,11 @@ void Value::dumpChildren(CommaPrinter& comma, PrintStream& out) const
 
 void Value::deepDump(const Procedure* proc, PrintStream& out) const
 {
-    out.print(m_type, " "_s, dumpPrefix, m_index, " = "_s, m_kind);
+    if (proc && m_type.isTuple())
+        out.print(listDump(proc->tupleForType(m_type)));
+    else
+        out.print(m_type);
+    out.print(" "_s, dumpPrefix, m_index, " = "_s, m_kind);
 
     out.print("("_s);
     CommaPrinter comma;
@@ -453,7 +459,17 @@ Value* Value::floorConstant(Procedure&) const
     return nullptr;
 }
 
+Value* Value::fTruncConstant(Procedure&) const
+{
+    return nullptr;
+}
+
 Value* Value::sqrtConstant(Procedure&) const
+{
+    return nullptr;
+}
+
+Value* Value::purifyNaNConstant(Procedure&) const
 {
     return nullptr;
 }
@@ -545,6 +561,7 @@ bool Value::isRounded() const
     switch (opcode()) {
     case Floor:
     case Ceil:
+    case FTrunc:
     case IToD:
     case IToF:
         return true;
@@ -640,6 +657,7 @@ Effects Value::effects() const
     case Sub:
     case Mul:
     case Neg:
+    case PurifyNaN:
     case BitAnd:
     case BitOr:
     case BitXor:
@@ -652,6 +670,7 @@ Effects Value::effects() const
     case Abs:
     case Ceil:
     case Floor:
+    case FTrunc:
     case Sqrt:
     case BitwiseCast:
     case SExt8:
@@ -745,6 +764,7 @@ Effects Value::effects() const
     case VectorRelaxedSwizzle:
     case VectorRelaxedMAdd:
     case VectorRelaxedNMAdd:
+    case VectorRelaxedLaneSelect:
         break;
     case Div:
     case UDiv:
@@ -865,6 +885,7 @@ ValueKey Value::key() const
     case Abs:
     case Ceil:
     case Floor:
+    case FTrunc:
     case Sqrt:
     case SExt8:
     case SExt16:
@@ -882,6 +903,7 @@ ValueKey Value::key() const
     case Check:
     case BitwiseCast:
     case Neg:
+    case PurifyNaN:
     case Depend:
         return ValueKey(kind(), type(), child(0));
     case Add:
@@ -1006,6 +1028,7 @@ ValueKey Value::key() const
     case VectorRelaxedMAdd:
     case VectorRelaxedNMAdd:
     case VectorBitwiseSelect:
+    case VectorRelaxedLaneSelect:
         numChildrenForKind(kind(), 3);
         return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), child(2));
     case VectorSwizzle:
@@ -1072,6 +1095,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case FMax:
     case FMin:
     case Neg:
+    case PurifyNaN:
     case BitAnd:
     case BitOr:
     case BitXor:
@@ -1084,6 +1108,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case Abs:
     case Ceil:
     case Floor:
+    case FTrunc:
     case Sqrt:
     case CheckAdd:
     case CheckSub:
@@ -1160,5 +1185,7 @@ void Value::badKind(Kind kind, unsigned numArgs)
 }
 
 } } // namespace JSC::B3
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

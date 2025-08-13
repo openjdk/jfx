@@ -39,10 +39,10 @@ class CSSImageSetValue final : public CSSValueContainingVector {
 public:
     static Ref<CSSImageSetValue> create(CSSValueListBuilder);
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSImageSetValue& other) const { return itemsEqual(other); }
 
-    RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
+    RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 
 private:
     explicit CSSImageSetValue(CSSValueListBuilder);

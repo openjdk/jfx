@@ -31,12 +31,12 @@
 namespace WebCore {
 
 CSSFontVariantAlternatesValue::CSSFontVariantAlternatesValue(FontVariantAlternates&& alternates)
-    : CSSValue(FontVariantAlternatesClass)
+    : CSSValue(ClassType::FontVariantAlternates)
     , m_value(alternates)
 {
 }
 
-String CSSFontVariantAlternatesValue::customCSSText() const
+String CSSFontVariantAlternatesValue::customCSSText(const CSS::SerializationContext&) const
 {
     TextStream ts;
     // For the moment, the stream operator implements the CSS serialization exactly.
