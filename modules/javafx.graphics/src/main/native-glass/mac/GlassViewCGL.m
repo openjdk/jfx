@@ -88,6 +88,7 @@
 }
 
 - (void)_initialize3dWithJproperties:(jobject)jproperties
+                       useMTLForBlit:(BOOL)useMTLInGlass
 {
     GET_MAIN_JENV;
 
@@ -173,7 +174,8 @@
                                     andClientContext:(NSObject*)clientCGL
                                          mtlQueuePtr:0l
                                       withHiDPIAware:isHiDPIAware
-                                        withIsSwPipe:isSwPipe];
+                                        withIsSwPipe:isSwPipe
+                                       useMTLForBlit:useMTLInGlass];
     // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/nsview_Class/Reference/NSView.html#//apple_ref/occ/instm/NSView/setWantsLayer:
     // the order of the following 2 calls is important: here we indicate we want a layer-hosting view
     [self setLayer:self->layer];
@@ -183,6 +185,7 @@
 - (id)initWithFrame:(NSRect)frame
           withJview:(jobject)jView
     withJproperties:(jobject)jproperties
+      useMTLForBlit:(BOOL)useMTLInGlass;
 {
     LOG("GlassViewCGL initWithFrame:withJview:withJproperties");
 
@@ -200,7 +203,8 @@
     self = [super initWithFrame:frame pixelFormat:pFormat];
     if (self != nil)
     {
-        [self _initialize3dWithJproperties:jproperties];
+        [self _initialize3dWithJproperties:jproperties
+            useMTLForBlit:(BOOL)useMTLInGlass];
     }
     return self;
 }

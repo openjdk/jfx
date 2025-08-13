@@ -45,18 +45,22 @@ static NSArray *allModes = nil;
          mtlQueuePtr:(long)mtlCommandQueuePtr
       withHiDPIAware:(BOOL)HiDPIAware
         withIsSwPipe:(BOOL)isSwPipe
+       useMTLForBlit:(BOOL)useMTLInGlass
 {
     LOG("GlassLayer initGlassLayer]");
     self = [super init];
     if (self != nil)
     {
-        if (mtlCommandQueuePtr != 0l) { // MTL
+        if (mtlCommandQueuePtr != 0l ||
+            useMTLInGlass) { // MTL
+            LOG("GlassLayer initGlassLayer using MTLLayer");
             GlassLayerMTL* mtlLayer = [[GlassLayerMTL alloc] init:mtlCommandQueuePtr
                                                      withIsSwPipe:isSwPipe];
             self->painterOffScreen = [mtlLayer getPainterOffscreen];
             self->glassOffScreen = nil;
             [self addSublayer:mtlLayer];
         } else {
+            LOG("GlassLayer initGlassLayer using CGLLayer");
             GlassLayerCGL* cglLayer = [[GlassLayerCGL alloc] initWithSharedContext:(CGLContextObj)ctx
                                                                   andClientContext:(CGLContextObj)clCtx
                                                                     withHiDPIAware:HiDPIAware

@@ -110,6 +110,7 @@
     // TODO : We again fetch isHiDPIAware in GlassViewCGL
     // Try to merge it
     self->isHiDPIAware = NO;
+    BOOL useMTLInGlass = NO;
     if (jproperties != NULL)
     {
         jobject kHiDPIAwareKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_kHiDPIAwareKeyValue);
@@ -121,18 +122,29 @@
             self->isHiDPIAware = (*env)->CallBooleanMethod(env, kHiDPIAwareValue, jBooleanValueMethod) ? YES : NO;
             GLASS_CHECK_EXCEPTION(env);
         }
+        jobject useMTLInGlassKey = (*env)->NewStringUTF(env, "useMTLInGlass");
+        jobject useMTLInGlassValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, useMTLInGlassKey);
+        GLASS_CHECK_EXCEPTION(env);
+        if (useMTLInGlassValue != NULL)
+        {
+            useMTLInGlass = (*env)->CallBooleanMethod(env, useMTLInGlassValue, jBooleanValueMethod) ? YES : NO;
+            GLASS_CHECK_EXCEPTION(env);
+        }
     }
 
     self = [super initWithFrame:frame];
     if (self != nil) {
-        if (mtlCommandQueuePtr != 0l) {
+        if (mtlCommandQueuePtr != 0l ||
+            useMTLInGlass) {
+            LOG("GlassView3D initWithFrame using MTLView");
             GlassViewMTL* mtlSubView;
-            subView = mtlSubView = [[GlassViewMTL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties];
+            subView = mtlSubView = [[GlassViewMTL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForBlit:useMTLInGlass];
             self->layer = [mtlSubView getLayer];
             self->isHiDPIAware = YES;
         } else {
+            LOG("GlassView3D initWithFrame using CGLView");
             GlassViewCGL* cglSubView;
-            subView = cglSubView = [[GlassViewCGL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties];
+            subView = cglSubView = [[GlassViewCGL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForBlit:useMTLInGlass];
             self->layer = [cglSubView getLayer];
         }
         [subView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
