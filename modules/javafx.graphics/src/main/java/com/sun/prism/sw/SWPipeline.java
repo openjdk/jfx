@@ -29,6 +29,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.PlatformUtil;
 
 import java.util.List;
@@ -75,10 +76,11 @@ public final class SWPipeline extends GraphicsPipeline {
             if (PlatformUtil.isMac()) {
                 HashMap devDetails =
                     (HashMap)SWPipeline.getInstance().getDeviceDetails();
-                // When Metal becomes default hardware pipeline, we need
-                // enable this flag
-                devDetails.put("useMTLInGlass",
-                                false);
+                if (PrismSettings.macDefaultPipeline.equals("es2")) {
+                    devDetails.put("useMTLInGlass", false);
+                } else {
+                    devDetails.put("useMTLInGlass", true);
+                }
             }
         }
         return factory;

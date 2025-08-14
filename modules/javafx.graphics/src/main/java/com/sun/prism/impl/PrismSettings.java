@@ -50,6 +50,7 @@ public final class PrismSettings {
     public static final boolean cacheComplexShapes;
     public static final boolean useNewImageLoader;
     public static final List<String> tryOrder;
+    public static final String macDefaultPipeline;
     public static final int prismStatFrequency;
     public static final RasterizerType rasterizerSpec;
     public static final String refType;
@@ -202,13 +203,17 @@ public final class PrismSettings {
 
         String order = systemProperties.getProperty("prism.order");
         String[] tryOrderArr;
+        String[] macDefaultOrderArr = new String[] { "es2", "mtl", "sw" };
+        // macDefaultPipeline flag will be used to determine whether to
+        // use es2/mtl pipeline in glass, when sw pipeline is used in prism
+        macDefaultPipeline = macDefaultOrderArr[0];
         if (order != null) {
             tryOrderArr = split(order, ",");
         } else {
             if (PlatformUtil.isWindows()) {
                 tryOrderArr = new String[] { "d3d", "sw" };
             } else if (PlatformUtil.isMac()) {
-                tryOrderArr = new String[] { "es2", "mtl", "sw" };
+                tryOrderArr = macDefaultOrderArr;
             } else if (PlatformUtil.isIOS()) {
                 tryOrderArr = new String[] { "es2" };
             } else if (PlatformUtil.isAndroid()) {
