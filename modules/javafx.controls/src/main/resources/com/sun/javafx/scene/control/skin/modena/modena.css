@@ -1979,7 +1979,7 @@ is being used to size a border should also be in pixels.
 }
 .color-palette > .color-picker-grid {
     -fx-padding: 0.5px;
-    -fx-snap-to-pixel: false;
+    -fx-snap-to-pixel: true;
 }
 .color-palette > .color-picker-grid > .color-square {
     -fx-background-color: transparent;
