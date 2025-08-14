@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
@@ -75,7 +76,7 @@ import javafx.util.Duration;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
-import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 /**
  * This is a the SkinBase for ContextMenu based controls so that the CSS parts
@@ -540,12 +541,12 @@ public class ContextMenuContent extends Region {
                         break;
                     case DOWN:
                         // move to the next sibling
-                        move(Direction.NEXT);
+                        move(TraversalDirection.NEXT);
                         ke.consume();
                         break;
                     case UP:
                         // move to previous sibling
-                        move(Direction.PREVIOUS);
+                        move(TraversalDirection.PREVIOUS);
                         ke.consume();
                         break;
                     case SPACE:
@@ -707,23 +708,23 @@ public class ContextMenuContent extends Region {
         });
     }
 
-    private void move(Direction dir) {
+    private void move(TraversalDirection dir) {
         int startIndex = currentFocusedIndex != -1 ? currentFocusedIndex : itemsContainer.getChildren().size();
         requestFocusOnIndex(findSibling(dir, startIndex));
     }
 
-    private int findSibling(final Direction dir, final int startIndex) {
+    private int findSibling(final TraversalDirection dir, final int startIndex) {
         final int childCount = itemsContainer.getChildren().size();
         int i = startIndex;
         do {
-            if (dir.isForward() && i >= childCount - 1) {
+            if (TraversalUtils.isForward(dir) && i >= childCount - 1) {
                 // loop to zero
                 i = 0;
-            } else if (!dir.isForward() && i == 0) {
+            } else if (!TraversalUtils.isForward(dir) && i == 0) {
                 // loop to end
                 i = childCount - 1;
             } else {
-                i += (dir.isForward() ? 1 : -1);
+                i += (TraversalUtils.isForward(dir) ? 1 : -1);
             }
 
             Node n = itemsContainer.getChildren().get(i);
