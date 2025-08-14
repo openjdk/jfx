@@ -35,6 +35,7 @@
 - (GlassLayer*)getLayer;
 - (id)initWithFrame:(NSRect)frame
           withJview:(jobject)jView
-    withJproperties:(jobject)jproperties;
+    withJproperties:(jobject)jproperties
+      useMTLForBlit:(BOOL)useMTLInGlass;
 
 @end

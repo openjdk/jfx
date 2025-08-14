@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
+import com.sun.prism.impl.PrismSettings;
+import com.sun.javafx.PlatformUtil;
 
 import java.util.List;
 import java.util.HashMap;
@@ -40,6 +42,8 @@ public final class SWPipeline extends GraphicsPipeline {
     }
 
     @Override public boolean init() {
+        HashMap devDetails = new HashMap();
+        setDeviceDetails(devDetails);
         return true;
     }
 
@@ -69,6 +73,15 @@ public final class SWPipeline extends GraphicsPipeline {
         if (factory == null) {
             factory = new SWResourceFactory(screen);
             factories.put(index, factory);
+            if (PlatformUtil.isMac()) {
+                HashMap devDetails =
+                    (HashMap)SWPipeline.getInstance().getDeviceDetails();
+                if (PrismSettings.macDefaultPipeline.equals("es2")) {
+                    devDetails.put("useMTLInGlass", false);
+                } else {
+                    devDetails.put("useMTLInGlass", true);
+                }
+            }
         }
         return factory;
     }
