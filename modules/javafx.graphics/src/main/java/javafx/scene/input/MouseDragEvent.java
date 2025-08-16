@@ -66,14 +66,13 @@ public final class MouseDragEvent extends MouseEvent{
             new EventType<>(MouseEvent.ANY, "MOUSE-DRAG");
 
     /**
-     * This event occurs when the gesture progresses within this node.
+     * This event occurs when the gesture progresses within a node.
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_OVER =
             new EventType<>(MouseDragEvent.ANY, "MOUSE-DRAG_OVER");
 
     /**
-     * This event occurs when the gesture ends (by releasing mouse button)
-     * on this node.
+     * This event occurs when the gesture is released over a node (by releasing the mouse button).
      */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_RELEASED =
             new EventType<>(MouseDragEvent.ANY, "MOUSE-DRAG_RELEASED");
@@ -127,6 +126,11 @@ public final class MouseDragEvent extends MouseEvent{
     public static final EventType<MouseDragEvent> MOUSE_DRAG_EXITED =
             new EventType<>(MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
                     "MOUSE-DRAG_EXITED");
+
+    /// This event occurs when the gesture ends. It is delivered exactly once to the source node/scene, and is always the
+    /// last event in the full press-drag-release process. It is delivered even when the mouse is outside the application.
+    public static final EventType<MouseDragEvent> MOUSE_DRAG_DONE =
+            new EventType<>(MouseDragEvent.ANY, "MOUSE-DRAG_DONE");
 
     /**
      * Constructs new MouseDragEvent event.

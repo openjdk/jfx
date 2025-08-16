@@ -478,7 +478,7 @@ public class MouseDragEventTest {
     }
 
     @Test
-    public void endingFullPDRShouldProduceReleaseEvents() {
+    public void endingFullPDRShouldProduceReleaseAndDoneEvents() {
         World w = new World(false, false);
 
         // Initiate the gesture
@@ -498,6 +498,11 @@ public class MouseDragEventTest {
         w.getSourceParent().getDragReleased().assertCoords(170, 150);
         w.getScene().getDragReleased().assertCalled();
         w.getScene().getDragReleased().assertCoords(170, 150);
+
+        w.getSource().getDragDone().assertCalled();
+        w.getBelowSource().getDragDone().assertNotCalled();
+        w.getScene().getDragDone().assertCalled();
+        w.getScene().getDragDone().assertGestureSource(w.getSource().getNode());
 
         w.clear();
     }
@@ -567,6 +572,7 @@ public class MouseDragEventTest {
         w.getSource().getDragReleased().assertCalled();
         w.getSource().getDragReleased().assertCoords(50, 50);
         w.getSource().getDragReleased().assertGestureSource(w.getSource().getNode());
+        w.getSource().getDragDone().assertCalled();
     }
 
     @Test
@@ -577,7 +583,7 @@ public class MouseDragEventTest {
         w.event(MouseEvent.MOUSE_PRESSED, 150, 150);
         w.event(MouseEvent.MOUSE_DRAGGED, 160, 150);
 
-        // Move to target (jumps temorarily out of the source)
+        // Move to target (jumps temporarily out of the source)
         w.event(MouseEvent.MOUSE_DRAGGED, 410, 150);
 
         w.getTarget().getAny().assertNotCalled();
@@ -599,6 +605,9 @@ public class MouseDragEventTest {
         w.getSource().getDragReleased().assertCalled();
         w.getSource().getDragReleased().assertCoords(50, 50);
         w.getSource().getDragReleased().assertGestureSource(w.getSource().getNode());
+
+        w.getSource().getDragDone().assertCalled();
+        w.getSource().getDragDone().assertGestureSource(w.getSource().getNode());
     }
 
     @Test
@@ -649,6 +658,8 @@ public class MouseDragEventTest {
         w.getTarget().getDragReleased().assertCalled();
         w.getTarget().getDragReleased().assertCoords(60, 50);
         w.getTarget().getDragReleased().assertGestureSource(w.getSource().getNode());
+        w.getTarget().getDragDone().assertNotCalled();
+        w.getSource().getDragDone().assertCalled();
         w.getSource().getAny().clear();
     }
 
@@ -705,7 +716,10 @@ public class MouseDragEventTest {
 
         // Release there
         w.event(MouseEvent.MOUSE_RELEASED, -5, -5);
-        w.getScene().getAny().assertNotCalled();
+        w.getScene().getDragReleased().assertNotCalled();
+
+        // Done called even outside the scene
+        w.getScene().getDragDone().assertCalled();
     }
 
     @Test
@@ -768,6 +782,7 @@ public class MouseDragEventTest {
         w.getScene().getDragEnteredTarget().assertNotCalled();
         w.getScene().getDragExitedTarget().assertNotCalled();
         w.getScene().getDragReleased().assertNotCalled();
+        w.getScene().getDragDone().assertNotCalled();
 
         w.clear();
 
@@ -815,10 +830,11 @@ public class MouseDragEventTest {
         // Release
         w.event(MouseEvent.MOUSE_RELEASED, 410, 150);
 
-        w.getSource().getAny().assertNotCalled();
         w.getBelowSource().getAny().assertNotCalled();
-        w.getSourceParent().getAny().assertNotCalled();
         w.getBelowTarget().getAny().assertNotCalled();
+        w.getSource().getDragDone().assertCalled();
+        w.getSourceParent().getDragDone().assertCalled();
+        w.getScene().getDragDone().assertCalled();
         w.getTarget().getDragReleased().assertCalled();
         w.getTarget().getDragReleased().assertCoords(60, 50);
         w.getTarget().getDragReleased().assertGestureSource(w.getSource().getNode());
@@ -986,6 +1002,7 @@ public class MouseDragEventTest {
         private Node node;
         private Handler dragOver;
         private Handler dragReleased;
+        private Handler dragDone;
         private Handler dragEntered;
         private Handler dragExited;
         private Handler dragEnteredTarget;
@@ -996,6 +1013,7 @@ public class MouseDragEventTest {
             this.node = node;
             node.setOnMouseDragOver(dragOver = new Handler());
             node.setOnMouseDragReleased(dragReleased = new Handler());
+            node.setOnMouseDragDone(dragDone = new Handler());
             node.setOnMouseDragEntered(dragEntered = new Handler());
             node.setOnMouseDragExited(dragExited = new Handler());
             node.addEventHandler(MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET,
@@ -1010,6 +1028,7 @@ public class MouseDragEventTest {
             this.node = null;
             scene.setOnMouseDragOver(dragOver = new Handler());
             scene.setOnMouseDragReleased(dragReleased = new Handler());
+            scene.setOnMouseDragDone(dragDone = new Handler());
             scene.setOnMouseDragEntered(dragEntered = new Handler());
             scene.setOnMouseDragExited(dragExited = new Handler());
             scene.addEventHandler(MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET,
@@ -1048,6 +1067,10 @@ public class MouseDragEventTest {
             return dragReleased;
         }
 
+        public Handler getDragDone() {
+            return dragDone;
+        }
+
         public void assertTranslate(double x, double y) {
             assertEquals(x, node.getTranslateX(), 0.0001);
             assertEquals(y, node.getTranslateY(), 0.0001);
@@ -1060,6 +1083,7 @@ public class MouseDragEventTest {
         public void clear() {
             dragOver.clear();
             dragReleased.clear();
+            dragDone.clear();
             dragEntered.clear();
             dragExited.clear();
             dragEnteredTarget.clear();
