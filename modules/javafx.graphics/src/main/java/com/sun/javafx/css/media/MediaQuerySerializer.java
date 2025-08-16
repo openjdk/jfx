@@ -27,9 +27,17 @@ package com.sun.javafx.css.media;
 
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
+import com.sun.javafx.css.media.expression.EqualExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.GreaterExpression;
+import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
+import com.sun.javafx.css.media.expression.LessExpression;
+import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
+import com.sun.javafx.css.media.expression.RangeExpression;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -47,7 +55,12 @@ public final class MediaQuerySerializer {
         FUNCTION(2),
         CONJUNCTION(3),
         DISJUNCTION(4),
-        NEGATION(5);
+        NEGATION(5),
+        EQUAL(6),
+        GREATER(7),
+        GREATER_OR_EQUAL(8),
+        LESS(9),
+        LESS_OR_EQUAL(10);
 
         static QueryType of(MediaQuery expression) {
             return switch (expression) {
@@ -56,6 +69,11 @@ public final class MediaQuerySerializer {
                 case ConjunctionExpression _ -> CONJUNCTION;
                 case DisjunctionExpression _ -> DISJUNCTION;
                 case NegationExpression _ -> NEGATION;
+                case EqualExpression _ -> EQUAL;
+                case GreaterExpression _ -> GREATER;
+                case GreaterOrEqualExpression _ -> GREATER_OR_EQUAL;
+                case LessExpression _ -> LESS;
+                case LessOrEqualExpression _ -> LESS_OR_EQUAL;
             };
         }
 
@@ -88,26 +106,32 @@ public final class MediaQuerySerializer {
                 os.writeBoolean(expr.value());
 
             case FunctionExpression<?> expr -> {
-                os.writeInt(stringStore.addString(expr.featureName()));
+                os.writeInt(stringStore.addString(expr.getFeatureName()));
 
-                if (expr.featureValue() != null) {
-                    os.writeInt(stringStore.addString(expr.featureValue()));
+                if (expr.getFeatureValue() != null) {
+                    os.writeInt(stringStore.addString(expr.getFeatureValue()));
                 } else {
                     os.writeInt(-1);
                 }
             }
 
             case NegationExpression expr ->
-                writeBinary(expr.expression(), os, stringStore);
+                writeBinary(expr.getExpression(), os, stringStore);
 
             case ConjunctionExpression expr -> {
-                writeBinary(expr.left(), os, stringStore);
-                writeBinary(expr.right(), os, stringStore);
+                writeBinary(expr.getLeft(), os, stringStore);
+                writeBinary(expr.getRight(), os, stringStore);
             }
 
             case DisjunctionExpression expr -> {
-                writeBinary(expr.left(), os, stringStore);
-                writeBinary(expr.right(), os, stringStore);
+                writeBinary(expr.getLeft(), os, stringStore);
+                writeBinary(expr.getRight(), os, stringStore);
+            }
+
+            case RangeExpression expr -> {
+                os.writeInt(stringStore.addString(expr.getFeatureName()));
+                os.writeDouble(expr.getFeatureValue().getValue());
+                os.writeByte(expr.getFeatureValue().getUnits().ordinal());
             }
         }
     }
@@ -118,12 +142,23 @@ public final class MediaQuerySerializer {
                 String featureName = strings[is.readInt()];
                 int featureValueIdx = is.readInt();
                 String featureValue = featureValueIdx >= 0 ? strings[featureValueIdx] : null;
-                yield MediaFeatures.featureQueryExpression(featureName, featureValue);
+                yield MediaFeatures.discreteQueryExpression(featureName, featureValue);
             }
-            case CONSTANT -> new ConstantExpression(is.readBoolean());
-            case NEGATION -> new NegationExpression(readBinary(is, strings));
-            case CONJUNCTION -> new ConjunctionExpression(readBinary(is, strings), readBinary(is, strings));
-            case DISJUNCTION -> new DisjunctionExpression(readBinary(is, strings), readBinary(is, strings));
+            case CONSTANT -> ConstantExpression.of(is.readBoolean());
+            case NEGATION -> NegationExpression.of(readBinary(is, strings));
+            case CONJUNCTION -> ConjunctionExpression.of(readBinary(is, strings), readBinary(is, strings));
+            case DISJUNCTION -> DisjunctionExpression.of(readBinary(is, strings), readBinary(is, strings));
+            case EQUAL -> EqualExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
+            case GREATER -> GreaterExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
+            case GREATER_OR_EQUAL -> GreaterOrEqualExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
+            case LESS -> LessExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
+            case LESS_OR_EQUAL -> LessOrEqualExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
         };
+    }
+
+    private static final SizeUnits[] SIZE_UNITS = SizeUnits.values();
+
+    private static Size readSize(DataInputStream is) throws IOException {
+        return new Size(is.readDouble(), SIZE_UNITS[is.readByte()]);
     }
 }

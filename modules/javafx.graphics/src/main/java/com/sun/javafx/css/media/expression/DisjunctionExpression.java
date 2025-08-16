@@ -25,19 +25,34 @@
 
 package com.sun.javafx.css.media.expression;
 
+import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
+import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Logical disjunction of the specified expressions.
  */
-public record DisjunctionExpression(MediaQuery left, MediaQuery right) implements MediaQuery {
+public final class DisjunctionExpression implements MediaQuery {
 
-    public DisjunctionExpression {
-        Objects.requireNonNull(left, "left cannot be null");
-        Objects.requireNonNull(right, "right cannot be null");
+    private final MediaQuery left;
+    private final MediaQuery right;
+    private final Set<ContextAwareness> contextAwareness;
+
+    private DisjunctionExpression(MediaQuery left, MediaQuery right) {
+        this.left = Objects.requireNonNull(left, "left cannot be null");
+        this.right = Objects.requireNonNull(right, "right cannot be null");
+        this.contextAwareness = ContextAwareness.combine(left.getContextAwareness(), right.getContextAwareness());
+    }
+
+    /**
+     * Returns the disjunction of the specified expressions.
+     */
+    public static DisjunctionExpression of(MediaQuery left, MediaQuery right) {
+        return MediaQueryCache.getCachedMediaQuery(new DisjunctionExpression(left, right));
     }
 
     /**
@@ -48,13 +63,38 @@ public record DisjunctionExpression(MediaQuery left, MediaQuery right) implement
             throw new IllegalArgumentException();
         }
 
-        var result = new DisjunctionExpression(expressions.get(0), expressions.get(1));
+        var result = of(expressions.get(0), expressions.get(1));
 
         for (int i = 2; i < expressions.size(); i++) {
-            result = new DisjunctionExpression(result, expressions.get(i));
+            result = of(result, expressions.get(i));
         }
 
         return result;
+    }
+
+    public MediaQuery getLeft() {
+        return left;
+    }
+
+    public MediaQuery getRight() {
+        return right;
+    }
+
+    @Override
+    public Set<ContextAwareness> getContextAwareness() {
+        return contextAwareness;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof DisjunctionExpression other
+            && left.equals(other.left)
+            && right.equals(other.right);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(DisjunctionExpression.class, left, right);
     }
 
     @Override
