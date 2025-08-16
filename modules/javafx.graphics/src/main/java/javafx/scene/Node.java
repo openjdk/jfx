@@ -7707,6 +7707,23 @@ public abstract sealed class Node
         return getEventHandlerProperties().onMouseDragExitedProperty();
     }
 
+    public final void setOnMouseDragDone(EventHandler<? super MouseDragEvent> value) {
+        onMouseDragDoneProperty().set(value);
+    }
+
+    public final EventHandler<? super MouseDragEvent> getOnMouseDragDone() {
+        return (eventHandlerProperties == null) ? null : eventHandlerProperties.getOnMouseDragDone();
+    }
+
+    /// Defines a function to be called when a full press-drag-release gesture ends with this node as its source.
+    ///
+    /// @return the event handler that is called when a full press-drag-release finishes
+    /// @see MouseDragEvent#MOUSE_DRAG_DONE
+    /// @since 26
+    public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDoneProperty() {
+        return getEventHandlerProperties().onMouseDragDoneProperty();
+    }
+
 
     /* *************************************************************************
      *                                                                         *
