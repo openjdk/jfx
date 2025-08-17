@@ -1021,7 +1021,7 @@ public abstract non-sealed class Parent extends Node {
      * rendered. This is batched up asynchronously to happen once per
      * "pulse", or frame of animation.
      * <p>
-     * If this parent is either a layout root or unmanaged, then it will be
+     * If this parent is either a scene root or unmanaged, then it will be
      * added directly to the scene's dirty layout list, otherwise requestParentLayout
      * will be invoked.
      * @since JavaFX 8.0

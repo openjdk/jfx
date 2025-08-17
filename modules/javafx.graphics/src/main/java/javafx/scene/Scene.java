@@ -645,6 +645,21 @@ public class Scene implements EventTarget {
         clearInitialCssStateNodes.remove(node);
     }
 
+    /**
+     * A set of nodes that are layout roots and are in need of layout. Any unmanaged
+     * {@link Parent} is considered a layout root. If a child of such a node
+     * requests layout, the layout root will be added to this set, to be laid
+     * out on the next layout pass.
+     *
+     * @see Node#managedProperty()
+     * @see Parent#requestLayout()
+     */
+    private final Set<Parent> dirtyLayoutRoots = new HashSet<>();
+
+    void addToDirtyLayoutList(Parent layoutRoot) {
+        dirtyLayoutRoots.add(layoutRoot);
+    }
+
     void doLayoutPass() {
         if (peer != null) {
             peer.layoutOverlay();
@@ -653,6 +668,14 @@ public class Scene implements EventTarget {
         final Parent r = getRoot();
         if (r != null) {
             r.layout();
+        }
+
+        Set<Parent> copy = new HashSet<>(dirtyLayoutRoots);
+
+        dirtyLayoutRoots.clear();
+
+        for (Parent parent : copy) {
+            parent.layout();
         }
     }
 

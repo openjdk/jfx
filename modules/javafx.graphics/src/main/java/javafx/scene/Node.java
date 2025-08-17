@@ -8651,6 +8651,12 @@ public abstract sealed class Node
     }
 
     void markDirtyLayoutBranch() {
+        if (this instanceof Parent p && p.layoutRoot) {  // is this node a layout root?
+            markAsDirtyLayoutRoot(p);
+
+            return;  // No need to propagate flags any further up the hierarchy
+        }
+
         Parent p = getParent();
         while (p != null && p.layoutFlag == LayoutFlags.CLEAN) {
             p.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
@@ -8660,9 +8666,23 @@ public abstract sealed class Node
                     getSubScene().setDirtyLayout(p);
                 }
             }
+            else if (p.layoutRoot) {
+                markAsDirtyLayoutRoot(p);
+
+                return;  // No need to propagate flags any further up the hierarchy
+            }
+
             p = p.getParent();
         }
+    }
 
+    private void markAsDirtyLayoutRoot(Parent p) {
+        Toolkit.getToolkit().requestNextPulse();
+        Scene s = getScene();
+
+        if (s != null) {
+            s.addToDirtyLayoutList(p);
+        }
     }
 
     private boolean isWindowShowing() {
