@@ -154,10 +154,17 @@ class WinWindow extends Window {
             if (!ySet) ySet = (py != this.y);
             pfReqWidth = (int) Math.ceil(fxReqWidth * platformScaleX);
             pfReqHeight = (int) Math.ceil(fxReqHeight * platformScaleY);
+            boolean alreadyAtSize = (pw == width && ph == height);
             _setBounds(getRawHandle(), px, py, xSet, ySet, pw, ph, 0, 0, xGravity, yGravity);
 
-            if (minMaxEnforced) {
-                notifyResize(WindowEvent.RESIZE, pw, ph);
+            if (minMaxEnforced && alreadyAtSize) {
+                var eventType = WindowEvent.RESIZE;
+                if (isMaximized()) {
+                    eventType = WindowEvent.MAXIMIZE;
+                } else if (isMinimized()) {
+                    eventType = WindowEvent.MINIMIZE;
+                }
+                notifyResize(eventType, pw, ph);
             }
         }
     }
