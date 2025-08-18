@@ -134,8 +134,7 @@
 
     self = [super initWithFrame:frame];
     if (self != nil) {
-        if (mtlCommandQueuePtr != 0l ||
-            mtlForSW) {
+        if (mtlCommandQueuePtr != 0l || mtlForSW) {
             LOG("GlassView3D initWithFrame using MTLView");
             GlassViewMTL* mtlSubView;
             subView = mtlSubView = [[GlassViewMTL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForSW:mtlForSW];
