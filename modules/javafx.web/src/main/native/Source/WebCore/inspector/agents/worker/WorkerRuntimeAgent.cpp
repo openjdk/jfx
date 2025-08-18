@@ -37,17 +37,20 @@
 #include "WorkerOrWorkletScriptController.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerRuntimeAgent);
 
 WorkerRuntimeAgent::WorkerRuntimeAgent(WorkerAgentContext& context)
     : InspectorRuntimeAgent(context)
     , m_backendDispatcher(RuntimeBackendDispatcher::create(context.backendDispatcher, this))
     , m_globalScope(context.globalScope)
 {
-    ASSERT(context.globalScope.isContextThread());
+    ASSERT(context.globalScope->isContextThread());
 }
 
 WorkerRuntimeAgent::~WorkerRuntimeAgent() = default;
@@ -61,7 +64,7 @@ InjectedScript WorkerRuntimeAgent::injectedScriptForEval(Inspector::Protocol::Er
 
     // FIXME: What guarantees m_globalScope.script() is non-null?
     // FIXME: What guarantees globalScopeWrapper() is non-null?
-    return injectedScriptManager().injectedScriptFor(m_globalScope.script()->globalScopeWrapper());
+    return injectedScriptManager().injectedScriptFor(m_globalScope->script()->globalScopeWrapper());
 }
 
 } // namespace WebCore

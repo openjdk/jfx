@@ -28,6 +28,7 @@
 
 #include "AXObjectCache.h"
 #include "CSSPrimitiveValueMappings.h"
+#include "CaretRectComputation.h"
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
 #include "DocumentInlines.h"
@@ -35,6 +36,7 @@
 #include "Editor.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
+#include "ElementTextDirection.h"
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
@@ -143,14 +145,14 @@ void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedE
     HTMLFormControlElement::dispatchBlurEvent(WTFMove(newFocusedElement));
 }
 
-void HTMLTextFormControlElement::didEditInnerTextValue()
+void HTMLTextFormControlElement::didEditInnerTextValue(bool wasUserEdit)
 {
     if (!renderer() || !isTextField())
         return;
 
     LOG(Editing, "HTMLTextFormControlElement %p didEditInnerTextValue", this);
 
-    m_lastChangeWasUserEdit = true;
+    m_lastChangeWasUserEdit = wasUserEdit;
     subtreeHasChanged();
 }
 
@@ -215,6 +217,8 @@ void HTMLTextFormControlElement::setSelectionDirection(const String& direction)
 
 void HTMLTextFormControlElement::select(SelectionRevealMode revealMode, const AXTextStateChangeIntent& intent)
 {
+    FocusOptions focusOptions { .preventScroll = true };
+    focus(focusOptions);
     if (setSelectionRange(0, std::numeric_limits<unsigned>::max(), SelectionHasNoDirection, revealMode, intent))
         scheduleSelectEvent();
 }
@@ -324,23 +328,24 @@ bool HTMLTextFormControlElement::setSelectionRange(unsigned start, unsigned end,
         if (!isConnected())
             return cacheSelection(start, end, direction);
 
+#if PLATFORM(COCOA)
+        bool cacheSelectionIfNotFocusedOrSelected = WTF::linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::SetSelectionRangeCachesSelectionIfNotFocusedOrSelected);
+#else
+        bool cacheSelectionIfNotFocusedOrSelected = true;
+#endif
+        // Cache selection if neither selection or focus is on the input.
+        if (cacheSelectionIfNotFocusedOrSelected && frame && enclosingTextFormControl(frame->selection().selection().start()) != this)
+            return cacheSelection(start, end, direction);
+
         // FIXME: Removing this synchronous layout requires fixing setSelectionWithoutUpdatingAppearance not needing up-to-date style.
         protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-        if (!isTextField())
-            return false;
-
-        // Double-check our connected state after the layout update.
-        if (!isConnected())
-            return cacheSelection(start, end, direction);
-
-        // Double-check the state of innerTextElement after the layout.
-        innerText = innerTextElement();
-        auto* rendererTextControl = renderer();
-
-        if (innerText && rendererTextControl && (rendererTextControl->style().visibility() == Visibility::Hidden || !innerText->renderBox() || !innerText->renderBox()->height()))
+        // Cache selection if renderer is invisible.
+        if (CheckedPtr renderer = this->renderer()) {
+            if (renderer->style().visibility() == Visibility::Hidden || !innerText->renderBox() || !innerText->renderBox()->height())
                 return cacheSelection(start, end, direction);
             }
+    }
 
     auto previousSelectionStart = m_cachedSelectionStart;
     auto previousSelectionEnd = m_cachedSelectionEnd;
@@ -487,7 +492,7 @@ TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirectio
         return SelectionHasNoDirection;
 
     const VisibleSelection& selection = frame->selection().selection();
-    return selection.isDirectional() ? (selection.isBaseFirst() ? SelectionHasForwardDirection : SelectionHasBackwardDirection) : SelectionHasNoDirection;
+    return selection.directionality() == Directionality::Strong ? (selection.isBaseFirst() ? SelectionHasForwardDirection : SelectionHasBackwardDirection) : SelectionHasNoDirection;
 }
 
 static void setContainerAndOffsetForRange(Node& node, unsigned offset, RefPtr<Node>& containerNode, unsigned& offsetInContainer)
@@ -689,7 +694,7 @@ void HTMLTextFormControlElement::setInnerTextValue(String&& value)
             }
 #endif
             if (AXObjectCache* cache = document().existingAXObjectCache())
-                cache->postNotification(this, AXObjectCache::AXValueChanged, PostTarget::ObservableParent);
+                cache->postNotification(this, AXNotification::ValueChanged, PostTarget::ObservableParent);
         }
 #endif
 
@@ -807,7 +812,7 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
 
     auto skipToNextSoftLineBreakPosition = [&] {
         while (currentLineBox) {
-            auto lastRun = currentLineBox->lastLeafBox();
+            auto lastRun = currentLineBox->lineRightmostLeafBox();
             ASSERT(lastRun);
             // Skip last line.
                 currentLineBox.traverseNext();
@@ -871,7 +876,7 @@ String HTMLTextFormControlElement::directionForFormData() const
             if (equalLettersIgnoringASCIICase(value, "ltr"_s))
                 return TextDirection::LTR;
             if (equalLettersIgnoringASCIICase(value, "auto"_s))
-                return element.directionalityIfDirIsAuto().value_or(TextDirection::LTR);
+                return computeAutoDirectionality(element).value_or(TextDirection::LTR);
         }
         return TextDirection::LTR;
     }();
@@ -899,7 +904,7 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
 {
     // The inner block, if present, always has its direction set to LTR,
     // so we need to inherit the direction and unicode-bidi style from the element.
-    textBlockStyle.setDirection(parentStyle.direction());
+    textBlockStyle.setDirection(parentStyle.writingMode().computedTextDirection());
     textBlockStyle.setUnicodeBidi(parentStyle.unicodeBidi());
 
     if (auto innerText = innerTextElement()) {
@@ -913,7 +918,7 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
         textBlockStyle.setLogicalMinWidth(Length { caretWidth(), LengthType::Fixed });
 
 #if PLATFORM(IOS_FAMILY)
-    if (textBlockStyle.textSecurity() != TextSecurity::None && !textBlockStyle.isLeftToRightDirection()) {
+    if (textBlockStyle.textSecurity() != TextSecurity::None && textBlockStyle.writingMode().isBidiRTL()) {
         // Preserve the alignment but force the direction to LTR so that the last-typed, unmasked character
         // (which cannot have RTL directionality) will appear to the right of the masked characters. See <rdar://problem/7024375>.
 

@@ -27,6 +27,7 @@
 
 
 #include <WebCore/DOMException.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLTextAreaElement.h>

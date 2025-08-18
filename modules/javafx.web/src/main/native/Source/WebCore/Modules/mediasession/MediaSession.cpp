@@ -44,16 +44,18 @@
 #include "NowPlayingInfo.h"
 #include "Page.h"
 #include "PlatformMediaSessionManager.h"
+#include "UserMediaController.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/JSONValues.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-static const void* nextLogIdentifier()
+static uint64_t nextLogIdentifier()
 {
     static uint64_t logIdentifier = cryptographicallyRandomNumber<uint32_t>();
-    return reinterpret_cast<const void*>(++logIdentifier);
+    return ++logIdentifier;
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -128,6 +130,7 @@ static std::optional<std::pair<PlatformMediaSession::RemoteControlCommandType, P
     case MediaSessionAction::Togglecamera:
     case MediaSessionAction::Togglemicrophone:
     case MediaSessionAction::Togglescreenshare:
+    case MediaSessionAction::Voiceactivity:
         break;
     }
     if (command == PlatformMediaSession::RemoteControlCommandType::NoCommand)
@@ -135,6 +138,8 @@ static std::optional<std::pair<PlatformMediaSession::RemoteControlCommandType, P
 
     return std::make_pair(command, argument);
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSession);
 
 Ref<MediaSession> MediaSession::create(Navigator& navigator)
 {
@@ -257,8 +262,18 @@ ExceptionOr<void> MediaSession::setActionHandler(MediaSessionAction action, RefP
 {
 #if ENABLE(MEDIA_STREAM)
     RefPtr document = this->document();
-    if (document && !document->settings().mediaSessionCaptureToggleAPIEnabled() && (action == MediaSessionAction::Togglecamera || action == MediaSessionAction::Togglemicrophone || action == MediaSessionAction::Togglescreenshare))
+    if (document && !document->settings().mediaSessionCaptureToggleAPIEnabled() && (action == MediaSessionAction::Togglecamera || action == MediaSessionAction::Togglemicrophone || action == MediaSessionAction::Togglescreenshare || action == MediaSessionAction::Voiceactivity))
         return Exception { ExceptionCode::TypeError, makeString("Argument 1 ('action') to MediaSession.setActionHandler must be a value other than '"_s, convertEnumerationToString(action), "'"_s) };
+
+#if PLATFORM(MAC) && !HAVE(VOICEACTIVITYDETECTION)
+    if (document && action == MediaSessionAction::Voiceactivity)
+        return Exception { ExceptionCode::TypeError, makeString("Argument 1 ('action') to MediaSession.setActionHandler must be a value other than '"_s, convertEnumerationToString(action), "'"_s) };
+#endif
+
+    if (action == MediaSessionAction::Voiceactivity) {
+        if (RefPtr document = this->document())
+            document->setShouldListenToVoiceActivity(!!handler);
+    }
 #endif
 
     if (handler) {
@@ -269,7 +284,7 @@ ExceptionOr<void> MediaSession::setActionHandler(MediaSessionAction action, RefP
         }
         auto platformCommand = platformCommandForMediaSessionAction(action);
         if (platformCommand != PlatformMediaSession::RemoteControlCommandType::NoCommand)
-            PlatformMediaSessionManager::sharedManager().addSupportedCommand(platformCommand);
+            PlatformMediaSessionManager::singleton().addSupportedCommand(platformCommand);
     } else {
         bool containedAction;
         {
@@ -279,7 +294,7 @@ ExceptionOr<void> MediaSession::setActionHandler(MediaSessionAction action, RefP
 
         if (containedAction)
             ALWAYS_LOG(LOGIDENTIFIER, "removing ", action);
-        PlatformMediaSessionManager::sharedManager().removeSupportedCommand(platformCommandForMediaSessionAction(action));
+        PlatformMediaSessionManager::singleton().removeSupportedCommand(platformCommandForMediaSessionAction(action));
     }
 
     notifyActionHandlerObservers();
@@ -394,7 +409,7 @@ void MediaSession::removeObserver(MediaSessionObserver& observer)
     m_observers.remove(observer);
 }
 
-void MediaSession::forEachObserver(const Function<void(MediaSessionObserver&)>& apply)
+void MediaSession::forEachObserver(NOESCAPE const Function<void(MediaSessionObserver&)>& apply)
 {
     ASSERT(isMainThread());
     Ref protectedThis { *this };
@@ -472,6 +487,7 @@ static Vector<URL> fallbackArtwork(DocumentLoader* loader)
     }
     if (!size)
         return { };
+
     Vector<URL> images;
     images.reserveInitialCapacity(size);
     for (const auto& icon : loader->linkIcons()) {
@@ -480,6 +496,7 @@ static Vector<URL> fallbackArtwork(DocumentLoader* loader)
     };
     return images;
 }
+
 void MediaSession::updateNowPlayingInfo(NowPlayingInfo& info)
 {
     if (auto positionState = this->positionState()) {
@@ -505,6 +522,46 @@ void MediaSession::updateNowPlayingInfo(NowPlayingInfo& info)
         info.metadata.album = m_metadata->album();
     }
 }
+
+#if ENABLE(MEDIA_STREAM)
+void MediaSession::updateCaptureState(bool isActive, DOMPromiseDeferred<void>&& promise, MediaProducerMediaCaptureKind kind)
+{
+    RefPtr document = this->document();
+    if (!document->isFullyActive()) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Document is not fully active or does not have focus"_s });
+        return;
+    }
+
+    if (isActive && (document->hidden() || !UserGestureIndicator::currentUserGesture())) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Activating capture must be called from a user gesture handler."_s });
+        return;
+    }
+
+    auto* controller = UserMediaController::from(document->page());
+    if (!controller) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Unable to proceed with the request."_s });
+        return;
+    }
+
+    if (!document->isCapturing()) {
+        promise.resolve();
+        return;
+    }
+
+    controller->updateCaptureState(*document, isActive, kind, [weakDocument = WeakPtr { document.get() }, promise = WTFMove(promise)] (auto&& exception) mutable {
+        RefPtr protectedDocument = weakDocument.get();
+        if (!protectedDocument)
+            return;
+        protectedDocument->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTFMove(promise), exception = WTFMove(exception)] () mutable {
+            if (exception) {
+                promise.reject(WTFMove(*exception));
+                return;
+            }
+            promise.resolve();
+        });
+    });
+}
+#endif
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 void MediaSession::notifyReadyStateObservers()

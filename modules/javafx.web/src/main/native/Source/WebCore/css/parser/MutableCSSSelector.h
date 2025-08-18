@@ -21,6 +21,7 @@
 #pragma once
 
 #include "CSSSelector.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
@@ -31,7 +32,7 @@ class MutableCSSSelector;
 using MutableCSSSelectorList = Vector<std::unique_ptr<MutableCSSSelector>>;
 
 class MutableCSSSelector {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MutableCSSSelector);
 public:
     enum class Combinator {
         Child,
@@ -58,6 +59,7 @@ public:
     CSSSelector* selector() { return m_selector.get(); }
 
     void setValue(const AtomString& value, bool matchLowerCase = false) { m_selector->setValue(value, matchLowerCase); }
+    const AtomString& value() const { return m_selector->value(); }
 
     void setAttribute(const QualifiedName& value, CSSSelector::AttributeMatchType type) { m_selector->setAttribute(value, type); }
 
@@ -75,7 +77,8 @@ public:
     void setPseudoClass(CSSSelector::PseudoClass type) { m_selector->setPseudoClass(type); }
 
     void adoptSelectorVector(MutableCSSSelectorList&&);
-    void setArgumentList(FixedVector<PossiblyQuotedIdentifier>);
+    void setArgumentList(FixedVector<AtomString>);
+    void setLangList(FixedVector<PossiblyQuotedIdentifier>);
     void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
     void setImplicit() { m_selector->setImplicit(); }

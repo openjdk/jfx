@@ -33,8 +33,12 @@
 #include "SWServerWorker.h"
 #include "ServiceWorkerTypes.h"
 #include "ServiceWorkerUpdateViaCache.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SWServerRegistration);
 
 Ref<SWServerRegistration> SWServerRegistration::create(SWServer& server, const ServiceWorkerRegistrationKey& key, ServiceWorkerUpdateViaCache updateViaCache, const URL& scopeURL, const URL& scriptURL, std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier, NavigationPreloadState&& navigationPreloadState)
 {
@@ -136,10 +140,10 @@ void SWServerRegistration::fireUpdateFoundEvent()
     });
 }
 
-void SWServerRegistration::forEachConnection(const Function<void(SWServer::Connection&)>& apply)
+void SWServerRegistration::forEachConnection(NOESCAPE const Function<void(SWServer::Connection&)>& apply)
 {
     for (auto connectionIdentifierWithClients : m_connectionsWithClientRegistrations.values()) {
-        if (CheckedPtr connection = protectedServer()->connection(connectionIdentifierWithClients))
+        if (RefPtr connection = protectedServer()->connection(connectionIdentifierWithClients))
             apply(*connection);
     }
 }
@@ -198,7 +202,7 @@ void SWServerRegistration::notifyClientsOfControllerChange()
 {
     std::optional<ServiceWorkerData> newController = activeWorker() ? std::optional { activeWorker()->data() } : std::nullopt;
     for (auto& item : m_clientsUsingRegistration) {
-        if (CheckedPtr connection = protectedServer()->connection(item.key))
+        if (RefPtr connection = protectedServer()->connection(item.key))
             connection->notifyClientsOfControllerChange(item.value, newController);
     }
 }
@@ -297,11 +301,11 @@ void SWServerRegistration::activate()
         updateWorkerState(*worker, ServiceWorkerState::Redundant);
     }
     // Run the Update Registration State algorithm passing registration, "active" and registration's waiting worker as the arguments.
-    updateRegistrationState(ServiceWorkerRegistrationState::Active, waitingWorker());
+    updateRegistrationState(ServiceWorkerRegistrationState::Active, protectedWaitingWorker().get());
     // Run the Update Registration State algorithm passing registration, "waiting" and null as the arguments.
     updateRegistrationState(ServiceWorkerRegistrationState::Waiting, nullptr);
     // Run the Update Worker State algorithm passing registration's active worker and activating as the arguments.
-    updateWorkerState(*activeWorker(), ServiceWorkerState::Activating);
+    updateWorkerState(*protectedActiveWorker(), ServiceWorkerState::Activating);
     // FIXME: For each service worker client whose creation URL matches registration's scope url...
 
     // The registration now has an active worker so we need to check if there are any ready promises that were waiting for this.
@@ -355,7 +359,7 @@ void SWServerRegistration::controlClient(ScriptExecutionContextIdentifier identi
 
     HashSet<ScriptExecutionContextIdentifier> identifiers;
     identifiers.add(identifier);
-    protectedServer()->connection(identifier.processIdentifier())->notifyClientsOfControllerChange(identifiers, activeWorker->data());
+    protectedServer()->protectedConnection(identifier.processIdentifier())->notifyClientsOfControllerChange(identifiers, activeWorker->data());
 }
 
 bool SWServerRegistration::shouldSoftUpdate(const FetchOptions& options) const
@@ -421,6 +425,21 @@ std::optional<ExceptionData> SWServerRegistration::setNavigationPreloadHeaderVal
     m_preloadState.headerValue = WTFMove(headerValue);
     protectedServer()->storeRegistrationForWorker(*activeWorker);
     return { };
+}
+
+void SWServerRegistration::addCookieChangeSubscriptions(Vector<CookieChangeSubscription>&& subscriptions)
+{
+    m_cookieChangeSubscriptions.add(subscriptions.begin(), subscriptions.end());
+}
+
+void SWServerRegistration::removeCookieChangeSubscriptions(Vector<CookieChangeSubscription>&& subscriptions)
+{
+    m_cookieChangeSubscriptions.remove(subscriptions.begin(), subscriptions.end());
+}
+
+Vector<CookieChangeSubscription> SWServerRegistration::cookieChangeSubscriptions() const
+{
+    return copyToVector(m_cookieChangeSubscriptions);
 }
 
 } // namespace WebCore

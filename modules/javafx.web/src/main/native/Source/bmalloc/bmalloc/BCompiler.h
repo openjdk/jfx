@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -146,4 +146,38 @@
 #else
 #define BALLOW_DEPRECATED_DECLARATIONS_BEGIN
 #define BALLOW_DEPRECATED_DECLARATIONS_END
+#endif
+
+/* BALLOW_UNSAFE_BUFFER_USAGE_BEGIN */
+
+#if BCOMPILER(CLANG)
+#define BALLOW_UNSAFE_BUFFER_USAGE_BEGIN \
+    _Pragma("clang diagnostic push") \
+    _Pragma("clang diagnostic ignored \"-Wunsafe-buffer-usage\"")
+
+#define BALLOW_UNSAFE_BUFFER_USAGE_END \
+    _Pragma("clang diagnostic pop")
+#else
+#define BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+#define BALLOW_UNSAFE_BUFFER_USAGE_END
+#endif
+
+/* MUST_TAIL_CALL */
+
+// 32-bit platforms use different calling conventions, so a MUST_TAIL_CALL function
+// written for 64-bit may fail to tail call on 32-bit.
+// It also doesn't work on ppc64le: https://github.com/llvm/llvm-project/issues/98859
+// and on Windows: https://github.com/llvm/llvm-project/issues/116568
+#if BCOMPILER(CLANG)
+#if __SIZEOF_POINTER__ == 8
+#if !defined(BMUST_TAIL_CALL) && defined(__cplusplus) && defined(__has_cpp_attribute)
+#if __has_cpp_attribute(clang::musttail) && !defined(__powerpc__) && !defined(_WIN32)
+#define BMUST_TAIL_CALL [[clang::musttail]]
+#endif
+#endif
+#endif
+#endif
+
+#if !defined(BMUST_TAIL_CALL)
+#define BMUST_TAIL_CALL
 #endif

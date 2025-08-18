@@ -1544,6 +1544,15 @@ static const guint32 iso15924_tags[] =
     PACK ('K', 'a', 'w', 'i'), /* G_UNICODE_SCRIPT_KAWI */
     PACK ('N', 'a', 'g', 'm'), /* G_UNICODE_SCRIPT_NAG_MUNDARI */
 
+    /* Unicode 16.0 additions */
+    PACK ('T', 'o', 'd', 'r'), /* G_UNICODE_SCRIPT_TODHRI */
+    PACK ('G', 'a', 'r', 'a'), /* G_UNICODE_SCRIPT_GARAY */
+    PACK ('T', 'u', 't', 'g'), /* G_UNICODE_SCRIPT_TULU_TIGALARI */
+    PACK ('S', 'u', 'n', 'u'), /* G_UNICODE_SCRIPT_SUNUWAR */
+    PACK ('G', 'u', 'k', 'h'), /* G_UNICODE_SCRIPT_GURUNG_KHEMA */
+    PACK ('K', 'r', 'a', 'i'), /* G_UNICODE_SCRIPT_KIRAT_RAI */
+    PACK ('O', 'n', 'a', 'o'), /* G_UNICODE_SCRIPT_OL_ONAL */
+
 #undef PACK
 };
 

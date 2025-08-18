@@ -33,7 +33,7 @@
 namespace WebCore {
 
 CSSValuePair::CSSValuePair(ValueSeparator separator, Ref<CSSValue> first, Ref<CSSValue> second, IdenticalValueSerialization serialization)
-    : CSSValue(ValuePairClass)
+    : CSSValue(ClassType::ValuePair)
     , m_coalesceIdenticalValues(serialization != IdenticalValueSerialization::DoNotCoalesce)
     , m_first(WTFMove(first))
     , m_second(WTFMove(second))
@@ -61,10 +61,10 @@ bool CSSValuePair::canBeCoalesced() const
     return m_coalesceIdenticalValues && m_first->equals(m_second);
 }
 
-String CSSValuePair::customCSSText() const
+String CSSValuePair::customCSSText(const CSS::SerializationContext& context) const
 {
-    String first = m_first->cssText();
-    String second = m_second->cssText();
+    auto first = m_first->cssText(context);
+    auto second = m_second->cssText(context);
     if (m_coalesceIdenticalValues && first == second)
         return first;
     return makeString(first, separatorCSSText(), second);

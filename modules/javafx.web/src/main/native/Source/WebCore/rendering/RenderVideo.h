@@ -41,7 +41,8 @@ public:
 
     WEBCORE_EXPORT HTMLVideoElement& videoElement() const;
 
-    WEBCORE_EXPORT IntRect videoBox() const;
+    IntRect videoBox() const;
+    WEBCORE_EXPORT IntRect videoBoxInRootView() const;
 
     static IntSize defaultSize();
 
@@ -80,12 +81,13 @@ private:
 
     void visibleInViewportStateChanged() final;
 
-    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const final;
+    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ShouldComputePreferred::ComputeActual) const final;
     LayoutUnit minimumReplacedHeight() const final;
 
-    void updatePlayer();
+    bool updatePlayer();
 
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const final;
+    void invalidateLineLayout();
 
     LayoutSize m_cachedImageSize;
 };

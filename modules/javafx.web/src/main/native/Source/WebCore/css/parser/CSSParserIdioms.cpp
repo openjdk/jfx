@@ -45,6 +45,9 @@ bool isColorKeywordAllowedInMode(CSSValueID id, CSSParserMode mode)
 #if PLATFORM(IOS_FAMILY)
     case CSSValueAppleSystemQuaternaryFill:
 #endif
+#if PLATFORM(MAC)
+    case CSSValueAppleSystemOpaqueFill:
+#endif
     case CSSValueInternalDocumentTextColor:
         return isUASheetBehavior(mode);
     default:

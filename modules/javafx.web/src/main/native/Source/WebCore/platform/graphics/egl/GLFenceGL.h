@@ -19,6 +19,8 @@
 
 #pragma once
 
+#if HAVE(GL_FENCE)
+
 #include "GLFence.h"
 
 typedef struct __GLsync* GLsync;
@@ -39,3 +41,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

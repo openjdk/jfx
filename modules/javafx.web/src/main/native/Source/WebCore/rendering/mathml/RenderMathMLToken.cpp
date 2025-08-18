@@ -39,6 +39,7 @@
 #include "RenderElement.h"
 #include "RenderIterator.h"
 #include "RenderStyleInlines.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -511,7 +512,8 @@ void RenderMathMLToken::computePreferredLogicalWidths()
     if (m_mathVariantCodePoint) {
         auto mathVariantGlyph = style().fontCascade().glyphDataForCharacter(m_mathVariantCodePoint.value(), m_mathVariantIsMirrored);
         if (mathVariantGlyph.font) {
-            m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph) + borderAndPaddingLogicalWidth();
+            m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph);
+            adjustPreferredLogicalWidthsForBorderAndPadding();
             setPreferredLogicalWidthsDirty(false);
             return;
         }
@@ -542,7 +544,7 @@ void RenderMathMLToken::updateMathVariantGlyph()
         char32_t transformedCodePoint = mathVariant(codePoint.value(), mathvariant);
         if (transformedCodePoint != codePoint.value()) {
             m_mathVariantCodePoint = mathVariant(codePoint.value(), mathvariant);
-            m_mathVariantIsMirrored = !style().isLeftToRightDirection();
+            m_mathVariantIsMirrored = writingMode().isBidiRTL();
         }
     }
 }
@@ -569,17 +571,16 @@ std::optional<LayoutUnit> RenderMathMLToken::firstLineBaseline() const
     return RenderMathMLBlock::firstLineBaseline();
 }
 
-void RenderMathMLToken::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight)
+void RenderMathMLToken::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit pageLogicalHeight)
 {
     ASSERT(needsLayout());
 
-    for (auto& box : childrenOfType<RenderBox>(*this)) {
-        if (box.isOutOfFlowPositioned())
-            box.containingBlock()->insertPositionedObject(box);
-    }
+    insertPositionedChildrenIntoContainingBlock();
 
-    if (!relayoutChildren && simplifiedLayout())
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
 
     GlyphData mathVariantGlyph;
     if (m_mathVariantCodePoint)
@@ -591,10 +592,12 @@ void RenderMathMLToken::layoutBlock(bool relayoutChildren, LayoutUnit pageLogica
     }
 
     recomputeLogicalWidth();
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
+    for (auto* child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox())
         child->layoutIfNeeded();
-    setLogicalWidth(LayoutUnit(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph)) + borderAndPaddingLogicalWidth());
-    setLogicalHeight(LayoutUnit(mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).height()) + borderAndPaddingLogicalHeight());
+    setLogicalWidth(LayoutUnit(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph)));
+    setLogicalHeight(LayoutUnit(mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).height()));
+
+    adjustLayoutForBorderAndPadding();
 
     layoutPositionedObjects(relayoutChildren);
 
@@ -621,7 +624,7 @@ void RenderMathMLToken::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     LayoutUnit glyphAscent = static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y()));
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph));
-    info.context().drawGlyphs(*mathVariantGlyph.font, &mathVariantGlyph.glyph, &advance, 1, paintOffset + location() + LayoutPoint(borderLeft() + paddingLeft(), glyphAscent + borderAndPaddingBefore()), style().fontCascade().fontDescription().usedFontSmoothing());
+    info.context().drawGlyphs(*mathVariantGlyph.font, singleElementSpan(mathVariantGlyph.glyph), singleElementSpan(advance), paintOffset + location() + LayoutPoint(borderLeft() + paddingLeft(), glyphAscent + borderAndPaddingBefore()), style().fontCascade().fontDescription().usedFontSmoothing());
 }
 
 void RenderMathMLToken::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect)

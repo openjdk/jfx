@@ -65,6 +65,7 @@ private:
 };
 
 class SourceCodeKey {
+    WTF_MAKE_FAST_ALLOCATED(SourceCodeKey);
     friend class CachedSourceCodeKey;
 
 public:
@@ -105,6 +106,8 @@ public:
 
     StringView host() const { return m_sourceCode.provider().sourceOrigin().url().host(); }
 
+    int functionConstructorParametersEndPosition() const { return m_functionConstructorParametersEndPosition; }
+
     bool operator==(const SourceCodeKey& other) const
     {
         return m_hash == other.m_hash
@@ -113,7 +116,7 @@ public:
             && m_functionConstructorParametersEndPosition == other.m_functionConstructorParametersEndPosition
             && m_name == other.m_name
             && host() == other.host()
-            && string() == other.string();
+            && (m_sourceCode == other.m_sourceCode || string() == other.string());
     }
 
     struct Hash {

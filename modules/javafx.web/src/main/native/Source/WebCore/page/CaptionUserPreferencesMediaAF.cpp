@@ -44,6 +44,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/SoftLinking.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/cf/VectorCF.h>
 #include <wtf/text/CString.h>
@@ -73,6 +74,8 @@ SOFT_LINK_OPTIONAL(MediaToolbox, MTEnableCaption2015Behavior, Boolean, (), ())
 #endif // HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CaptionUserPreferencesMediaAF);
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 
@@ -312,6 +315,14 @@ void CaptionUserPreferencesMediaAF::setCaptionPreferencesDelegate(std::unique_pt
     captionPreferencesDelegate() = WTFMove(delegate);
 }
 
+static bool behaviorShouldNotBeOverriden(MACaptionAppearanceBehavior behavior)
+{
+    if (!canLoad_MediaAccessibility_MACaptionAppearanceIsCustomized())
+        return behavior == kMACaptionAppearanceBehaviorUseValue;
+
+    return (behavior == kMACaptionAppearanceBehaviorUseValue) && MACaptionAppearanceIsCustomized(kMACaptionAppearanceDomainUser);
+}
+
 String CaptionUserPreferencesMediaAF::captionsWindowCSS() const
 {
     MACaptionAppearanceBehavior behavior;
@@ -321,22 +332,16 @@ String CaptionUserPreferencesMediaAF::captionsWindowCSS() const
     if (!windowColor.isValid())
         windowColor = Color::transparentBlack;
 
-    bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    bool important = behaviorShouldNotBeOverriden(behavior);
     CGFloat opacity = MACaptionAppearanceGetWindowOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
-        important = behavior == kMACaptionAppearanceBehaviorUseValue;
-    String windowStyle = colorPropertyCSS(CSSPropertyBackgroundColor, windowColor.colorWithAlpha(opacity), important);
-
-    if (!opacity)
-        return windowStyle;
-
-    return makeString(windowStyle, nameLiteral(CSSPropertyPadding), ": .4em !important;"_s);
+        important = behaviorShouldNotBeOverriden(behavior);
+    return colorPropertyCSS(CSSPropertyBackgroundColor, windowColor.colorWithAlpha(opacity), important);
 }
 
 String CaptionUserPreferencesMediaAF::captionsBackgroundCSS() const
 {
-    // This default value must be the same as the one specified in mediaControls.css for -webkit-media-text-track-past-nodes
-    // and webkit-media-text-track-future-nodes.
+    // This must match the ::cue background color of WebCore/Modules/modern-media-controls/controls/text-tracks.css
     constexpr auto defaultBackgroundColor = Color::black.colorWithAlphaByte(204);
 
     MACaptionAppearanceBehavior behavior;
@@ -346,10 +351,10 @@ String CaptionUserPreferencesMediaAF::captionsBackgroundCSS() const
     if (!backgroundColor.isValid())
         backgroundColor = defaultBackgroundColor;
 
-    bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    bool important = behaviorShouldNotBeOverriden(behavior);
     CGFloat opacity = MACaptionAppearanceGetBackgroundOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
-        important = behavior == kMACaptionAppearanceBehaviorUseValue;
+        important = behaviorShouldNotBeOverriden(behavior);
     return colorPropertyCSS(CSSPropertyBackgroundColor, backgroundColor.colorWithAlpha(opacity), important);
 }
 
@@ -359,13 +364,13 @@ Color CaptionUserPreferencesMediaAF::captionsTextColor(bool& important) const
     RetainPtr color = adoptCF(MACaptionAppearanceCopyForegroundColor(kMACaptionAppearanceDomainUser, &behavior)).get();
     Color textColor(roundAndClampToSRGBALossy(color.get()));
     if (!textColor.isValid()) {
-        // This default value must be the same as the one specified in mediaControls.css for -webkit-media-text-track-container.
+        // This must match the ::cue text color of WebCore/Modules/modern-media-controls/controls/text-tracks.css
         textColor = Color::white;
     }
-    important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    important = behaviorShouldNotBeOverriden(behavior);
     CGFloat opacity = MACaptionAppearanceGetForegroundOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
-        important = behavior == kMACaptionAppearanceBehaviorUseValue;
+        important = behaviorShouldNotBeOverriden(behavior);
     return textColor.colorWithAlpha(opacity);
 }
 
@@ -391,7 +396,8 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
         return emptyString();
 
     StringBuilder builder;
-    appendCSS(builder, CSSPropertyBorderRadius, behavior == kMACaptionAppearanceBehaviorUseValue, radius, "px"_s);
+    appendCSS(builder, CSSPropertyBorderRadius, behaviorShouldNotBeOverriden(behavior), radius, "px"_s);
+    appendCSS(builder, CSSPropertyPadding, behaviorShouldNotBeOverriden(behavior), radius / 4, "px"_s);
     return builder.toString();
 }
 
@@ -419,7 +425,7 @@ bool CaptionUserPreferencesMediaAF::captionStrokeWidthForFont(float fontSize, co
 
     // Since only half of the stroke is visible because the stroke is drawn before the fill, we double the stroke width here.
     strokeWidth = strokeWidthPt * 2;
-    important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    important = behaviorShouldNotBeOverriden(behavior);
     return true;
 }
 
@@ -432,7 +438,7 @@ String CaptionUserPreferencesMediaAF::captionsTextEdgeCSS() const
         return emptyString();
 
     StringBuilder builder;
-    bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    bool important = behaviorShouldNotBeOverriden(behavior);
     if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleRaised)
         appendCSS(builder, CSSPropertyTextShadow, important, "-.1em -.1em .16em black"_s);
     else if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleDepressed)
@@ -487,7 +493,7 @@ String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
             builder.append(", \""_s, fontCascadeName.get(), '"');
         }
     }
-    builder.append(behavior == kMACaptionAppearanceBehaviorUseValue ? " !important;"_s : ";"_s);
+    builder.append(behaviorShouldNotBeOverriden(behavior) ? " !important;"_s : ";"_s);
     return builder.toString();
 }
 
@@ -503,7 +509,7 @@ float CaptionUserPreferencesMediaAF::captionFontSizeScaleAndImportance(bool& imp
     if (!scaleAdjustment)
         return characterScale;
 
-    important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    important = behaviorShouldNotBeOverriden(behavior);
 #if defined(__LP64__) && __LP64__
     return narrowPrecisionToFloat(scaleAdjustment * characterScale);
 #else
@@ -843,19 +849,19 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
     return tracksForMenu;
 }
 
-Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList, HashSet<TextTrack::Kind> kinds)
+Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(TextTrackList* trackList, UncheckedKeyHashSet<TextTrack::Kind> kinds)
 {
     ASSERT(trackList);
 
     Vector<RefPtr<TextTrack>> tracksForMenu;
-    HashSet<String> languagesIncluded;
+    UncheckedKeyHashSet<String> languagesIncluded;
     CaptionDisplayMode displayMode = captionDisplayMode();
     bool prefersAccessibilityTracks = userPrefersCaptions();
     bool filterTrackList = shouldFilterTrackMenu();
     bool requestingCaptionsOrDescriptionsOrSubtitles = kinds.contains(TextTrack::Kind::Subtitles) || kinds.contains(TextTrack::Kind::Captions) || kinds.contains(TextTrack::Kind::Descriptions);
 
     for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
-        TextTrack* track = trackList->item(i);
+        RefPtr track = trackList->item(i);
         if (!kinds.contains(track->kind()))
             continue;
 
@@ -922,7 +928,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
     if (requestingCaptionsOrDescriptionsOrSubtitles) {
         // Now that we have filtered for the user's accessibility/translation preference, add  all tracks with a unique language without regard to track type.
         for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
-            TextTrack* track = trackList->item(i);
+            RefPtr track = trackList->item(i);
             String language = displayNameForLanguageLocale(track->language());
 
             if (tracksForMenu.contains(track))

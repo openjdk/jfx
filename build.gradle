@@ -1694,6 +1694,9 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
 
     def generateShaders = project.task("generate${name}Shaders",
             dependsOn: compileCompilers) {
+        doFirst {
+            mkdir "$project.buildDir/gensrc/mtl-headers"
+        }
         description = "Generate $name shaders from JSL"
         def sourceDir = project.file("src/main/jsl-$lowerName")
         def destinationDir = project.file("$project.buildDir/gensrc/jsl-$lowerName")
@@ -1704,15 +1707,28 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
         }
     }
 
+    // D3D shaders
     def compileHLSLShaders = project.task("compile${name}HLSLShaders",
             dependsOn: generateShaders,
             type: CompileHLSLTask) {
         enabled = IS_WINDOWS
         description = "Compile $name HLSL files into .obj files"
         matches = ".*\\.hlsl"
-        output project.file("$project.buildDir/hlsl/$name/$pkg")
-        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg")
+        output project.file("$project.buildDir/hlsl/$name/$pkg/d3d/hlsl")
+        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg/d3d/hlsl")
     }
+
+    // Metal shaders
+    def compileMSLShaders = project.task("compile${name}MSLShaders",
+            dependsOn: generateShaders,
+            type: CompileMSLTask) {
+        enabled = IS_MAC
+        description = "Compile $name MSL files into .air files"
+        matches = ".*\\.metal"
+        output project.file("$project.buildDir/msl/$name/$pkg/mtl/msl")
+        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg/mtl/msl")
+    }
+    project.compileMSLShaders.dependsOn(compileMSLShaders)
 
     def processShaders = project.task("process${name}Shaders",
             dependsOn: [generateShaders, compileHLSLShaders],
@@ -2163,8 +2179,7 @@ allprojects {
         }
 
         if (IS_HEADLESS_TEST) {
-            systemProperty 'glass.platform', 'Monocle'
-            systemProperty 'monocle.platform', 'Headless'
+            systemProperty 'glass.platform', 'Headless'
             systemProperty 'prism.order', 'sw'
             systemProperty 'com.sun.javafx.gestures.zoom', 'true'
             systemProperty 'com.sun.javafx.gestures.rotate', 'true'
@@ -2357,6 +2372,10 @@ project(":graphics") {
         // an empty task to hang the prism and decora shaders on
     }
 
+    project.task("compileMSLShaders") {
+        // an empty task to hang the Metal prism and decora shaders on
+    }
+
     compileShimsJava.dependsOn("processShimsShaders")
 
     // Generate the JSLC support grammar
@@ -2435,6 +2454,10 @@ project(":graphics") {
     addNative(project, "iio")
     if (IS_INCLUDE_ES2) {
         addNative(project, "prismES2")
+    }
+
+    if (IS_MAC) {
+        addNative(project, "prismMTL")
     }
 
     if (IS_COMPILE_PANGO) {
@@ -2556,17 +2579,10 @@ project(":graphics") {
 
     def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-    addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw/d3d/hlsl", decoraAddExports) { sourceDir, destinationDir ->
-        [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
-         [fileName: "Brightpass", generator: "CompileJSL", outputs: "-all"],
-         [fileName: "SepiaTone", generator: "CompileJSL", outputs: "-all"],
-         [fileName: "PerspectiveTransform", generator: "CompileJSL", outputs: "-all"],
-         [fileName: "DisplacementMap", generator: "CompileJSL", outputs: "-all"],
-         [fileName: "InvertMask", generator: "CompileJSL", outputs: "-all"],
-         [fileName: "Blend", generator: "CompileBlend", outputs: "-all"],
-         [fileName: "PhongLighting", generator: "CompilePhong", outputs: "-all"],
-         [fileName: "LinearConvolve", generator: "CompileLinearConvolve", outputs: "-hw"],
-         [fileName: "LinearConvolveShadow", generator: "CompileLinearConvolve", outputs: "-hw"]].each { settings ->
+
+    // The GenAllDecoraShader.java class generates all the Decora shaders
+    addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw", decoraAddExports) { sourceDir, destinationDir ->
+        [[fileName: "GenAllDecoraShaders", generator: "GenAllDecoraShaders", outputs: "-all"]].each { settings ->
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
@@ -2586,8 +2602,14 @@ project(":graphics") {
     }
 
 
-    task nativeDecora(dependsOn: compileDecoraHLSLShaders, group: "Build") {
+    task nativeDecora(group: "Build") {
         description = "Generates JNI headers, compiles, and builds native dynamic library for Decora"
+    }
+    if (IS_WINDOWS) {
+        nativeDecora.dependsOn(compileDecoraHLSLShaders)
+    }
+    if (IS_MAC) {
+        nativeDecora.dependsOn(compileDecoraMSLShaders)
     }
     task cleanNativeDecora(type: Delete, group: "Build") {
         description = "Clean native objects for Decora"
@@ -2652,7 +2674,7 @@ project(":graphics") {
     }
 
     // Prism JSL
-    addJSL(project, "Prism", "com/sun/prism/d3d/hlsl", null) { sourceDir, destinationDir ->
+    addJSL(project, "Prism", "com/sun/prism", null) { sourceDir, destinationDir ->
         def inputFiles = fileTree(dir: sourceDir)
         inputFiles.include "**/*.jsl"
         inputFiles.each { file ->
@@ -2665,9 +2687,121 @@ project(":graphics") {
                 classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
                     project.projectDir.path + "/src/main/jsl-prism") // for the .stg
-                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"]
+                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-mtl", "-name", "$file"]
             }
         }
+    }
+
+    if (IS_MAC) {
+        task compileMSLPassThroughVS(group: "Build") {
+            def PASSTHROUGH_VS_SRC = file("src/main/native-prism-mtl/msl/PassThroughVS.metal")
+            doLast {
+                mkdir "$buildDir/msl"
+                exec {
+                    commandLine("${metalCompiler}")
+                    args += [ "-std=${mslVersion}" ]
+                    args += [ "-c" ]
+                    args += [ "$PASSTHROUGH_VS_SRC" ]
+                    args += [ "-o" ]
+                    args += [ "$buildDir/msl/PassThroughVS.air" ]
+                }
+            }
+        }
+        nativePrism.dependsOn compileMSLPassThroughVS;
+
+        task compileMSLClearRttShaders(group: "Build") {
+            def CLEAR_RTT_VFS_SRC = file("src/main/native-prism-mtl/msl/ClearRttShaders.metal")
+            doLast {
+                mkdir "$buildDir/msl"
+                exec {
+                    commandLine("${metalCompiler}")
+                    args += [ "-std=${mslVersion}" ]
+                    args += [ "-c" ]
+                    args += [ "$CLEAR_RTT_VFS_SRC" ]
+                    args += [ "-o" ]
+                    args += [ "$buildDir/msl/ClearRttShaders.air" ]
+                }
+            }
+        }
+        nativePrism.dependsOn compileMSLClearRttShaders;
+
+        task compileMSLComputeKernels(group: "Build") {
+            def COMPUTE_KERNELS_SRC = file("src/main/native-prism-mtl/msl/ComputeKernels.metal")
+            doLast {
+                mkdir "$buildDir/msl"
+                exec {
+                    commandLine("${metalCompiler}")
+                    args += [ "-std=${mslVersion}" ]
+                    args += [ "-c" ]
+                    args += [ "$COMPUTE_KERNELS_SRC" ]
+                    args += [ "-o" ]
+                    args += [ "$buildDir/msl/ComputeKernels.air" ]
+                }
+            }
+        }
+        nativePrism.dependsOn compileMSLComputeKernels;
+
+        task compileMSLPhongVS(group: "Build") {
+            def PHONG_VS_SRC = file("src/main/native-prism-mtl/msl/PhongVS.metal")
+            doLast {
+                mkdir "$buildDir/msl"
+                exec {
+                    commandLine("${metalCompiler}")
+                    args += [ "-std=${mslVersion}" ]
+                    args += [ "-c" ]
+                    args += [ "$PHONG_VS_SRC" ]
+                    args += [ "-o" ]
+                    args += [ "$buildDir/msl/PhongVS.air" ]
+                }
+            }
+        }
+        nativePrism.dependsOn compileMSLPhongVS;
+
+        task compileMSLPhongPS(group: "Build") {
+            def PHONG_PS_SRC = file("src/main/native-prism-mtl/msl/PhongPS.metal")
+            doLast {
+                mkdir "$buildDir/msl"
+                exec {
+                    commandLine("${metalCompiler}")
+                    args += [ "-std=${mslVersion}" ]
+                    args += [ "-c" ]
+                    args += [ "$PHONG_PS_SRC" ]
+                    args += [ "-o" ]
+                    args += [ "$buildDir/msl/PhongPS.air" ]
+                }
+            }
+        }
+        nativePrism.dependsOn compileMSLPhongPS;
+
+        task linkMSLShader(group: "Build") {
+            dependsOn(compileDecoraMSLShaders,
+                      compilePrismMSLShaders,
+                      compileMSLPassThroughVS,
+                      compileMSLClearRttShaders,
+                      compileMSLComputeKernels,
+                      compileMSLPhongVS,
+                      compileMSLPhongPS)
+            doLast {
+                mkdir "$buildDir/msl/com/sun/prism/mtl/msl"
+                def shaderFiles = fileTree(dir: "$buildDir/msl", include: "**/*.air")
+                exec {
+                    commandLine("${metalLinker}")
+                    shaderFiles.each { shaderFile ->
+                        args += shaderFile
+                    }
+                    args += [ "-o", "$buildDir/msl/com/sun/prism/mtl/msl/jfxshaders.metallib" ]
+                }
+            }
+        }
+        processResources.dependsOn linkMSLShader
+
+        // Copy metallib file as resource
+        def copyMetalLib = project.task("copyMetalLib", type: Copy, dependsOn: linkMSLShader) {
+            from "$buildDir/msl/com/sun/prism/mtl/msl/jfxshaders.metallib"
+            into "${project.moduleDir}/com/sun/prism/mtl/msl"
+        }
+
+        processResources.dependsOn copyMetalLib
     }
 
     task initShaderDirs() {
@@ -2680,13 +2814,26 @@ project(":graphics") {
         }
     }
     project.processShaders.dependsOn(initShaderDirs)
-
     nativePrism.dependsOn compilePrismHLSLShaders;
+    if (IS_MAC) {
+        nativePrism.dependsOn compilePrismMSLShaders;
+    }
 
     project.nativeAllTask.dependsOn nativeDecora
     project.cleanNativeAllTask.dependsOn cleanNativeDecora
     assemble.dependsOn nativeDecora
     processResources.dependsOn processDecoraShaders, processPrismShaders
+
+    if (IS_MAC) {
+        def copyShimsMetalLibTask = project.task("copyShimsMetalLib", type: Copy,
+                dependsOn: [project.tasks.getByName("compileFullJava"),
+                            project.tasks.getByName("processResources")]) {
+            from project.moduleDir
+            into project.moduleShimsDir
+            include "**/jfxshaders.metallib"
+        }
+        processShimsResources.dependsOn(copyShimsMetalLibTask)
+    }
 
     test {
         def cssDir = file("${TEST_SDK_DIR}/shims/${moduleName}/javafx")
@@ -3855,8 +4002,7 @@ project(":web") {
         jvmArgs enableNativeAll
 
         // Run web tests in headless mode
-        systemProperty 'glass.platform', 'Monocle'
-        systemProperty 'monocle.platform', 'Headless'
+        systemProperty 'glass.platform', 'Headless'
         systemProperty 'prism.order', 'sw'
         dependsOn testWebArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
@@ -5469,6 +5615,8 @@ compileTargets { t ->
                              "com/sun/prism/es2/MacGL*",
                              "com/sun/glass/events/mac",
                              "com/sun/glass/ui/mac",
+                             "com/sun/prism/mtl",
+                             "com/sun/scenario/effect/impl/hw/mtl/MTLShaderSource.java"
                              )
                 }
 
@@ -5623,6 +5771,9 @@ compileTargets { t ->
             def libs = ['font', 'prism', 'prismSW', 'glass', 'iio']
             if (IS_INCLUDE_ES2) {
                 libs += ['prismES2'];
+            }
+            if (IS_MAC) {
+                libs += ['prismMTL']
             }
             if (IS_COMPILE_PANGO) {
                 libs += ['fontFreetype', 'fontPango'];

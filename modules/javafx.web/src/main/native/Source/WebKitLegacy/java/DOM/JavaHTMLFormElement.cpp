@@ -27,6 +27,7 @@
 
 
 #include <WebCore/HTMLCollection.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/JSExecState.h>

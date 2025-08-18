@@ -43,6 +43,9 @@ class SocketStreamHandleClient;
 class Page;
 class WebSocketChannelClient;
 class WebTransportSession;
+class WebTransportSessionClient;
+
+using WebTransportSessionPromise = NativePromise<Ref<WebTransportSession>, void>;
 
 class WEBCORE_EXPORT SocketProvider : public ThreadSafeRefCounted<SocketProvider> {
 public:
@@ -56,7 +59,7 @@ public:
     virtual Ref<SocketStreamHandle> createSocketStreamHandle(const URL&, SocketStreamHandleClient&, WebSocketIdentifier, PAL::SessionID, const String& credentialPartition, const StorageSessionProvider*);
 #endif
     virtual RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&);
-    void initializeWebTransportSession(WebCore::ScriptExecutionContext&, const URL&, CompletionHandler<void(RefPtr<WebCore::WebTransportSession>&&)>&&);
+    Ref<WebCore::WebTransportSessionPromise> initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&);
     virtual ~SocketProvider() { };
 };
 

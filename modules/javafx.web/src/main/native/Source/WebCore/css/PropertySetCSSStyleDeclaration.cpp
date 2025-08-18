@@ -24,6 +24,7 @@
 
 #include "CSSPropertyParser.h"
 #include "CSSRule.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
 #include "Document.h"
 #include "DocumentInlines.h"
@@ -46,12 +47,12 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PropertySetCSSStyleDeclaration);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StyleRuleCSSStyleDeclaration);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineCSSStyleDeclaration);
 
-void PropertySetCSSStyleDeclaration::ref()
+void PropertySetCSSStyleDeclaration::ref() const
 {
     m_propertySet->ref();
 }
 
-void PropertySetCSSStyleDeclaration::deref()
+void PropertySetCSSStyleDeclaration::deref() const
 {
     m_propertySet->deref();
 }
@@ -81,7 +82,7 @@ String PropertySetCSSStyleDeclaration::item(unsigned i) const
 
 String PropertySetCSSStyleDeclaration::cssText() const
 {
-    return m_propertySet->asText();
+    return m_propertySet->asText(CSS::defaultSerializationContext());
 }
 
 ExceptionOr<void> PropertySetCSSStyleDeclaration::setCssText(const String& text)

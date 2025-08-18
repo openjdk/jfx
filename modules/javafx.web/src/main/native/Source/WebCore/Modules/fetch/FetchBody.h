@@ -82,6 +82,7 @@ public:
 
     void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
     void cleanConsumer() { m_consumer.clean(); }
+    bool hasConsumerPendingActivity() const { return m_consumer.hasPendingActivity(); }
 
     FetchBody clone();
 
@@ -93,6 +94,8 @@ public:
         ASSERT(!m_readableStream);
         m_readableStream = WTFMove(stream);
     }
+
+    void convertReadableStreamToArrayBuffer(FetchBodyOwner&, CompletionHandler<void(std::optional<Exception>&&)>&&);
 
     bool isBlob() const { return std::holds_alternative<Ref<const Blob>>(m_data); }
     bool isFormData() const { return std::holds_alternative<Ref<FormData>>(m_data); }

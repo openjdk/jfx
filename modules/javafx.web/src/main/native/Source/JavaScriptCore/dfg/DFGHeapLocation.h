@@ -43,9 +43,11 @@ enum LocationKind {
     CheckTypeInfoFlagsLoc,
     OverridesHasInstanceLoc,
     ClosureVariableLoc,
+    ClosureVariableDoubleLoc,
     DirectArgumentsLoc,
     GetterLoc,
     GlobalVariableLoc,
+    GlobalVariableDoubleLoc,
     EnumeratorNextUpdateIndexAndModeLoc,
     HasIndexedPropertyLoc,
     IndexedPropertyDoubleLoc,
@@ -65,6 +67,7 @@ enum LocationKind {
     TypeOfIsObjectLoc,
     TypeOfIsFunctionLoc,
     NamedPropertyLoc,
+    NamedPropertyDoubleLoc,
     RegExpObjectLastIndexLoc,
     SetterLoc,
     StructureLoc,
@@ -155,9 +158,9 @@ public:
         return m_kind
             + m_heap.hash()
             + m_index.hash()
-            + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_base))
-            + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_descriptor))
-            + static_cast<unsigned>(bitwise_cast<uintptr_t>(m_extraState));
+            + static_cast<unsigned>(std::bit_cast<uintptr_t>(m_base))
+            + static_cast<unsigned>(std::bit_cast<uintptr_t>(m_descriptor))
+            + static_cast<unsigned>(std::bit_cast<uintptr_t>(m_extraState));
     }
 
     friend bool operator==(const HeapLocation&, const HeapLocation&) = default;
@@ -183,7 +186,6 @@ struct HeapLocationHash {
     static bool equal(const HeapLocation& a, const HeapLocation& b) { return a == b; }
     static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
-
 
 inline LocationKind indexedPropertyLocForResultType(NodeFlags canonicalResultRepresentation)
 {
@@ -223,10 +225,10 @@ inline LocationKind indexedPropertyLocToOutOfBoundsSaneChain(LocationKind locati
         RELEASE_ASSERT_NOT_REACHED();
     }
 }
+
 } } // namespace JSC::DFG
 
 namespace WTF {
-
 
 template<typename T> struct DefaultHash;
 template<> struct DefaultHash<JSC::DFG::HeapLocation> : JSC::DFG::HeapLocationHash { };

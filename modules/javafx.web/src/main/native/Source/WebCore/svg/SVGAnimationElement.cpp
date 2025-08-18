@@ -554,7 +554,7 @@ void SVGAnimationElement::startedActiveInterval()
     if (animationMode == AnimationMode::None)
         return;
     if ((animationMode == AnimationMode::FromTo || animationMode == AnimationMode::FromBy || animationMode == AnimationMode::To || animationMode == AnimationMode::By)
-        && (hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) && hasAttributeWithoutSynchronization(SVGNames::keyTimesAttr) && (keyTimes.size() < 2 || keyTimes.size() != m_keyPoints.size())))
+        && (hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) && hasAttributeWithoutSynchronization(SVGNames::keyTimesAttr) && (keyTimes.size() < 2 || keyTimes.last() != 1 || keyTimes.size() != m_keyPoints.size())))
         return;
     if (animationMode == AnimationMode::FromTo)
         m_animationValid = setFromAndToValues(from, to);

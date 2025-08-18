@@ -36,11 +36,10 @@
 #include <wtf/text/StringCommon.h>
 #include <wtf/text/UTF8ConversionError.h>
 
-// FIXME: Enabling the StringView lifetime checking causes the MSVC build to fail. Figure out why.
-#if defined(NDEBUG) || COMPILER(MSVC)
-#define CHECK_STRINGVIEW_LIFETIME 0
-#else
+#if ASSERT_ENABLED && !PLATFORM(JAVA)
 #define CHECK_STRINGVIEW_LIFETIME 1
+#else
+#define CHECK_STRINGVIEW_LIFETIME 0
 #endif
 
 OBJC_CLASS NSString;
@@ -63,16 +62,17 @@ public:
     StringView& operator=(const StringView&);
 #endif
 
-    StringView(const AtomString&);
-    StringView(const String&);
-    StringView(const StringImpl&);
-    StringView(const StringImpl*);
-    StringView(std::span<const LChar>);
-    StringView(std::span<const UChar>);
-    StringView(std::span<const char>); // FIXME: Consider dropping this overload. Callers should pass LChars/UChars instead.
-    StringView(const void*, unsigned length, bool is8bit);
+    StringView(const AtomString& string LIFETIME_BOUND);
+    StringView(const String& string LIFETIME_BOUND);
+    StringView(const StringImpl& string LIFETIME_BOUND);
+    StringView(const StringImpl* string LIFETIME_BOUND);
+    StringView(std::span<const LChar> span LIFETIME_BOUND);
+    StringView(std::span<const UChar> span LIFETIME_BOUND);
+    StringView(std::span<const char> span LIFETIME_BOUND); // FIXME: Consider dropping this overload. Callers should pass LChars/UChars instead.
+    StringView(const void* string LIFETIME_BOUND, unsigned length, bool is8bit);
     StringView(ASCIILiteral);
 
+    ALWAYS_INLINE static StringView fromLatin1(std::span<const LChar> span LIFETIME_BOUND) { return StringView { span }; } // FIXME: This can become span<const char> once CString::span() changes to match
     ALWAYS_INLINE static StringView fromLatin1(const char* characters) { return StringView { characters }; }
 
     unsigned length() const;
@@ -94,10 +94,10 @@ public:
     GraphemeClusters graphemeClusters() const;
 
     bool is8Bit() const;
-    const void* rawCharacters() const { return m_characters; }
-    std::span<const LChar> span8() const;
-    std::span<const UChar> span16() const;
-    template<typename CharacterType> std::span<const CharacterType> span() const;
+    const void* rawCharacters() const LIFETIME_BOUND { return m_characters; }
+    std::span<const LChar> span8() const LIFETIME_BOUND;
+    std::span<const UChar> span16() const LIFETIME_BOUND;
+    template<typename CharacterType> std::span<const CharacterType> span() const LIFETIME_BOUND;
 
     unsigned hash() const;
 
@@ -133,13 +133,13 @@ public:
     template<size_t N = 32>
     UpconvertedCharactersWithSize<N> upconvertedCharacters() const;
 
-    template<typename CharacterType> void getCharacters(CharacterType*) const;
-    template<typename CharacterType> void getCharacters8(CharacterType*) const;
-    template<typename CharacterType> void getCharacters16(CharacterType*) const;
+    template<typename CharacterType> void getCharacters(std::span<CharacterType>) const;
+    template<typename CharacterType> void getCharacters8(std::span<CharacterType>) const;
+    template<typename CharacterType> void getCharacters16(std::span<CharacterType>) const;
 
     enum class CaseConvertType { Upper, Lower };
-    WTF_EXPORT_PRIVATE void getCharactersWithASCIICase(CaseConvertType, LChar*) const;
-    WTF_EXPORT_PRIVATE void getCharactersWithASCIICase(CaseConvertType, UChar*) const;
+    WTF_EXPORT_PRIVATE void getCharactersWithASCIICase(CaseConvertType, std::span<LChar>) const;
+    WTF_EXPORT_PRIVATE void getCharactersWithASCIICase(CaseConvertType, std::span<UChar>) const;
 
     StringView substring(unsigned start, unsigned length = std::numeric_limits<unsigned>::max()) const;
     StringView left(unsigned length) const { return substring(0, length); }
@@ -205,8 +205,6 @@ public:
 private:
     // Clients should use StringView(ASCIILiteral) or StringView::fromLatin1() instead.
     explicit StringView(const char*);
-
-    UChar unsafeCharacterAt(unsigned index) const;
 
     friend bool equal(StringView, StringView);
     friend bool equal(StringView, StringView, unsigned length);
@@ -407,7 +405,7 @@ inline StringView::StringView(std::span<const UChar> characters)
 
 inline StringView::StringView(const char* characters)
 {
-    initialize(WTF::span8(characters));
+    initialize(unsafeSpan8(characters));
 }
 
 inline StringView::StringView(std::span<const char> characters)
@@ -478,14 +476,14 @@ inline std::span<const LChar> StringView::span8() const
 {
     ASSERT(is8Bit());
     ASSERT(underlyingStringIsValid());
-    return { static_cast<const LChar*>(m_characters), m_length };
+    return unsafeMakeSpan(static_cast<const LChar*>(m_characters), m_length);
 }
 
 inline std::span<const UChar> StringView::span16() const
 {
     ASSERT(!is8Bit() || isEmpty());
     ASSERT(underlyingStringIsValid());
-    return { static_cast<const UChar*>(m_characters), m_length };
+    return unsafeMakeSpan(static_cast<const UChar*>(m_characters), m_length);
 }
 
 inline unsigned StringView::hash() const
@@ -517,10 +515,10 @@ class StringView::UpconvertedCharactersWithSize {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit UpconvertedCharactersWithSize(StringView);
-    operator const UChar*() const { return m_characters.data(); }
-    const UChar* get() const { return m_characters.data(); }
-    operator std::span<const UChar>() const { return m_characters; }
-    std::span<const UChar> span() const { return m_characters; }
+    operator const UChar*() const LIFETIME_BOUND { return m_characters.data(); }
+    const UChar* get() const LIFETIME_BOUND { return m_characters.data(); }
+    operator std::span<const UChar>() const LIFETIME_BOUND { return m_characters; }
+    std::span<const UChar> span() const LIFETIME_BOUND { return m_characters; }
 
 private:
     Vector<UChar, N> m_upconvertedCharacters;
@@ -587,14 +585,6 @@ inline UChar StringView::characterAt(unsigned index) const
     return span16()[index];
 }
 
-inline UChar StringView::unsafeCharacterAt(unsigned index) const
-{
-    ASSERT(index < length());
-    if (is8Bit())
-        return span8().data()[index];
-    return span16().data()[index];
-}
-
 inline UChar StringView::operator[](unsigned index) const
 {
     return characterAt(index);
@@ -618,17 +608,17 @@ template<bool isSpecialCharacter(UChar)> inline bool StringView::containsOnly() 
     return WTF::containsOnly<isSpecialCharacter>(span16());
 }
 
-template<typename CharacterType> inline void StringView::getCharacters8(CharacterType* destination) const
+template<typename CharacterType> inline void StringView::getCharacters8(std::span<CharacterType> destination) const
 {
     StringImpl::copyCharacters(destination, span8());
 }
 
-template<typename CharacterType> inline void StringView::getCharacters16(CharacterType* destination) const
+template<typename CharacterType> inline void StringView::getCharacters16(std::span<CharacterType> destination) const
 {
     StringImpl::copyCharacters(destination, span16());
 }
 
-template<typename CharacterType> inline void StringView::getCharacters(CharacterType* destination) const
+template<typename CharacterType> inline void StringView::getCharacters(std::span<CharacterType> destination) const
 {
     if (is8Bit())
         getCharacters8(destination);
@@ -644,7 +634,7 @@ inline StringView::UpconvertedCharactersWithSize<N>::UpconvertedCharactersWithSi
         return;
     }
     m_upconvertedCharacters.grow(string.m_length);
-    StringImpl::copyCharacters(m_upconvertedCharacters.data(), string.span8());
+    StringImpl::copyCharacters(m_upconvertedCharacters.mutableSpan(), string.span8());
     m_characters = m_upconvertedCharacters.span();
 }
 
@@ -736,7 +726,7 @@ public:
 
     unsigned length() const { return m_string.length(); }
     bool is8Bit() const { return m_string.is8Bit(); }
-    template<typename CharacterType> void writeTo(CharacterType* destination) { m_string.getCharacters(destination); }
+    template<typename CharacterType> void writeTo(std::span<CharacterType> destination) { m_string.getCharacters(destination); }
 
 private:
     StringView m_string;
@@ -746,7 +736,7 @@ template<typename CharacterType, size_t inlineCapacity> void append(Vector<Chara
 {
     size_t oldSize = buffer.size();
     buffer.grow(oldSize + string.length());
-    string.getCharacters(buffer.data() + oldSize);
+    string.getCharacters(buffer.mutableSpan().subspan(oldSize));
 }
 
 ALWAYS_INLINE bool equal(StringView a, StringView b, unsigned length)
@@ -776,7 +766,7 @@ inline bool equal(StringView a, const LChar* b)
     if (a.isEmpty())
         return !b;
 
-    auto bSpan = span8(byteCast<char>(b));
+    auto bSpan = unsafeSpan8(byteCast<char>(b));
     if (a.length() != bSpan.size())
         return false;
 
@@ -803,11 +793,11 @@ inline bool equalIgnoringASCIICase(StringView a, ASCIILiteral b)
 class StringView::SplitResult {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    SplitResult(StringView, UChar separator, bool allowEmptyEntries);
+    SplitResult(StringView view LIFETIME_BOUND, UChar separator, bool allowEmptyEntries);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
 
 private:
     StringView m_string;
@@ -818,11 +808,11 @@ private:
 class StringView::GraphemeClusters {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit GraphemeClusters(StringView);
+    explicit GraphemeClusters(StringView view LIFETIME_BOUND);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
 
 private:
     StringView m_stringView;
@@ -831,11 +821,12 @@ private:
 class StringView::CodePoints {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit CodePoints(StringView);
+    explicit CodePoints(StringView view LIFETIME_BOUND);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
+    Iterator codePointAt(unsigned index) const LIFETIME_BOUND;
 
 private:
     StringView m_stringView;
@@ -844,11 +835,11 @@ private:
 class StringView::CodeUnits {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit CodeUnits(StringView);
+    explicit CodeUnits(StringView view LIFETIME_BOUND);
 
     class Iterator;
-    Iterator begin() const;
-    Iterator end() const;
+    Iterator begin() const LIFETIME_BOUND;
+    Iterator end() const LIFETIME_BOUND;
 
 private:
     StringView m_stringView;
@@ -888,7 +879,7 @@ class StringView::GraphemeClusters::Iterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     Iterator() = delete;
-    WTF_EXPORT_PRIVATE Iterator(StringView, unsigned index);
+    WTF_EXPORT_PRIVATE Iterator(StringView view LIFETIME_BOUND, unsigned index);
     WTF_EXPORT_PRIVATE ~Iterator();
 
     Iterator(const Iterator&) = delete;
@@ -910,7 +901,8 @@ private:
 class StringView::CodePoints::Iterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Iterator(StringView, unsigned index);
+    using iterator_category = std::forward_iterator_tag;
+    Iterator(StringView view LIFETIME_BOUND, unsigned index);
 
     char32_t operator*() const;
     Iterator& operator++();
@@ -929,7 +921,7 @@ private:
 class StringView::CodeUnits::Iterator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Iterator(StringView, unsigned index);
+    Iterator(StringView view LIFETIME_BOUND, unsigned index);
 
     UChar operator*() const;
     Iterator& operator++();
@@ -983,16 +975,17 @@ inline StringView::CodePoints::Iterator::Iterator(StringView stringView, unsigne
 #endif
 {
     if (m_is8Bit) {
-        const LChar* begin = stringView.span8().data();
-        m_current = begin + index;
-        m_end = begin + stringView.length();
+        auto characters = stringView.span8();
+        m_current = characters.subspan(index).data();
+        m_end = std::to_address(characters.end());
     } else {
-        const UChar* begin = stringView.span16().data();
-        m_current = begin + index;
-        m_end = begin + stringView.length();
+        auto characters = stringView.span16();
+        m_current = characters.subspan(index).data();
+        m_end = std::to_address(characters.end());
     }
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 inline auto StringView::CodePoints::Iterator::operator++() -> Iterator&
 {
 #if CHECK_STRINGVIEW_LIFETIME
@@ -1023,6 +1016,7 @@ inline char32_t StringView::CodePoints::Iterator::operator*() const
     U16_GET(static_cast<const UChar*>(m_current), 0, 0, length, codePoint);
     return codePoint;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 inline bool StringView::CodePoints::Iterator::operator==(const Iterator& other) const
 {
@@ -1044,6 +1038,11 @@ inline auto StringView::CodePoints::end() const -> Iterator
     return Iterator(m_stringView, m_stringView.length());
 }
 
+inline auto StringView::CodePoints::codePointAt(unsigned index) const -> Iterator
+{
+    return Iterator(m_stringView, index);
+}
+
 inline StringView::CodeUnits::CodeUnits(StringView stringView)
     : m_stringView(stringView)
 {
@@ -1063,7 +1062,7 @@ inline auto StringView::CodeUnits::Iterator::operator++() -> Iterator&
 
 inline UChar StringView::CodeUnits::Iterator::operator*() const
 {
-    return m_stringView.unsafeCharacterAt(m_index);
+    return m_stringView.characterAt(m_index);
 }
 
 inline bool StringView::CodeUnits::Iterator::operator==(const Iterator& other) const
@@ -1206,7 +1205,7 @@ inline size_t findCommon(StringView haystack, StringView needle, unsigned start)
     unsigned needleLength = needle.length();
 
     if (needleLength == 1) {
-        UChar firstCharacter = needle.unsafeCharacterAt(0);
+        UChar firstCharacter = needle[0];
         if (haystack.is8Bit())
             return WTF::find(haystack.span8(), firstCharacter, start);
         return WTF::find(haystack.span16(), firstCharacter, start);
@@ -1300,12 +1299,12 @@ inline bool endsWith(StringView reference, StringView suffix)
 
     if (reference.is8Bit()) {
         if (suffix.is8Bit())
-            return equal(reference.span8().data() + startOffset, suffix.span8());
-        return equal(reference.span8().data() + startOffset, suffix.span16());
+            return equal(reference.span8().subspan(startOffset).data(), suffix.span8());
+        return equal(reference.span8().subspan(startOffset).data(), suffix.span16());
     }
     if (suffix.is8Bit())
-        return equal(reference.span16().data() + startOffset, suffix.span8());
-    return equal(reference.span16().data() + startOffset, suffix.span16());
+        return equal(reference.span16().subspan(startOffset).data(), suffix.span8());
+    return equal(reference.span16().subspan(startOffset).data(), suffix.span16());
 }
 
 inline bool endsWithIgnoringASCIICase(StringView reference, StringView suffix)
@@ -1420,12 +1419,12 @@ inline bool String::endsWithIgnoringASCIICase(StringView string) const
 
 inline bool String::hasInfixStartingAt(StringView prefix, unsigned start) const
 {
-    return m_impl && prefix && m_impl->hasInfixStartingAt(prefix, start);
+    SUPPRESS_UNCOUNTED_ARG return m_impl && prefix && m_impl->hasInfixStartingAt(prefix, start);
 }
 
 inline bool String::hasInfixEndingAt(StringView suffix, unsigned end) const
 {
-    return m_impl && suffix && m_impl->hasInfixEndingAt(suffix, end);
+    SUPPRESS_UNCOUNTED_ARG return m_impl && suffix && m_impl->hasInfixEndingAt(suffix, end);
 }
 
 inline size_t AtomString::find(StringView string, size_t start) const

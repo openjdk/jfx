@@ -27,6 +27,7 @@
 
 #include "com_sun_webkit_event_WCMouseEvent.h"
 #include "PlatformMouseEvent.h"
+#include "MouseEventTypes.h"
 
 namespace WebCore {
 

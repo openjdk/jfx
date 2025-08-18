@@ -26,11 +26,12 @@
 #pragma once
 
 #include "RenderOverflow.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class RenderBoxFragmentInfo {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(RenderBoxFragmentInfo);
     WTF_MAKE_NONCOPYABLE(RenderBoxFragmentInfo);
 public:
     RenderBoxFragmentInfo(LayoutUnit logicalLeft, LayoutUnit logicalWidth, bool isShifted)
@@ -46,19 +47,15 @@ public:
 
     bool isShifted() const { return m_isShifted; }
 
-    void createOverflow(const LayoutRect& layoutOverflow, const LayoutRect& visualOverflow) { m_overflow = adoptRef(new RenderOverflow(layoutOverflow, visualOverflow)); }
+    void createOverflow(const LayoutRect& layoutOverflow, const LayoutRect& visualOverflow) { m_overflow = makeUnique<RenderOverflow>(layoutOverflow, visualOverflow); }
     RenderOverflow* overflow() const { return m_overflow.get(); }
-    void clearOverflow()
-    {
-        if (m_overflow)
-            m_overflow = nullptr;
-    }
+    void clearOverflow() { m_overflow = { }; }
 
 private:
     LayoutUnit m_logicalLeft;
     LayoutUnit m_logicalWidth;
     bool m_isShifted;
-    RefPtr<RenderOverflow> m_overflow;
+    std::unique_ptr<RenderOverflow> m_overflow;
 };
 
 } // namespace WebCore
