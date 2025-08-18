@@ -32,8 +32,9 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.PlatformUtil;
 
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class SWPipeline extends GraphicsPipeline {
 
@@ -42,7 +43,7 @@ public final class SWPipeline extends GraphicsPipeline {
     }
 
     @Override public boolean init() {
-        HashMap devDetails = new HashMap();
+        Map<String, Boolean> devDetails = new HashMap<>();
         setDeviceDetails(devDetails);
         return true;
     }
@@ -74,7 +75,7 @@ public final class SWPipeline extends GraphicsPipeline {
             factory = new SWResourceFactory(screen);
             factories.put(index, factory);
             if (PlatformUtil.isMac()) {
-                HashMap devDetails = (HashMap)getDeviceDetails();
+                Map<String, Boolean> devDetails = getDeviceDetails();
                 if (PrismSettings.defaultPipeline.equals("es2")) {
                     devDetails.put("useMTLInGlassForSW", false);
                 } else {
