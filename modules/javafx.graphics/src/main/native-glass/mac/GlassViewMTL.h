@@ -36,6 +36,6 @@
 - (id)initWithFrame:(NSRect)frame
           withJview:(jobject)jView
     withJproperties:(jobject)jproperties
-      useMTLForBlit:(BOOL)useMTLInGlass;
+        useMTLForSW:(BOOL)mtlForSW;
 
 @end

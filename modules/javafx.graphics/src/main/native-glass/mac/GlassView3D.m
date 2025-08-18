@@ -110,7 +110,7 @@
     // TODO : We again fetch isHiDPIAware in GlassViewCGL
     // Try to merge it
     self->isHiDPIAware = NO;
-    BOOL useMTLInGlass = NO;
+    BOOL mtlForSW = NO;
     if (jproperties != NULL)
     {
         jobject kHiDPIAwareKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_kHiDPIAwareKeyValue);
@@ -122,12 +122,12 @@
             self->isHiDPIAware = (*env)->CallBooleanMethod(env, kHiDPIAwareValue, jBooleanValueMethod) ? YES : NO;
             GLASS_CHECK_EXCEPTION(env);
         }
-        jobject useMTLInGlassKey = (*env)->NewStringUTF(env, "useMTLInGlass");
-        jobject useMTLInGlassValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, useMTLInGlassKey);
+        jobject mtlForSWKey = (*env)->NewStringUTF(env, "useMTLInGlassForSW");
+        jobject mtlForSWValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, mtlForSWKey);
         GLASS_CHECK_EXCEPTION(env);
-        if (useMTLInGlassValue != NULL)
+        if (mtlForSWValue != NULL)
         {
-            useMTLInGlass = (*env)->CallBooleanMethod(env, useMTLInGlassValue, jBooleanValueMethod) ? YES : NO;
+            mtlForSW = (*env)->CallBooleanMethod(env, mtlForSWValue, jBooleanValueMethod) ? YES : NO;
             GLASS_CHECK_EXCEPTION(env);
         }
     }
@@ -135,16 +135,16 @@
     self = [super initWithFrame:frame];
     if (self != nil) {
         if (mtlCommandQueuePtr != 0l ||
-            useMTLInGlass) {
+            mtlForSW) {
             LOG("GlassView3D initWithFrame using MTLView");
             GlassViewMTL* mtlSubView;
-            subView = mtlSubView = [[GlassViewMTL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForBlit:useMTLInGlass];
+            subView = mtlSubView = [[GlassViewMTL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForSW:mtlForSW];
             self->layer = [mtlSubView getLayer];
             self->isHiDPIAware = YES;
         } else {
             LOG("GlassView3D initWithFrame using CGLView");
             GlassViewCGL* cglSubView;
-            subView = cglSubView = [[GlassViewCGL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForBlit:useMTLInGlass];
+            subView = cglSubView = [[GlassViewCGL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForSW:mtlForSW];
             self->layer = [cglSubView getLayer];
         }
         [subView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];

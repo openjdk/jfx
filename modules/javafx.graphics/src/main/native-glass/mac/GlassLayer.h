@@ -37,7 +37,7 @@
          mtlQueuePtr:(long)mtlCommandQueuePtr
       withHiDPIAware:(BOOL)HiDPIAware
         withIsSwPipe:(BOOL)isSwPipe
-       useMTLForBlit:(BOOL)useMTLInGlass;
+         useMTLForSW:(BOOL)mtlForSW;
 
 - (GlassOffscreen*)getPainterOffscreen;
 - (void)bindForWidth:(unsigned int)width

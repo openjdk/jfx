@@ -74,12 +74,11 @@ public final class SWPipeline extends GraphicsPipeline {
             factory = new SWResourceFactory(screen);
             factories.put(index, factory);
             if (PlatformUtil.isMac()) {
-                HashMap devDetails =
-                    (HashMap)SWPipeline.getInstance().getDeviceDetails();
+                HashMap devDetails = (HashMap)getDeviceDetails();
                 if (PrismSettings.macDefaultPipeline.equals("es2")) {
-                    devDetails.put("useMTLInGlass", false);
+                    devDetails.put("useMTLInGlassForSW", false);
                 } else {
-                    devDetails.put("useMTLInGlass", true);
+                    devDetails.put("useMTLInGlassForSW", true);
                 }
             }
         }
