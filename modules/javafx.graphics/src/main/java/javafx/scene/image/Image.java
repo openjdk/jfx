@@ -739,6 +739,7 @@ public class Image {
      * @param backgroundLoading indicates whether the image
      *      should be loaded in the background
      * @throws NullPointerException if input stream is null
+     * @since 26
      */
     public Image(@NamedArg("is") InputStream is, @NamedArg("backgroundLoading") boolean backgroundLoading) {
         this(null, validateInputStream(is), 0, 0, false, false, backgroundLoading);
@@ -788,6 +789,7 @@ public class Image {
      * @param backgroundLoading indicates whether the image
      *      should be loaded in the background
      * @throws NullPointerException if input stream is null
+     * @since 26
      */
     public Image(@NamedArg("is") InputStream is, @NamedArg("requestedWidth") double requestedWidth, @NamedArg("requestedHeight") double requestedHeight,
                  @NamedArg("preserveRatio") boolean preserveRatio, @NamedArg("smooth") boolean smooth, @NamedArg("backgroundLoading") boolean backgroundLoading) {
