@@ -122,7 +122,7 @@ Issue Key | Summary | Subcomponent
 [JDK-8354797](https://bugs.openjdk.org/browse/JDK-8354797) | Parent.needsLayoutProperty() should return read-only getter | graphics
 [JDK-8354813](https://bugs.openjdk.org/browse/JDK-8354813) | Parent.isNeedsLayout() may return wrong value in property listener | graphics
 [JDK-8357004](https://bugs.openjdk.org/browse/JDK-8357004) | Windows platform color changes are not picked up in some cases | graphics
-[JDK-8358454](https://bugs.openjdk.org/browse/JDK-8358454) | Wrong <br> tags in cssref.html  | graphics
+[JDK-8358454](https://bugs.openjdk.org/browse/JDK-8358454) | Wrong \<br> tags in cssref.html  | graphics
 [JDK-8329227](https://bugs.openjdk.org/browse/JDK-8329227) | Seek might hang with fMP4 H.265/HEVC or H.265/HEVC over HTTP/FILE | media
 [JDK-8357714](https://bugs.openjdk.org/browse/JDK-8357714) | AudioClip.play crash on macOS when loading resource from jar | media
 [JDK-8088343](https://bugs.openjdk.org/browse/JDK-8088343) | Race condition in javafx.concurrent.Task::cancel | other
