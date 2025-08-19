@@ -50,6 +50,7 @@ public final class PrismSettings {
     public static final boolean cacheComplexShapes;
     public static final boolean useNewImageLoader;
     public static final List<String> tryOrder;
+    public static final String defaultPipeline;
     public static final int prismStatFrequency;
     public static final RasterizerType rasterizerSpec;
     public static final String refType;
@@ -200,24 +201,26 @@ public final class PrismSettings {
         /* Force GPU, if GPU is PS 3 capable, disable GPU qualification check. */
         forceGPU = getBoolean(systemProperties, "prism.forceGPU", false);
 
-        String order = systemProperties.getProperty("prism.order");
         String[] tryOrderArr;
+        if (PlatformUtil.isWindows()) {
+            tryOrderArr = new String[] { "d3d", "sw" };
+        } else if (PlatformUtil.isMac()) {
+            tryOrderArr = new String[] { "es2", "mtl", "sw" };
+        } else if (PlatformUtil.isIOS()) {
+            tryOrderArr = new String[] { "es2" };
+        } else if (PlatformUtil.isAndroid()) {
+                tryOrderArr = new String[] { "es2" };
+        } else if (PlatformUtil.isLinux()) {
+            tryOrderArr = new String[] { "es2", "sw" };
+        } else {
+            tryOrderArr = new String[] { "sw" };
+        }
+
+        defaultPipeline = tryOrderArr[0];
+
+        String order = systemProperties.getProperty("prism.order");
         if (order != null) {
             tryOrderArr = split(order, ",");
-        } else {
-            if (PlatformUtil.isWindows()) {
-                tryOrderArr = new String[] { "d3d", "sw" };
-            } else if (PlatformUtil.isMac()) {
-                tryOrderArr = new String[] { "es2", "mtl", "sw" };
-            } else if (PlatformUtil.isIOS()) {
-                tryOrderArr = new String[] { "es2" };
-            } else if (PlatformUtil.isAndroid()) {
-                    tryOrderArr = new String[] { "es2" };
-            } else if (PlatformUtil.isLinux()) {
-                tryOrderArr = new String[] { "es2", "sw" };
-            } else {
-                tryOrderArr = new String[] { "sw" };
-            }
         }
 
         tryOrder = List.of(tryOrderArr);
