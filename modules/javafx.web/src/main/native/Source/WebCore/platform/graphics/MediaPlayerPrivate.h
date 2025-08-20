@@ -33,6 +33,7 @@
 #include "PlatformTimeRanges.h"
 #include "ProcessIdentity.h"
 #include <optional>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/CompletionHandler.h>
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
@@ -43,22 +44,22 @@ namespace WebCore {
 
 class VideoFrame;
 
-class MediaPlayerPrivateInterface {
+// MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
+// to be RefCounted or ThreadSafeRefCounted. Therefore, each subclass must implement a pair of
+// virtual ref()/deref() methods. See NullMediaPlayerPrivate for an example.
+class MediaPlayerPrivateInterface : public AbstractRefCounted {
 public:
     WEBCORE_EXPORT MediaPlayerPrivateInterface();
     WEBCORE_EXPORT virtual ~MediaPlayerPrivateInterface();
 
-    // MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
-    // to be RefCounted or ThreadSafeRefCounted. Therefore, each subclass must implement a pair of
-    // virtual ref()/deref() methods. See NullMediaPlayerPrivate for an example.
-    virtual void ref() = 0;
-    virtual void deref() = 0;
+    virtual constexpr MediaPlayerType mediaPlayerType() const = 0;
 
+    using LoadOptions = MediaPlayer::LoadOptions;
     virtual void load(const String&) { }
-    virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
+    virtual void load(const URL& url, const LoadOptions&) { load(url.string()); }
 
 #if ENABLE(MEDIA_SOURCE)
-    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient&) = 0;
+    virtual void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) = 0;
 #endif
 #if ENABLE(MEDIA_STREAM)
     virtual void load(MediaStreamPrivate&) = 0;
@@ -119,7 +120,7 @@ public:
     virtual bool hasVideo() const = 0;
     virtual bool hasAudio() const = 0;
 
-    virtual void setPageIsVisible(bool, String&& sceneIdentifier = ""_s) = 0;
+    virtual void setPageIsVisible(bool) = 0;
     virtual void setVisibleForCanvas(bool visible) { setPageIsVisible(visible); }
     virtual void setVisibleInViewport(bool) { }
 
@@ -153,6 +154,8 @@ public:
     // explicitly by the HTMLMediaElement or through remote media playback control.
     // This excludes video potentially playing but having stalled.
     virtual bool paused() const = 0;
+
+    virtual void setVolumeLocked(bool) { }
 
     virtual void setVolume(float) { }
     virtual void setVolumeDouble(double volume) { return setVolume(volume); }
@@ -190,12 +193,6 @@ public:
     virtual void paint(GraphicsContext&, const FloatRect&) = 0;
 
     virtual void paintCurrentFrameInContext(GraphicsContext& c, const FloatRect& r) { paint(c, r); }
-#if !USE(AVFOUNDATION)
-    virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
-#endif
-#if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-    virtual void willBeAskedToPaintGL() { }
-#endif
 
     virtual RefPtr<VideoFrame> videoFrameForCurrentTime();
     virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
@@ -235,29 +232,20 @@ public:
 
     virtual MediaPlayer::MovieLoadType movieLoadType() const { return MediaPlayer::MovieLoadType::Unknown; }
 
-    using VideoPlaybackConfiguration = MediaPlayer::VideoPlaybackConfiguration;
-    using VideoPlaybackConfigurationOption = MediaPlayer::VideoPlaybackConfigurationOption;
-    virtual VideoPlaybackConfiguration videoPlaybackConfiguration() const { return { }; }
-
     virtual void prepareForRendering() { }
 
     // Time value in the movie's time scale. It is only necessary to override this if the media
     // engine uses rational numbers to represent media time.
     virtual MediaTime mediaTimeForTimeValue(const MediaTime& timeValue) const { return timeValue; }
 
-    // Overide this if it is safe for HTMLMediaElement to cache movie time and report
-    // 'currentTime' as [cached time + elapsed wall time]. Returns the maximum wall time
-    // it is OK to calculate movie time before refreshing the cached time.
-    virtual double maximumDurationToCacheMediaTime() const { return 0; }
-
     virtual unsigned decodedFrameCount() const { return 0; }
     virtual unsigned droppedFrameCount() const { return 0; }
     virtual unsigned audioDecodedByteCount() const { return 0; }
     virtual unsigned videoDecodedByteCount() const { return 0; }
 
-    HashSet<SecurityOriginData> originsInMediaCache(const String&) { return { }; }
+    UncheckedKeyHashSet<SecurityOriginData> originsInMediaCache(const String&) { return { }; }
     void clearMediaCache(const String&, WallTime) { }
-    void clearMediaCacheForOrigins(const String&, const HashSet<SecurityOriginData>&) { }
+    void clearMediaCacheForOrigins(const String&, const UncheckedKeyHashSet<SecurityOriginData>&) { }
 
     virtual void setPrivateBrowsingMode(bool) { }
 
@@ -268,7 +256,7 @@ public:
 #endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-    virtual std::unique_ptr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient&) { return nullptr; }
+    virtual RefPtr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient&) { return nullptr; }
     virtual void setCDM(LegacyCDM*) { }
     virtual void setCDMSession(LegacyCDMSession*) { }
     virtual void keyAdded() { }
@@ -327,6 +315,7 @@ public:
 
 #if USE(AVFOUNDATION)
     virtual AVPlayer *objCAVFoundationAVPlayer() const { return nullptr; }
+    virtual void setDecompressionSessionPreferences(bool, bool) { }
 #endif
 
     virtual bool performTaskAtTime(Function<void()>&&, const MediaTime&) { return false; }
@@ -337,7 +326,7 @@ public:
 
     virtual void audioOutputDeviceChanged() { }
 
-    virtual MediaPlayerIdentifier identifier() const { return { }; }
+    virtual std::optional<MediaPlayerIdentifier> identifier() const { return std::nullopt; }
 
     virtual bool supportsPlayAtHostTime() const { return false; }
     virtual bool supportsPauseAtHostTime() const { return false; }

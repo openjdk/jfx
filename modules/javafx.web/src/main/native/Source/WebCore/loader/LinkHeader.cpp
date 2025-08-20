@@ -28,7 +28,7 @@
 #include "config.h"
 #include "LinkHeader.h"
 
-#include "ParsingUtilities.h"
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -82,14 +82,14 @@ template<typename CharacterType> static std::optional<String> findURLBoundaries(
         return std::nullopt;
     skipWhile<isTabOrSpace>(buffer);
 
-    auto urlStart = buffer.position();
+    auto urlStart = buffer.span();
     skipWhile<isNotURLTerminatingChar>(buffer);
     auto urlEnd = buffer.position();
     skipUntil(buffer, '>');
     if (!skipExactly(buffer, '>'))
         return std::nullopt;
 
-    return String({ urlStart, urlEnd });
+    return String(urlStart.first(urlEnd - urlStart.data()));
 }
 
 template<typename CharacterType> static bool invalidParameterDelimiter(StringParsingBuffer<CharacterType>& buffer)
@@ -173,13 +173,13 @@ static LinkHeader::LinkParameterName parameterNameFromString(StringView name)
 //            position  end
 template<typename CharacterType> static std::optional<LinkHeader::LinkParameterName> parseParameterName(StringParsingBuffer<CharacterType>& buffer)
 {
-    auto nameStart = buffer.position();
+    auto nameStart = buffer.span();
     skipWhile<isValidParameterNameChar>(buffer);
     auto nameEnd = buffer.position();
     skipWhile<isTabOrSpace>(buffer);
     bool hasEqual = skipExactly(buffer, '=');
     skipWhile<isTabOrSpace>(buffer);
-    auto name = parameterNameFromString(std::span { nameStart, static_cast<size_t>(nameEnd - nameStart) });
+    auto name = parameterNameFromString(nameStart.first(static_cast<size_t>(nameEnd - nameStart.data())));
     if (hasEqual)
         return name;
     bool validParameterValueEnd = buffer.atEnd() || isParameterValueEnd(*buffer);
@@ -201,6 +201,7 @@ template<typename CharacterType> static std::optional<LinkHeader::LinkParameterN
 //                     position               end
 template<typename CharacterType> static bool skipQuotesIfNeeded(StringParsingBuffer<CharacterType>& buffer, bool& completeQuotes)
 {
+    auto startSpan = buffer.span();
     unsigned char quote;
     if (skipExactly(buffer, '\''))
         quote = '\'';
@@ -211,7 +212,7 @@ template<typename CharacterType> static bool skipQuotesIfNeeded(StringParsingBuf
 
     while (!completeQuotes && buffer.hasCharactersRemaining()) {
         skipUntil(buffer, static_cast<CharacterType>(quote));
-        if (*(buffer.position() - 1) != '\\')
+        if (startSpan[buffer.position() - startSpan.data() - 1] != '\\')
             completeQuotes = true;
         completeQuotes = skipExactly(buffer, static_cast<CharacterType>(quote)) && completeQuotes;
     }
@@ -231,24 +232,28 @@ template<typename CharacterType> static bool skipQuotesIfNeeded(StringParsingBuf
 //                   position     end
 template<typename CharacterType> static bool parseParameterValue(StringParsingBuffer<CharacterType>& buffer, String& value)
 {
-    auto valueStart = buffer.position();
-    auto valueEnd = buffer.position();
+    auto valueStart = buffer.span();
+    size_t valueLength = 0;
     bool completeQuotes = false;
     bool hasQuotes = skipQuotesIfNeeded(buffer, completeQuotes);
     if (!hasQuotes)
         skipWhile<isParameterValueChar>(buffer);
-    valueEnd = buffer.position();
+    valueLength = buffer.position() - valueStart.data();
     skipWhile<isTabOrSpace>(buffer);
-    if ((!completeQuotes && valueStart == valueEnd) || (!buffer.atEnd() && !isParameterValueEnd(*buffer))) {
+    if ((!completeQuotes && !valueLength) || (!buffer.atEnd() && !isParameterValueEnd(*buffer))) {
         value = emptyString();
         return false;
     }
-    if (hasQuotes)
-        ++valueStart;
-    if (completeQuotes)
-        --valueEnd;
-    ASSERT(valueEnd >= valueStart);
-    value = String({ valueStart, valueEnd });
+    if (hasQuotes) {
+        skip(valueStart, 1);
+        ASSERT(valueLength);
+        --valueLength;
+    }
+    if (completeQuotes) {
+        ASSERT(valueLength);
+        --valueLength;
+    }
+    value = String(valueStart.first(valueLength));
     return !hasQuotes || completeQuotes;
 }
 
@@ -287,7 +292,7 @@ void LinkHeader::setValue(LinkParameterName name, String&& value)
         m_referrerPolicy = WTFMove(value);
         break;
     case LinkParameterFetchPriority:
-        m_fetchPriorityHint = WTFMove(value);
+        m_fetchPriority = WTFMove(value);
         break;
     case LinkParameterTitle:
     case LinkParameterRev:
@@ -349,4 +354,3 @@ LinkHeaderSet::LinkHeaderSet(const String& header)
 }
 
 } // namespace WebCore
-

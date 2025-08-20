@@ -33,6 +33,7 @@
 #include <wtf/Scope.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
 #if !OS(WINDOWS)
@@ -64,7 +65,7 @@ ALLOW_DEPRECATED_DECLARATIONS_END
 static String fromStdFileSystemPath(const std::filesystem::path& path)
 {
 #if HAVE(MISSING_U8STRING)
-    return String::fromUTF8(span8(path.u8string().c_str()));
+    return String::fromUTF8(unsafeSpan8(path.u8string().c_str()));
 #else
     return String::fromUTF8(span(path.u8string()));
 #endif
@@ -88,7 +89,7 @@ static String fromStdFileSystemPath(const std::filesystem::path& path)
 //     - Pipe              (7C)
 //     - Delete            (7F)
 
-static const bool needsEscaping[128] = {
+constexpr std::array<bool, 128> needsEscaping = {
     true,  true,  true,  true,  true,  true,  true,  true,  /* 00-07 */
     true,  true,  true,  true,  true,  true,  true,  true,  /* 08-0F */
 
@@ -310,7 +311,6 @@ void setMetadataURL(const String&, const String&, const String&)
 MappedFileData::MappedFileData(const String& filePath, MappedFileMode mapMode, bool& success)
 {
     auto fd = openFile(filePath, FileSystem::FileOpenMode::Read);
-
     success = mapFileHandle(fd, FileSystem::FileOpenMode::Read, mapMode);
     closeFile(fd);
 }
@@ -332,14 +332,12 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
     int fd = posixFileDescriptor(handle);
 
     struct stat fileStat;
-    if (fstat(fd, &fileStat)) {
+    if (fstat(fd, &fileStat))
         return false;
-    }
 
-    unsigned size;
-    if (!WTF::convertSafely(fileStat.st_size, size)) {
+    size_t size;
+    if (!WTF::convertSafely(fileStat.st_size, size))
         return false;
-    }
 
     if (!size)
         return true;
@@ -361,14 +359,11 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
 #endif
     }
 
-    void* data = mmap(0, size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), fd, 0);
-
-    if (data == MAP_FAILED) {
+    auto fileData = MallocSpan<uint8_t, Mmap>::mmap(size, pageProtection, MAP_FILE | (mapMode == MappedFileMode::Shared ? MAP_SHARED : MAP_PRIVATE), fd);
+    if (!fileData)
         return false;
-    }
 
-    m_fileData = data;
-    m_fileSize = size;
+    m_fileData = WTFMove(fileData);
     return true;
 }
 #endif
@@ -413,6 +408,11 @@ bool makeSafeToUseMemoryMapForPath(const String&)
 #if !PLATFORM(COCOA)
 
 String createTemporaryZipArchive(const String&)
+{
+    return { };
+}
+
+String extractTemporaryZipArchive(const String&)
 {
     return { };
 }
@@ -478,7 +478,7 @@ void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
 #endif
 }
 
-MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(std::span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+MappedFileData mapToFile(const String& path, size_t bytesSize, NOESCAPE const Function<void(const Function<bool(std::span<const uint8_t>)>&)>& apply, PlatformFileHandle* outputHandle)
 {
     auto mappedFile = createMappedFileData(path, bytesSize, outputHandle);
     if (!mappedFile)
@@ -487,8 +487,7 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
     auto mapData = mappedFile.mutableSpan();
 
     apply([&mapData](std::span<const uint8_t> chunk) {
-        memcpySpan(mapData, chunk);
-        mapData = mapData.subspan(chunk.size());
+        memcpySpan(consumeSpan(mapData, chunk.size()), chunk);
         return true;
     });
 
@@ -653,6 +652,7 @@ bool moveFile(const String& oldPath, const String& newPath)
     std::filesystem::rename(fsOldPath, fsNewPath, ec);
     if (!ec)
         return true;
+
     if (isAncestor(oldPath, newPath))
         return false;
 
@@ -748,6 +748,16 @@ bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)
     return !ec;
 }
 
+bool copyFile(const String& targetPath, const String& sourcePath)
+{
+    auto fsTargetPath = toStdFileSystemPath(targetPath);
+    auto fsSourcePath = toStdFileSystemPath(sourcePath);
+
+    std::error_code ec;
+    std::filesystem::copy_file(fsSourcePath, fsTargetPath, std::filesystem::copy_options::overwrite_existing, ec);
+    return !ec;
+}
+
 std::optional<uint64_t> hardLinkCount(const String& path)
 {
     std::error_code ec;
@@ -839,12 +849,13 @@ bool isAncestor(const String& possibleAncestor, const String& possibleChild)
 {
     auto possibleChildLexicallyNormal = lexicallyNormal(possibleChild);
     auto possibleAncestorLexicallyNormal = lexicallyNormal(possibleAncestor);
-    if (possibleChildLexicallyNormal.endsWith(std::filesystem::path::preferred_separator))
+    if (possibleChildLexicallyNormal.endsWith(static_cast<UChar>(std::filesystem::path::preferred_separator)))
         possibleChildLexicallyNormal = possibleChildLexicallyNormal.left(possibleChildLexicallyNormal.length() - 1);
-    if (possibleAncestorLexicallyNormal.endsWith(std::filesystem::path::preferred_separator))
+    if (possibleAncestorLexicallyNormal.endsWith(static_cast<UChar>(std::filesystem::path::preferred_separator)))
         possibleAncestorLexicallyNormal = possibleAncestorLexicallyNormal.left(possibleAncestorLexicallyNormal.length() - 1);
     return possibleChildLexicallyNormal.startsWith(possibleAncestorLexicallyNormal) && possibleChildLexicallyNormal.length() != possibleAncestorLexicallyNormal.length();
 }
+
 String createTemporaryFile(StringView prefix, StringView suffix)
 {
     auto [path, handle] = openTemporaryFile(prefix, suffix);

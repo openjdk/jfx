@@ -28,6 +28,7 @@
 
 #include "PeerConnectionBackend.h"
 #include "RealtimeMediaSource.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 class LibWebRTCPeerConnectionBackend;
@@ -60,12 +61,13 @@ class RealtimeOutgoingAudioSource;
 class RealtimeOutgoingVideoSource;
 
 class LibWebRTCPeerConnectionBackend final : public PeerConnectionBackend {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCPeerConnectionBackend);
 public:
     LibWebRTCPeerConnectionBackend(RTCPeerConnection&, LibWebRTCProvider&);
     ~LibWebRTCPeerConnectionBackend();
 
     bool shouldEnableWebRTCL4S() const;
+
 private:
     void close() final;
     void doCreateOffer(RTCOfferOptions&&) final;

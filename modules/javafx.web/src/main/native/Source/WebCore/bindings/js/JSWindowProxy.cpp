@@ -160,6 +160,11 @@ DOMWindow& JSWindowProxy::wrapped() const
     return jsCast<JSDOMWindowBase*>(window)->wrapped();
 }
 
+Ref<DOMWindow> JSWindowProxy::protectedWrapped() const
+{
+    return wrapped();
+}
+
 JSValue toJS(JSGlobalObject* lexicalGlobalObject, WindowProxy& windowProxy)
 {
     auto* jsWindowProxy = windowProxy.jsWindowProxy(currentWorld(*lexicalGlobalObject));
@@ -183,7 +188,7 @@ WindowProxy* JSWindowProxy::toWrapped(VM&, JSValue value)
 
 JSC::GCClient::IsoSubspace* JSWindowProxy::subspaceForImpl(JSC::VM& vm)
 {
-    return &static_cast<JSVMClientData*>(vm.clientData)->windowProxySpace();
+    return &downcast<JSVMClientData>(vm.clientData)->windowProxySpace();
 }
 
 Ref<DOMWrapperWorld> JSWindowProxy::protectedWorld()

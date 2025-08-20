@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "JITCompilation.h"
 #include "SIMDInfo.h"
 #include "WasmLLIntBuiltin.h"
 #include "WasmOps.h"
@@ -56,9 +57,13 @@
 #define RTT_ALIGNMENT
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 namespace Wasm {
+
+class JSToWasmICCallee;
 
 #define CREATE_ENUM_VALUE(name, id, ...) name = id,
 enum class ExtSIMDOpType : uint32_t {
@@ -234,7 +239,7 @@ constexpr void dumpOpType(PrintStream& out, OpType op)
 
 MAKE_PRINT_ADAPTOR(OpTypeDump, OpType, dumpOpType);
 
-constexpr bool isCompareOpType(OpType op)
+inline bool isCompareOpType(OpType op)
 {
     switch (op) {
 #define CREATE_CASE(name, ...) case name: return true;
@@ -245,6 +250,7 @@ constexpr bool isCompareOpType(OpType op)
         return false;
     }
 }
+
 constexpr Type simdScalarType(SIMDLane lane)
 {
     switch (lane) {
@@ -272,7 +278,7 @@ using ProjectionIndex = uint32_t;
 using DisplayCount = uint32_t;
 using SupertypeCount = uint32_t;
 
-inline Width Type::width() const
+ALWAYS_INLINE Width Type::width() const
 {
     switch (kind) {
 #define CREATE_CASE(name, id, b3type, inc, wasmName, width, ...) case TypeKind::name: return widthForBytes(width / 8);
@@ -312,6 +318,7 @@ constexpr size_t typeKindSizeInBytes(TypeKind kind)
     case TypeKind::Arrayref:
     case TypeKind::Structref:
     case TypeKind::Funcref:
+    case TypeKind::Exn:
     case TypeKind::Externref:
     case TypeKind::Ref:
     case TypeKind::RefNull: {
@@ -326,6 +333,7 @@ constexpr size_t typeKindSizeInBytes(TypeKind kind)
     case TypeKind::Rec:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
+    case TypeKind::Nullexn:
     case TypeKind::Nullref:
     case TypeKind::Nullfuncref:
     case TypeKind::Nullexternref:
@@ -339,13 +347,11 @@ constexpr size_t typeKindSizeInBytes(TypeKind kind)
 }
 
 class FunctionSignature {
+    WTF_MAKE_NONCOPYABLE(FunctionSignature);
+    WTF_MAKE_NONMOVABLE(FunctionSignature);
 public:
-    FunctionSignature(Type* payload, FunctionArgCount argumentCount, FunctionArgCount returnCount)
-        : m_payload(payload)
-        , m_argCount(argumentCount)
-        , m_retCount(returnCount)
-    {
-    }
+    FunctionSignature(void* payload, FunctionArgCount argumentCount, FunctionArgCount returnCount);
+    ~FunctionSignature();
 
     FunctionArgCount argumentCount() const { return m_argCount; }
     FunctionArgCount returnCount() const { return m_retCount; }
@@ -354,8 +360,12 @@ public:
     Type returnType(FunctionArgCount i) const { ASSERT(i < returnCount()); return const_cast<FunctionSignature*>(this)->getReturnType(i); }
     bool returnsVoid() const { return !returnCount(); }
     Type argumentType(FunctionArgCount i) const { return const_cast<FunctionSignature*>(this)->getArgumentType(i); }
+    bool argumentsOrResultsIncludeI64() const { return m_argumentsOrResultsIncludeI64; }
+    void setArgumentsOrResultsIncludeI64(bool value) { m_argumentsOrResultsIncludeI64 = value; }
     bool argumentsOrResultsIncludeV128() const { return m_argumentsOrResultsIncludeV128; }
     void setArgumentsOrResultsIncludeV128(bool value) { m_argumentsOrResultsIncludeV128 = value; }
+    bool argumentsOrResultsIncludeExnref() const { return m_argumentsOrResultsIncludeExnref; }
+    void setArgumentsOrResultsIncludeExnref(bool value) { m_argumentsOrResultsIncludeExnref = value; }
 
     size_t numVectors() const
     {
@@ -403,14 +413,29 @@ public:
     Type* storage(FunctionArgCount i) { return i + m_payload; }
     const Type* storage(FunctionArgCount i) const { return const_cast<FunctionSignature*>(this)->storage(i); }
 
+#if ENABLE(JIT)
+    // This is const because we generally think of FunctionSignatures as immutable.
+    // Conceptually this more like using the `const FunctionSignature*` as a global UncheckedKeyHashMap
+    // key to the JIT code though.
+    CodePtr<JSEntryPtrTag> jsToWasmICEntrypoint() const;
+#endif
+
 private:
     friend class TypeInformation;
 
     Type* m_payload;
     FunctionArgCount m_argCount;
     FunctionArgCount m_retCount;
-    bool m_hasRecursiveReference { false };
-    bool m_argumentsOrResultsIncludeV128 { false };
+#if ENABLE(JIT)
+    mutable RefPtr<JSToWasmICCallee> m_jsToWasmICCallee;
+    // FIXME: We should have a WTF::Once that uses ParkingLot and the low bits of a pointer as a lock and use that here.
+    mutable Lock m_jitCodeLock;
+    // FIXME: Support caching wasmToJSEntrypoints too.
+#endif
+    bool m_hasRecursiveReference : 1 { false };
+    bool m_argumentsOrResultsIncludeI64 : 1 { false };
+    bool m_argumentsOrResultsIncludeV128 : 1 { false };
+    bool m_argumentsOrResultsIncludeExnref : 1 { false };
 };
 
 // FIXME auto-generate this. https://bugs.webkit.org/show_bug.cgi?id=165231
@@ -538,8 +563,10 @@ public:
 };
 
 class StructType {
+    WTF_MAKE_NONCOPYABLE(StructType);
+    WTF_MAKE_NONMOVABLE(StructType);
 public:
-    StructType(FieldType*, StructFieldCount, const FieldType*);
+    StructType(void*, StructFieldCount, const FieldType*);
 
     StructFieldCount fieldCount() const { return m_fieldCount; }
     bool hasRecursiveReference() const { return m_hasRecursiveReference; }
@@ -554,7 +581,7 @@ public:
     const FieldType* storage(StructFieldCount i) const { return const_cast<StructType*>(this)->storage(i); }
 
     // Returns the offset relative to `m_payload` (the internal vector of fields)
-    const unsigned* offsetOfField(StructFieldCount i) const { ASSERT(i < fieldCount()); return bitwise_cast<const unsigned*>(m_payload + m_fieldCount) + i; }
+    const unsigned* offsetOfField(StructFieldCount i) const { ASSERT(i < fieldCount()); return std::bit_cast<const unsigned*>(m_payload + m_fieldCount) + i; }
     unsigned* offsetOfField(StructFieldCount i) { return const_cast<unsigned*>(const_cast<const StructType*>(this)->offsetOfField(i)); }
 
     // Returns the offset relative to `m_payload.storage` (the internal storage for the internal vector of fields)
@@ -570,9 +597,11 @@ private:
 };
 
 class ArrayType {
+    WTF_MAKE_NONCOPYABLE(ArrayType);
+    WTF_MAKE_NONMOVABLE(ArrayType);
 public:
-    ArrayType(FieldType* payload)
-        : m_payload(payload)
+    ArrayType(void* payload)
+        : m_payload(static_cast<FieldType*>(payload))
         , m_hasRecursiveReference(false)
     {
     }
@@ -594,14 +623,16 @@ private:
 };
 
 class RecursionGroup {
+    WTF_MAKE_NONCOPYABLE(RecursionGroup);
+    WTF_MAKE_NONMOVABLE(RecursionGroup);
 public:
-    RecursionGroup(TypeIndex* payload, RecursionGroupCount typeCount)
-        : m_payload(payload)
+    RecursionGroup(void* payload, RecursionGroupCount typeCount)
+        : m_payload(static_cast<TypeIndex*>(payload))
         , m_typeCount(typeCount)
     {
     }
 
-    void cleanup();
+    bool cleanup();
 
     RecursionGroupCount typeCount() const { return m_typeCount; }
     TypeIndex type(RecursionGroupCount i) const { return const_cast<RecursionGroup*>(this)->getType(i); }
@@ -631,13 +662,15 @@ private:
 // A projection with an invalid PlaceholderGroup index represents a recursive reference
 // that has not yet been resolved. The expand() function on type definitions resolves it.
 class Projection {
+    WTF_MAKE_NONCOPYABLE(Projection);
+    WTF_MAKE_NONMOVABLE(Projection);
 public:
-    Projection(TypeIndex* payload)
-        : m_payload(payload)
+    Projection(void* payload)
+        : m_payload(static_cast<TypeIndex*>(payload))
     {
     }
 
-    void cleanup();
+    bool cleanup();
 
     TypeIndex recursionGroup() const { return const_cast<Projection*>(this)->getRecursionGroup(); }
     ProjectionIndex index() const { return const_cast<Projection*>(this)->getIndex(); }
@@ -665,15 +698,17 @@ static_assert(sizeof(ProjectionIndex) <= sizeof(TypeIndex));
 // support 0 or 1 supertypes. More than 1 supertype is not supported in the initial
 // GC proposal.
 class Subtype {
+    WTF_MAKE_NONCOPYABLE(Subtype);
+    WTF_MAKE_NONMOVABLE(Subtype);
 public:
-    Subtype(TypeIndex* payload, SupertypeCount count, bool isFinal)
-        : m_payload(payload)
+    Subtype(void* payload, SupertypeCount count, bool isFinal)
+        : m_payload(static_cast<TypeIndex*>(payload))
         , m_supertypeCount(count)
         , m_final(isFinal)
     {
     }
 
-    void cleanup();
+    bool cleanup();
 
     SupertypeCount supertypeCount() const { return m_supertypeCount; }
     bool isFinal() const { return m_final; }
@@ -738,7 +773,9 @@ private:
     // Payload starts past end of this object.
     const RTT** payload() { return static_cast<const RTT**>(static_cast<void*>(this + 1)); }
 
+IGNORE_WARNINGS_BEGIN("unused-private-field")
     RTTKind m_kind;
+IGNORE_WARNINGS_END
     DisplayCount m_displaySize;
 };
 
@@ -753,41 +790,14 @@ enum class TypeDefinitionKind : uint8_t {
 
 class TypeDefinition : public ThreadSafeRefCounted<TypeDefinition> {
     WTF_MAKE_TZONE_ALLOCATED(TypeDefinition);
+    WTF_MAKE_NONCOPYABLE(TypeDefinition);
 
     TypeDefinition() = delete;
-    TypeDefinition(const TypeDefinition&) = delete;
 
-    TypeDefinition(TypeDefinitionKind kind, FunctionArgCount retCount, FunctionArgCount argCount)
-        : m_typeHeader { FunctionSignature { static_cast<Type*>(payload()), argCount, retCount } }
+    template<typename InPlaceType, typename ...Args>
+    TypeDefinition(InPlaceType&& tag, Args&&... args)
+        : m_typeHeader(std::forward<InPlaceType>(tag), payload(), std::forward<Args>(args)...)
     {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::FunctionSignature);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind, uint32_t fieldCount, const FieldType* fields)
-        : m_typeHeader { StructType { static_cast<FieldType*>(payload()), static_cast<StructFieldCount>(fieldCount), fields } }
-    {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::StructType);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind, uint32_t fieldCount)
-        : m_typeHeader { RecursionGroup { static_cast<TypeIndex*>(payload()), static_cast<RecursionGroupCount>(fieldCount) } }
-    {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::RecursionGroup);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind, SupertypeCount count, bool isFinal)
-        : m_typeHeader { Subtype { static_cast<TypeIndex*>(payload()), count, isFinal } }
-    {
-        RELEASE_ASSERT(kind == TypeDefinitionKind::Subtype);
-    }
-
-    TypeDefinition(TypeDefinitionKind kind)
-        : m_typeHeader { ArrayType { static_cast<FieldType*>(payload()) } }
-    {
-        if (kind == TypeDefinitionKind::Projection)
-            m_typeHeader = { Projection { static_cast<TypeIndex*>(payload()) } };
-        else
-            RELEASE_ASSERT(kind == TypeDefinitionKind::ArrayType);
     }
 
     // Payload starts past end of this object.
@@ -810,15 +820,22 @@ public:
     template <typename T>
     const T* as() const { return const_cast<TypeDefinition*>(this)->as<T>(); }
 
-    TypeIndex index() const { return bitwise_cast<TypeIndex>(this); }
+    TypeIndex index() const;
 
     WTF::String toString() const;
     void dump(WTF::PrintStream& out) const;
     bool operator==(const TypeDefinition& rhs) const { return this == &rhs; }
     unsigned hash() const;
 
-    const TypeDefinition& replacePlaceholders(TypeIndex) const;
-    const TypeDefinition& unroll() const;
+    Ref<const TypeDefinition> replacePlaceholders(TypeIndex) const;
+    ALWAYS_INLINE const TypeDefinition& unroll() const
+    {
+        if (UNLIKELY(is<Projection>()))
+            return unrollSlow();
+        ASSERT(refCount() > 1); // TypeInformation registry + owner(s).
+        return *this;
+    }
+
     const TypeDefinition& expand() const;
     bool hasRecursiveReference() const;
     bool isFinalType() const;
@@ -826,13 +843,19 @@ public:
     // Type definitions that are compound and contain references to other definitions
     // via a type index should ref() the other definition when new unique instances are
     // constructed, and need to be cleaned up and have deref() called through this cleanup()
-    // method when the containing module is destroyed.
-    void cleanup();
+    // method when the containing module is destroyed. Returns true if any ref counts may
+    // have changed.
+    bool cleanup();
 
     // Type definitions are uniqued and, for call_indirect, validated at runtime. Tables can create invalid TypeIndex values which cause call_indirect to fail. We use 0 as the invalidIndex so that the codegen can easily test for it and trap, and we add a token invalid entry in TypeInformation.
     static const constexpr TypeIndex invalidIndex = 0;
 
 private:
+    // Returns the TypeIndex of a potentially unowned (other than TypeInformation::m_typeSet) TypeDefinition.
+    TypeIndex unownedIndex() const { return std::bit_cast<TypeIndex>(this); }
+
+    const TypeDefinition& unrollSlow() const;
+
     friend class TypeInformation;
     friend struct FunctionParameterTypes;
     friend struct StructParameterTypes;
@@ -923,6 +946,7 @@ public:
     static TypeInformation& singleton();
 
     static const TypeDefinition& signatureForLLIntBuiltin(LLIntBuiltin);
+    static const TypeDefinition& signatureForJSException();
 
     static RefPtr<TypeDefinition> typeDefinitionForFunction(const Vector<Type, 16>& returnTypes, const Vector<Type, 16>& argumentTypes);
     static RefPtr<TypeDefinition> typeDefinitionForStruct(const Vector<FieldType>& fields);
@@ -933,7 +957,7 @@ public:
     static RefPtr<TypeDefinition> getPlaceholderProjection(ProjectionIndex);
     ALWAYS_INLINE const FunctionSignature* thunkFor(Type type) const { return thunkTypes[linearizeType(type.kind)]; }
 
-    static void addCachedUnrolling(TypeIndex, const TypeDefinition*);
+    static void addCachedUnrolling(TypeIndex, const TypeDefinition&);
     static std::optional<TypeIndex> tryGetCachedUnrolling(TypeIndex);
 
     // Every type definition that is in a module's signature list should have a canonical RTT registered for subtyping checks.
@@ -948,14 +972,15 @@ public:
     static const TypeDefinition& get(TypeIndex);
     static TypeIndex get(const TypeDefinition&);
 
-    static const FunctionSignature& getFunctionSignature(TypeIndex);
+    inline static const FunctionSignature& getFunctionSignature(TypeIndex);
+    inline static std::optional<const FunctionSignature*> tryGetFunctionSignature(TypeIndex);
 
     static void tryCleanup();
 private:
-    HashSet<Wasm::TypeHash> m_typeSet;
-    HashMap<TypeIndex, RefPtr<const TypeDefinition>> m_unrollingCache;
-    HashMap<TypeIndex, RefPtr<RTT>> m_rttMap;
-    HashSet<RefPtr<TypeDefinition>> m_placeholders;
+    UncheckedKeyHashSet<Wasm::TypeHash> m_typeSet;
+    UncheckedKeyHashMap<TypeIndex, RefPtr<const TypeDefinition>> m_unrollingCache;
+    UncheckedKeyHashMap<TypeIndex, RefPtr<RTT>> m_rttMap;
+    UncheckedKeyHashSet<RefPtr<TypeDefinition>> m_placeholders;
     const FunctionSignature* thunkTypes[numTypes];
     RefPtr<TypeDefinition> m_I64_Void;
     RefPtr<TypeDefinition> m_Void_I32;
@@ -967,6 +992,7 @@ private:
     RefPtr<TypeDefinition> m_Ref_RefI32I32;
     RefPtr<TypeDefinition> m_Arrayref_I32I32I32I32;
     RefPtr<TypeDefinition> m_Anyref_Externref;
+    RefPtr<TypeDefinition> m_Void_Externref;
     RefPtr<TypeDefinition> m_Void_I32AnyrefI32;
     RefPtr<TypeDefinition> m_Void_I32AnyrefI32I32I32I32;
     RefPtr<TypeDefinition> m_Void_I32AnyrefI32I32AnyrefI32I32;
@@ -974,5 +1000,7 @@ private:
 };
 
 } } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

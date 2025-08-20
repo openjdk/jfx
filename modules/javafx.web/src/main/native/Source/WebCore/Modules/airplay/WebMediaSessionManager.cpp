@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "WebMediaSessionManagerClient.h"
 #include <wtf/Algorithms.h>
 #include <wtf/Logger.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -44,7 +45,7 @@ static const Seconds taskDelayInterval { 100_ms };
 #define ALWAYS_LOG_MEDIASESSIONMANAGER logger().logAlways
 
 struct ClientState {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(ClientState);
 
     explicit ClientState(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
         : client(client)
@@ -65,6 +66,8 @@ struct ClientState {
     bool configurationRequired { true };
     bool playedToEnd { false };
 };
+
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(ClientState);
 
 static bool flagsAreSet(MediaProducerMediaStateFlags value, MediaProducerMediaStateFlags flags)
 {
@@ -101,7 +104,7 @@ String mediaProducerStateString(MediaProducerMediaStateFlags flags)
 
 class WebMediaSessionLogger {
     WTF_MAKE_NONCOPYABLE(WebMediaSessionLogger);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebMediaSessionLogger);
 public:
 
     static std::unique_ptr<WebMediaSessionLogger> create(WebMediaSessionManager& manager)
@@ -115,16 +118,16 @@ public:
         if (!state->client.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), state->contextId.toUInt64(), state->flags, arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, unsafeSpan(methodName), ' '), state->contextId.loggingString(), state->flags, arguments...);
     }
 
     template<typename... Arguments>
     inline void logAlways(const char* methodName, const Arguments&... arguments) const
     {
-        if (!m_manager.alwaysOnLoggingAllowed())
+        if (!m_manager->alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, span(methodName), ' '), arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::"_s, unsafeSpan(methodName), ' '), arguments...);
     }
 
 private:
@@ -135,9 +138,11 @@ private:
     {
     }
 
-    WebMediaSessionManager& m_manager;
+    CheckedRef<WebMediaSessionManager> m_manager;
     Ref<Logger> m_logger;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebMediaSessionLogger);
 
 WebMediaSessionLogger& WebMediaSessionManager::logger()
 {
@@ -199,14 +204,14 @@ WebMediaSessionManager::WebMediaSessionManager()
 
 WebMediaSessionManager::~WebMediaSessionManager() = default;
 
-PlaybackTargetClientContextIdentifier WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
+std::optional<PlaybackTargetClientContextIdentifier> WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
 {
     size_t index = find(&client, contextId);
     ASSERT(index == notFound);
     if (index != notFound)
-        return { };
+        return std::nullopt;
 
-    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.toUInt64());
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.loggingString());
     m_clientState.append(makeUnique<ClientState>(client, contextId));
 
     if (m_externalOutputDeviceAvailable || m_playbackTarget)

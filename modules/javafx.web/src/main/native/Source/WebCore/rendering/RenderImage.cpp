@@ -58,7 +58,7 @@
 #include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderImageResourceStyleImage.h"
-#include "RenderLayoutState.h"
+#include "RenderStyleInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -81,6 +81,10 @@
 #if USE(CG)
 #include "PDFDocumentImage.h"
 #include "Settings.h"
+#endif
+
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+#include "SpatialImageControls.h"
 #endif
 
 namespace WebCore {
@@ -120,11 +124,11 @@ void RenderImage::collectSelectionGeometries(Vector<SelectionGeometry>& geometri
         }
     } else {
         auto selectionLogicalRect = LineSelection::logicalRect(*run->lineBox());
-        int selectionTop = !containingBlock->style().isFlippedBlocksWritingMode() ? selectionLogicalRect.y() - logicalTop() : logicalBottom() - selectionLogicalRect.maxY();
+        int selectionTop = !containingBlock->writingMode().isBlockFlipped() ? selectionLogicalRect.y() - logicalTop() : logicalBottom() - selectionLogicalRect.maxY();
         int selectionHeight = selectionLogicalRect.height();
         imageRect = IntRect { 0,  selectionTop, logicalWidth(), selectionHeight };
-        isFirstOnLine = !run->previousOnLine();
-        isLastOnLine = !run->nextOnLine();
+        isFirstOnLine = !run->nextLineLeftwardOnLine();
+        isLastOnLine = !run->nextLineRightwardOnLine();
         LogicalSelectionOffsetCaches cache(*containingBlock);
         LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
         LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
@@ -143,7 +147,7 @@ void RenderImage::collectSelectionGeometries(Vector<SelectionGeometry>& geometri
 
     // FIXME: We should consider either making SelectionGeometry a struct or better organize its optional fields into
     // an auxiliary struct to simplify its initialization.
-    geometries.append(SelectionGeometry(absoluteQuad, SelectionRenderingBehavior::CoalesceBoundingRects, containingBlock->style().direction(), lineExtentBounds.x(), lineExtentBounds.maxX(), lineExtentBounds.maxY(), 0, false /* line break */, isFirstOnLine, isLastOnLine, false /* contains start */, false /* contains end */, containingBlock->style().isHorizontalWritingMode(), isFixed, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
+    geometries.append(SelectionGeometry(absoluteQuad, SelectionRenderingBehavior::CoalesceBoundingRects, containingBlock->writingMode().bidiDirection(), lineExtentBounds.x(), lineExtentBounds.maxX(), lineExtentBounds.maxY(), 0, false /* line break */, isFirstOnLine, isLastOnLine, false /* contains start */, false /* contains end */, containingBlock->writingMode().isHorizontal(), isFixed, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
 }
 #endif
 
@@ -163,6 +167,10 @@ RenderImage::RenderImage(Type type, Element& element, RenderStyle&& style, Optio
     if (RefPtr image = dynamicDowncast<HTMLImageElement>(element))
         m_hasShadowControls = image->isImageMenuEnabled();
 #endif
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    if (RefPtr image = dynamicDowncast<HTMLElement>(element))
+        m_hasShadowControls = SpatialImageControls::hasSpatialImageControls(*image);
+#endif
 }
 
 RenderImage::RenderImage(Type type, Element& element, RenderStyle&& style, StyleImage* styleImage, const float imageDevicePixelRatio)
@@ -176,10 +184,8 @@ RenderImage::RenderImage(Type type, Document& document, RenderStyle&& style, Sty
 {
 }
 
-RenderImage::~RenderImage()
-{
-    // Do not add any code here. Add it to willBeDestroyed() instead.
-}
+// Do not add any code in below destructor. Add it to willBeDestroyed() instead.
+RenderImage::~RenderImage() = default;
 
 void RenderImage::willBeDestroyed()
 {
@@ -304,7 +310,7 @@ LayoutUnit RenderImage::baselinePosition(FontBaseline baselineType, bool firstLi
     LayoutUnit offset;
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
     if (isMultiRepresentationHEIC()) {
-        auto metrics = style().fontCascade().primaryFont().metricsForMultiRepresentationHEIC();
+        auto metrics = style().fontCascade().primaryFont()->metricsForMultiRepresentationHEIC();
         offset = LayoutUnit::fromFloatRound(metrics.descent);
     }
 #endif
@@ -409,7 +415,7 @@ void RenderImage::repaintOrMarkForLayout(ImageSizeChangeType imageSizeChange, co
     }
 
     // Tell any potential compositing layers that the image needs updating.
-    contentChanged(ImageChanged);
+    contentChanged(ContentChangeType::Image);
 }
 
 void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
@@ -422,7 +428,7 @@ void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetr
     if (&newImage == cachedImage()) {
         // tell any potential compositing layers
         // that the image is done and they can reference it directly.
-        contentChanged(ImageChanged);
+        contentChanged(ContentChangeType::Image);
     }
 
     if (RefPtr image = dynamicDowncast<HTMLImageElement>(element()))
@@ -455,22 +461,6 @@ bool RenderImage::shouldDisplayBrokenImageIcon() const
     return imageResource().errorOccurred();
 }
 
-bool RenderImage::hasNonBitmapImage() const
-{
-    if (!imageResource().cachedImage())
-        return false;
-
-    Image* image = cachedImage()->imageForRenderer(this);
-    return image && !is<BitmapImage>(image);
-}
-
-bool RenderImage::hasAnimatedImage() const
-{
-    if (auto* image = cachedImage() ? cachedImage()->image() : nullptr)
-        return image->isAnimated();
-    return false;
-}
-
 #if ENABLE(MULTI_REPRESENTATION_HEIC)
 bool RenderImage::isMultiRepresentationHEIC() const
 {
@@ -484,7 +474,7 @@ bool RenderImage::isMultiRepresentationHEIC() const
 
 void RenderImage::paintIncompleteImageOutline(PaintInfo& paintInfo, LayoutPoint paintOffset, LayoutUnit borderWidth) const
 {
-    auto contentSize = this->contentSize();
+    auto contentSize = this->contentBoxSize();
     if (contentSize.width() <= 2 || contentSize.height() <= 2)
         return;
 
@@ -516,7 +506,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
         return;
     }
 
-    auto contentSize = this->contentSize();
+    auto contentSize = this->contentBoxSize();
     float deviceScaleFactor = document().deviceScaleFactor();
     LayoutUnit missingImageBorderWidth(1 / deviceScaleFactor);
 
@@ -577,7 +567,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 auto& style = this->style();
                 auto& fontCascade = style.fontCascade();
                 auto& fontMetrics = fontCascade.metricsOfPrimaryFont();
-                auto isHorizontal = style.isHorizontalWritingMode();
+                auto isHorizontal = writingMode().isHorizontal();
                 auto encodedDisplayString = document().displayStringModifiedByEncoding(m_altText);
                 auto textRun = RenderBlock::constructTextRun(encodedDisplayString, style, ExpansionBehavior::defaultBehavior(), RespectDirection | RespectDirectionOverride);
                 auto textWidth = LayoutUnit { fontCascade.width(textRun) };
@@ -597,7 +587,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                     auto altTextLocation = [&]() -> LayoutPoint {
                         auto contentHorizontalOffset = LayoutUnit { leftBorder + leftPadding + (paddingWidth / 2) - missingImageBorderWidth };
                             auto contentVerticalOffset = LayoutUnit { topBorder + topPadding + fontMetrics.intAscent() + (paddingHeight / 2) - missingImageBorderWidth };
-                            if (!style.isLeftToRightDirection())
+                            if (!style.writingMode().isInlineLeftToRight())
                             contentHorizontalOffset += contentSize.width() - textWidth;
                         return paintOffset + LayoutPoint { contentHorizontalOffset, contentVerticalOffset };
                     };
@@ -609,7 +599,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
                         auto visualLeft = size().width() / 2 - contentLogicalHeight / 2;
                         auto visualRight = visualLeft + contentLogicalHeight;
-                        if (style.isFlippedBlocksWritingMode())
+                        if (writingMode().isBlockFlipped())
                             visualLeft = size().width() - visualRight;
                         visualLeft += adjustedPaintOffset.x();
 
@@ -735,13 +725,11 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
     if (!img || img->isNull())
         return ImageDrawResult::DidNothing;
 
-    auto* imageElement = dynamicDowncast<HTMLImageElement>(element());
-
     // FIXME: Document when image != img.get().
     auto* image = imageResource().image().get();
 
     ImagePaintingOptions options = {
-        imageElement ? imageElement->compositeOperator() : CompositeOperator::SourceOver,
+        CompositeOperator::SourceOver,
         decodingModeForImageDraw(*image, paintInfo),
         imageOrientation(),
         image ? chooseInterpolationQuality(paintInfo.context(), *image, image, LayoutSize(rect.size())) : InterpolationQuality::Default,
@@ -765,6 +753,7 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
         imageResource().cachedImage()->addClientWaitingForAsyncDecoding(*this);
 
 #if USE(SYSTEM_PREVIEW)
+    auto* imageElement = dynamicDowncast<HTMLImageElement>(element());
     if (imageElement && imageElement->isSystemPreviewImage() && drawResult == ImageDrawResult::DidDraw && imageElement->document().settings().systemPreviewEnabled())
         theme().paintSystemPreviewBadge(*img, paintInfo, rect);
 #endif
@@ -885,36 +874,6 @@ void RenderImage::layout()
         layoutShadowContent(oldSize);
 }
 
-void RenderImage::layoutShadowContent(const LayoutSize& oldSize)
-{
-    for (auto& renderBox : childrenOfType<RenderBox>(*this)) {
-        bool childNeedsLayout = renderBox.needsLayout();
-        // If the region chain has changed we also need to relayout the children to update the region box info.
-        // FIXME: We can do better once we compute region box info for RenderReplaced, not only for RenderBlock.
-        auto* fragmentedFlow = enclosingFragmentedFlow();
-        if (fragmentedFlow && !childNeedsLayout) {
-            if (fragmentedFlow->pageLogicalSizeChanged())
-                childNeedsLayout = true;
-        }
-
-        auto newSize = contentBoxRect().size();
-        if (newSize == oldSize && !childNeedsLayout)
-            continue;
-
-        // When calling layout() on a child node, a parent must either push a LayoutStateMaintainer, or
-        // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
-        // and this method might be called many times per second during video playback, use a LayoutStateMaintainer:
-        LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
-        renderBox.setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
-        renderBox.mutableStyle().setHeight(Length(newSize.height(), LengthType::Fixed));
-        renderBox.mutableStyle().setWidth(Length(newSize.width(), LengthType::Fixed));
-        renderBox.setNeedsLayout(MarkOnlyThis);
-        renderBox.layout();
-    }
-
-    clearChildNeedsLayout();
-}
-
 void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
 {
     ASSERT(!shouldApplySizeContainment());
@@ -924,8 +883,8 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, Flo
     if (intrinsicSize.isEmpty() && (imageResource().imageHasRelativeWidth() || imageResource().imageHasRelativeHeight())) {
         RenderObject* containingBlock = isOutOfFlowPositioned() ? container() : this->containingBlock();
         if (auto* box = dynamicDowncast<RenderBox>(*containingBlock)) {
-            intrinsicSize.setWidth(box->availableLogicalWidth());
-            intrinsicSize.setHeight(box->availableLogicalHeight(IncludeMarginBorderPadding));
+            intrinsicSize.setWidth(box->contentBoxLogicalWidth());
+            intrinsicSize.setHeight(box->availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding));
         }
     }
 

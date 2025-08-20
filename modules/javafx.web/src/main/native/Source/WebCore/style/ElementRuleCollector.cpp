@@ -39,6 +39,7 @@
 #include "ContainerQueryEvaluator.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
+#include "ElementTextDirection.h"
 #include "HTMLElement.h"
 #include "HTMLSlotElement.h"
 #include "SVGElement.h"
@@ -156,12 +157,19 @@ inline void ElementRuleCollector::addElementStyleProperties(const StylePropertie
     addMatchedProperties(WTFMove(matchedProperty), DeclarationOrigin::Author);
 }
 
+bool ElementRuleCollector::isFirstMatchModeAndHasMatchedAnyRules() const
+{
+    return m_firstMatchMode && !m_matchedRules.isEmpty();
+}
+
 void ElementRuleCollector::collectMatchingRules(CascadeLevel level)
 {
     switch (level) {
     case CascadeLevel::Author: {
         MatchRequest matchRequest(m_authorStyle);
         collectMatchingRules(matchRequest);
+        if (isFirstMatchModeAndHasMatchedAnyRules())
+            return;
         break;
     }
 
@@ -169,6 +177,8 @@ void ElementRuleCollector::collectMatchingRules(CascadeLevel level)
         if (m_userStyle) {
             MatchRequest matchRequest(*m_userStyle);
             collectMatchingRules(matchRequest);
+            if (isFirstMatchModeAndHasMatchedAnyRules())
+                return;
         }
         break;
 
@@ -178,14 +188,22 @@ void ElementRuleCollector::collectMatchingRules(CascadeLevel level)
     }
 
     auto* parent = element().parentElement();
-    if (parent && parent->shadowRoot())
+    if (parent && parent->shadowRoot()) {
         matchSlottedPseudoElementRules(level);
+        if (isFirstMatchModeAndHasMatchedAnyRules())
+            return;
+    }
 
-    if (element().shadowRoot())
+    if (element().shadowRoot()) {
         matchHostPseudoClassRules(level);
+        if (isFirstMatchModeAndHasMatchedAnyRules())
+            return;
+    }
 
     if (element().isInShadowTree()) {
         matchUserAgentPartRules(level);
+        if (isFirstMatchModeAndHasMatchedAnyRules())
+            return;
         matchPartPseudoElementRules(level);
     }
 }
@@ -212,7 +230,7 @@ void ElementRuleCollector::collectMatchingRules(const MatchRequest& matchRequest
     }
     if (element.hasAttributesWithoutUpdate() && matchRequest.ruleSet.hasAttributeRules()) {
         Vector<const RuleSet::RuleDataVector*, 4> ruleVectors;
-        for (auto& attribute : element.attributesIterator()) {
+        for (auto& attribute : element.attributes()) {
             if (auto* rules = matchRequest.ruleSet.attributeRules(attribute.localName(), isHTML))
                 ruleVectors.append(rules);
         }
@@ -292,8 +310,8 @@ void ElementRuleCollector::matchAuthorRules()
 bool ElementRuleCollector::matchesAnyAuthorRules()
 {
     clearMatchedRules();
+    SetForScope scope { m_firstMatchMode, true };
 
-    // FIXME: This should bail out on first match.
     collectMatchingRules(CascadeLevel::Author);
 
     return !m_matchedRules.isEmpty();
@@ -561,9 +579,7 @@ void ElementRuleCollector::collectMatchingRulesForList(const RuleSet::RuleDataVe
     if (!rules)
         return;
 
-    for (unsigned i = 0, size = rules->size(); i < size; ++i) {
-        const auto& ruleData = rules->data()[i];
-
+    for (auto& ruleData : *rules) {
         if (UNLIKELY(!ruleData.isEnabled()))
             continue;
 
@@ -603,6 +619,8 @@ void ElementRuleCollector::collectMatchingRulesForList(const RuleSet::RuleDataVe
     }
 
         addRuleIfMatches();
+        if (isFirstMatchModeAndHasMatchedAnyRules())
+            return;
     }
 }
 
@@ -823,11 +841,11 @@ void ElementRuleCollector::matchAllRules(bool matchAuthorAndUserStyles, bool inc
         addElementStyleProperties(styledElement->additionalPresentationalHintStyle(), RuleSet::cascadeLayerPriorityForPresentationalHints);
 
         if (auto* htmlElement = dynamicDowncast<HTMLElement>(*styledElement)) {
-            auto result = htmlElement->directionalityIfDirIsAuto();
-            auto& properties = result.value_or(TextDirection::LTR) == TextDirection::LTR ? leftToRightDeclaration() : rightToLeftDeclaration();
-            if (result)
+            if (auto textDirection = computeTextDirectionIfDirIsAuto(*htmlElement)) {
+                auto& properties = *textDirection == TextDirection::LTR ? leftToRightDeclaration() : rightToLeftDeclaration();
                 addMatchedProperties({ properties }, DeclarationOrigin::Author);
         }
+    }
     }
 
     if (matchAuthorAndUserStyles) {
@@ -863,10 +881,11 @@ void ElementRuleCollector::addElementInlineStyleProperties(bool includeSMILPrope
     }
 }
 
-bool ElementRuleCollector::hasAnyMatchingRules(const RuleSet& ruleSet)
+bool ElementRuleCollector::matchesAnyRules(const RuleSet& ruleSet)
 {
     clearMatchedRules();
 
+    SetForScope scope { m_firstMatchMode , true };
     m_mode = SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements;
     collectMatchingRules(MatchRequest(ruleSet));
 

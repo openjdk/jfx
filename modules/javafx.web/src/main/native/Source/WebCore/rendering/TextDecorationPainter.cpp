@@ -33,6 +33,7 @@
 #include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "ShadowData.h"
+#include "TextBoxPainter.h"
 #include "TextRun.h"
 
 namespace WebCore {
@@ -98,7 +99,7 @@ static void strokeWavyTextDecoration(GraphicsContext& context, const FloatRect& 
     FloatPoint controlPoint1(0, yAxis + wavyStrokeParameters.controlPointDistance);
     FloatPoint controlPoint2(0, yAxis - wavyStrokeParameters.controlPointDistance);
 
-    for (float x = x1; x + 2 * wavyStrokeParameters.step <= x2;) {
+    for (double x = x1; x + 2 * wavyStrokeParameters.step <= x2;) {
         controlPoint1.setX(x + wavyStrokeParameters.step);
         controlPoint2.setX(x + wavyStrokeParameters.step);
         x += 2 * wavyStrokeParameters.step;
@@ -108,59 +109,6 @@ static void strokeWavyTextDecoration(GraphicsContext& context, const FloatRect& 
     context.setShouldAntialias(true);
     context.setStrokeThickness(rect.height());
     context.strokePath(path);
-}
-
-static bool compareTuples(std::pair<float, float> l, std::pair<float, float> r)
-{
-    return l.first < r.first;
-}
-
-static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray& intersections, float dilationAmount, float totalWidth)
-{
-    ASSERT(!(intersections.size() % 2));
-
-    // Step 1: Make pairs so we can sort based on range starting-point. We dilate the ranges in this step as well.
-    Vector<std::pair<float, float>> tuples;
-    for (auto i = intersections.begin(); i != intersections.end(); i++, i++)
-        tuples.append(std::make_pair(*i - dilationAmount, *(i + 1) + dilationAmount));
-    std::sort(tuples.begin(), tuples.end(), &compareTuples);
-
-    // Step 2: Deal with intersecting ranges.
-    Vector<std::pair<float, float>> intermediateTuples;
-    if (tuples.size() >= 2) {
-        intermediateTuples.append(*tuples.begin());
-        for (auto i = tuples.begin() + 1; i != tuples.end(); i++) {
-            float& firstEnd = intermediateTuples.last().second;
-            float secondStart = i->first;
-            float secondEnd = i->second;
-            if (secondStart <= firstEnd && secondEnd <= firstEnd) {
-                // Ignore this range completely
-            } else if (secondStart <= firstEnd)
-                firstEnd = secondEnd;
-            else
-                intermediateTuples.append(*i);
-        }
-    } else {
-        // XXX(274780): A plain assignment or move here makes Clang generate bad code in LTO builds.
-        intermediateTuples.swap(tuples);
-    }
-
-    // Step 3: Output the space between the ranges, but only if the space warrants an underline.
-    float previous = 0;
-    DashArray result;
-    for (const auto& tuple : intermediateTuples) {
-        if (tuple.first - previous > dilationAmount) {
-            result.append(previous);
-            result.append(tuple.first);
-        }
-        previous = tuple.second;
-    }
-    if (totalWidth - previous > dilationAmount) {
-        result.append(previous);
-        result.append(totalWidth);
-    }
-
-    return result;
 }
 
 static StrokeStyle textDecorationStyleToStrokeStyle(TextDecorationStyle decorationStyle)
@@ -193,10 +141,10 @@ bool TextDecorationPainter::Styles::operator==(const Styles& other) const
         && underline.decorationStyle == other.underline.decorationStyle && overline.decorationStyle == other.overline.decorationStyle && linethrough.decorationStyle == other.linethrough.decorationStyle;
 }
 
-TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const FontCascade& font, const ShadowData* shadow, const FilterOperations* colorFilter, bool isPrinting, bool isHorizontal)
+TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const FontCascade& font, const ShadowData* shadow, const FilterOperations* colorFilter, bool isPrinting, WritingMode writingMode)
     : m_context(context)
     , m_isPrinting(isPrinting)
-    , m_isHorizontal(isHorizontal)
+    , m_writingMode(writingMode)
     , m_shadow(shadow)
     , m_shadowColorFilter(colorFilter)
     , m_font(font)
@@ -206,26 +154,31 @@ TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const Fon
 // Paint text-shadow, underline, overline
 void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style, const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
 {
-    auto paintDecoration = [&] (auto decoration, auto style, auto& color, auto& rect) {
+    auto paintDecoration = [&] (auto decoration, auto underlineStyle, auto& color, auto& rect) {
         m_context.setStrokeColor(color);
 
-        auto strokeStyle = textDecorationStyleToStrokeStyle(style);
+        auto strokeStyle = textDecorationStyleToStrokeStyle(underlineStyle);
 
-        if (style == TextDecorationStyle::Wavy)
+        if (underlineStyle == TextDecorationStyle::Wavy)
             strokeWavyTextDecoration(m_context, rect, decorationGeometry.wavyStrokeParameters);
         else if (decoration == TextDecorationLine::Underline || decoration == TextDecorationLine::Overline) {
-            if ((decorationStyle.skipInk == TextDecorationSkipInk::Auto || decorationStyle.skipInk == TextDecorationSkipInk::All) && m_isHorizontal) {
+            if ((style.textDecorationSkipInk() == TextDecorationSkipInk::Auto
+                || style.textDecorationSkipInk() == TextDecorationSkipInk::All)
+                && !m_writingMode.isVerticalTypographic()) {
                 if (!m_context.paintingDisabled()) {
                     auto underlineBoundingBox = m_context.computeUnderlineBoundsForText(rect, m_isPrinting);
-                    DashArray intersections = m_font.dashesForIntersectionsWithRect(textRun, decorationGeometry.textOrigin, underlineBoundingBox);
-                    DashArray boundaries = translateIntersectionPointsToSkipInkBoundaries(intersections, underlineBoundingBox.height(), rect.width());
-                    ASSERT(!(boundaries.size() % 2));
+                    auto intersections = m_font.lineSegmentsForIntersectionsWithRect(textRun, decorationGeometry.textOrigin, underlineBoundingBox);
+                    if (!intersections.isEmpty()) {
+                        auto dilationAmount = std::min(underlineBoundingBox.height(), style.metricsOfPrimaryFont().height() / 5);
+                        auto boundaries = differenceWithDilation({ 0, rect.width() }, WTFMove(intersections), dilationAmount);
                     // We don't use underlineBoundingBox here because drawLinesForText() will run computeUnderlineBoundsForText() internally.
-                    m_context.drawLinesForText(rect.location(), rect.height(), boundaries, m_isPrinting, style == TextDecorationStyle::Double, strokeStyle);
+                        m_context.drawLinesForText(rect.location(), rect.height(), boundaries.span(), m_isPrinting, underlineStyle == TextDecorationStyle::Double, strokeStyle);
+                    } else
+                    m_context.drawLineForText(rect, m_isPrinting, underlineStyle == TextDecorationStyle::Double, strokeStyle);
                 }
             } else {
                 // FIXME: Need to support text-decoration-skip: none.
-                m_context.drawLineForText(rect, m_isPrinting, style == TextDecorationStyle::Double, strokeStyle);
+                m_context.drawLineForText(rect, m_isPrinting, underlineStyle == TextDecorationStyle::Double, strokeStyle);
             }
         } else
             ASSERT_NOT_REACHED();
@@ -244,11 +197,10 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             auto shadowExtent = shadow->paintingExtent();
             auto shadowRect = clipRect;
             shadowRect.inflate(shadowExtent);
-            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
-            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
-            shadowRect.move(shadowX, shadowY);
+            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), m_writingMode);
+            shadowRect.move(shadowOffset);
             clipRect.unite(shadowRect);
-            extraOffset = std::max(extraOffset, std::max(0.f, shadowY) + shadowExtent);
+            extraOffset = std::max(extraOffset, std::max(0.f, shadowOffset.height()) + shadowExtent);
         }
         m_context.save();
         m_context.clip(clipRect);
@@ -278,9 +230,9 @@ void TextDecorationPainter::paintBackgroundDecorations(const RenderStyle& style,
             if (m_shadowColorFilter)
                 m_shadowColorFilter->transformColor(shadowColor);
 
-            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
-            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
-            m_context.setDropShadow({ { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor, ShadowRadiusMode::Default });
+            auto shadowOffset = TextBoxPainter::rotateShadowOffset(shadow->location(), m_writingMode);
+            shadowOffset.expand(0, -extraOffset);
+            m_context.setDropShadow({ shadowOffset, shadow->radius().value, shadowColor, ShadowRadiusMode::Default });
             shadow = shadow->next();
         };
         applyShadowIfNeeded();
@@ -402,7 +354,6 @@ auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, Opti
     collectStylesForRenderer(result, renderer, requestedDecorations, false, paintBehavior, pseudoId);
     if (firstLineStyle)
         collectStylesForRenderer(result, renderer, requestedDecorations, true, paintBehavior, pseudoId);
-    result.skipInk = renderer.style().textDecorationSkipInk();
     return result;
 }
 

@@ -52,16 +52,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_dispose(JNI
 }
 
 
-// Functions
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_hasFeatureImpl(JNIEnv* env, jclass, jlong
-    , jstring feature
-    , jstring version)
-{
-    WebCore::JSMainThreadNullState state;
-    return WebCore::SVGTests::hasFeatureForLegacyBindings(AtomString{String(env, feature)}, AtomString{String(env, version)});
-}
-
-
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_createDocumentTypeImpl(JNIEnv* env, jclass, jlong peer
     , jstring qualifiedName
     , jstring publicId

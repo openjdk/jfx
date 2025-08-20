@@ -40,8 +40,8 @@ const Font* FontRanges::Range::font(ExternalResourceDownloadPolicy policy) const
 }
 
 FontRanges::FontRanges(FontRanges&& other, IsGenericFontFamily isGenericFontFamily)
-: m_ranges { WTFMove(other.m_ranges) }
-, m_isGenericFontFamily { isGenericFontFamily }
+    : m_ranges { WTFMove(other.m_ranges) }
+    , m_isGenericFontFamily { isGenericFontFamily }
 {
 }
 

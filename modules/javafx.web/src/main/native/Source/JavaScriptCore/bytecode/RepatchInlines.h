@@ -91,7 +91,7 @@ inline void* handleHostCall(VM& vm, JSCell* owner, CallFrame* calleeFrame, JSVal
             NativeCallFrameTracer tracer(vm, calleeFrame);
             calleeFrame->setCallee(asObject(callee));
             vm.encodedHostCallReturnValue = callData.native.function(asObject(callee)->globalObject(), calleeFrame);
-            DisallowGC disallowGC;
+            AssertNoGC assertNoGC;
             if (UNLIKELY(scope.exception()))
                 return nullptr;
             return LLInt::getHostCallReturnValueEntrypoint().code().taggedPtr();
@@ -112,7 +112,7 @@ inline void* handleHostCall(VM& vm, JSCell* owner, CallFrame* calleeFrame, JSVal
         NativeCallFrameTracer tracer(vm, calleeFrame);
         calleeFrame->setCallee(asObject(callee));
         vm.encodedHostCallReturnValue = constructData.native.function(asObject(callee)->globalObject(), calleeFrame);
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         if (UNLIKELY(scope.exception()))
             return nullptr;
         return LLInt::getHostCallReturnValueEntrypoint().code().taggedPtr();

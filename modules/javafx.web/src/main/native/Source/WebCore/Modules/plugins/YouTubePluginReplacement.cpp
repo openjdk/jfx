@@ -40,7 +40,7 @@ namespace WebCore {
 
 void YouTubePluginReplacement::registerPluginReplacement(PluginReplacementRegistrar registrar)
 {
-    registrar(ReplacementPlugin(create, supportsMIMEType, supportsFileExtension, supportsURL, isEnabledBySettings));
+    registrar(ReplacementPlugin(create, supportsMIMEType, supportsFileExtension, supportsURL));
 }
 
 Ref<PluginReplacement> YouTubePluginReplacement::create(HTMLPlugInElement& plugin, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
@@ -335,11 +335,6 @@ AtomString YouTubePluginReplacement::youTubeURLFromAbsoluteURL(const URL& srcURL
 bool YouTubePluginReplacement::supportsURL(const URL& url)
 {
     return isYouTubeURL(url);
-}
-
-bool YouTubePluginReplacement::isEnabledBySettings(const Settings& settings)
-{
-    return settings.youTubeFlashPluginReplacementEnabled();
 }
 
 }

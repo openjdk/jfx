@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,9 +37,13 @@
 #include "XMLNSNames.h"
 #include "XPathParser.h"
 #include "XPathUtil.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace XPath {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Step);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Step::NodeTest);
 
 Step::Step(Axis axis, NodeTest nodeTest)
     : m_axis(axis)
@@ -371,7 +375,7 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
             if (!contextElement->hasAttributes())
                 return;
 
-            for (const Attribute& attribute : contextElement->attributesIterator()) {
+            for (auto& attribute : contextElement->attributes()) {
                 auto attr = contextElement->ensureAttr(attribute.name());
                 if (nodeMatches(attr.get(), AttributeAxis, m_nodeTest))
                     nodes.append(WTFMove(attr));

@@ -95,7 +95,6 @@ void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype)
 
     JSGlobalObject* globalObject = regExpPrototype->globalObject();
 
-    if (Options::useRegExpEscape())
         JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("escape"_s, regExpConstructorEscape, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
 
     GetterSetter* speciesGetterSetter = GetterSetter::create(vm, globalObject, JSFunction::create(vm, globalObject, 0, "get [Symbol.species]"_s, globalFuncSpeciesGetter, ImplementationVisibility::Public, SpeciesGetterIntrinsic), nullptr);
@@ -114,10 +113,10 @@ JSC_DEFINE_HOST_FUNCTION(regExpConstructorEscape, (JSGlobalObject* globalObject,
     auto string = asString(value)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    StringBuilder builder;
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     builder.reserveCapacity(string->length());
 
-    for (unsigned i = 0; i < string->length();) {
+    for (unsigned i = 0; i < string->length() && !builder.hasOverflowed();) {
         char32_t codePoint;
         if (string->is8Bit())
             codePoint = string->span8()[i++];
@@ -174,6 +173,10 @@ JSC_DEFINE_HOST_FUNCTION(regExpConstructorEscape, (JSGlobalObject* globalObject,
             builder.append(U16_LEAD(codePoint), U16_TRAIL(codePoint));
     }
 
+    if (builder.hasOverflowed()) {
+        throwOutOfMemoryError(globalObject, scope);
+        return { };
+    }
     RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, builder.toString())));
 }
 

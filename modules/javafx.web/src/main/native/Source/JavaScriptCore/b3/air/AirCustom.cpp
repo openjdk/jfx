@@ -76,7 +76,7 @@ bool CCallCustom::isValidForm(Inst& inst)
     size_t expectedArgCount = resultCount + 1; // first Arg is always CCallSpecial.
     for (Value* child : value->children()) {
         ASSERT(!child->type().isTuple());
-        expectedArgCount += cCallArgumentRegisterCount(child);
+        expectedArgCount += cCallArgumentRegisterCount(child->type());
     }
 
     if (inst.args.size() != expectedArgCount)
@@ -115,7 +115,7 @@ bool CCallCustom::isValidForm(Inst& inst)
 
     for (unsigned i = 1 ; i < value->numChildren(); ++i) {
         Value* child = value->child(i);
-        for (unsigned j = 0; j < cCallArgumentRegisterCount(child); j++) {
+        for (unsigned j = 0; j < cCallArgumentRegisterCount(child->type()); j++) {
             if (!checkNextArg(child))
             return false;
     }
@@ -148,7 +148,7 @@ bool ShuffleCustom::isValidForm(Inst& inst)
     // - Closed loops. These loops consist of nodes that have one successor and one predecessor, so
     //   there is no way to "get into" the loop from outside of it. These can be executed using swaps
     //   or by saving one of the Args to a scratch register and executing it as a shift.
-    HashSet<Arg> dsts;
+    UncheckedKeyHashSet<Arg> dsts;
 
     for (unsigned i = 0; i < inst.args.size(); ++i) {
         Arg arg = inst.args[i];
@@ -219,18 +219,18 @@ bool WasmBoundsCheckCustom::isValidForm(Inst& inst)
 MacroAssembler::Jump WasmBoundsCheckCustom::generate(Inst& inst, CCallHelpers& jit, GenerationContext& context)
 {
     WasmBoundsCheckValue* value = inst.origin->as<WasmBoundsCheckValue>();
-    MacroAssembler::Jump outOfBounds = Inst(Air::Branch64, value, Arg::relCond(MacroAssembler::AboveOrEqual), inst.args[0], inst.args[1]).generate(jit, context);
+    MacroAssembler::Jump outOfBounds = Inst((is32Bit() ? Air::Branch32 : Air::Branch64), value, Arg::relCond(MacroAssembler::AboveOrEqual), inst.args[0], inst.args[1]).generate(jit, context);
 
     context.latePaths.append(createSharedTask<GenerationContext::LatePathFunction>(
         [outOfBounds, value] (CCallHelpers& jit, Air::GenerationContext& context) {
             outOfBounds.link(&jit);
             switch (value->boundsType()) {
             case WasmBoundsCheckValue::Type::Pinned:
-                context.code->wasmBoundsCheckGenerator()->run(jit, value->bounds().pinnedSize);
+                context.code->wasmBoundsCheckGenerator()->run(jit, value, value->bounds().pinnedSize);
                 break;
 
             case WasmBoundsCheckValue::Type::Maximum:
-                context.code->wasmBoundsCheckGenerator()->run(jit, InvalidGPRReg);
+                context.code->wasmBoundsCheckGenerator()->run(jit, value, InvalidGPRReg);
                 break;
             }
         }));

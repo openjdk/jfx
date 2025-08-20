@@ -35,6 +35,7 @@
 #include "Operands.h"
 #include "ValueRecovery.h"
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -51,8 +52,8 @@ class OSRExit;
 
 namespace DFG {
 
+class BasicBlock;
 class SpeculativeJIT;
-struct BasicBlock;
 struct Node;
 
 // This enum describes the types of additional recovery that
@@ -136,7 +137,7 @@ private:
 };
 
 struct SpeculationFailureDebugInfo {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(SpeculationFailureDebugInfo);
     CodeBlock* codeBlock;
     ExitKind kind;
     uint32_t exitIndex;

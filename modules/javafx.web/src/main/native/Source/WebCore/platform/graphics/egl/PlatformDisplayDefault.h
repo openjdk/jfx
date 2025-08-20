@@ -32,6 +32,9 @@
 namespace WebCore {
 
 class PlatformDisplayDefault final : public PlatformDisplay {
+
+
+
 public:
     static std::unique_ptr<PlatformDisplayDefault> create();
 

@@ -33,6 +33,7 @@
 #include <WebCore/MediaPlayerIdentifier.h>
 #include <WebGPU/WebGPU.h>
 #include <wtf/Deque.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
@@ -40,7 +41,7 @@ class ConvertToBackingContext;
 enum class DeviceLostReason : uint8_t;
 
 class DeviceImpl final : public Device {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DeviceImpl);
 public:
     static Ref<DeviceImpl> create(WebGPUPtr<WGPUDevice>&& device, Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits, ConvertToBackingContext& convertToBackingContext)
     {
@@ -94,6 +95,12 @@ private:
     void resolveDeviceLostPromise(CompletionHandler<void(WebCore::WebGPU::DeviceLostReason)>&&) final;
 
     void setLabelInternal(const String&) final;
+    void pauseAllErrorReporting(bool pause) final;
+
+    [[noreturn]] Ref<CommandEncoder> invalidCommandEncoder() final;
+    [[noreturn]] Ref<CommandBuffer> invalidCommandBuffer() final;
+    [[noreturn]] Ref<RenderPassEncoder> invalidRenderPassEncoder() final;
+    [[noreturn]] Ref<ComputePassEncoder> invalidComputePassEncoder() final;
 
     WebGPUPtr<WGPUDevice> m_backing;
     Ref<ConvertToBackingContext> m_convertToBackingContext;

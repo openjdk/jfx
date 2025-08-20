@@ -107,8 +107,10 @@ bool objectPrototypeHasOwnProperty(JSGlobalObject* globalObject, JSObject* thisO
     Structure* structure = thisObject->structure();
     HasOwnPropertyCache& hasOwnPropertyCache = vm.ensureHasOwnPropertyCache();
     if (std::optional<bool> result = hasOwnPropertyCache.get(structure, propertyName)) {
+#if ASSERT_ENABLED
         ASSERT(*result == thisObject->hasOwnProperty(globalObject, propertyName) || vm.hasPendingTerminationException());
-        scope.assertNoExceptionExceptTermination();
+        RETURN_IF_EXCEPTION(scope, false);
+#endif
         return *result;
     }
 

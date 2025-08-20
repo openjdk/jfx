@@ -27,8 +27,6 @@
 #include "config.h"
 #include "DateTimeNumericFieldElement.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "EventNames.h"
 #include "FontCascade.h"
 #include "HTMLNames.h"
@@ -82,7 +80,7 @@ void DateTimeNumericFieldElement::adjustMinInlineSize(RenderStyle& style) const
         inlineSize = std::max(inlineSize, font.width(RenderBlock::constructTextRun(numberString, style)));
     }
 
-    if (style.isHorizontalWritingMode())
+    if (style.writingMode().isHorizontal())
         style.setMinWidth({ inlineSize, LengthType::Fixed });
     else
         style.setMinHeight({ inlineSize, LengthType::Fixed });
@@ -199,5 +197,3 @@ void DateTimeNumericFieldElement::handleBlurEvent(Event& event)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

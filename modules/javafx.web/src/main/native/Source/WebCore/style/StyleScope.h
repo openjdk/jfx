@@ -33,11 +33,11 @@
 #include "Timer.h"
 #include <memory>
 #include <wtf/CheckedPtr.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashMap.h>
@@ -70,7 +70,7 @@ class RuleSet;
 struct MatchResult;
 
 class Scope final : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr<Scope> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Scope);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Scope);
 public:
     explicit Scope(Document&);
@@ -86,7 +86,6 @@ public:
     void addStyleSheetCandidateNode(Node&, bool createdByParser);
     void removeStyleSheetCandidateNode(Node&);
 
-    String preferredStylesheetSetName() const { return m_preferredStylesheetSetName; }
     void setPreferredStylesheetSetName(const String&);
 
     void addPendingSheet(const Element&);
@@ -147,23 +146,21 @@ public:
     static const Scope& forNode(const Node&);
     static Scope* forOrdinal(Element&, ScopeOrdinal);
 
-    struct QueryContainerUpdateContext {
-        // FIXME: Switching to a WeakHashSet causes fast/dom/Node/Node-destruction-crash.html
-        // to time out. Scope::updateQueryContainerState() seems to rely on this container
-        // containing stale pointers.
-        HashSet<Element*> invalidatedContainers;
+    struct LayoutDependencyUpdateContext {
+        UncheckedKeyHashSet<CheckedRef<const Element>> invalidatedContainers;
+        UncheckedKeyHashSet<CheckedRef<const Element>> invalidatedAnchorPositioned;
     };
-    bool updateQueryContainerState(QueryContainerUpdateContext&);
+    bool invalidateForLayoutDependencies(LayoutDependencyUpdateContext&);
 
     const CustomPropertyRegistry& customPropertyRegistry() const { return m_customPropertyRegistry.get(); }
     CustomPropertyRegistry& customPropertyRegistry() { return m_customPropertyRegistry.get(); }
     const CSSCounterStyleRegistry& counterStyleRegistry() const { return m_counterStyleRegistry.get(); }
     CSSCounterStyleRegistry& counterStyleRegistry() { return m_counterStyleRegistry.get(); }
 
-    WeakHashSet<Element, WeakPtrImplWithEventTargetData>& anchorElements() { return m_anchorElements; }
     AnchorPositionedStates& anchorPositionedStates() { return m_anchorPositionedStates; }
-    AnchorsForAnchorName& anchorsForAnchorName() { return m_anchorsForAnchorName; }
-    void clearAnchorPositioningState();
+    const AnchorPositionedStates& anchorPositionedStates() const { return m_anchorPositionedStates; }
+    void resetAnchorPositioningStateBeforeStyleResolution();
+    void updateAnchorPositioningStateAfterStyleResolution();
 
 private:
     Scope& documentScope();
@@ -175,7 +172,7 @@ private:
     void updateActiveStyleSheets(UpdateType);
     void scheduleUpdate(UpdateType);
 
-    using ResolverScopes = HashMap<Ref<Resolver>, Vector<WeakPtr<Scope>>>;
+    using ResolverScopes = UncheckedKeyHashMap<Ref<Resolver>, Vector<WeakPtr<Scope>>>;
     ResolverScopes collectResolverScopes();
     template <typename TestFunction> void evaluateMediaQueries(TestFunction&&);
 
@@ -217,7 +214,11 @@ private:
     using MediaQueryViewportState = std::tuple<IntSize, float, bool>;
     static MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
 
-    Document& m_document; // FIXME: Use a smart pointer.
+    bool invalidateForContainerDependencies(LayoutDependencyUpdateContext&);
+    bool invalidateForAnchorDependencies(LayoutDependencyUpdateContext&);
+    bool invalidateForPositionTryFallbacks(LayoutDependencyUpdateContext&);
+
+    CheckedRef<Document> m_document;
     ShadowRoot* m_shadowRoot { nullptr };
 
     RefPtr<Resolver> m_resolver;
@@ -229,7 +230,7 @@ private:
 
     Timer m_pendingUpdateTimer;
 
-    mutable HashSet<SingleThreadWeakRef<const CSSStyleSheet>> m_weakCopyOfActiveStyleSheetListForFastLookup;
+    mutable UncheckedKeyHashSet<SingleThreadWeakRef<const CSSStyleSheet>> m_weakCopyOfActiveStyleSheetListForFastLookup;
 
     // Track the currently loading top-level stylesheets needed for rendering.
     // Sheets loaded using the @import directive are not included in this count.
@@ -251,17 +252,18 @@ private:
     bool m_isUpdatingStyleResolver { false };
 
     std::optional<MediaQueryViewportState> m_viewportStateOnPreviousMediaQueryEvaluation;
-    WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerStates;
+    WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerDimensionsOnLastUpdate;
+
+    SingleThreadWeakHashMap<const RenderBoxModelObject, LayoutRect> m_anchorRectsOnLastUpdate;
+
     mutable WeakHashMap<const Element, UniqueRef<MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
 
     UniqueRef<CustomPropertyRegistry> m_customPropertyRegistry;
     UniqueRef<CSSCounterStyleRegistry> m_counterStyleRegistry;
 
     // FIXME: These (and some things above) are only relevant for the root scope.
-    HashMap<ResolverSharingKey, Ref<Resolver>> m_sharedShadowTreeResolvers;
+    UncheckedKeyHashMap<ResolverSharingKey, Ref<Resolver>> m_sharedShadowTreeResolvers;
 
-    WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_anchorElements;
-    AnchorsForAnchorName m_anchorsForAnchorName;
     AnchorPositionedStates m_anchorPositionedStates;
 };
 

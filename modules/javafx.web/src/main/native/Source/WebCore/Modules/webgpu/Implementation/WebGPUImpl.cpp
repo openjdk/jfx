@@ -38,8 +38,11 @@
 #include <WebCore/NativeImage.h>
 #include <WebGPU/WebGPUExt.h>
 #include <wtf/BlockPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::WebGPU {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GPUImpl);
 
 GPUImpl::GPUImpl(WebGPUPtr<WGPUInstance>&& instance, ConvertToBackingContext& convertToBackingContext)
     : m_backing(WTFMove(instance))
@@ -58,20 +61,22 @@ static void requestAdapterCallback(WGPURequestAdapterStatus status, WGPUAdapter 
 
 void GPUImpl::requestAdapter(const RequestAdapterOptions& options, CompletionHandler<void(RefPtr<Adapter>&&)>&& callback)
 {
+    Ref convertToBackingContext = m_convertToBackingContext;
+
     WGPURequestAdapterOptions backingOptions {
         .nextInChain = nullptr,
         .compatibleSurface = nullptr,
 #if CPU(X86_64)
         .powerPreference = WGPUPowerPreference_HighPerformance,
 #else
-        .powerPreference = options.powerPreference ? m_convertToBackingContext->convertToBacking(*options.powerPreference) : static_cast<WGPUPowerPreference>(WGPUPowerPreference_Undefined),
+        .powerPreference = options.powerPreference ? convertToBackingContext->convertToBacking(*options.powerPreference) : static_cast<WGPUPowerPreference>(WGPUPowerPreference_Undefined),
 #endif
         .backendType = WGPUBackendType_Metal,
         .forceFallbackAdapter = options.forceFallbackAdapter,
         .xrCompatible = options.xrCompatible,
     };
 
-    auto blockPtr = makeBlockPtr([convertToBackingContext = m_convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char*) mutable {
+    auto blockPtr = makeBlockPtr([convertToBackingContext = convertToBackingContext.copyRef(), callback = WTFMove(callback)](WGPURequestAdapterStatus status, WGPUAdapter adapter, const char*) mutable {
         if (status == WGPURequestAdapterStatus_Success)
             callback(AdapterImpl::create(adoptWebGPU(adapter), convertToBackingContext));
         else

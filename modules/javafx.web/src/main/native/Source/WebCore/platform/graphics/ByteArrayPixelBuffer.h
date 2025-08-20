@@ -39,15 +39,15 @@ public:
     WEBCORE_EXPORT static RefPtr<ByteArrayPixelBuffer> tryCreate(const PixelBufferFormat&, const IntSize&, Ref<JSC::ArrayBuffer>&&);
 
     JSC::Uint8ClampedArray& data() const { return m_data.get(); }
+    Ref<JSC::Uint8ClampedArray> protectedData() const { return m_data; }
     Ref<JSC::Uint8ClampedArray>&& takeData() { return WTFMove(m_data); }
     WEBCORE_EXPORT std::span<const uint8_t> span() const;
 
+    Type type() const override { return Type::ByteArray; }
     RefPtr<PixelBuffer> createScratchPixelBuffer(const IntSize&) const override;
 
 private:
     ByteArrayPixelBuffer(const PixelBufferFormat&, const IntSize&, Ref<JSC::Uint8ClampedArray>&&);
-
-    bool isByteArrayPixelBuffer() const override { return true; }
 
     Ref<JSC::Uint8ClampedArray> m_data;
 };
@@ -55,5 +55,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ByteArrayPixelBuffer)
-    static bool isType(const WebCore::PixelBuffer& pixelBuffer) { return pixelBuffer.isByteArrayPixelBuffer(); }
+    static bool isType(const WebCore::PixelBuffer& pixelBuffer) { return pixelBuffer.type() == WebCore::PixelBuffer::Type::ByteArray; }
 SPECIALIZE_TYPE_TRAITS_END()

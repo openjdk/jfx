@@ -52,6 +52,7 @@
 #include "Text.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include "ViewTransition.h"
+#include "ViewTransitionTypeSet.h"
 
 namespace WebCore {
 
@@ -60,6 +61,29 @@ using namespace HTMLNames;
 enum class VisitedMatchType : unsigned char {
     Disabled, Enabled
 };
+
+static bool matchesActiveViewTransitionTypePseudoClass(const Element& element, const FixedVector<AtomString>& types)
+{
+    // This pseudo class only matches the root element.
+    if (&element != element.document().documentElement())
+        return false;
+
+    if (const auto* viewTransition = element.document().activeViewTransition()) {
+        const auto& activeTypes = viewTransition->types();
+
+        for (const auto& type : types) {
+            // https://github.com/w3c/csswg-drafts/issues/9534#issuecomment-1802364085
+            // RESOLVED: type can accept any idents, except 'none' or '-ua-' prefixes
+            if (type.convertToASCIILowercase() == "none"_s || type.convertToASCIILowercase().startsWith("-ua-"_s))
+                continue;
+
+            if (activeTypes.hasType(type))
+                return true;
+        }
+    }
+
+    return false;
+}
 
 struct SelectorChecker::LocalContext {
     LocalContext(const CSSSelector& selector, const Element& element, VisitedMatchType visitedMatchType, std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier)
@@ -180,6 +204,8 @@ SelectorChecker::SelectorChecker(Document& document)
 
 bool SelectorChecker::match(const CSSSelector& selector, const Element& element, CheckingContext& checkingContext) const
 {
+    ASSERT_WITH_SECURITY_IMPLICATION(!selector.destructorHasBeenCalled());
+
     auto pseudoElementIdentifier = checkingContext.pseudoId == PseudoId::None ? std::nullopt : std::optional(Style::PseudoElementIdentifier { checkingContext.pseudoId, checkingContext.pseudoElementNameArgument });
     LocalContext context(selector, element, checkingContext.resolvingMode == SelectorChecker::Mode::QueryingRules ? VisitedMatchType::Disabled : VisitedMatchType::Enabled, pseudoElementIdentifier);
 
@@ -598,7 +624,7 @@ static bool anyAttributeMatches(const Element& element, const CSSSelector& selec
 {
     ASSERT(element.hasAttributesWithoutUpdate());
     bool isHTML = element.isHTMLElement() && element.document().isHTMLDocument();
-    for (const Attribute& attribute : element.attributesIterator()) {
+    for (auto& attribute : element.attributes()) {
         if (!attribute.matches(selectorAttr.prefix(), isHTML ? selectorAttr.localNameLowercase() : selectorAttr.localName(), selectorAttr.namespaceURI()))
             continue;
 
@@ -708,8 +734,12 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
         // :host doesn't combine with anything except pseudo elements.
         bool isHostPseudoClass = selector.match() == CSSSelector::Match::PseudoClass && selector.pseudoClass() == CSSSelector::PseudoClass::Host;
         bool isPseudoElement = selector.match() == CSSSelector::Match::PseudoElement;
-        // We can early return when we know it's neither :host, a compound like :is(:host), a pseudo-element.
-        if (!isHostPseudoClass && !isPseudoElement && !selector.selectorList())
+        // FIXME: We do not support combining :host with :not() functional pseudoclass. Combination with functional pseudoclass has been allowed for the useful :is(:host) ; but combining with :not() doesn't sound useful like :host():not(:not(:host))
+        // https://bugs.webkit.org/show_bug.cgi?id=283062
+        bool isNotPseudoClass = selector.match() == CSSSelector::Match::PseudoClass && selector.pseudoClass() == CSSSelector::PseudoClass::Not;
+
+        // We can early return when we know it's neither :host, a compound :is(:host) , a pseudo-element.
+        if (!isHostPseudoClass && !isPseudoElement && (!selector.selectorList() || isNotPseudoClass))
             return false;
     }
 
@@ -746,14 +776,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
     }
 
     if (selector.match() == CSSSelector::Match::HasScope) {
-        bool matches = &element == checkingContext.hasScope || checkingContext.matchesAllHasScopes;
-
-        if (!matches && checkingContext.hasScope) {
-            if (element.isDescendantOf(*checkingContext.hasScope))
                 checkingContext.matchedInsideScope = true;
-        }
-
-        return matches;
+        return &element == checkingContext.hasScope || checkingContext.matchesAllHasScopes;
     }
 
     if (selector.match() == CSSSelector::Match::PseudoClass) {
@@ -898,6 +922,7 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
                     context.matchedHostPseudoClass |= subcontext.matchedHostPseudoClass;
 
                     // Pseudo elements are not valid inside :is()/:matches()
+                    // They should also have a specificity of 0 (CSSSelector::simpleSelectorSpecificity)
                     if (localDynamicPseudoIdSet)
                         continue;
 
@@ -1072,8 +1097,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
                 return true;
             break;
         case CSSSelector::PseudoClass::Lang:
-                ASSERT(selector.argumentList() && !selector.argumentList()->isEmpty());
-                return matchesLangPseudoClass(element, *selector.argumentList());
+            ASSERT(selector.langList() && !selector.langList()->isEmpty());
+            return matchesLangPseudoClass(element, *selector.langList());
 #if ENABLE(FULLSCREEN_API)
         case CSSSelector::PseudoClass::Fullscreen:
             return matchesFullscreenPseudoClass(element);
@@ -1081,10 +1106,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             return matchesAnimatingFullscreenTransitionPseudoClass(element);
         case CSSSelector::PseudoClass::InternalFullscreenDocument:
             return matchesFullscreenDocumentPseudoClass(element);
-#if ENABLE(VIDEO)
         case CSSSelector::PseudoClass::InternalInWindowFullscreen:
             return matchesInWindowFullscreenPseudoClass(element);
-#endif
 #endif
 #if ENABLE(PICTURE_IN_PICTURE_API)
         case CSSSelector::PseudoClass::PictureInPicture:
@@ -1246,6 +1269,8 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             for (auto& partName : element.partNames())
                 appendTranslatedPartNameToRuleScope(translatedPartNames, partName);
 
+            ASSERT(selector.argumentList());
+
             for (auto& part : *selector.argumentList()) {
                 if (!translatedPartNames.contains(part))
                     return false;
@@ -1279,9 +1304,9 @@ bool SelectorChecker::checkOne(CheckingContext& checkingContext, LocalContext& c
             if (list.size() == 1)
                 return true;
 
-            return std::ranges::all_of(list.begin() + 1, list.end(),
-                [&](const PossiblyQuotedIdentifier& classSelector) {
-                    return checkingContext.classList.contains(classSelector.identifier);
+            return std::ranges::all_of(list.span().subspan(1),
+                [&](const AtomString& classSelector) {
+                    return checkingContext.classList.contains(classSelector);
                 }
             );
         }
@@ -1409,6 +1434,9 @@ bool SelectorChecker::matchHasPseudoClass(CheckingContext& checkingContext, cons
     auto checkDescendants = [&](const Element& descendantRoot) {
         for (auto it = descendantsOfType<Element>(descendantRoot).begin(); it;) {
             auto& descendant = *it;
+            if (checkRelative(descendant))
+                return true;
+
             if (cache && descendant.firstElementChild()) {
                 auto key = Style::makeHasPseudoClassCacheKey(descendant, hasSelector);
                 if (cache->get(key) == Style::HasPseudoClassMatch::FailsSubtree) {
@@ -1416,8 +1444,6 @@ bool SelectorChecker::matchHasPseudoClass(CheckingContext& checkingContext, cons
                     continue;
                 }
             }
-            if (checkRelative(descendant))
-                return true;
 
             it.traverseNext();
         }

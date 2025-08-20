@@ -95,6 +95,7 @@ CrossThreadTask createCrossThreadTask(T& callee, void (T::*method)(Parameters...
         callMemberFunctionForCrossThreadTask(callee.get(), method, WTFMove(arguments));
     });
 }
+
 template<typename T, typename... Parameters, typename... Arguments>
 requires (!WTF::HasRefPtrMemberFunctions<T>::value)
 CrossThreadTask createCrossThreadTask(T& callee, void (T::*method)(Parameters...), const Arguments&... arguments)

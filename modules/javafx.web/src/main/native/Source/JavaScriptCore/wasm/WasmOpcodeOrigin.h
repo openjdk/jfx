@@ -37,10 +37,12 @@ namespace JSC { namespace Wasm {
 class OpcodeOrigin {
     WTF_FORBID_HEAP_ALLOCATION;
 
-    OpcodeOrigin() = default;
-
 public:
     void dump(PrintStream&) const;
+
+    OpcodeOrigin() = default;
+
+    friend bool operator==(const OpcodeOrigin&, const OpcodeOrigin&) = default;
 
 #if USE(JSVALUE64)
     OpcodeOrigin(OpType opcode, size_t offset)
@@ -57,7 +59,7 @@ public:
         packedData = (static_cast<uint64_t>(opcode) << 40) | (static_cast<uint64_t>(prefix) << 32) | offset;
     }
     OpcodeOrigin(B3::Origin origin)
-        : packedData(bitwise_cast<uint64_t>(origin))
+        : packedData(std::bit_cast<uint64_t>(origin))
     {
     }
 
@@ -73,13 +75,20 @@ private:
     uint64_t packedData { 0 };
 
 #elif USE(JSVALUE32_64)
-    OpcodeOrigin(OpType opcode, size_t offset)
+    OpcodeOrigin(OpType prefix, size_t offset)
     {
         // We accept the wrap around for large offsets.
-        packedData = (static_cast<uint32_t>(opcode) << 24) | (offset & 0xffffff);
+        packedData = (static_cast<uint32_t>(prefix) << 24) | (offset & 0xffffff);
     }
+
+    OpcodeOrigin(OpType prefix, size_t, size_t offset)
+    {
+        // We accept the wrap around for large offsets.
+        packedData = (static_cast<uint32_t>(prefix) << 24) | (offset & 0xffffff);
+    }
+
     OpcodeOrigin(B3::Origin origin)
-        : packedData(bitwise_cast<uint32_t>(origin))
+        : packedData(std::bit_cast<uint32_t>(origin))
     {
     }
 
