@@ -205,6 +205,8 @@ public final class PrismSettings {
         if (PlatformUtil.isWindows()) {
             tryOrderArr = new String[] { "d3d", "sw" };
         } else if (PlatformUtil.isMac()) {
+            // Temporarily set the default rendering pipeline to Metal, to get more testing
+            // of Metal pipeline. It will be reverted with JDK-8365577.
             tryOrderArr = new String[] { "mtl", "es2", "sw" };
         } else if (PlatformUtil.isIOS()) {
             tryOrderArr = new String[] { "es2" };
