@@ -1133,18 +1133,10 @@ public class Image {
 
         private AsyncOperation constructPeer() {
             if(inputSource == null) {
-                return loadImageAsync(
-                    this, url,
-                    requestedWidth, requestedHeight,
-                    preserveRatio, smooth
-                );
+                return loadImageAsync(this, url, requestedWidth, requestedHeight, preserveRatio, smooth);
             }
 
-            return loadImageAsync(
-                this, inputSource,
-                requestedWidth, requestedHeight,
-                preserveRatio, smooth
-            );
+            return loadImageAsync(this, inputSource, requestedWidth, requestedHeight, preserveRatio, smooth);
         }
     }
 
