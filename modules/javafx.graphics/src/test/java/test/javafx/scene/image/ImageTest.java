@@ -570,7 +570,7 @@ public final class ImageTest {
     }
 
     @Test
-    public void createImageAsynFromNullInputStreamTest() {
+    public void createImageAsyncFromNullInputStreamTest() {
         assertThrows(NullPointerException.class, () -> {
             new Image((InputStream) null, true);
         });
