@@ -637,7 +637,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
      * <p>
-     * If loading in the background is requested, then the progress property can
+     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
      * be monitored for loading progress. Otherwise, the image loading is performed
      * immediately and is completed after this constructor returns.
      *
@@ -682,7 +682,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
      * <p>
-     * If loading in the background is requested, then the progress property can
+     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
      * be monitored for loading progress. Otherwise, the image loading is performed
      * immediately and is completed after this constructor returns.
      *
@@ -731,7 +731,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified
      * input stream.
      * <p>
-     * If loading in the background is requested, then the progress property can
+     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
      * be monitored for loading progress. Otherwise, the image loading is performed
      * immediately and is completed after this constructor returns.
      *
@@ -773,7 +773,7 @@ public class Image {
     /**
      * Constructs a new {@code Image} with the specified parameters.
      * <p>
-     * If loading in the background is requested, then the progress property can
+     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
      * be monitored for loading progress. Otherwise, the image loading is performed
      * immediately and is completed after this constructor returns.
      *
