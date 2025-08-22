@@ -27,8 +27,10 @@
 
 #include "CagedBarrierPtr.h"
 #include "DirectArgumentsOffset.h"
-#include "GenericArguments.h"
+#include "GenericArgumentsImpl.h"
 #include <wtf/CagedPtr.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -41,7 +43,7 @@ namespace JSC {
 //
 // To speed allocation, this object will hold all of the arguments in-place. The arguments as well
 // as a table of flags saying which arguments were overridden.
-class DirectArguments final : public GenericArguments<DirectArguments> {
+class DirectArguments final : public GenericArgumentsImpl<DirectArguments> {
 private:
     DirectArguments(VM&, Structure*, unsigned length, unsigned capacity);
 
@@ -49,7 +51,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        static_assert(!CellType::needsDestruction);
+        static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
         return &vm.variableSizedCellSpace();
     }
 
@@ -123,7 +125,7 @@ public:
         return storage()[offset.offset()];
     }
 
-    // Methods intended for use by the GenericArguments mixin.
+    // Methods intended for use by the GenericArgumentsImpl mixin.
     bool overrodeThings() const { return !!m_mappedArguments; }
     void overrideThings(JSGlobalObject*);
     void overrideThingsIfNecessary(JSGlobalObject*);
@@ -131,17 +133,17 @@ public:
 
     void initModifiedArgumentsDescriptorIfNecessary(JSGlobalObject* globalObject)
     {
-        GenericArguments<DirectArguments>::initModifiedArgumentsDescriptorIfNecessary(globalObject, m_length);
+        GenericArgumentsImpl<DirectArguments>::initModifiedArgumentsDescriptorIfNecessary(globalObject, m_length);
     }
 
     void setModifiedArgumentDescriptor(JSGlobalObject* globalObject, unsigned index)
     {
-        GenericArguments<DirectArguments>::setModifiedArgumentDescriptor(globalObject, index, m_length);
+        GenericArgumentsImpl<DirectArguments>::setModifiedArgumentDescriptor(globalObject, index, m_length);
     }
 
     bool isModifiedArgumentDescriptor(unsigned index)
     {
-        return GenericArguments<DirectArguments>::isModifiedArgumentDescriptor(index, m_length);
+        return GenericArgumentsImpl<DirectArguments>::isModifiedArgumentDescriptor(index, m_length);
     }
 
     void copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length);
@@ -178,7 +180,7 @@ public:
 private:
     WriteBarrier<Unknown>* storage()
     {
-        return bitwise_cast<WriteBarrier<Unknown>*>(bitwise_cast<char*>(this) + storageOffset());
+        return std::bit_cast<WriteBarrier<Unknown>*>(std::bit_cast<char*>(this) + storageOffset());
     }
 
     unsigned mappedArgumentsSize();
@@ -193,3 +195,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

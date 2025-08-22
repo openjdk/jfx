@@ -31,8 +31,6 @@
 #include "config.h"
 #include "DateTimeLocalInputType.h"
 
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-
 #include "DateComponents.h"
 #include "DateTimeFieldsState.h"
 #include "Decimal.h"
@@ -42,9 +40,12 @@
 #include "InputTypeNames.h"
 #include "PlatformLocale.h"
 #include "StepRange.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DateTimeLocalInputType);
 
 using namespace HTMLNames;
 
@@ -140,5 +141,3 @@ void DateTimeLocalInputType::setupLayoutParameters(DateTimeEditElement::LayoutPa
 }
 
 } // namespace WebCore
-
-#endif

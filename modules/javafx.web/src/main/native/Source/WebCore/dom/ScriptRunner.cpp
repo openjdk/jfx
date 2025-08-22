@@ -31,8 +31,11 @@
 #include "Element.h"
 #include "PendingScript.h"
 #include "ScriptElement.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptRunner);
 
 ScriptRunner::ScriptRunner(Document& document)
     : m_document(document)
@@ -62,10 +65,12 @@ void ScriptRunner::ref() const
 {
     m_document->ref();
 }
+
 void ScriptRunner::deref() const
 {
     m_document->deref();
 }
+
 void ScriptRunner::queueScriptForExecution(ScriptElement& scriptElement, LoadableScript& loadableScript, ExecutionType executionType)
 {
     ASSERT(scriptElement.element().isConnected());

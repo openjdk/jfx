@@ -26,6 +26,7 @@
 #pragma once
 
 #include "RenderTreeBuilder.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -33,7 +34,7 @@ class RenderBlockFlow;
 class RenderMultiColumnFlow;
 
 class RenderTreeBuilder::MultiColumn {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MultiColumn);
 public:
     MultiColumn(RenderTreeBuilder&);
 
@@ -42,7 +43,7 @@ public:
     // sets. If |child| is such a renderer, resolve it to the placeholder that lives at the original
     // location in the tree.
     RenderObject* resolveMovedChild(RenderFragmentedFlow& enclosingFragmentedFlow, RenderObject* beforeChild);
-    void restoreColumnSpannersForContainer(const RenderElement& container, RenderMultiColumnFlow&);
+    void restoreColumnSpannersForContainer(RenderMultiColumnFlow&, const RenderElement& container);
     void multiColumnDescendantInserted(RenderMultiColumnFlow&, RenderObject& newDescendant);
     void multiColumnRelativeWillBeRemoved(RenderMultiColumnFlow&, RenderObject& relative, RenderTreeBuilder::CanCollapseAnonymousBlock);
     static RenderObject* adjustBeforeChildForMultiColumnSpannerIfNeeded(RenderObject& beforeChild);

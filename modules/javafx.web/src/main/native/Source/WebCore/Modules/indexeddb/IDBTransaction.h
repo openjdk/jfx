@@ -30,6 +30,7 @@
 #include "IDBError.h"
 #include "IDBGetAllRecordsData.h"
 #include "IDBGetRecordData.h"
+#include "IDBIndexIdentifier.h"
 #include "IDBKeyRangeData.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBOpenDBRequest.h"
@@ -193,13 +194,13 @@ private:
     void createIndexOnServer(IDBClient::TransactionOperation&, const IDBIndexInfo&);
     void didCreateIndexOnServer(const IDBResultData&);
 
-    void renameIndexOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier, const uint64_t& indexIdentifier, const String& newName);
+    void renameIndexOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
     void didRenameIndexOnServer(const IDBResultData&);
 
     void clearObjectStoreOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier);
     void didClearObjectStoreOnServer(IDBRequest&, const IDBResultData&);
 
-    void putOrAddOnServer(IDBClient::TransactionOperation&, RefPtr<IDBKey>, RefPtr<SerializedScriptValue>, const IndexedDB::ObjectStoreOverwriteMode&);
+    void putOrAddOnServer(IDBClient::TransactionOperation&, const IDBObjectStoreInfo&, RefPtr<IDBKey>&&, Ref<SerializedScriptValue>&&, const IndexedDB::ObjectStoreOverwriteMode&);
     void didPutOrAddOnServer(IDBRequest&, const IDBResultData&);
 
     void getRecordOnServer(IDBClient::TransactionOperation&, const IDBGetRecordData&);
@@ -277,18 +278,18 @@ public:
     TransactionActivator(IDBTransaction* transaction)
         : m_transaction(transaction)
     {
-        if (m_transaction)
-            m_transaction->activate();
+        if (transaction)
+            transaction->activate();
     }
 
     ~TransactionActivator()
     {
-        if (m_transaction)
-            m_transaction->deactivate();
+        if (RefPtr transaction = m_transaction)
+            transaction->deactivate();
     }
 
 private:
-    IDBTransaction* m_transaction;
+    RefPtr<IDBTransaction> m_transaction;
 };
 
 } // namespace WebCore

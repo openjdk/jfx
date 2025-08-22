@@ -254,6 +254,7 @@ CallData RuntimeObject::getCallData(JSCell* cell)
         callData.type = CallData::Type::Native;
         callData.native.function = callRuntimeObject;
         callData.native.isBoundFunction = false;
+        callData.native.isWasm = false;
     }
 
     return callData;
@@ -282,6 +283,7 @@ CallData RuntimeObject::getConstructData(JSCell* cell)
         constructData.type = CallData::Type::Native;
         constructData.native.function = callRuntimeConstructor;
         constructData.native.isBoundFunction = false;
+        constructData.native.isWasm = false;
     }
 
     return constructData;
@@ -311,7 +313,7 @@ Exception* throwRuntimeObjectInvalidAccessError(JSGlobalObject* lexicalGlobalObj
 
 JSC::GCClient::IsoSubspace* RuntimeObject::subspaceForImpl(JSC::VM& vm)
 {
-    return &static_cast<JSVMClientData*>(vm.clientData)->runtimeObjectSpace();
+    return &downcast<JSVMClientData>(vm.clientData)->runtimeObjectSpace();
 }
 
 }

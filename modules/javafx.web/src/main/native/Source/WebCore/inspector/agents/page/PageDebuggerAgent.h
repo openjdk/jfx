@@ -32,6 +32,7 @@
 #pragma once
 
 #include "WebDebuggerAgent.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -43,7 +44,7 @@ class UserGestureEmulationScope;
 
 class PageDebuggerAgent final : public WebDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(PageDebuggerAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PageDebuggerAgent);
 public:
     PageDebuggerAgent(PageAgentContext&);
     ~PageDebuggerAgent();
@@ -64,10 +65,6 @@ public:
     void mainFrameStartedLoading();
     void mainFrameStoppedLoading();
     void mainFrameNavigated();
-    void didRequestAnimationFrame(int callbackId, Document&);
-    void willFireAnimationFrame(int callbackId);
-    void didCancelAnimationFrame(int callbackId);
-    void didFireAnimationFrame(int callbackId);
 
 private:
     void internalEnable();
@@ -80,7 +77,7 @@ private:
 
     Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
 
-    Page& m_inspectedPage;
+    WeakRef<Page> m_inspectedPage;
     Vector<UniqueRef<UserGestureEmulationScope>> m_breakpointActionUserGestureEmulationScopeStack;
 };
 

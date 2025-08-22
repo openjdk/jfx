@@ -383,14 +383,14 @@ static ALWAYS_INLINE bool isDenormal(double x)
 {
     static const uint64_t signbit = 0x8000000000000000ULL;
     static const uint64_t minNormal = 0x0001000000000000ULL;
-    return (bitwise_cast<uint64_t>(x) & ~signbit) - 1 < minNormal - 1;
+    return (std::bit_cast<uint64_t>(x) & ~signbit) - 1 < minNormal - 1;
 }
 
 static ALWAYS_INLINE bool isEdgeCase(double x)
 {
     static const uint64_t signbit = 0x8000000000000000ULL;
     static const uint64_t infinity = 0x7fffffffffffffffULL;
-    return (bitwise_cast<uint64_t>(x) & ~signbit) - 1 >= infinity - 1;
+    return (std::bit_cast<uint64_t>(x) & ~signbit) - 1 >= infinity - 1;
 }
 
 static ALWAYS_INLINE double mathPowInternal(double x, double y)
@@ -648,6 +648,7 @@ static inline float roundevenf(float operand)
     }
     return rounded;
 }
+
 static inline double roundeven(double operand)
 {
     double rounded = round(operand);

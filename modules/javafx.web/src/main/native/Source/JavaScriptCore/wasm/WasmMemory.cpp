@@ -49,9 +49,9 @@
 #include <limits>
 #include <mutex>
 
-namespace JSC {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED_TEMPLATE(MemoryJSWebAssemblyInstanceWeakCGSet, Wasm::Memory::JSWebAssemblyInstanceWeakCGSet);
+namespace JSC {
 
 namespace Wasm {
 
@@ -149,7 +149,7 @@ Ref<Memory> Memory::createZeroSized(VM& vm, MemorySharingMode sharingMode, WTF::
     return adoptRef(*new Memory(vm, PageCount(0), PageCount(0), sharingMode, WTFMove(growSuccessCallback)));
 }
 
-RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, MemorySharingMode sharingMode, WTF::Function<void(GrowSuccess, PageCount, PageCount)>&& growSuccessCallback)
+RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, MemorySharingMode sharingMode, std::optional<MemoryMode> desiredMemoryMode, WTF::Function<void(GrowSuccess, PageCount, PageCount)>&& growSuccessCallback)
 {
     ASSERT(initial);
     RELEASE_ASSERT(!maximum || maximum >= initial); // This should be guaranteed by our caller.
@@ -159,7 +159,6 @@ RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, M
 
     if (initialBytes > MAX_ARRAY_BUFFER_SIZE)
         return nullptr; // Client will throw OOMError.
-
 
     if (maximum && !maximumBytes) {
         // User specified a zero maximum, initial size must also be zero.
@@ -175,14 +174,14 @@ RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, M
         return nullptr;
 
     char* fastMemory = nullptr;
-    if (Options::useWasmFastMemory()) {
+    if (Options::useWasmFastMemory() && desiredMemoryMode.value_or(MemoryMode::Signaling) == MemoryMode::Signaling) {
 #if CPU(ADDRESS32)
         RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("32-bit platforms don't support fast memory.");
 #endif
         tryAllocate(vm,
             [&] () -> BufferMemoryResult::Kind {
                 auto result = BufferMemoryManager::singleton().tryAllocateFastMemory();
-                fastMemory = bitwise_cast<char*>(result.basePtr);
+                fastMemory = std::bit_cast<char*>(result.basePtr);
                 return result.kind;
             });
     }
@@ -206,6 +205,9 @@ RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, M
         return nullptr;
     }
 
+    if (desiredMemoryMode == MemoryMode::Signaling)
+        return nullptr;
+
     if (UNLIKELY(Options::crashIfWasmCantFastMemory()))
         webAssemblyCouldntGetFastMemory();
 
@@ -226,7 +228,7 @@ RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, M
         tryAllocate(vm,
             [&] () -> BufferMemoryResult::Kind {
                 auto result = BufferMemoryManager::singleton().tryAllocateGrowableBoundsCheckingMemory(maximumBytes);
-                slowMemory = bitwise_cast<char*>(result.basePtr);
+                slowMemory = std::bit_cast<char*>(result.basePtr);
                 return result.kind;
             });
         if (!slowMemory) {
@@ -451,5 +453,7 @@ void Memory::dump(PrintStream& out) const
 } // namespace Wasm
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

@@ -32,6 +32,9 @@
 #include "Timer.h"
 #include <wtf/EnumTraits.h>
 #include <wtf/HashSet.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -51,8 +54,8 @@ enum class CaptionUserPreferencesDisplayMode : uint8_t {
     Manual,
 };
 
-class CaptionUserPreferences : public RefCounted<CaptionUserPreferences>, public CanMakeWeakPtr<CaptionUserPreferences> {
-    WTF_MAKE_FAST_ALLOCATED;
+class CaptionUserPreferences : public RefCountedAndCanMakeWeakPtr<CaptionUserPreferences> {
+    WTF_MAKE_TZONE_ALLOCATED(CaptionUserPreferences);
 public:
     static Ref<CaptionUserPreferences> create(PageGroup&);
     virtual ~CaptionUserPreferences();
@@ -92,7 +95,7 @@ public:
 
     virtual String displayNameForTrack(TextTrack*) const;
     MediaSelectionOption mediaSelectionOptionForTrack(TextTrack*) const;
-    virtual Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>);
+    virtual Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*, UncheckedKeyHashSet<TextTrack::Kind>);
 
     virtual String displayNameForTrack(AudioTrack*) const;
     MediaSelectionOption mediaSelectionOptionForTrack(AudioTrack*) const;
@@ -141,7 +144,7 @@ private:
 };
 
 class CaptionUserPreferencesTestingModeToken {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(CaptionUserPreferencesTestingModeToken, WEBCORE_EXPORT);
 public:
     CaptionUserPreferencesTestingModeToken(CaptionUserPreferences& parent)
         : m_parent(parent)

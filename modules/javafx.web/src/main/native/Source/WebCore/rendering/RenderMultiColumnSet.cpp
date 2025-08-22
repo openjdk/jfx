@@ -326,7 +326,7 @@ void RenderMultiColumnSet::updateLogicalWidth()
 
     // FIXME: When we add fragments support, we'll start it off at the width of the multi-column
     // block in that particular fragment.
-    setLogicalWidth(multiColumnBlockFlow()->contentLogicalWidth());
+    setLogicalWidth(multiColumnBlockFlow()->contentBoxLogicalWidth());
 }
 
 bool RenderMultiColumnSet::requiresBalancing() const
@@ -432,7 +432,7 @@ LayoutUnit RenderMultiColumnSet::calculateMaxColumnHeight() const
     LayoutUnit availableHeight = multiColumnFlow()->columnHeightAvailable();
     LayoutUnit maxColumnHeight = availableHeight ? availableHeight : RenderFragmentedFlow::maxLogicalHeight();
     if (!multicolStyle.logicalMaxHeight().isUndefined())
-        maxColumnHeight = std::min(maxColumnHeight, multicolBlock->computeContentLogicalHeight(MaxSize, multicolStyle.logicalMaxHeight(), std::nullopt).value_or(maxColumnHeight));
+        maxColumnHeight = std::min(maxColumnHeight, multicolBlock->computeContentLogicalHeight(RenderBox::SizeType::MaxSize, multicolStyle.logicalMaxHeight(), std::nullopt).value_or(maxColumnHeight));
     return heightAdjustedForSetOffset(maxColumnHeight);
 }
 
@@ -443,7 +443,7 @@ LayoutUnit RenderMultiColumnSet::columnGap() const
     RenderBlockFlow& parentBlock = downcast<RenderBlockFlow>(*parent());
     if (parentBlock.style().columnGap().isNormal())
         return LayoutUnit(parentBlock.style().fontDescription().computedSize()); // "1em" is recommended as the normal gap setting. Matches <p> margins.
-    return valueForLength(parentBlock.style().columnGap().length(), parentBlock.availableLogicalWidth());
+    return valueForLength(parentBlock.style().columnGap().length(), parentBlock.contentBoxLogicalWidth());
 }
 
 unsigned RenderMultiColumnSet::columnCount() const
@@ -477,10 +477,10 @@ LayoutUnit RenderMultiColumnSet::columnLogicalLeft(unsigned index) const
     bool progressionInline = multiColumnFlow()->progressionIsInline();
 
     if (progressionInline) {
-        if (style().isLeftToRightDirection() ^ progressionReversed)
+        if (writingMode().isLogicalLeftInlineStart() ^ progressionReversed)
             colLogicalLeft += index * (colLogicalWidth + colGap);
         else
-            colLogicalLeft += contentLogicalWidth() - colLogicalWidth - index * (colLogicalWidth + colGap);
+            colLogicalLeft += contentBoxLogicalWidth() - colLogicalWidth - index * (colLogicalWidth + colGap);
     }
 
     return colLogicalLeft;
@@ -499,7 +499,7 @@ LayoutUnit RenderMultiColumnSet::columnLogicalTop(unsigned index) const
         if (!progressionReversed)
             colLogicalTop += index * (colLogicalHeight + colGap);
         else
-            colLogicalTop += contentLogicalHeight() - colLogicalHeight - index * (colLogicalHeight + colGap);
+            colLogicalTop += contentBoxLogicalHeight() - colLogicalHeight - index * (colLogicalHeight + colGap);
     }
 
     return colLogicalTop;
@@ -596,8 +596,8 @@ LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutR
 
     bool isFirstColumn = !index;
     bool isLastColumn = index == colCount - 1;
-    bool isLeftmostColumn = style().isLeftToRightDirection() ^ progressionReversed ? isFirstColumn : isLastColumn;
-    bool isRightmostColumn = style().isLeftToRightDirection() ^ progressionReversed ? isLastColumn : isFirstColumn;
+    bool isLeftmostColumn = writingMode().isLogicalLeftInlineStart() ^ progressionReversed ? isFirstColumn : isLastColumn;
+    bool isRightmostColumn = writingMode().isLogicalLeftInlineStart() ^ progressionReversed ? isLastColumn : isFirstColumn;
 
     // Calculate the overflow rectangle, based on the flow thread's, clipped at column logical
     // top/bottom unless it's the first/last column.
@@ -643,18 +643,18 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     bool antialias = BorderPainter::shouldAntialiasLines(paintInfo.context());
 
     if (fragmentedFlow->progressionIsInline()) {
-        bool leftToRight = style().isLeftToRightDirection() ^ fragmentedFlow->progressionIsReversed();
-        LayoutUnit currLogicalLeftOffset = leftToRight ? 0_lu : contentLogicalWidth();
+        bool isLogicalLeftInlineStart = writingMode().isLogicalLeftInlineStart() ^ fragmentedFlow->progressionIsReversed();
+        LayoutUnit currLogicalLeftOffset = isLogicalLeftInlineStart ? 0_lu : contentBoxLogicalWidth();
         LayoutUnit ruleAdd = logicalLeftOffsetForContent();
-        LayoutUnit ruleLogicalLeft = leftToRight ? 0_lu : contentLogicalWidth();
+        LayoutUnit ruleLogicalLeft = isLogicalLeftInlineStart ? 0_lu : contentBoxLogicalWidth();
         LayoutUnit inlineDirectionSize = computedColumnWidth();
         BoxSide boxSide = isHorizontalWritingMode()
-            ? leftToRight ? BoxSide::Left : BoxSide::Right
-            : leftToRight ? BoxSide::Top : BoxSide::Bottom;
+            ? isLogicalLeftInlineStart ? BoxSide::Left : BoxSide::Right
+            : isLogicalLeftInlineStart ? BoxSide::Top : BoxSide::Bottom;
 
         for (unsigned i = 0; i < colCount; i++) {
             // Move to the next position.
-            if (leftToRight) {
+            if (isLogicalLeftInlineStart) {
                 ruleLogicalLeft += inlineDirectionSize + colGap / 2;
                 currLogicalLeftOffset += inlineDirectionSize + colGap;
             } else {
@@ -665,9 +665,9 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
             // Now paint the column rule.
             if (i < colCount - 1) {
                 LayoutUnit ruleLeft = isHorizontalWritingMode() ? paintOffset.x() + ruleLogicalLeft - ruleThickness / 2 + ruleAdd : paintOffset.x() + borderLeft() + paddingLeft();
-                LayoutUnit ruleRight = isHorizontalWritingMode() ? ruleLeft + ruleThickness : ruleLeft + contentWidth();
+                LayoutUnit ruleRight = isHorizontalWritingMode() ? ruleLeft + ruleThickness : ruleLeft + contentBoxWidth();
                 LayoutUnit ruleTop = isHorizontalWritingMode() ? paintOffset.y() + borderTop() + paddingTop() : paintOffset.y() + ruleLogicalLeft - ruleThickness / 2 + ruleAdd;
-                LayoutUnit ruleBottom = isHorizontalWritingMode() ? ruleTop + contentHeight() : ruleTop + ruleThickness;
+                LayoutUnit ruleBottom = isHorizontalWritingMode() ? ruleTop + contentBoxHeight() : ruleTop + ruleThickness;
                 IntRect pixelSnappedRuleRect = snappedIntRect(ruleLeft, ruleTop, ruleRight - ruleLeft, ruleBottom - ruleTop);
                 BorderPainter::drawLineForBoxSide(paintInfo.context(), document(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
             }
@@ -675,11 +675,11 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
             ruleLogicalLeft = currLogicalLeftOffset;
         }
     } else {
-        bool topToBottom = !style().isFlippedBlocksWritingMode() ^ fragmentedFlow->progressionIsReversed();
+        bool topToBottom = !writingMode().isBlockFlipped() ^ fragmentedFlow->progressionIsReversed();
         LayoutUnit ruleLeft = isHorizontalWritingMode() ? 0_lu : colGap / 2 - colGap - ruleThickness / 2;
-        LayoutUnit ruleWidth = isHorizontalWritingMode() ? contentWidth() : ruleThickness;
+        LayoutUnit ruleWidth = isHorizontalWritingMode() ? contentBoxWidth() : ruleThickness;
         LayoutUnit ruleTop = isHorizontalWritingMode() ? colGap / 2 - colGap - ruleThickness / 2 : 0_lu;
-        LayoutUnit ruleHeight = isHorizontalWritingMode() ? ruleThickness : contentHeight();
+        LayoutUnit ruleHeight = isHorizontalWritingMode() ? ruleThickness : contentBoxHeight();
         LayoutRect ruleRect(ruleLeft, ruleTop, ruleWidth, ruleHeight);
 
         if (!topToBottom) {
@@ -865,11 +865,11 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
         LayoutSize translationOffset;
         LayoutUnit inlineOffset = progressionIsInline ? i * (colLogicalWidth + colGap) : 0_lu;
 
-        bool leftToRight = style().isLeftToRightDirection() ^ progressionReversed;
-        if (!leftToRight) {
+        bool isLogicalLeftInlineStart = writingMode().isLogicalLeftInlineStart() ^ progressionReversed;
+        if (!isLogicalLeftInlineStart) {
             inlineOffset = -inlineOffset;
             if (progressionReversed)
-                inlineOffset += contentLogicalWidth() - colLogicalWidth;
+                inlineOffset += contentBoxLogicalWidth() - colLogicalWidth;
         }
         translationOffset.setWidth(inlineOffset);
 
@@ -880,7 +880,7 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
             else
                 blockOffset -= i * (computedColumnHeight() + colGap);
         }
-        if (isFlippedWritingMode(style().writingMode()))
+        if (style().writingMode().isBlockFlipped())
             blockOffset = -blockOffset;
         translationOffset.setHeight(blockOffset);
         if (!isHorizontalWritingMode())
@@ -935,7 +935,7 @@ LayoutPoint RenderMultiColumnSet::columnTranslationForOffset(const LayoutUnit& o
         else
             blockOffset -= startColumn * (computedColumnHeight() + colGap);
     }
-    if (isFlippedWritingMode(style().writingMode()))
+    if (style().writingMode().isBlockFlipped())
         blockOffset = -blockOffset;
     translationOffset.setY(blockOffset);
 
@@ -1044,7 +1044,7 @@ Node* RenderMultiColumnSet::nodeForHitTest() const
     return document().documentElement();
 }
 
-void RenderMultiColumnSet::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
+void RenderMultiColumnSet::updateHitTestResult(HitTestResult& result, const LayoutPoint& point) const
 {
     if (result.innerNode() || !parent()->isRenderView())
         return;

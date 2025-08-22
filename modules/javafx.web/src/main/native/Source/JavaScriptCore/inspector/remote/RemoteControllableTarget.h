@@ -44,6 +44,7 @@ using TargetID = unsigned;
 
 class JS_EXPORT_PRIVATE RemoteControllableTarget : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RemoteControllableTarget> {
 public:
+    RemoteControllableTarget();
     virtual ~RemoteControllableTarget();
 
     void init();

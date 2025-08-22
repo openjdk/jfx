@@ -1,3 +1,5 @@
+include(CheckCXXSymbolExists)
+
 if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/Modules/mediastream/gstreamer"
@@ -94,7 +96,6 @@ if (ENABLE_VIDEO)
             ${GSTREAMER_MPEGTS_LIBRARIES}
         )
     endif ()
-
     if (USE_GSTREAMER_GL AND NOT USE_GSTREAMER_FULL)
             list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
                 ${GSTREAMER_GL_INCLUDE_DIRS}
@@ -103,6 +104,15 @@ if (ENABLE_VIDEO)
                 ${GSTREAMER_GL_LIBRARIES}
             )
         endif ()
+
+    if (USE_GSTREAMER_GL AND NOT USE_GSTREAMER_FULL)
+        list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
+            ${GSTREAMER_GL_INCLUDE_DIRS}
+        )
+        list(APPEND WebCore_LIBRARIES
+            ${GSTREAMER_GL_LIBRARIES}
+        )
+    endif ()
 
     if (USE_LIBWEBRTC)
         list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
@@ -131,7 +141,7 @@ if (ENABLE_VIDEO)
     endif ()
 endif ()
 
-if (ENABLE_WEB_AUDIO OR ENABLE_WEB_CODECS)
+if (ENABLE_MEDIA_STREAM OR ENABLE_WEB_AUDIO OR ENABLE_WEB_CODECS)
     list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/platform/audio/gstreamer"
     )
@@ -158,4 +168,35 @@ if (ENABLE_ENCRYPTED_MEDIA AND ENABLE_THUNDER)
         list(APPEND WebCore_LIBRARIES
             ${THUNDER_LIBRARIES}
         )
+
+    # Globally add thunder libraries, required for the check_cxx_symbol_exists call.
+    set(CMAKE_REQUIRED_LIBRARIES ${THUNDER_LIBRARIES})
+
+    check_cxx_symbol_exists(opencdm_gstreamer_session_decrypt_buffer ${THUNDER_INCLUDE_DIR}/open_cdm_adapter.h HAS_OCDM_DECRYPT_BUFFER)
+    if (HAS_OCDM_DECRYPT_BUFFER)
+      list(APPEND WebCore_PRIVATE_DEFINITIONS THUNDER_HAS_OCDM_DECRYPT_BUFFER=1)
+    else ()
+      list(APPEND WebCore_PRIVATE_DEFINITIONS THUNDER_HAS_OCDM_DECRYPT_BUFFER=0)
+    endif ()
+endif ()
+
+if (ENABLE_SPEECH_SYNTHESIS)
+    if (USE_SPIEL)
+        list(APPEND WebCore_SOURCES
+            platform/spiel/PlatformSpeechSynthesizerSpiel.cpp
+        )
+        list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
+            ${SPIEL_INCLUDE_DIRS}
+        )
+        list(APPEND WebCore_LIBRARIES
+            LibSpiel::LibSpiel
+        )
+    elseif (USE_FLITE)
+        list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
+            ${Flite_INCLUDE_DIRS}
+        )
+        list(APPEND WebCore_LIBRARIES
+            ${Flite_LIBRARIES}
+        )
+    endif ()
 endif ()

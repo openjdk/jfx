@@ -36,6 +36,7 @@
 #include "WorkerThreadableWebSocketChannel.h"
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -44,16 +45,12 @@ namespace WebCore {
 class ScriptExecutionContext;
 class WebSocketChannelClient;
 
-class ThreadableWebSocketChannelClientWrapper : public ThreadSafeRefCounted<ThreadableWebSocketChannelClientWrapper> {
+class ThreadableWebSocketChannelClientWrapper : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ThreadableWebSocketChannelClientWrapper> {
 public:
     static Ref<ThreadableWebSocketChannelClientWrapper> create(ScriptExecutionContext&, WebSocketChannelClient&);
 
-    void clearSyncMethodDone();
-    void setSyncMethodDone();
-    bool syncMethodDone() const;
-
     WorkerThreadableWebSocketChannel::Peer* peer() const;
-    void didCreateWebSocketChannel(WorkerThreadableWebSocketChannel::Peer*);
+    void didCreateWebSocketChannel(Ref<WorkerThreadableWebSocketChannel::Peer>&&);
     void clearPeer();
 
     bool failedWebSocketChannelCreation() const;
@@ -64,12 +61,6 @@ public:
     void setSubprotocol(const String&);
     String extensions() const;
     void setExtensions(const String&);
-
-    ThreadableWebSocketChannel::SendResult sendRequestResult() const;
-    void setSendRequestResult(ThreadableWebSocketChannel::SendResult);
-
-    unsigned bufferedAmount() const;
-    void setBufferedAmount(unsigned);
 
     void clearClient();
 
@@ -91,15 +82,12 @@ private:
     void processPendingTasks();
 
     WeakPtr<ScriptExecutionContext> m_context;
-    WebSocketChannelClient* m_client;
-    WorkerThreadableWebSocketChannel::Peer* m_peer;
+    ThreadSafeWeakPtr<WebSocketChannelClient> m_client;
+    RefPtr<WorkerThreadableWebSocketChannel::Peer> m_peer;
     bool m_failedWebSocketChannelCreation;
-    bool m_syncMethodDone;
     // ThreadSafeRefCounted must not have String member variables.
     Vector<UChar> m_subprotocol;
     Vector<UChar> m_extensions;
-    ThreadableWebSocketChannel::SendResult m_sendRequestResult;
-    unsigned m_bufferedAmount;
     bool m_suspended;
     Vector<std::unique_ptr<ScriptExecutionContext::Task>> m_pendingTasks;
 };

@@ -250,7 +250,7 @@ void DeleteSelectionCommand::setStartingSelectionOnSmartDelete(const Position& s
         newBase = end;
         newExtent = start;
     }
-    setStartingSelection(VisibleSelection(newBase, newExtent, startingSelection().isDirectional()));
+    setStartingSelection(VisibleSelection(newBase, newExtent, startingSelection().directionality()));
 }
 
 bool DeleteSelectionCommand::shouldSmartDeleteParagraphSpacers()
@@ -489,7 +489,7 @@ void DeleteSelectionCommand::insertBlockPlaceholderForTableCellIfNeeded(Element&
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         CheckedPtr renderer = dynamicDowncast<RenderTableCell>(element.renderer());
-        if (!renderer || renderer->contentHeight() > 0)
+        if (!renderer || renderer->contentBoxHeight() > 0)
             return;
     }
     insertBlockPlaceholder(firstEditablePositionInNode(&element));
@@ -605,18 +605,22 @@ void DeleteSelectionCommand::makeStylingElementsDirectChildrenOfEditableRootToPr
     if (!range)
         return;
     auto nodes = intersectingNodes(*range).begin();
+    Vector<Ref<HTMLElement>> stylingElements;
     while (nodes) {
         Ref node = *nodes;
         auto shouldMove = is<HTMLLinkElement>(node) || is<HTMLStyleElement>(node);
-        if (!shouldMove)
-            nodes.advance();
-        else {
+        if (shouldMove) {
             nodes.advanceSkippingChildren();
-            if (RefPtr rootEditableElement = node->rootEditableElement()) {
-                removeNode(node.get());
-                appendNode(node.get(), *rootEditableElement);
-            }
+            stylingElements.append(downcast<HTMLElement>(WTFMove(node)));
+        } else
+            nodes.advance();
         }
+    for (auto& stylingElement : stylingElements) {
+        RefPtr rootEditableElement = stylingElement->rootEditableElement();
+        if (!rootEditableElement)
+            continue;
+        removeNode(stylingElement.get());
+        appendNode(stylingElement.get(), *rootEditableElement);
     }
 }
 
@@ -695,6 +699,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                 node = nullptr;
                 continue;
             }
+
             if (!m_downstreamEnd.deprecatedNode()->isDescendantOf(*node)) {
                 RefPtr parentNode = node->parentNode();
                 if (!parentNode || canHaveChildrenForEditing(*parentNode)) {
@@ -707,6 +712,7 @@ void DeleteSelectionCommand::handleGeneralDelete()
                     continue;
                 }
             }
+
                 RefPtr lastDescendant { node->lastDescendant() };
                 if (m_downstreamEnd.deprecatedNode() == lastDescendant && m_downstreamEnd.deprecatedEditingOffset() >= caretMaxOffset(*lastDescendant)) {
                     removeNode(*node);
@@ -815,6 +821,7 @@ void DeleteSelectionCommand::mergeParagraphs()
     if (mergeDestination == startOfParagraphToMove)
         return;
 
+    VisiblePosition currentStartOfParagraphToMove = startOfParagraph(startOfParagraphToMove, CanSkipOverEditingBoundary);
     VisiblePosition endOfParagraphToMove = endOfParagraph(startOfParagraphToMove, CanSkipOverEditingBoundary);
 
     if (mergeDestination == endOfParagraphToMove)
@@ -851,8 +858,8 @@ void DeleteSelectionCommand::mergeParagraphs()
     // moveParagraphs will insert placeholders if it removes blocks that would require their use, don't let block
     // removals that it does cause the insertion of *another* placeholder.
     bool needPlaceholder = m_needPlaceholder;
-    bool paragraphToMergeIsEmpty = (startOfParagraphToMove == endOfParagraphToMove);
-    moveParagraph(startOfParagraphToMove, endOfParagraphToMove, mergeDestination, false, !paragraphToMergeIsEmpty);
+    bool paragraphToMergeIsEmpty = (currentStartOfParagraphToMove == endOfParagraphToMove);
+    moveParagraph(currentStartOfParagraphToMove, endOfParagraphToMove, mergeDestination, false, !paragraphToMergeIsEmpty);
     m_needPlaceholder = needPlaceholder;
     // The endingPosition was likely clobbered by the move, so recompute it (moveParagraph selects the moved paragraph).
 
@@ -952,7 +959,7 @@ String DeleteSelectionCommand::originalStringForAutocorrectionAtBeginningOfSelec
         return String();
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
-    for (auto& marker : protectedDocument()->markers().markersInRange(*rangeOfFirstCharacter, DocumentMarker::Type::Autocorrected)) {
+    for (auto& marker : protectedDocument()->markers().markersInRange(*rangeOfFirstCharacter, DocumentMarkerType::Autocorrected)) {
         int startOffset = marker->startOffset();
         if (startOffset == startOfSelection.deepEquivalent().offsetInContainerNode())
             return marker->description();
@@ -1030,7 +1037,7 @@ void DeleteSelectionCommand::doApply()
     // want to replace it with a placeholder BR!
     if (handleSpecialCaseBRDelete()) {
         calculateTypingStyleAfterDelete();
-        setEndingSelection(VisibleSelection(m_endingPosition, affinity, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(m_endingPosition, affinity, endingSelection().directionality()));
         clearTransientState();
         rebalanceWhitespace();
         return;
@@ -1073,7 +1080,7 @@ void DeleteSelectionCommand::doApply()
     if (!originalString.isEmpty())
         document->editor().deletedAutocorrectionAtPosition(m_endingPosition, originalString);
 
-    setEndingSelection(VisibleSelection(VisiblePosition(m_endingPosition, affinity), endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(VisiblePosition(m_endingPosition, affinity), endingSelection().directionality()));
     clearTransientState();
 }
 

@@ -35,11 +35,11 @@
 #include "HTMLInputElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "RenderPtr.h"
-#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -70,7 +70,7 @@ enum class DateComponentsType : uint8_t;
 // Do not expose instances of InputType and classes derived from it to classes
 // other than HTMLInputElement.
 class InputType : public RefCounted<InputType> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InputType);
 public:
     enum class Type : uint32_t {
         Button          = 1 << 0,
@@ -159,8 +159,6 @@ public:
     virtual ~InputType();
 
     void detachFromElement() { m_element = nullptr; }
-
-    static bool themeSupportsDataListUI(InputType*);
 
     virtual const AtomString& formControlType() const = 0;
 
@@ -329,9 +327,7 @@ public:
     virtual HTMLElement* sliderThumbElement() const { return nullptr; }
     virtual HTMLElement* sliderTrackElement() const { return nullptr; }
     virtual HTMLElement* placeholderElement() const;
-#if ENABLE(DATALIST_ELEMENT)
     virtual HTMLElement* dataListButtonElement() const { return nullptr; }
-#endif
     RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded();
 
     // Miscellaneous functions.
@@ -347,7 +343,7 @@ public:
     virtual bool storesValueSeparateFromAttribute();
     virtual void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection);
     virtual bool shouldResetOnDocumentActivation();
-    virtual bool shouldRespectListAttribute();
+    virtual bool shouldRespectListAttribute() { return false; }
     virtual bool shouldRespectHeightAndWidthAttributes();
     virtual bool supportsPlaceholder() const;
     virtual bool supportsReadOnly() const;
@@ -364,9 +360,7 @@ public:
     virtual bool isPresentingAttachedView() const;
     virtual bool supportsSelectionAPI() const;
     virtual bool dirAutoUsesValue() const;
-#if ENABLE(DATALIST_ELEMENT)
     virtual bool isFocusingWithDataListDropdown() const { return false; };
-#endif
     virtual void willUpdateCheckedness(bool /*nowChecked*/, WasSetByJavaScript) { }
 
     // Parses the specified string for the type, and return
@@ -389,10 +383,8 @@ public:
 
     void dispatchSimulatedClickIfActive(KeyboardEvent&) const;
 
-#if ENABLE(DATALIST_ELEMENT)
-    virtual void dataListMayHaveChanged();
+    virtual void dataListMayHaveChanged() { }
     virtual std::optional<Decimal> findClosestTickMarkValue(const Decimal&);
-#endif
 
 #if ENABLE(DRAG_SUPPORT)
     virtual bool receiveDroppedFiles(const DragData&);

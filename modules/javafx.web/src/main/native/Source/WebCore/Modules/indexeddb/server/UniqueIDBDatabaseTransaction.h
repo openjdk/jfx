@@ -26,11 +26,13 @@
 #pragma once
 
 #include "IDBError.h"
+#include "IDBIndexIdentifier.h"
 #include "IDBObjectStoreIdentifier.h"
 #include "IDBTransactionInfo.h"
+#include "IndexKey.h"
 #include <wtf/Deque.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -53,11 +55,11 @@ class IDBServer;
 class UniqueIDBDatabase;
 class UniqueIDBDatabaseConnection;
 
-class UniqueIDBDatabaseTransaction : public CanMakeWeakPtr<UniqueIDBDatabaseTransaction>, public RefCounted<UniqueIDBDatabaseTransaction> {
+class UniqueIDBDatabaseTransaction : public RefCountedAndCanMakeWeakPtr<UniqueIDBDatabaseTransaction> {
 public:
     static Ref<UniqueIDBDatabaseTransaction> create(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
 
-    ~UniqueIDBDatabaseTransaction();
+    WEBCORE_EXPORT ~UniqueIDBDatabaseTransaction();
 
     UniqueIDBDatabaseConnection* databaseConnection() const;
     UniqueIDBDatabase* database() const;
@@ -78,8 +80,8 @@ public:
     WEBCORE_EXPORT void clearObjectStore(const IDBRequestData&, IDBObjectStoreIdentifier);
     WEBCORE_EXPORT void createIndex(const IDBRequestData&, const IDBIndexInfo&);
     WEBCORE_EXPORT void deleteIndex(const IDBRequestData&, IDBObjectStoreIdentifier, const String& indexName);
-    WEBCORE_EXPORT void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
-    WEBCORE_EXPORT void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode);
+    WEBCORE_EXPORT void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
+    WEBCORE_EXPORT void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexIDToIndexKeyMap& indexKeys, IndexedDB::ObjectStoreOverwriteMode);
     WEBCORE_EXPORT void getRecord(const IDBRequestData&, const IDBGetRecordData&);
     WEBCORE_EXPORT void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&);
     WEBCORE_EXPORT void getCount(const IDBRequestData&, const IDBKeyRangeData&);

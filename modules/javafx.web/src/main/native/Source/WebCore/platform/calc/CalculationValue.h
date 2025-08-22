@@ -30,33 +30,42 @@
 
 #pragma once
 
-#include "Length.h"
+#include "CalculationRange.h"
+#include "CalculationTree.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
-class CalcExpressionNode;
+namespace Calculation {
+enum class Category : uint8_t;
+}
 
 class CalculationValue : public RefCounted<CalculationValue> {
+    WTF_MAKE_FAST_COMPACT_ALLOCATED;
 public:
-    WEBCORE_EXPORT static Ref<CalculationValue> create(std::unique_ptr<CalcExpressionNode>, ValueRange);
+    WEBCORE_EXPORT static Ref<CalculationValue> create(Calculation::Category, Calculation::Range, Calculation::Tree&&);
     WEBCORE_EXPORT ~CalculationValue();
 
-    float evaluate(float maxValue) const;
+    double evaluate(double percentResolutionLength) const;
 
-    bool shouldClampToNonNegative() const { return m_shouldClampToNonNegative; }
-    const CalcExpressionNode& expression() const { return *m_expression; }
+    Calculation::Category category() const { return m_category; }
+    Calculation::Range range() const { return m_range; }
+
+    const Calculation::Tree& tree() const { return m_tree; }
+    Calculation::Tree copyTree() const;
+    Calculation::Child copyRoot() const;
+
+    WEBCORE_EXPORT bool operator==(const CalculationValue&) const;
 
 private:
-    CalculationValue(std::unique_ptr<CalcExpressionNode>, ValueRange);
+    CalculationValue(Calculation::Category, Calculation::Range, Calculation::Tree&&);
 
-    std::unique_ptr<CalcExpressionNode> m_expression;
-    bool m_shouldClampToNonNegative;
+    Calculation::Category m_category;
+    Calculation::Range m_range;
+    Calculation::Tree m_tree;
 };
-
-bool operator==(const CalculationValue&, const CalculationValue&);
 
 TextStream& operator<<(TextStream&, const CalculationValue&);
 

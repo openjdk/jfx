@@ -36,13 +36,16 @@
 #include "PageConsoleClient.h"
 #include "ThreadableWebSocketChannel.h"
 #include "WebSocket.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageNetworkAgent);
+
 PageNetworkAgent::PageNetworkAgent(PageAgentContext& context, InspectorClient* client)
-    : InspectorNetworkAgent(context)
+    : InspectorNetworkAgent(context, context.inspectedPage->settings().inspectorMaximumResourcesContentSize())
     , m_inspectedPage(context.inspectedPage)
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     , m_client(client)
@@ -90,7 +93,7 @@ Vector<WebSocket*> PageNetworkAgent::activeWebSockets()
             continue;
 
         // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display iframe's WebSockets
-        if (document->page() != &m_inspectedPage)
+        if (document->page() != m_inspectedPage.ptr())
             continue;
 
         webSockets.append(webSocket);
@@ -101,7 +104,7 @@ Vector<WebSocket*> PageNetworkAgent::activeWebSockets()
 
 void PageNetworkAgent::setResourceCachingDisabledInternal(bool disabled)
 {
-    m_inspectedPage.setResourceCachingDisabledByWebInspector(disabled);
+    m_inspectedPage->setResourceCachingDisabledByWebInspector(disabled);
 }
 
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
@@ -136,7 +139,7 @@ ScriptExecutionContext* PageNetworkAgent::scriptExecutionContext(Inspector::Prot
 
 void PageNetworkAgent::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
 {
-    m_inspectedPage.console().addMessage(WTFMove(message));
+    m_inspectedPage->console().addMessage(WTFMove(message));
 }
 
 } // namespace WebCore

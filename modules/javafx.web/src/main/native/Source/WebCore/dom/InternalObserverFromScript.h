@@ -49,7 +49,6 @@ public:
     void complete() final;
 
     void visitAdditionalChildren(JSC::AbstractSlotVisitor&) const final;
-    void visitAdditionalChildren(JSC::SlotVisitor&) const final;
 
 protected:
     // ActiveDOMObject

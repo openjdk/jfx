@@ -31,9 +31,12 @@
 #include "LayoutBoxGeometry.h"
 #include "LayoutElementBox.h"
 #include "RenderStyleInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LineBox);
 
 LineBox::LineBox(const Box& rootLayoutBox, InlineLayoutUnit contentLogicalLeft, InlineLayoutUnit contentLogicalWidth, size_t lineIndex, size_t nonSpanningInlineLevelBoxCount)
     : m_lineIndex(lineIndex)
@@ -62,7 +65,7 @@ InlineRect LineBox::logicalRectForTextRun(const Line::Run& run) const
     while (ancestorInlineBox != &m_rootInlineBox && !ancestorInlineBox->hasLineBoxRelativeAlignment()) {
         ancestorInlineBox = &parentInlineBox(*ancestorInlineBox);
         ASSERT(ancestorInlineBox->isInlineBox());
-        runlogicalTop += (ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForTextBoxTrim());
+        runlogicalTop += ancestorInlineBox->logicalTop();
     }
     return { runlogicalTop, m_rootInlineBox.logicalLeft() + run.logicalLeft(), run.logicalWidth(), logicalHeight };
 }

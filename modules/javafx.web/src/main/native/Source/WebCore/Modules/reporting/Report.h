@@ -35,7 +35,7 @@ namespace WebCore {
 class FormData;
 
 class WEBCORE_EXPORT Report : public RefCounted<Report> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Report);
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Report, WEBCORE_EXPORT);
 public:
     static Ref<Report> create(const String& type, const String& url, RefPtr<ReportBody>&&);
 
@@ -45,7 +45,7 @@ public:
     const String& url() const;
     const RefPtr<ReportBody>& body() const;
 
-    static Ref<FormData> createReportFormDataForViolation(const String& type, const URL&, const String& userAgent, const String& destination, const Function<void(JSON::Object&)>& populateBody);
+    static Ref<FormData> createReportFormDataForViolation(const String& type, const URL&, const String& userAgent, const String& destination, NOESCAPE const Function<void(JSON::Object&)>& populateBody);
 
 private:
     explicit Report(const String& type, const String& url, RefPtr<ReportBody>&&);

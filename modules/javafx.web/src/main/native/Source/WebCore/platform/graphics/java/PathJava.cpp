@@ -79,7 +79,7 @@ RefPtr<RQRef> createEmptyPath()
 
 static GraphicsContext& scratchContext()
 {
-    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     static GraphicsContext &context = img->context();
     return context;
 }
@@ -135,6 +135,20 @@ PlatformPathPtr PathJava::platformPath() const
     return m_platformPath.get();
 }
 
+bool PathJava::definitelyEqual(const PathImpl& otherImpl) const
+{
+    RefPtr otherAsPathJava = dynamicDowncast<PathJava>(otherImpl);
+    if (!otherAsPathJava) {
+        return false;
+    }
+    if (otherAsPathJava.get() == this)
+        return true;
+    return m_platformPath == otherAsPathJava->m_platformPath;
+}
+void PathJava::add(PathContinuousRoundedRect continuousRoundedRect)
+{
+    add(PathRoundedRect { FloatRoundedRect { continuousRoundedRect.rect, FloatRoundedRect::Radii { continuousRoundedRect.cornerWidth, continuousRoundedRect.cornerHeight } }, PathRoundedRect::Strategy::PreferNative });
+}
 
 void PathJava::add(PathMoveTo moveto)
 {
