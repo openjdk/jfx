@@ -308,22 +308,19 @@ void WindowContext::process_focus(GdkEventFocus *event) {
             gtk_im_context_focus_out(im_ctx.ctx);
         }
     }
-}
 
-void WindowContext::process_focus(bool focus_in) {
-    LOG("process_focus (state): %d\n", focus_in);
     if (jwindow) {
-        if (focus_in && !isEnabled()) {
+        if (event->in && !isEnabled()) {
             // when the user tries to activate a disabled window, send FOCUS_DISABLED
             LOG("jWindowNotifyFocusDisabled");
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusDisabled);
             CHECK_JNI_EXCEPTION(mainEnv)
         } else {
-            LOG("%s\n", (focus_in) ? "com_sun_glass_events_WindowEvent_FOCUS_GAINED"
+            LOG("%s\n", (event->in) ? "com_sun_glass_events_WindowEvent_FOCUS_GAINED"
                                   : "com_sun_glass_events_WindowEvent_FOCUS_LOST");
 
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
-                    focus_in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
+                    event->in ? com_sun_glass_events_WindowEvent_FOCUS_GAINED
                              : com_sun_glass_events_WindowEvent_FOCUS_LOST);
             CHECK_JNI_EXCEPTION(mainEnv)
         }
@@ -966,18 +963,11 @@ void WindowContext::process_state(GdkEventWindowState *event) {
     if (!(event->changed_mask & (GDK_WINDOW_STATE_ICONIFIED
                                 | GDK_WINDOW_STATE_MAXIMIZED
                                 | GDK_WINDOW_STATE_FULLSCREEN
-                                | GDK_WINDOW_STATE_ABOVE
-                                | GDK_WINDOW_STATE_FOCUSED))) {
+                                | GDK_WINDOW_STATE_ABOVE))) {
         return;
     }
 
     LOG("process_state\n");
-
-    if (event->changed_mask & GDK_WINDOW_STATE_FOCUSED) {
-        process_focus(event->new_window_state & GDK_WINDOW_STATE_FOCUSED);
-
-        if (event->changed_mask == GDK_WINDOW_STATE_FOCUSED) return;
-    }
 
     if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
         notify_on_top(event->new_window_state & GDK_WINDOW_STATE_ABOVE);
@@ -1217,6 +1207,11 @@ void WindowContext::set_visible(bool visible) {
     LOG("set_visible: %d\n", visible);
     if (visible) {
         gdk_window_show(gdk_window);
+
+        if (jwindow && isEnabled()) {
+            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
+            CHECK_JNI_EXCEPTION(mainEnv);
+        }
     } else {
         gdk_window_hide(gdk_window);
         if (jview && is_mouse_entered) {
@@ -1745,4 +1740,3 @@ bool WindowContextExtended::get_window_edge(int x, int y, GdkWindowEdge* window_
 
     return true;
 }
-

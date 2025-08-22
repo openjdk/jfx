@@ -322,7 +322,6 @@ public:
     void process_map();
     void process_expose(GdkEventExpose*);
     void process_focus(GdkEventFocus*);
-    void process_focus(bool);
     virtual void process_mouse_button(GdkEventButton*, bool synthesized = false);
     virtual void process_mouse_motion(GdkEventMotion*);
     void process_mouse_scroll(GdkEventScroll*);
