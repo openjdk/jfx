@@ -717,7 +717,7 @@ public class Image {
      * input stream.
      * <p>
      * The image loading is performed immediately and is completed after this
-     * constructor returns.
+     * constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
      * @throws NullPointerException if input stream is null
@@ -731,9 +731,12 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified
      * input stream.
      * <p>
-     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
-     * be monitored for loading progress. Otherwise, the image loading is performed
-     * immediately and is completed after this constructor returns.
+     * If {@code backgroundLoading} is {@code true}, the {@link #progressProperty() progress} property
+     * can be monitored for loading progress. The stream will be consumed asynchronously;
+     * the caller must not read from or close it. It will be closed automatically when loading completes.
+     * <p>
+     * If {@code backgroundLoading} is {@code false}, the image is loaded immediately and
+     * completed when this constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
      * @param backgroundLoading indicates whether the image
@@ -750,7 +753,7 @@ public class Image {
      * Constructs a new {@code Image} with the specified parameters.
      * <p>
      * The image loading is performed immediately and is completed after this
-     * constructor returns.
+     * constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
      * @param requestedWidth the image's bounding box width
@@ -773,9 +776,12 @@ public class Image {
     /**
      * Constructs a new {@code Image} with the specified parameters.
      * <p>
-     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
-     * be monitored for loading progress. Otherwise, the image loading is performed
-     * immediately and is completed after this constructor returns.
+     * If {@code backgroundLoading} is {@code true}, the {@link #progressProperty() progress} property
+     * can be monitored for loading progress. The stream will be consumed asynchronously;
+     * the caller must not read from or close it. It will be closed automatically when loading completes.
+     * <p>
+     * If {@code backgroundLoading} is {@code false}, the image is loaded immediately and
+     * completed when this constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
      * @param requestedWidth the image's bounding box width
