@@ -156,7 +156,7 @@ class SizingTest extends StageTestBase {
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
     void minSize(StageStyle stageStyle) {
         // JDK-8364547
-        assumeTrue(PlatformUtil.isWindows());
+        assumeTrue(!PlatformUtil.isWindows());
 
         setupStageWithStyle(stageStyle, s -> {
             s.setMinWidth(MIN_WIDTH);

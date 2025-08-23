@@ -68,6 +68,7 @@ class StageOwnershipTest extends VisualTestBase {
     private static final Color COLOR0 = Color.RED;
     private static final Color COLOR1 = Color.ORANGE;
     private static final Color COLOR2 = Color.YELLOW;
+    private static final Color COLOR3 = Color.GREEN;
     private static final int X_DELTA = 15; // shadows
     private static final int Y_DELTA = 75; // shadows + decoration
 
@@ -193,16 +194,16 @@ class StageOwnershipTest extends VisualTestBase {
         setupTopStage(bottomStage, stageStyle, modality);
 
         Util.doTimeLine(WAIT_TIME,
-                () -> bottomStage.setMaximized(true),
-                topStage::show,
-                () -> {
-                    assertTrue(bottomStage.isMaximized());
-                    // Make sure state is still maximized
-                    assertColorEqualsVisualBounds(BOTTOM_COLOR);
+            () -> bottomStage.setMaximized(true),
+            topStage::show,
+            () -> {
+                assertTrue(bottomStage.isMaximized());
+                // Make sure state is still maximized
+                assertColorEqualsVisualBounds(BOTTOM_COLOR);
 
-                    Color color = getColor(100, 100);
-                    assertColorEquals(TOP_COLOR, color, TOLERANCE);
-                });
+                Color color = getColor(100, 100);
+                assertColorEquals(TOP_COLOR, color, TOLERANCE);
+            });
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -230,6 +231,7 @@ class StageOwnershipTest extends VisualTestBase {
     private Stage stage0;
     private Stage stage1;
     private Stage stage2;
+    private Stage stage3;
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @MethodSource("getTestsParams")
@@ -248,25 +250,25 @@ class StageOwnershipTest extends VisualTestBase {
         Util.sleep(WAIT_TIME);
 
         Util.doTimeLine(WAIT_TIME,
-                stage1::show,
-                stage2::show,
-                () -> {
-                    assertTrue(stage2.isFocused());
-                    assertColorEquals(COLOR2, stage2);
-                    assertFalse(stage1.isFocused());
-                    assertFalse(stage0.isFocused());
-                },
-                stage2::close,
-                () -> {
-                    assertTrue(stage1.isFocused());
-                    assertColorEquals(COLOR1, stage1);
-                    assertFalse(stage0.isFocused());
-                },
-                stage1::close,
-                () -> {
-                    assertTrue(stage0.isFocused());
-                    assertColorEquals(COLOR0, stage0);
-                });
+            stage1::show,
+            stage2::show,
+            () -> {
+                assertTrue(stage2.isFocused());
+                assertColorEquals(COLOR2, stage2);
+                assertFalse(stage1.isFocused());
+                assertFalse(stage0.isFocused());
+            },
+            stage2::close,
+            () -> {
+                assertTrue(stage1.isFocused());
+                assertColorEquals(COLOR1, stage1);
+                assertFalse(stage0.isFocused());
+            },
+            stage1::close,
+            () -> {
+                assertTrue(stage0.isFocused());
+                assertColorEquals(COLOR0, stage0);
+            });
     }
 
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
@@ -274,17 +276,18 @@ class StageOwnershipTest extends VisualTestBase {
     void iconifyParentShouldHideChildren(StageStyle style) {
         if (style == StageStyle.EXTENDED || style == StageStyle.DECORATED) {
             // Windows just hides the first-level ownership (bug?)
-            assumeTrue(PlatformUtil.isWindows());
-            return;
+            assumeTrue(!PlatformUtil.isWindows());
         }
 
-        CountDownLatch shownLatch = new CountDownLatch(3);
+        CountDownLatch shownLatch = new CountDownLatch(4);
         Util.runAndWait(() -> {
-            stage0 = createStage(style, COLOR0, null, null, 100, 100);
-            stage1 = createStage(style, COLOR1, stage0, null, 200, 150);
-            stage2 = createStage(style, COLOR2, stage1, null, 300, 200);
+            stage0 = createStage(StageStyle.UNDECORATED, COLOR0, null, null, 0, 0);
+            stage0.setMaximized(true);
+            stage1 = createStage(style, COLOR1, null, null, 100, 100);
+            stage2 = createStage(style, COLOR2, stage1, null, 200, 150);
+            stage3 = createStage(style, COLOR3, stage2, null, 300, 200);
 
-            List.of(stage0, stage1, stage2).forEach(stage -> {
+            List.of(stage0, stage1, stage2, stage3).forEach(stage -> {
                 stage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
                 stage.show();
             });
@@ -294,19 +297,19 @@ class StageOwnershipTest extends VisualTestBase {
         Util.sleep(WAIT_TIME);
 
         Util.doTimeLine(WAIT_TIME,
-                () -> stage0.setIconified(true),
-                () -> {
-                    assertTrue(stage0.isIconified());
-                    assertColorNotEquals(COLOR0, stage0);
-                    assertColorNotEquals(COLOR1, stage1);
-                    assertColorNotEquals(COLOR2, stage2);
-                },
-                () -> stage0.setIconified(false),
-                () -> {
-                    assertFalse(stage0.isIconified());
-                    assertColorEquals(COLOR0, stage0);
-                    assertColorEquals(COLOR1, stage1);
-                    assertColorEquals(COLOR2, stage2);
-                });
+            () -> stage1.setIconified(true),
+            () -> {
+                assertTrue(stage1.isIconified());
+                assertColorEquals(COLOR0, stage1);
+                assertColorEquals(COLOR0, stage2);
+                assertColorEquals(COLOR0, stage3);
+            },
+            () -> stage1.setIconified(false),
+            () -> {
+                assertFalse(stage1.isIconified());
+                assertColorEquals(COLOR1, stage1);
+                assertColorEquals(COLOR2, stage2);
+                assertColorEquals(COLOR3, stage3);
+            });
     }
 }
