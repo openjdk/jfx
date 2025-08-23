@@ -1069,8 +1069,8 @@ public abstract non-sealed class Parent extends Node {
 
                 /*
                  * The forceParentLayout flag must be propagated to mark all ancestors
-                 * as needing layout. Failure to do so while performingLayout is true 
-                 * would stop the propagation mid-tree. This leaves some nodes as needing 
+                 * as needing layout. Failure to do so while performingLayout is true
+                 * would stop the propagation mid-tree. This leaves some nodes as needing
                  * layout, while its ancestors are clean, which is an inconsistent state.
                  */
 
