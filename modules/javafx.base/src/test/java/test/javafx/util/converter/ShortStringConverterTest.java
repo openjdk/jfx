@@ -25,32 +25,30 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.ShortStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.ShortStringConverter;
+
 public class ShortStringConverterTest {
-    private ShortStringConverter converter;
 
-    private final short shortValue_10 = 10;
+    private static final short SHORT_VALUE_10 = 10;
 
-    @BeforeEach public void setup() {
-        converter = new ShortStringConverter();
+    private final ShortStringConverter converter = new ShortStringConverter();
+
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(SHORT_VALUE_10, converter.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals((Object)shortValue_10, converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(SHORT_VALUE_10, converter.fromString("     10     "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals((Object)shortValue_10, converter.fromString("     10     "));
-    }
-
-    @Test public void toString_testStringInput() {
-        assertEquals("10", converter.toString(shortValue_10));
+    @Test
+    void toString_testStringInput() {
+        assertEquals("10", converter.toString(SHORT_VALUE_10));
     }
 }

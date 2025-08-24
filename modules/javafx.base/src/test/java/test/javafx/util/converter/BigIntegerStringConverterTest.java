@@ -25,31 +25,30 @@
 
 package test.javafx.util.converter;
 
-import java.math.BigInteger;
-import javafx.util.converter.BigIntegerStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.math.BigInteger;
+
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.BigIntegerStringConverter;
+
 public class BigIntegerStringConverterTest {
-    private BigIntegerStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new BigIntegerStringConverter();
-    }
+    private final BigIntegerStringConverter converter = new BigIntegerStringConverter();
 
-    @Test public void fromString_testValidStringInput() {
+    @Test
+    void fromString_testValidStringInput() {
         assertEquals(BigInteger.TEN, converter.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
         assertEquals(BigInteger.TEN, converter.fromString("      10      "));
     }
 
-    @Test public void toString_testStringInput() {
+    @Test
+    void toString_testStringInput() {
         assertEquals("10", converter.toString(BigInteger.TEN));
     }
 }

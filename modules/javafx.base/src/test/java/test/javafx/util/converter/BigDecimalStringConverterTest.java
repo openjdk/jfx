@@ -25,34 +25,30 @@
 
 package test.javafx.util.converter;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import javafx.util.converter.BigDecimalStringConverter;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.BigDecimalStringConverter;
+
 public class BigDecimalStringConverterTest {
-    private BigDecimalStringConverter converter;
 
-    private final BigDecimal bigDecimal = new BigDecimal(BigInteger.TEN);
+    private final BigDecimalStringConverter converter = new BigDecimalStringConverter();
 
-    @BeforeEach public void setup() {
-        converter = new BigDecimalStringConverter();
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(BigDecimal.TEN, converter.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals(bigDecimal, converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(BigDecimal.TEN, converter.fromString("      10      "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(bigDecimal, converter.fromString("      10      "));
-    }
-
-    @Test public void toString_testStringInput() {
-        assertEquals("10", converter.toString(bigDecimal));
+    @Test
+    void toString_testStringInput() {
+        assertEquals("10", converter.toString(BigDecimal.TEN));
     }
 }

@@ -25,34 +25,33 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.DefaultStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.DefaultStringConverter;
+
 public class DefaultStringConverterTest {
-    private DefaultStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new DefaultStringConverter();
-    }
+    private final DefaultStringConverter converter = new DefaultStringConverter();
 
-    @Test public void fromString_testValidStringInput() {
+    @Test
+    public void fromString_testValidStringInput() {
         assertEquals("string", converter.fromString("string"));
     }
 
-    @Test public void fromString_testEmptytringInput() {
+    @Test
+    public void fromString_testEmptytringInput() {
         assertEquals("", converter.fromString(""));
     }
 
-    @Test public void toString_testValidStringInput() {
+    @Test
+    public void toString_testValidStringInput() {
         assertEquals("string", converter.toString("string"));
     }
 
-    @Test public void toString_testEmptyStringInput() {
+    @Test
+    public void toString_testEmptyStringInput() {
         assertEquals("", converter.toString(""));
     }
 }

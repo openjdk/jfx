@@ -25,56 +25,63 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.BooleanStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javafx.util.converter.BooleanStringConverter;
+
 public class BooleanStringConverterTest {
-    private BooleanStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new BooleanStringConverter();
-    }
+    private final BooleanStringConverter converter = new BooleanStringConverter();
 
-    @Test public void fromString_testValidStringInput_lowercase_true() {
+    @Test
+    void fromString_testValidStringInput_lowercase_true() {
         assertEquals(Boolean.TRUE, converter.fromString("true"));
     }
 
-    @Test public void fromString_testValidStringInput_uppercase_true() {
+    @Test
+    void fromString_testValidStringInput_uppercase_true() {
         assertEquals(Boolean.TRUE, converter.fromString("TRUE"));
     }
 
-    @Test public void fromString_testValidStringInput_mixedCase_true() {
+    @Test
+    void fromString_testValidStringInput_mixedCase_true() {
         assertEquals(Boolean.TRUE, converter.fromString("tRUe"));
     }
 
-    @Test public void fromString_testValidStringInput_lowercase_false() {
+    @Test
+    void fromString_testValidStringInput_lowercase_false() {
         assertEquals(Boolean.FALSE, converter.fromString("false"));
     }
 
-    @Test public void fromString_testValidStringInput_uppercase_false() {
+    @Test
+    void fromString_testValidStringInput_uppercase_false() {
         assertEquals(Boolean.FALSE, converter.fromString("FALSE"));
     }
 
-    @Test public void fromString_testValidStringInput_mixedCase_false() {
+    @Test
+    void fromString_testValidStringInput_mixedCase_false() {
         assertEquals(Boolean.FALSE, converter.fromString("fALsE"));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace_true() {
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace_true() {
         assertEquals(Boolean.TRUE, converter.fromString("      true      "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace_false() {
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace_false() {
         assertEquals(Boolean.FALSE, converter.fromString("     false      "));
     }
 
-    @Test public void toString_true() {
+    @Test
+    void toString_true() {
         assertEquals("true", converter.toString(true));
     }
 
-    @Test public void toString_false() {
+    @Test
+    void toString_false() {
         assertEquals("false", converter.toString(false));
     }
 }
