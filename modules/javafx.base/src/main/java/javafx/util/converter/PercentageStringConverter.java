@@ -27,57 +27,34 @@ package javafx.util.converter;
 
 import java.text.NumberFormat;
 import java.util.Locale;
-import javafx.util.StringConverter;
 
-/**
- * A {@link StringConverter} implementation for {@link Number} values that represent percentages. Instances of this class are
- * immutable.
- *
- * @see CurrencyStringConverter
- * @see NumberStringConverter
- * @see StringConverter
- * @since JavaFX 2.1
- */
+/// A `StringConverter` implementation for `Number` values that represent percentages.
+///
+/// @since JavaFX 2.1
 public class PercentageStringConverter extends NumberStringConverter {
 
-    /**
-     * Constructs a {@code PercentageStringConverter} with the default locale and format.
-     */
+    /// Creates a `PercentageStringConverter` that uses a formatter/parser based on the user's [Locale].
     public PercentageStringConverter() {
-        this(Locale.getDefault());
+        super();
     }
 
-    /**
-     * Constructs a {@code PercentageStringConverter} with the given locale and the default format.
-     *
-     * @param locale the locale used in determining the number format used to format the string
-     */
+    /// Creates a `PercentageStringConverter` that uses a formatter/parser based on the given locale.
+    ///
+    /// @param locale the `Locale` that will be used by the formatter/parser. If `null`, the user's locale will be used.
     public PercentageStringConverter(Locale locale) {
-        super(locale, null, null);
+        super(locale);
     }
 
-    /**
-     * Constructs a {@code PercentageStringConverter} with the given number format.
-     *
-     * @param numberFormat the number format used to format the string
-     */
+    /// Creates a `PercentageStringConverter` that uses the given formatter/parser.
+    ///
+    /// @param numberFormat the formatter/parser that will be used by the `toString()` and `fromString()` methods. If
+    ///        `null`, a default formatter/parser will be used.
     public PercentageStringConverter(NumberFormat numberFormat) {
-        super(null, null, numberFormat);
+        super(numberFormat);
     }
 
-    /**
-     * @deprecated This method was exposed erroneously and will be removed in a future version.
-     */
-    @Deprecated(forRemoval = true, since = "22")
-    @SuppressWarnings("removal")
     @Override
-    public NumberFormat getNumberFormat() {
-        Locale _locale = locale == null ? Locale.getDefault() : locale;
-
-        if (numberFormat != null) {
-            return numberFormat;
-        } else {
-            return NumberFormat.getPercentInstance(_locale);
-        }
+    NumberFormat getSpecializedNumberFormat(Locale locale) {
+        return NumberFormat.getPercentInstance(locale);
     }
 }

@@ -25,100 +25,92 @@
 
 package test.javafx.util.converter;
 
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.util.Locale;
-import javafx.util.converter.NumberStringConverter;
-import javafx.util.converter.NumberStringConverterShim;
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
+import java.util.Locale;
+
 import org.junit.jupiter.api.Test;
 
+import javafx.util.converter.NumberStringConverter;
+import javafx.util.converter.NumberStringConverterShim;
+
 public class NumberStringConverterTest {
-    private NumberStringConverter converter;
 
-    @BeforeEach
-    public void setup() {
-        converter = new NumberStringConverter();
+    private static final String PATTERN = "#,##,###,####";
+
+    private final NumberStringConverter usLocaleConverter = new NumberStringConverter(Locale.US);
+
+    @Test
+    void testDefaultConstructor() {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.getDefault());
+
+        var nsc = new NumberStringConverter();
+
+        assertEquals(numberFormat, numberFormatOf(nsc));
     }
 
     @Test
-    public void testDefaultConstructor() {
-        NumberStringConverter c = new NumberStringConverter();
-        assertEquals(Locale.getDefault(), NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    void testConstructor_locale() {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.CANADA);
+
+        var nsc = new NumberStringConverter(Locale.CANADA);
+
+        assertEquals(numberFormat, numberFormatOf(nsc));
     }
 
     @Test
-    public void testConstructor_locale() {
-        NumberStringConverter c = new NumberStringConverter(Locale.CANADA);
-        assertEquals(Locale.CANADA, NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    void testConstructor_pattern() {
+        var symbols = new DecimalFormatSymbols(Locale.getDefault());
+        var numberFormat = new DecimalFormat(PATTERN, symbols);
+
+        var nsc = new NumberStringConverter(PATTERN);
+
+        assertEquals(numberFormat, numberFormatOf(nsc));
     }
 
     @Test
-    public void testConstructor_pattern() {
-        NumberStringConverter c = new NumberStringConverter("#,##,###,####");
-        assertEquals(Locale.getDefault(), NumberStringConverterShim.getLocale(c));
-        assertEquals("#,##,###,####", NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    void testConstructor_locale_pattern() {
+        var symbols = new DecimalFormatSymbols(Locale.CANADA);
+        var numberFormat = new DecimalFormat(PATTERN, symbols);
+
+        var nsc = new NumberStringConverter(Locale.CANADA, PATTERN);
+
+        assertEquals(numberFormat, numberFormatOf(nsc));
     }
 
     @Test
-    public void testConstructor_locale_pattern() {
-        NumberStringConverter c = new NumberStringConverter(Locale.CANADA, "#,##,###,####");
-        assertEquals(Locale.CANADA, NumberStringConverterShim.getLocale(c));
-        assertEquals("#,##,###,####", NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    void testConstructor_numberFormat() {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.JAPAN);
+
+        var nsc = new NumberStringConverter(numberFormat);
+
+        assertEquals(numberFormat, numberFormatOf(nsc));
+    }
+
+    static NumberFormat numberFormatOf(NumberStringConverter csc) {
+        return NumberStringConverterShim.getNumberFormat(csc);
     }
 
     @Test
-    public void testConstructor_numberFormat() {
-        NumberFormat format = NumberFormat.getCurrencyInstance(Locale.JAPAN);
-        NumberStringConverter c = new NumberStringConverter(format);
-        assertNull(NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertEquals(format, NumberStringConverterShim.getNumberFormatVar(c));
+    void fromString_testValidInput() {
+        assertEquals(10L, usLocaleConverter.fromString("10"));
     }
 
     @Test
-    public void getNumberFormat_default() {
-        assertNotNull(NumberStringConverterShim.getNumberFormat(converter));
+    void fromString_testValidInputWithWhiteSpace() {
+        assertEquals(10L, usLocaleConverter.fromString("      10      "));
     }
 
     @Test
-    public void getNumberFormat_nonNullPattern() {
-        converter = new NumberStringConverter("#,##,###,####");
-        assertTrue(NumberStringConverterShim.getNumberFormat(converter) instanceof DecimalFormat);
+    void fromString_testInvalidInput() {
+        assertThrows(RuntimeException.class, () -> usLocaleConverter.fromString("abcdefg"));
     }
 
     @Test
-    public void getNumberFormat_nonNullNumberFormat() {
-        NumberFormat nf = NumberFormat.getCurrencyInstance();
-        converter = new NumberStringConverter(nf);
-        assertEquals(nf, NumberStringConverterShim.getNumberFormat(converter));
-    }
-
-    @Test
-    public void fromString_testValidInput() {
-        assertEquals(10L, converter.fromString("10"));
-    }
-
-    @Test
-    public void fromString_testValidInputWithWhiteSpace() {
-        assertEquals(10L, converter.fromString("      10      "));
-    }
-
-    @Test
-    public void fromString_testInvalidInput() {
-        assertThrows(RuntimeException.class, () -> converter.fromString("abcdefg"));
-    }
-
-    @Test
-    public void toString_validInput() {
-        assertEquals("10", converter.toString(10L));
+    void toString_validInput() {
+        assertEquals("10", usLocaleConverter.toString(10L));
     }
 }

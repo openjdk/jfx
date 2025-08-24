@@ -25,79 +25,59 @@
 
 package test.javafx.util.converter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static test.javafx.util.converter.NumberStringConverterTest.numberFormatOf;
+
 import java.text.NumberFormat;
 import java.util.Locale;
-import javafx.util.converter.NumberStringConverterShim;
-import javafx.util.converter.PercentageStringConverter;
-import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.PercentageStringConverter;
+
 public class PercentageStringConverterTest {
-    private PercentageStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new PercentageStringConverter(Locale.US);
+    private final PercentageStringConverter usLocaleConverter = new PercentageStringConverter(Locale.US);
+
+    @Test
+    void testDefaultConstructor() {
+        NumberFormat numberFormat = NumberFormat.getPercentInstance(Locale.getDefault());
+
+        var psc = new PercentageStringConverter();
+
+        assertEquals(numberFormat, numberFormatOf(psc));
     }
 
-    /*********************************************************************
-     * Test constructors
-     ********************************************************************/
+    @Test
+    void testConstructor_locale() {
+        NumberFormat numberFormat = NumberFormat.getPercentInstance(Locale.CANADA);
 
-    @Test public void testDefaultConstructor() {
-        PercentageStringConverter c = new PercentageStringConverter();
-        assertEquals(Locale.getDefault(), NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+        var psc = new PercentageStringConverter(Locale.CANADA);
+
+        assertEquals(numberFormat, numberFormatOf(psc));
     }
 
-    @Test public void testConstructor_locale() {
-        PercentageStringConverter c = new PercentageStringConverter(Locale.CANADA);
-        assertEquals(Locale.CANADA, NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    @Test
+    void testConstructor_numberFormat() {
+        NumberFormat numberFormat = NumberFormat.getPercentInstance(Locale.JAPAN);
+
+        var csc = new PercentageStringConverter(numberFormat);
+
+        assertEquals(numberFormat, numberFormatOf(csc));
     }
 
-    @Test public void testConstructor_numberFormat() {
-        NumberFormat format = NumberFormat.getCurrencyInstance(Locale.JAPAN);
-        PercentageStringConverter c = new PercentageStringConverter(format);
-        assertNull(NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertEquals(format, NumberStringConverterShim.getNumberFormatVar(c));
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(.1032, usLocaleConverter.fromString("10.32%"));
     }
 
-
-    /*********************************************************************
-     * Test methods
-     ********************************************************************/
-
-    @Test public void getNumberFormat_default() {
-        assertNotNull(NumberStringConverterShim.getNumberFormat(converter));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(.1032, usLocaleConverter.fromString("      10.32%      "));
     }
 
-    @Test public void getNumberFormat_nonNullNumberFormat() {
-        NumberFormat nf = NumberFormat.getCurrencyInstance();
-        converter = new PercentageStringConverter(nf);
-        assertEquals(nf, NumberStringConverterShim.getNumberFormat(converter));
-    }
-
-
-    /*********************************************************************
-     * Test toString / fromString methods
-     ********************************************************************/
-
-    @Test public void fromString_testValidStringInput() {
-        assertEquals(.1032, converter.fromString("10.32%"));
-    }
-
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(.1032, converter.fromString("      10.32%      "));
-    }
-
-    @Test public void toString_validInput() {
-        assertEquals("10%", converter.toString(.10));
+    @Test
+    void toString_validInput() {
+        assertEquals("10%", usLocaleConverter.toString(.10));
     }
 }
