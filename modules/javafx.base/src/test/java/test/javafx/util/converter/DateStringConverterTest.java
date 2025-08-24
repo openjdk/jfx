@@ -25,24 +25,27 @@
 
 package test.javafx.util.converter;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
-import javafx.util.converter.DateStringConverter;
-import javafx.util.converter.DateTimeStringConverterShim;
-import static org.junit.jupiter.api.Assertions.*;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-/**
- */
+import javafx.util.converter.DateStringConverter;
+import javafx.util.converter.DateTimeStringConverterShim;
+
 public class DateStringConverterTest {
+
+    private static final Locale DEFALUT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
     private static final Date VALID_DATE;
 
     static {
@@ -58,126 +61,73 @@ public class DateStringConverterTest {
         VALID_DATE = c.getTime();
     }
 
-    private static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-                { new DateStringConverter(),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
-                        VALID_DATE, null, null },
+    private record TestCase(DateStringConverter converter, Locale locale, int dateStyle, String pattern, DateFormat dateFormat) {}
 
-                { new DateStringConverter(DateFormat.SHORT),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.SHORT,
-                        VALID_DATE, null, null },
-
-                { new DateStringConverter(Locale.UK),
-                        Locale.UK, DateFormat.DEFAULT,
-                        VALID_DATE, null, null },
-
-                { new DateStringConverter(Locale.UK, DateFormat.SHORT),
-                        Locale.UK, DateFormat.SHORT,
-                        VALID_DATE, null, null },
-
-                { new DateStringConverter("dd MM yyyy"),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
-                        VALID_DATE, "dd MM yyyy", null },
-
-                { new DateStringConverter(DateFormat.getDateInstance(DateFormat.LONG)),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
-                        VALID_DATE, null, DateFormat.getDateInstance(DateFormat.LONG) },
-        });
+    private static Collection<TestCase> implementations() {
+        return List.of(
+                new TestCase(new DateStringConverter(), DEFALUT_LOCALE, DateFormat.DEFAULT, null, null),
+                new TestCase(new DateStringConverter(DateFormat.SHORT), DEFALUT_LOCALE, DateFormat.SHORT, null, null),
+                new TestCase(new DateStringConverter(Locale.UK), Locale.UK, DateFormat.DEFAULT, null, null),
+                new TestCase(new DateStringConverter(Locale.UK, DateFormat.SHORT), Locale.UK, DateFormat.SHORT, null, null),
+                new TestCase(new DateStringConverter("dd MM yyyy"), DEFALUT_LOCALE, DateFormat.DEFAULT, "dd MM yyyy", null),
+                new TestCase(new DateStringConverter(DateFormat.getDateInstance(DateFormat.LONG)),
+                        DEFALUT_LOCALE, DateFormat.DEFAULT, null, DateFormat.getDateInstance(DateFormat.LONG))
+                );
     }
 
-    private DateStringConverter converter;
-    private Locale locale;
-    private int dateStyle;
-    private String pattern;
-    private DateFormat dateFormat;
-    private Date validDate;
-    private DateFormat validFormatter;
-
-    private void setUp(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        this.converter = converter;
-        this.locale = locale;
-        this.dateStyle = dateStyle;
-        this.validDate = validDate;
-        this.pattern = pattern;
-        this.dateFormat = dateFormat;
-
-        if (dateFormat != null) {
-            validFormatter = dateFormat;
-        } else if (pattern != null) {
-            validFormatter = new SimpleDateFormat(pattern);
-        } else {
-            validFormatter = DateFormat.getDateInstance(dateStyle, locale);
+    private static DateFormat createFormatter(TestCase testCase) {
+        if (testCase.dateFormat() != null) {
+            return testCase.dateFormat();
         }
-    }
-
-    /*********************************************************************
-     * Test constructors
-     ********************************************************************/
-
-    @ParameterizedTest
-    @MethodSource("implementations")
-    public void testConstructor(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        setUp(converter, locale, dateStyle, validDate, pattern, dateFormat);
-        assertEquals(locale, DateTimeStringConverterShim.getLocale(converter));
-        assertEquals(dateStyle, DateTimeStringConverterShim.getDateStyle(converter));
-        assertEquals(pattern, DateTimeStringConverterShim.getPattern(converter));
-        assertEquals(dateFormat, DateTimeStringConverterShim.getDateFormatVar(converter));
-    }
-
-
-    /*********************************************************************
-     * Test methods
-     ********************************************************************/
-
-    @ParameterizedTest
-    @MethodSource("implementations")
-    public void getDateFormat(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        setUp(converter, locale, dateStyle, validDate, pattern, dateFormat);
-        assertNotNull(DateTimeStringConverterShim.getDateFormat(converter));
+        DateFormat validFormatter;
+        if (testCase.pattern() != null) {
+            validFormatter = new SimpleDateFormat(testCase.pattern(), testCase.locale());
+        } else {
+            validFormatter = DateFormat.getDateInstance(testCase.dateStyle(), testCase.locale());
+        }
+        validFormatter.setLenient(false);
+        return validFormatter;
     }
 
     @ParameterizedTest
     @MethodSource("implementations")
-    public void getDateFormat_nonNullPattern(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        setUp(converter, locale, dateStyle, validDate, pattern, dateFormat);
-        converter = new DateStringConverter("yyyy");
-        assertTrue(
-                DateTimeStringConverterShim.getDateFormat(converter)
-                        instanceof SimpleDateFormat);
+    void testConstructor(TestCase testCase) {
+        DateFormat validFormatter = createFormatter(testCase);
+        assertEquals(validFormatter, DateTimeStringConverterShim.getDateFormat(testCase.converter()));
     }
 
-    /*********************************************************************
-     * Test toString / fromString methods
-     ********************************************************************/
-
-    @ParameterizedTest
-    @MethodSource("implementations")
-    public void fromString_testValidInput(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        setUp(converter, locale, dateStyle, validDate, pattern, dateFormat);
-        String input = validFormatter.format(validDate);
-        assertEquals(validDate, converter.fromString(input), "Input = " + input);
+    @Test
+    void getDateFormat_nonNullPattern() {
+        var converter = new DateStringConverter("yyyy");
+        assertTrue(DateTimeStringConverterShim.getDateFormat(converter) instanceof SimpleDateFormat);
     }
 
     @ParameterizedTest
     @MethodSource("implementations")
-    public void fromString_testValidInputWithWhiteSpace(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        setUp(converter, locale, dateStyle, validDate, pattern, dateFormat);
-        String input = validFormatter.format(validDate);
-        assertEquals(validDate, converter.fromString("      " + input + "      "), "Input = " + input);
+    public void fromString_testValidInput(TestCase testCase) {
+        DateFormat validFormatter = createFormatter(testCase);
+        String input = validFormatter.format(VALID_DATE);
+        assertEquals(VALID_DATE, testCase.converter().fromString(input), "Input = " + input);
     }
 
     @ParameterizedTest
     @MethodSource("implementations")
-    public void fromString_testInvalidInput(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        setUp(converter, locale, dateStyle, validDate, pattern, dateFormat);
-        assertThrows(RuntimeException.class, () -> converter.fromString("abcdefg"));
+    public void fromString_testValidInputWithWhiteSpace(TestCase testCase) {
+        DateFormat validFormatter = createFormatter(testCase);
+        String input = validFormatter.format(VALID_DATE);
+        assertEquals(VALID_DATE, testCase.converter().fromString("      " + input + "      "), "Input = " + input);
     }
 
     @ParameterizedTest
     @MethodSource("implementations")
-    public void toString_validOutput(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
-        setUp(converter, locale, dateStyle, validDate, pattern, dateFormat);
-        assertEquals(validFormatter.format(validDate), converter.toString(validDate));
+    public void fromString_testInvalidInput(TestCase testCase) {
+        assertThrows(RuntimeException.class, () -> testCase.converter().fromString("abcdefg"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("implementations")
+    public void toString_validOutput(TestCase testCase) {
+        DateFormat validFormatter = createFormatter(testCase);
+        assertEquals(validFormatter.format(VALID_DATE), testCase.converter().toString(VALID_DATE));
     }
 }
