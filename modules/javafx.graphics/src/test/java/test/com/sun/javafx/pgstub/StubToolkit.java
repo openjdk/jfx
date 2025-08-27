@@ -964,6 +964,10 @@ public class StubToolkit extends Toolkit {
         public List<MenuBase> getMenus() {
             return menus;
         }
+
+        @Override
+        public void setCommonMenus(List<MenuBase> menus) {
+        }
     }
 
     @Override
