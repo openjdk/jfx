@@ -77,6 +77,9 @@ abstract class GlassStage implements TKStage {
     @Override
     public void setPrefHeaderButtonHeight(double height) {}
 
+    @Override
+    public void setDarkFrame(boolean value) {}
+
     protected final GlassScene getScene() {
         return scene;
     }

@@ -145,7 +145,8 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                 Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
 
         return new StubStage();
     }
