@@ -33,12 +33,13 @@ import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.test.PropertyInvalidationCounter;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.InvalidationListener;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Queue;
+
+import javafx.beans.InvalidationListener;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageShim;
 
@@ -131,6 +132,35 @@ public final class ImageTest {
         registerImage(url, 200, 100);
 
         final Image image = new Image(url, true);
+
+        final StubAsyncImageLoader lastAsyncImageLoader =
+                getLastAsyncImageLoader();
+
+        lastAsyncImageLoader.setProgress(0, 100);
+        final float p1 = (float) image.getProgress();
+
+        lastAsyncImageLoader.setProgress(33, 100);
+        final float p2 = (float) image.getProgress();
+
+        lastAsyncImageLoader.setProgress(66, 100);
+        final float p3 = (float) image.getProgress();
+
+        lastAsyncImageLoader.setProgress(200, 100);
+        final float p4 = (float) image.getProgress();
+
+        lastAsyncImageLoader.finish();
+
+        assertTrue(p1 < p2);
+        assertTrue(p2 < p3);
+        assertTrue(p3 == p4);
+    }
+
+    @Test
+    public void loadImageStreamAsyncProgressTest() {
+        final InputStream stream = new ByteArrayInputStream(new byte[0]);
+        registerImage(stream, 200, 100);
+
+        final Image image = new Image(stream, true);
 
         final StubAsyncImageLoader lastAsyncImageLoader =
                 getLastAsyncImageLoader();
@@ -528,7 +558,7 @@ public final class ImageTest {
     @Test
     public void createImageAsyncFromNullUrlTest() {
         assertThrows(NullPointerException.class, () -> {
-            new Image(null, true);
+            new Image((String)null, true);
         });
     }
 
@@ -536,6 +566,13 @@ public final class ImageTest {
     public void createImageFromNullInputStreamTest() {
         assertThrows(NullPointerException.class, () -> {
             new Image((InputStream) null);
+        });
+    }
+
+    @Test
+    public void createImageAsyncFromNullInputStreamTest() {
+        assertThrows(NullPointerException.class, () -> {
+            new Image((InputStream) null, true);
         });
     }
 
