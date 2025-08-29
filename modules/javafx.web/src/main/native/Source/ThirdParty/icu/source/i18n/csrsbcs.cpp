@@ -127,7 +127,7 @@ int32_t NGramParser::parse(InputText *det)
     // TODO: Is this OK? The buffer could have ended in the middle of a word...
     addByte(0x20);
 
-    double rawPercent = (double) hitCount / (double) ngramCount;
+    double rawPercent = static_cast<double>(hitCount) / static_cast<double>(ngramCount);
 
     //            if (rawPercent <= 2.0) {
     //                return 0;
@@ -139,7 +139,7 @@ int32_t NGramParser::parse(InputText *det)
         return 98;
     }
 
-    return (int32_t) (rawPercent * 300.0);
+    return static_cast<int32_t>(rawPercent * 300.0);
 }
 
 #if !UCONFIG_ONLY_HTML_CONVERSION
@@ -165,21 +165,21 @@ static const uint8_t unshapeMap_IBM420[] = {
 
 NGramParser_IBM420::NGramParser_IBM420(const int32_t *theNgramList, const uint8_t *theCharMap):NGramParser(theNgramList, theCharMap)
 {
-        alef = 0x00;
+	alef = 0x00;
 }
 
 NGramParser_IBM420::~NGramParser_IBM420() {}
 
 int32_t NGramParser_IBM420::isLamAlef(int32_t b)
 {
-        if(b == 0xB2 || b == 0xB3){
-                return 0x47;
+	if(b == 0xB2 || b == 0xB3){
+         	return 0x47;
         }else if(b == 0xB4 || b == 0xB5){
-                return 0x49;
+         	return 0x49;
         }else if(b == 0xB8 || b == 0xB9){
-                return 0x56;
+         	return 0x56;
         }else
-                return 0x00;
+         	return 0x00;
 }
 
 /*
@@ -210,7 +210,7 @@ int32_t NGramParser_IBM420::nextByte(InputText *det)
 
 void NGramParser_IBM420::parseCharacters(InputText *det)
 {
-        int32_t b;
+	int32_t b;
     bool ignoreSpace = false;
 
     while ((b = nextByte(det)) >= 0) {
@@ -224,7 +224,7 @@ void NGramParser_IBM420::parseCharacters(InputText *det)
             ignoreSpace = (mb == 0x20);
         }
 
-                if(alef != 0x00){
+		if(alef != 0x00){
             mb = charMap[alef & 0xFF];
 
             // TODO: 0x20 might not be a space in all character sets...

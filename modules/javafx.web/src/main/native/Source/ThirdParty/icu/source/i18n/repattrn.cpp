@@ -118,14 +118,14 @@ RegexPattern &RegexPattern::operator = (const RegexPattern &other) {
     int32_t  numSets = other.fSets->size();
     fSets8 = new Regex8BitSet[numSets];
     if (fSets8 == nullptr) {
-        fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
-        return *this;
+    	fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
+    	return *this;
     }
     for (i=1; i<numSets; i++) {
         if (U_FAILURE(fDeferredStatus)) {
             return *this;
         }
-        UnicodeSet *sourceSet = (UnicodeSet *)other.fSets->elementAt(i);
+        UnicodeSet* sourceSet = static_cast<UnicodeSet*>(other.fSets->elementAt(i));
         UnicodeSet *newSet    = new UnicodeSet(*sourceSet);
         if (newSet == nullptr) {
             fDeferredStatus = U_MEMORY_ALLOCATION_ERROR;
@@ -142,7 +142,7 @@ RegexPattern &RegexPattern::operator = (const RegexPattern &other) {
             if (U_FAILURE(fDeferredStatus)) {
                 break;
             }
-            const UnicodeString *name = (const UnicodeString *)hashEl->key.pointer;
+            const UnicodeString* name = static_cast<const UnicodeString*>(hashEl->key.pointer);
             UnicodeString *key = new UnicodeString(*name);
             int32_t val = hashEl->value.integer;
             if (key == nullptr) {
@@ -164,7 +164,7 @@ RegexPattern &RegexPattern::operator = (const RegexPattern &other) {
 //--------------------------------------------------------------------------
 void RegexPattern::init() {
     fFlags            = 0;
-    fCompiledPat      = 0;
+    fCompiledPat      = nullptr;
     fLiteralText.remove();
     fSets             = nullptr;
     fSets8            = nullptr;
@@ -199,7 +199,7 @@ void RegexPattern::init() {
     }
 
     // Slot zero of the vector of sets is reserved.  Fill it here.
-    fSets->addElement((int32_t)0, fDeferredStatus);
+    fSets->addElement(static_cast<int32_t>(0), fDeferredStatus);
 }
 
 
@@ -232,10 +232,8 @@ void RegexPattern::zap() {
     int i;
     for (i=1; i<fSets->size(); i++) {
         UnicodeSet *s;
-        s = (UnicodeSet *)fSets->elementAt(i);
-        if (s != nullptr) {
-            delete s;
-        }
+        s = static_cast<UnicodeSet*>(fSets->elementAt(i));
+        delete s;
     }
     delete fSets;
     fSets = nullptr;
@@ -579,7 +577,7 @@ UnicodeString RegexPattern::pattern() const {
     if (fPatternString != nullptr) {
         return *fPatternString;
     } else if (fPattern == nullptr) {
-        return UnicodeString();
+        return {};
     } else {
         UErrorCode status = U_ZERO_ERROR;
         int64_t nativeLen = utext_nativeLength(fPattern);
@@ -663,7 +661,7 @@ int32_t  RegexPattern::split(const UnicodeString &input,
     int32_t r = 0;
     // Check m's status to make sure all is ok.
     if (U_SUCCESS(m.fDeferredStatus)) {
-        r = m.split(input, dest, destCapacity, status);
+    	r = m.split(input, dest, destCapacity, status);
     }
     return r;
 }
@@ -684,7 +682,7 @@ int32_t  RegexPattern::split(UText *input,
     int32_t r = 0;
     // Check m's status to make sure all is ok.
     if (U_SUCCESS(m.fDeferredStatus)) {
-        r = m.split(input, dest, destCapacity, status);
+    	r = m.split(input, dest, destCapacity, status);
     }
     return r;
 }

@@ -25,6 +25,7 @@
 U_NAMESPACE_BEGIN
 
 class FieldPositionIteratorHandler;
+class SimpleDateFormat;
 
 namespace number {  // icu::number
 
@@ -127,7 +128,7 @@ class U_I18N_API FormattedNumber : public UMemory, public FormattedValue {
     template<typename StringClass>
     inline StringClass toDecimalNumber(UErrorCode& status) const;
 
-        /**
+	/**
      * Gets the resolved output unit.
      *
      * The output unit is dependent upon the localized preferences for the usage
@@ -190,6 +191,9 @@ class U_I18N_API FormattedNumber : public UMemory, public FormattedValue {
 
     // To give C API access to internals
     friend struct impl::UFormattedNumberImpl;
+
+    // To give access to the data pointer for non-heap allocation
+    friend class icu::SimpleDateFormat;
 };
 
 template<typename StringClass>

@@ -391,6 +391,17 @@ set(ICU_I18N_SOURCES
     source/i18n/measunit.cpp
     source/i18n/measunit_extra.cpp
     source/i18n/measure.cpp
+    source/i18n/messageformat2.cpp
+    source/i18n/messageformat2_arguments.cpp
+    source/i18n/messageformat2_checker.cpp
+    source/i18n/messageformat2_data_model.cpp
+    source/i18n/messageformat2_errors.cpp
+    source/i18n/messageformat2_evaluation.cpp
+    source/i18n/messageformat2_formatter.cpp
+    source/i18n/messageformat2_formattable.cpp
+    source/i18n/messageformat2_function_registry.cpp
+    source/i18n/messageformat2_parser.cpp
+    source/i18n/messageformat2_serializer.cpp
     source/i18n/msgfmt.cpp
     source/i18n/name2uni.cpp
     source/i18n/nfrs.cpp

@@ -38,7 +38,7 @@ StringSearch::StringSearch(const UnicodeString &pattern,
 
     m_strsrch_ = usearch_open(m_pattern_.getBuffer(), m_pattern_.length(),
                               m_text_.getBuffer(), m_text_.length(),
-                              locale.getName(), (UBreakIterator *)breakiter,
+                              locale.getName(), reinterpret_cast<UBreakIterator*>(breakiter),
                               &status);
     uprv_free(m_search_);
     m_search_ = nullptr;
@@ -70,7 +70,7 @@ StringSearch::StringSearch(const UnicodeString     &pattern,
                                           m_pattern_.length(),
                                           m_text_.getBuffer(),
                                           m_text_.length(), coll->toUCollator(),
-                                          (UBreakIterator *)breakiter,
+                                          reinterpret_cast<UBreakIterator*>(breakiter),
                                           &status);
     uprv_free(m_search_);
     m_search_ = nullptr;
@@ -95,7 +95,7 @@ StringSearch::StringSearch(const UnicodeString     &pattern,
     }
     m_strsrch_ = usearch_open(m_pattern_.getBuffer(), m_pattern_.length(),
                               m_text_.getBuffer(), m_text_.length(),
-                              locale.getName(), (UBreakIterator *)breakiter,
+                              locale.getName(), reinterpret_cast<UBreakIterator*>(breakiter),
                               &status);
     uprv_free(m_search_);
     m_search_ = nullptr;
@@ -127,7 +127,7 @@ StringSearch::StringSearch(const UnicodeString     &pattern,
                                           m_pattern_.length(),
                                           m_text_.getBuffer(),
                                           m_text_.length(), coll->toUCollator(),
-                                          (UBreakIterator *)breakiter,
+                                          reinterpret_cast<UBreakIterator*>(breakiter),
                                           &status);
     uprv_free(m_search_);
     m_search_ = nullptr;
@@ -159,7 +159,7 @@ StringSearch::StringSearch(const StringSearch &that) :
                                               m_text_.getBuffer(),
                                               m_text_.length(),
                                               that.m_strsrch_->collator,
-                                             (UBreakIterator *)that.m_breakiterator_,
+                                              reinterpret_cast<UBreakIterator*>(that.m_breakiterator_),
                                               &status);
         if (U_SUCCESS(status)) {
             // m_search_ has been created by the base SearchIterator class
@@ -291,9 +291,9 @@ StringSearch * StringSearch::safeClone() const
                                             m_breakiterator_,
                                             status);
     /* test for nullptr */
-    if (result == 0) {
+    if (result == nullptr) {
         status = U_MEMORY_ALLOCATION_ERROR;
-        return 0;
+        return nullptr;
     }
     result->setOffset(getOffset(), status);
     result->setMatchStart(m_strsrch_->search->matchedIndex);
@@ -381,20 +381,20 @@ int32_t StringSearch::handleNext(int32_t position, UErrorCode &status)
             // then we don't need to check the match boundaries here because
             // usearch_handleNextXXX will already have done it.
             if (m_search_->isCanonicalMatch) {
-                // *could* actually use exact here 'cause no extra accents allowed...
-                usearch_handleNextCanonical(m_strsrch_, &status);
+            	// *could* actually use exact here 'cause no extra accents allowed...
+            	usearch_handleNextCanonical(m_strsrch_, &status);
             } else {
-                usearch_handleNextExact(m_strsrch_, &status);
+            	usearch_handleNextExact(m_strsrch_, &status);
             }
 
             if (U_FAILURE(status)) {
-                return USEARCH_DONE;
+            	return USEARCH_DONE;
             }
 
             if (m_search_->matchedIndex == USEARCH_DONE) {
-                ucol_setOffset(m_strsrch_->textIter, m_search_->textLength, &status);
+            	ucol_setOffset(m_strsrch_->textIter, m_search_->textLength, &status);
             } else {
-                ucol_setOffset(m_strsrch_->textIter, m_search_->matchedIndex, &status);
+            	ucol_setOffset(m_strsrch_->textIter, m_search_->matchedIndex, &status);
             }
 
             return m_search_->matchedIndex;
@@ -460,14 +460,14 @@ int32_t StringSearch::handlePrev(int32_t position, UErrorCode &status)
             ucol_setOffset(m_strsrch_->textIter, position, &status);
 
             if (m_search_->isCanonicalMatch) {
-                // *could* use exact match here since extra accents *not* allowed!
-                usearch_handlePreviousCanonical(m_strsrch_, &status);
+            	// *could* use exact match here since extra accents *not* allowed!
+            	usearch_handlePreviousCanonical(m_strsrch_, &status);
             } else {
-                usearch_handlePreviousExact(m_strsrch_, &status);
+            	usearch_handlePreviousExact(m_strsrch_, &status);
             }
 
             if (U_FAILURE(status)) {
-                return USEARCH_DONE;
+            	return USEARCH_DONE;
             }
 
             return m_search_->matchedIndex;
