@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.ParentHelper;
-import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
 import com.sun.javafx.scene.traversal.Algorithm;
@@ -106,6 +105,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         behavior = new SpinnerBehavior<>(control);
 
         textField = control.getEditor();
+        textField.setHoistFocus(true);
 
         ListenerHelper lh = ListenerHelper.get(this);
 
@@ -116,6 +116,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
         // increment / decrement arrows
         incrementArrow = new Region();
+        incrementArrow.setHoistFocus(true);
         incrementArrow.setFocusTraversable(false);
         incrementArrow.getStyleClass().setAll("increment-arrow");
         incrementArrow.setMaxWidth(Region.USE_PREF_SIZE);
@@ -132,6 +133,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             }
         };
         incrementArrowButton.setAccessibleRole(AccessibleRole.INCREMENT_BUTTON);
+        incrementArrowButton.setHoistFocus(true);
         incrementArrowButton.setFocusTraversable(false);
         incrementArrowButton.getStyleClass().setAll("increment-arrow-button");
         incrementArrowButton.getChildren().add(incrementArrow);
@@ -142,6 +144,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         incrementArrowButton.setOnMouseReleased(e -> behavior.stopSpinning());
 
         decrementArrow = new Region();
+        decrementArrow.setHoistFocus(true);
         decrementArrow.setFocusTraversable(false);
         decrementArrow.getStyleClass().setAll("decrement-arrow");
         decrementArrow.setMaxWidth(Region.USE_PREF_SIZE);
@@ -158,6 +161,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             }
         };
         decrementArrowButton.setAccessibleRole(AccessibleRole.DECREMENT_BUTTON);
+        decrementArrowButton.setHoistFocus(true);
         decrementArrowButton.setFocusTraversable(false);
         decrementArrowButton.getStyleClass().setAll("decrement-arrow-button");
         decrementArrowButton.getChildren().add(decrementArrow);
@@ -169,56 +173,8 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
         getChildren().addAll(incrementArrowButton, decrementArrowButton);
 
-        // Fixes in the same vein as ComboBoxListViewSkin
-
-        // move fake focus in to the textfield if the spinner is editable
-        lh.addChangeListener(control.focusedProperty(), (op) -> {
-            // Fix for the regression noted in a comment in JDK-8115009.
-            ((FakeFocusTextField)textField).setFakeFocus(control.isFocused());
-        });
-
-        lh.addEventFilter(control, KeyEvent.ANY, (ke) -> {
-            if (control.isEditable()) {
-                // This prevents a stack overflow from our rebroadcasting of the
-                // event to the textfield that occurs in the final else statement
-                // of the conditions below.
-                if (ke.getTarget().equals(textField)) return;
-
-                // Fix for JDK-8095537 which led to a stack overflow
-                if (ke.getCode() == KeyCode.ESCAPE) return;
-
-                // This and the additional check of isIncDecKeyEvent in
-                // textField's event filter fix JDK-8185937.
-                if (isIncDecKeyEvent(ke)) return;
-
-                // Fix for the regression noted in a comment in JDK-8115009.
-                // This forwards the event down into the TextField when
-                // the key event is actually received by the Spinner.
-                textField.fireEvent(ke.copyFor(textField, textField));
-
-                if (ke.getCode() == KeyCode.ENTER) return;
-
-                ke.consume();
-            }
-        });
-
-        // This event filter is to enable keyboard events being delivered to the
-        // spinner when the user has mouse clicked into the TextField area of the
-        // Spinner control. Without this the up/down/left/right arrow keys don't
-        // work when you click inside the TextField area (but they do in the case
-        // of tabbing in).
-        lh.addEventFilter(textField, KeyEvent.ANY, (ke) -> {
-            if (! control.isEditable() || isIncDecKeyEvent(ke)) {
-                control.fireEvent(ke.copyFor(control, control));
-                ke.consume();
-            }
-        });
-
         lh.addChangeListener(textField.focusedProperty(), (op) -> {
             boolean hasFocus = textField.isFocused();
-            // Fix for JDK-8115009
-            control.getProperties().put("FOCUSED", hasFocus);
-            // --- end of JDK-8115009
 
             // JDK-8120120 starts here
             if (! hasFocus) {
@@ -228,8 +184,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             }
             // --- end of JDK-8120120
         });
-
-        // end of comboBox-esque fixes
 
         textField.focusTraversableProperty().bind(control.editableProperty());
 
@@ -290,6 +244,11 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         }
 
         super.dispose();
+    }
+
+    @Override
+    protected Node getFocusDelegate(Node hoistingNode) {
+        return textField;
     }
 
     /** {@inheritDoc} */
