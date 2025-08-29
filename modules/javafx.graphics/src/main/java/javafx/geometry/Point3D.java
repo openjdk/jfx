@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -410,8 +410,8 @@ public class Point3D implements Interpolatable<Point3D> {
     public Point3D interpolate(Point3D endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
-        if (t <= 0.0) return this;
-        if (t >= 1.0) return endValue;
+        if (t == 0.0) return this;
+        if (t == 1.0) return endValue;
         return new Point3D(
             getX() + (endValue.getX() - getX()) * t,
             getY() + (endValue.getY() - getY()) * t,
