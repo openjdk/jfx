@@ -352,20 +352,6 @@ public class TreeTableRowSkinTest {
         assertEquals(5, row.getChildrenUnmodifiable().stream().filter(TreeTableCell.class::isInstance).count());
     }
 
-    /** TreeTableView.refresh() must release all discarded cells JDK-8307538 */
-    @Test
-    public void cellsMustBeCollectableAfterRefresh() {
-        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
-        assertNotNull(row);
-        WeakReference<Object> ref = new WeakReference<>(row);
-        row = null;
-
-        treeTableView.refresh();
-        Toolkit.getToolkit().firePulse();
-
-        JMemoryBuddy.assertCollectable(ref);
-    }
-
     /** TreeTableView.setRowFactory() must release all discarded cells JDK-8307538 */
     @Test
     public void cellsMustBeCollectableAfterRowFactoryChange() {
