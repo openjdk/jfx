@@ -497,6 +497,21 @@ public final class EventHandlerProperties {
         return onMouseDragExited;
     }
 
+
+    private EventHandlerProperty<MouseDragEvent> onMouseDragDone;
+
+    public final EventHandler<? super MouseDragEvent> getOnMouseDragDone() {
+        return (onMouseDragDone == null) ? null : onMouseDragDone.get();
+    }
+
+    public ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDoneProperty() {
+        if (onMouseDragDone == null) {
+            onMouseDragDone = new EventHandlerProperty<>(bean, "onMouseDragDone", MouseDragEvent.MOUSE_DRAG_DONE);
+        }
+        return onMouseDragDone;
+    }
+
+
     private EventHandlerProperty<KeyEvent> onKeyPressed;
 
     public final EventHandler<? super KeyEvent> getOnKeyPressed() {
