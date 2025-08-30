@@ -33,45 +33,45 @@ import javafx.util.converter.CharacterStringConverter;
 
 public class CharacterStringConverterTest {
 
-    private final CharacterStringConverter converter = new CharacterStringConverter();
+    private static final CharacterStringConverter CONVERTER = new CharacterStringConverter();
 
     @Test
     void fromString_testValidStringInput_lowercase() {
-        assertEquals('c', converter.fromString("c"));
+        assertEquals('c', CONVERTER.fromString("c"));
     }
 
     @Test
     void fromString_testValidStringInput_uppercase() {
-        assertEquals('C', converter.fromString("C"));
+        assertEquals('C', CONVERTER.fromString("C"));
     }
 
     @Test
     void fromString_testValidStringInput_differentCase_one() {
-        assertNotSame('C', converter.fromString("c"));
+        assertNotSame('C', CONVERTER.fromString("c"));
     }
 
     @Test
     void fromString_testValidStringInput_differentCase_two() {
-        assertNotSame('c', converter.fromString("C"));
+        assertNotSame('c', CONVERTER.fromString("C"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace_lowercase() {
-        assertEquals('c', converter.fromString("     c     "));
+        assertEquals('c', CONVERTER.fromString("     c     "));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace_uppercase() {
-        assertEquals('C', converter.fromString("     C     "));
+        assertEquals('C', CONVERTER.fromString("     C     "));
     }
 
     @Test
     void toString_lowercase() {
-        assertEquals("c", converter.toString('c'));
+        assertEquals("c", CONVERTER.toString('c'));
     }
 
     @Test
     void toString_uppercase() {
-        assertEquals("C", converter.toString('C'));
+        assertEquals("C", CONVERTER.toString('C'));
     }
 }

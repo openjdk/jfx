@@ -33,55 +33,55 @@ import javafx.util.converter.BooleanStringConverter;
 
 public class BooleanStringConverterTest {
 
-    private final BooleanStringConverter converter = new BooleanStringConverter();
+    private static final BooleanStringConverter CONVERTER = new BooleanStringConverter();
 
     @Test
     void fromString_testValidStringInput_lowercase_true() {
-        assertEquals(Boolean.TRUE, converter.fromString("true"));
+        assertEquals(Boolean.TRUE, CONVERTER.fromString("true"));
     }
 
     @Test
     void fromString_testValidStringInput_uppercase_true() {
-        assertEquals(Boolean.TRUE, converter.fromString("TRUE"));
+        assertEquals(Boolean.TRUE, CONVERTER.fromString("TRUE"));
     }
 
     @Test
     void fromString_testValidStringInput_mixedCase_true() {
-        assertEquals(Boolean.TRUE, converter.fromString("tRUe"));
+        assertEquals(Boolean.TRUE, CONVERTER.fromString("tRUe"));
     }
 
     @Test
     void fromString_testValidStringInput_lowercase_false() {
-        assertEquals(Boolean.FALSE, converter.fromString("false"));
+        assertEquals(Boolean.FALSE, CONVERTER.fromString("false"));
     }
 
     @Test
     void fromString_testValidStringInput_uppercase_false() {
-        assertEquals(Boolean.FALSE, converter.fromString("FALSE"));
+        assertEquals(Boolean.FALSE, CONVERTER.fromString("FALSE"));
     }
 
     @Test
     void fromString_testValidStringInput_mixedCase_false() {
-        assertEquals(Boolean.FALSE, converter.fromString("fALsE"));
+        assertEquals(Boolean.FALSE, CONVERTER.fromString("fALsE"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace_true() {
-        assertEquals(Boolean.TRUE, converter.fromString("      true      "));
+        assertEquals(Boolean.TRUE, CONVERTER.fromString("      true      "));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace_false() {
-        assertEquals(Boolean.FALSE, converter.fromString("     false      "));
+        assertEquals(Boolean.FALSE, CONVERTER.fromString("     false      "));
     }
 
     @Test
     void toString_true() {
-        assertEquals("true", converter.toString(true));
+        assertEquals("true", CONVERTER.toString(true));
     }
 
     @Test
     void toString_false() {
-        assertEquals("false", converter.toString(false));
+        assertEquals("false", CONVERTER.toString(false));
     }
 }

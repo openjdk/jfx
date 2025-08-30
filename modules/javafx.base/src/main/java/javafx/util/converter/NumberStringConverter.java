@@ -79,12 +79,12 @@ public class NumberStringConverter extends BaseStringConverter<Number> {
     }
 
     private NumberFormat createFormat(Locale locale, String pattern) {
-        locale = Objects.requireNonNullElse(locale, Locale.getDefault());
+        locale = locale != null ? locale : Locale.getDefault();
         return pattern != null ? new DecimalFormat(pattern, new DecimalFormatSymbols(locale))
                                : getSpecializedNumberFormat(locale);
     }
 
-    // treat as protected
+    /// Returns the `NumberFormat` to be used without a pattern. Subclasses should override to return their own formatter.
     NumberFormat getSpecializedNumberFormat(Locale locale) {
         return NumberFormat.getNumberInstance(locale);
     }
@@ -94,7 +94,7 @@ public class NumberStringConverter extends BaseStringConverter<Number> {
         try {
             return numberFormat.parse(string);
         } catch (ParseException e) {
-            throw new RuntimeException(e);
+            throw new IllegalArgumentException(e);
         }
     }
 
@@ -103,8 +103,6 @@ public class NumberStringConverter extends BaseStringConverter<Number> {
         return numberFormat.format(number);
     }
 
-    /// {@return the `NumberFormat` used for formatting and parsing in this `NumberStringConverter`}
-    ///
     /// Used in tests only.
     NumberFormat getNumberFormat() {
         return numberFormat;

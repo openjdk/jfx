@@ -35,20 +35,20 @@ import javafx.util.converter.BigIntegerStringConverter;
 
 public class BigIntegerStringConverterTest {
 
-    private final BigIntegerStringConverter converter = new BigIntegerStringConverter();
+    private static final BigIntegerStringConverter CONVERTER = new BigIntegerStringConverter();
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(BigInteger.TEN, converter.fromString("10"));
+        assertEquals(BigInteger.TEN, CONVERTER.fromString("10"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(BigInteger.TEN, converter.fromString("      10      "));
+        assertEquals(BigInteger.TEN, CONVERTER.fromString("      10      "));
     }
 
     @Test
     void toString_testStringInput() {
-        assertEquals("10", converter.toString(BigInteger.TEN));
+        assertEquals("10", CONVERTER.toString(BigInteger.TEN));
     }
 }

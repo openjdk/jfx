@@ -39,7 +39,7 @@ public class FormatStringConverter<T> extends BaseStringConverter<T> {
 
     private final Format format;
 
-    /// Creates a `StringConverter` for arbitrary types that uses the given `Format`.
+    /// Creates a `FormatStringConverter` for arbitrary types that uses the given `Format`.
     ///
     /// @param format the formatter/parser that will be used by the `toString()` and `fromString()` methods. Must not be
     ///        `null`.
@@ -54,7 +54,7 @@ public class FormatStringConverter<T> extends BaseStringConverter<T> {
         @SuppressWarnings("unchecked")
         T result = (T) format.parseObject(string, pos);
         if (pos.getIndex() != string.length()) {
-            throw new RuntimeException("Parsed string not according to the format");
+            throw new IllegalArgumentException("Parsed string not according to the format");
         }
         return result;
     }
@@ -64,7 +64,7 @@ public class FormatStringConverter<T> extends BaseStringConverter<T> {
         return format.format(object);
     }
 
-    /// {@return the `Format` instance for formatting and parsing in this `StringConverter`}
+    /// {@return the `Format` instance for formatting and parsing in this `FormatStringConverter`}
     protected Format getFormat() {
         return format;
     }

@@ -35,20 +35,20 @@ import javafx.util.converter.BigDecimalStringConverter;
 
 public class BigDecimalStringConverterTest {
 
-    private final BigDecimalStringConverter converter = new BigDecimalStringConverter();
+    private static final BigDecimalStringConverter CONVERTER = new BigDecimalStringConverter();
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(BigDecimal.TEN, converter.fromString("10"));
+        assertEquals(BigDecimal.TEN, CONVERTER.fromString("10"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(BigDecimal.TEN, converter.fromString("      10      "));
+        assertEquals(BigDecimal.TEN, CONVERTER.fromString("      10      "));
     }
 
     @Test
     void toString_testStringInput() {
-        assertEquals("10", converter.toString(BigDecimal.TEN));
+        assertEquals("10", CONVERTER.toString(BigDecimal.TEN));
     }
 }

@@ -33,20 +33,20 @@ import javafx.util.converter.IntegerStringConverter;
 
 public class IntegerStringConverterTest {
 
-    private final IntegerStringConverter converter = new IntegerStringConverter();
+    private static final IntegerStringConverter CONVERTER = new IntegerStringConverter();
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(10, converter.fromString("10"));
+        assertEquals(10, CONVERTER.fromString("10"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(10, converter.fromString("      10      "));
+        assertEquals(10, CONVERTER.fromString("      10      "));
     }
 
     @Test
     void toString_validInput() {
-        assertEquals("10", converter.toString(10));
+        assertEquals("10", CONVERTER.toString(10));
     }
 }

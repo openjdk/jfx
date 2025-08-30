@@ -35,20 +35,20 @@ public class ShortStringConverterTest {
 
     private static final short SHORT_VALUE_10 = 10;
 
-    private final ShortStringConverter converter = new ShortStringConverter();
+    private static final ShortStringConverter CONVERTER = new ShortStringConverter();
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(SHORT_VALUE_10, converter.fromString("10"));
+        assertEquals(SHORT_VALUE_10, CONVERTER.fromString("10"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(SHORT_VALUE_10, converter.fromString("     10     "));
+        assertEquals(SHORT_VALUE_10, CONVERTER.fromString("     10     "));
     }
 
     @Test
     void toString_testStringInput() {
-        assertEquals("10", converter.toString(SHORT_VALUE_10));
+        assertEquals("10", CONVERTER.toString(SHORT_VALUE_10));
     }
 }

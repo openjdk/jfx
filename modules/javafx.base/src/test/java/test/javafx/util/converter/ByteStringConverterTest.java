@@ -35,20 +35,20 @@ public class ByteStringConverterTest {
 
     private static final byte BYTE_VALUE_10 = 10;
 
-    private final ByteStringConverter converter = new ByteStringConverter();
+    private static final ByteStringConverter CONVERTER = new ByteStringConverter();
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(BYTE_VALUE_10, converter.fromString("10"));
+        assertEquals(BYTE_VALUE_10, CONVERTER.fromString("10"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(BYTE_VALUE_10, converter.fromString("     10     "));
+        assertEquals(BYTE_VALUE_10, CONVERTER.fromString("     10     "));
     }
 
     @Test
     void toString_testStringInput() {
-        assertEquals("10", converter.toString(BYTE_VALUE_10));
+        assertEquals("10", CONVERTER.toString(BYTE_VALUE_10));
     }
 }

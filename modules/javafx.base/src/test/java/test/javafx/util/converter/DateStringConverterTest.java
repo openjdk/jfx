@@ -45,7 +45,7 @@ import javafx.util.converter.DateTimeStringConverterShim;
 
 public class DateStringConverterTest {
 
-    private static final Locale DEFALUT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
     private static final Date VALID_DATE;
 
     static {
@@ -65,13 +65,13 @@ public class DateStringConverterTest {
 
     private static Collection<TestCase> implementations() {
         return List.of(
-                new TestCase(new DateStringConverter(), DEFALUT_LOCALE, DateFormat.DEFAULT, null, null),
-                new TestCase(new DateStringConverter(DateFormat.SHORT), DEFALUT_LOCALE, DateFormat.SHORT, null, null),
+                new TestCase(new DateStringConverter(), DEFAULT_LOCALE, DateFormat.DEFAULT, null, null),
+                new TestCase(new DateStringConverter(DateFormat.SHORT), DEFAULT_LOCALE, DateFormat.SHORT, null, null),
                 new TestCase(new DateStringConverter(Locale.UK), Locale.UK, DateFormat.DEFAULT, null, null),
                 new TestCase(new DateStringConverter(Locale.UK, DateFormat.SHORT), Locale.UK, DateFormat.SHORT, null, null),
-                new TestCase(new DateStringConverter("dd MM yyyy"), DEFALUT_LOCALE, DateFormat.DEFAULT, "dd MM yyyy", null),
+                new TestCase(new DateStringConverter("dd MM yyyy"), DEFAULT_LOCALE, DateFormat.DEFAULT, "dd MM yyyy", null),
                 new TestCase(new DateStringConverter(DateFormat.getDateInstance(DateFormat.LONG)),
-                        DEFALUT_LOCALE, DateFormat.DEFAULT, null, DateFormat.getDateInstance(DateFormat.LONG))
+                        DEFAULT_LOCALE, DateFormat.DEFAULT, null, DateFormat.getDateInstance(DateFormat.LONG))
                 );
     }
 

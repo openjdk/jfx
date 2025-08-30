@@ -41,24 +41,24 @@ public class CurrencyStringConverterTest {
 
     private static final String PATTERN = "#,##,###,####";
 
-    private final CurrencyStringConverter usLocaleConverter = new CurrencyStringConverter(Locale.US);
+    private static final CurrencyStringConverter US_LOCALE_CONVERTER = new CurrencyStringConverter(Locale.US);
 
     @Test
     void testDefaultConstructor() {
         NumberFormat numberFormat = NumberFormat.getCurrencyInstance(Locale.getDefault());
 
-        var csc = new CurrencyStringConverter();
+        var converter = new CurrencyStringConverter();
 
-        assertEquals(numberFormat, numberFormatOf(csc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
     void testConstructor_locale() {
         NumberFormat numberFormat = NumberFormat.getCurrencyInstance(Locale.CANADA);
 
-        var csc = new CurrencyStringConverter(Locale.CANADA);
+        var converter = new CurrencyStringConverter(Locale.CANADA);
 
-        assertEquals(numberFormat, numberFormatOf(csc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
@@ -66,9 +66,9 @@ public class CurrencyStringConverterTest {
         var symbols = new DecimalFormatSymbols(Locale.getDefault());
         var numberFormat = new DecimalFormat(PATTERN, symbols);
 
-        var csc = new CurrencyStringConverter(PATTERN);
+        var converter = new CurrencyStringConverter(PATTERN);
 
-        assertEquals(numberFormat, numberFormatOf(csc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
@@ -76,32 +76,32 @@ public class CurrencyStringConverterTest {
         var symbols = new DecimalFormatSymbols(Locale.CANADA);
         var numberFormat = new DecimalFormat(PATTERN, symbols);
 
-        var csc = new CurrencyStringConverter(Locale.CANADA, PATTERN);
+        var converter = new CurrencyStringConverter(Locale.CANADA, PATTERN);
 
-        assertEquals(numberFormat, numberFormatOf(csc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
     void testConstructor_numberFormat() {
         NumberFormat numberFormat = NumberFormat.getCurrencyInstance(Locale.JAPAN);
 
-        var csc = new CurrencyStringConverter(numberFormat);
+        var converter = new CurrencyStringConverter(numberFormat);
 
-        assertEquals(numberFormat, numberFormatOf(csc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(10.32, usLocaleConverter.fromString("$10.32"));
+        assertEquals(10.32, US_LOCALE_CONVERTER.fromString("$10.32"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(10.32, usLocaleConverter.fromString("      $10.32      "));
+        assertEquals(10.32, US_LOCALE_CONVERTER.fromString("      $10.32      "));
     }
 
     @Test
     void toString_validInput() {
-        assertEquals("$10.32", usLocaleConverter.toString(10.32));
+        assertEquals("$10.32", US_LOCALE_CONVERTER.toString(10.32));
     }
 }

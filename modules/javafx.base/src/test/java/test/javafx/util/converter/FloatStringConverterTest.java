@@ -33,20 +33,20 @@ import javafx.util.converter.FloatStringConverter;
 
 public class FloatStringConverterTest {
 
-    private final FloatStringConverter converter = new FloatStringConverter();
+    private static final FloatStringConverter CONVERTER = new FloatStringConverter();
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(10.3521f, converter.fromString("10.3521"));
+        assertEquals(10.3521f, CONVERTER.fromString("10.3521"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(10.3521f, converter.fromString("      10.3521     "));
+        assertEquals(10.3521f, CONVERTER.fromString("      10.3521     "));
     }
 
     @Test
     void toString_validInput() {
-        assertEquals("10.3521", converter.toString(10.3521f));
+        assertEquals("10.3521", CONVERTER.toString(10.3521f));
     }
 }

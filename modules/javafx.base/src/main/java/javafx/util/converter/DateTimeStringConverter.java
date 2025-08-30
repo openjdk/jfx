@@ -104,19 +104,19 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
     /// @param dateFormat the formatter/parser that will be used by the `toString()` and `fromString()` methods. If
     ///        `null`, a default formatter/parser will be used.
     public DateTimeStringConverter(DateFormat dateFormat) {
-        this.dateFormat = Objects.requireNonNullElseGet(dateFormat,
-                () -> create(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT, null));
+        this.dateFormat = dateFormat != null ? dateFormat
+                                             : create(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT, null);
     }
 
     private DateFormat create(Locale locale, int dateStyle, int timeStyle, String pattern) {
-        locale = Objects.requireNonNullElse(locale, DEFAULT_LOCALE);
+        locale = locale != null ? locale : DEFAULT_LOCALE;
         DateFormat dateFormat = pattern == null ? getSpecialziedDateFormat(dateStyle, timeStyle, locale)
                                                 : new SimpleDateFormat(pattern, locale);
         dateFormat.setLenient(false);
         return dateFormat;
     }
 
-    // treat as protected
+    /// Returns the `DateFormat` to be used without a pattern. Subclasses should override to return their own formatter.
     DateFormat getSpecialziedDateFormat(int dateStyle, int timeStyle, Locale locale) {
         return DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale);
     }
@@ -126,7 +126,7 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
         try {
             return dateFormat.parse(string);
         } catch (ParseException e) {
-            throw new RuntimeException(e);
+            throw new IllegalArgumentException(e);
         }
     }
 
@@ -135,8 +135,6 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
         return dateFormat.format(data);
     }
 
-    /// {@return the `DateFormat` used for formatting and parsing in this `DateTimeStringConverter`}
-    ///
     /// Used in tests only.
     DateFormat getDateFormat() {
         return dateFormat;

@@ -33,25 +33,25 @@ import javafx.util.converter.DefaultStringConverter;
 
 public class DefaultStringConverterTest {
 
-    private final DefaultStringConverter converter = new DefaultStringConverter();
+    private static final DefaultStringConverter CONVERTER = new DefaultStringConverter();
 
     @Test
     public void fromString_testValidStringInput() {
-        assertEquals("string", converter.fromString("string"));
+        assertEquals("string", CONVERTER.fromString("string"));
     }
 
     @Test
     public void fromString_testEmptytringInput() {
-        assertEquals("", converter.fromString(""));
+        assertEquals("", CONVERTER.fromString(""));
     }
 
     @Test
     public void toString_testValidStringInput() {
-        assertEquals("string", converter.toString("string"));
+        assertEquals("string", CONVERTER.toString("string"));
     }
 
     @Test
     public void toString_testEmptyStringInput() {
-        assertEquals("", converter.toString(""));
+        assertEquals("", CONVERTER.toString(""));
     }
 }

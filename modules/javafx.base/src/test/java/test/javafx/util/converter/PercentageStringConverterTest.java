@@ -37,24 +37,24 @@ import javafx.util.converter.PercentageStringConverter;
 
 public class PercentageStringConverterTest {
 
-    private final PercentageStringConverter usLocaleConverter = new PercentageStringConverter(Locale.US);
+    private static final PercentageStringConverter US_LOCALE_CONVERTER = new PercentageStringConverter(Locale.US);
 
     @Test
     void testDefaultConstructor() {
         NumberFormat numberFormat = NumberFormat.getPercentInstance(Locale.getDefault());
 
-        var psc = new PercentageStringConverter();
+        var converter = new PercentageStringConverter();
 
-        assertEquals(numberFormat, numberFormatOf(psc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
     void testConstructor_locale() {
         NumberFormat numberFormat = NumberFormat.getPercentInstance(Locale.CANADA);
 
-        var psc = new PercentageStringConverter(Locale.CANADA);
+        var converter = new PercentageStringConverter(Locale.CANADA);
 
-        assertEquals(numberFormat, numberFormatOf(psc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
@@ -68,16 +68,16 @@ public class PercentageStringConverterTest {
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(.1032, usLocaleConverter.fromString("10.32%"));
+        assertEquals(.1032, US_LOCALE_CONVERTER.fromString("10.32%"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(.1032, usLocaleConverter.fromString("      10.32%      "));
+        assertEquals(.1032, US_LOCALE_CONVERTER.fromString("      10.32%      "));
     }
 
     @Test
     void toString_validInput() {
-        assertEquals("10%", usLocaleConverter.toString(.10));
+        assertEquals("10%", US_LOCALE_CONVERTER.toString(.10));
     }
 }

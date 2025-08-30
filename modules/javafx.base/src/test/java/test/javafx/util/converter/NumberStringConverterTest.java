@@ -41,24 +41,24 @@ public class NumberStringConverterTest {
 
     private static final String PATTERN = "#,##,###,####";
 
-    private final NumberStringConverter usLocaleConverter = new NumberStringConverter(Locale.US);
+    private static final NumberStringConverter US_LOCALE_CONVERTER = new NumberStringConverter(Locale.US);
 
     @Test
     void testDefaultConstructor() {
         NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.getDefault());
 
-        var nsc = new NumberStringConverter();
+        var converter = new NumberStringConverter();
 
-        assertEquals(numberFormat, numberFormatOf(nsc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
     void testConstructor_locale() {
         NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.CANADA);
 
-        var nsc = new NumberStringConverter(Locale.CANADA);
+        var converter = new NumberStringConverter(Locale.CANADA);
 
-        assertEquals(numberFormat, numberFormatOf(nsc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
@@ -66,9 +66,9 @@ public class NumberStringConverterTest {
         var symbols = new DecimalFormatSymbols(Locale.getDefault());
         var numberFormat = new DecimalFormat(PATTERN, symbols);
 
-        var nsc = new NumberStringConverter(PATTERN);
+        var converter = new NumberStringConverter(PATTERN);
 
-        assertEquals(numberFormat, numberFormatOf(nsc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
@@ -76,18 +76,18 @@ public class NumberStringConverterTest {
         var symbols = new DecimalFormatSymbols(Locale.CANADA);
         var numberFormat = new DecimalFormat(PATTERN, symbols);
 
-        var nsc = new NumberStringConverter(Locale.CANADA, PATTERN);
+        var converter = new NumberStringConverter(Locale.CANADA, PATTERN);
 
-        assertEquals(numberFormat, numberFormatOf(nsc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     @Test
     void testConstructor_numberFormat() {
         NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.JAPAN);
 
-        var nsc = new NumberStringConverter(numberFormat);
+        var converter = new NumberStringConverter(numberFormat);
 
-        assertEquals(numberFormat, numberFormatOf(nsc));
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
     static NumberFormat numberFormatOf(NumberStringConverter csc) {
@@ -96,21 +96,21 @@ public class NumberStringConverterTest {
 
     @Test
     void fromString_testValidInput() {
-        assertEquals(10L, usLocaleConverter.fromString("10"));
+        assertEquals(10L, US_LOCALE_CONVERTER.fromString("10"));
     }
 
     @Test
     void fromString_testValidInputWithWhiteSpace() {
-        assertEquals(10L, usLocaleConverter.fromString("      10      "));
+        assertEquals(10L, US_LOCALE_CONVERTER.fromString("      10      "));
     }
 
     @Test
     void fromString_testInvalidInput() {
-        assertThrows(RuntimeException.class, () -> usLocaleConverter.fromString("abcdefg"));
+        assertThrows(RuntimeException.class, () -> US_LOCALE_CONVERTER.fromString("abcdefg"));
     }
 
     @Test
     void toString_validInput() {
-        assertEquals("10", usLocaleConverter.toString(10L));
+        assertEquals("10", US_LOCALE_CONVERTER.toString(10L));
     }
 }

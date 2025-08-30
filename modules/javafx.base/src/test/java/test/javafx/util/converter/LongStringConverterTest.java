@@ -33,20 +33,20 @@ import javafx.util.converter.LongStringConverter;
 
 public class LongStringConverterTest {
 
-    private final LongStringConverter converter = new LongStringConverter();
+    private static final LongStringConverter CONVERTER = new LongStringConverter();
 
     @Test
     void fromString_testValidStringInput() {
-        assertEquals(10, converter.fromString("10"));
+        assertEquals(10, CONVERTER.fromString("10"));
     }
 
     @Test
     void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(10, converter.fromString("      10      "));
+        assertEquals(10, CONVERTER.fromString("      10      "));
     }
 
     @Test
     void toString_validInput() {
-        assertEquals("10", converter.toString(10L));
+        assertEquals("10", CONVERTER.toString(10L));
     }
 }
