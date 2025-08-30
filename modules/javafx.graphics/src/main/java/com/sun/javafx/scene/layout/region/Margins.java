@@ -39,7 +39,7 @@ import java.util.Objects;
 /**
  * Similar to Insets but with flag denoting values are proportional.
  * If proportional is true, then the values represent fractions or percentages
- * and are in the range 0..1, although this is not enforced.
+ * where 0 corresponds to 0%, and 1 corresponds to 100%.
  */
 public final class Margins implements Interpolatable<Margins> {
 

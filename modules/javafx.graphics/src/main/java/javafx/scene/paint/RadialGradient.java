@@ -317,7 +317,6 @@ public final class RadialGradient extends Paint {
     private RadialGradient(
             double focusAngle, double focusDistance, double centerX, double centerY, double radius,
             boolean proportional, CycleMethod cycleMethod, List<Stop> stops, int ignored) {
-        checkInvariants(radius, focusDistance);
         this.focusAngle = focusAngle;
         this.focusDistance = focusDistance;
         this.centerX = centerX;
@@ -609,8 +608,7 @@ public final class RadialGradient extends Paint {
             parser.shift();
 
             if (distance < 0) {
-                throw new IllegalArgumentException(
-                    "Invalid gradient specification: focus-distance cannot be negative");
+                throw new IllegalArgumentException("Invalid gradient specification: focus-distance cannot be negative");
             }
         }
 
@@ -632,12 +630,10 @@ public final class RadialGradient extends Paint {
             parser.shift();
 
             if (radius.value < 0) {
-                throw new IllegalArgumentException(
-                    "Invalid gradient specification: radius cannot be negative");
+                throw new IllegalArgumentException("Invalid gradient specification: radius cannot be negative");
             }
         } else {
-            throw new IllegalArgumentException("Invalid gradient specification: "
-                    + "radius must be specified");
+            throw new IllegalArgumentException("Invalid gradient specification: radius must be specified");
         }
 
         CycleMethod method = CycleMethod.NO_CYCLE;
