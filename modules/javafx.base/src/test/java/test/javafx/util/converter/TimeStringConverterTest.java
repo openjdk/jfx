@@ -45,6 +45,7 @@ import javafx.util.converter.TimeStringConverter;
 
 public class TimeStringConverterTest {
 
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
     private static final Date VALID_TIME_WITH_SECONDS;
     private static final Date VALID_TIME_WITHOUT_SECONDS;
 
@@ -65,25 +66,31 @@ public class TimeStringConverterTest {
 
     private static Collection<TestCase> implementations() {
         return List.of(
-                new TestCase(new TimeStringConverter(), Locale.getDefault(Locale.Category.FORMAT),
-                        DateFormat.DEFAULT, null, null, VALID_TIME_WITH_SECONDS),
+                new TestCase(new TimeStringConverter(), DEFAULT_LOCALE,
+                        DateFormat.DEFAULT, null, null, VALID_TIME_WITH_SECONDS
+                ),
 
-                new TestCase(new TimeStringConverter(DateFormat.SHORT), Locale.getDefault(Locale.Category.FORMAT),
-                        DateFormat.SHORT, null, null, VALID_TIME_WITHOUT_SECONDS),
+                new TestCase(new TimeStringConverter(DateFormat.SHORT), DEFAULT_LOCALE,
+                        DateFormat.SHORT, null, null, VALID_TIME_WITHOUT_SECONDS
+                ),
 
                 new TestCase(new TimeStringConverter(Locale.UK), Locale.UK,
-                        DateFormat.DEFAULT, null, null, VALID_TIME_WITH_SECONDS),
+                        DateFormat.DEFAULT, null, null, VALID_TIME_WITH_SECONDS
+                ),
 
                 new TestCase(new TimeStringConverter(Locale.UK, DateFormat.SHORT), Locale.UK,
-                        DateFormat.SHORT, null, null, VALID_TIME_WITHOUT_SECONDS),
+                        DateFormat.SHORT, null, null, VALID_TIME_WITHOUT_SECONDS
+                ),
 
-                new TestCase(new TimeStringConverter("HH mm ss"), Locale.getDefault(Locale.Category.FORMAT),
-                        DateFormat.DEFAULT, "HH mm ss", null, VALID_TIME_WITH_SECONDS),
+                new TestCase(new TimeStringConverter("HH mm ss"), DEFAULT_LOCALE,
+                        DateFormat.DEFAULT, "HH mm ss", null, VALID_TIME_WITH_SECONDS
+                ),
 
                 new TestCase(new TimeStringConverter(DateFormat.getTimeInstance(DateFormat.FULL)),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, null,
-                        DateFormat.getTimeInstance(DateFormat.FULL), VALID_TIME_WITH_SECONDS)
-                );
+                        DEFAULT_LOCALE, DateFormat.DEFAULT, null,
+                        DateFormat.getTimeInstance(DateFormat.FULL), VALID_TIME_WITH_SECONDS
+                )
+        );
     }
 
     private static DateFormat computeValidFormatter(TestCase testCase) {

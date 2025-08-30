@@ -75,7 +75,7 @@ public class LocalDateTimeStringConverterTest {
     public enum LocalDateTimeStringConverterVariant {
         NO_PARAM,
         WITH_FORMATTER_PARSER,
-        WITH_FORMAT_STYLES,
+        WITH_FORMAT_STYLES;
     }
 
     private record TestCase(LocalDateTimeStringConverterVariant variant, LocalDateTime validDateTime) {}
@@ -131,7 +131,7 @@ public class LocalDateTimeStringConverterTest {
             case NO_PARAM -> new LocalDateTimeStringConverter();
             case WITH_FORMATTER_PARSER -> new LocalDateTimeStringConverter(aFormatter, aParser);
             case WITH_FORMAT_STYLES -> new LocalDateTimeStringConverter(FormatStyle.SHORT, FormatStyle.SHORT,
-                                Locale.UK, IsoChronology.INSTANCE);
+                    Locale.UK, IsoChronology.INSTANCE);
         };
     }
 

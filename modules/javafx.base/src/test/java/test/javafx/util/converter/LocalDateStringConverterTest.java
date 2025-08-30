@@ -69,7 +69,7 @@ public class LocalDateStringConverterTest {
     private enum LocalDateStringConverterVariant {
         NO_PARAM,
         WITH_FORMATTER_PARSER,
-        WITH_FORMAT_STYLES,
+        WITH_FORMAT_STYLES;
     }
 
     private record TestCase(LocalDateStringConverterVariant variant, LocalDate validDate) {}

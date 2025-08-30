@@ -69,7 +69,7 @@ public class LocalTimeStringConverterTest {
     private enum LocalTimeStringConverterVariant {
         NO_PARAM,
         WITH_FORMATTER_PARSER,
-        WITH_FORMAT_STYLES,
+        WITH_FORMAT_STYLES;
     }
 
     private record TestCase(LocalTimeStringConverterVariant variant, LocalTime validTime) {}

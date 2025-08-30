@@ -30,7 +30,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import java.util.Objects;
 
 /// A `StringConverter` implementation for [Date] values that represent dates and times.
 ///
@@ -104,14 +103,15 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
     /// @param dateFormat the formatter/parser that will be used by the `toString()` and `fromString()` methods. If
     ///        `null`, a default formatter/parser will be used.
     public DateTimeStringConverter(DateFormat dateFormat) {
-        this.dateFormat = dateFormat != null ? dateFormat
-                                             : create(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT, null);
+        this.dateFormat = dateFormat != null ? dateFormat :
+                create(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT, null);
     }
 
     private DateFormat create(Locale locale, int dateStyle, int timeStyle, String pattern) {
         locale = locale != null ? locale : DEFAULT_LOCALE;
-        DateFormat dateFormat = pattern == null ? getSpecialziedDateFormat(dateStyle, timeStyle, locale)
-                                                : new SimpleDateFormat(pattern, locale);
+        DateFormat dateFormat = pattern == null ?
+                getSpecialziedDateFormat(dateStyle, timeStyle, locale) :
+                new SimpleDateFormat(pattern, locale);
         dateFormat.setLenient(false);
         return dateFormat;
     }

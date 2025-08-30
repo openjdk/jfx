@@ -80,8 +80,9 @@ public class NumberStringConverter extends BaseStringConverter<Number> {
 
     private NumberFormat createFormat(Locale locale, String pattern) {
         locale = locale != null ? locale : Locale.getDefault();
-        return pattern != null ? new DecimalFormat(pattern, new DecimalFormatSymbols(locale))
-                               : getSpecializedNumberFormat(locale);
+        return pattern != null ?
+                new DecimalFormat(pattern, new DecimalFormatSymbols(locale)) :
+                getSpecializedNumberFormat(locale);
     }
 
     /// Returns the `NumberFormat` to be used without a pattern. Subclasses should override to return their own formatter.

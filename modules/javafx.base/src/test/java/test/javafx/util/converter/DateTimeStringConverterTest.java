@@ -45,6 +45,7 @@ import javafx.util.converter.DateTimeStringConverterShim;
 
 public class DateTimeStringConverterTest {
 
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
     private static final Date VALID_DATE_WITH_SECONDS;
     private static final Date VALID_DATE_WITHOUT_SECONDS;
 
@@ -69,29 +70,35 @@ public class DateTimeStringConverterTest {
     private static Collection<TestCase> implementations() {
         return List.of(
                 new TestCase(new DateTimeStringConverter(),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, DateFormat.DEFAULT,
-                        null, null, VALID_DATE_WITH_SECONDS),
+                        DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT,
+                        null, null, VALID_DATE_WITH_SECONDS
+                ),
 
                 new TestCase(new DateTimeStringConverter(DateFormat.SHORT, DateFormat.SHORT),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.SHORT, DateFormat.SHORT,
-                        null, null, VALID_DATE_WITHOUT_SECONDS),
+                        DEFAULT_LOCALE, DateFormat.SHORT, DateFormat.SHORT,
+                        null, null, VALID_DATE_WITHOUT_SECONDS
+                ),
 
                 new TestCase(new DateTimeStringConverter(Locale.UK),
                         Locale.UK, DateFormat.DEFAULT, DateFormat.DEFAULT,
-                        null, null, VALID_DATE_WITH_SECONDS),
+                        null, null, VALID_DATE_WITH_SECONDS
+                ),
 
                 new TestCase(new DateTimeStringConverter(Locale.UK, DateFormat.SHORT, DateFormat.SHORT),
                         Locale.UK, DateFormat.SHORT, DateFormat.SHORT,
-                        null, null, VALID_DATE_WITHOUT_SECONDS),
+                        null, null, VALID_DATE_WITHOUT_SECONDS
+                ),
 
                 new TestCase(new DateTimeStringConverter("dd MM yyyy HH mm ss"),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, DateFormat.DEFAULT,
-                        "dd MM yyyy HH mm ss", null, VALID_DATE_WITH_SECONDS),
+                        DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT,
+                        "dd MM yyyy HH mm ss", null, VALID_DATE_WITH_SECONDS
+                ),
 
                 new TestCase(new DateTimeStringConverter(DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL)),
-                        Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT, DateFormat.DEFAULT,
-                        null, DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL), VALID_DATE_WITH_SECONDS)
-                );
+                        DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT,
+                        null, DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL), VALID_DATE_WITH_SECONDS
+                )
+        );
     }
 
     private static DateFormat create(TestCase testCase) {

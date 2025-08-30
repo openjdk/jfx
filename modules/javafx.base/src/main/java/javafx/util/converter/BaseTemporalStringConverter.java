@@ -54,18 +54,20 @@ abstract class BaseTemporalStringConverter<T extends Temporal> extends BaseStrin
 
     protected BaseTemporalStringConverter(DateTimeFormatter formatter, DateTimeFormatter parser,
             FormatStyle dateStyle, FormatStyle timeStyle) {
-        this.formatter = formatter != null ? formatter : createFormatter(dateStyle, timeStyle, DEFAULT_LOCALE, DEFAULT_CHRONO);
+        this.formatter = formatter != null ? formatter :
+                createFormatter(dateStyle, timeStyle, DEFAULT_LOCALE, DEFAULT_CHRONO);
         this.parser = parser != null ? parser :
-                formatter != null ? formatter : createParser(dateStyle, timeStyle, DEFAULT_LOCALE, DEFAULT_CHRONO);
+                formatter != null ? formatter :
+                    createParser(dateStyle, timeStyle, DEFAULT_LOCALE, DEFAULT_CHRONO);
     }
 
     private final DateTimeFormatter createParser(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale, Chronology chrono) {
         String pattern = DateTimeFormatterBuilder.getLocalizedDateTimePattern(dateStyle, timeStyle, chrono, locale);
         return new DateTimeFormatterBuilder().parseLenient()
-                                             .appendPattern(pattern)
-                                             .toFormatter()
-                                             .withChronology(chrono)
-                                             .withDecimalStyle(DecimalStyle.of(locale));
+                .appendPattern(pattern)
+                .toFormatter()
+                .withChronology(chrono)
+                .withDecimalStyle(DecimalStyle.of(locale));
     }
 
     /// To satisfy the requirements of date formatters as described in, e.g.,
@@ -80,9 +82,9 @@ abstract class BaseTemporalStringConverter<T extends Temporal> extends BaseStrin
             }
         }
         return getLocalizedFormatter(dateStyle, timeStyle)
-                            .withLocale(locale)
-                            .withChronology(chrono)
-                            .withDecimalStyle(DecimalStyle.of(locale));
+                .withLocale(locale)
+                .withChronology(chrono)
+                .withDecimalStyle(DecimalStyle.of(locale));
     }
 
     abstract DateTimeFormatter getLocalizedFormatter(FormatStyle dateStyle, FormatStyle timeStyle);
