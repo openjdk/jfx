@@ -29,9 +29,7 @@ import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.SizeQueryType;
 import javafx.css.Size;
-import java.util.EnumSet;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Base class for expressions that are evaluated in a range context.
@@ -42,8 +40,6 @@ public sealed abstract class RangeExpression implements MediaQuery
                 GreaterOrEqualExpression,
                 LessExpression,
                 LessOrEqualExpression {
-
-    private static final Set<ContextAwareness> VIEWPORT_SIZE = EnumSet.of(ContextAwareness.VIEWPORT_SIZE);
 
     private final SizeQueryType featureType;
     private final Size featureValue;
@@ -66,8 +62,8 @@ public sealed abstract class RangeExpression implements MediaQuery
     }
 
     @Override
-    public Set<ContextAwareness> getContextAwareness() {
-        return VIEWPORT_SIZE;
+    public int getContextAwareness() {
+        return ContextAwareness.VIEWPORT_SIZE.value();
     }
 
     @Override

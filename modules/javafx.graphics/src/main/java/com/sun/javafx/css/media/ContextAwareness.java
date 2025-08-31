@@ -25,31 +25,44 @@
 
 package com.sun.javafx.css.media;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Set;
-
 public enum ContextAwareness {
+
+    /**
+     * Indicates no context awareness.
+     */
+    NONE(0),
 
     /**
      * Indicates that the media query probes the viewport size (width or height).
      */
-    VIEWPORT_SIZE,
+    VIEWPORT_SIZE(1),
 
     /**
      * Indicates that the media query probes the full-screen state.
      */
-    FULLSCREEN;
+    FULLSCREEN(2);
 
-    public static Set<ContextAwareness> combine(Set<ContextAwareness> first, Set<ContextAwareness> second) {
-        var result = EnumSet.copyOf(first);
-        result.addAll(second);
-        return result;
+    ContextAwareness(int value) {
+        this.value = value;
     }
 
-    public static Set<ContextAwareness> of(ContextAwareness... awareness) {
-        var result = EnumSet.noneOf(ContextAwareness.class);
-        Collections.addAll(result, awareness);
+    private final int value;
+
+    public int value() {
+        return value;
+    }
+
+    public boolean isSet(int flags) {
+        return (flags & value) != 0;
+    }
+
+    public static int combine(ContextAwareness... contextAwareness) {
+        int result = 0;
+
+        for (ContextAwareness value : contextAwareness) {
+            result |= value.value;
+        }
+
         return result;
     }
 }

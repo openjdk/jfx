@@ -25,13 +25,11 @@
 
 package com.sun.javafx.css.media.expression;
 
-import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Logical disjunction of the specified expressions.
@@ -40,12 +38,12 @@ public final class DisjunctionExpression implements MediaQuery {
 
     private final MediaQuery left;
     private final MediaQuery right;
-    private final Set<ContextAwareness> contextAwareness;
+    private final int contextAwareness;
 
     private DisjunctionExpression(MediaQuery left, MediaQuery right) {
         this.left = Objects.requireNonNull(left, "left cannot be null");
         this.right = Objects.requireNonNull(right, "right cannot be null");
-        this.contextAwareness = ContextAwareness.combine(left.getContextAwareness(), right.getContextAwareness());
+        this.contextAwareness = left.getContextAwareness() | right.getContextAwareness();
     }
 
     /**
@@ -81,7 +79,7 @@ public final class DisjunctionExpression implements MediaQuery {
     }
 
     @Override
-    public Set<ContextAwareness> getContextAwareness() {
+    public int getContextAwareness() {
         return contextAwareness;
     }
 

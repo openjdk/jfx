@@ -31,7 +31,6 @@ import com.sun.javafx.css.media.expression.FunctionExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
 import com.sun.javafx.css.media.expression.RangeExpression;
-import java.util.Set;
 
 /**
  * {@code MediaQuery} is the runtime representation of a CSS media query expression.
@@ -53,7 +52,7 @@ public sealed interface MediaQuery
      *
      * @return the context awareness flags
      */
-    Set<ContextAwareness> getContextAwareness();
+    int getContextAwareness();
 
     /**
      * Evaluates this media query against the provided context.

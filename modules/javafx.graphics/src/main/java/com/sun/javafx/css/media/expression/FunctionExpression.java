@@ -30,7 +30,6 @@ import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -41,7 +40,7 @@ public final class FunctionExpression<T> implements MediaQuery {
     private final String featureName;
     private final String featureValue;
     private final Function<MediaQueryContext, T> function;
-    private final Set<ContextAwareness> contextAwareness;
+    private final int contextAwareness;
     private final T value;
 
     private FunctionExpression(String featureName,
@@ -52,7 +51,7 @@ public final class FunctionExpression<T> implements MediaQuery {
         this.featureName = Objects.requireNonNull(featureName, "featureName cannot be null");
         this.featureValue = featureValue;
         this.function = Objects.requireNonNull(function, "function cannot be null");
-        this.contextAwareness = ContextAwareness.of(contextAwareness);
+        this.contextAwareness = ContextAwareness.combine(contextAwareness);
         this.value = value;
     }
 
@@ -83,7 +82,7 @@ public final class FunctionExpression<T> implements MediaQuery {
     }
 
     @Override
-    public Set<ContextAwareness> getContextAwareness() {
+    public int getContextAwareness() {
         return contextAwareness;
     }
 

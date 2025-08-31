@@ -34,7 +34,6 @@ import com.sun.javafx.css.media.MediaRule;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javafx.application.ColorScheme;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableValue;
@@ -97,16 +96,13 @@ public final class SceneContext implements Scene.Preferences, MediaQueryContext 
      */
     @Override
     public void notifyQueryEvaluated(MediaQuery query, boolean currentValue) {
-        Set<ContextAwareness> contextAwareness = query.getContextAwareness();
-        if (contextAwareness.isEmpty()) {
-            return;
-        }
+        int contextAwareness = query.getContextAwareness();
 
-        if (contextAwareness.contains(ContextAwareness.VIEWPORT_SIZE)) {
+        if (ContextAwareness.VIEWPORT_SIZE.isSet(contextAwareness)) {
             viewportSizeAwareQueries.put(query, currentValue);
         }
 
-        if (contextAwareness.contains(ContextAwareness.FULLSCREEN)) {
+        if (ContextAwareness.FULLSCREEN.isSet(contextAwareness)) {
             fullScreenAwareQueries.put(query, currentValue);
         }
     }

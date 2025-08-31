@@ -25,12 +25,10 @@
 
 package com.sun.javafx.css.media.expression;
 
-import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Logical negation of the specified expression.
@@ -38,7 +36,7 @@ import java.util.Set;
 public final class NegationExpression implements MediaQuery {
 
     private final MediaQuery expression;
-    private final Set<ContextAwareness> contextAwareness;
+    private final int contextAwareness;
 
     private NegationExpression(MediaQuery expression) {
         this.expression = Objects.requireNonNull(expression, "expression cannot be null");
@@ -54,7 +52,7 @@ public final class NegationExpression implements MediaQuery {
     }
 
     @Override
-    public Set<ContextAwareness> getContextAwareness() {
+    public int getContextAwareness() {
         return contextAwareness;
     }
 
