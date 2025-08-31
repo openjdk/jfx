@@ -62,7 +62,7 @@ import test.util.Util;
 public class MacOSSystemMenuSingleWindowTest extends MacOSSystemMenuTestBase {
 
     @Test
-    public void testSingleWindow() throws InterruptedException, IOException {             
+    public void testSingleWindow() throws InterruptedException, IOException {
         initSwing(List.of(TEST_MENUS_0));
         initJavaFX(List.of(TEST_MENUS_1));
 

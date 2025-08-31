@@ -58,11 +58,10 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-
 public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
 
     @Test
-    public void testMultiWindow() throws InterruptedException, IOException {             
+    public void testMultiWindow() throws InterruptedException, IOException {
         initSwing(List.of(TEST_MENUS_0, TEST_MENUS_2));
         initJavaFX(List.of(TEST_MENUS_1, TEST_MENUS_3));
 
