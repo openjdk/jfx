@@ -61,7 +61,7 @@
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
-    // store host menu if running embedded, otherwise we 
+    // store host menu if running embedded, otherwise we
     // just store a default menu
     self->hostMenu = [NSApp mainMenu];
 

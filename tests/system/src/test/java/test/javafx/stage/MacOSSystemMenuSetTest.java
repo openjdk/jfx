@@ -64,7 +64,7 @@ public class MacOSSystemMenuSetTest extends MacOSSystemMenuTestBase {
     private CountDownLatch latch;
 
     @Test
-    public void testSet() throws InterruptedException, IOException {             
+    public void testSet() throws InterruptedException, IOException {
         initSwing(List.of(TEST_MENUS_0));
         initJavaFX(List.of(TEST_MENUS_1));
 
