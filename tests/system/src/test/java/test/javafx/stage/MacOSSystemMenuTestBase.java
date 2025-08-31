@@ -144,7 +144,7 @@ public class MacOSSystemMenuTestBase {
     /// Helpers for creation and focusing of windows
     ///
     /////////////////////////////////////////////////////////
-    
+
     protected void initJavaFX(List<List<Element>> menus) {
         initJavaFX(false, menus);
     }
