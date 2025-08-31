@@ -36,7 +36,8 @@
     andClientContext:(NSObject*)clCtx
          mtlQueuePtr:(long)mtlCommandQueuePtr
       withHiDPIAware:(BOOL)HiDPIAware
-        withIsSwPipe:(BOOL)isSwPipe;
+        withIsSwPipe:(BOOL)isSwPipe
+         useMTLForSW:(BOOL)mtlForSW;
 
 - (GlassOffscreen*)getPainterOffscreen;
 - (void)bindForWidth:(unsigned int)width
