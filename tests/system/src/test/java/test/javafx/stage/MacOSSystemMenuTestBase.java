@@ -40,7 +40,7 @@ public class MacOSSystemMenuTestBase {
      * A utility record to represent a menu and its possible children (items)
      */
     protected static record Element(String name, List<Element> items) {
-        
+
         public Element(String name) {
             this(name, List.of());
         }
@@ -140,9 +140,9 @@ public class MacOSSystemMenuTestBase {
     private CountDownLatch latch = null;
 
     /////////////////////////////////////////////////////////
-    /// 
+    ///
     /// Helpers for creation and focusing of windows
-    /// 
+    ///
     /////////////////////////////////////////////////////////
     
     protected void initJavaFX(List<List<Element>> menus) {
@@ -194,13 +194,13 @@ public class MacOSSystemMenuTestBase {
         initLock();
 
         SwingUtilities.invokeLater(() -> {
-            swingWindows.get(id).setAlwaysOnTop(true); 
+            swingWindows.get(id).setAlwaysOnTop(true);
             swingWindows.get(id).toFront();
             swingWindows.get(id).requestFocus();
-            swingWindows.get(id).setAlwaysOnTop(false); 
+            swingWindows.get(id).setAlwaysOnTop(false);
 
             releaseLock();
-        }); 
+        });
 
         awaitLock();
     }
@@ -280,9 +280,9 @@ public class MacOSSystemMenuTestBase {
     }
 
     /////////////////////////////////////////////////////////
-    /// 
+    ///
     /// Helpers for system menu comparison
-    /// 
+    ///
     /////////////////////////////////////////////////////////
 
     /**
@@ -300,7 +300,7 @@ public class MacOSSystemMenuTestBase {
     }
 
     /**
-     * Compares two menus where the first one is with an app menu and 
+     * Compares two menus where the first one is with an app menu and
      * the last one is without an app menu. This is used for comparing
      * the hardcoded menus inside this file to the actual menus used
      * when launching the application on MacOS.
@@ -401,9 +401,9 @@ public class MacOSSystemMenuTestBase {
     }
 
     /////////////////////////////////////////////////////////
-    /// 
+    ///
     /// Helpers for synchronization
-    /// 
+    ///
     /////////////////////////////////////////////////////////
 
     private void initLock() {
