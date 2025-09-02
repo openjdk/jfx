@@ -504,6 +504,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         Toolkit.getToolkit().getSystemMenu().setCommonMenus(wrappedCommonSystemMenus);
     }
 
+    /**
+     * Set the common system menus. Intended as a private API.
+     * @param menuList list of common menus
+     */
     public static void setCommonSystemMenus(final ObservableList<Menu> menuList) {
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
             if (commonSystemMenusChangeListener == null) {
