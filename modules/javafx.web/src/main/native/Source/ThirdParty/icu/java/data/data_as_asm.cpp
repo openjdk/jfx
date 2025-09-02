@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Generates icudt*l_dat.s file into the <out_dir>.
-    writeAssemblyCode(argv[2], argv[3], argv[4], NULL, NULL, NULL, 0);
+    writeAssemblyCode(argv[2], argv[3], argv[4], NULL, NULL, 0);
 #endif
     return 0;
 }
