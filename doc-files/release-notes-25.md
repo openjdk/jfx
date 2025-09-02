@@ -148,9 +148,6 @@ Issue Key | Summary | Subcomponent
 [JDK-8354631](https://bugs.openjdk.org/browse/JDK-8354631) | [macos] OpenURIHandler events not received by AWT when JavaFX is primary toolkit | window-toolkit
 [JDK-8356652](https://bugs.openjdk.org/browse/JDK-8356652) | Input field ignores custom input source characters | window-toolkit
 [JDK-8357584](https://bugs.openjdk.org/browse/JDK-8357584) | [XWayland] [OL10] Robot.mousePress() is delivered to wrong place | window-toolkit
-[JDK-8359601](https://bugs.openjdk.org/browse/JDK-8359601) | Fix window button states of an extended stage | window-toolkit
-[JDK-8359763](https://bugs.openjdk.org/browse/JDK-8359763) | Close request handler is not called for an extended stage | window-toolkit
-[JDK-8362095](https://bugs.openjdk.org/browse/JDK-8362095) | HeaderButtonMetrics should not be used across toolkit boundary | window-toolkit
 [JDK-8363813](https://bugs.openjdk.org/browse/JDK-8363813) | Missing null check in GlassScreen | window-toolkit
 
 ## List of Security fixes
