@@ -130,13 +130,8 @@ Issue Key | Summary | Subcomponent
 [JDK-8245602](https://bugs.openjdk.org/browse/JDK-8245602) | Ensemble8: HTMLEditor Toolbar gets scrolled out of view | samples
 [JDK-8146479](https://bugs.openjdk.org/browse/JDK-8146479) | Scene is black after stage is restored (content changed while minimized) | scenegraph
 [JDK-8340322](https://bugs.openjdk.org/browse/JDK-8340322) | Update WebKit to 620.1 | web
-[JDK-8347937](https://bugs.openjdk.org/browse/JDK-8347937) | Canvas pattern test fails and crashes on WebKit 620.1 | web
-[JDK-8349924](https://bugs.openjdk.org/browse/JDK-8349924) | Additional WebKit 620.1 fixes from WebKitGTK 2.46.6 | web
-[JDK-8350284](https://bugs.openjdk.org/browse/JDK-8350284) | WebKit 620.1 crashes on startup on Windows x86 32-bit | web
-[JDK-8351264](https://bugs.openjdk.org/browse/JDK-8351264) | Some images don't load with WebKit 620.1 | web
 [JDK-8352162](https://bugs.openjdk.org/browse/JDK-8352162) | Update libxml2 to 2.13.8 | web
 [JDK-8352164](https://bugs.openjdk.org/browse/JDK-8352164) | Update libxslt to 1.1.43 | web
-[JDK-8353916](https://bugs.openjdk.org/browse/JDK-8353916) | Unexpected event type for DOM mutation events with WebKit 620.1 | web
 [JDK-8354876](https://bugs.openjdk.org/browse/JDK-8354876) | Update SQLite to 3.49.1 | web
 [JDK-8354940](https://bugs.openjdk.org/browse/JDK-8354940) | Fail to sign in to Microsoft sites with WebView | web
 [JDK-8176813](https://bugs.openjdk.org/browse/JDK-8176813) | Mac: Failure to exit full-screen programmatically in some cases | window-toolkit
