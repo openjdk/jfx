@@ -279,13 +279,13 @@ void MessageFormatter::formatPattern(MessageContext& context, const Environment&
         } else if (part.isMarkup()) {
             // Markup is ignored
         } else {
-	      // Format the expression
+              // Format the expression
               LocalPointer<InternalValue> partVal(
                   formatExpression(globalEnv, part.contents(), context, status));
               FormattedPlaceholder partResult = partVal->forceFormatting(context.getErrors(),
                                                                          status);
               // Force full evaluation, e.g. applying default formatters to
-	      // unformatted input (or formatting numbers as strings)
+              // unformatted input (or formatting numbers as strings)
               result += partResult.formatToString(locale, status);
               // Handle formatting errors. `formatToString()` can't take a context and thus can't
               // register an error directly
@@ -343,9 +343,9 @@ void MessageFormatter::resolveSelectors(MessageContext& context, const Environme
 // `keys` and `matches` are vectors of strings
 void MessageFormatter::matchSelectorKeys(const UVector& keys,
                                          MessageContext& context,
-					 InternalValue* rv, // Does not adopt `rv`
-					 UVector& keysOut,
-					 UErrorCode& status) const {
+                                         InternalValue* rv, // Does not adopt `rv`
+                                         UVector& keysOut,
+                                         UErrorCode& status) const {
     CHECK_ERROR(status);
 
     if (U_FAILURE(status)) {
@@ -520,7 +520,7 @@ void MessageFormatter::filterVariants(const UVector& pref, UVector& vars, UError
         }
         if (!noMatch) {
             // Append `var` as the last element of the list `vars`.
-	    PrioritizedVariant* tuple = create<PrioritizedVariant>(PrioritizedVariant(-1, selectorKeys, p), status);
+            PrioritizedVariant* tuple = create<PrioritizedVariant>(PrioritizedVariant(-1, selectorKeys, p), status);
             CHECK_ERROR(status);
             vars.adoptElement(tuple, status);
         }
@@ -549,7 +549,7 @@ void MessageFormatter::sortVariants(const UVector& pref, UVector& vars, UErrorCo
     while (i >= 0) {
         // 5i. Let `matches` be the list of strings at index `i` of `pref`.
         U_ASSERT(pref[i] != nullptr);
-	const UVector& matches = *(static_cast<UVector*>(pref[i])); // `matches` is a vector of strings
+        const UVector& matches = *(static_cast<UVector*>(pref[i])); // `matches` is a vector of strings
         // 5ii. Let `minpref` be the integer count of items in `matches`.
         int32_t minpref = matches.size();
         // 5iii. For each tuple `tuple` of `sortable`:

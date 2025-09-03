@@ -80,32 +80,32 @@ namespace message2 {
     // Parser class (private)
     class Parser : public UMemory {
     public:
-	virtual ~Parser();
+        virtual ~Parser();
     private:
         friend class MessageFormatter;
 
         void parse(UParseError&, UErrorCode&);
 
-	/*
-	  Use an internal "parse error" structure to make it easier to translate
-	  absolute offsets to line offsets.
-	  This is translated back to a `UParseError` at the end of parsing.
-	*/
-	typedef struct MessageParseError {
-	    // The line on which the error occurred
-	    uint32_t line;
-	    // The offset, relative to the erroneous line, on which the error occurred
-	    uint32_t offset;
-	    // The total number of characters seen before advancing to the current line. It has a value of 0 if line == 0.
-	    // It includes newline characters, because the index does too.
-	    uint32_t lengthBeforeCurrentLine;
+        /*
+          Use an internal "parse error" structure to make it easier to translate
+          absolute offsets to line offsets.
+          This is translated back to a `UParseError` at the end of parsing.
+        */
+        typedef struct MessageParseError {
+            // The line on which the error occurred
+            uint32_t line;
+            // The offset, relative to the erroneous line, on which the error occurred
+            uint32_t offset;
+            // The total number of characters seen before advancing to the current line. It has a value of 0 if line == 0.
+            // It includes newline characters, because the index does too.
+            uint32_t lengthBeforeCurrentLine;
 
-	    // This parser doesn't yet use the last two fields.
-	    UChar   preContext[U_PARSE_CONTEXT_LEN];
-	    UChar   postContext[U_PARSE_CONTEXT_LEN];
-	} MessageParseError;
+            // This parser doesn't yet use the last two fields.
+            UChar   preContext[U_PARSE_CONTEXT_LEN];
+            UChar   postContext[U_PARSE_CONTEXT_LEN];
+        } MessageParseError;
 
-	Parser(const UnicodeString &input,
+        Parser(const UnicodeString &input,
                MFDataModel::Builder& dataModelBuilder,
                StaticErrors& e,
                UnicodeString& normalizedInputRef,
@@ -122,12 +122,12 @@ namespace message2 {
               escapableChars(unisets::get(unisets::ESCAPABLE, status)),
             source(input), index(0), errors(e), normalizedInput(normalizedInputRef), dataModel(dataModelBuilder) {
             (void) status;
-	  parseError.line = 0;
-	  parseError.offset = 0;
-	  parseError.lengthBeforeCurrentLine = 0;
-	  parseError.preContext[0] = '\0';
-	  parseError.postContext[0] = '\0';
-	}
+          parseError.line = 0;
+          parseError.offset = 0;
+          parseError.lengthBeforeCurrentLine = 0;
+          parseError.preContext[0] = '\0';
+          parseError.postContext[0] = '\0';
+        }
 
         bool isContentChar(UChar32) const;
         bool isBidiControl(UChar32) const;
@@ -143,36 +143,36 @@ namespace message2 {
         bool isLiteralStart(UChar32) const;
         bool isKeyStart(UChar32) const;
 
-	static void translateParseError(const MessageParseError&, UParseError&);
-	static void setParseError(MessageParseError&, uint32_t);
-	void maybeAdvanceLine();
+        static void translateParseError(const MessageParseError&, UParseError&);
+        static void setParseError(MessageParseError&, uint32_t);
+        void maybeAdvanceLine();
         Pattern parseSimpleMessage(UErrorCode&);
         void parseBody(UErrorCode&);
-	void parseDeclarations(UErrorCode&);
+        void parseDeclarations(UErrorCode&);
         void parseUnsupportedStatement(UErrorCode&);
         void parseLocalDeclaration(UErrorCode&);
         void parseInputDeclaration(UErrorCode&);
         void parseSelectors(UErrorCode&);
         void parseVariant(UErrorCode&);
 
-	void parseRequiredWS(UErrorCode&);
-	void parseRequiredWhitespace(UErrorCode&);
-	void parseOptionalBidi();
-	void parseOptionalWhitespace();
-	void parseToken(UChar32, UErrorCode&);
-	void parseTokenWithWhitespace(UChar32, UErrorCode&);
-	void parseToken(const std::u16string_view&, UErrorCode&);
-	void parseTokenWithWhitespace(const std::u16string_view&, UErrorCode&);
+        void parseRequiredWS(UErrorCode&);
+        void parseRequiredWhitespace(UErrorCode&);
+        void parseOptionalBidi();
+        void parseOptionalWhitespace();
+        void parseToken(UChar32, UErrorCode&);
+        void parseTokenWithWhitespace(UChar32, UErrorCode&);
+        void parseToken(const std::u16string_view&, UErrorCode&);
+        void parseTokenWithWhitespace(const std::u16string_view&, UErrorCode&);
         bool nextIs(const std::u16string_view&) const;
-	UnicodeString parseName(UErrorCode&);
+        UnicodeString parseName(UErrorCode&);
         UnicodeString parseIdentifier(UErrorCode&);
         UnicodeString parseDigits(UErrorCode&);
-	VariableName parseVariableName(UErrorCode&);
-	FunctionName parseFunction(UErrorCode&);
-	UnicodeString parseEscapeSequence(UErrorCode&);
-	Literal parseUnquotedLiteral(UErrorCode&);
+        VariableName parseVariableName(UErrorCode&);
+        FunctionName parseFunction(UErrorCode&);
+        UnicodeString parseEscapeSequence(UErrorCode&);
+        Literal parseUnquotedLiteral(UErrorCode&);
         Literal parseQuotedLiteral(UErrorCode&);
-	Literal parseLiteral(UErrorCode&);
+        Literal parseLiteral(UErrorCode&);
         template<class T>
         void parseAttribute(AttributeAdder<T>&, UErrorCode&);
         template<class T>
@@ -181,16 +181,16 @@ namespace message2 {
         void parseOption(OptionAdder<T>&, UErrorCode&);
         template<class T>
         void parseOptions(OptionAdder<T>&, UErrorCode&);
-	Operator parseAnnotation(UErrorCode&);
-	void parseLiteralOrVariableWithAnnotation(bool, Expression::Builder&, UErrorCode&);
+        Operator parseAnnotation(UErrorCode&);
+        void parseLiteralOrVariableWithAnnotation(bool, Expression::Builder&, UErrorCode&);
         Markup parseMarkup(UErrorCode&);
-	Expression parseExpression(UErrorCode&);
+        Expression parseExpression(UErrorCode&);
         std::variant<Expression, Markup> parsePlaceholder(UErrorCode&);
-	UnicodeString parseTextChar(UErrorCode&);
-	Key parseKey(UErrorCode&);
-	SelectorKeys parseNonEmptyKeys(UErrorCode&);
-	void errorPattern(UErrorCode& status);
-	Pattern parseQuotedPattern(UErrorCode&);
+        UnicodeString parseTextChar(UErrorCode&);
+        Key parseKey(UErrorCode&);
+        SelectorKeys parseNonEmptyKeys(UErrorCode&);
+        void errorPattern(UErrorCode& status);
+        Pattern parseQuotedPattern(UErrorCode&);
         bool isDeclarationStart();
 
         UChar32 peek() const { return source.char32At(index) ; }
@@ -215,22 +215,22 @@ namespace message2 {
         const UnicodeSet* quotedChars;
         const UnicodeSet* escapableChars;
 
-	// The input string
-	const UnicodeString &source;
-	// The current position within the input string -- counting in UChar32
-	uint32_t index;
-	// Represents the current line (and when an error is indicated),
-	// character offset within the line of the parse error
-	MessageParseError parseError;
+        // The input string
+        const UnicodeString &source;
+        // The current position within the input string -- counting in UChar32
+        uint32_t index;
+        // Represents the current line (and when an error is indicated),
+        // character offset within the line of the parse error
+        MessageParseError parseError;
 
-	// The structure to use for recording errors
-	StaticErrors& errors;
+        // The structure to use for recording errors
+        StaticErrors& errors;
 
-	// Normalized version of the input string (optional whitespace removed)
-	UnicodeString& normalizedInput;
+        // Normalized version of the input string (optional whitespace removed)
+        UnicodeString& normalizedInput;
 
-	// The parent builder
-	MFDataModel::Builder &dataModel;
+        // The parent builder
+        MFDataModel::Builder &dataModel;
 
     }; // class Parser
 } // namespace message2

@@ -1746,9 +1746,9 @@ UnicodeString::copy(int32_t start, int32_t limit, int32_t dest) {
     char16_t* text = static_cast<char16_t*>(uprv_malloc(sizeof(char16_t) * (limit - start)));
     // Check to make sure text is not null.
     if (text != nullptr) {
-	    extractBetween(start, limit, text, 0);
-	    insert(dest, text, 0, limit - start);
-	    uprv_free(text);
+            extractBetween(start, limit, text, 0);
+            insert(dest, text, 0, limit - start);
+            uprv_free(text);
     }
 }
 

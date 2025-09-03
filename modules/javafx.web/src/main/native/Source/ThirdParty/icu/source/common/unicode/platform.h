@@ -737,7 +737,7 @@
 #       define U_HAVE_CHAR16_T 0
 #   else
         // conformant C11
-#       define U_HAVE_CHAR16_T 0 
+#       define U_HAVE_CHAR16_T 0
 #   endif
 #endif
 

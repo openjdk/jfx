@@ -809,16 +809,16 @@ namespace message2 {
                     static Builder attributes(UErrorCode&);
                     // As this class is private, build() is destructive
                     OptionMap build(UErrorCode&);
-		    friend inline void swap(Builder& m1, Builder& m2) noexcept {
-		      using std::swap;
+                    friend inline void swap(Builder& m1, Builder& m2) noexcept {
+                      using std::swap;
 
-		      swap(m1.options, m2.options);
-		      swap(m1.checkDuplicates, m2.checkDuplicates);
-		    }
-		    Builder(Builder&&);
-		    Builder(const Builder&) = delete;
-		    Builder& operator=(Builder) noexcept;
-		    virtual ~Builder();
+                      swap(m1.options, m2.options);
+                      swap(m1.checkDuplicates, m2.checkDuplicates);
+                    }
+                    Builder(Builder&&);
+                    Builder(const Builder&) = delete;
+                    Builder& operator=(Builder) noexcept;
+                    virtual ~Builder();
             }; // class OptionMap::Builder
         private:
             friend class message2::Serializer;

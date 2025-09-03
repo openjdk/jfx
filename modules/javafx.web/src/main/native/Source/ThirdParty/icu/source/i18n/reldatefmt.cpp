@@ -1170,7 +1170,7 @@ void RelativeDateTimeFormatter::formatRelativeImpl(
             case  100/* 1*/: direction = UDAT_DIRECTION_NEXT; break;
             case  200/* 2*/: direction = UDAT_DIRECTION_NEXT_2; break;
             default: break;
-    	}
+        }
     }
     UDateAbsoluteUnit absunit = UDAT_ABSOLUTE_UNIT_COUNT;
     switch (unit) {

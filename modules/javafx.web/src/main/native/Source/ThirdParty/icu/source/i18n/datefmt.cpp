@@ -746,8 +746,8 @@ UDisplayContext DateFormat::getContext(UDisplayContextType type, UErrorCode& sta
 
 DateFormat&
 DateFormat::setBooleanAttribute(UDateFormatBooleanAttribute attr,
-    									UBool newValue,
-    									UErrorCode &status) {
+                                                                        UBool newValue,
+                                                                        UErrorCode &status) {
     if(!fBoolFlags.isValidValue(newValue)) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
     } else {

@@ -433,14 +433,14 @@ UCollationPCE::previousProcessed(
 finish:
     if (pceBuffer.isEmpty()) {
         // **** Is -1 the right value for ixLow, ixHigh? ****
-    	if (ixLow != nullptr) {
-    		*ixLow = -1;
-    	}
+        if (ixLow != nullptr) {
+                *ixLow = -1;
+        }
 
-    	if (ixHigh != nullptr) {
-    		*ixHigh = -1
-    		;
-    	}
+        if (ixHigh != nullptr) {
+                *ixHigh = -1
+                ;
+        }
         return UCOL_PROCESSED_NULLORDER;
     }
 

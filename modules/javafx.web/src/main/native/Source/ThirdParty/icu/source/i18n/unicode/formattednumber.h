@@ -128,7 +128,7 @@ class U_I18N_API FormattedNumber : public UMemory, public FormattedValue {
     template<typename StringClass>
     inline StringClass toDecimalNumber(UErrorCode& status) const;
 
-	/**
+        /**
      * Gets the resolved output unit.
      *
      * The output unit is dependent upon the localized preferences for the usage

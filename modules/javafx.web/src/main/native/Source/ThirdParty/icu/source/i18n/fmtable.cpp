@@ -663,8 +663,8 @@ Formattable::getString(UErrorCode& status)
         return *getBogus();
     }
     if (fValue.fString == nullptr) {
-    	setError(status, U_MEMORY_ALLOCATION_ERROR);
-    	return *getBogus();
+        setError(status, U_MEMORY_ALLOCATION_ERROR);
+        return *getBogus();
     }
     return *fValue.fString;
 }

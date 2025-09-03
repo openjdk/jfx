@@ -89,10 +89,10 @@ template class U_I18N_API std::_Variant_storage_<false,
 #endif
 typedef std::pair<const icu::message2::Formattable*, int32_t> P;
 template class U_I18N_API std::variant<double,
-				       int64_t,
-				       icu::UnicodeString,
-				       icu::Formattable,
-				       const icu::message2::FormattableObject*,
+                                       int64_t,
+                                       icu::UnicodeString,
+                                       icu::Formattable,
+                                       const icu::message2::FormattableObject*,
                                        P>;
 #endif
 /// @endcond

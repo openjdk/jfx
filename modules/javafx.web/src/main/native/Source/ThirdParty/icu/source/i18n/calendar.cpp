@@ -1134,15 +1134,15 @@ Calendar::setTimeInMillis( double millis, UErrorCode& status ) {
         if(isLenient()) {
             millis = MAX_MILLIS;
         } else {
-		    status = U_ILLEGAL_ARGUMENT_ERROR;
-		    return;
+                    status = U_ILLEGAL_ARGUMENT_ERROR;
+                    return;
         }
     } else if (millis < MIN_MILLIS) {
         if(isLenient()) {
             millis = MIN_MILLIS;
         } else {
-    		status = U_ILLEGAL_ARGUMENT_ERROR;
-	    	return;
+                status = U_ILLEGAL_ARGUMENT_ERROR;
+                return;
         }
     } else if (uprv_isNaN(millis)) {
         status = U_ILLEGAL_ARGUMENT_ERROR;

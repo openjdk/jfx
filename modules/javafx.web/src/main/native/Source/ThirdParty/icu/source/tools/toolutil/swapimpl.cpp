@@ -911,11 +911,11 @@ test_swap(const UDataSwapper *ds,
             return 0;
         }
 
-	offset =0;
-	/* swap a 1 entry array */
+        offset =0;
+        /* swap a 1 entry array */
         ds->swapArray16(ds, inBytes+offset, size16, outBytes+offset, pErrorCode);
-	offset+=size16;
-	ds->swapInvChars(ds, inBytes+offset, sizeStr, outBytes+offset, pErrorCode);
+        offset+=size16;
+        ds->swapInvChars(ds, inBytes+offset, sizeStr, outBytes+offset, pErrorCode);
     }
 
     return headerSize+size;

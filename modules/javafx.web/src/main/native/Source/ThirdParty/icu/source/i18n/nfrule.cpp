@@ -920,10 +920,10 @@ static void dumpUS(FILE* f, const UnicodeString& us) {
   int len = us.length();
   char* buf = (char *)uprv_malloc((len+1)*sizeof(char)); //new char[len+1];
   if (buf != nullptr) {
-	  us.extract(0, len, buf);
-	  buf[len] = 0;
-	  fprintf(f, "%s", buf);
-	  uprv_free(buf); //delete[] buf;
+          us.extract(0, len, buf);
+          buf[len] = 0;
+          fprintf(f, "%s", buf);
+          uprv_free(buf); //delete[] buf;
   }
 }
 #endif
@@ -1142,14 +1142,14 @@ NFRule::stripPrefix(UnicodeString& text, const UnicodeString& prefix, ParsePosit
 {
     // if the prefix text is empty, dump out without doing anything
     if (prefix.length() != 0) {
-    	UErrorCode status = U_ZERO_ERROR;
+        UErrorCode status = U_ZERO_ERROR;
         // use prefixLength() to match the beginning of
         // "text" against "prefix".  This function returns the
         // number of characters from "text" that matched (or 0 if
         // we didn't match the whole prefix)
         int32_t pfl = prefixLength(text, prefix, status);
         if (U_FAILURE(status)) { // Memory allocation error.
-        	return;
+                return;
         }
         if (pfl != 0) {
             // if we got a successful match, update the parse position
@@ -1200,15 +1200,15 @@ NFRule::matchToDelimiter(const UnicodeString& text,
                          int32_t recursionCount,
                          double upperBound) const
 {
-	UErrorCode status = U_ZERO_ERROR;
+        UErrorCode status = U_ZERO_ERROR;
     // if "delimiter" contains real (i.e., non-ignorable) text, search
     // it for "delimiter" beginning at "start".  If that succeeds, then
     // use "sub"'s doParse() method to match the text before the
     // instance of "delimiter" we just found.
     if (!allIgnorable(delimiter, status)) {
-    	if (U_FAILURE(status)) { //Memory allocation error.
-    		return 0;
-    	}
+        if (U_FAILURE(status)) { //Memory allocation error.
+                return 0;
+        }
         ParsePosition tempPP;
         Formattable result;
 

@@ -332,7 +332,7 @@ UBool UVector::ensureCapacity(int32_t minimumCapacity, UErrorCode &status) {
         return false;
     }
     if (capacity < minimumCapacity) {
-        if (capacity > (INT32_MAX - 1) / 2) {        	// integer overflow check
+        if (capacity > (INT32_MAX - 1) / 2) {           // integer overflow check
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return false;
         }

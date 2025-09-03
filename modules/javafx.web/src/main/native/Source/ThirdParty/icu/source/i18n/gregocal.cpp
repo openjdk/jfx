@@ -361,7 +361,7 @@ void GregorianCalendar::handleComputeFields(int32_t julianDay, UErrorCode& statu
         // The Julian epoch day (not the same as Julian Day)
         // is zero on Saturday December 30, 0 (Gregorian).
         int32_t julianEpochDay = julianDay - (kJan1_1JulianDay - 2);
-		eyear = static_cast<int32_t>(ClockMath::floorDivide((4.0 * julianEpochDay) + 1464.0, static_cast<int32_t>(1461), &unusedRemainder));
+                eyear = static_cast<int32_t>(ClockMath::floorDivide((4.0 * julianEpochDay) + 1464.0, static_cast<int32_t>(1461), &unusedRemainder));
 
         // Compute the Julian calendar day number for January 1, eyear
         int32_t january1 = 365 * (eyear - 1) + ClockMath::floorDivide(eyear - 1, static_cast<int32_t>(4));

@@ -719,7 +719,7 @@ void StandardFunctions::Plural::selectKey(FormattedPlaceholder&& toFormat,
                                           int32_t keysLen,
                                           UnicodeString* prefs,
                                           int32_t& prefsLen,
-					  UErrorCode& errorCode) const {
+                                          UErrorCode& errorCode) const {
     CHECK_ERROR(errorCode);
 
     // No argument => return "NaN"
@@ -779,7 +779,7 @@ void StandardFunctions::Plural::selectKey(FormattedPlaceholder&& toFormat,
             // 5i(a). If key and exact consist of the same sequence of Unicode code points, then
             if (exact == keys[i]) {
                 // 5i(a)(a) Append key as the last element of the list resultExact.
-		prefs[prefsLen] = keys[i];
+                prefs[prefsLen] = keys[i];
                 prefsLen++;
                 break;
             }
@@ -1242,7 +1242,7 @@ void StandardFunctions::TextSelector::selectKey(FormattedPlaceholder&& toFormat,
                                                 int32_t keysLen,
                                                 UnicodeString* prefs,
                                                 int32_t& prefsLen,
-						UErrorCode& errorCode) const {
+                                                UErrorCode& errorCode) const {
     // No options
     (void) opts;
 
@@ -1266,7 +1266,7 @@ void StandardFunctions::TextSelector::selectKey(FormattedPlaceholder&& toFormat,
 
     for (int32_t i = 0; i < keysLen; i++) {
         if (keys[i] == formattedValue) {
-	    prefs[0] = keys[i];
+            prefs[0] = keys[i];
             prefsLen = 1;
             break;
         }

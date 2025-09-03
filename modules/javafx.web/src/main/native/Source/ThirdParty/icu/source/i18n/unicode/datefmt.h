@@ -827,8 +827,8 @@ public:
      */
 
     virtual DateFormat&  U_EXPORT2 setBooleanAttribute(UDateFormatBooleanAttribute attr,
-    									UBool newvalue,
-    									UErrorCode &status);
+                                                                        UBool newvalue,
+                                                                        UErrorCode &status);
 
     /**
      * Returns a boolean from this DateFormat

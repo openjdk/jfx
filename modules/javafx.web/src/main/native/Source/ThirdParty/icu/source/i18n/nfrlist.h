@@ -52,9 +52,9 @@ public:
     }
     NFRule* operator[](uint32_t index) const { return fStuff != nullptr ? fStuff[index] : nullptr; }
     NFRule* remove(uint32_t index) {
-    	if (fStuff == nullptr) {
-    		return nullptr;
-    	}
+        if (fStuff == nullptr) {
+                return nullptr;
+        }
         NFRule* result = fStuff[index];
         fCount -= 1;
         for (uint32_t i = index; i < fCount; ++i) { // assumes small arrays
@@ -68,10 +68,10 @@ public:
             fStuff = static_cast<NFRule**>(uprv_realloc(fStuff, fCapacity * sizeof(NFRule*))); // assume success
         }
         if (fStuff != nullptr) {
-        	fStuff[fCount++] = thing;
+                fStuff[fCount++] = thing;
         } else {
-        	fCapacity = 0;
-        	fCount = 0;
+                fCapacity = 0;
+                fCount = 0;
         }
     }
     uint32_t size() const { return fCount; }

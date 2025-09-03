@@ -997,7 +997,7 @@ ModulusSubstitution::toString(UnicodeString& text) const
       text.append(tokenChar());
       text.append(tokenChar());
   } else { // Otherwise just use the super-class function.
-	  NFSubstitution::toString(text);
+          NFSubstitution::toString(text);
   }
 }
 //===================================================================

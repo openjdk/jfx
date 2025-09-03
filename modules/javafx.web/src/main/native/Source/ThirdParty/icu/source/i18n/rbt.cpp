@@ -268,11 +268,11 @@ RuleBasedTransliterator::handleTransliterate(Replaceable& text, UTransPosition& 
 
     // Check to make sure we don't dereference a null pointer.
     if (fData != nullptr) {
-	    while (index.start < index.limit &&
-	           loopCount <= loopLimit &&
-	           fData->ruleSet.transliterate(text, index, isIncremental)) {
-	        ++loopCount;
-	    }
+            while (index.start < index.limit &&
+                   loopCount <= loopLimit &&
+                   fData->ruleSet.transliterate(text, index, isIncremental)) {
+                ++loopCount;
+            }
     }
     if (lockedMutexAtThisLevel) {
         {
