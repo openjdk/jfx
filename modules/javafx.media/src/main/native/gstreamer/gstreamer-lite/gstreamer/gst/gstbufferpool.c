@@ -70,10 +70,8 @@
 #endif
 #include <sys/types.h>
 
-#include "gstatomicqueue.h"
-#include "gstpoll.h"
+#include "gstvecdeque.h"
 #include "gstinfo.h"
-#include "gstquark.h"
 #include "gstvalue.h"
 
 #include "gstbufferpool.h"
@@ -92,8 +90,9 @@ GST_DEBUG_CATEGORY_STATIC (gst_buffer_pool_debug);
 
 struct _GstBufferPoolPrivate
 {
-  GstAtomicQueue *queue;
-  GstPoll *poll;
+  GMutex queue_lock;
+  GCond queue_cond;
+  GstVecDeque *queue;
 
   GRecMutex rec_lock;
 
@@ -159,22 +158,20 @@ gst_buffer_pool_init (GstBufferPool * pool)
 
   g_rec_mutex_init (&priv->rec_lock);
 
-  priv->poll = gst_poll_new_timer ();
-  priv->queue = gst_atomic_queue_new (16);
+  priv->queue = gst_vec_deque_new (16);
+  g_mutex_init (&priv->queue_lock);
+  g_cond_init (&priv->queue_cond);
+
   pool->flushing = 1;
   priv->active = FALSE;
   priv->configured = FALSE;
   priv->started = FALSE;
-  priv->config = gst_structure_new_id_empty (GST_QUARK (BUFFER_POOL_CONFIG));
+  priv->config = gst_structure_new_static_str_empty ("GstBufferPoolConfig");
   gst_buffer_pool_config_set_params (priv->config, NULL, 0, 0, 0);
   priv->allocator = NULL;
   gst_allocation_params_init (&priv->params);
   gst_buffer_pool_config_set_allocator (priv->config, priv->allocator,
       &priv->params);
-  /* 1 control write for flushing - the flush token */
-  gst_poll_write_control (priv->poll);
-  /* 1 control write for marking that we are not waiting for poll - the wait token */
-  gst_poll_write_control (priv->poll);
 
   GST_DEBUG_OBJECT (pool, "created");
 }
@@ -207,8 +204,9 @@ gst_buffer_pool_finalize (GObject * object)
 
   GST_DEBUG_OBJECT (pool, "%p finalize", pool);
 
-  gst_atomic_queue_unref (priv->queue);
-  gst_poll_free (priv->poll);
+  gst_vec_deque_free (priv->queue);
+  g_mutex_clear (&priv->queue_lock);
+  g_cond_clear (&priv->queue_cond);
   gst_structure_free (priv->config);
   g_rec_mutex_clear (&priv->rec_lock);
 
@@ -397,6 +395,10 @@ do_free_buffer (GstBufferPool * pool, GstBuffer * buffer)
 
   if (G_LIKELY (pclass->free_buffer))
     pclass->free_buffer (pool, buffer);
+
+  g_mutex_lock (&priv->queue_lock);
+  g_cond_signal (&priv->queue_cond);
+  g_mutex_unlock (&priv->queue_lock);
 }
 
 /* must be called with the lock */
@@ -405,23 +407,18 @@ default_stop (GstBufferPool * pool)
 {
   GstBufferPoolPrivate *priv = pool->priv;
   GstBuffer *buffer;
+  gboolean cleared;
 
   /* clear the pool */
-  while ((buffer = gst_atomic_queue_pop (priv->queue))) {
-    while (!gst_poll_read_control (priv->poll)) {
-      if (errno == EWOULDBLOCK) {
-        /* We put the buffer into the queue but did not finish writing control
-         * yet, let's wait a bit and retry */
-        g_thread_yield ();
-        continue;
-      } else {
-        /* Critical error but GstPoll already complained */
-        break;
-      }
-    }
+  g_mutex_lock (&priv->queue_lock);
+  while ((buffer = gst_vec_deque_pop_head (priv->queue))) {
+    g_mutex_unlock (&priv->queue_lock);
     do_free_buffer (pool, buffer);
+    g_mutex_lock (&priv->queue_lock);
   }
-  return priv->cur_buffers == 0;
+  cleared = priv->cur_buffers == 0;
+  g_mutex_unlock (&priv->queue_lock);
+  return cleared;
 }
 
 /* must be called with the lock */
@@ -458,28 +455,17 @@ do_set_flushing (GstBufferPool * pool, gboolean flushing)
     return;
 
   if (flushing) {
+    /* Wake up any waiters */
+    g_mutex_lock (&priv->queue_lock);
     g_atomic_int_set (&pool->flushing, 1);
-    /* Write the flush token to wake up any waiters */
-    gst_poll_write_control (priv->poll);
+    g_cond_broadcast (&priv->queue_cond);
+    g_mutex_unlock (&priv->queue_lock);
 
     if (pclass->flush_start)
       pclass->flush_start (pool);
   } else {
     if (pclass->flush_stop)
       pclass->flush_stop (pool);
-
-    while (!gst_poll_read_control (priv->poll)) {
-      if (errno == EWOULDBLOCK) {
-        /* This should not really happen unless flushing and unflushing
-         * happens on different threads. Let's wait a bit to get back flush
-         * token from the thread that was setting it to flushing */
-        g_thread_yield ();
-        continue;
-      } else {
-        /* Critical error but GstPoll already complained */
-        break;
-      }
-    }
 
     g_atomic_int_set (&pool->flushing, 0);
   }
@@ -843,11 +829,11 @@ gst_buffer_pool_config_set_params (GstStructure * config, GstCaps * caps,
   g_return_if_fail (max_buffers == 0 || min_buffers <= max_buffers);
   g_return_if_fail (caps == NULL || gst_caps_is_fixed (caps));
 
-  gst_structure_id_set (config,
-      GST_QUARK (CAPS), GST_TYPE_CAPS, caps,
-      GST_QUARK (SIZE), G_TYPE_UINT, size,
-      GST_QUARK (MIN_BUFFERS), G_TYPE_UINT, min_buffers,
-      GST_QUARK (MAX_BUFFERS), G_TYPE_UINT, max_buffers, NULL);
+  gst_structure_set_static_str (config,
+      "caps", GST_TYPE_CAPS, caps,
+      "size", G_TYPE_UINT, size,
+      "min-buffers", G_TYPE_UINT, min_buffers,
+      "max-buffers", G_TYPE_UINT, max_buffers, NULL);
 }
 
 /**
@@ -876,9 +862,9 @@ gst_buffer_pool_config_set_allocator (GstStructure * config,
   g_return_if_fail (config != NULL);
   g_return_if_fail (allocator != NULL || params != NULL);
 
-  gst_structure_id_set (config,
-      GST_QUARK (ALLOCATOR), GST_TYPE_ALLOCATOR, allocator,
-      GST_QUARK (PARAMS), GST_TYPE_ALLOCATION_PARAMS, params, NULL);
+  gst_structure_set_static_str (config,
+      "allocator", GST_TYPE_ALLOCATOR, allocator,
+      "params", GST_TYPE_ALLOCATION_PARAMS, params, NULL);
 }
 
 /**
@@ -900,7 +886,7 @@ gst_buffer_pool_config_add_option (GstStructure * config, const gchar * option)
 
   g_return_if_fail (config != NULL);
 
-  value = gst_structure_id_get_value (config, GST_QUARK (OPTIONS));
+  value = gst_structure_get_value (config, "options");
   if (value) {
     len = gst_value_array_get_size (value);
     for (i = 0; i < len; ++i) {
@@ -913,8 +899,8 @@ gst_buffer_pool_config_add_option (GstStructure * config, const gchar * option)
     GValue new_array_val = { 0, };
 
     g_value_init (&new_array_val, GST_TYPE_ARRAY);
-    gst_structure_id_take_value (config, GST_QUARK (OPTIONS), &new_array_val);
-    value = gst_structure_id_get_value (config, GST_QUARK (OPTIONS));
+    gst_structure_take_value_static_str (config, "options", &new_array_val);
+    value = gst_structure_get_value (config, "options");
   }
   g_value_init (&option_value, G_TYPE_STRING);
   g_value_set_string (&option_value, option);
@@ -938,7 +924,7 @@ gst_buffer_pool_config_n_options (GstStructure * config)
 
   g_return_val_if_fail (config != NULL, 0);
 
-  value = gst_structure_id_get_value (config, GST_QUARK (OPTIONS));
+  value = gst_structure_get_value (config, "options");
   if (value) {
     size = gst_value_array_get_size (value);
   }
@@ -963,7 +949,7 @@ gst_buffer_pool_config_get_option (GstStructure * config, guint index)
 
   g_return_val_if_fail (config != NULL, 0);
 
-  value = gst_structure_id_get_value (config, GST_QUARK (OPTIONS));
+  value = gst_structure_get_value (config, "options");
   if (value) {
     const GValue *option_value;
 
@@ -991,7 +977,7 @@ gst_buffer_pool_config_has_option (GstStructure * config, const gchar * option)
 
   g_return_val_if_fail (config != NULL, 0);
 
-  value = gst_structure_id_get_value (config, GST_QUARK (OPTIONS));
+  value = gst_structure_get_value (config, "options");
   if (value) {
     len = gst_value_array_get_size (value);
     for (i = 0; i < len; ++i) {
@@ -1023,13 +1009,12 @@ gst_buffer_pool_config_get_params (GstStructure * config, GstCaps ** caps,
   g_return_val_if_fail (config != NULL, FALSE);
 
   if (caps) {
-    *caps = g_value_get_boxed (gst_structure_id_get_value (config,
-            GST_QUARK (CAPS)));
+    *caps = g_value_get_boxed (gst_structure_get_value (config, "caps"));
   }
-  return gst_structure_id_get (config,
-      GST_QUARK (SIZE), G_TYPE_UINT, size,
-      GST_QUARK (MIN_BUFFERS), G_TYPE_UINT, min_buffers,
-      GST_QUARK (MAX_BUFFERS), G_TYPE_UINT, max_buffers, NULL);
+  return gst_structure_get (config,
+      "size", G_TYPE_UINT, size,
+      "min-buffers", G_TYPE_UINT, min_buffers,
+      "max-buffers", G_TYPE_UINT, max_buffers, NULL);
 }
 
 /**
@@ -1049,13 +1034,12 @@ gst_buffer_pool_config_get_allocator (GstStructure * config,
   g_return_val_if_fail (config != NULL, FALSE);
 
   if (allocator)
-    *allocator = g_value_get_object (gst_structure_id_get_value (config,
-            GST_QUARK (ALLOCATOR)));
+    *allocator = g_value_get_object (gst_structure_get_value (config,
+            "allocator"));
   if (params) {
     GstAllocationParams *p;
 
-    p = g_value_get_boxed (gst_structure_id_get_value (config,
-            GST_QUARK (PARAMS)));
+    p = g_value_get_boxed (gst_structure_get_value (config, "params"));
     if (p) {
       *params = *p;
     } else {
@@ -1112,24 +1096,16 @@ default_acquire_buffer (GstBufferPool * pool, GstBuffer ** buffer,
   GstFlowReturn result;
   GstBufferPoolPrivate *priv = pool->priv;
 
+  g_mutex_lock (&priv->queue_lock);
   while (TRUE) {
     if (G_UNLIKELY (GST_BUFFER_POOL_IS_FLUSHING (pool)))
       goto flushing;
 
     /* try to get a buffer from the queue */
-    *buffer = gst_atomic_queue_pop (priv->queue);
+    *buffer = gst_vec_deque_pop_head (priv->queue);
+    g_mutex_unlock (&priv->queue_lock);
+
     if (G_LIKELY (*buffer)) {
-      while (!gst_poll_read_control (priv->poll)) {
-        if (errno == EWOULDBLOCK) {
-          /* We put the buffer into the queue but did not finish writing control
-           * yet, let's wait a bit and retry */
-          g_thread_yield ();
-          continue;
-        } else {
-          /* Critical error but GstPoll already complained */
-          break;
-        }
-      }
       result = GST_FLOW_OK;
       GST_LOG_OBJECT (pool, "acquired buffer %p", *buffer);
       break;
@@ -1152,34 +1128,14 @@ default_acquire_buffer (GstBufferPool * pool, GstBuffer ** buffer,
       break;
     }
 
-    /* now we release the control socket, we wait for a buffer release or
-     * flushing */
-    if (!gst_poll_read_control (pool->priv->poll)) {
-      if (errno == EWOULDBLOCK) {
-        /* This means that we have two threads trying to allocate buffers
-         * already, and the other one already got the wait token. This
-         * means that we only have to wait for the poll now and not write the
-         * token afterwards: we will be woken up once the other thread is
-         * woken up and that one will write the wait token it removed */
-        GST_LOG_OBJECT (pool, "waiting for free buffers or flushing");
-        gst_poll_wait (priv->poll, GST_CLOCK_TIME_NONE);
-      } else {
-        /* This is a critical error, GstPoll already gave a warning */
-        result = GST_FLOW_ERROR;
-        break;
-      }
-    } else {
-      /* We're the first thread waiting, we got the wait token and have to
-       * write it again later
-       * OR
-       * We're a second thread and just consumed the flush token and block all
-       * other threads, in which case we must not wait and give it back
-       * immediately */
-      if (!GST_BUFFER_POOL_IS_FLUSHING (pool)) {
-        GST_LOG_OBJECT (pool, "waiting for free buffers or flushing");
-        gst_poll_wait (priv->poll, GST_CLOCK_TIME_NONE);
-      }
-      gst_poll_write_control (pool->priv->poll);
+    /* now we wait for a buffer release or flushing */
+    g_mutex_lock (&priv->queue_lock);
+    while (gst_vec_deque_get_length (priv->queue) == 0
+        && !GST_BUFFER_POOL_IS_FLUSHING (pool)
+        && g_atomic_int_get (&priv->cur_buffers) >= priv->max_buffers) {
+      GST_LOG_OBJECT (pool, "waiting for free buffers or flushing");
+      g_cond_wait (&priv->queue_cond, &priv->queue_lock);
+      GST_LOG_OBJECT (pool, "waited for free buffers or flushing");
     }
   }
 
@@ -1188,6 +1144,7 @@ default_acquire_buffer (GstBufferPool * pool, GstBuffer ** buffer,
   /* ERRORS */
 flushing:
   {
+    g_mutex_unlock (&priv->queue_lock);
     GST_DEBUG_OBJECT (pool, "we are flushing");
     return GST_FLOW_FLUSHING;
   }
@@ -1331,8 +1288,10 @@ default_release_buffer (GstBufferPool * pool, GstBuffer * buffer)
     goto not_writable;
 
   /* keep it around in our queue */
-  gst_atomic_queue_push (pool->priv->queue, buffer);
-  gst_poll_write_control (pool->priv->poll);
+  g_mutex_lock (&pool->priv->queue_lock);
+  gst_vec_deque_push_tail (pool->priv->queue, buffer);
+  g_cond_signal (&pool->priv->queue_cond);
+  g_mutex_unlock (&pool->priv->queue_lock);
 
   return;
 
@@ -1358,7 +1317,10 @@ not_writable:
 discard:
   {
     do_free_buffer (pool, buffer);
-    gst_poll_write_control (pool->priv->poll);
+
+    g_mutex_lock (&pool->priv->queue_lock);
+    g_cond_signal (&pool->priv->queue_cond);
+    g_mutex_unlock (&pool->priv->queue_lock);
     return;
   }
 }

@@ -717,9 +717,9 @@ gst_registry_remove_feature (GstRegistry * registry, GstPluginFeature * feature)
 /**
  * gst_registry_plugin_filter:
  * @registry: registry to query
- * @filter: (scope call): the filter to use
+ * @filter: (scope call) (closure user_data): the filter to use
  * @first: only return first match
- * @user_data: (closure): user data passed to the filter function
+ * @user_data: user data passed to the filter function
  *
  * Runs a filter against all plugins in the registry and returns a #GList with
  * the results. If the first flag is set, only the first match is
@@ -897,9 +897,9 @@ gst_registry_get_device_provider_factory_list (GstRegistry * registry)
 /**
  * gst_registry_feature_filter:
  * @registry: registry to query
- * @filter: (scope call): the filter to use
+ * @filter: (scope call) (closure user_data): the filter to use
  * @first: only return first match
- * @user_data: (closure): user data passed to the filter function
+ * @user_data: user data passed to the filter function
  *
  * Runs a filter against all features of the plugins in the registry
  * and returns a GList with the results.
