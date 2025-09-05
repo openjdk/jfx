@@ -62,7 +62,7 @@ public final class ConstantExpression implements MediaQuery {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof ConstantExpression other && value == other.value ;
+        return obj instanceof ConstantExpression other && value == other.value;
     }
 
     @Override

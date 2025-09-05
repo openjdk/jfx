@@ -62,7 +62,7 @@ public sealed abstract class RangeExpression implements MediaQuery
     }
 
     @Override
-    public int getContextAwareness() {
+    public final int getContextAwareness() {
         return ContextAwareness.VIEWPORT_SIZE.value();
     }
 
