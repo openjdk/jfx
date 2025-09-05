@@ -117,8 +117,8 @@ public class CssTransitionsTest extends Application {
             new RectInfo("#rect2", "rect2", Color.WHITE),
             new RectInfo("#rect3", "rect3", Color.WHITE),
             new RectInfo("#rect4", "rect4", Color.WHITE),
-            new RectInfo("#rect4", "rect5", Color.WHITE),
-            new RectInfo("#rect5", "rect6", Color.WHITE));
+            new RectInfo("#rect5", "rect5", Color.WHITE),
+            new RectInfo("#rect6", "rect6", Color.WHITE));
     }
 
     private Region createBackgroundTransitionsTab() {
