@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,52 +25,16 @@
 
 package com.sun.javafx.collections;
 
-import javafx.collections.ObservableSet;
-import javafx.collections.SetChangeListener;
-import javafx.collections.SetChangeListener.Change;
+import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableMap;
 
-public final class SetAdapterChange<E> extends SetChangeListener.Change<E> {
+abstract class IterableMapChange<K, V> extends MapChangeListener.Change<K, V> {
 
-    private Change<? extends E> change;
-
-    public SetAdapterChange(ObservableSet<E> set, Change<? extends E> change) {
-        super(set);
-        this.change = change;
+    public IterableMapChange(ObservableMap<K, V> map) {
+        super(map);
     }
 
-    @Override
-    public String toString() {
-        return change.toString();
-    }
+    public abstract boolean nextChange();
 
-    @Override
-    public boolean wasAdded() {
-        return change.wasAdded();
-    }
-
-    @Override
-    public boolean wasRemoved() {
-        return change.wasRemoved();
-    }
-
-    @Override
-    public E getElementAdded() {
-        return change.getElementAdded();
-    }
-
-    @Override
-    public E getElementRemoved() {
-        return change.getElementRemoved();
-    }
-
-    @Override
-    public Change<E> next() {
-        Change<? extends E> nextChange = change.next();
-        if (nextChange != null) {
-            change = nextChange;
-            return this;
-        }
-
-        return null;
-    }
+    public abstract void reset();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,11 +157,13 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(SetChangeListener.Change<? extends E> change) {
-            try {
-                listener.onChanged(change);
-            } catch (Exception e) {
-                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-            }
+            do {
+                try {
+                    listener.onChanged(change);
+                } catch (Exception e) {
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                }
+            } while (change instanceof IterableSetChange<? extends E> c && c.nextChange());
         }
     }
 
@@ -320,17 +322,43 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                         Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
                 }
-                for (int i = 0; i < curChangeSize; i++) {
-                    try {
-                        curChangeList[i].onChanged(change);
-                    } catch (Exception e) {
-                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                    }
+
+                if (change instanceof IterableSetChange<? extends E> iterableChange) {
+                    fireSetChangeEvent(iterableChange, curChangeList, curChangeSize);
+                } else {
+                    fireSetChangeEvent(change, curChangeList, curChangeSize);
                 }
             } finally {
                 locked = false;
             }
         }
-    }
 
+        private static <E> void fireSetChangeEvent(SetChangeListener.Change<? extends E> change,
+                                                   SetChangeListener<? super E>[] curChangeList,
+                                                   int curChangeSize) {
+            for (int i = 0; i < curChangeSize; i++) {
+                try {
+                    curChangeList[i].onChanged(change);
+                } catch (Exception e) {
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                }
+            }
+        }
+
+        private static <E> void fireSetChangeEvent(IterableSetChange<? extends E> change,
+                                                   SetChangeListener<? super E>[] curChangeList,
+                                                   int curChangeSize) {
+            for (int i = 0; i < curChangeSize; i++) {
+                do {
+                    try {
+                        curChangeList[i].onChanged(change);
+                    } catch (Exception e) {
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    }
+                } while (change.nextChange());
+
+                change.reset();
+            }
+        }
+    }
 }

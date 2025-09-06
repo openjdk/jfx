@@ -25,8 +25,6 @@
 
 package test.javafx.collections;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -180,6 +178,21 @@ public class ObservableMapTest {
 
         assertTrue(observableMap.containsKey("oFoo"));
         observer.assertMultipleCalls(call("oFoo", null, "OFoo"), call("pFoo", null, "PFoo"), call("foo", "bar", "foofoo"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    @SuppressWarnings("unchecked")
+    public void testReplaceAll(Callable<ObservableMap<String, String>> mapFactory) throws Exception {
+        setUp(mapFactory);
+
+        observableMap.replaceAll((key, value) -> switch (key) {
+            case "one" -> "2";
+            case "two" -> "3";
+            default -> value;
+        });
+
+        observer.assertMultipleCalls(call("one", "1", "2"), call("two", "2", "3"));
     }
 
     @ParameterizedTest

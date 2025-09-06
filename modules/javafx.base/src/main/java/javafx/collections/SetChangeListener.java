@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,6 +86,21 @@ public interface SetChangeListener<E> {
          */
         public abstract E getElementRemoved();
 
+        /**
+         * Gets the next change in a series of changes.
+         * <p>
+         * Repeatedly calling this method allows a listener to fetch all subsequent changes of a bulk
+         * set modification that would otherwise be reported as repeated invocations of the listener.
+         * <p>
+         * After this method has been called, the current {@code Change} instance is no longer valid and
+         * calling any method on it may result in undefined behavior. Callers must not make any assumptions
+         * about the identity of the {@code Change} instance returned by this method; even if the returned
+         * instance is the same as the current instance, it must be treated as a distinct change.
+         *
+         * @return the next change, or {@code null} if there are no more changes
+         * @since 26
+         */
+        public Change<E> next() { return null; }
     }
 
     /**

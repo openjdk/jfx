@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,14 @@
 package test.com.sun.javafx.collections;
 
 import com.sun.javafx.collections.ObservableMapWrapper;
+import javafx.collections.MapChangeListener;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import java.util.AbstractSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -40,7 +42,64 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ObservableMapWrapperTest {
 
     @Nested
+    class ClearTest {
+        @Test
+        public void singleEntry() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a"));
+            map.clear();
+            map.assertTraceEquals("a removed at key k1");
+        }
+
+        @Test
+        public void multipleEntries() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+            map.clear();
+            map.assertTraceEquals(
+                "a removed at key k1",
+                "b removed at key k2",
+                "c removed at key k3");
+        }
+    }
+
+    @Nested
+    class PutAllTest {
+        @Test
+        public void singleEntry() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+            map.putAll(Map.of("k1", "d"));
+            map.assertTraceEquals("a replaced by d at key k1");
+        }
+
+        @Test
+        public void multipleEntries() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+            map.putAll(Map.of("k1", "d", "k2", "e", "k4", "f"));
+            map.assertTraceEquals(
+                "a replaced by d at key k1",
+                "b replaced by e at key k2",
+                "f added at key k4");
+        }
+    }
+
+    @Nested
     class RemoveAllTest {
+        @Test
+        public void singleEntry() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+            map.keySet().removeAll(List.of("k1"));
+            map.assertTraceEquals("a removed at key k1");
+        }
+
+        @Test
+        public void multipleEntries() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+            map.keySet().removeAll(List.of("k1", "k2", "k3"));
+            map.assertTraceEquals(
+                "a removed at key k1",
+                "b removed at key k2",
+                "c removed at key k3");
+        }
+
         @Test
         public void testEntrySetNullArgumentThrowsNPE() {
             var emptyMap = new ObservableMapWrapper<>(new HashMap<>());
@@ -98,6 +157,20 @@ public class ObservableMapWrapperTest {
     @Nested
     class RetainAllTest {
         @Test
+        public void singleEntry() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+            map.keySet().retainAll(List.of("k1"));
+            map.assertTraceEquals("b removed at key k2", "c removed at key k3");
+        }
+
+        @Test
+        public void multipleEntries() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+            map.keySet().retainAll(List.of("k1", "k3"));
+            map.assertTraceEquals("b removed at key k2");
+        }
+
+        @Test
         public void testEntrySetNullArgumentThrowsNPE() {
             var map1 = new ObservableMapWrapper<>(new HashMap<>());
             assertThrows(NullPointerException.class, () -> map1.entrySet().retainAll(null));
@@ -151,6 +224,63 @@ public class ObservableMapWrapperTest {
         }
     }
 
+    @Nested
+    class ReplaceAllTest {
+        @Test
+        public void singleEntry() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+
+            map.replaceAll((key, value) -> switch (key) {
+                case "k2" -> "e";
+                default -> value;
+            });
+
+            map.assertTraceEquals("b replaced by e at key k2");
+        }
+
+        @Test
+        public void multipleEntries() {
+            var map = new TestObservableMapWrapper(Map.of("k1", "a", "k2", "b", "k3", "c"));
+
+            map.replaceAll((key, value) -> switch (key) {
+                case "k1" -> "d";
+                case "k2" -> "e";
+                case "k3" -> "f";
+                default -> value;
+            });
+
+            map.assertTraceEquals(
+                "a replaced by d at key k1",
+                "b replaced by e at key k2",
+                "c replaced by f at key k3");
+        }
+    }
+
+    private static class TestObservableMapWrapper extends ObservableMapWrapper<String, String> {
+        final Set<String> bulkChangeTrace = new HashSet<>();
+        final Set<String> singleChangeTrace = new HashSet<>();
+
+        public TestObservableMapWrapper(Map<String, String> map) {
+            super(new HashMap<>(map));
+
+            addListener((MapChangeListener<? super String, ? super String>) change -> {
+                do {
+                    bulkChangeTrace.add(change.toString());
+                } while ((change = change.next()) != null);
+            });
+
+            addListener((MapChangeListener<? super String, ? super String>) change -> {
+                singleChangeTrace.add(change.toString());
+            });
+        }
+
+        void assertTraceEquals(String... expected) {
+            var expectedSet = Set.of(expected);
+            assertEquals(expectedSet, bulkChangeTrace);
+            assertEquals(expectedSet, singleChangeTrace);
+        }
+    }
+
     private ObservableMapWrapper<String, String> newNonIterableObservableMapWrapper() {
         return new ObservableMapWrapper<>(
             new HashMap<>(Map.of("k0", "v0", "k1", "v1", "k2", "v2")) {
@@ -185,5 +315,4 @@ public class ObservableMapWrapperTest {
             }
         };
     }
-
 }
