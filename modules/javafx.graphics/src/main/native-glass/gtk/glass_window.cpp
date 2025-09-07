@@ -1498,6 +1498,11 @@ void WindowContext::move_resize(int x, int y, bool xSet, bool ySet, int width, i
 
     LOG("gdk_window_move_resize: x,y: %d,%d / cw,ch: %d,%d\n", newX, newY, boundsW, boundsH);
 
+    if (!is_resizable()) {
+        view_size.set({boundsW, boundsH});
+        update_window_constraints();
+    }
+
     gdk_window_move_resize(gdk_window, newX, newY, boundsW, boundsH);
 }
 
