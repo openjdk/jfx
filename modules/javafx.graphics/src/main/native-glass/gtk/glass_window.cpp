@@ -1551,10 +1551,8 @@ void WindowContext::set_owner(WindowContext * owner_ctx) {
 }
 
 void WindowContext::update_view_size() {
-    // Notify the view size only if size is oriented by WINDOW, otherwise it knows its own size
-    if (width_type == BOUNDSTYPE_WINDOW || height_type == BOUNDSTYPE_WINDOW) {
-        notify_view_resize();
-    }
+    LOG("update_view_size\n");
+    notify_view_resize();
 }
 
 void WindowContext::show_system_menu(int x, int y) {
