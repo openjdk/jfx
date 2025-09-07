@@ -104,9 +104,9 @@ public class ContextMenuNPETest {
 
     @Test
     public void testContextMenuNPE() throws Throwable {
-        if (PlatformUtil.isLinux()) {
-            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321625
-        }
+//        if (PlatformUtil.isLinux()) {
+//            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321625
+//        }
 
         showMenuButtonContextMenu();
         selectSubmenuItem();
