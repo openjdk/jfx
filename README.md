@@ -1,5 +1,7 @@
 # OpenJFX
 
+KCR says "hi"
+
 OpenJFX is an open source, next generation client application platform for desktop, mobile and embedded systems based on JavaSE. It is a collaborative effort by many individuals and companies with the goal of producing a modern, efficient, and fully featured toolkit for developing rich client applications. This is the open source project where we develop JavaFX.
 
 OpenJFX is free software, licensed under [GPL v2 with the Classpath exception](LICENSE), just like the JDK. Anybody is welcome to contribute to this project, port it to other platforms or devices, or do anything else that a free software license allows you to do!
