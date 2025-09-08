@@ -23,55 +23,46 @@
  * questions.
  */
 
-package com.sun.javafx.css.media.expression;
+package com.sun.javafx.css.media;
 
-import com.sun.javafx.css.media.ContextAwareness;
-import com.sun.javafx.css.media.MediaQuery;
-import com.sun.javafx.css.media.MediaQueryCache;
-import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+public enum ContextAwareness {
 
-/**
- * Evaluates to a constant boolean value.
- */
-public final class ConstantExpression implements MediaQuery {
+    /**
+     * Indicates no context awareness.
+     */
+    NONE(0),
 
-    private final boolean value;
+    /**
+     * Indicates that the media query probes the viewport size (width or height).
+     */
+    VIEWPORT_SIZE(1),
 
-    private ConstantExpression(boolean value) {
+    /**
+     * Indicates that the media query probes the full-screen state.
+     */
+    FULLSCREEN(2);
+
+    ContextAwareness(int value) {
         this.value = value;
     }
 
-    public static ConstantExpression of(boolean value) {
-        return MediaQueryCache.getCachedMediaQuery(new ConstantExpression(value));
-    }
+    private final int value;
 
-    public boolean value() {
+    public int value() {
         return value;
     }
 
-    @Override
-    public int getContextAwareness() {
-        return ContextAwareness.NONE.value();
+    public boolean isSet(int flags) {
+        return (flags & value) != 0;
     }
 
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return value;
-    }
+    public static int combine(ContextAwareness... contextAwareness) {
+        int result = 0;
 
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ConstantExpression other && value == other.value;
-    }
+        for (ContextAwareness value : contextAwareness) {
+            result |= value.value;
+        }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(ConstantExpression.class, value);
-    }
-
-    @Override
-    public String toString() {
-        return "(" + value + ")";
+        return result;
     }
 }
