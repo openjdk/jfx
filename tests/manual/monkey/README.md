@@ -39,4 +39,4 @@ To use a different directory, for example to run multiple instances of MonkeyTes
 having them fight over the preferences, one can redefine the `user.home` system property,
 `-Duser.home=<DIR>`.
 
-To disable loading and saving, specify `-Ddisable.settings=true` VM agrument.
+To disable loading and saving, specify `-Ddisable.settings=true` VM argument.
