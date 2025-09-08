@@ -124,7 +124,7 @@ public class DialogPage extends TestPaneBase {
         d.initStyle(stageStyle.get());
         d.initModality(modality.get());
         d.initOwner(owner.get() ? FX.getParentWindow(this) : null);
-        
+
         // dialog
         d.contentTextProperty().bindBidirectional(contentText);
         d.headerTextProperty().bindBidirectional(headerText);

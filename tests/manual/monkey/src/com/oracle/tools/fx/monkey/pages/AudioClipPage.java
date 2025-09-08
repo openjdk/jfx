@@ -92,7 +92,7 @@ public class AudioClipPage extends TestPaneBase {
         String uri = sourceURI.get();
         play(uri);
     }
-    
+
     private void play(String uri) {
         if (Utils.isBlank(uri)) {
             return;

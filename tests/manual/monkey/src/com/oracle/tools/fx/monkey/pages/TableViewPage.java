@@ -138,7 +138,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
                         if (item == getItem()) {
                             return;
                         }
-    
+
                         super.updateItem(item, empty);
     
                         if (item == null) {
@@ -150,7 +150,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
                         } else {
                             String text = item.toString();
                             Canvas c = createCanvas(this, text);
-                            
+
                             super.setText(null);
                             super.setGraphic(c);
                         }
