@@ -33,12 +33,12 @@ extern "C" {
  */
 XML_DEPRECATED
 XMLPUBFUN xmlXPathContextPtr
-		    xmlXPtrNewContext		(xmlDocPtr doc,
-						 xmlNodePtr here,
-						 xmlNodePtr origin);
+                    xmlXPtrNewContext           (xmlDocPtr doc,
+                                                 xmlNodePtr here,
+                                                 xmlNodePtr origin);
 XMLPUBFUN xmlXPathObjectPtr
-		    xmlXPtrEval			(const xmlChar *str,
-						 xmlXPathContextPtr ctx);
+                    xmlXPtrEval                 (const xmlChar *str,
+                                                 xmlXPathContextPtr ctx);
 
 #ifdef __cplusplus
 }

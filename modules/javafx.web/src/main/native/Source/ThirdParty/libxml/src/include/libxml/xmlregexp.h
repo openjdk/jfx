@@ -42,17 +42,17 @@ typedef xmlRegExecCtxt *xmlRegExecCtxtPtr;
  * The POSIX like API
  */
 XMLPUBFUN xmlRegexpPtr
-		    xmlRegexpCompile	(const xmlChar *regexp);
-XMLPUBFUN void			 xmlRegFreeRegexp(xmlRegexpPtr regexp);
+                    xmlRegexpCompile    (const xmlChar *regexp);
+XMLPUBFUN void                   xmlRegFreeRegexp(xmlRegexpPtr regexp);
 XMLPUBFUN int
-		    xmlRegexpExec	(xmlRegexpPtr comp,
-					 const xmlChar *value);
+                    xmlRegexpExec       (xmlRegexpPtr comp,
+                                         const xmlChar *value);
 XML_DEPRECATED
 XMLPUBFUN void
-		    xmlRegexpPrint	(FILE *output,
-					 xmlRegexpPtr regexp);
+                    xmlRegexpPrint      (FILE *output,
+                                         xmlRegexpPtr regexp);
 XMLPUBFUN int
-		    xmlRegexpIsDeterminist(xmlRegexpPtr comp);
+                    xmlRegexpIsDeterminist(xmlRegexpPtr comp);
 
 /**
  * xmlRegExecCallbacks:
@@ -64,48 +64,48 @@ XMLPUBFUN int
  * Callback function when doing a transition in the automata
  */
 typedef void (*xmlRegExecCallbacks) (xmlRegExecCtxtPtr exec,
-	                             const xmlChar *token,
-				     void *transdata,
-				     void *inputdata);
+                                     const xmlChar *token,
+                                     void *transdata,
+                                     void *inputdata);
 
 /*
  * The progressive API
  */
 XML_DEPRECATED
 XMLPUBFUN xmlRegExecCtxtPtr
-		    xmlRegNewExecCtxt	(xmlRegexpPtr comp,
-					 xmlRegExecCallbacks callback,
-					 void *data);
+                    xmlRegNewExecCtxt   (xmlRegexpPtr comp,
+                                         xmlRegExecCallbacks callback,
+                                         void *data);
 XML_DEPRECATED
 XMLPUBFUN void
-		    xmlRegFreeExecCtxt	(xmlRegExecCtxtPtr exec);
+                    xmlRegFreeExecCtxt  (xmlRegExecCtxtPtr exec);
 XML_DEPRECATED
 XMLPUBFUN int
-		    xmlRegExecPushString(xmlRegExecCtxtPtr exec,
-					 const xmlChar *value,
-					 void *data);
+                    xmlRegExecPushString(xmlRegExecCtxtPtr exec,
+                                         const xmlChar *value,
+                                         void *data);
 XML_DEPRECATED
 XMLPUBFUN int
-		    xmlRegExecPushString2(xmlRegExecCtxtPtr exec,
-					 const xmlChar *value,
-					 const xmlChar *value2,
-					 void *data);
+                    xmlRegExecPushString2(xmlRegExecCtxtPtr exec,
+                                         const xmlChar *value,
+                                         const xmlChar *value2,
+                                         void *data);
 
 XML_DEPRECATED
 XMLPUBFUN int
-		    xmlRegExecNextValues(xmlRegExecCtxtPtr exec,
-					 int *nbval,
-					 int *nbneg,
-					 xmlChar **values,
-					 int *terminal);
+                    xmlRegExecNextValues(xmlRegExecCtxtPtr exec,
+                                         int *nbval,
+                                         int *nbneg,
+                                         xmlChar **values,
+                                         int *terminal);
 XML_DEPRECATED
 XMLPUBFUN int
-		    xmlRegExecErrInfo	(xmlRegExecCtxtPtr exec,
-					 const xmlChar **string,
-					 int *nbval,
-					 int *nbneg,
-					 xmlChar **values,
-					 int *terminal);
+                    xmlRegExecErrInfo   (xmlRegExecCtxtPtr exec,
+                                         const xmlChar **string,
+                                         int *nbval,
+                                         int *nbneg,
+                                         xmlChar **values,
+                                         int *terminal);
 
 #ifdef __cplusplus
 }
