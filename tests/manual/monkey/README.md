@@ -27,7 +27,7 @@ ant -Djavafx.home=<JAVAFX>
 To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 
 ```
-java -p <JAVAFX>/javafx-sdk-24/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
+java -p <JAVAFX>/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
 ```
 
 
