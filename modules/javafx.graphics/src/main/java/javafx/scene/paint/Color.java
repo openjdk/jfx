@@ -1953,14 +1953,14 @@ public final class Color extends Paint {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
         // If both instances are equal, return this instance to prevent the creation of numerous small objects.
-        if (t <= 0.0 || equals(endValue)) return this;
-        if (t >= 1.0) return endValue;
+        if (t == 0.0 || equals(endValue)) return this;
+        if (t == 1.0) return endValue;
         float ft = (float) t;
         return new Color(
-            red     + (endValue.red     - red)     * ft,
-            green   + (endValue.green   - green)   * ft,
-            blue    + (endValue.blue    - blue)    * ft,
-            opacity + (endValue.opacity - opacity) * ft
+            Math.clamp(red + (endValue.red - red) * ft, 0, 1),
+            Math.clamp(green + (endValue.green - green) * ft, 0, 1),
+            Math.clamp(blue + (endValue.blue - blue) * ft, 0, 1),
+            Math.clamp(opacity + (endValue.opacity - opacity) * ft, 0, 1)
         );
     }
 
