@@ -1236,7 +1236,7 @@ xmlNanoHTTPClose(void *ctx) {
  * Returns true, iff hostname matches the pattern.
  */
 
-static int 
+static int
 xmlNanoHTTPHostnameMatch(const char *pattern, const char *hostname) {
     int idx_pattern, idx_hostname;
     const char * pattern_start;
@@ -1255,7 +1255,7 @@ xmlNanoHTTPHostnameMatch(const char *pattern, const char *hostname) {
     }
     idx_hostname = strlen(hostname);
 
-    for (; idx_pattern >= 0 && idx_hostname >= 0; 
+    for (; idx_pattern >= 0 && idx_hostname >= 0;
            --idx_pattern, --idx_hostname) {
         if (tolower((unsigned char)pattern_start[idx_pattern]) !=
             tolower((unsigned char)hostname[idx_hostname]))

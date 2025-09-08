@@ -89,7 +89,7 @@ XMLPUBFUN xmlChar *
                 xmlSchemaCollapseString         (const xmlChar *value);
 XMLPUBFUN xmlChar *
                 xmlSchemaWhiteSpaceReplace      (const xmlChar *value);
-XMLPUBFUN unsigned long 
+XMLPUBFUN unsigned long
                 xmlSchemaGetFacetValueAsULong   (xmlSchemaFacetPtr facet);
 XMLPUBFUN int
                 xmlSchemaValidateLengthFacet    (xmlSchemaTypePtr type,
