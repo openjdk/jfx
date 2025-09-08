@@ -30,9 +30,11 @@ import javafx.collections.MapChangeListener;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import java.util.AbstractSet;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +42,42 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ObservableMapWrapperTest {
+
+    @Test
+    public void partialChangeIterationCausesSubsequentListenerInvocation() {
+        var trace = new ArrayList<String>();
+        var invocations = new int[1];
+        var map = new ObservableMapWrapper<String, String>(new HashMap<>());
+
+        // This listener only processes 2 changes in each invocation.
+        map.addListener((MapChangeListener<String, String>) change -> {
+            invocations[0]++;
+            trace.add(change.toString());
+
+            change = change.next();
+            trace.add(change.toString());
+        });
+
+        map.putAll(new LinkedHashMap<>() {{
+            put("k1", "a");
+            put("k2", "b");
+            put("k3", "c");
+            put("k4", "d");
+            put("k5", "e");
+            put("k6", "f");
+        }});
+
+        assertEquals(3, invocations[0]);
+        assertEquals(
+            List.of(
+                "a added at key k1",
+                "b added at key k2",
+                "c added at key k3",
+                "d added at key k4",
+                "e added at key k5",
+                "f added at key k6"),
+            trace);
+    }
 
     @Nested
     class ClearTest {

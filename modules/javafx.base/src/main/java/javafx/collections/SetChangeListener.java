@@ -91,11 +91,24 @@ public interface SetChangeListener<E> {
          * <p>
          * Repeatedly calling this method allows a listener to fetch all subsequent changes of a bulk
          * set modification that would otherwise be reported as repeated invocations of the listener.
+         * If the listener only fetches some of the pending changes, the rest of the changes will be
+         * reported with subsequent listener invocations.
          * <p>
          * After this method has been called, the current {@code Change} instance is no longer valid and
          * calling any method on it may result in undefined behavior. Callers must not make any assumptions
          * about the identity of the {@code Change} instance returned by this method; even if the returned
          * instance is the same as the current instance, it must be treated as a distinct change.
+         * <p>
+         * Since this method must not be called before inspecting the first change, listeners will
+         * usually use a do-while loop to iterate over multiple changes:
+         * <pre>{@code
+         *     set.addListener((SetChangeListener<String>) change -> {
+         *         do {
+         *             // Inspect the change
+         *             // ...
+         *         } while ((change = change.next()) != null);
+         *     });
+         * }</pre>
          *
          * @return the next change, or {@code null} if there are no more changes
          * @since 26

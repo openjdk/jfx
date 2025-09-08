@@ -29,13 +29,35 @@ import com.sun.javafx.collections.ObservableSetWrapper;
 import javafx.collections.SetChangeListener;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ObservableSetWrapperTest {
+
+    @Test
+    public void partialChangeIterationCausesSubsequentListenerInvocation() {
+        var trace = new ArrayList<String>();
+        var invocations = new int[1];
+        var set = new ObservableSetWrapper<String>(new HashSet<>());
+
+        // This listener only processes 2 changes in each invocation.
+        set.addListener((SetChangeListener<String>) change -> {
+            invocations[0]++;
+            trace.add(change.toString());
+
+            change = change.next();
+            trace.add(change.toString());
+        });
+
+        set.addAll(List.of("a", "b", "c", "d", "e", "f"));
+        assertEquals(3, invocations[0]);
+        assertEquals(List.of("added a", "added b", "added c", "added d", "added e", "added f"), trace);
+    }
 
     @Nested
     class AddAllTest {
