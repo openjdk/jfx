@@ -143,7 +143,7 @@ public class DnDPage extends TestPaneBase {
         target.setOnDragDropped((ev) -> {
             //print(ev);
         });
-        
+
         // listeners
         source.addEventHandler(DragEvent.ANY, (ev) -> {
             print(ev);

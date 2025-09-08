@@ -140,7 +140,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
                         }
 
                         super.updateItem(item, empty);
-    
+
                         if (item == null) {
                             super.setText(null);
                             super.setGraphic(null);
