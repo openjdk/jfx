@@ -183,9 +183,9 @@ static xmlGlobalState globalState;
 #endif /* LIBXML_THREAD_ENABLED */
 
 /************************************************************************
- *									*
- *	All the user accessible global variables of the library		*
- *									*
+ *                                                                      *
+ *      All the user accessible global variables of the library         *
+ *                                                                      *
  ************************************************************************/
 
 /*
@@ -383,9 +383,9 @@ static void
 xmlInitGlobalState(xmlGlobalStatePtr gs);
 
 /************************************************************************
- *									*
- *			Per thread global state handling		*
- *									*
+ *                                                                      *
+ *                      Per thread global state handling                *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -897,9 +897,9 @@ xmlThrDefSetGenericErrorFunc(void *ctx, xmlGenericErrorFunc handler) {
     xmlMutexLock(&xmlThrDefMutex);
     xmlGenericErrorContextThrDef = ctx;
     if (handler != NULL)
-	xmlGenericErrorThrDef = handler;
+        xmlGenericErrorThrDef = handler;
     else
-	xmlGenericErrorThrDef = xmlGenericErrorDefaultFunc;
+        xmlGenericErrorThrDef = xmlGenericErrorDefaultFunc;
     xmlMutexUnlock(&xmlThrDefMutex);
 }
 
@@ -1041,8 +1041,8 @@ xmlThrDefParserInputBufferCreateFilenameDefault(xmlParserInputBufferCreateFilena
     xmlMutexLock(&xmlThrDefMutex);
     old = xmlParserInputBufferCreateFilenameValueThrDef;
     if (old == NULL) {
-		old = __xmlParserInputBufferCreateFilename;
-	}
+                old = __xmlParserInputBufferCreateFilename;
+        }
 
     xmlParserInputBufferCreateFilenameValueThrDef = func;
     xmlMutexUnlock(&xmlThrDefMutex);
@@ -1059,8 +1059,8 @@ xmlThrDefOutputBufferCreateFilenameDefault(xmlOutputBufferCreateFilenameFunc fun
     old = xmlOutputBufferCreateFilenameValueThrDef;
 #ifdef LIBXML_OUTPUT_ENABLED
     if (old == NULL) {
-		old = __xmlOutputBufferCreateFilename;
-	}
+                old = __xmlOutputBufferCreateFilename;
+        }
 #endif
     xmlOutputBufferCreateFilenameValueThrDef = func;
     xmlMutexUnlock(&xmlThrDefMutex);
