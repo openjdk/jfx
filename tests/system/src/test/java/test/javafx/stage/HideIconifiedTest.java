@@ -34,10 +34,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import test.util.Util;
+import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 class HideIconifiedTest {
 
@@ -100,6 +102,8 @@ class HideIconifiedTest {
     @ParameterizedTest
     @EnumSource(names = { "DECORATED", "UNDECORATED", "TRANSPARENT", "EXTENDED" })
     void hideWhileIconifiedThenShow(StageStyle stageStyle) {
+        // Disable on Linux until JDK-8354943 is fixed
+        assumeFalse(PlatformUtil.isLinux());
         createAndShowStage(stageStyle);
 
         Util.runAndWait(() -> {
