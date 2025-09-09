@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,10 +40,14 @@ DrawGlyphsRecorder::DrawGlyphsRecorder(GraphicsContext& owner, float scaleFactor
     UNUSED_PARAM(scaleFactor);
 }
 
-void DrawGlyphsRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& startPoint, FontSmoothingMode smoothingMode)
+void DrawGlyphsRecorder::drawGlyphs(const Font& font,
+                                    std::span<const GlyphBufferGlyph> glyphs,
+                                    std::span<const GlyphBufferAdvance> advances,
+                                    const FloatPoint& startPoint,
+                                    FontSmoothingMode smoothingMode)
 {
 
-    m_owner.drawGlyphsAndCacheResources(font, glyphs, advances, numGlyphs, startPoint, smoothingMode);
+    m_owner.drawGlyphsAndCacheResources(font, glyphs, advances, startPoint, smoothingMode);
 }
 
 } // namespace WebCore

@@ -98,6 +98,7 @@
 #include <WebCore/RenderView.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ScriptController.h>
+#include <WebCore/ScrollingCoordinatorTypes.h>
 #include <WebCore/SecurityPolicy.h>
 #include <WebCore/Settings.h>
 #include <WebCore/StorageNamespaceProvider.h>
@@ -231,13 +232,13 @@ void WebPage::prePaint() {
         return;
     }
 
-    Frame* mainFrame = (Frame*)&m_page->mainFrame();
-        auto* localFrame = dynamicDowncast<LocalFrame>(mainFrame);
-    LocalFrameView* frameView = localFrame->view();
-    if (frameView) {
-        // Updating layout & styles precedes normal painting.
-        frameView->updateLayoutAndStyleIfNeededRecursive();
-    }
+   if(!m_page) return;
+   auto* localFrame = dynamicDowncast<LocalFrame>(&m_page->mainFrame());
+   if (!localFrame)
+       return;
+
+   if (auto* frameView = localFrame->view())
+       frameView->updateLayoutAndStyleIfNeededRecursive();
 }
 
 RefPtr<RQRef> WebPage::jRenderTheme()
@@ -270,7 +271,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
     GraphicsContextJava gc(ppgc);
 
     // TODO: Following JS synchronization is not necessary for single thread model
-    JSGlobalContextRef globalContext = toGlobalRef(localFrame->script().globalObject(mainThreadNormalWorld()));
+    JSGlobalContextRef globalContext = toGlobalRef(localFrame->script().globalObject(mainThreadNormalWorldSingleton()));
     JSC::JSLockHolder sw(toJS(globalContext)); // TODO-java: was JSC::APIEntryShim sw( toJS(globalContext) );
 
     frameView->paint(gc, IntRect(x, y, w, h));
@@ -796,14 +797,14 @@ void WebPage::debugEnded() {
 }
 void WebPage::enableWatchdog() {
     if (globalDebugSessionCounter == 0) {
-        JSContextGroupRef contextGroup = toRef(&mainThreadNormalWorld().vm());
+        JSContextGroupRef contextGroup = toRef(&mainThreadNormalWorldSingleton().vm());
         JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
     }
 }
 
 void WebPage::disableWatchdog() {
     if (globalDebugSessionCounter > 0) {
-        JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorld().vm()));
+        JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorldSingleton().vm()));
         JSContextGroupClearExecutionTimeLimit(contextGroup);
     }
 }
@@ -929,12 +930,15 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
-    //pc.clientForMainFrame = UniqueRef<LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientJava>(jlself));
-    pc.clientCreatorForMainFrame = CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&)>(
-        [client = makeUniqueRef<FrameLoaderClientJava>(jlself)](LocalFrame& frame) mutable -> UniqueRef<LocalFrameLoaderClient> {
-            return WTFMove(client);
-        }
-    );
+    pc.mainFrameCreationParameters = PageConfiguration::LocalMainFrameCreationParameters {
+        CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)>(
+            [jlself](LocalFrame& frame, FrameLoader& loader) -> UniqueRef<LocalFrameLoaderClient> {
+                return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientJava>(loader, jlself);
+            }
+        ),
+        SandboxFlags { }
+    };
+
     pc.progressTrackerClient = makeUniqueRef<ProgressTrackerClientJava>(jlself);
 
     pc.backForwardClient = BackForwardList::create();
@@ -988,7 +992,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
 
     frame->init();
 
-    JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorld().vm()));
+    JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorldSingleton().vm()));
     JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
 
     WebPage::webPageFromJLong(pPage)->enableWatchdog();
@@ -1356,11 +1360,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true"_s);
     } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled"_s) {
         settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true"_s);
-    } /*else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled"_s) {
-        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true"_s);
-    } */else if (nativePropertyName == "CSSColorContrastEnabled"_s) {
-        settings.setCSSColorContrastEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "WebKitTextAreasAreResizable"_s) {
+    }
+    else if (nativePropertyName == "WebKitTextAreasAreResizable"_s) {
         settings.setTextAreasAreResizable(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitLoadsImagesAutomatically"_s) {
         settings.setLoadsImagesAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
@@ -1504,7 +1505,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
 
         Frame* mainFrame = (Frame*)&page->mainFrame();
     auto* coreFrame = dynamicDowncast<LocalFrame>(mainFrame);
-    auto globalContext = toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorld()));
+    auto globalContext = toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorldSingleton()));
     WebCoreTestSupport::resetInternalsObject(globalContext);
 }
 
@@ -1771,7 +1772,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetEncoding
 
     auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
 
-    return frame->document()->charset().toJavaString(env).releaseLocal();
+    return String::fromUTF8(frame->document()->charset().span()).toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetEncoding
@@ -1938,7 +1939,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
         WheelEventProcessingSteps::SynchronousScrolling,
         WheelEventProcessingSteps::BlockingDOMEventDispatch
     };
-    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent, processingSteps).wasHandled();
+
+    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent, processingSteps).first.wasHandled();
 
     return bool_to_jbool(consumeEvent);
 }

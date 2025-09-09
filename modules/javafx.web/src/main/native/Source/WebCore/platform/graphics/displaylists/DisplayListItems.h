@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,6 @@
 #include "Gradient.h"
 #include "GraphicsContext.h"
 #include "Image.h"
-#include "MediaPlayerIdentifier.h"
 #include "PositionedGlyphs.h"
 #include "RenderingResourceIdentifier.h"
 #include "SharedBuffer.h"
@@ -49,6 +48,7 @@ class TextStream;
 
 namespace WebCore {
 
+class ControlFactory;
 struct ImagePaintingOptions;
 
 namespace DisplayList {
@@ -394,22 +394,22 @@ class ClipToImageBuffer {
 public:
     static constexpr char name[] = "clip-to-image-buffer";
 
-    ClipToImageBuffer(RenderingResourceIdentifier imageBufferIdentifier, const FloatRect& destinationRect)
+    ClipToImageBuffer(std::optional<RenderingResourceIdentifier> imageBufferIdentifier, const FloatRect& destinationRect)
         : m_imageBufferIdentifier(imageBufferIdentifier)
         , m_destinationRect(destinationRect)
     {
     }
 
-    RenderingResourceIdentifier imageBufferIdentifier() const { return m_imageBufferIdentifier; }
+    RenderingResourceIdentifier imageBufferIdentifier() const { return *m_imageBufferIdentifier; }
     FloatRect destinationRect() const { return m_destinationRect; }
 
-    bool isValid() const { return m_imageBufferIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageBufferIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageBufferIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageBufferIdentifier;
     FloatRect m_destinationRect;
 };
 
@@ -506,7 +506,7 @@ public:
     FontSmoothingMode fontSmoothingMode() const { return m_positionedGlyphs.smoothingMode; }
     const Vector<GlyphBufferGlyph>& glyphs() const { return m_positionedGlyphs.glyphs; }
 
-    WEBCORE_EXPORT DrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode);
+    WEBCORE_EXPORT DrawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint& localAnchor, FontSmoothingMode);
     WEBCORE_EXPORT DrawGlyphs(RenderingResourceIdentifier, PositionedGlyphs&&);
 
     WEBCORE_EXPORT void apply(GraphicsContext&, const Font&) const;
@@ -538,25 +538,6 @@ private:
     RenderingResourceIdentifier m_decomposedGlyphsIdentifier;
 };
 
-class DrawDisplayListItems {
-public:
-    static constexpr char name[] = "draw-display-list-items";
-
-    DrawDisplayListItems(const Vector<Item>&, const FloatPoint& destination);
-    WEBCORE_EXPORT DrawDisplayListItems(Vector<Item>&&, const FloatPoint& destination);
-
-    const Vector<Item>& items() const { return m_items; }
-    FloatPoint destination() const { return m_destination; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&, const ResourceHeap&) const;
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-    void dump(TextStream&, OptionSet<AsTextFlag>) const;
-
-private:
-    Vector<Item> m_items;
-    FloatPoint m_destination;
-};
-
 class DrawImageBuffer {
 public:
     static constexpr char name[] = "draw-image-buffer";
@@ -569,19 +550,19 @@ public:
     {
     }
 
-    RenderingResourceIdentifier imageBufferIdentifier() const { return m_imageBufferIdentifier; }
+    RenderingResourceIdentifier imageBufferIdentifier() const { return *m_imageBufferIdentifier; }
     FloatRect source() const { return m_srcRect; }
     FloatRect destinationRect() const { return m_destinationRect; }
     ImagePaintingOptions options() const { return m_options; }
 
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return m_imageBufferIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageBufferIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageBufferIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageBufferIdentifier;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -599,19 +580,19 @@ public:
     {
     }
 
-    RenderingResourceIdentifier imageIdentifier() const { return m_imageIdentifier; }
+    RenderingResourceIdentifier imageIdentifier() const { return *m_imageIdentifier; }
     const FloatRect& destinationRect() const { return m_destinationRect; }
     const FloatRect& source() const { return m_srcRect; }
     ImagePaintingOptions options() const { return m_options; }
 
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return m_imageIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, NativeImage&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageIdentifier;
     FloatRect m_destinationRect;
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
@@ -644,7 +625,7 @@ public:
 
     WEBCORE_EXPORT DrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { });
 
-    RenderingResourceIdentifier imageIdentifier() const { return m_imageIdentifier; }
+    RenderingResourceIdentifier imageIdentifier() const { return *m_imageIdentifier; }
     FloatRect destRect() const { return m_destination; }
     FloatRect tileRect() const { return m_tileRect; }
     const AffineTransform& patternTransform() const { return m_patternTransform; }
@@ -653,13 +634,13 @@ public:
     ImagePaintingOptions options() const { return m_options; }
 
     // FIXME: We might want to validate ImagePaintingOptions.
-    bool isValid() const { return m_imageIdentifier.isValid(); }
+    bool isValid() const { return !!m_imageIdentifier; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, SourceImage&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    RenderingResourceIdentifier m_imageIdentifier;
+    Markable<RenderingResourceIdentifier> m_imageIdentifier;
     FloatRect m_destination;
     FloatRect m_tileRect;
     AffineTransform m_patternTransform;
@@ -758,14 +739,11 @@ class DrawLinesForText {
 public:
     static constexpr char name[] = "draw-lines-for-text";
 
-    WEBCORE_EXPORT DrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, const DashArray& widths, float thickness, bool printing, bool doubleLines, StrokeStyle);
+    WEBCORE_EXPORT DrawLinesForText(const FloatPoint&, std::span<const FloatSegment> lineSegments, float thickness, bool printing, bool doubleLines, StrokeStyle);
 
-    void setBlockLocation(const FloatPoint& blockLocation) { m_blockLocation = blockLocation; }
-    const FloatPoint& blockLocation() const { return m_blockLocation; }
-    const FloatSize& localAnchor() const { return m_localAnchor; }
-    FloatPoint point() const { return m_blockLocation + m_localAnchor; }
+    FloatPoint point() const { return m_point; }
     float thickness() const { return m_thickness; }
-    const DashArray& widths() const { return m_widths; }
+    const Vector<FloatSegment>& lineSegments() const { return m_lineSegments; }
     bool isPrinting() const { return m_printing; }
     bool doubleLines() const { return m_doubleLines; }
     StrokeStyle style() const { return m_style; }
@@ -774,9 +752,8 @@ public:
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
-    FloatPoint m_blockLocation;
-    FloatSize m_localAnchor;
-    DashArray m_widths;
+    FloatPoint m_point;
+    Vector<FloatSegment> m_lineSegments;
     float m_thickness;
     bool m_printing;
     bool m_doubleLines;
@@ -1227,27 +1204,6 @@ private:
     FloatRect m_rect;
 };
 
-#if ENABLE(VIDEO)
-class PaintFrameForMedia {
-public:
-    static constexpr char name[] = "paint-frame-for-media";
-
-    WEBCORE_EXPORT PaintFrameForMedia(MediaPlayerIdentifier, const FloatRect& destination);
-
-    MediaPlayerIdentifier identifier() const { return m_identifier; }
-    const FloatRect& destination() const { return m_destination; }
-
-    bool isValid() const { return m_identifier.isValid(); }
-
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-    void dump(TextStream&, OptionSet<AsTextFlag>) const;
-
-private:
-    MediaPlayerIdentifier m_identifier;
-    FloatRect m_destination;
-};
-#endif
-
 class StrokeRect {
 public:
     static constexpr char name[] = "stroke-rect";
@@ -1467,7 +1423,7 @@ public:
     const ControlStyle& style() const { return m_style; }
     StyleAppearance type() const { return m_part->type(); }
 
-    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    WEBCORE_EXPORT void apply(GraphicsContext&, ControlFactory&) const;
     void dump(TextStream&, OptionSet<AsTextFlag>) const;
 
 private:
@@ -1513,6 +1469,53 @@ public:
 
 private:
     float m_scaleFactor { 1 };
+};
+
+class BeginPage {
+public:
+    static constexpr char name[] = "begin-page";
+
+    BeginPage(const IntSize& pageSize)
+        : m_pageSize(pageSize)
+    {
+    }
+
+    const IntSize& pageSize() const { return m_pageSize; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    IntSize m_pageSize;
+};
+
+class EndPage {
+public:
+    static constexpr char name[] = "end-page";
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const { }
+};
+
+class SetURLForRect {
+public:
+    static constexpr char name[] = "set-URL-for-rect";
+
+    SetURLForRect(const URL& link, const FloatRect& destRect)
+        : m_link(link)
+        , m_destRect(destRect)
+    {
+    }
+
+    const URL& link() const { return m_link; }
+    const FloatRect& destRect() const { return m_destRect; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+    void dump(TextStream&, OptionSet<AsTextFlag>) const;
+
+private:
+    URL m_link;
+    FloatRect m_destRect;
 };
 
 } // namespace DisplayList

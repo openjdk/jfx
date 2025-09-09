@@ -145,6 +145,12 @@ HTMLFormElement* HTMLOptionElement::form() const
     return nullptr;
 }
 
+HTMLFormElement* HTMLOptionElement::formForBindings() const
+{
+    // FIXME: The downcast should be unnecessary, but the WPT was written before https://github.com/WICG/webcomponents/issues/1072 was resolved. Update once the WPT has been updated.
+    return dynamicDowncast<HTMLFormElement>(retargetReferenceTargetForBindings(form())).get();
+}
+
 int HTMLOptionElement::index() const
 {
     // It would be faster to cache the index, but harder to get it right in all cases.
@@ -195,12 +201,10 @@ void HTMLOptionElement::attributeChanged(const QualifiedName& name, const AtomSt
             select->optionElementChildrenChanged();
         break;
     }
-#if ENABLE(DATALIST_ELEMENT)
     case AttributeNames::valueAttr:
         for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
             dataList.optionElementChildrenChanged();
         break;
-#endif
     default:
         HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
         break;
@@ -255,13 +259,11 @@ void HTMLOptionElement::setSelectedState(bool selected, AllowStyleInvalidation a
 
 void HTMLOptionElement::childrenChanged(const ChildChange& change)
 {
-#if ENABLE(DATALIST_ELEMENT)
     Vector<Ref<HTMLDataListElement>> ancestors;
     for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
         ancestors.append(dataList);
     for (auto& dataList : ancestors)
         dataList->optionElementChildrenChanged();
-#endif
     if (change.source != ChildChange::Source::Clone) {
     if (RefPtr select = ownerSelectElement())
         select->optionElementChildrenChanged();

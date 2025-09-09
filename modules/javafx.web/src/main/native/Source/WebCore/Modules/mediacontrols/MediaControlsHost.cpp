@@ -38,6 +38,7 @@
 #include "ContextMenuController.h"
 #include "ContextMenuItem.h"
 #include "ContextMenuProvider.h"
+#include "DocumentInlines.h"
 #include "Event.h"
 #include "EventListener.h"
 #include "EventNames.h"
@@ -57,6 +58,7 @@
 #include "Node.h"
 #include "Page.h"
 #include "PageGroup.h"
+#include "Quirks.h"
 #include "RenderTheme.h"
 #include "ShadowRoot.h"
 #include "TextTrack.h"
@@ -312,19 +314,23 @@ bool MediaControlsHost::inWindowFullscreen() const
     if (!m_mediaElement)
         return false;
 
-    auto& mediaElement = *m_mediaElement;
-    if (is<HTMLVideoElement>(mediaElement))
-        return downcast<HTMLVideoElement>(mediaElement).webkitPresentationMode() == HTMLVideoElement::VideoPresentationMode::InWindow;
+    if (RefPtr videoElement = dynamicDowncast<HTMLVideoElement>(*m_mediaElement))
+        return videoElement->webkitPresentationMode() == HTMLVideoElement::VideoPresentationMode::InWindow;
 #endif
     return false;
 }
 
 bool MediaControlsHost::supportsRewind() const
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
     if (auto sourceType = this->sourceType())
         return *sourceType == SourceType::HLS || *sourceType == SourceType::File;
-#endif
+    return false;
+}
+
+bool MediaControlsHost::needsChromeMediaControlsPseudoElement() const
+{
+    if (m_mediaElement)
+        return m_mediaElement->document().quirks().needsChromeMediaControlsPseudoElement();
     return false;
 }
 
@@ -391,8 +397,6 @@ String MediaControlsHost::generateUUID()
 {
     return createVersion4UUIDString();
 }
-
-#if ENABLE(MODERN_MEDIA_CONTROLS)
 
 String MediaControlsHost::shadowRootCSSText()
 {
@@ -807,8 +811,6 @@ auto MediaControlsHost::sourceType() const -> std::optional<SourceType>
         return m_mediaElement->sourceType();
     return std::nullopt;
 }
-
-#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
 
 void MediaControlsHost::presentationModeChanged()

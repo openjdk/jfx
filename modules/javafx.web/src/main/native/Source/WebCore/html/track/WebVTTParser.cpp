@@ -35,6 +35,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "CSSSerializationContext.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
 #include "ISOVTTCue.h"
@@ -46,8 +47,12 @@
 #include "VTTScanner.h"
 #include "WebVTTElement.h"
 #include "WebVTTTokenizer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebVTTCueData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebVTTParser);
 
 constexpr double secondsPerHour = 3600;
 constexpr double secondsPerMinute = 60;
@@ -231,7 +236,7 @@ void WebVTTParser::parse()
 void WebVTTParser::fileFinished()
 {
     ASSERT(m_state != Finished);
-    parseBytes("\n\n"_span);
+    parseBytes("\n\n"_span8);
     m_state = Finished;
 }
 
@@ -406,7 +411,7 @@ bool WebVTTParser::checkAndStoreStyleSheet(StringView line)
         if (styleRule->properties().isEmpty())
             continue;
 
-        sanitizedStyleSheetBuilder.append(selectorText, " { "_s, styleRule->properties().asText(), "  }\n"_s);
+        sanitizedStyleSheetBuilder.append(selectorText, " { "_s, styleRule->properties().asText(CSS::defaultSerializationContext()), "  }\n"_s);
     }
 
     // It would be more stylish to parse the stylesheet only once instead of serializing a sanitized version.
@@ -442,7 +447,7 @@ WebVTTParser::ParseState WebVTTParser::collectTimingsAndSettings(const String& l
     input.skipWhile<isASCIIWhitespace<UChar>>();
 
     // Steps 6 - 9 - If the next three characters are not "-->", abort and return failure.
-    if (!input.scan("-->"))
+    if (!input.scan("-->"_span8))
         return BadCue;
 
     input.skipWhile<isASCIIWhitespace<UChar>>();

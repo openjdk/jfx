@@ -179,6 +179,71 @@ GLIB_AVAILABLE_IN_2_36
 gboolean g_close (gint       fd,
                   GError   **error);
 
+/**
+ * g_clear_fd: (skip)
+ * @fd_ptr: (not optional) (inout) (transfer full): a pointer to a file descriptor
+ * @error: Used to return an error on failure
+ *
+ * If @fd_ptr points to a file descriptor, close it and return
+ * whether closing it was successful, like g_close().
+ * If @fd_ptr points to a negative number, return %TRUE without closing
+ * anything.
+ * In both cases, set @fd_ptr to `-1` before returning.
+ *
+ * Like g_close(), if closing the file descriptor fails, the error is
+ * stored in both %errno and @error. If this function succeeds,
+ * %errno is undefined.
+ *
+ * On POSIX platforms, this function is async-signal safe
+ * if @error is %NULL and @fd_ptr points to either a negative number or a
+ * valid open file descriptor.
+ * This makes it safe to call from a signal handler or a #GSpawnChildSetupFunc
+ * under those conditions.
+ * See [`signal(7)`](man:signal(7)) and
+ * [`signal-safety(7)`](man:signal-safety(7)) for more details.
+ *
+ * It is a programming error for @fd_ptr to point to a non-negative
+ * number that is not a valid file descriptor.
+ *
+ * A typical use of this function is to clean up a file descriptor at
+ * the end of its scope, whether it has been set successfully or not:
+ *
+ * |[
+ * gboolean
+ * operate_on_fd (GError **error)
+ * {
+ *   gboolean ret = FALSE;
+ *   int fd = -1;
+ *
+ *   fd = open_a_fd (error);
+ *
+ *   if (fd < 0)
+ *     goto out;
+ *
+ *   if (!do_something (fd, error))
+ *     goto out;
+ *
+ *   if (!g_clear_fd (&fd, error))
+ *     goto out;
+ *
+ *   ret = TRUE;
+ *
+ * out:
+ *   // OK to call even if fd was never opened or was already closed
+ *   g_clear_fd (&fd, NULL);
+ *   return ret;
+ * }
+ * ]|
+ *
+ * This function is also useful in conjunction with #g_autofd.
+ *
+ * Returns: %TRUE on success
+ * Since: 2.76
+ */
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_76
+static inline gboolean g_clear_fd (int     *fd_ptr,
+                                   GError **error);
+
 GLIB_AVAILABLE_STATIC_INLINE_IN_2_76
 static inline gboolean
 g_clear_fd (int     *fd_ptr,

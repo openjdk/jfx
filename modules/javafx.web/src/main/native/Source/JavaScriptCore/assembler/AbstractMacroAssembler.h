@@ -62,7 +62,7 @@ struct OSRExit;
 #define JIT_COMMENT(jit, ...) do { if (UNLIKELY(Options::needDisassemblySupport())) { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0)
 
 class AbstractMacroAssemblerBase {
-    WTF_MAKE_TZONE_ALLOCATED(AbstractMacroAssemblerBase);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AbstractMacroAssemblerBase);
 public:
     enum StatusCondition {
         Success,
@@ -408,8 +408,7 @@ public:
         int64_t m_value;
     };
 
-    struct Imm64 : private TrustedImm64
-    {
+    struct Imm64 : private TrustedImm64 {
         explicit constexpr Imm64(int64_t value)
             : TrustedImm64(value)
         {
@@ -947,10 +946,12 @@ public:
         for (auto& offset : m_registerAllocationForOffsets)
             offset.checkOffsets(offset1, offset2);
     }
+
     void checkRegisterAllocationAgainstSlowPathCall(const JumpList &from)
     {
         if (m_suppressRegisterValidation)
             return;
+
         for (auto& jump : from.jumps())
             checkRegisterAllocationAgainstBranchRange(jump.label().m_label.offset(), debugOffset());
     }

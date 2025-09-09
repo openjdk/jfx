@@ -32,6 +32,8 @@
 #include "StructureInlines.h"
 #include "WeakMapImplInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 template <typename WeakMapBucket>
@@ -98,7 +100,7 @@ template <typename WeakMapBucket>
 template<typename Appender>
 void WeakMapImpl<WeakMapBucket>::takeSnapshotInternal(unsigned limit, Appender appender)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     unsigned fetched = 0;
     forEach([&](JSCell* key, JSValue value) {
         appender(key, value);
@@ -131,3 +133,5 @@ template class WeakMapImpl<WeakMapBucket<WeakMapBucketDataKeyValue>>;
 template class WeakMapImpl<WeakMapBucket<WeakMapBucketDataKey>>;
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

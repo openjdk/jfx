@@ -47,7 +47,6 @@ namespace WebCore {
 
 class Filter;
 class FloatRect;
-class ImageBufferAllocator;
 
 class FilterImage : public RefCounted<FilterImage> {
 public:

@@ -97,14 +97,15 @@ void DynamicsCompressorNode::process(size_t framesToProcess)
 
 void DynamicsCompressorNode::processOnlyAudioParams(size_t framesToProcess)
 {
-    float values[AudioUtilities::renderQuantumSize];
+    std::array<float, AudioUtilities::renderQuantumSize> values;
     ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
 
-    m_threshold->calculateSampleAccurateValues(values, framesToProcess);
-    m_knee->calculateSampleAccurateValues(values, framesToProcess);
-    m_ratio->calculateSampleAccurateValues(values, framesToProcess);
-    m_attack->calculateSampleAccurateValues(values, framesToProcess);
-    m_release->calculateSampleAccurateValues(values, framesToProcess);
+    auto valuesSpan = std::span { values }.first(framesToProcess);
+    m_threshold->calculateSampleAccurateValues(valuesSpan);
+    m_knee->calculateSampleAccurateValues(valuesSpan);
+    m_ratio->calculateSampleAccurateValues(valuesSpan);
+    m_attack->calculateSampleAccurateValues(valuesSpan);
+    m_release->calculateSampleAccurateValues(valuesSpan);
 }
 
 void DynamicsCompressorNode::initialize()

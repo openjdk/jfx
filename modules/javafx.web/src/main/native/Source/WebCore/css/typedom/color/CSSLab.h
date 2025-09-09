@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "CSSColorValue.h"
+#include "CSSOMColorValue.h"
 
 namespace WebCore {
 
-class CSSLab final : public CSSColorValue {
+class CSSLab final : public CSSOMColorValue {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSLab);
 public:
     static ExceptionOr<Ref<CSSLab>> create(CSSColorPercent&& lightness, CSSColorNumber&& a, CSSColorNumber&& b, CSSColorPercent&& alpha);

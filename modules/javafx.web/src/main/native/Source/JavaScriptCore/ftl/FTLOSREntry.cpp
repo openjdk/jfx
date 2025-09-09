@@ -36,6 +36,8 @@
 
 #if ENABLE(FTL_JIT)
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace FTL {
 
 SUPPRESS_ASAN
@@ -107,9 +109,10 @@ void* prepareOSREntry(
         }
         if (reconstructedValue && valueOnStack == reconstructedValue.value())
             continue;
-        dataLog("Mismatch between reconstructed values and the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at ", bytecodeIndex, ":\n");
-        dataLog("    Value on stack: ", valueOnStack, "\n");
-        dataLog("    Reconstructed value: ", reconstructedValue, "\n");
+        dataLogLn(
+            "Mismatch between reconstructed values and the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at ", bytecodeIndex, ":\n",
+            "    Value on stack: ", valueOnStack, "\n",
+            "    Reconstructed value: ", reconstructedValue);
         RELEASE_ASSERT_NOT_REACHED();
     }
 
@@ -148,6 +151,6 @@ void* prepareOSREntry(
 
 } } // namespace JSC::FTL
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 #endif // ENABLE(FTL_JIT)
-
-

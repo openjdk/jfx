@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,11 @@
 #include "HandlerInfo.h"
 #include "InstructionStream.h"
 #include "MacroAssemblerCodeRef.h"
+#include "WasmFormat.h"
 #include "WasmHandlerInfo.h"
 #include "WasmLLIntTierUpCounter.h"
 #include "WasmOps.h"
+#include <wtf/FixedBitVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -71,12 +73,12 @@ class FunctionCodeBlockGenerator {
     friend class LLIntCallee;
 
 public:
-    FunctionCodeBlockGenerator(uint32_t functionIndex)
+    FunctionCodeBlockGenerator(FunctionCodeIndex functionIndex)
         : m_functionIndex(functionIndex)
     {
     }
 
-    uint32_t functionIndex() const { return m_functionIndex; }
+    FunctionCodeIndex functionIndex() const { return m_functionIndex; }
     unsigned numVars() const { return m_numVars; }
     unsigned numCalleeLocals() const { return m_numCalleeLocals; }
     uint32_t numArguments() const { return m_numArguments; }
@@ -84,10 +86,12 @@ public:
     const Vector<uint64_t>& constants() const { return m_constants; }
     const Vector<uint64_t>& constantRegisters() const { return m_constants; }
     const WasmInstructionStream& instructions() const { return *m_instructions; }
+    bool hasTailCallSuccessors() const { return m_hasTailCallSuccessors; }
     const BitVector& tailCallSuccessors() const { return m_tailCallSuccessors; }
+    FixedBitVector&& takeCallees() { return WTFMove(m_callees); }
     bool tailCallClobbersInstance() const { return m_tailCallClobbersInstance ; }
     void setTailCall(uint32_t, bool);
-    void setTailCallClobbersInstance(bool value) { m_tailCallClobbersInstance  = value; }
+    void setTailCallClobbersInstance() { m_tailCallClobbersInstance = true; }
 
     void setNumVars(unsigned numVars) { m_numVars = numVars; }
     void setNumCalleeLocals(unsigned numCalleeLocals) { m_numCalleeLocals = numCalleeLocals; }
@@ -119,7 +123,7 @@ public:
         return returnAddress - instructionsBegin;
     }
 
-    HashMap<WasmInstructionStream::Offset, LLIntTierUpCounter::OSREntryData>& tierUpCounter() { return m_tierUpCounter; }
+    UncheckedKeyHashMap<WasmInstructionStream::Offset, LLIntTierUpCounter::OSREntryData>& tierUpCounter() { return m_tierUpCounter; }
 
     unsigned addSignature(const TypeDefinition&);
 
@@ -131,15 +135,16 @@ public:
     void addExceptionHandler(const UnlinkedHandlerInfo& handler) { m_exceptionHandlers.append(handler); }
 
 private:
-    using OutOfLineJumpTargets = HashMap<WasmInstructionStream::Offset, int>;
+    using OutOfLineJumpTargets = UncheckedKeyHashMap<WasmInstructionStream::Offset, int>;
 
-    uint32_t m_functionIndex;
+    FunctionCodeIndex m_functionIndex;
 
     // Used for the number of WebAssembly locals, as in https://webassembly.github.io/spec/core/syntax/modules.html#syntax-local
     unsigned m_numVars { 0 };
     // Number of VirtualRegister. The naming is unfortunate, but has to match UnlinkedCodeBlock
     unsigned m_numCalleeLocals { 0 };
     uint32_t m_numArguments { 0 };
+    bool m_hasTailCallSuccessors { false };
     bool m_tailCallClobbersInstance { false };
     Vector<Type> m_constantTypes;
     Vector<uint64_t> m_constants;
@@ -148,9 +153,10 @@ private:
     Vector<WasmInstructionStream::Offset> m_jumpTargets;
     Vector<const TypeDefinition*> m_signatures;
     OutOfLineJumpTargets m_outOfLineJumpTargets;
-    HashMap<WasmInstructionStream::Offset, LLIntTierUpCounter::OSREntryData> m_tierUpCounter;
+    UncheckedKeyHashMap<WasmInstructionStream::Offset, LLIntTierUpCounter::OSREntryData> m_tierUpCounter;
     Vector<JumpTable> m_jumpTables;
     Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
+    FixedBitVector m_callees;
     BitVector m_tailCallSuccessors;
 };
 

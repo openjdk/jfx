@@ -76,12 +76,13 @@ RenderStyle resolveForDocument(const Document& document)
     const Pagination& pagination = renderView.frameView().pagination();
     if (pagination.mode != Pagination::Mode::Unpaginated) {
         documentStyle.setColumnStylesFromPaginationMode(pagination.mode);
-        documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, LengthType::Fixed)));
+        documentStyle.setColumnGap(GapLength(WebCore::Length(static_cast<int>(pagination.gap), LengthType::Fixed)));
         if (renderView.multiColumnFlow())
             renderView.updateColumnProgressionFromStyle(documentStyle);
     }
 
-    const Settings& settings = renderView.frame().settings();
+    auto fontDescription = [&]() {
+        auto& settings = renderView.frame().settings();
 
     FontCascadeDescription fontDescription;
     fontDescription.setSpecifiedLocale(document.contentLanguage());
@@ -97,10 +98,15 @@ RenderStyle resolveForDocument(const Document& document)
     auto [fontOrientation, glyphOrientation] = documentStyle.fontAndGlyphOrientation();
     fontDescription.setOrientation(fontOrientation);
     fontDescription.setNonCJKGlyphOrientation(glyphOrientation);
+        return fontDescription;
+    }();
 
-    documentStyle.setFontDescription(WTFMove(fontDescription));
+    auto fontCascade = FontCascade { WTFMove(fontDescription), documentStyle.fontCascade() };
 
-    documentStyle.fontCascade().update(&const_cast<Document&>(document).fontSelector());
+    // We don't just call setFontDescription() because we need to provide the fontSelector to the FontCascade.
+    RefPtr fontSelector = document.protectedFontSelector();
+    fontCascade.update(WTFMove(fontSelector));
+    documentStyle.setFontCascade(WTFMove(fontCascade));
 
     return documentStyle;
 }

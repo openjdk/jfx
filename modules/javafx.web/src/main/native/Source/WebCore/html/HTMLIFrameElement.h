@@ -46,8 +46,8 @@ public:
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const final;
 
-    const AtomString& loadingForBindings() const;
-    void setLoadingForBindings(const AtomString&);
+    const AtomString& loading() const;
+    void setLoading(const AtomString&);
 
     String srcdoc() const;
     ExceptionOr<void> setSrcdoc(std::variant<RefPtr<TrustedHTML>, String>&&);
@@ -59,6 +59,11 @@ public:
 #if ENABLE(FULLSCREEN_API)
     bool hasIFrameFullscreenFlag() const { return m_IFrameFullscreenFlag; }
     void setIFrameFullscreenFlag(bool value) { m_IFrameFullscreenFlag = value; }
+#endif
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    const URL& initiatorSourceURL() const { return m_initiatorSourceURL; }
+    void setInitiatorSourceURL(URL&& url) { m_initiatorSourceURL = WTFMove(url); }
 #endif
 
 private:
@@ -73,6 +78,7 @@ private:
 
     bool rendererIsNeeded(const RenderStyle&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+    bool isReplaced(const RenderStyle&) const final { return true; }
 
     bool shouldLoadFrameLazily() final;
     bool isLazyLoadObserverActive() const final;
@@ -82,6 +88,9 @@ private:
     bool m_IFrameFullscreenFlag { false };
 #endif
     std::unique_ptr<LazyLoadFrameObserver> m_lazyLoadFrameObserver;
+#if ENABLE(CONTENT_EXTENSIONS)
+    URL m_initiatorSourceURL;
+#endif
 };
 
 } // namespace WebCore

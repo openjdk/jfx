@@ -38,7 +38,7 @@ class Element;
 inline bool shouldInvalidateTypeOnAttributeChange(NodeListInvalidationType, const QualifiedName&);
 
 class LiveNodeList : public NodeList {
-    WTF_MAKE_TZONE_OR_ISO_NONALLOCATABLE(LiveNodeList);
+    WTF_MAKE_TZONE_OR_ISO_NON_HEAP_ALLOCATABLE(LiveNodeList);
 public:
     virtual ~LiveNodeList();
 
@@ -73,7 +73,7 @@ private:
 
 template <class NodeListType>
 class CachedLiveNodeList : public LiveNodeList {
-    WTF_MAKE_TZONE_OR_ISO_NONALLOCATABLE(CachedLiveNodeList);
+    WTF_MAKE_TZONE_OR_ISO_NON_HEAP_ALLOCATABLE(CachedLiveNodeList);
 public:
     virtual ~CachedLiveNodeList();
 

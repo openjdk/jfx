@@ -31,9 +31,12 @@
 #include "config.h"
 #include "FileStream.h"
 
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileStream);
 
 FileStream::FileStream()
     : m_handle(FileSystem::invalidPlatformFileHandle)
@@ -95,8 +98,11 @@ void FileStream::close()
         m_handle = FileSystem::invalidPlatformFileHandle;
     }
 }
-
+#if PLATFORM(JAVA)
 int FileStream::read(void* buffer, int bufferSize)
+#else
+int FileStream::read(std::span<uint8_t> buffer)
+#endif
 {
     if (!FileSystem::isHandleValid(m_handle))
         return -1;

@@ -24,6 +24,7 @@
 #include "LengthBox.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,7 +40,7 @@ class LocalFrame;
 class Node;
 
 class PrintContext : public FrameDestructionObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PrintContext, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT explicit PrintContext(LocalFrame*);
     WEBCORE_EXPORT ~PrintContext();
@@ -76,7 +77,7 @@ public:
 
     // Used by layout tests.
     WEBCORE_EXPORT static int pageNumberForElement(Element*, const FloatSize& pageSizeInPixels); // Returns -1 if page isn't found.
-    WEBCORE_EXPORT static String pageProperty(LocalFrame*, const char* propertyName, int pageNumber);
+    WEBCORE_EXPORT static String pageProperty(LocalFrame*, const String& propertyName, int pageNumber);
     WEBCORE_EXPORT static bool isPageBoxVisible(LocalFrame*, int pageNumber);
     WEBCORE_EXPORT static String pageSizeAndMarginsInPixels(LocalFrame*, int pageNumber, int width, int height, int marginTop, int marginRight, int marginBottom, int marginLeft);
     WEBCORE_EXPORT static int numberOfPages(LocalFrame&, const FloatSize& pageSizeInPixels);

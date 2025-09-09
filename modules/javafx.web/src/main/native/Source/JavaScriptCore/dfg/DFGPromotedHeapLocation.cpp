@@ -91,6 +91,18 @@ void printInternal(PrintStream& out, PromotedLocationKind kind)
         out.print("ArgumentsCalleePLoc");
         return;
 
+    case ArrayPLoc:
+        out.print("ArrayPLoc");
+        return;
+
+    case ArrayLengthPropertyPLoc:
+        out.print("ArrayLengthPropertyPLoc");
+        return;
+
+    case ArrayIndexedPropertyPLoc:
+        out.print("ArrayIndexedPropertyPLoc");
+        return;
+
     case FunctionExecutablePLoc:
         out.print("FunctionExecutablePLoc");
         return;

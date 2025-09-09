@@ -38,7 +38,7 @@ class CSSSkewX : public CSSTransformComponent {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSSkewX);
 public:
     static ExceptionOr<Ref<CSSSkewX>> create(Ref<CSSNumericValue>);
-    static ExceptionOr<Ref<CSSSkewX>> create(CSSFunctionValue&);
+    static ExceptionOr<Ref<CSSSkewX>> create(Ref<const CSSFunctionValue>);
 
     const CSSNumericValue& ax() const { return m_ax.get(); }
     ExceptionOr<void> setAx(Ref<CSSNumericValue>);

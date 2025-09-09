@@ -92,7 +92,6 @@ void CSSTransition::setTimingProperties(Seconds delay, Seconds duration)
     animationEffect->setDelay(delay);
     animationEffect->setIterationDuration(duration);
     animationEffect->setTimingFunction(backingAnimation().timingFunction());
-    animationEffect->updateStaticTimingProperties();
     effectTimingDidChange();
 
     unsuspendEffectInvalidation();

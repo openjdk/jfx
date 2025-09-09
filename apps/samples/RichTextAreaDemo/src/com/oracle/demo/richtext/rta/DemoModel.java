@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -128,6 +128,10 @@ public class DemoModel extends SimpleViewOnlyStyledModel {
         addWavyUnderline(36, 100, Color.RED);
         highlight(46, 11, Color.rgb(255, 255, 128, 0.7));
         highlight(50, 20, Color.rgb(0, 0, 128, 0.1));
+        nl();
+        addSegment("Styled with CSS");
+        addWavyUnderline(0, 6, "squiggly-css");
+        highlight(12, 3, "highlight1", "highlight2");
         nl(2);
 
         addParagraph(this::createRect);

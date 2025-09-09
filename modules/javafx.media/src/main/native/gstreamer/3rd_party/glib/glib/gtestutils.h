@@ -302,33 +302,60 @@ void    g_test_init                     (int            *argc,
 /**
  * G_TEST_OPTION_ISOLATE_DIRS:
  *
- * Creates a unique temporary directory for each unit test and uses
- * g_set_user_dirs() to set XDG directories to point into subdirectories of it
- * for the duration of the unit test. The directory tree is cleaned up after the
- * test finishes successfully. Note that this doesn't take effect until
- * g_test_run() is called, so calls to (for example) g_get_user_home_dir() will
- * return the system-wide value when made in a test program's main() function.
+ * A value that can be passed as an option to [func@GLib.test_init].
+ *
+ * Creates a unique temporary directory for each unit test and uses sets
+ * XDG directories to point into subdirectories of it for the duration of
+ * the unit test. The directory tree is cleaned up after the test finishes
+ * successfully.
+ *
+ * Note that this doesn’t take effect until [func@GLib.test_run] is called,
+ * so calls to (for example) [func@GLib.get_home_dir] will return the
+ * system-wide value when made in a test program’s main() function.
  *
  * The following functions will return subdirectories of the temporary directory
  * when this option is used. The specific subdirectory paths in use are not
- * guaranteed to be stable API - always use a getter function to retrieve them.
+ * guaranteed to be stable API — always use a getter function to retrieve them.
  *
- *  - g_get_home_dir()
- *  - g_get_user_cache_dir()
- *  - g_get_system_config_dirs()
- *  - g_get_user_config_dir()
- *  - g_get_system_data_dirs()
- *  - g_get_user_data_dir()
- *  - g_get_user_state_dir()
- *  - g_get_user_runtime_dir()
+ *  - [func@GLib.get_home_dir]
+ *  - [func@GLib.get_user_cache_dir]
+ *  - [func@GLib.get_system_config_dirs]
+ *  - [func@GLib.get_user_config_dir]
+ *  - [func@GLib.get_system_data_dirs]
+ *  - [func@GLib.get_user_data_dir]
+ *  - [func@GLib.get_user_state_dir]
+ *  - [func@GLib.get_user_runtime_dir]
  *
  * The subdirectories may not be created by the test harness; as with normal
- * calls to functions like g_get_user_cache_dir(), the caller must be prepared
- * to create the directory if it doesn't exist.
+ * calls to functions like [func@GLib.get_user_cache_dir], the caller must
+ * be prepared to create the directory if it doesn’t exist.
  *
  * Since: 2.60
  */
 #define G_TEST_OPTION_ISOLATE_DIRS "isolate_dirs"
+
+/**
+ * G_TEST_OPTION_NO_PRGNAME:
+ *
+ * A value that can be passed as an option to [func@GLib.test_init].
+ *
+ * If this option is given, [func@GLib.test_init] will not call [func@GLib.set_prgname].
+ *
+ * Since: 2.84
+ */
+#define G_TEST_OPTION_NO_PRGNAME "no_g_set_prgname"
+
+/**
+ * G_TEST_OPTION_NONFATAL_ASSERTIONS:
+ *
+ * A value that can be passed as an option to [func@GLib.test_init].
+ *
+ * If this option is given, assertions will not abort the process, but
+ * call [func@GLib.test_fail]. Equivalent to [func@GLib.test_set_nonfatal_assertions].
+ *
+ * Since: 2.84
+ */
+#define G_TEST_OPTION_NONFATAL_ASSERTIONS "nonfatal-assertions"
 
 /* While we discourage its use, g_assert() is often used in unit tests
  * (especially in legacy code). g_assert_*() should really be used instead.
@@ -412,20 +439,24 @@ void    g_test_disable_crash_reporting  (void);
 
 /**
  * g_test_add:
- * @testpath:  The test path for a new test case.
- * @Fixture:   The type of a fixture data structure.
- * @tdata:     Data argument for the test functions.
- * @fsetup:    The function to set up the fixture data.
- * @ftest:     The actual test function.
- * @fteardown: The function to tear down the fixture data.
+ * @testpath: the test path for a new test case
+ * @Fixture: the type of a fixture data structure
+ * @tdata: data argument for the test functions
+ * @fsetup: the function to set up the fixture data
+ * @ftest: the actual test function
+ * @fteardown: the function to tear down the fixture data
  *
- * Hook up a new test case at @testpath, similar to g_test_add_func().
- * A fixture data structure with setup and teardown functions may be provided,
- * similar to g_test_create_case().
+ * Hooks up a new test case at @testpath.
  *
- * g_test_add() is implemented as a macro, so that the fsetup(), ftest() and
- * fteardown() callbacks can expect a @Fixture pointer as their first argument
- * in a type safe manner. They otherwise have type #GTestFixtureFunc.
+ * This function is similar to [func@GLib.test_add_func].
+ *
+ * A fixture data structure with setup and teardown functions
+ * may be provided, similar to [func@GLib.test_create_case].
+ *
+ * `g_test_add()` is implemented as a macro, so that the @fsetup,
+ * @ftest and @fteardown callbacks can expect a @Fixture pointer
+ * as their first argument in a type safe manner. They otherwise
+ * have type `GTestFixtureFunc`.
  *
  * Since: 2.16
  */
@@ -482,12 +513,13 @@ void    g_test_queue_destroy            (GDestroyNotify destroy_func,
  *     child process is shared with stdin of its parent process.
  *     It is redirected to `/dev/null` otherwise.
  *
- * Test traps are guards around forked tests.
- * These flags determine what traps to set.
+ * Flags to pass to [func@GLib.test_trap_fork] to control input and output.
  *
- * Deprecated: 2.38: #GTestTrapFlags is used only with g_test_trap_fork(),
- * which is deprecated. g_test_trap_subprocess() uses
- * #GTestSubprocessFlags.
+ * Test traps are guards around forked tests. These flags determine what traps to set.
+ *
+ * Deprecated: 2.38: `GTestTrapFlags` is used only with [func@GLib.test_trap_fork],
+ *   which is deprecated. Its replacement, [func@GLib.test_trap_subprocess] uses
+ *   [flags@GLib.TestSubprocessFlags].
  */
 typedef enum {
   G_TEST_TRAP_DEFAULT GLIB_AVAILABLE_ENUMERATOR_IN_2_74 = 0,

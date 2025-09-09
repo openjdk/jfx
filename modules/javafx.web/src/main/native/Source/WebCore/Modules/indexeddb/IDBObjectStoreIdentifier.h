@@ -30,6 +30,6 @@
 namespace WebCore {
 
 enum class IDBObjectStoreIdentifierType { };
-using IDBObjectStoreIdentifier = LegacyNullableAtomicObjectIdentifier<IDBObjectStoreIdentifierType>;
+using IDBObjectStoreIdentifier = AtomicObjectIdentifier<IDBObjectStoreIdentifierType>;
 
 } // namespace WebCore

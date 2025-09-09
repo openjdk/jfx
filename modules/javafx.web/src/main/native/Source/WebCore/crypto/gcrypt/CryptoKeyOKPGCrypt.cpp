@@ -33,9 +33,9 @@
 
 namespace WebCore {
 
-bool CryptoKeyOKP::isPlatformSupportedCurve(NamedCurve namedCurve)
+bool CryptoKeyOKP::supportsNamedCurve()
 {
-    return namedCurve == NamedCurve::Ed25519 || namedCurve == NamedCurve::X25519;
+    return true;
 }
 
 namespace CryptoKeyOKPImpl {
@@ -115,7 +115,7 @@ static std::optional<std::pair<Vector<uint8_t>, Vector<uint8_t>>> gcryptGenerate
 
 std::optional<CryptoKeyPair> CryptoKeyOKP::platformGeneratePair(CryptoAlgorithmIdentifier identifier, NamedCurve namedCurve, bool extractable, CryptoKeyUsageBitmap usages)
 {
-    if (!isPlatformSupportedCurve(namedCurve))
+    if (!supportsNamedCurve())
         return std::nullopt;
 
     std::optional<std::pair<Vector<uint8_t>, Vector<uint8_t>>> keyPair;
@@ -149,7 +149,7 @@ std::optional<CryptoKeyPair> CryptoKeyOKP::platformGeneratePair(CryptoAlgorithmI
 
 bool CryptoKeyOKP::platformCheckPairedKeys(CryptoAlgorithmIdentifier, NamedCurve namedCurve, const Vector<uint8_t>& privateKey, const Vector<uint8_t>& publicKey)
 {
-    if (!isPlatformSupportedCurve(namedCurve))
+    if (!supportsNamedCurve())
         return false;
 
     switch (namedCurve) {
@@ -177,7 +177,7 @@ bool CryptoKeyOKP::platformCheckPairedKeys(CryptoAlgorithmIdentifier, NamedCurve
 // For all of the OIDs, the parameters MUST be absent.
 RefPtr<CryptoKeyOKP> CryptoKeyOKP::importSpki(CryptoAlgorithmIdentifier identifier, NamedCurve curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages)
 {
-    if (!isPlatformSupportedCurve(curve))
+    if (!supportsNamedCurve())
         return nullptr;
 
     // Decode the `SubjectPublicKeyInfo` structure using the provided key data.
@@ -298,7 +298,7 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyOKP::exportSpki() const
 // For all of the OIDs, the parameters MUST be absent.
 RefPtr<CryptoKeyOKP> CryptoKeyOKP::importPkcs8(CryptoAlgorithmIdentifier identifier, NamedCurve curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages)
 {
-    if (!isPlatformSupportedCurve(curve))
+    if (!supportsNamedCurve())
         return nullptr;
 
     // Decode the `PrivateKeyInfo` structure using the provided key data.

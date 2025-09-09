@@ -27,24 +27,21 @@
 
 #include "DeferrableTask.h"
 #include "PlatformMediaSession.h"
+#include <wtf/AbstractRefCounted.h>
 
 namespace WebCore {
 
 class RemoteCommandListenerClient {
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~RemoteCommandListenerClient() = default;
     virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
 };
 
-class WEBCORE_EXPORT RemoteCommandListener {
+class WEBCORE_EXPORT RemoteCommandListener : public AbstractRefCounted {
 public:
     static RefPtr<RemoteCommandListener> create(RemoteCommandListenerClient&);
     RemoteCommandListener(RemoteCommandListenerClient&);
     virtual ~RemoteCommandListener();
-
-    virtual void ref() const = 0;
-    virtual void deref() const = 0;
 
     using CreationFunction = Function<RefPtr<RemoteCommandListener>(RemoteCommandListenerClient&)>;
     static void setCreationFunction(CreationFunction&&);
@@ -53,7 +50,7 @@ public:
     void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
     void removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
 
-    using RemoteCommandsSet = HashSet<PlatformMediaSession::RemoteControlCommandType, IntHash<PlatformMediaSession::RemoteControlCommandType>, WTF::StrongEnumHashTraits<PlatformMediaSession::RemoteControlCommandType>>;
+    using RemoteCommandsSet = UncheckedKeyHashSet<PlatformMediaSession::RemoteControlCommandType, IntHash<PlatformMediaSession::RemoteControlCommandType>, WTF::StrongEnumHashTraits<PlatformMediaSession::RemoteControlCommandType>>;
     void setSupportedCommands(const RemoteCommandsSet&);
     const RemoteCommandsSet& supportedCommands() const;
 

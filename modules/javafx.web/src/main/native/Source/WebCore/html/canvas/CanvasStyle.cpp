@@ -46,7 +46,7 @@
 
 namespace WebCore {
 
-class CanvasStyleColorResolutionDelegate final : public CSSUnresolvedColorResolutionDelegate {
+class CanvasStyleColorResolutionDelegate final : public CSS::PlatformColorResolutionDelegate {
 public:
     explicit CanvasStyleColorResolutionDelegate(Ref<HTMLCanvasElement> canvasElement)
         : m_canvasElement { WTFMove(canvasElement) }
@@ -60,7 +60,7 @@ public:
 
 using LazySlowPathColorParsingParameters = std::tuple<
     CSSPropertyParserHelpers::CSSColorParsingOptions,
-    CSSUnresolvedColorResolutionContext,
+    CSS::PlatformColorResolutionState,
     std::optional<CanvasStyleColorResolutionDelegate>
 >;
 
@@ -78,15 +78,15 @@ Color CanvasStyleColorResolutionDelegate::currentColor() const
     return color;
 }
 
-static OptionSet<StyleColor::CSSColorType> allowedColorTypes(ScriptExecutionContext* scriptExecutionContext)
+static OptionSet<CSS::ColorType> allowedColorTypes(ScriptExecutionContext* scriptExecutionContext)
 {
     if (scriptExecutionContext && scriptExecutionContext->isDocument())
-        return { StyleColor::CSSColorType::Absolute, StyleColor::CSSColorType::Current, StyleColor::CSSColorType::System };
+        return { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System };
 
     // FIXME: All canvas types should support all color types, but currently
     //        system colors are not thread safe so are disabled for non-document
     //        based canvases.
-    return { StyleColor::CSSColorType::Absolute, StyleColor::CSSColorType::Current };
+    return { CSS::ColorType::Absolute, CSS::ColorType::Current };
 }
 
 static LazySlowPathColorParsingParameters elementlessColorParsingParameters(ScriptExecutionContext* scriptExecutionContext)
@@ -95,7 +95,7 @@ static LazySlowPathColorParsingParameters elementlessColorParsingParameters(Scri
         CSSPropertyParserHelpers::CSSColorParsingOptions {
             .allowedColorTypes = allowedColorTypes(scriptExecutionContext)
         },
-        CSSUnresolvedColorResolutionContext {
+        CSS::PlatformColorResolutionState {
             .resolvedCurrentColor = Color::black
         },
         std::nullopt
@@ -110,7 +110,7 @@ static LazySlowPathColorParsingParameters colorParsingParameters(CanvasBase& can
 
     return {
         CSSPropertyParserHelpers::CSSColorParsingOptions { },
-        CSSUnresolvedColorResolutionContext { },
+        CSS::PlatformColorResolutionState { },
         CanvasStyleColorResolutionDelegate(canvasElement.releaseNonNull())
     };
 }

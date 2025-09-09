@@ -33,14 +33,14 @@
 #include "WebXRSession.h"
 #include "XRHandJoint.h"
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class WebXRHand : public RefCounted<WebXRHand>, public CanMakeWeakPtr<WebXRHand> {
+class WebXRHand : public RefCountedAndCanMakeWeakPtr<WebXRHand> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRHand);
 public:
 

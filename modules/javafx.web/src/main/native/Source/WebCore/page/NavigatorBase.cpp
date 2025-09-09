@@ -29,6 +29,7 @@
 
 #include "Document.h"
 #include "GPU.h"
+#include "ScriptTelemetryCategory.h"
 #include "ServiceWorkerContainer.h"
 #include "StorageManager.h"
 #include "WebCoreOpaqueRoot.h"
@@ -37,7 +38,9 @@
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/NumberOfCores.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WeakRandom.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
@@ -68,6 +71,8 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NavigatorBase);
+
 NavigatorBase::NavigatorBase(ScriptExecutionContext* context)
     : ContextDestructionObserver(context)
 {
@@ -94,7 +99,7 @@ String NavigatorBase::platform() const
     static std::once_flag onceKey;
     std::call_once(onceKey, [] {
         struct utsname osname;
-        platformName.construct(uname(&osname) >= 0 ? makeString(span(osname.sysname), " "_s, span(osname.machine)) : emptyString());
+        platformName.construct(uname(&osname) >= 0 ? makeString(unsafeSpan(osname.sysname), " "_s, unsafeSpan(osname.machine)) : emptyString());
     });
     return platformName->isolatedCopy();
 #elif PLATFORM(IOS_FAMILY)
@@ -170,14 +175,19 @@ ServiceWorkerContainer& NavigatorBase::serviceWorker()
 
 ExceptionOr<ServiceWorkerContainer&> NavigatorBase::serviceWorker(ScriptExecutionContext& context)
 {
-    if (RefPtr document = dynamicDowncast<Document>(context); document && document->isSandboxed(SandboxOrigin))
+    if (RefPtr document = dynamicDowncast<Document>(context); document && document->isSandboxed(SandboxFlag::Origin))
         return Exception { ExceptionCode::SecurityError, "Service Worker is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag"_s };
     return serviceWorker();
 }
 
-int NavigatorBase::hardwareConcurrency()
+int NavigatorBase::hardwareConcurrency(ScriptExecutionContext& context)
 {
     static int numberOfCores;
+
+    if (context.requiresScriptExecutionTelemetry(ScriptTelemetryCategory::HardwareConcurrency)) {
+        auto randomSeed = static_cast<unsigned>(context.noiseInjectionHashSalt().value_or(0));
+        return 1 + WeakRandom { randomSeed }.getUint32(63);
+    }
 
     static std::once_flag once;
     std::call_once(once, [] {

@@ -50,15 +50,20 @@ public:
 
     friend bool operator==(const Iterator&, const Iterator&) = default;
 
-    Iterator& operator++()
+    WTF_UNSAFE_BUFFER_USAGE Iterator& operator++()
     {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         ++m_iterator;
         return *this;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
-    Iterator& operator--()
+
+    WTF_UNSAFE_BUFFER_USAGE Iterator& operator--()
     {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         --m_iterator;
         return *this;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
 private:
@@ -86,15 +91,20 @@ public:
 
     friend bool operator==(const Iterator&, const Iterator&) = default;
 
-    Iterator& operator++()
+    WTF_UNSAFE_BUFFER_USAGE Iterator& operator++()
     {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         ++m_iterator;
         return *this;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
-    Iterator& operator--()
+
+    WTF_UNSAFE_BUFFER_USAGE Iterator& operator--()
     {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         --m_iterator;
         return *this;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
 private:
@@ -137,8 +147,8 @@ public:
     T& last() { return Base::at(Base::size() - 1).get(); }
     const T& last() const { return Base::at(Base::size() - 1).get(); }
 
-    template<typename MatchFunction> size_t findIf(const MatchFunction&) const;
-    template<typename MatchFunction> bool containsIf(const MatchFunction& matches) const { return findIf(matches) != notFound; }
+    template<typename MatchFunction> size_t findIf(NOESCAPE const MatchFunction&) const;
+    template<typename MatchFunction> bool containsIf(NOESCAPE const MatchFunction& matches) const { return findIf(matches) != notFound; }
 };
 
 template<typename T, size_t inlineCapacity>
@@ -149,7 +159,7 @@ inline ReferenceWrapperVector<T, inlineCapacity>::ReferenceWrapperVector(std::in
 
 template<typename T, size_t inlineCapacity>
 template<typename MatchFunction>
-size_t ReferenceWrapperVector<T, inlineCapacity>::findIf(const MatchFunction& matches) const
+size_t ReferenceWrapperVector<T, inlineCapacity>::findIf(NOESCAPE const MatchFunction& matches) const
 {
     for (size_t i = 0; i < size(); ++i) {
         if (matches(at(i)))

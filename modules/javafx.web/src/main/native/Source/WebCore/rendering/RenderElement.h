@@ -87,6 +87,7 @@ public:
     Element* element() const { return downcast<Element>(RenderObject::node()); }
     RefPtr<Element> protectedElement() const { return element(); }
     Element* nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
+    RefPtr<Element> protectedNonPseudoElement() const { return nonPseudoElement(); }
     Element* generatingElement() const;
 
     RenderObject* firstChild() const { return m_firstChild.get(); }
@@ -108,7 +109,6 @@ public:
     inline bool shouldApplySizeOrInlineSizeContainment() const;
     inline bool shouldApplyStyleContainment() const;
     inline bool shouldApplyPaintContainment() const;
-    inline bool shouldApplyLayoutOrPaintContainment() const;
     inline bool shouldApplyAnyContainment() const;
 
     bool hasEligibleContainmentForSizeQuery() const;
@@ -142,7 +142,8 @@ public:
     void setOutOfFlowChildNeedsStaticPositionLayout();
     void clearChildNeedsLayout();
     void setNeedsPositionedMovementLayout(const RenderStyle* oldStyle);
-    void setNeedsSimplifiedNormalFlowLayout();
+    void setNeedsLayoutForStyleDifference(StyleDifference, const RenderStyle* oldStyle);
+    void setNeedsLayoutForOverflowChange();
 
     // paintOffset is the offset from the origin of the GraphicsContext at which to paint the current object.
     virtual void paint(PaintInfo&, const LayoutPoint& paintOffset) = 0;
@@ -213,6 +214,11 @@ public:
     inline bool hasBlendMode() const;
     inline bool hasShapeOutside() const;
 
+#if HAVE(CORE_MATERIAL)
+    inline bool hasAppleVisualEffect() const;
+    inline bool hasAppleVisualEffectRequiringBackdropFilter() const;
+#endif
+
     void registerForVisibleInViewportCallback();
     void unregisterForVisibleInViewportCallback();
 
@@ -279,7 +285,7 @@ public:
     inline Overflow effectiveOverflowInlineDirection() const;
     inline Overflow effectiveOverflowBlockDirection() const;
 
-    bool isWritingModeRoot() const { return !parent() || parent()->style().writingMode() != style().writingMode(); }
+    bool isWritingModeRoot() const { return !parent() || parent()->style().writingMode().computedWritingMode() != style().writingMode().computedWritingMode(); }
 
     bool isDeprecatedFlexItem() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isRenderDeprecatedFlexibleBox(); }
     bool isFlexItemIncludingDeprecated() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isFlexibleBoxIncludingDeprecated(); }
@@ -287,12 +293,7 @@ public:
     virtual LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) { return { }; }
     void paintFocusRing(const PaintInfo&, const RenderStyle&, const Vector<LayoutRect>& focusRingRects) const;
 
-    virtual bool establishesIndependentFormattingContext() const;
-    bool createsNewFormattingContext() const;
-
     static void markRendererDirtyAfterTopLayerChange(RenderElement* renderer, RenderBlock* containingBlockBeforeStyleResolution);
-
-    bool isSkippedContentRoot() const;
 
     void clearNeedsLayoutForSkippedContent();
 
@@ -301,10 +302,7 @@ public:
     bool renderBoxHasShapeOutsideInfo() const { return m_renderBoxHasShapeOutsideInfo; }
     bool hasCachedSVGResource() const { return m_hasCachedSVGResource; }
 
-    using LayoutIdentifier = unsigned;
-    void setLayoutIdentifier(LayoutIdentifier layoutIdentifier) { m_layoutIdentifier = layoutIdentifier; }
-    LayoutIdentifier layoutIdentifier() const { return m_layoutIdentifier; }
-    bool didVisitDuringLastLayout() const;
+    virtual bool overflowChangesMayAffectLayout() const { return false; }
 
 protected:
     RenderElement(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -314,7 +312,7 @@ protected:
 
     enum class StylePropagationType {
         AllChildren,
-        BlockChildrenOnly
+        BlockAndRubyChildren
     };
     void propagateStyleToAnonymousChildren(StylePropagationType);
 
@@ -352,6 +350,9 @@ protected:
 
     bool shouldApplyLayoutOrPaintContainment(bool) const;
     inline bool shouldApplySizeOrStyleContainment(bool) const;
+
+    const Element* defaultAnchor() const;
+    const RenderElement* defaultAnchorRenderer() const;
 
 private:
     RenderElement(Type, ContainerNode&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -420,7 +421,6 @@ private:
     unsigned m_isRegisteredForVisibleInViewportCallback : 1;
     unsigned m_visibleInViewportState : 2;
     unsigned m_didContributeToVisuallyNonEmptyPixelCount : 1;
-    LayoutIdentifier m_layoutIdentifier : 12 { 0 };
 
     RenderStyle m_style;
 };
@@ -428,6 +428,7 @@ private:
 inline int adjustForAbsoluteZoom(int, const RenderElement&);
 inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit, const RenderElement&);
 inline LayoutSize adjustLayoutSizeForAbsoluteZoom(LayoutSize, const RenderElement&);
+inline bool isSkippedContentRoot(const RenderElement&);
 
 inline void RenderElement::setChildNeedsLayout(MarkingBehavior markParents)
 {
@@ -491,13 +492,6 @@ inline RenderObject* RenderElement::lastInFlowChild() const
         return lastChild->previousInFlowSibling();
     }
     return nullptr;
-}
-
-inline bool RenderObject::isSkippedContentRoot() const
-{
-    if (isRenderText())
-        return false;
-    return downcast<RenderElement>(*this).isSkippedContentRoot();
 }
 
 inline RenderElement* RenderObject::parent() const
