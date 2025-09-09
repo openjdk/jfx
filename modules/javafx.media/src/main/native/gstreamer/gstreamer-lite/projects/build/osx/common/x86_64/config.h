@@ -38,7 +38,7 @@
 #undef GST_DATADIR
 
 /* Define if tracing subsystem hooks is disabled */
-#undef GST_DISABLE_GST_TRACER_HOOKS
+#define GST_DISABLE_GST_TRACER_HOOKS 1
 
 /* Define if option parsing is disabled */
 #define GST_DISABLE_OPTION_PARSING 1

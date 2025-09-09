@@ -26,6 +26,10 @@
 #include <glib-object.h>
 #include <string.h>
 
+#ifdef GSTREAMER_LITE
+#include "glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 G_BEGIN_DECLS
 
 typedef struct {
@@ -162,11 +166,15 @@ _gst_id_str_copy_into_inline (GstIdStr * d,
 
   *dp = *sp;
   if (dp->s.string_type.t == 1) {
+#ifndef GSTREAMER_LITE
 #if GLIB_CHECK_VERSION (2, 68, 0)
       dp->s.pointer_string.s = (gchar *) g_memdup2 (dp->s.pointer_string.s, dp->s.pointer_string.len + 1);
 #else
       dp->s.pointer_string.s = (gchar *) g_memdup (dp->s.pointer_string.s, dp->s.pointer_string.len + 1);
 #endif
+#else // GSTREAMER_LITE
+      dp->s.pointer_string.s = (gchar *) g_memdup2 (dp->s.pointer_string.s, dp->s.pointer_string.len + 1);
+#endif // GSTREAMER_LITE
   }
 }
 
