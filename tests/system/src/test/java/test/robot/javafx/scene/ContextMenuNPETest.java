@@ -25,7 +25,6 @@
 
 package test.robot.javafx.scene;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -45,7 +44,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
+import org.junit.jupiter.api.extension.ExtendWith;
+import test.util.ScreenCaptureTestWatcher;
 import test.util.Util;
 
 /*
@@ -61,6 +61,7 @@ import test.util.Util;
  * 6. Repeat step 4 and 5 and check if NPE is thrown on second attempt.
  */
 
+@ExtendWith(ScreenCaptureTestWatcher.class)
 public class ContextMenuNPETest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
@@ -104,9 +105,6 @@ public class ContextMenuNPETest {
 
     @Test
     public void testContextMenuNPE() throws Throwable {
-//        if (PlatformUtil.isLinux()) {
-//            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321625
-//        }
 
         showMenuButtonContextMenu();
         selectSubmenuItem();
