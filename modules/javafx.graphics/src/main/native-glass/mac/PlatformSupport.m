@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,25 +105,25 @@
 
     [[NSNotificationCenter defaultCenter]
         addObserver:self
-        selector:@selector(platformPreferencesDidChange)
+        selector:@selector(updatePreferences)
         name:NSPreferredScrollerStyleDidChangeNotification
         object:nil];
 
     [[NSDistributedNotificationCenter defaultCenter]
         addObserver:self
-        selector:@selector(platformPreferencesDidChange)
+        selector:@selector(updatePreferences)
         name:@"AppleInterfaceThemeChangedNotification"
         object:nil];
 
-    [[NSDistributedNotificationCenter defaultCenter]
+    [[NSNotificationCenter defaultCenter]
         addObserver:self
-        selector:@selector(platformPreferencesDidChange)
-        name:@"AppleColorPreferencesChangedNotification"
+        selector:@selector(updatePreferences)
+        name:NSSystemColorsDidChangeNotification
         object:nil];
 
     [[[NSWorkspace sharedWorkspace] notificationCenter]
         addObserver:self
-        selector:@selector(platformPreferencesDidChange)
+        selector:@selector(updatePreferences)
         name:NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification
         object:nil];
 
@@ -145,21 +145,6 @@
     [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
     [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
     nw_path_monitor_cancel(pathMonitor);
-}
-
-- (void)platformPreferencesDidChange {
-    // Some dynamic colors like NSColor.controlAccentColor don't seem to be reliably updated
-    // at the exact moment AppleColorPreferencesChangedNotification is received.
-    // As a workaround, we wait for a short period of time (one second seems sufficient) before
-    // we query the updated platform preferences.
-
-    [NSObject cancelPreviousPerformRequestsWithTarget:self
-              selector:@selector(updatePreferences)
-              object:nil];
-
-    [self performSelector:@selector(updatePreferences)
-          withObject:nil
-          afterDelay:1.0];
 }
 
 - (jobject)collectPreferences {
