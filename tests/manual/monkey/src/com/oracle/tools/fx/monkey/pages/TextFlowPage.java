@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.AccessibleAttribute;
@@ -36,6 +37,8 @@ import javafx.scene.input.PickResult;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.HitInfo;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
@@ -44,7 +47,9 @@ import com.oracle.tools.fx.monkey.options.ActionSelector;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.FontOption;
+import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.sheets.PropertiesMonitor;
 import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
 import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.EnterTextDialog;
@@ -53,7 +58,9 @@ import com.oracle.tools.fx.monkey.util.LayoutInfoVisualizer;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCaretPaths;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
+import com.oracle.tools.fx.monkey.util.TabStopPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.TextShapeLogic;
 import com.oracle.tools.fx.monkey.util.TextTemplates;
 import com.oracle.tools.fx.monkey.util.Utils;
 
@@ -65,7 +72,8 @@ public class TextFlowPage extends TestPaneBase {
     private final FontOption fontOption;
     private final Label pickResult;
     private final Label hitInfo;
-    private final Label hitInfo2;
+    private final Label hitInfoNew;
+    private final Label hitInfoText;
     private final TextFlow textFlow;
     private final BorderPane container;
     private final LayoutInfoVisualizer visualizer;
@@ -75,20 +83,23 @@ public class TextFlowPage extends TestPaneBase {
 
         textFlow = new TextFlow() {
             @Override
-            public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
+            public Object queryAccessibleAttribute(AccessibleAttribute a, Object ... ps) {
                 Object v = super.queryAccessibleAttribute(a, ps);
                 Loggers.accessibility.log(a, v);
                 return v;
             }
         };
         textFlow.addEventHandler(MouseEvent.ANY, this::handleMouseEvent);
+        textFlow.tabStopPolicyProperty().addListener((p) -> {
+            updateTabStopPolicy();
+        });
         FX.setPopupMenu(textFlow, this::createPopupMenu);
 
         pickResult = new Label();
 
         hitInfo = new Label();
-
-        hitInfo2 = new Label();
+        hitInfoNew = new Label();
+        hitInfoText = new Label();
 
         visualizer = new LayoutInfoVisualizer();
 
@@ -118,17 +129,19 @@ public class TextFlowPage extends TestPaneBase {
         op.option("Font:", fontOption);
         op.option("Line Spacing:", Options.lineSpacing("lineSpacing", textFlow.lineSpacingProperty()));
         op.option("Tab Size:", Options.tabSize("tabSize", textFlow.tabSizeProperty()));
+        op.option("Tab Stop Policy:", createTabStopPolicyOption("tabStopPolicy", textFlow.tabStopPolicyProperty()));
         op.option("Text Alignment:", new EnumOption<>("textAlignment", TextAlignment.class, textFlow.textAlignmentProperty()));
         op.separator();
         op.option(new BooleanOption("showCaretAndRange", visualizer.caretOptionText(), visualizer.showCaretAndRange));
-//        op.option(new BooleanOption("useLegacyAPI", "(use TextFlow API)", visualizer.legacyAPI));
-//        op.option(new BooleanOption("showLines", "show text lines", visualizer.showLines));
-//        op.option(new BooleanOption("showBounds", "show layout bounds", visualizer.showLayoutBounds));
-//        op.option(new BooleanOption("includeLineSpacing", "include lineSpacing ", visualizer.includeLineSpace));
+        op.option("API:", new EnumOption<>("api", TextShapeLogic.class, visualizer.shapeLogic));
+        op.option(new BooleanOption("showLines", "show text lines", visualizer.showLines));
+        op.option(new BooleanOption("showBounds", "show layout bounds", visualizer.showLayoutBounds));
+        op.option(new BooleanOption("includeLineSpacing", "include lineSpacing ", visualizer.includeLineSpace));
         op.separator();
         op.option("Pick Result:", pickResult);
-        op.option("Text.hitTest:", hitInfo2);
+        op.option("Text.hitTest:", hitInfoText);
         op.option("TextFlow.hitTest:", hitInfo);
+        op.option("TextFlow.getHitInfo:", hitInfoNew);
 
         RegionPropertySheet.appendTo(op, textFlow);
 
@@ -214,7 +227,7 @@ public class TextFlowPage extends TestPaneBase {
     private void handleMouseEvent(MouseEvent ev) {
         PickResult pick = ev.getPickResult();
         Node n = pick.getIntersectedNode();
-        hitInfo2.setText(null);
+        hitInfoText.setText(null);
         if (n == null) {
             pickResult.setText("null");
         } else {
@@ -223,13 +236,15 @@ public class TextFlowPage extends TestPaneBase {
                 Point3D p3 = pick.getIntersectedPoint();
                 Point2D p = new Point2D(p3.getX(), p3.getY());
                 HitInfo h = t.hitTest(p);
-                hitInfo2.setText(String.valueOf(h));
+                hitInfoText.setText(String.valueOf(h));
             }
         }
 
         Point2D p = new Point2D(ev.getX(), ev.getY());
         HitInfo h = textFlow.hitTest(p);
         hitInfo.setText(String.valueOf(h));
+        HitInfo h2 = textFlow.getHitInfo(p);
+        hitInfoNew.setText(String.valueOf(h2));
     }
 
     private String getText() {
@@ -262,8 +277,55 @@ public class TextFlowPage extends TestPaneBase {
     }
 
     private ContextMenu createPopupMenu(PickResult pick) {
+        Node source = pick.getIntersectedNode();
         ContextMenu m = new ContextMenu();
-        FX.item(m, "Accessibility Attributes", () -> AccessibilityPropertyViewer.open(pick));
+        FX.item(m, "Accessibility Attributes", () -> {
+            AccessibilityPropertyViewer.open(pick);
+        });
+        FX.item(m, "Show Properties Monitor...", () -> {
+            PropertiesMonitor.open(source);
+        });
         return m;
+    }
+
+    private Node createTabStopPolicyOption(String name, ObjectProperty<TabStopPolicy> prop) {
+        ObjectOption<TabStopPolicy> op = new ObjectOption<>(name, prop);
+        op.addChoice("<null>", null);
+        op.addChoiceSupplier("50 px", () -> fixedTabStopPolicy(50));
+        op.addChoiceSupplier("200 px", () -> fixedTabStopPolicy(200));
+        op.addChoiceSupplier("With Tab Stops", () -> {
+            TabStopPolicy p = new TabStopPolicy();
+            p.tabStops().setAll(
+                new TabStop(50),
+                new TabStop(175)
+            );
+            p.setDefaultInterval(100);
+            return p;
+        });
+        op.addChoiceSupplier("Tab Stops, w/o default stops", () -> {
+            TabStopPolicy p = new TabStopPolicy();
+            p.tabStops().setAll(
+                new TabStop(50),
+                new TabStop(175)
+            );
+            return p;
+        });
+        op.selectInitialValue();
+        return op;
+    }
+
+    private static TabStopPolicy fixedTabStopPolicy(double defaultStops) {
+        TabStopPolicy p = new TabStopPolicy();
+        p.setDefaultInterval(defaultStops);
+        return p;
+    }
+
+    private void updateTabStopPolicy() {
+        TabStopPolicy p = textFlow.getTabStopPolicy();
+        if (p == null) {
+            container.setTop(null);
+        } else {
+            container.setTop(new TabStopPane(p));
+        }
     }
 }

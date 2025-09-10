@@ -41,8 +41,8 @@ This build requires javafx.home property, pointing to JavaFX SDK directory, e.g.
 			fork="true"
 			nowarn="true"
 			optimize="false"
-			source="23"
-			target="23"
+			source="24"
+			target="24"
 			includeantruntime="false"
 		>
 			<compilerarg value="-Xlint:none"/>

@@ -24,39 +24,43 @@
  */
 package com.oracle.tools.fx.monkey.tools;
 
-import java.awt.EventQueue;
-import javafx.embed.swing.SwingNode;
-import javafx.geometry.NodeOrientation;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ToolBar;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 
 /**
- * JTextArea tool for comparison with FX.
+ * Test Modal Window
  */
-public class EmbeddedJTextAreaWindow extends BorderPane {
-    private final SwingNode swingNode;
-    private JTextPanel panel;
+public class ModalWindow extends Stage {
+    public ModalWindow(Window owner) {
+        Button b1 = new Button("Does Nothing");
+        b1.setDefaultButton(false);
 
-    public EmbeddedJTextAreaWindow() {
-        swingNode = new SwingNode();
+        Button b2 = new Button("Platform.exit()");
+        b2.setDefaultButton(false);
+        b2.setOnAction((ev) -> Platform.exit());
 
-        CheckBox rtl = new CheckBox("right-to-left (FX Scene.NodeOrientation)");
-        rtl.selectedProperty().addListener((s, p, c) -> {
-            // why does it mirror images the text area, including text??
-            // https://bugs.openjdk.org/browse/JDK-8317835
-            NodeOrientation v = (c) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT;
-            getScene().setNodeOrientation(v);
-        });
+        Button b3 = new Button("OK");
+        b3.setOnAction((ev) -> hide());
 
-        ToolBar tb = new ToolBar(rtl);
+        HBox bp = new HBox(b1, b2, b3);
+        // FIX BUG: default button property ignored on macOS, ENTER goes to the first button
+        b3.setDefaultButton(true);
 
-        setTop(tb);
-        setCenter(swingNode);
+        BorderPane p = new BorderPane();
+        p.setBottom(bp);
+        System.out.println(b2.isDefaultButton() + " " + b3.isDefaultButton());
 
-        EventQueue.invokeLater(() -> {
-            panel = new JTextPanel();
-            swingNode.setContent(panel);
-        });
+        setTitle("Modal Window");
+        setScene(new Scene(p));
+        initModality(Modality.APPLICATION_MODAL);
+        initOwner(owner);
+        setWidth(500);
+        setHeight(200);
     }
 }

@@ -344,10 +344,9 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         return s;
     }
 
-    private Supplier<TreeItem<DataRow>> mk(int count) {
+    private Supplier<TreeItem<DataRow>> mk(boolean nullValue, int count) {
         return () -> {
-            // root cannot have null value JDK-8341281
-            TreeItem<DataRow> root = new TreeItem<>(new DataRow());
+            TreeItem<DataRow> root = new TreeItem<>(nullValue ? null : new DataRow());
             for (int i = 0; i < count; i++) {
                 root.getChildren().add(new TreeItem<>(new DataRow()));
             }
@@ -357,9 +356,11 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
 
     private Node createRootOptions(String name, ObjectProperty<TreeItem<DataRow>> p) {
         ObjectOption<TreeItem<DataRow>> s = new ObjectOption(name, p);
-        s.addChoiceSupplier("1 Row", mk(1));
-        s.addChoiceSupplier("10 Rows", mk(10));
-        s.addChoiceSupplier("1_000 Rows", mk(1_000));
+        s.addChoiceSupplier("1 Row", mk(false, 1));
+        s.addChoiceSupplier("10 Rows", mk(false, 10));
+        s.addChoiceSupplier("1_000 Rows", mk(false, 1_000));
+        s.addChoiceSupplier("null value + 5 Rows", mk(true, 5));
+        s.addChoiceSupplier("null value + 15 Rows", mk(true, 15));
         s.addChoice("<null>", null);
         return s;
     }
