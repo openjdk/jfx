@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -161,7 +161,8 @@ public class CssParser_transition_Test {
     public void testTransitionTimingFunction() {
         Stylesheet stylesheet = parse("""
             .rule1 { transition-timing-function: linear; }
-            .rule2 { transition-timing-function: ease, ease-in, ease-out, ease-in-out, cubic-bezier(0.1, 0.2, 0.3, 0.4); }
+            .rule2 { transition-timing-function: ease, ease-in, ease-out, ease-in-out, cubic-bezier(0.1, 0.2, 0.3, 0.4),
+                                                 cubic-bezier(0.5, 2, 0.5, -1); }
             .rule3 { transition-timing-function: step-start, step-end,
                                                  steps(3, jump-start), steps(3, jump-end),
                                                  steps(3, jump-none), steps(3, jump-both),
@@ -182,6 +183,7 @@ public class CssParser_transition_Test {
         assertInterpolatorEquals(CSS_EASE_OUT, values[2]);
         assertInterpolatorEquals(CSS_EASE_IN_OUT, values[3]);
         assertInterpolatorEquals(SPLINE(0.1, 0.2, 0.3, 0.4), values[4]);
+        assertInterpolatorEquals(SPLINE(0.5, 2, 0.5, -1), values[5]);
 
         values = values("transition-timing-function", stylesheet.getRules().get(2));
         assertInterpolatorEquals(STEP_START, values[0]);
