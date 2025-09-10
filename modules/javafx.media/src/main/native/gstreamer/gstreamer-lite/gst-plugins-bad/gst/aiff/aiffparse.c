@@ -1572,8 +1572,9 @@ gst_aiff_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buf)
 
       if (aiff->state != AIFF_PARSE_HEADER)
         break;
-
+#ifndef GSTREAMER_LITE
       G_GNUC_FALLTHROUGH;
+#endif // GSTREAMER_LITE
     case AIFF_PARSE_HEADER:
       GST_INFO_OBJECT (aiff, "AIFF_PARSE_HEADER");
       if ((ret = gst_aiff_parse_stream_headers (aiff)) != GST_FLOW_OK)
