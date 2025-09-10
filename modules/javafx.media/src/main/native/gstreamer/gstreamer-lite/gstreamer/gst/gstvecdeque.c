@@ -455,7 +455,7 @@ gst_vec_deque_move_data_after_position (GstVecDeque * array, gsize pos)
     return;
   }
 
-  /* Otherwise, array wraps around and we're inserting before the breaking point. 
+  /* Otherwise, array wraps around and we're inserting before the breaking point.
    * First, move everything past that point by one place. */
   memmove (array->array + elt_size, array->array, array->tail * elt_size);
 
@@ -588,7 +588,7 @@ compare_wrapper (gpointer * a, gpointer * b, QueueSortData * sort_data)
   return sort_data->func (*a, *b, sort_data->user_data);
 }
 
-/** 
+/**
  * gst_vec_deque_sort: (skip)
  * @array: a #GstVecDeque object
  * @compare_func: comparison function
@@ -637,8 +637,8 @@ gst_vec_deque_sort (GstVecDeque * array, GCompareDataFunc compare_func,
         (array->head % array->size) * array->elt_size, array->length,
         array->elt_size, compare_func, user_data);
   } else {
-    /* For non-struct arrays, we need to wrap the provided compare function 
-     * to dereference our pointers before passing them for comparison. 
+    /* For non-struct arrays, we need to wrap the provided compare function
+     * to dereference our pointers before passing them for comparison.
      * This matches the behaviour of gst_vec_deque_find(). */
     QueueSortData sort_data = { compare_func, user_data };
     g_sort_array (array->array +

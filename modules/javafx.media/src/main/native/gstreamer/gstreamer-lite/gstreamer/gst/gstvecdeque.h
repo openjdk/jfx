@@ -108,15 +108,15 @@ GST_API
 gpointer        gst_vec_deque_peek_tail_struct (GstVecDeque * array);
 
 GST_API
-void            gst_vec_deque_push_sorted (GstVecDeque * array, 
+void            gst_vec_deque_push_sorted (GstVecDeque * array,
                                            gpointer data,
-                                           GCompareDataFunc func, 
+                                           GCompareDataFunc func,
                                            gpointer user_data);
 
 GST_API
-void            gst_vec_deque_push_sorted_struct (GstVecDeque * array, 
+void            gst_vec_deque_push_sorted_struct (GstVecDeque * array,
                                                   gpointer p_struct,
-                                                  GCompareDataFunc func, 
+                                                  GCompareDataFunc func,
                                                   gpointer user_data);
 
 GST_API
