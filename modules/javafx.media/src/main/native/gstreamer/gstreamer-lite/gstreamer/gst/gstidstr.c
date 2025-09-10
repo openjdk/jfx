@@ -65,9 +65,11 @@ G_STATIC_ASSERT (G_STRUCT_OFFSET (GstIdStrPrivate,
 G_STATIC_ASSERT (sizeof (GstIdStrPrivate) == 16);
 // See https://developercommunity.visualstudio.com/t/C-offsetof-an-array-item-is-accepted-by/10736612
 #ifndef _MSC_VER
+#ifndef GSTREAMER_LITE
 G_STATIC_ASSERT (G_ALIGNOF (GstIdStrPrivate) >= G_ALIGNOF (gpointer));
 // Alignment and size of the private and public type must be the same
 G_STATIC_ASSERT (G_ALIGNOF (GstIdStrPrivate) == G_ALIGNOF (GstIdStr));
+#endif // GSTREAMER_LITE
 #endif
 G_STATIC_ASSERT (sizeof (GstIdStrPrivate) == sizeof (GstIdStr));
 
