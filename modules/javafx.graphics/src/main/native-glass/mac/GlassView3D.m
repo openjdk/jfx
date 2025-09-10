@@ -361,23 +361,13 @@
 {
     KEYLOG("performKeyEquivalent");
 
-    // JDK-8093711, JDK-8094601 Command-EQUALS and Command-DOT needs special casing on Mac
-    // as it is passed through as two calls to performKeyEquivalent, which in turn
-    // create extra KeyEvents.
-    //
-    // If the user presses Command-"=" on a US keyboard the OS will send that
-    // to performKeyEquivalent. If it isn't handled it will then send
-    // Command-"+". This allows a user to invoke Command-"+" without using
-    // the Shift key. The OS does this for any key where + is the shifted
-    // character above =. It does something similar with the period key;
-    // Command-"." leads to Escape for dismissing dialogs. Here we detect and
-    // ignore the second key event.
-    if (theEvent != NSApp.currentEvent && NSApp.currentEvent == lastKeyEvent) {
-        return YES;
-    }
-
-    BOOL result = [self handleKeyDown: theEvent];
-    return result;
+    // We can return YES here unconditionally. If the scene graph wants to
+    // invoke the system menu it will call handleKeyEvent in the
+    // MenuBarDelegate while the KeyEvent is being dispatched.
+    [GlassApplication setMenuKeyEvent: theEvent];
+    [self handleKeyDown: theEvent];
+    [GlassApplication setMenuKeyEvent: nil];
+    return YES;
 }
 
 - (BOOL)handleKeyDown:(NSEvent *)theEvent

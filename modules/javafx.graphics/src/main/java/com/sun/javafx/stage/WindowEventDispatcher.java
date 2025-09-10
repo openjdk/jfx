@@ -25,11 +25,15 @@
 
 package com.sun.javafx.stage;
 
+import com.sun.javafx.tk.Toolkit;
+
 import com.sun.javafx.event.BasicEventDispatcher;
 import com.sun.javafx.event.CompositeEventDispatcher;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.event.EventRedirector;
 
+import javafx.event.Event;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Window;
 
 /**
@@ -38,29 +42,73 @@ import javafx.stage.Window;
  * and then through {@code EventHandlerManager}.
  */
 public class WindowEventDispatcher extends CompositeEventDispatcher {
+
+    static class SystemMenuHandler extends BasicEventDispatcher {
+        private enum SupportedState {
+            TRUE,
+            FALSE,
+            UNKNOWN
+        };
+
+        private SupportedState supported = SupportedState.UNKNOWN;
+
+        @Override
+        public Event dispatchBubblingEvent(Event event) {
+            if (supported == SupportedState.UNKNOWN) {
+                var systemMenu = Toolkit.getToolkit().getSystemMenu();
+                if (systemMenu != null && systemMenu.isSupported()) {
+                    supported = SupportedState.TRUE;
+                } else {
+                    supported = SupportedState.FALSE;
+                }
+            }
+            if (supported == SupportedState.TRUE && event.getEventType() == KeyEvent.KEY_PRESSED && event instanceof KeyEvent ke) {
+               Toolkit.getToolkit().getSystemMenu().handleKeyEvent(ke);
+            }
+            return event;
+        }
+    }
+
     private final EventRedirector eventRedirector;
 
     private final WindowCloseRequestHandler windowCloseRequestHandler;
 
     private final EventHandlerManager eventHandlerManager;
 
+    private final SystemMenuHandler systemMenuHandler;
+
     public WindowEventDispatcher(final Window window) {
         this(new EventRedirector(window),
              new WindowCloseRequestHandler(window),
-             new EventHandlerManager(window));
-
+             new EventHandlerManager(window),
+             new SystemMenuHandler());
     }
 
     public WindowEventDispatcher(
             final EventRedirector eventRedirector,
             final WindowCloseRequestHandler windowCloseRequestHandler,
             final EventHandlerManager eventHandlerManager) {
+        this(eventRedirector,
+             windowCloseRequestHandler,
+             eventHandlerManager,
+             null);
+    }
+
+    private WindowEventDispatcher(
+            final EventRedirector eventRedirector,
+            final WindowCloseRequestHandler windowCloseRequestHandler,
+            final EventHandlerManager eventHandlerManager,
+            final SystemMenuHandler systemMenuHandler) {
         this.eventRedirector = eventRedirector;
         this.windowCloseRequestHandler = windowCloseRequestHandler;
         this.eventHandlerManager = eventHandlerManager;
+        this.systemMenuHandler = systemMenuHandler;
 
         eventRedirector.insertNextDispatcher(windowCloseRequestHandler);
         windowCloseRequestHandler.insertNextDispatcher(eventHandlerManager);
+        if (systemMenuHandler != null) {
+            eventHandlerManager.insertNextDispatcher(systemMenuHandler);
+        }
     }
 
     public final EventRedirector getEventRedirector() {
@@ -82,6 +130,9 @@ public class WindowEventDispatcher extends CompositeEventDispatcher {
 
     @Override
     public BasicEventDispatcher getLastDispatcher() {
+        if (systemMenuHandler != null) {
+            return systemMenuHandler;
+        }
         return eventHandlerManager;
     }
 }

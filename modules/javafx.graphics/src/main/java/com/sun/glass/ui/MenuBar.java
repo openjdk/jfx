@@ -89,4 +89,9 @@ public final class MenuBar {
         Application.checkEventThread();
         return Collections.unmodifiableList(menus);
     }
+
+    public boolean handleKeyEvent(int code, int modifiers) {
+        Application.checkEventThread();
+        return delegate.handleKeyEvent(code, modifiers);
+    }
 }

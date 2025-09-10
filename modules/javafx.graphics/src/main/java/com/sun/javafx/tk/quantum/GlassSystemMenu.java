@@ -120,6 +120,13 @@ class GlassSystemMenu implements TKSystemMenu {
         }
     }
 
+    @Override
+    public void handleKeyEvent(javafx.scene.input.KeyEvent event) {
+        if (glassSystemMenuBar.handleKeyEvent(event.getCode().getCode(), glassModifiers(event))) {
+            event.consume();
+        }
+    }
+
     // Clear the menu to prevent a memory leak, as outlined in JDK-8094232
     private void clearMenu(Menu menu) {
         ListChangeListener<MenuItemBase> lcl = menuListeners.get(menu);
@@ -407,4 +414,31 @@ class GlassSystemMenu implements TKSystemMenu {
         return (ret);
     }
 
+    private int glassModifiers(javafx.scene.input.KeyEvent event) {
+        int ret = 0;
+        if (event.isShiftDown()) {
+            ret |= KeyEvent.MODIFIER_SHIFT;
+        }
+        if (event.isControlDown()) {
+            ret |= KeyEvent.MODIFIER_CONTROL;
+        }
+        if (event.isAltDown()) {
+            ret |= KeyEvent.MODIFIER_ALT;
+        }
+        if (event.isShortcutDown()) {
+            if (PlatformUtil.isMac()) {
+                ret |= KeyEvent.MODIFIER_COMMAND;
+            } else {
+                ret |= KeyEvent.MODIFIER_CONTROL;
+            }
+        }
+        if (event.isMetaDown()) {
+            if (PlatformUtil.isLinux()) {
+                ret |= KeyEvent.MODIFIER_WINDOWS;
+            } else if (PlatformUtil.isMac()) {
+                ret |= KeyEvent.MODIFIER_COMMAND;
+            }
+        }
+        return ret;
+    }
 }
