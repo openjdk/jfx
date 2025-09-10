@@ -103,16 +103,15 @@
     self->currentPathConstrained = false;
     self->currentPathExpensive = false;
 
+    [NSApp addObserver:self
+           forKeyPath:@"effectiveAppearance"
+           options:0
+           context:nil];
+
     [[NSNotificationCenter defaultCenter]
         addObserver:self
         selector:@selector(updatePreferences)
         name:NSPreferredScrollerStyleDidChangeNotification
-        object:nil];
-
-    [[NSDistributedNotificationCenter defaultCenter]
-        addObserver:self
-        selector:@selector(updatePreferences)
-        name:@"AppleInterfaceThemeChangedNotification"
         object:nil];
 
     [[NSNotificationCenter defaultCenter]
@@ -141,10 +140,14 @@
 }
 
 - (void)stopEventProcessing {
+    [NSApp removeObserver:self forKeyPath:@"effectiveAppearance"];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
     [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
     nw_path_monitor_cancel(pathMonitor);
+}
+
+- (void)observeValueForKeyPath:(NSString*)keyPath ofObject:(id)object change:(NSDictionary*)change context:(void*)c {
+    [self updatePreferences];
 }
 
 - (jobject)collectPreferences {
