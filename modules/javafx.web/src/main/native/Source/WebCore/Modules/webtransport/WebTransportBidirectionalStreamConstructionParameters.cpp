@@ -26,13 +26,12 @@
 #include "config.h"
 #include "WebTransportBidirectionalStreamConstructionParameters.h"
 
-#include "ReadableStreamSource.h"
 #include "WritableStreamSink.h"
 
 namespace WebCore {
 
-WebTransportBidirectionalStreamConstructionParameters::WebTransportBidirectionalStreamConstructionParameters(Ref<ReadableStreamSource>&& source, Ref<WritableStreamSink>&& sink)
-    : source(WTFMove(source))
+WebTransportBidirectionalStreamConstructionParameters::WebTransportBidirectionalStreamConstructionParameters(WebTransportStreamIdentifier identifier, Ref<WritableStreamSink>&& sink)
+    : identifier(identifier)
     , sink(WTFMove(sink)) { }
 
 WebTransportBidirectionalStreamConstructionParameters::WebTransportBidirectionalStreamConstructionParameters(WebTransportBidirectionalStreamConstructionParameters&&) = default;
@@ -40,5 +39,10 @@ WebTransportBidirectionalStreamConstructionParameters::WebTransportBidirectional
 WebTransportBidirectionalStreamConstructionParameters& WebTransportBidirectionalStreamConstructionParameters::operator=(WebTransportBidirectionalStreamConstructionParameters&&) = default;
 
 WebTransportBidirectionalStreamConstructionParameters::~WebTransportBidirectionalStreamConstructionParameters() = default;
+
+WebTransportBidirectionalStreamConstructionParameters WebTransportBidirectionalStreamConstructionParameters::isolatedCopy() &&
+{
+    return { identifier, Ref { sink } };
+}
 
 }

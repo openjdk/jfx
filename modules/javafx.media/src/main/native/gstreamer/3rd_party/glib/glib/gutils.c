@@ -1162,12 +1162,15 @@ g_get_prgname (void)
  * If you are using #GApplication the program name is set in
  * g_application_run(). In case of GDK or GTK it is set in
  * gdk_init(), which is called by gtk_init() and the
- * #GtkApplication::startup handler. The program name is found by
- * taking the last component of @argv[0].
+ * #GtkApplication::startup handler. By default, the program name is
+ * found by taking the last component of @argv[0].
  *
  * Since GLib 2.72, this function can be called multiple times
  * and is fully thread safe. Prior to GLib 2.72, this function
  * could only be called once per process.
+ *
+ * See the [GTK documentation](https://docs.gtk.org/gtk4/migrating-3to4.html#set-a-proper-application-id)
+ * for requirements on integrating g_set_prgname() with GTK applications.
  */
 void
 g_set_prgname (const gchar *prgname)
@@ -1948,6 +1951,7 @@ g_build_user_config_dir (void)
   if (!config_dir || !config_dir[0])
     {
       gchar *home_dir = g_build_home_dir ();
+      g_free (config_dir);
       config_dir = g_build_filename (home_dir, ".config", NULL);
       g_free (home_dir);
     }
@@ -2011,6 +2015,7 @@ g_build_user_cache_dir (void)
   if (!cache_dir || !cache_dir[0])
     {
       gchar *home_dir = g_build_home_dir ();
+      g_free (cache_dir);
       cache_dir = g_build_filename (home_dir, ".cache", NULL);
       g_free (home_dir);
     }
@@ -2073,6 +2078,7 @@ g_build_user_state_dir (void)
   if (!state_dir || !state_dir[0])
     {
       gchar *home_dir = g_build_home_dir ();
+      g_free (state_dir);
       state_dir = g_build_filename (home_dir, ".local/state", NULL);
       g_free (home_dir);
     }

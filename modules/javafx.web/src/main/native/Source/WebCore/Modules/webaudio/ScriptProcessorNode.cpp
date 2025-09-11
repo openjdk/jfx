@@ -188,14 +188,14 @@ void ScriptProcessorNode::process(size_t framesToProcess)
         return;
 
     for (unsigned i = 0; i < numberOfInputChannels; i++)
-        m_internalInputBus->setChannelMemory(i, inputBuffer->rawChannelData(i) + m_bufferReadWriteIndex, framesToProcess);
+        m_internalInputBus->setChannelMemory(i, inputBuffer->rawChannelData(i).subspan(m_bufferReadWriteIndex).first(framesToProcess));
 
     if (numberOfInputChannels)
         m_internalInputBus->copyFrom(*inputBus);
 
     // Copy from the output buffer to the output.
     for (unsigned i = 0; i < numberOfOutputChannels; ++i)
-        memcpy(outputBus->channel(i)->mutableData(), outputBuffer->rawChannelData(i) + m_bufferReadWriteIndex, sizeof(float) * framesToProcess);
+        memcpySpan(outputBus->channel(i)->mutableSpan(), outputBuffer->rawChannelData(i).subspan(m_bufferReadWriteIndex, framesToProcess));
 
     // Update the buffering index.
     m_bufferReadWriteIndex = (m_bufferReadWriteIndex + framesToProcess) % bufferSize();

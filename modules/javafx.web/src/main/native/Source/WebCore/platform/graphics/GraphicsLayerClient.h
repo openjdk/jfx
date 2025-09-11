@@ -113,6 +113,7 @@ public:
     virtual float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const { return 1; }
     virtual bool paintsOpaquelyAtNonIntegralScales(const GraphicsLayer*) const { return false; }
 
+    virtual bool isFlushingLayers() const { return false; }
     virtual bool isTrackingRepaints() const { return false; }
 
     virtual bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const { return false; }
@@ -128,13 +129,19 @@ public:
 
     virtual bool needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack(const GraphicsLayer&) const { return false; }
 
+    virtual void dumpProperties(const GraphicsLayer*, TextStream&, OptionSet<LayerTreeAsTextOptions>) const { }
+
     virtual void logFilledVisibleFreshTile(unsigned) { };
 
     virtual TransformationMatrix transformMatrixForProperty(AnimatedProperty) const { return { }; }
 
-    virtual bool layerContainsBitmapOnly(const GraphicsLayer*) const { return false; }
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual bool layerAllowsDynamicContentScaling(const GraphicsLayer*) const { return true; }
+#endif
 
     virtual bool layerNeedsPlatformContext(const GraphicsLayer*) const { return false; }
+
+    virtual bool backdropRootIsOpaque(const GraphicsLayer*) const { return false; }
 
 #ifndef NDEBUG
     // RenderLayerBacking overrides this to verify that it is not

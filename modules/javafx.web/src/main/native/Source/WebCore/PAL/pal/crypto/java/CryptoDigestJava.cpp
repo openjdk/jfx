@@ -70,7 +70,7 @@ jstring toJavaMessageDigestAlgorithm(CryptoDigest::Algorithm algorithm)
         case CryptoDigest::Algorithm::SHA_1:
             algorithmStr = "SHA-1";
             break;
-        case CryptoDigest::Algorithm::SHA_224:
+        case CryptoDigest::Algorithm::DEPRECATED_SHA_224:
             algorithmStr = "SHA-224";
             break;
         case CryptoDigest::Algorithm::SHA_256:

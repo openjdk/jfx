@@ -208,12 +208,16 @@ inline void opEnumeratorPutByVal(JSGlobalObject* globalObject, JSValue baseValue
         return;
     }
     case JSPropertyNameEnumerator::OwnStructureMode: {
-        if (LIKELY(baseValue.isCell()) && baseValue.asCell()->structureID() == enumerator->cachedStructureID() && !baseValue.asCell()->structure()->isWatchingReplacement()) {
+        if (LIKELY(baseValue.isCell())) {
+            auto* baseCell = baseValue.asCell();
+            auto* structure = baseCell->structure();
+            if (structure->id() == enumerator->cachedStructureID() && !structure->isWatchingReplacement() && !structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto()) {
             // We'll only match the structure ID if the base is an object.
             ASSERT(index < enumerator->endStructurePropertyIndex());
             scope.release();
             asObject(baseValue)->putDirectOffset(vm, index < enumerator->cachedInlineCapacity() ? index : index - enumerator->cachedInlineCapacity() + firstOutOfLineOffset, value);
             return;
+        }
         }
         if (enumeratorMetadata)
             *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);

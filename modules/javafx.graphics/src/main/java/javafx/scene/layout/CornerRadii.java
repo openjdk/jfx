@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -419,11 +419,11 @@ public final class CornerRadii implements Interpolatable<CornerRadii> {
     public CornerRadii interpolate(CornerRadii endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
-        if (t <= 0) {
+        if (t == 0) {
             return this;
         }
 
-        if (t >= 1) {
+        if (t == 1) {
             return endValue;
         }
 
@@ -546,9 +546,11 @@ public final class CornerRadii implements Interpolatable<CornerRadii> {
     private static double interpolate(double start, double end,
                                       boolean startIsPercentage, boolean endIsPercentage,
                                       double t) {
-        return startIsPercentage == endIsPercentage ?
+        double value = startIsPercentage == endIsPercentage ?
             InterpolationUtils.interpolate(start, end, t) :
             InterpolationUtils.interpolateDiscrete(start, end, t);
+
+        return Math.max(0, value);
     }
 
     private boolean isSame(double topLeftHorizontalRadius, double topLeftVerticalRadius,

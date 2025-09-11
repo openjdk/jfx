@@ -54,7 +54,7 @@ class WriteBarrierStructureID;
 
 class AbstractSlotVisitor {
     WTF_MAKE_NONCOPYABLE(AbstractSlotVisitor);
-    WTF_MAKE_TZONE_ALLOCATED(AbstractSlotVisitor);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(AbstractSlotVisitor);
 public:
     enum OpaqueRootTag { OpaqueRoot };
 

@@ -48,6 +48,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/Ref.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -377,7 +378,7 @@ int BlobResourceHandle::readDataSync(const BlobDataItem& item, std::span<uint8_t
 
     long long remaining = item.length() - m_currentItemReadSize;
     long long bytesToRead = std::min(std::min<long long>(remaining, buffer.size()), m_totalRemainingSize);
-    memcpy(buffer.data(), item.data()->span().subspan(item.offset() + m_currentItemReadSize).data(), bytesToRead);
+    memcpySpan(buffer, item.data()->span().subspan(item.offset() + m_currentItemReadSize).first(bytesToRead));
     m_totalRemainingSize -= bytesToRead;
 
     m_currentItemReadSize += bytesToRead;
@@ -408,8 +409,11 @@ int BlobResourceHandle::readFileSync(const BlobDataItem& item, std::span<uint8_t
 
         m_fileOpened = true;
     }
-
+#if !PLATFORM(JAVA)
+    int bytesRead = m_stream->read(buffer);
+#else
     int bytesRead = m_stream->read(buffer.data(), buffer.size());
+#endif
     if (bytesRead < 0) {
         m_errorCode = Error::NotReadableError;
         return 0;
@@ -470,7 +474,11 @@ void BlobResourceHandle::readFileAsync(const BlobDataItem& item)
     ASSERT(isMainThread());
 
     if (m_fileOpened) {
-        m_asyncStream->read(m_buffer.data(), m_buffer.size());
+#if !PLATFORM(JAVA)
+        m_asyncStream->read(m_buffer.mutableSpan());
+#else
+    m_asyncStream->read(m_buffer.data(), m_buffer.size());
+#endif
         return;
     }
 

@@ -559,7 +559,7 @@ void TestRunner::setPageScaleFactor(double scaleFactor, long x, long y)
       // FIXME: implement
 }
 
-void TestRunner::setTopContentInset(double)
+void TestRunner::setObscuredContentInsets(double top, double right, double bottom, double left)
 {
     // FIXME: implement
 }
@@ -568,4 +568,3 @@ JSValueRef TestRunner::alwaysResolvePromise(JSContextRef)
 {
    // FIXME: implement
 }
-

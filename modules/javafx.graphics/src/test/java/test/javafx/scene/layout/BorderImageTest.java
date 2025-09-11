@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,15 +69,39 @@ public class BorderImageTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             assertSame(BORDER_IMAGE_A, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 0));
-            assertSame(BORDER_IMAGE_A, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, -0.5));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             assertSame(BORDER_IMAGE_B, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 1));
-            assertSame(BORDER_IMAGE_B, BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            assertEquals(
+                new BorderImage(IMAGE_1, new BorderWidths(0), new Insets(12), new BorderWidths(0),
+                                false, BorderRepeat.REPEAT, BorderRepeat.REPEAT),
+                BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, -1));
+
+            assertEquals(
+                new BorderImage(IMAGE_1, new BorderWidths(0), new Insets(16), new BorderWidths(0),
+                                false, BorderRepeat.REPEAT, BorderRepeat.REPEAT),
+                BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            assertEquals(
+                new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(0), new BorderWidths(18),
+                                false, BorderRepeat.REPEAT, BorderRepeat.REPEAT),
+                BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 2));
+
+            assertEquals(
+                new BorderImage(IMAGE_2, new BorderWidths(40), new Insets(-4), new BorderWidths(24),
+                                false, BorderRepeat.REPEAT, BorderRepeat.REPEAT),
+                BORDER_IMAGE_A.interpolate(BORDER_IMAGE_B, 3));
         }
     }
 }

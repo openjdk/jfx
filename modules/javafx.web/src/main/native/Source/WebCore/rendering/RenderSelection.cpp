@@ -49,8 +49,8 @@ namespace {
 
 struct SelectionContext {
 
-    using RendererMap = HashMap<SingleThreadWeakRef<RenderObject>, std::unique_ptr<RenderSelectionGeometry>>;
-    using RenderBlockMap = HashMap<SingleThreadWeakRef<const RenderBlock>, std::unique_ptr<RenderBlockSelectionGeometry>>;
+    using RendererMap = UncheckedKeyHashMap<SingleThreadWeakRef<RenderObject>, std::unique_ptr<RenderSelectionGeometry>>;
+    using RenderBlockMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBlock>, std::unique_ptr<RenderBlockSelectionGeometry>>;
 
     unsigned startOffset;
     unsigned endOffset;
@@ -143,7 +143,7 @@ void RenderSelection::clear()
 
 void RenderSelection::repaint() const
 {
-    HashSet<CheckedPtr<RenderBlock>> processedBlocks;
+    UncheckedKeyHashSet<CheckedPtr<RenderBlock>> processedBlocks;
     RenderObject* end = nullptr;
     if (m_renderRange.end())
         end = rendererAfterOffset(*m_renderRange.end(), m_renderRange.endOffset());

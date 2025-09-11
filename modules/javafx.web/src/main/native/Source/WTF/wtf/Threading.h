@@ -33,6 +33,7 @@
 #include <mutex>
 #include <stdint.h>
 #include <wtf/Atomics.h>
+#include <wtf/Compiler.h>
 #include <wtf/Expected.h>
 #include <wtf/FastTLS.h>
 #include <wtf/Function.h>
@@ -143,7 +144,7 @@ public:
     static Thread& current();
 
     // Set of all WTF::Thread created threads.
-    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
+    WTF_EXPORT_PRIVATE static UncheckedKeyHashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
     WTF_EXPORT_PRIVATE static Lock& allThreadsLock() WTF_RETURNS_LOCK(s_allThreadsLock);
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
@@ -169,7 +170,7 @@ public:
 
     private:
         static constexpr size_t s_maxKeys = 32;
-        static Atomic<int> s_numberOfKeys;
+        static Atomic<size_t> s_numberOfKeys;
         static std::array<Atomic<DestroyFunction>, s_maxKeys> s_destroyFunctions;
         std::array<void*, s_maxKeys> m_slots { };
     };
@@ -438,7 +439,7 @@ inline Thread& Thread::current()
     if (UNLIKELY(Thread::s_key == InvalidThreadSpecificKey))
         WTF::initialize();
 #endif
-    if (auto* thread = currentMayBeNull(); LIKELY(thread))
+    if (SUPPRESS_UNCOUNTED_LOCAL auto* thread = currentMayBeNull(); LIKELY(thread))
         return *thread;
     return initializeCurrentTLS();
 }

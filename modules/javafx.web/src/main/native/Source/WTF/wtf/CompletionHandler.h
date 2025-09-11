@@ -95,9 +95,10 @@ public:
     using InTypes = std::tuple<In...>;
 
     template<typename CallableType, class = typename std::enable_if<std::is_rvalue_reference<CallableType&&>::value>::type>
-    CompletionHandlerWithFinalizer(CallableType&& callable, Function<void(Function<Out(In...)>&)>&& finalizer)
+    CompletionHandlerWithFinalizer(CallableType&& callable, Function<void(Function<Out(In...)>&)>&& finalizer, ThreadLikeAssertion callThread = CompletionHandlerCallThread::ConstructionThread)
         : m_function(std::forward<CallableType>(callable))
         , m_finalizer(WTFMove(finalizer))
+        , m_callThread(callThread)
     {
     }
 

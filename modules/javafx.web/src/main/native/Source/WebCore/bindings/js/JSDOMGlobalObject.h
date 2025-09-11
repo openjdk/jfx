@@ -28,6 +28,7 @@
 
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/WeakGCMap.h>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 
 namespace JSC {
@@ -45,8 +46,8 @@ class Event;
 class DOMWrapperWorld;
 class ScriptExecutionContext;
 
-using JSDOMStructureMap = HashMap<const JSC::ClassInfo*, JSC::WriteBarrier<JSC::Structure>>;
-using DOMGuardedObjectSet = HashSet<DOMGuardedObject*>;
+using JSDOMStructureMap = UncheckedKeyHashMap<const JSC::ClassInfo*, JSC::WriteBarrier<JSC::Structure>>;
+using DOMGuardedObjectSet = UncheckedKeyHashSet<DOMGuardedObject*>;
 
 class WEBCORE_EXPORT JSDOMGlobalObject : public JSC::JSGlobalObject {
 public:
@@ -77,9 +78,12 @@ public:
     inline JSDOMStructureMap& structures(NoLockingNecessaryTag);
     inline DOMGuardedObjectSet& guardedObjects(NoLockingNecessaryTag);
 
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
     ScriptExecutionContext* scriptExecutionContext() const;
 
-    static bool canCompileStrings(JSC::JSGlobalObject*, JSC::CompilationType, String, JSC::JSValue);
+    static String codeForEval(JSC::JSGlobalObject*, JSC::JSValue);
+    static bool canCompileStrings(JSC::JSGlobalObject*, JSC::CompilationType, String, const JSC::ArgList&);
+    static JSC::Structure* trustedScriptStructure(JSC::JSGlobalObject*);
 
     // https://tc39.es/ecma262/#sec-agent-clusters
     String agentClusterID() const;

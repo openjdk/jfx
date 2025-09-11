@@ -33,6 +33,8 @@
 #include "YarrFlags.h"
 #include <wtf/text/StringBuilder.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 static JSC_DECLARE_HOST_FUNCTION(regExpProtoFuncExec);
@@ -197,7 +199,9 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncToString, (JSGlobalObject* globalObject,
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
-    if (!thisValue.isObject())
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (UNLIKELY(!thisValue.isObject()))
         return throwVMTypeError(globalObject, scope);
 
     JSObject* thisObject = asObject(thisValue);
@@ -209,14 +213,14 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncToString, (JSGlobalObject* globalObject,
         return JSValue::encode(earlyReturnValue);
 
     JSValue sourceValue = thisObject->get(globalObject, vm.propertyNames->source);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
     String source = sourceValue.toWTFString(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
 
     JSValue flagsValue = thisObject->get(globalObject, vm.propertyNames->flags);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
     String flags = flagsValue.toWTFString(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
 
     RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, '/', source, '/', flags)));
 }
@@ -354,7 +358,9 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoGetterFlags, (JSGlobalObject* globalObject, 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue thisValue = callFrame->thisValue();
+    JSValue thisValue = callFrame->thisValue().toThis(globalObject, ECMAMode::strict());
+    RETURN_IF_EXCEPTION(scope, { });
+
     if (UNLIKELY(!thisValue.isObject()))
         return throwVMTypeError(globalObject, scope, "The RegExp.prototype.flags getter can only be called on an object"_s);
 
@@ -388,7 +394,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSearchFast, (JSGlobalObject* globalObjec
     RegExp* regExp = jsCast<RegExpObject*>(thisValue)->regExp();
 
     JSString* string = callFrame->uncheckedArgument(0).toString(globalObject);
-    auto s = string->value(globalObject);
+    auto s = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     MatchResult result = globalObject->regExpGlobalData().performMatch(globalObject, regExp, string, s, 0);
@@ -396,7 +402,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSearchFast, (JSGlobalObject* globalObjec
     return JSValue::encode(result ? jsNumber(result.start) : jsNumber(-1));
 }
 
-static inline unsigned advanceStringIndex(String str, unsigned strSize, unsigned index, bool isUnicode)
+static inline unsigned advanceStringIndex(StringView str, unsigned strSize, unsigned index, bool isUnicode)
 {
     if (!isUnicode)
         return ++index;
@@ -410,7 +416,7 @@ enum SplitControl {
 
 template<typename ControlFunc, typename PushFunc>
 void genericSplit(
-    JSGlobalObject* globalObject, RegExp* regexp, JSString* inputString, const String& input, unsigned inputSize, unsigned& position,
+    JSGlobalObject* globalObject, RegExp* regexp, JSString* inputString, StringView input, unsigned inputSize, unsigned& position,
     unsigned& matchPosition, bool regExpIsSticky, bool regExpIsUnicode,
     const ControlFunc& control, const PushFunc& push)
 {
@@ -509,7 +515,7 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
 
     // 3. [handled by JS builtin] Let S be ? ToString(string).
     JSString* inputString = callFrame->argument(0).toString(globalObject);
-    auto input = inputString->value(globalObject);
+    auto input = inputString->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     ASSERT(!input->isNull());
 
@@ -652,3 +658,5 @@ JSC_DEFINE_HOST_FUNCTION(regExpProtoFuncSplitFast, (JSGlobalObject* globalObject
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

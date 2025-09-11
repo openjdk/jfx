@@ -29,6 +29,7 @@
 #include "CSSPropertyParser.h"
 #include "CSSStyleSheet.h"
 #include "CSSTokenizer.h"
+#include "CSSValueList.h"
 #include "CSSValuePair.h"
 #include "MutableStyleProperties.h"
 #include "StyleProperties.h"
@@ -113,6 +114,15 @@ String CSSViewTransitionRule::cssText() const
 
     builder.append('}');
     return builder.toString();
+}
+
+AtomString CSSViewTransitionRule::navigation() const
+{
+    if (!m_viewTransitionRule->navigation())
+        return emptyAtom();
+    if (*m_viewTransitionRule->navigation() == ViewTransitionNavigation::Auto)
+        return "auto"_s;
+    return "none"_s;
 }
 
 void CSSViewTransitionRule::reattach(StyleRuleBase& rule)

@@ -64,7 +64,7 @@ SecurityOriginData SecurityOriginData::fromFrame(LocalFrame* frame)
     if (!frame)
         return SecurityOriginData { };
 
-    auto* document = frame->document();
+    RefPtr document = frame->document();
     if (!document)
         return SecurityOriginData { };
 
@@ -110,6 +110,15 @@ String SecurityOriginData::databaseIdentifier() const
         return "file__0"_s;
 
     return makeString(protocol, separatorCharacter, FileSystem::encodeForFileName(host()), separatorCharacter, port().value_or(0));
+}
+
+String SecurityOriginData::optionalDatabaseIdentifier() const
+{
+    auto url = toURL();
+    if (!url.isValid())
+        return { };
+
+    return databaseIdentifier();
 }
 
 std::optional<SecurityOriginData> SecurityOriginData::fromDatabaseIdentifier(StringView databaseIdentifier)

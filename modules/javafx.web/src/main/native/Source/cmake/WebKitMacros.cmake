@@ -46,7 +46,14 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
             message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
         endif ()
 
-        list(APPEND ${_framework}_SOURCES ${_outputTmp})
+        foreach (_file IN LISTS _outputTmp)
+            if (_file MATCHES "\\.c$")
+                list(APPEND ${_framework}_C_SOURCES ${_file})
+            else ()
+                list(APPEND ${_framework}_SOURCES ${_file})
+            endif ()
+        endforeach ()
+
         unset(_resultTmp)
         unset(_outputTmp)
     else ()
@@ -136,6 +143,9 @@ macro(WEBKIT_LIBRARY_DECLARE _target)
 
     if (${_target}_LIBRARY_TYPE STREQUAL "OBJECT")
         list(APPEND ${_target}_INTERFACE_LIBRARIES $<TARGET_OBJECTS:${_target}>)
+        if (TARGET ${_target}_c)
+            list(APPEND ${_target}_INTERFACE_LIBRARIES $<TARGET_OBJECTS:${_target}_c>)
+        endif ()
     endif ()
 endmacro()
 
@@ -144,47 +154,65 @@ macro(WEBKIT_EXECUTABLE_DECLARE _target)
 endmacro()
 
 # Private macro for setting the properties of a target.
-macro(_WEBKIT_TARGET _target)
-    target_sources(${_target} PRIVATE
-        ${${_target}_HEADERS}
-        ${${_target}_SOURCES}
-    )
-
-    if (PLAYSTATION AND CMAKE_GENERATOR MATCHES "Visual Studio")
-        set(${_target}_SOURCES_C ${${_target}_SOURCES})
-        list(FILTER ${_target}_SOURCES_C INCLUDE REGEX "\\.c$")
-        set_source_files_properties(
-            ${${_target}_SOURCES_C}
-            PROPERTIES LANGUAGE C
-            COMPILE_OPTIONS --std=gnu17
-        )
-    endif ()
-
-    target_include_directories(${_target} PUBLIC "$<BUILD_INTERFACE:${${_target}_INCLUDE_DIRECTORIES}>")
-    target_include_directories(${_target} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_target}_SYSTEM_INCLUDE_DIRECTORIES}>")
-    target_include_directories(${_target} PRIVATE "$<BUILD_INTERFACE:${${_target}_PRIVATE_INCLUDE_DIRECTORIES}>")
+macro(_WEBKIT_TARGET_SETUP _target _logical_name)
+    target_include_directories(${_target} PUBLIC "$<BUILD_INTERFACE:${${_logical_name}_INCLUDE_DIRECTORIES}>")
+    target_include_directories(${_target} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_logical_name}_SYSTEM_INCLUDE_DIRECTORIES}>")
+    target_include_directories(${_target} PRIVATE "$<BUILD_INTERFACE:${${_logical_name}_PRIVATE_INCLUDE_DIRECTORIES}>")
 
     if (DEVELOPER_MODE_CXX_FLAGS)
         target_compile_options(${_target} PRIVATE ${DEVELOPER_MODE_CXX_FLAGS})
     endif ()
 
-    target_compile_definitions(${_target} PRIVATE "BUILDING_${_target}")
-    if (${_target}_DEFINITIONS)
-        target_compile_definitions(${_target} PUBLIC ${${_target}_DEFINITIONS})
+    target_compile_definitions(${_target} PRIVATE "BUILDING_${_logical_name}")
+    if (${_logical_name}_DEFINITIONS)
+        target_compile_definitions(${_target} PUBLIC ${${_logical_name}_DEFINITIONS})
     endif ()
-    if (${_target}_PRIVATE_DEFINITIONS)
-        target_compile_definitions(${_target} PRIVATE ${${_target}_PRIVATE_DEFINITIONS})
-    endif ()
-
-    if (${_target}_LIBRARIES)
-        target_link_libraries(${_target} PUBLIC ${${_target}_LIBRARIES})
-    endif ()
-    if (${_target}_PRIVATE_LIBRARIES)
-        target_link_libraries(${_target} PRIVATE ${${_target}_PRIVATE_LIBRARIES})
+    if (${_logical_name}_PRIVATE_DEFINITIONS)
+        target_compile_definitions(${_target} PRIVATE ${${_logical_name}_PRIVATE_DEFINITIONS})
     endif ()
 
-    if (${_target}_DEPENDENCIES)
-        add_dependencies(${_target} ${${_target}_DEPENDENCIES})
+    if (${_logical_name}_COMPILE_OPTIONS)
+        target_compile_options(${_target} PRIVATE ${${_logical_name}_COMPILE_OPTIONS})
+    endif ()
+
+    if (${_logical_name}_LIBRARIES)
+        target_link_libraries(${_target} PUBLIC ${${_logical_name}_LIBRARIES})
+    endif ()
+    if (${_logical_name}_PRIVATE_LIBRARIES)
+        target_link_libraries(${_target} PRIVATE ${${_logical_name}_PRIVATE_LIBRARIES})
+    endif ()
+
+    if (${_logical_name}_DEPENDENCIES)
+        add_dependencies(${_target} ${${_logical_name}_DEPENDENCIES})
+    endif ()
+endmacro()
+
+macro(_WEBKIT_TARGET _target)
+    if (CMAKE_GENERATOR MATCHES "Visual Studio")
+        if (${_target}_C_SOURCES)
+            add_library(${_target}_c OBJECT)
+            target_sources(${_target}_c PRIVATE ${${_target}_C_SOURCES})
+
+            _WEBKIT_TARGET_SETUP(${_target}_c ${_target})
+
+            set_target_properties(${_target}_c PROPERTIES C_STANDARD 17)
+            list(APPEND ${_target}_PRIVATE_LIBRARIES ${_target}_c)
+    endif ()
+
+        target_sources(${_target} PRIVATE
+            ${${_target}_HEADERS}
+            ${${_target}_SOURCES}
+        )
+
+        _WEBKIT_TARGET_SETUP(${_target} ${_target})
+    else ()
+        target_sources(${_target} PRIVATE
+            ${${_target}_HEADERS}
+            ${${_target}_SOURCES}
+            ${${_target}_C_SOURCES}
+        )
+
+        _WEBKIT_TARGET_SETUP(${_target} ${_target})
     endif ()
 endmacro()
 
@@ -292,6 +320,9 @@ macro(_WEBKIT_FRAMEWORK_LINK_FRAMEWORK _target_name)
             list(APPEND ${_target_name}_PRIVATE_LIBRARIES WebKit::${framework})
             if (${framework}_LIBRARY_TYPE STREQUAL "OBJECT")
                 list(APPEND ${_target_name}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}>)
+                if (TARGET ${framework}_c)
+                    list(APPEND ${_target_name}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}_c>)
+                endif ()
             endif ()
         else ()
             list(APPEND ${_target_name}_LIBRARIES WebKit::${framework})
@@ -314,6 +345,9 @@ macro(_WEBKIT_TARGET_LINK_FRAMEWORK _target)
             # underyling library's objects are explicitly added to link properly
             if (TARGET ${framework} AND ${framework}_LIBRARY_TYPE STREQUAL "OBJECT")
                 list(APPEND ${_target}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}>)
+                if (TARGET ${framework}_c)
+                    list(APPEND ${_target}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}_c>)
+                endif ()
             endif ()
         endif ()
     endforeach ()

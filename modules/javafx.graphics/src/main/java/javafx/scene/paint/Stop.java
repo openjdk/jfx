@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,11 +155,11 @@ public final class Stop implements Interpolatable<Stop> {
             throw new IllegalArgumentException("secondList is not normalized");
         }
 
-        if (t <= 0) {
+        if (t == 0) {
             return firstList;
         }
 
-        if (t >= 1) {
+        if (t == 1) {
             return secondList;
         }
 
@@ -283,11 +283,11 @@ public final class Stop implements Interpolatable<Stop> {
 
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
-        if (t <= 0.0) {
+        if (t == 0.0) {
             return this;
         }
 
-        if (t >= 1.0) {
+        if (t == 1.0) {
             return endValue;
         }
 
@@ -295,7 +295,7 @@ public final class Stop implements Interpolatable<Stop> {
         // intermediate value is equal to the start value or the end value, which allows us to use an
         // identity comparison in place of a value comparison to determine equality.
         Color color = this.color.interpolate(endValue.color, t);
-        double offset = InterpolationUtils.interpolate(this.offset, endValue.offset, t);
+        double offset = Math.clamp(InterpolationUtils.interpolate(this.offset, endValue.offset, t), 0, 1);
 
         if (offset == this.offset && color == this.color) {
             return this;

@@ -195,7 +195,7 @@ public:
     const_iterator end() const { return WeakHashMapConstIterator(*this, m_map.end()); }
 
     template <typename Functor>
-    AddResult ensure(const KeyType& key, Functor&& functor)
+    AddResult ensure(const KeyType& key, NOESCAPE Functor&& functor)
     {
         amortizedCleanupIfNeeded();
         auto result = m_map.ensure(makeKeyImpl(key), functor);
@@ -253,6 +253,15 @@ public:
         return m_map.take(*keyImpl);
     }
 
+    std::optional<ValueType> takeOptional(const KeyType& key)
+    {
+        amortizedCleanupIfNeeded();
+        auto* keyImpl = keyImplIfExists(key);
+        if (!keyImpl)
+            return std::nullopt;
+        return m_map.takeOptional(*keyImpl);
+    }
+
     typename ValueTraits::PeekType get(const KeyType& key) const
     {
         increaseOperationCountSinceLastCleanup();
@@ -260,6 +269,15 @@ public:
         if (!keyImpl)
             return ValueTraits::peek(ValueTraits::emptyValue());
         return m_map.get(*keyImpl);
+    }
+
+    std::optional<ValueType> getOptional(const KeyType& key) const
+    {
+        increaseOperationCountSinceLastCleanup();
+        auto* keyImpl = keyImplIfExists(key);
+        if (!keyImpl)
+            return std::nullopt;
+        return m_map.getOptional(*keyImpl);
     }
 
     bool remove(iterator it)
@@ -279,7 +297,7 @@ public:
     }
 
     template<typename Functor>
-    bool removeIf(Functor&& functor)
+    bool removeIf(NOESCAPE Functor&& functor)
     {
         bool result = m_map.removeIf([&](auto& entry) {
             auto* key = static_cast<KeyType*>(entry.key->template get<KeyType>());
@@ -369,13 +387,13 @@ private:
     template <typename T>
     static RefType makeKeyImpl(const T& key)
     {
-        return *key.weakPtrFactory().template createWeakPtr<T>(const_cast<T&>(key)).m_impl;
+        return WeakRef<T, WeakPtrImpl>(key).releaseImpl();
     }
 
     template <typename T>
     static WeakPtrImpl* keyImplIfExists(const T& key)
     {
-        if (auto* impl = key.weakPtrFactory().impl(); impl && *impl)
+        if (auto* impl = key.weakImplIfExists(); impl && *impl)
             return impl;
             return nullptr;
     }

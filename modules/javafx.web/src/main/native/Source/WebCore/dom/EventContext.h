@@ -29,11 +29,12 @@
 
 #include "HTMLFormElement.h"
 #include "TouchList.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class EventContext {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EventContext);
 public:
     using EventInvokePhase = EventTarget::EventInvokePhase;
 
@@ -54,6 +55,7 @@ public:
     RefPtr<EventTarget> protectedCurrentTarget() const { return m_currentTarget; }
     bool isCurrentTargetInShadowTree() const { return m_currentTargetIsInShadowTree; }
     EventTarget* target() const { return m_target.get(); }
+    RefPtr<EventTarget> protectedTarget() const { return m_target; }
     int closedShadowDepth() const { return m_closedShadowDepth; }
 
     void handleLocalEvents(Event&, EventInvokePhase) const;
@@ -64,6 +66,7 @@ public:
     bool isWindowContext() const { return m_type == Type::Window; }
 
     Node* relatedTarget() const { return m_relatedTarget.get(); }
+    RefPtr<Node> protectedRelatedTarget() const { return m_relatedTarget; }
     void setRelatedTarget(RefPtr<Node>&&);
 
 #if ENABLE(TOUCH_EVENTS)

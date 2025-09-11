@@ -38,10 +38,6 @@
 #include "MediaSessionManagerCocoa.h"
 #endif
 
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>)
-#import <WebKitAdditions/DeprecatedGlobalSettingsAdditions.cpp>
-#endif
-
 namespace WebCore {
 
 DeprecatedGlobalSettings& DeprecatedGlobalSettings::shared()
@@ -49,32 +45,6 @@ DeprecatedGlobalSettings& DeprecatedGlobalSettings::shared()
     static NeverDestroyed<DeprecatedGlobalSettings> deprecatedGlobalSettings;
     return deprecatedGlobalSettings;
 }
-
-#if ENABLE(VORBIS)
-void DeprecatedGlobalSettings::setVorbisDecoderEnabled(bool isEnabled)
-{
-    shared().m_vorbisDecoderEnabled = isEnabled;
-    PlatformMediaSessionManager::setVorbisDecoderEnabled(isEnabled);
-}
-#endif
-
-#if ENABLE(OPUS)
-void DeprecatedGlobalSettings::setOpusDecoderEnabled(bool isEnabled)
-{
-    shared().m_opusDecoderEnabled = isEnabled;
-    PlatformMediaSessionManager::setOpusDecoderEnabled(isEnabled);
-}
-#endif
-
-#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-void DeprecatedGlobalSettings::setMediaSourceInlinePaintingEnabled(bool isEnabled)
-{
-    shared().m_mediaSourceInlinePaintingEnabled = isEnabled;
-#if HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    MediaSessionManagerCocoa::setMediaSourceInlinePaintingEnabled(isEnabled);
-#endif
-}
-#endif
 
 #if USE(AVFOUNDATION)
 void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
@@ -133,11 +103,6 @@ unsigned DeprecatedGlobalSettings::audioSessionCategoryOverride()
     return static_cast<unsigned>(AudioSession::sharedSession().categoryOverride());
 }
 
-void DeprecatedGlobalSettings::setNetworkDataUsageTrackingEnabled(bool trackingEnabled)
-{
-    shared().m_networkDataUsageTrackingEnabled = trackingEnabled;
-}
-
 void DeprecatedGlobalSettings::setNetworkInterfaceName(const String& networkInterfaceName)
 {
     shared().m_networkInterfaceName = networkInterfaceName;
@@ -170,11 +135,7 @@ bool DeprecatedGlobalSettings::allowsAnySSLCertificate()
 
 bool DeprecatedGlobalSettings::builtInNotificationsEnabled()
 {
-#if defined(DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS)
-    DEPRECATED_GLOBAL_SETTINGS_BUILT_IN_NOTIFICATIONS_ENABLED_ADDITIONS;
-#else
     return shared().m_builtInNotificationsEnabled;
-#endif
 }
 
 #endif

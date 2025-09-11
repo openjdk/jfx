@@ -56,7 +56,7 @@ void InsertIntoTextNodeCommand::doApply()
     bool passwordEchoEnabled = document().settings().passwordEchoEnabled() && !document().editor().client()->shouldSuppressPasswordEcho();
 
     if (passwordEchoEnabled)
-        document().updateLayoutIgnorePendingStylesheets();
+        protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
     auto node = protectedNode();
     if (!node->hasEditableStyle())
@@ -90,7 +90,7 @@ void InsertIntoTextNodeCommand::doUnapply()
 
 #ifndef NDEBUG
 
-void InsertIntoTextNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void InsertIntoTextNodeCommand::getNodesInCommand(NodeSet& nodes)
 {
     auto node = protectedNode();
     addNodeAndDescendants(node.ptr(), nodes);

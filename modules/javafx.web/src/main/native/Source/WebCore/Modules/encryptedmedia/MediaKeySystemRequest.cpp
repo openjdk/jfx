@@ -57,7 +57,7 @@ MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& k
 MediaKeySystemRequest::~MediaKeySystemRequest()
 {
     if (m_allowCompletionHandler)
-        m_allowCompletionHandler(WTFMove(m_promise));
+        m_allowCompletionHandler({ }, WTFMove(m_promise));
 }
 
 SecurityOrigin* MediaKeySystemRequest::topLevelDocumentOrigin() const
@@ -85,14 +85,14 @@ void MediaKeySystemRequest::start()
     controller->requestMediaKeySystem(*this);
 }
 
-void MediaKeySystemRequest::allow()
+void MediaKeySystemRequest::allow(String&& mediaKeysHashSalt)
 {
     if (!scriptExecutionContext())
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, mediaKeysHashSalt = WTFMove(mediaKeysHashSalt)] () mutable {
         if (auto allowCompletionHandler = std::exchange(m_allowCompletionHandler, { }))
-            allowCompletionHandler(WTFMove(m_promise));
+            allowCompletionHandler(WTFMove(mediaKeysHashSalt), WTFMove(m_promise));
     });
 }
 

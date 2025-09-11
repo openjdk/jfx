@@ -25,6 +25,8 @@
 
 #include "config.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #if ENABLE(DISASSEMBLER) && USE(CAPSTONE)
 
 #include "MacroAssemblerCodeRef.h"
@@ -77,5 +79,7 @@ bool tryToDisassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, vo
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(DISASSEMBLER) && USE(CAPSTONE)

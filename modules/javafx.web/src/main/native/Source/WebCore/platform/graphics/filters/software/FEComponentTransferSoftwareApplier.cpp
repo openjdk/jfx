@@ -31,18 +31,21 @@
 #include "PixelBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEComponentTransferSoftwareApplier);
+
 void FEComponentTransferSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer) const
 {
-    auto* data = pixelBuffer.bytes().data();
+    auto data = pixelBuffer.bytes();
     auto pixelByteLength = pixelBuffer.bytes().size();
 
-    auto redTable   = FEComponentTransfer::computeLookupTable(m_effect.redFunction());
-    auto greenTable = FEComponentTransfer::computeLookupTable(m_effect.greenFunction());
-    auto blueTable  = FEComponentTransfer::computeLookupTable(m_effect.blueFunction());
-    auto alphaTable = FEComponentTransfer::computeLookupTable(m_effect.alphaFunction());
+    auto redTable   = FEComponentTransfer::computeLookupTable(m_effect->redFunction());
+    auto greenTable = FEComponentTransfer::computeLookupTable(m_effect->greenFunction());
+    auto blueTable  = FEComponentTransfer::computeLookupTable(m_effect->blueFunction());
+    auto alphaTable = FEComponentTransfer::computeLookupTable(m_effect->alphaFunction());
 
     for (unsigned pixelOffset = 0; pixelOffset < pixelByteLength; pixelOffset += 4) {
         data[pixelOffset]     = redTable[data[pixelOffset]];
@@ -54,14 +57,14 @@ void FEComponentTransferSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer)
 
 bool FEComponentTransferSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
-    auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Unpremultiplied);
+    RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Unpremultiplied);
     if (!destinationPixelBuffer)
         return false;
 
     auto drawingRect = result.absoluteImageRectRelativeTo(input);
-    input.copyPixelBuffer(*destinationPixelBuffer, drawingRect);
+    input->copyPixelBuffer(*destinationPixelBuffer, drawingRect);
 
     applyPlatform(*destinationPixelBuffer);
     return true;
