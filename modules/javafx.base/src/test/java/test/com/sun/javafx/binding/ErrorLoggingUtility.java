@@ -177,17 +177,10 @@ public class ErrorLoggingUtility {
             });
         return m;
     }
-    
-    // ^(((Exception in thread\s+"[^"]*"\s+([a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):)|(((?:[a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):))
 
-    // OK, so here is an idea: pass the list of exception classes (with duplicates),
-    // then look in the output
-    // ^(Exception in thread\s+"[^"]*"\s+([a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):
-    //   Exception in thread "main" java.lang.RuntimeException: 
-    // ^((?:[a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):
-    //   java.lang.NullPointerException: Cannot invoke "Object.toString()" because the return value of "javafx.beans.value.ObservableValue.getValue()" is null
     private static final Pattern EXCEPTION_PATTERN = Pattern.compile(
         "(?:" +
+            // catches lines starting with things like "Exception in thread "main" java.lang.RuntimeException:"
             "^" +
             "(?:" +
                 "Exception in thread\s+\"[^\"]*\"\\s+" +
@@ -203,6 +196,7 @@ public class ErrorLoggingUtility {
         ")" +
         "|" +
         "(?:" +
+            // // catches lines starting with things like "java.lang.NullPointerException: Cannot invoke..."
             "^" +
             "(" + // capture group 2
                 "(?:[a-zA-Z_][a-zA-Z0-9_]*\\.)*" +
