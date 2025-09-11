@@ -17,6 +17,7 @@
 #include <libxml/parser.h>
 #include <libxml/threads.h>
 
+#include "private/error.h"
 #include "private/memory.h"
 #include "private/threads.h"
 
@@ -25,9 +26,9 @@ static unsigned long  debugMemBlocks = 0;
 static xmlMutex xmlMemMutex;
 
 /************************************************************************
- *                                    *
- *        Macros, variables and associated types            *
- *                                    *
+ *                                                                      *
+ *              Macros, variables and associated types                  *
+ *                                                                      *
  ************************************************************************/
 
 /*
@@ -47,7 +48,7 @@ typedef struct memnod {
 #define ALIGN_SIZE  sizeof(double)
 #endif
 #define RESERVE_SIZE (((sizeof(MEMHDR) + ALIGN_SIZE - 1) \
-              / ALIGN_SIZE ) * ALIGN_SIZE)
+                      / ALIGN_SIZE ) * ALIGN_SIZE)
 
 #define MAX_SIZE_T ((size_t)-1)
 
@@ -103,16 +104,12 @@ xmlMemMalloc(size_t size)
 
     xmlInitParser();
 
-    if (size > (MAX_SIZE_T - RESERVE_SIZE)) {
-        fprintf(stderr, "xmlMemMalloc: Unsigned overflow\n");
+    if (size > (MAX_SIZE_T - RESERVE_SIZE))
         return(NULL);
-    }
 
     p = (MEMHDR *) malloc(RESERVE_SIZE + size);
-    if (!p) {
-        fprintf(stderr, "xmlMemMalloc: Out of memory\n");
+    if (!p)
         return(NULL);
-    }
     p->mh_tag = MEMTAG;
     p->mh_size = size;
 
@@ -161,14 +158,12 @@ xmlMemRealloc(void *ptr, size_t size) {
 
     xmlInitParser();
 
-    if (size > (MAX_SIZE_T - RESERVE_SIZE)) {
-        fprintf(stderr, "xmlMemRealloc: Unsigned overflow\n");
+    if (size > (MAX_SIZE_T - RESERVE_SIZE))
         return(NULL);
-    }
 
     p = CLIENT_2_HDR(ptr);
     if (p->mh_tag != MEMTAG) {
-        fprintf(stderr, "xmlMemRealloc: Tag error\n");
+        xmlPrintErrorMessage("xmlMemRealloc: Tag error\n");
         return(NULL);
     }
     oldSize = p->mh_size;
@@ -177,7 +172,6 @@ xmlMemRealloc(void *ptr, size_t size) {
     tmp = (MEMHDR *) realloc(p, RESERVE_SIZE + size);
     if (!tmp) {
         p->mh_tag = MEMTAG;
-        fprintf(stderr, "xmlMemRealloc: Out of memory\n");
         return(NULL);
     }
     p = tmp;
@@ -207,13 +201,13 @@ xmlMemFree(void *ptr)
         return;
 
     if (ptr == (void *) -1) {
-        fprintf(stderr, "xmlMemFree: Pointer from freed area\n");
+        xmlPrintErrorMessage("xmlMemFree: Pointer from freed area\n");
         return;
     }
 
     p = CLIENT_2_HDR(ptr);
     if (p->mh_tag != MEMTAG) {
-        fprintf(stderr, "xmlMemFree: Tag error\n");
+        xmlPrintErrorMessage("xmlMemFree: Tag error\n");
         return;
     }
     p->mh_tag = ~MEMTAG;
@@ -225,8 +219,6 @@ xmlMemFree(void *ptr)
     xmlMutexUnlock(&xmlMemMutex);
 
     free(p);
-
-    return;
 }
 
 /**
@@ -262,16 +254,12 @@ xmlMemoryStrdup(const char *str) {
 
     xmlInitParser();
 
-    if (size > (MAX_SIZE_T - RESERVE_SIZE)) {
-        fprintf(stderr, "xmlMemoryStrdup: Unsigned overflow\n");
+    if (size > (MAX_SIZE_T - RESERVE_SIZE))
         return(NULL);
-    }
 
     p = (MEMHDR *) malloc(RESERVE_SIZE + size);
-    if (!p) {
-        fprintf(stderr, "xmlMemoryStrdup: Out of memory\n");
+    if (!p)
         return(NULL);
-    }
     p->mh_tag = MEMTAG;
     p->mh_size = size;
 
@@ -299,7 +287,7 @@ xmlMemSize(void *ptr) {
     MEMHDR *p;
 
     if (ptr == NULL)
-    return(0);
+        return(0);
 
     p = CLIENT_2_HDR(ptr);
     if (p->mh_tag != MEMTAG)
@@ -386,9 +374,9 @@ xmlMemoryDump(void)
 
 
 /****************************************************************
- *                                *
- *        Initialization Routines                *
- *                                *
+ *                                                              *
+ *              Initialization Routines                         *
+ *                                                              *
  ****************************************************************/
 
 /**
@@ -465,13 +453,13 @@ int
 xmlMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
             xmlReallocFunc reallocFunc, xmlStrdupFunc strdupFunc) {
     if (freeFunc == NULL)
-    return(-1);
+        return(-1);
     if (mallocFunc == NULL)
-    return(-1);
+        return(-1);
     if (reallocFunc == NULL)
-    return(-1);
+        return(-1);
     if (strdupFunc == NULL)
-    return(-1);
+        return(-1);
     xmlFree = freeFunc;
     xmlMalloc = mallocFunc;
     xmlMallocAtomic = mallocFunc;
@@ -493,7 +481,7 @@ xmlMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
  */
 int
 xmlMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
-      xmlReallocFunc *reallocFunc, xmlStrdupFunc *strdupFunc) {
+          xmlReallocFunc *reallocFunc, xmlStrdupFunc *strdupFunc) {
     if (freeFunc != NULL) *freeFunc = xmlFree;
     if (mallocFunc != NULL) *mallocFunc = xmlMalloc;
     if (reallocFunc != NULL) *reallocFunc = xmlRealloc;
@@ -509,6 +497,8 @@ xmlMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
  * @reallocFunc: the realloc() function to use
  * @strdupFunc: the strdup() function to use
  *
+ * DEPRECATED: Use xmlMemSetup.
+ *
  * Override the default memory access functions with a new set
  * This has to be called before any other libxml routines !
  * The mallocAtomicFunc is specialized for atomic block
@@ -522,17 +512,17 @@ xmlMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
 int
 xmlGcMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
               xmlMallocFunc mallocAtomicFunc, xmlReallocFunc reallocFunc,
-          xmlStrdupFunc strdupFunc) {
+              xmlStrdupFunc strdupFunc) {
     if (freeFunc == NULL)
-    return(-1);
+        return(-1);
     if (mallocFunc == NULL)
-    return(-1);
+        return(-1);
     if (mallocAtomicFunc == NULL)
-    return(-1);
+        return(-1);
     if (reallocFunc == NULL)
-    return(-1);
+        return(-1);
     if (strdupFunc == NULL)
-    return(-1);
+        return(-1);
     xmlFree = freeFunc;
     xmlMalloc = mallocFunc;
     xmlMallocAtomic = mallocAtomicFunc;
@@ -549,6 +539,8 @@ xmlGcMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
  * @reallocFunc: place to save the realloc() function in use
  * @strdupFunc: place to save the strdup() function in use
  *
+ * DEPRECATED: xmlMemGet.
+ *
  * Provides the memory access functions set currently in use
  * The mallocAtomicFunc is specialized for atomic block
  * allocations (i.e. of areas  useful for garbage collected memory allocators
@@ -558,7 +550,7 @@ xmlGcMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
 int
 xmlGcMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
             xmlMallocFunc *mallocAtomicFunc, xmlReallocFunc *reallocFunc,
-        xmlStrdupFunc *strdupFunc) {
+            xmlStrdupFunc *strdupFunc) {
     if (freeFunc != NULL) *freeFunc = xmlFree;
     if (mallocFunc != NULL) *mallocFunc = xmlMalloc;
     if (mallocAtomicFunc != NULL) *mallocAtomicFunc = xmlMallocAtomic;
