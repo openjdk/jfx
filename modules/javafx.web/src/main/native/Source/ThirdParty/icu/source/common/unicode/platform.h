@@ -736,7 +736,11 @@
 #   elif U_PLATFORM_IS_DARWIN_BASED || (U_PLATFORM == U_PF_CYGWIN && CYGWIN_VERSION_DLL_MAJOR < 3005)
 #       define U_HAVE_CHAR16_T 0
 #   else
+    /* Commented out for JavaFX
         // conformant C11
+       #       define U_HAVE_CHAR16_T 1
+    */
+        // JavaFX: We cannot define U_HAVE_CHAR16_T
 #       define U_HAVE_CHAR16_T 0
 #   endif
 #endif
