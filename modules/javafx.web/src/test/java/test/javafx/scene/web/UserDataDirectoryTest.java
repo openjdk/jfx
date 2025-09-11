@@ -655,4 +655,10 @@ public class UserDataDirectoryTest extends TestBase {
             System.err.println("onError: " + event);
         }
     }
+    
+    @Test
+    public void THIS_WILL_FAIL() {
+        // FIX remove
+        fail();
+    }
 }

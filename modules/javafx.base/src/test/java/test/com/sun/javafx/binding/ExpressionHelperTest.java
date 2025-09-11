@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -566,7 +566,10 @@ public class ExpressionHelperTest {
     public void testExceptionNotPropagatedFromSingleChange() {
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
         observable.set(null);
+
+        ErrorLoggingUtiltity.suppressStderr();
         ExpressionHelperShim.fireValueChangedEvent(helper);
+        ErrorLoggingUtiltity.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @Test
@@ -576,7 +579,10 @@ public class ExpressionHelperTest {
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();});
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();});
         observable.set(null);
+
+        ErrorLoggingUtiltity.suppressStderr();
         ExpressionHelperShim.fireValueChangedEvent(helper);
+        ErrorLoggingUtiltity.checkAndRestoreStderr(RuntimeException.class, RuntimeException.class);
 
         assertTrue(called.get(0));
         assertTrue(called.get(1));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,20 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import com.sun.javafx.logging.PlatformLogger.Level;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.io.PrintStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.binding.Logging;
-import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
 import com.sun.javafx.binding.Logging.ErrorLogger;
+import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
+import com.sun.javafx.logging.PlatformLogger.Level;
+import test.util.AccumulatingPrintStream;
 
 public class ErrorLoggingUtiltity {
 
@@ -67,5 +74,168 @@ public class ErrorLoggingUtiltity {
         assertEquals(expectedLevel, errorLogRecord.getLevel());
         assertTrue(expectedException.isAssignableFrom(errorLogRecord.getThrown().getClass()));
         reset();
+        checked++;
+    }
+
+    private static PrintStream stderr;
+    private static AccumulatingPrintStream stderrCapture;
+    private static int checked;
+
+    /// Redirects the stderr to an internal buffer, for the purpose of avoiding polluting the test logs.
+    /// This method is typically placed inside of the `@BeforeEach` block.
+    ///
+    /// Once the test is finished, the output can be checked for thrown exceptions using {@link #checkStderr(Class...)}.
+    /// or {@link #checkAndRestoreStderr(Class...)}.
+    ///
+    /// The redirection needs to be undone by calling either {@link #restoreStderr()} or
+    /// {@link #checkAndRestoreStderr(Class...)} method.
+    ///
+    public static void suppressStderr() {
+        if (stderrCapture == null) {
+            stderr = System.err;
+            stderrCapture = AccumulatingPrintStream.create();
+            System.setErr(stderrCapture);
+            checked = 0;
+        }
+    }
+
+    /// Restores stderr redirection (typically done inside of a `@AfterEach` block).
+    /// It is safe to call this method multiple times.
+    public static void restoreStderr() {
+        if (stderr != null) {
+            System.setErr(stderr);
+            stderr = null;
+            stderrCapture = null;
+        }
+    }
+
+    /// Checks the accumulated stderr buffer for the expected exceptions.
+    /// Verifies that the number and type of exceptions logged to stderr redirected to an internal buffer
+    /// (by a prior call to {@link #suppressStderr()}) corresponds to the `expected` exceptions.
+    ///
+    /// When mismatch occurs, the accumulated output is dumped to the actual stderr.
+    ///
+    /// @param expected the expected exceptions (duplicates allowed)
+    ///
+    public static void checkStderr(Class<? extends Throwable> ... expected) {
+        if (stderrCapture != null) {
+            String text = stderrCapture.getAccumulatedOutput();
+            Map<String,Integer> errors = findErrors(text);
+            Map<String,Integer> exp = toMap(expected);
+            if(!errors.equals(exp)) {
+                stderr.println("Mismatch in thrown exceptions:\n  expected=" + exp + "\n  observed=" + errors);
+                stderr.println(text);
+            }
+        }
+    }
+
+    /// Checks the accumulated stderr buffer for the expected exceptions, and restores the redirection.
+    ///
+    /// Verifies that the number and type of exceptions logged to stderr redirected to an internal buffer
+    /// (by a prior call to {@link #suppressStderr()}) corresponds to the `expected` exceptions.
+    ///
+    /// When mismatch occurs, the accumulated output is dumped to the actual stderr.
+    ///
+    /// This method is equivalent to calling {@link #checkStderr(Class...)} followed by
+    /// {@link #restoreStderr()}.
+    ///
+    /// @param expected the expected exceptions (duplicates allowed)
+    ///
+    public static void checkAndRestoreStderr(Class<? extends Throwable> ... expected) {
+        checkStderr(expected);
+        restoreStderr();
+    }
+
+    private static Map<String, Integer> toMap(Class<? extends Throwable> ... expected) {
+        HashMap<String, Integer> m = new HashMap<>();
+        for (Class<? extends Throwable> c : expected) {
+            String name = c.getName();
+            Integer v = m.get(name);
+            if (v == null) {
+                m.put(name, Integer.valueOf(1));
+            } else {
+                m.put(name, Integer.valueOf(v + 1));
+            }
+        }
+        return m;
+    }
+
+    private static Map<String, Integer> findErrors(String text) {
+        HashMap<String, Integer> m = new HashMap<>();
+        text.
+            lines().
+            map((s) -> findException(s)).
+            forEach((c) -> {
+                if (c != null) {
+                    Integer v = m.get(c);
+                    if (v == null) {
+                        m.put(c, Integer.valueOf(1));
+                    } else {
+                        m.put(c, Integer.valueOf(v + 1));
+                    }
+                }
+            });
+        return m;
+    }
+    
+    // ^(((Exception in thread\s+"[^"]*"\s+([a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):)|(((?:[a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):))
+
+    // OK, so here is an idea: pass the list of exception classes (with duplicates),
+    // then look in the output
+    // ^(Exception in thread\s+"[^"]*"\s+([a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):
+    //   Exception in thread "main" java.lang.RuntimeException: 
+    // ^((?:[a-zA-Z_][a-zA-Z0-9_]*\.)*([A-Z][a-zA-Z0-9]*)(Exception|Error)):
+    //   java.lang.NullPointerException: Cannot invoke "Object.toString()" because the return value of "javafx.beans.value.ObservableValue.getValue()" is null
+    private static final Pattern EXCEPTION_PATTERN = Pattern.compile(
+        "(?:" +
+            "^" +
+            "(?:" +
+                "Exception in thread\s+\"[^\"]*\"\\s+" +
+                "(" + // capture group 1
+                    "(?:[a-zA-Z_][a-zA-Z0-9_]*\\.)*" +
+                    "(?:" +
+                        "(?:[A-Z][a-zA-Z0-9]*)*" +
+                        "(?:Exception|Error)" +
+                    ")" +
+                ")" +
+                //":" +
+            ")" +
+        ")" +
+        "|" +
+        "(?:" +
+            "^" +
+            "(" + // capture group 2
+                "(?:[a-zA-Z_][a-zA-Z0-9_]*\\.)*" +
+                "(?:[A-Z][a-zA-Z0-9]*)*" +
+                "(?:Exception|Error)" +
+            ")" +
+            //":" +
+        ")");
+
+    private static String findException(String text) {
+        Matcher m = EXCEPTION_PATTERN.matcher(text);
+        String name;
+        if (m.find()) {
+            name = m.group(1);
+            if (name == null) {
+                name = m.group(2);
+            }
+            return name;
+        }
+        return null;
+    }
+
+    // should I leave this test here?  to test the test?
+    @Test
+    public void testFindException() {
+        t("Exception in thread \"main\" java.lang.Error", "java.lang.Error");
+        t("Exception in thread \"main\" java.lang.RuntimeException: blah blah", "java.lang.RuntimeException");
+        t("java.lang.NullPointerException: Cannot invoke \"Object.toString(", "java.lang.NullPointerException");
+        t("    at javafx.base/com.sun.javafx.binding.SelectBinding$AsString.computeValue(SelectBinding.java:392)", null);
+    }
+
+    private void t(String text, String expected) {
+        String s = findException(text);
+        assertEquals(expected, s);
     }
 }
