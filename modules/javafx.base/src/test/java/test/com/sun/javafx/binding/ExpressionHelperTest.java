@@ -567,9 +567,9 @@ public class ExpressionHelperTest {
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
         observable.set(null);
 
-        ErrorLoggingUtiltity.suppressStderr();
+        ErrorLoggingUtility.suppressStderr();
         ExpressionHelperShim.fireValueChangedEvent(helper);
-        ErrorLoggingUtiltity.checkAndRestoreStderr(RuntimeException.class);
+        ErrorLoggingUtility.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @Test
@@ -580,9 +580,9 @@ public class ExpressionHelperTest {
         helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();});
         observable.set(null);
 
-        ErrorLoggingUtiltity.suppressStderr();
+        ErrorLoggingUtility.suppressStderr();
         ExpressionHelperShim.fireValueChangedEvent(helper);
-        ErrorLoggingUtiltity.checkAndRestoreStderr(RuntimeException.class, RuntimeException.class);
+        ErrorLoggingUtility.checkAndRestoreStderr(RuntimeException.class, RuntimeException.class);
 
         assertTrue(called.get(0));
         assertTrue(called.get(1));

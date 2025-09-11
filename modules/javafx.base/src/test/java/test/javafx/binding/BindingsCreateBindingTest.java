@@ -45,7 +45,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
 
 /**
  */
@@ -68,13 +68,13 @@ public class BindingsCreateBindingTest<T> {
 
     @BeforeEach
     public void beforeEach() {
-        ErrorLoggingUtiltity.suppressStderr();
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.suppressStderr();
+        ErrorLoggingUtility.reset();
     }
 
     @AfterEach
     public void afterEach() {
-        ErrorLoggingUtiltity.checkAndRestoreStderr();
+        ErrorLoggingUtility.checkAndRestoreStderr();
     }
 
     private void setup(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
@@ -113,7 +113,7 @@ public class BindingsCreateBindingTest<T> {
         final Binding<T> binding2 = f.create(func2, new Observable [0]);
 
         f.check(defaultValue, binding2.getValue());
-        ErrorLoggingUtiltity.checkWarning(Exception.class);
+        ErrorLoggingUtility.checkWarning(Exception.class);
         assertTrue(binding2.getDependencies().isEmpty());
         binding2.dispose();
     }

@@ -86,12 +86,12 @@ public class BidirectionalBindingTest<T> {
 
     @BeforeEach
     public void beforeEach() {
-        ErrorLoggingUtiltity.suppressStderr();
+        ErrorLoggingUtility.suppressStderr();
     }
 
     @AfterEach
     public void afterEach() {
-        ErrorLoggingUtiltity.checkAndRestoreStderr();
+        ErrorLoggingUtility.checkAndRestoreStderr();
     }
 
     private void setUp(Factory<T> factory) {
@@ -331,7 +331,7 @@ public class BidirectionalBindingTest<T> {
         assertEquals(op3.getValue(), op1.getValue());
         assertEquals(op2.getValue(), op1.getValue());
 
-        ErrorLoggingUtiltity.checkAndRestoreStderr(RuntimeException.class);
+        ErrorLoggingUtility.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @ParameterizedTest
@@ -353,7 +353,7 @@ public class BidirectionalBindingTest<T> {
         assertEquals(v[0], op1.getValue());
         assertEquals(v[1], op2.getValue());
 
-        ErrorLoggingUtiltity.checkAndRestoreStderr(RuntimeException.class);
+        ErrorLoggingUtility.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @ParameterizedTest

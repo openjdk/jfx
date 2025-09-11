@@ -40,7 +40,7 @@ import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import test.util.AccumulatingPrintStream;
 
-public class ErrorLoggingUtiltity {
+public class ErrorLoggingUtility {
 
     private static ErrorLogger errorLogger = Logging.getLogger();
 
