@@ -608,9 +608,10 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -693,7 +694,7 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false);
         stage.setIsPopup();
         stage.init(systemMenu);
         return stage;
