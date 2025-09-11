@@ -94,6 +94,7 @@ public class MenuDoubleShortcutTest {
     //
     // https://bugs.openjdk.org/browse/JDK-8087863
     // https://bugs.openjdk.org/browse/JDK-8088897
+    @Disabled("JDK-8364405")
     @Test
     void macSceneComesBeforeMenuBar() {
         Assumptions.assumeTrue(PlatformUtil.isMac());
