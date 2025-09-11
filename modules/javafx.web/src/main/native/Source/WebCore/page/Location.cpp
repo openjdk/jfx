@@ -263,7 +263,8 @@ ExceptionOr<void> Location::replace(LocalDOMWindow& activeWindow, LocalDOMWindow
     if (!completedURL.isValid())
         return Exception { ExceptionCode::SyntaxError };
 
-    if (!activeWindow.document()->canNavigate(frame.get(), completedURL))
+    auto canNavigateState = activeWindow.document()->canNavigate(frame.get(), completedURL);
+    if (canNavigateState == CanNavigateState::Unable)
         return Exception { ExceptionCode::SecurityError };
 
 #if PLATFORM(JAVA)
@@ -278,7 +279,7 @@ ExceptionOr<void> Location::replace(LocalDOMWindow& activeWindow, LocalDOMWindow
 #endif
 
     // We call LocalDOMWindow::setLocation directly here because replace() always operates on the current frame.
-    frame->window()->setLocation(activeWindow, completedURL, NavigationHistoryBehavior::Replace, SetLocationLocking::LockHistoryAndBackForwardList);
+    frame->window()->setLocation(activeWindow, completedURL, NavigationHistoryBehavior::Replace, SetLocationLocking::LockHistoryAndBackForwardList, canNavigateState);
     return { };
 }
 
@@ -307,7 +308,7 @@ void Location::reload(LocalDOMWindow& activeWindow)
     if (targetDocument->url().protocolIsJavaScript())
         return;
 
-    localFrame->checkedNavigationScheduler()->scheduleRefresh(activeDocument);
+    localFrame->protectedNavigationScheduler()->scheduleRefresh(activeDocument);
 }
 
 ExceptionOr<void> Location::setLocation(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& urlString)
@@ -324,7 +325,8 @@ ExceptionOr<void> Location::setLocation(LocalDOMWindow& incumbentWindow, LocalDO
     if (!completedURL.isValid())
         return Exception { ExceptionCode::SyntaxError, "Invalid URL"_s };
 
-    if (!incumbentWindow.document()->canNavigate(frame.get(), completedURL))
+    auto canNavigateState = incumbentWindow.document()->canNavigate(frame.get(), completedURL);
+    if (canNavigateState == CanNavigateState::Unable)
         return Exception { ExceptionCode::SecurityError };
 
     // https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-location-interface:location-object-navigate
@@ -343,7 +345,7 @@ ExceptionOr<void> Location::setLocation(LocalDOMWindow& incumbentWindow, LocalDO
 #endif
 
     ASSERT(frame->window());
-    frame->window()->setLocation(incumbentWindow, completedURL, historyHandling);
+    frame->window()->setLocation(incumbentWindow, completedURL, historyHandling, SetLocationLocking::LockHistoryBasedOnGestureState, canNavigateState);
     return { };
 }
 

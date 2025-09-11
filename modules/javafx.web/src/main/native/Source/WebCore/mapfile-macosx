@@ -213,7 +213,6 @@
                _Java_com_sun_webkit_dom_DOMImplementationImpl_createDocumentTypeImpl
                _Java_com_sun_webkit_dom_DOMImplementationImpl_createHTMLDocumentImpl
                _Java_com_sun_webkit_dom_DOMImplementationImpl_dispose
-               _Java_com_sun_webkit_dom_DOMImplementationImpl_hasFeatureImpl
                _Java_com_sun_webkit_dom_DOMStringListImpl_containsImpl
                _Java_com_sun_webkit_dom_DOMStringListImpl_dispose
                _Java_com_sun_webkit_dom_DOMStringListImpl_getLengthImpl
@@ -373,7 +372,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_getOnreadystatechangeImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOnresetImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOnscrollImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_getOnsearchImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOnselectImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOnselectionchangeImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getOnselectstartImpl
@@ -387,7 +385,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_getTitleImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getURLImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStateImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_getWebkitCurrentFullScreenElementImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullScreenKeyboardInputAllowedImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullscreenElementImpl
                _Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullscreenEnabledImpl
@@ -444,7 +441,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_setOnreadystatechangeImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnresetImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnscrollImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_setOnsearchImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnselectImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnselectionchangeImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnselectstartImpl
@@ -453,8 +449,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_setTitleImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setXmlStandaloneImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setXmlVersionImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_webkitCancelFullScreenImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_webkitExitFullscreenImpl
                _Java_com_sun_webkit_dom_DocumentTypeImpl_getEntitiesImpl
                _Java_com_sun_webkit_dom_DocumentTypeImpl_getInternalSubsetImpl
                _Java_com_sun_webkit_dom_DocumentTypeImpl_getNameImpl
@@ -524,7 +518,6 @@
                _Java_com_sun_webkit_dom_ElementImpl_getOnpasteImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOnresetImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOnscrollImpl
-               _Java_com_sun_webkit_dom_ElementImpl_getOnsearchImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOnselectImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOnselectstartImpl
                _Java_com_sun_webkit_dom_ElementImpl_getOnsubmitImpl
@@ -590,7 +583,6 @@
                _Java_com_sun_webkit_dom_ElementImpl_setOnpasteImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnresetImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnscrollImpl
-               _Java_com_sun_webkit_dom_ElementImpl_setOnsearchImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnselectImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnselectstartImpl
                _Java_com_sun_webkit_dom_ElementImpl_setOnsubmitImpl
@@ -1025,7 +1017,6 @@
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_getFormNoValidateImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_getFormTargetImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_getHeightImpl
-               _Java_com_sun_webkit_dom_HTMLInputElementImpl_getIncrementalImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_getIndeterminateImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_getLabelsImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_getMaxImpl
@@ -1066,7 +1057,6 @@
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_setFormNoValidateImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_setFormTargetImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_setHeightImpl
-               _Java_com_sun_webkit_dom_HTMLInputElementImpl_setIncrementalImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_setIndeterminateImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_setMaxImpl
                _Java_com_sun_webkit_dom_HTMLInputElementImpl_setMaxLengthImpl
@@ -1511,7 +1501,6 @@
                _Java_com_sun_webkit_dom_NodeImpl_isDefaultNamespaceImpl
                _Java_com_sun_webkit_dom_NodeImpl_isEqualNodeImpl
                _Java_com_sun_webkit_dom_NodeImpl_isSameNodeImpl
-               _Java_com_sun_webkit_dom_NodeImpl_isSupportedImpl
                _Java_com_sun_webkit_dom_NodeImpl_lookupNamespaceURIImpl
                _Java_com_sun_webkit_dom_NodeImpl_lookupPrefixImpl
                _Java_com_sun_webkit_dom_NodeImpl_normalizeImpl

@@ -44,4 +44,11 @@ CSSPropertyID StylePropertyMetadata::shorthandID() const
     return shorthands[m_indexInShorthandsVector].id();
 }
 
+bool CSSProperty::isSizingProperty(CSSPropertyID propertyId)
+{
+    return isSizeProperty(propertyId)
+        || isMaxSizeProperty(propertyId)
+        || isMinSizeProperty(propertyId);
+}
+
 } // namespace WebCore

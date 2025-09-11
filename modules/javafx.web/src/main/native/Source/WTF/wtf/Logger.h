@@ -36,6 +36,10 @@
 #include <systemd/sd-journal.h>
 #endif
 
+#if OS(ANDROID)
+#include <android/log.h>
+#endif
+
 namespace WTF {
 
 template<typename T>
@@ -55,6 +59,7 @@ struct LogArgument {
     template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, AtomString>, String> toString(const AtomString& argument) { return argument.string(); }
     template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, String>, String> toString(String argument) { return argument; }
     template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, StringBuilder*>, String> toString(StringBuilder* argument) { return argument->toString(); }
+    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, StringView>, String> toString(const StringView& argument) { return argument.toString(); }
     template<typename U = T> static std::enable_if_t<std::is_same_v<U, const char*>, String> toString(const char* argument) { return String::fromLatin1(argument); }
     template<typename U = T> static std::enable_if_t<std::is_same_v<U, ASCIILiteral>, String> toString(ASCIILiteral argument) { return argument; }
 #ifdef __OBJC__
@@ -136,6 +141,7 @@ public:
         // Can be called on any thread.
         virtual void didLogMessage(const WTFLogChannel&, WTFLogLevel, Vector<JSONLogValue>&&) = 0;
     };
+
     class MessageHandlerObserver {
     public:
         virtual ~MessageHandlerObserver() = default;
@@ -258,14 +264,16 @@ public:
     {
             if (!messageHandlerObserverLock().tryLock())
                 return false;
+
             Locker locker { AdoptLock, messageHandlerObserverLock() };
             for (MessageHandlerObserver& observer : messageHandlerObservers())
                 observer.handleLogMessage(channel, level, { ConsoleLogValue<Argument>::toValue(arguments)... });
         }
+
         if (!m_enabled)
             return false;
 
-#if ENABLE(JOURNALD_LOG)
+#if ENABLE(JOURNALD_LOG) || OS(ANDROID)
         if (channel.state == WTFLogChannelState::Off)
             return false;
 #endif
@@ -288,16 +296,16 @@ public:
     }
 
     struct LogSiteIdentifier {
-        LogSiteIdentifier(const char* methodName, const void* objectPtr)
+        LogSiteIdentifier(const char* methodName, uint64_t objectIdentifier)
             : methodName { methodName }
-            , objectPtr { reinterpret_cast<uintptr_t>(objectPtr) }
+            , objectIdentifier { objectIdentifier }
         {
         }
 
-        LogSiteIdentifier(ASCIILiteral className, const char* methodName, const void* objectPtr)
+        LogSiteIdentifier(ASCIILiteral className, const char* methodName, uint64_t objectIdentifier)
             : className { className }
             , methodName { methodName }
-            , objectPtr { reinterpret_cast<uintptr_t>(objectPtr) }
+            , objectIdentifier { objectIdentifier }
         {
         }
 
@@ -305,7 +313,7 @@ public:
 
         ASCIILiteral className;
         const char* methodName { nullptr };
-        const uintptr_t objectPtr { 0 };
+        const uint64_t objectIdentifier { 0 };
     };
 
     static inline void addObserver(Observer& observer)
@@ -320,6 +328,7 @@ public:
             return &anObserver.get() == &observer;
         });
     }
+
     static inline void addMessageHandlerObserver(MessageHandlerObserver& observer)
     {
         Locker locker { messageHandlerObserverLock() };
@@ -351,6 +360,8 @@ private:
         WTFLog(&channel, "%s", logMessage.utf8().data());
 #elif USE(OS_LOG)
         os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+#elif OS(ANDROID)
+        __android_log_print(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s", channel.name, logMessage.utf8().data());
 #elif ENABLE(JOURNALD_LOG)
         sd_journal_send("WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else
@@ -380,8 +391,10 @@ private:
         UNUSED_PARAM(file);
         UNUSED_PARAM(line);
         UNUSED_PARAM(function);
+#elif OS(ANDROID)
+        __android_log_print(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s FILE=%s:%d: %s", channel.name, logMessage.utf8().data(), file, line, function);
 #elif ENABLE(JOURNALD_LOG)
-        auto fileString = makeString("CODE_FILE="_s, span(file));
+        auto fileString = makeString("CODE_FILE="_s, unsafeSpan(file));
         auto lineString = makeString("CODE_LINE="_s, line);
         sd_journal_send_with_location(fileString.utf8().data(), lineString.utf8().data(), function, "WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else
@@ -407,6 +420,7 @@ private:
     }
 
     WTF_EXPORT_PRIVATE static Vector<std::reference_wrapper<MessageHandlerObserver>>& messageHandlerObservers() WTF_REQUIRES_LOCK(messageHandlerObserverLock());
+
     static Lock& messageHandlerObserverLock() WTF_RETURNS_LOCK(messageHandlerLoggerObserverLock)
     {
         return messageHandlerLoggerObserverLock;

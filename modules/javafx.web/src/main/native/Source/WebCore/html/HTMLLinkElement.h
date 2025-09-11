@@ -49,15 +49,18 @@ class HTMLLinkElement final : public HTMLElement, public CachedStyleSheetClient,
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLLinkElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLLinkElement);
 public:
-    using HTMLElement::weakPtrFactory;
-    using HTMLElement::WeakValueType;
-    using HTMLElement::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
 
     static Ref<HTMLLinkElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLLinkElement();
 
     URL href() const;
     WEBCORE_EXPORT const AtomString& rel() const;
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    URL environmentMap() const;
+    bool isSpatialBackdrop() const { return m_relAttribute.isSpatialBackdrop; }
+#endif
 
     AtomString target() const final;
 
@@ -98,9 +101,11 @@ public:
 
     void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
-    RequestPriority fetchPriorityHint() const;
+    RequestPriority fetchPriority() const;
 
-    void processInternalResourceLink(HTMLAnchorElement* = nullptr);
+    // If element is specified, checks if that Element satisfies the link.
+    // Otherwise checks if any Element in the tree does.
+    void processInternalResourceLink(Element* = nullptr);
 
 private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
@@ -110,7 +115,9 @@ private:
     static void processCallback(Node*);
     void clearSheet();
 
+    void potentiallyBlockRendering();
     void unblockRendering();
+    bool isImplicitlyPotentiallyRenderBlocking() const;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
@@ -119,7 +126,7 @@ private:
     void initializeStyleSheet(Ref<StyleSheetContents>&&, const CachedCSSStyleSheet&, MediaQueryParserContext);
 
     // from CachedResourceClient
-    void setCSSStyleSheet(const String& href, const URL& baseURL, const String& charset, const CachedCSSStyleSheet*) final;
+    void setCSSStyleSheet(const String& href, const URL& baseURL, ASCIILiteral charset, const CachedCSSStyleSheet*) final;
     bool sheetLoaded() final;
     void notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred) final;
     void startLoadingDynamicSheet() final;
@@ -141,7 +148,7 @@ private:
 
     String debugDescription() const final;
 
-    enum PendingSheetType : uint8_t { Unknown, ActiveSheet, InactiveSheet };
+    enum class PendingSheetType : uint8_t { Unknown, Active, Inactive };
     void addPendingSheet(PendingSheetType);
 
     void removePendingSheet();
@@ -160,6 +167,9 @@ private:
     String m_media;
     String m_integrityMetadataForPendingSheetRequest;
     URL m_url;
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    URL m_environmentMapURL;
+#endif
     std::unique_ptr<DOMTokenList> m_sizes;
     std::unique_ptr<DOMTokenList> m_relList;
     std::unique_ptr<DOMTokenList> m_blockingList;

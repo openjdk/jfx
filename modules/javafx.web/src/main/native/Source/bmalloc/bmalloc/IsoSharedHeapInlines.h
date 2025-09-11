@@ -25,10 +25,12 @@
 
 #pragma once
 
+#if !BUSE(TZONE)
+
 #include "IsoSharedHeap.h"
 
 #include "IsoSharedPage.h"
-#include "StdLibExtras.h"
+#include <bit>
 
 #if !BUSE(LIBPAS)
 
@@ -86,3 +88,4 @@ BNO_INLINE void* IsoSharedHeap::allocateSlow(const LockHolder& locker, bool abor
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)

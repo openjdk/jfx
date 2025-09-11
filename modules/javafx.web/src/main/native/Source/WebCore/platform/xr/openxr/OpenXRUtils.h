@@ -116,9 +116,9 @@ inline XrViewConfigurationType toXrViewConfigurationType(SessionMode mode)
     return XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO;
 }
 
-inline String handenessToString(XRHandedness handeness)
+inline String handednessToString(XRHandedness handedness)
 {
-    switch (handeness) {
+    switch (handedness) {
     case XRHandedness::Left:
         return "left"_s;
     case XRHandedness::Right:

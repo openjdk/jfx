@@ -161,7 +161,7 @@ void RenderSVGViewportContainer::applyTransform(TransformationMatrix& transform,
     applySVGTransform(transform, protectedSVGSVGElement(), style, boundingBox, m_supplementalLayerTransform.isIdentity() ? std::nullopt : std::make_optional(m_supplementalLayerTransform), std::nullopt, options);
 }
 
-LayoutRect RenderSVGViewportContainer::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy, PaintPhase) const
+LayoutRect RenderSVGViewportContainer::overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
     // Overflow for the outermost <svg> element is handled in RenderSVGRoot, not here.
     ASSERT(!isOutermostSVGViewportContainer());

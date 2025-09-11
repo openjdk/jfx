@@ -25,6 +25,7 @@
 #include "CallData.h"
 #include "CellState.h"
 #include "ConstructData.h"
+#include "DestructionMode.h"
 #include "EnumerationMode.h"
 #include "Heap.h"
 #include "HeapCell.h"
@@ -99,16 +100,15 @@ class JSCell : public HeapCell {
 public:
     static constexpr unsigned StructureFlags = 0;
 
-    static constexpr bool needsDestruction = false;
+    static constexpr DestructionMode needsDestruction = DoesNotNeedDestruction;
 
-    static constexpr bool usePreciseAllocationsOnly = false;
     static constexpr uint8_t numberOfLowerTierPreciseCells = 8;
 
     static constexpr size_t atomSize = 16; // This needs to be larger or equal to 16.
 
     static constexpr bool isResizableOrGrowableSharedTypedArray = false;
 
-    static JSCell* seenMultipleCalleeObjects() { return bitwise_cast<JSCell*>(static_cast<uintptr_t>(1)); }
+    static JSCell* seenMultipleCalleeObjects() { return std::bit_cast<JSCell*>(static_cast<uintptr_t>(1)); }
 
     enum CreatingEarlyCellTag { CreatingEarlyCell };
     JSCell(CreatingEarlyCellTag);

@@ -23,11 +23,9 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
 #import <jni.h>
 
 #import "GlassHostView.h"
-#import "GlassDragSource.h"
 #import "GlassDraggingSource.h"
 #import "GlassAccessible.h"
 

@@ -51,7 +51,7 @@ public:
 
     virtual ~CachedModuleScriptLoader();
 
-    bool load(Document&, URL&& sourceURL);
+    bool load(Document&, URL&& sourceURL, std::optional<ServiceWorkersMode>);
 
     CachedScript* cachedScript() { return m_cachedScript.get(); }
     CachedScriptFetcher& scriptFetcher() { return static_cast<CachedScriptFetcher&>(ModuleScriptLoader::scriptFetcher()); }

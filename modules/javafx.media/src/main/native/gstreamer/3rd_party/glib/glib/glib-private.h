@@ -64,7 +64,8 @@
  * as we'd like: https://stackoverflow.com/a/11529277/210151 and
  * https://devblogs.microsoft.com/oldnewthing/20200731-00/?p=104024
  */
-#elif defined (G_OS_UNIX) && !defined (__APPLE__) && !defined(__CYGWIN__) && g_macro__has_attribute (weak)
+#elif defined (G_OS_UNIX) && !defined (__APPLE__) && !defined(__CYGWIN__) && !defined(_AIX) && \
+      g_macro__has_attribute (weak)
 
 #define HAS_DYNAMIC_ASAN_LOADING
 
@@ -99,7 +100,7 @@ g_leak_sanitizer_is_supported (void)
 #if defined (_GLIB_ADDRESS_SANITIZER)
   return TRUE;
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  return __lsan_enable != NULL && __lsan_ignore_object != NULL;
+  return G_UNLIKELY (__lsan_enable != NULL && __lsan_ignore_object != NULL);
 #else
   return FALSE;
 #endif
@@ -121,7 +122,7 @@ g_ignore_leak (gconstpointer p)
   if (p != NULL)
     __lsan_ignore_object (p);
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  if (p != NULL && __lsan_ignore_object != NULL)
+  if (G_LIKELY (p != NULL) && G_UNLIKELY (__lsan_ignore_object != NULL))
     __lsan_ignore_object (p);
 #endif
 }
@@ -165,7 +166,7 @@ g_begin_ignore_leaks (void)
 #if defined (_GLIB_ADDRESS_SANITIZER)
   __lsan_disable ();
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  if (__lsan_disable != NULL)
+  if (G_UNLIKELY (__lsan_disable != NULL))
     __lsan_disable ();
 #endif
 }
@@ -182,7 +183,7 @@ g_end_ignore_leaks (void)
 #if defined (_GLIB_ADDRESS_SANITIZER)
   __lsan_enable ();
 #elif defined (HAS_DYNAMIC_ASAN_LOADING)
-  if (__lsan_enable != NULL)
+  if (G_UNLIKELY (__lsan_enable != NULL))
     __lsan_enable ();
 #endif
 }

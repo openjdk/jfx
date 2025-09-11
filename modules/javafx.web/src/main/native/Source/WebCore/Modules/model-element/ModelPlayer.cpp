@@ -28,14 +28,17 @@
 
 #include "Color.h"
 #include "TransformationMatrix.h"
+#include <wtf/TZoneMallocInlines.h>
+
+#if ENABLE(MODEL_PROCESS)
+#include <WebCore/StageModeOperations.h>
+#endif
 
 namespace WebCore {
 
-ModelPlayer::~ModelPlayer() = default;
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelPlayer);
 
-void ModelPlayer::setBackgroundColor(Color)
-{
-}
+ModelPlayer::~ModelPlayer() = default;
 
 void ModelPlayer::setEntityTransform(TransformationMatrix)
 {
@@ -64,5 +67,70 @@ String ModelPlayer::inlinePreviewUUIDForTesting() const
 {
     return emptyString();
 }
+
+#if ENABLE(MODEL_PROCESS)
+void ModelPlayer::setAutoplay(bool)
+{
+}
+
+void ModelPlayer::setLoop(bool)
+{
+}
+
+void ModelPlayer::setPlaybackRate(double, CompletionHandler<void(double effectivePlaybackRate)>&& completionHandler)
+{
+    completionHandler(1.0);
+}
+
+double ModelPlayer::duration() const
+{
+    return 0;
+}
+
+bool ModelPlayer::paused() const
+{
+    return true;
+}
+
+void ModelPlayer::setPaused(bool, CompletionHandler<void(bool succeeded)>&& completionHandler)
+{
+    completionHandler(false);
+}
+
+Seconds ModelPlayer::currentTime() const
+{
+    return 0_s;
+}
+
+void ModelPlayer::setCurrentTime(Seconds, CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
+}
+
+void ModelPlayer::setEnvironmentMap(Ref<SharedBuffer>&&)
+{
+}
+
+void ModelPlayer::setHasPortal(bool)
+{
+}
+
+void ModelPlayer::setStageMode(StageModeOperation)
+{
+}
+
+void ModelPlayer::beginStageModeTransform(const TransformationMatrix&)
+{
+}
+
+void ModelPlayer::updateStageModeTransform(const TransformationMatrix&)
+{
+}
+
+void ModelPlayer::endStageModeInteraction()
+{
+}
+
+#endif // ENABLE(MODEL_PROCESS)
 
 }

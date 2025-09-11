@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #include "AllocatorForMode.h"
 #include "AllocatorInlines.h"
 #include "CompleteSubspaceInlines.h"
@@ -82,14 +86,14 @@ ALWAYS_INLINE JSCell::JSCell(CreatingWellDefinedBuiltinCellTag, StructureID stru
     : m_structureID(structureID)
 #if CPU(LITTLE_ENDIAN)
     , m_indexingTypeAndMisc(static_cast<uint8_t>(blob >> 0))
-    , m_type(bitwise_cast<JSType>(static_cast<uint8_t>(blob >> 8)))
-    , m_flags(bitwise_cast<TypeInfo::InlineTypeFlags>(static_cast<uint8_t>(blob >> 16)))
-    , m_cellState(bitwise_cast<CellState>(static_cast<uint8_t>(blob >> 24)))
+    , m_type(std::bit_cast<JSType>(static_cast<uint8_t>(blob >> 8)))
+    , m_flags(std::bit_cast<TypeInfo::InlineTypeFlags>(static_cast<uint8_t>(blob >> 16)))
+    , m_cellState(std::bit_cast<CellState>(static_cast<uint8_t>(blob >> 24)))
 #else
     , m_indexingTypeAndMisc(static_cast<uint8_t>(blob >> 24))
-    , m_type(bitwise_cast<JSType>(static_cast<uint8_t>(blob >> 16)))
-    , m_flags(bitwise_cast<TypeInfo::InlineTypeFlags>(static_cast<uint8_t>(blob >> 8)))
-    , m_cellState(bitwise_cast<CellState>(static_cast<uint8_t>(blob >> 0)))
+    , m_type(std::bit_cast<JSType>(static_cast<uint8_t>(blob >> 16)))
+    , m_flags(std::bit_cast<TypeInfo::InlineTypeFlags>(static_cast<uint8_t>(blob >> 8)))
+    , m_cellState(std::bit_cast<CellState>(static_cast<uint8_t>(blob >> 0)))
 #endif
 {
 }
@@ -186,7 +190,7 @@ inline Allocator allocatorForConcurrently(VM& vm, size_t allocationSize, Allocat
 template<typename T, AllocationFailureMode failureMode>
 ALWAYS_INLINE void* tryAllocateCellHelper(VM& vm, size_t size, GCDeferralContext* deferralContext)
 {
-    ASSERT(deferralContext || vm.heap.isDeferred() || !DisallowGC::isInEffectOnCurrentThread());
+    ASSERT(deferralContext || vm.heap.isDeferred() || !AssertNoGC::isInEffectOnCurrentThread());
     ASSERT(size >= sizeof(T));
     JSCell* result = static_cast<JSCell*>(subspaceFor<T>(vm)->allocate(vm, WTF::roundUpToMultipleOf<T::atomSize>(size), deferralContext, failureMode));
     if constexpr (failureMode == AllocationFailureMode::ReturnNull) {
@@ -403,27 +407,27 @@ inline TriState JSCell::pureToBoolean() const
 
 inline void JSCellLock::lock()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     if (UNLIKELY(!IndexingTypeLockAlgorithm::lockFast(*lock)))
         lockSlow();
 }
 
 inline bool JSCellLock::tryLock()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     return IndexingTypeLockAlgorithm::tryLock(*lock);
 }
 
 inline void JSCellLock::unlock()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     if (UNLIKELY(!IndexingTypeLockAlgorithm::unlockFast(*lock)))
         unlockSlow();
 }
 
 inline bool JSCellLock::isLocked() const
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     return IndexingTypeLockAlgorithm::isLocked(*lock);
 }
 
@@ -483,3 +487,5 @@ inline bool isWebAssemblyInstance(const JSCell* cell)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

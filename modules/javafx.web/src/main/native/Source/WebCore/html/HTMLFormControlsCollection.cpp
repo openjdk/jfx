@@ -42,8 +42,6 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFormControlsCollection);
 
 HTMLFormControlsCollection::HTMLFormControlsCollection(ContainerNode& ownerNode)
     : CachedHTMLCollection(ownerNode, CollectionType::FormControls)
-    , m_cachedElement(nullptr)
-    , m_cachedElementOffsetInArray(0)
 {
     ASSERT(is<HTMLFormElement>(ownerNode));
 }
@@ -117,7 +115,7 @@ void HTMLFormControlsCollection::updateNamedElementCache() const
 
     auto cache = makeUnique<CollectionNamedElementCache>();
 
-    HashSet<AtomString> foundInputElements;
+    UncheckedKeyHashSet<AtomString> foundInputElements;
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
     for (auto& weakElement : ownerNode().unsafeListedElements()) {

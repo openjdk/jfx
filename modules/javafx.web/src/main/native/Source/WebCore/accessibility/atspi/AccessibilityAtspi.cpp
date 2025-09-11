@@ -55,8 +55,10 @@ void AccessibilityAtspi::connect(const String& busAddress, const String& busName
 {
     if (busAddress.isEmpty())
         return;
+
     RELEASE_ASSERT(g_dbus_is_name(busName.utf8().data()));
     RELEASE_ASSERT(!g_dbus_is_unique_name(busName.utf8().data()));
+
     m_busName = busName;
 
     m_isConnecting = true;
@@ -78,6 +80,7 @@ void AccessibilityAtspi::didConnect(GRefPtr<GDBusConnection>&& connection)
         m_isConnecting = false;
         return;
     }
+
     RELEASE_ASSERT(g_dbus_is_name(m_busName.utf8().data()));
     g_bus_own_name_on_connection(m_connection.get(), m_busName.utf8().data(), G_BUS_NAME_OWNER_FLAGS_DO_NOT_QUEUE,
         [](GDBusConnection*, const char*, gpointer userData) {
@@ -86,6 +89,7 @@ void AccessibilityAtspi::didConnect(GRefPtr<GDBusConnection>&& connection)
         },
         nullptr, this, nullptr);
 }
+
 void AccessibilityAtspi::didOwnName()
 {
     m_isConnecting = false;
@@ -143,6 +147,7 @@ void AccessibilityAtspi::initializeRegistry()
     }, this);
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
 static GUniquePtr<char*> eventConvertingDetailToNonCamelCase(const char* eventName)
 {
     GUniquePtr<char*> event(g_strsplit(eventName, ":", 3));
@@ -189,6 +194,7 @@ static bool eventIsSubtype(char** needle, char** haystack)
 
     return true;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void AccessibilityAtspi::removeEventListener(const char* dbusName, const char* eventName)
 {
@@ -674,7 +680,6 @@ static constexpr std::pair<AccessibilityRole, RoleNameEntry> roleNames[] = {
     { AccessibilityRole::MathElement, { "math", N_("math") } },
     { AccessibilityRole::Menu, { "menu", N_("menu") } },
     { AccessibilityRole::MenuBar, { "menu bar", N_("menu bar") } },
-    { AccessibilityRole::MenuButton, { "menu item", N_("menu item") } },
     { AccessibilityRole::MenuItem, { "menu item", N_("menu item") } },
     { AccessibilityRole::MenuItemCheckbox, { "check menu item", N_("check menu item") } },
     { AccessibilityRole::MenuItemRadio, { "radio menu item", N_("radio menu item") } },

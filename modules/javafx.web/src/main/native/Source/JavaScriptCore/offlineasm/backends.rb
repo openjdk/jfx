@@ -140,8 +140,12 @@ class Label
 end
 
 class LocalLabel
+    def labelString
+        "jsc_llint_#{name[1..-1]}_#{codeOrigin.labelStringExtension}"
+    end
+
     def lower(name)
-        $asm.putsLocalLabel "jsc_llint_#{self.name[1..-1]}"
+        $asm.putsLocalLabel(self.labelString)
     end
 end
 
@@ -161,11 +165,11 @@ end
 
 class LocalLabelReference
     def asmLabel
-        Assembler.localLabelReference("jsc_llint_"+name[1..-1])
+        Assembler.localLabelReference(@label.labelString)
     end
 
     def cLabel
-        Assembler.cLocalLabelReference("jsc_llint_"+name[1..-1])
+        Assembler.cLocalLabelReference(@label.labelString)
     end
 end
 

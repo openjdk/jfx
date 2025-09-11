@@ -67,7 +67,7 @@ msc_strxfrm_wrapper (char       *string1,
  * @str2: a UTF-8 encoded string
  *
  * Compares two strings for ordering using the linguistically
- * correct rules for the [current locale][setlocale].
+ * correct rules for the [current locale](running.html#locale).
  * When sorting a large number of strings, it will be significantly
  * faster to obtain collation keys with g_utf8_collate_key() and
  * compare the keys with strcmp() when sorting instead of sorting
@@ -373,10 +373,15 @@ carbon_collate_key_for_filename (const gchar *str,
  * with strcmp() will always be the same as comparing the two
  * original keys with g_utf8_collate().
  *
- * Note that this function depends on the [current locale][setlocale].
+ * Note that this function depends on the [current locale](running.html#locale).
  *
- * Returns: a newly allocated string. This string should
- *   be freed with g_free() when you are done with it.
+ * Note that the returned string is not guaranteed to be in any
+ * encoding, especially UTF-8. The returned value is meant to be
+ * used only for comparisons.
+ *
+ * Returns: (transfer full) (type filename): a newly allocated string.
+ *   The contents of the string are only meant to be used when sorting.
+ *   This string should be freed with g_free() when you are done with it.
  **/
 gchar *
 g_utf8_collate_key (const gchar *str,
@@ -502,10 +507,15 @@ g_utf8_collate_key (const gchar *str,
  * would like to treat numbers intelligently so that "file1" "file10" "file5"
  * is sorted as "file1" "file5" "file10".
  *
- * Note that this function depends on the [current locale][setlocale].
+ * Note that this function depends on the [current locale](running.html#locale).
  *
- * Returns: a newly allocated string. This string should
- *   be freed with g_free() when you are done with it.
+ * Note that the returned string is not guaranteed to be in any
+ * encoding, especially UTF-8. The returned value is meant to be
+ * used only for comparisons.
+ *
+ * Returns: (transfer full) (type filename): a newly allocated string.
+ *   The contents of the string are only meant to be used when sorting.
+ *   This string should be freed with g_free() when you are done with it.
  *
  * Since: 2.8
  */

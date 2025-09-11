@@ -32,6 +32,7 @@
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
 #include "HTMLTableElement.h"
+#include "InlineDisplayContent.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
@@ -90,10 +91,8 @@ static std::optional<LayoutSize> accumulatedOffsetForInFlowPositionedContinuatio
 template<typename CharacterType>
 static bool canUseSimplifiedTextMeasuringForCharacters(std::span<const CharacterType> characters, const FontCascade& fontCascade, bool whitespaceIsCollapsed)
 {
-    auto& primaryFont = fontCascade.primaryFont();
-    auto* rawCharacters = characters.data();
-    for (unsigned i = 0; i < characters.size(); ++i) {
-        auto character = rawCharacters[i]; // Not using characters[i] to bypass the bounds check.
+    Ref primaryFont = fontCascade.primaryFont();
+    for (auto character : characters) {
         if (!fontCascade.canUseSimplifiedTextMeasuring(character, AutoVariant, whitespaceIsCollapsed, primaryFont))
             return false;
     }
@@ -140,7 +139,7 @@ std::unique_ptr<Box> TreeBuilder::createTextBox(String text, bool isCombined, bo
 {
     auto contentCharacteristic = OptionSet<Layout::InlineTextBox::ContentCharacteristic> { };
     if (canUseSimpleFontCodePath)
-        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpledFontCodepath);
+        contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimpleFontCodepath);
     if (canUseSimplifiedTextMeasuring)
         contentCharacteristic.add(Layout::InlineTextBox::ContentCharacteristic::CanUseSimplifiedContentMeasuring);
     if (hasPositionDependentContentWidth)
@@ -575,11 +574,11 @@ void printLayoutTreeForLiveDocuments()
             continue;
         if (document->frame() && document->frame()->isMainFrame())
             fprintf(stderr, "----------------------main frame--------------------------\n");
-        fprintf(stderr, "%s\n", document->url().string().utf8().data());
+        SAFE_FPRINTF(stderr, "%s\n", document->url().string().utf8());
         // FIXME: Need to find a way to output geometry without layout context.
         auto& renderView = *document->renderView();
         auto layoutTree = TreeBuilder::buildLayoutTree(renderView);
-        auto layoutState = LayoutState { document, layoutTree->root(), Layout::LayoutState::Type::Secondary, { } };
+        auto layoutState = LayoutState { document, layoutTree->root(), Layout::LayoutState::Type::Secondary, { }, { }, { } };
 
         LayoutContext(layoutState).layout(renderView.size());
         showLayoutTree(downcast<InitialContainingBlock>(layoutState.root()), &layoutState);
@@ -589,4 +588,3 @@ void printLayoutTreeForLiveDocuments()
 
 }
 }
-

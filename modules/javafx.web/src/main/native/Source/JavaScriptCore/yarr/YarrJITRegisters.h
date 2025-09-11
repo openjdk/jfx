@@ -71,6 +71,12 @@ public:
     static constexpr GPRReg unicodeAndSubpatternIdTemp = ARM64Registers::x5;
     static constexpr GPRReg initialStart = ARM64Registers::x11;
 
+#if ENABLE(YARR_JIT_UNICODE_CAN_INCREMENT_INDEX_FOR_NON_BMP)
+    static constexpr GPRReg firstCharacterAdditionalReadSize { ARM64Registers::x12 };
+#else
+    static constexpr GPRReg firstCharacterAdditionalReadSize { InvalidGPRReg };
+#endif
+
     static constexpr GPRReg leadingSurrogateTag = ARM64Registers::x13;
     static constexpr GPRReg trailingSurrogateTag = ARM64Registers::x14;
     static constexpr GPRReg endOfStringAddress = ARM64Registers::x15;

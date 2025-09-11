@@ -38,15 +38,17 @@
 #include "MediaPlayerEnums.h"
 #include "StorageBlockingPolicy.h"
 #include "StorageMap.h"
-#include "TextDirection.h"
 #include "TextDirectionSubmenuInclusionBehavior.h"
 #include "Timer.h"
 #include "TrustedFonts.h"
 #include "UserInterfaceDirectionPolicy.h"
+#include "WritingMode.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <unicode/uscript.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 
@@ -58,8 +60,9 @@ namespace WebCore {
 
 class Page;
 
-class SettingsBase {
-    WTF_MAKE_NONCOPYABLE(SettingsBase); WTF_MAKE_FAST_ALLOCATED;
+class SettingsBase : public AbstractRefCounted {
+    WTF_MAKE_TZONE_ALLOCATED(SettingsBase);
+    WTF_MAKE_NONCOPYABLE(SettingsBase);
 public:
 
 #if ENABLE(MEDIA_SOURCE)
@@ -144,7 +147,6 @@ protected:
     void imagesEnabledChanged();
     void userStyleSheetLocationChanged();
     void usesBackForwardCacheChanged();
-    void dnsPrefetchingEnabledChanged();
     void storageBlockingPolicyChanged();
     void backgroundShouldExtendBeyondPageChanged();
     void scrollingPerformanceTestingEnabledChanged();
@@ -160,9 +162,10 @@ protected:
     void mockCaptureDevicesEnabledChanged();
 #endif
     void layerBasedSVGEngineEnabledChanged();
-#if HAVE(AVCONTENTKEYSPECIFIER)
-    void sampleBufferContentKeySessionSupportEnabledChanged();
+#if USE(MODERN_AVCONTENTKEYSESSION)
+    void shouldUseModernAVContentKeySessionChanged();
 #endif
+    void useSystemAppearanceChanged();
 
     WeakPtr<Page> m_page;
 
