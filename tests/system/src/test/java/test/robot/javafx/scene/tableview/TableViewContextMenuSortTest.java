@@ -104,6 +104,11 @@ public class TableViewContextMenuSortTest {
             assertEquals(unsortedList.get(i).getName(), table.getItems().get(i).getName());
         }
 
+        /*
+        // This part of test is causing intermittent test failures on MacOS. see: JDK-8359154
+        // As a fix for JDK-8359154, this code is commented out.
+        // This code should be re-enabled with a more robust approach : JDK-8367566
+
         // macOS only: Ctrl + Left click also triggers the context menu
         if (PlatformUtil.isMac()) {
             Util.runAndWait(() -> {
@@ -125,6 +130,7 @@ public class TableViewContextMenuSortTest {
                 assertEquals(unsortedList.get(i).getName(), table.getItems().get(i).getName());
             }
         }
+        */
     }
 
     @BeforeAll
