@@ -95,7 +95,9 @@ _gst_memory_free (GstMemory * mem)
 
   allocator = mem->allocator;
 
+  GST_TRACER_MEMORY_FREE_PRE (mem);
   gst_allocator_free (allocator, mem);
+  GST_TRACER_MEMORY_FREE_POST (mem);
 
   gst_object_unref (allocator);
 }
@@ -139,6 +141,7 @@ gst_memory_init (GstMemory * mem, GstMemoryFlags flags,
   GST_CAT_DEBUG (GST_CAT_MEMORY, "new memory %p, maxsize:%" G_GSIZE_FORMAT
       " offset:%" G_GSIZE_FORMAT " size:%" G_GSIZE_FORMAT, mem, maxsize,
       offset, size);
+  GST_TRACER_MEMORY_INIT (mem);
 }
 
 /**

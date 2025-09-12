@@ -382,10 +382,24 @@ GST_API
 GstCaps *         gst_caps_new_any                 (void);
 
 GST_API
+GstCaps *         gst_caps_new_id_str_empty_simple (const GstIdStr *media_type) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
 GstCaps *         gst_caps_new_empty_simple        (const char    *media_type) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
+GstCaps *         gst_caps_new_static_str_empty_simple (const char    *media_type) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstCaps *         gst_caps_new_id_str_simple       (const GstIdStr *media_type,
+                                                    const GstIdStr *fieldname,
+                                                    ...) G_GNUC_NULL_TERMINATED G_GNUC_WARN_UNUSED_RESULT;
+GST_API
 GstCaps *         gst_caps_new_simple              (const char    *media_type,
+                                                    const char    *fieldname,
+                                                    ...) G_GNUC_NULL_TERMINATED G_GNUC_WARN_UNUSED_RESULT;
+GST_API
+GstCaps *         gst_caps_new_static_str_simple   (const char    *media_type,
                                                     const char    *fieldname,
                                                     ...) G_GNUC_NULL_TERMINATED G_GNUC_WARN_UNUSED_RESULT;
 GST_API
@@ -460,16 +474,38 @@ GST_API
 GstCaps *         gst_caps_truncate                (GstCaps       *caps) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
+void              gst_caps_id_str_set_value        (GstCaps        *caps,
+                                                    const GstIdStr *field,
+                                                    const GValue   *value);
+GST_API
 void              gst_caps_set_value               (GstCaps       *caps,
                                                     const char    *field,
                                                     const GValue  *value);
 GST_API
+void              gst_caps_set_value_static_str    (GstCaps       *caps,
+                                                    const char    *field,
+                                                    const GValue  *value);
+GST_API
+void              gst_caps_id_str_set_simple       (GstCaps        *caps,
+                                                    const GstIdStr *field, ...) G_GNUC_NULL_TERMINATED;
+GST_API
 void              gst_caps_set_simple              (GstCaps       *caps,
                                                     const char    *field, ...) G_GNUC_NULL_TERMINATED;
+GST_API
+void              gst_caps_set_simple_static_str   (GstCaps       *caps,
+                                                    const char    *field, ...) G_GNUC_NULL_TERMINATED;
+GST_API
+void              gst_caps_id_str_set_simple_valist(GstCaps        *caps,
+                                                    const GstIdStr *field,
+                                                    va_list         varargs);
 GST_API
 void              gst_caps_set_simple_valist       (GstCaps       *caps,
                                                     const char    *field,
                                                     va_list        varargs);
+GST_API
+void              gst_caps_set_simple_static_str_valist (GstCaps       *caps,
+                                                         const char    *field,
+                                                         va_list        varargs);
 GST_API
 gboolean          gst_caps_foreach                 (const GstCaps       *caps,
                                                     GstCapsForeachFunc   func,

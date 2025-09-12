@@ -75,6 +75,12 @@ gboolean gst_tracer_register (GstPlugin * plugin, const gchar * name, GType type
 GST_API
 GList* gst_tracing_get_active_tracers (void);
 
+GST_API
+gboolean gst_tracer_class_uses_structure_params  (GstTracerClass *tracer_class);
+GST_API
+void gst_tracer_class_set_use_structure_params   (GstTracerClass *tracer_class,
+                                                  gboolean use_structure_params);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTracer, gst_object_unref)
 
 G_END_DECLS

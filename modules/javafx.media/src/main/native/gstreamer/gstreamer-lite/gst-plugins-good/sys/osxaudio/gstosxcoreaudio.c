@@ -33,13 +33,28 @@ G_DEFINE_TYPE (GstCoreAudio, gst_core_audio, G_TYPE_OBJECT);
 #include "gstosxcoreaudioremoteio.c"
 #else
 #include "gstosxcoreaudiohal.c"
+#include <CoreAudio/CoreAudio.h>
 #endif
+
+enum
+{
+  PROP_0,
+  PROP_DEVICE,
+  PROP_IS_SRC,
+  PROP_CONFIGURE_SESSION,
+};
+
+static void gst_core_audio_set_property (GObject * object, guint prop_id,
+    const GValue * value, GParamSpec * pspec);
+static void gst_core_audio_get_property (GObject * object, guint prop_id,
+    GValue * value, GParamSpec * pspec);
 
 static void
 gst_core_audio_finalize (GObject * object)
 {
   GstCoreAudio *core_audio = GST_CORE_AUDIO (object);
   g_mutex_clear (&core_audio->timing_lock);
+  g_free (core_audio->unique_id);
 
   G_OBJECT_CLASS (gst_core_audio_parent_class)->finalize (object);
 }
@@ -49,6 +64,27 @@ gst_core_audio_class_init (GstCoreAudioClass * klass)
 {
   GObjectClass *object_klass = G_OBJECT_CLASS (klass);
   object_klass->finalize = gst_core_audio_finalize;
+
+  object_klass->set_property = gst_core_audio_set_property;
+  object_klass->get_property = gst_core_audio_get_property;
+
+  g_object_class_install_property (object_klass, PROP_DEVICE,
+      g_param_spec_int ("device", "Device ID", "Device ID of input device",
+          0, G_MAXINT, 0,
+          G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+
+  g_object_class_install_property (object_klass, PROP_IS_SRC,
+      g_param_spec_boolean ("is-src", "Is source", "Is a source device",
+          FALSE,
+          G_PARAM_STATIC_STRINGS | G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+
+#ifdef HAVE_IOS
+  g_object_class_install_property (object_klass, PROP_CONFIGURE_SESSION,
+      g_param_spec_boolean ("configure-session",
+          "Enable automatic AVAudioSession setup",
+          "Auto-configure the AVAudioSession for audio playback/capture", FALSE,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_CONSTRUCT_ONLY));
+#endif
 }
 
 static void
@@ -56,6 +92,7 @@ gst_core_audio_init (GstCoreAudio * core_audio)
 {
   core_audio->is_passthrough = FALSE;
   core_audio->device_id = kAudioDeviceUnknown;
+  core_audio->unique_id = NULL;
   core_audio->is_src = FALSE;
   core_audio->audiounit = NULL;
   core_audio->cached_caps = NULL;
@@ -63,10 +100,60 @@ gst_core_audio_init (GstCoreAudio * core_audio)
 #ifndef HAVE_IOS
   core_audio->hog_pid = -1;
   core_audio->disabled_mixing = FALSE;
+#else
+  core_audio->configure_session = FALSE;
 #endif
 
   mach_timebase_info (&core_audio->timebase);
   g_mutex_init (&core_audio->timing_lock);
+}
+
+static void
+gst_core_audio_set_property (GObject * object, guint prop_id,
+    const GValue * value, GParamSpec * pspec)
+{
+  GstCoreAudio *self = GST_CORE_AUDIO (object);
+
+  switch (prop_id) {
+    case PROP_IS_SRC:
+      self->is_src = g_value_get_boolean (value);
+      break;
+    case PROP_DEVICE:
+      self->device_id = g_value_get_int (value);
+      break;
+#ifdef HAVE_IOS
+    case PROP_CONFIGURE_SESSION:
+      self->configure_session = g_value_get_boolean (value);
+      break;
+#endif
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
+}
+
+static void
+gst_core_audio_get_property (GObject * object, guint prop_id,
+    GValue * value, GParamSpec * pspec)
+{
+  GstCoreAudio *self = GST_CORE_AUDIO (object);
+
+  switch (prop_id) {
+    case PROP_IS_SRC:
+      g_value_set_boolean (value, self->is_src);
+      break;
+    case PROP_DEVICE:
+      g_value_set_int (value, self->device_id);
+      break;
+#ifdef HAVE_IOS
+    case PROP_CONFIGURE_SESSION:
+      g_value_set_boolean (value, self->configure_session);
+      break;
+#endif
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+      break;
+  }
 }
 
 static gboolean
@@ -127,17 +214,6 @@ _host_time_to_ns (GstCoreAudio * core_audio, uint64_t host_time)
 /**************************
  *       Public API       *
  *************************/
-
-GstCoreAudio *
-gst_core_audio_new (GstObject * osxbuf)
-{
-  GstCoreAudio *core_audio;
-
-  core_audio = g_object_new (GST_TYPE_CORE_AUDIO, NULL);
-  core_audio->osxbuf = osxbuf;
-  core_audio->cached_caps = NULL;
-  return core_audio;
-}
 
 gboolean
 gst_core_audio_close (GstCoreAudio * core_audio)
@@ -368,7 +444,16 @@ gst_core_audio_set_volume (GstCoreAudio * core_audio, gfloat volume)
 gboolean
 gst_core_audio_select_device (GstCoreAudio * core_audio)
 {
-  return gst_core_audio_select_device_impl (core_audio);
+  gboolean ret = gst_core_audio_select_device_impl (core_audio);
+
+#ifndef HAVE_IOS
+  if (core_audio->device_id != kAudioDeviceUnknown)
+    core_audio->unique_id =
+        gst_core_audio_device_get_prop (core_audio->device_id,
+        kAudioDevicePropertyDeviceUID);
+#endif
+
+  return ret;
 }
 
 void
@@ -407,6 +492,29 @@ _is_core_audio_layout_positioned (AudioChannelLayout * layout)
   return FALSE;
 }
 
+static gboolean
+_core_audio_has_invalid_channel_labels (AudioChannelLayout * layout)
+{
+  guint i;
+
+  g_assert (layout->mChannelLayoutTag ==
+      kAudioChannelLayoutTag_UseChannelDescriptions);
+
+  for (i = 0; i < layout->mNumberChannelDescriptions; ++i) {
+    /* Let's use our mapping to judge whether the value is valid.
+     * It doesn't support all of the defined positions, but the missing ones
+     * aren't useful to us anyway. */
+    GstAudioChannelPosition p =
+        gst_core_audio_channel_label_to_gst
+        (layout->mChannelDescriptions[i].mChannelLabel, i, FALSE);
+
+    if (p == GST_AUDIO_CHANNEL_POSITION_INVALID)
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
 static void
 _core_audio_parse_channel_descriptions (AudioChannelLayout * layout,
     guint * channels, guint64 * channel_mask, GstAudioChannelPosition * pos)
@@ -416,6 +524,24 @@ _core_audio_parse_channel_descriptions (AudioChannelLayout * layout,
 
   g_assert (layout->mChannelLayoutTag ==
       kAudioChannelLayoutTag_UseChannelDescriptions);
+
+  /* For >16ch devices, CoreAudio can give out completely incorrect
+   * channel positions by default - instead of using kAudioChannelLabel_Discrete_X,
+   * it just returns incrementing values starting from 0, some of which are not
+   * valid if you check against the CoreAudioBaseTypes.h header.
+   * If such case is detected, let's just swap all positions to Discrete,
+   * which map to GST_AUDIO_CHANNEL_POSITION_NONE. */
+  if (_core_audio_has_invalid_channel_labels (layout)) {
+    GST_DEBUG
+        ("Invalid channel positions given by CoreAudio, setting all to unpositioned");
+    if (pos) {
+      for (i = 0; i < layout->mNumberChannelDescriptions; ++i)
+        pos[i] = GST_AUDIO_CHANNEL_POSITION_NONE;
+    }
+    *channels = layout->mNumberChannelDescriptions;
+    *channel_mask = 0;
+    return;
+  }
 
   positioned = _is_core_audio_layout_positioned (layout);
   *channel_mask = 0;
@@ -740,7 +866,7 @@ gst_core_audio_get_channel_layout (GstCoreAudio * core_audio, gboolean outer)
 GstCaps *
 gst_core_audio_probe_caps (GstCoreAudio * core_audio, GstCaps * in_caps)
 {
-  guint i, channels;
+  guint i, channels, channels_max = 0;
   gboolean spdif_allowed;
   AudioChannelLayout *layout;
   AudioStreamBasicDescription outer_asbd;
@@ -770,6 +896,17 @@ gst_core_audio_probe_caps (GstCoreAudio * core_audio, GstCaps * in_caps)
             NULL)) {
       GST_WARNING_OBJECT (core_audio, "Failed to parse channel layout");
       channel_mask = 0;
+    }
+
+    if (channel_mask != 0 && channels > 2 &&
+        layout->mChannelLayoutTag ==
+        kAudioChannelLayoutTag_UseChannelDescriptions) {
+      /* CoreAudio gave us a positioned layout, which might mean we're ignoring some unpositioned channels.
+       * For example, with a 64ch output, macOS only allows assigning positions to 16 channels at most.
+       * Let's make sure we also expose the actual maximum amount of channels in our caps,
+       * without any positions assigned. */
+      channels_max =
+          MIN (layout->mNumberChannelDescriptions, GST_OSX_AUDIO_MAX_CHANNEL);
     }
 
     /* If available, start with the preferred caps. */
@@ -856,7 +993,17 @@ gst_core_audio_probe_caps (GstCoreAudio * core_audio, GstCaps * in_caps)
         gst_caps_append_structure (caps, out_s);
         gst_caps_append_structure (caps, mono);
       } else {
-        /* Otherwise just add the caps */
+        /* Otherwise, if needed, add an unpositioned max-channels variant ... */
+        if (channels_max > 0) {
+          GstStructure *unpos_s = gst_structure_copy (in_s);
+          gst_structure_set (unpos_s, "channels", G_TYPE_INT, channels_max,
+              NULL);
+          gst_structure_set (unpos_s, "channel-mask", GST_TYPE_BITMASK, 0,
+              NULL);
+          gst_caps_append_structure (caps, unpos_s);
+        }
+
+        /* ... and just add the caps */
         gst_caps_append_structure (caps, out_s);
       }
     }

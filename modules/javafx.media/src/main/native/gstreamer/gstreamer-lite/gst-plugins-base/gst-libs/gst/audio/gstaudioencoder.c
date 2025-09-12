@@ -1725,8 +1725,8 @@ gst_audio_encoder_sink_event_default (GstAudioEncoder * enc, GstEvent * event)
           break;
         }
       }
-      /* fall through */
     }
+      /* FALLTHROUGH */
     default:
       /* Forward non-serialized events immediately. */
       if (!GST_EVENT_IS_SERIALIZED (event)) {

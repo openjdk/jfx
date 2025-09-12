@@ -610,15 +610,19 @@ GST_API
 GstClockTime            gst_clock_get_timeout           (GstClock *clock);
 
 GST_API
-gboolean                gst_clock_add_observation       (GstClock *clock, GstClockTime slave,
-                                                         GstClockTime master, gdouble *r_squared);
+gboolean                gst_clock_add_observation       (GstClock *clock,
+                                                         GstClockTime observation_internal,
+                                                         GstClockTime observation_external,
+                                                         gdouble *r_squared);
 GST_API
-gboolean                gst_clock_add_observation_unapplied (GstClock *clock, GstClockTime slave,
-                                                         GstClockTime master, gdouble *r_squared,
-                                                         GstClockTime *internal,
-                                                         GstClockTime *external,
-                                                         GstClockTime *rate_num,
-                                                         GstClockTime *rate_denom);
+gboolean                gst_clock_add_observation_unapplied (GstClock *clock,
+                                                             GstClockTime observation_internal,
+                                                             GstClockTime observation_external,
+                                                             gdouble *r_squared,
+                                                             GstClockTime *internal,
+                                                             GstClockTime *external,
+                                                             GstClockTime *rate_num,
+                                                             GstClockTime *rate_denom);
 
 /* getting and adjusting internal/external time */
 

@@ -100,7 +100,7 @@ gst_isoff_qt_sidx_parser_add_data (GstSidxParser * parser,
       parser->sidx.flags = gst_byte_reader_get_uint24_le_unchecked (&reader);
 
       parser->status = GST_ISOFF_QT_SIDX_PARSER_HEADER;
-
+      /* FALLTHROUGH */
     case GST_ISOFF_QT_SIDX_PARSER_HEADER:
       remaining = gst_byte_reader_get_remaining (&reader);
       if (remaining < 12 + (parser->sidx.version == 0 ? 8 : 16)) {

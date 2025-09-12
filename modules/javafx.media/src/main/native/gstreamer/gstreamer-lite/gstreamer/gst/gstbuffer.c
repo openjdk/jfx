@@ -172,7 +172,14 @@ typedef struct
 static gint64 meta_seq;         /* 0 *//* ATOMIC */
 
 /* TODO: use GLib's once https://gitlab.gnome.org/GNOME/glib/issues/1076 lands */
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__)
+#include <stdatomic.h>
+static inline gint64
+gst_atomic_int64_inc (gint64 * atomic)
+{
+  return atomic_fetch_add ((_Atomic gint64 *) atomic, 1);
+}
+#elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
 static inline gint64
 gst_atomic_int64_inc (gint64 * atomic)
 {
@@ -2023,7 +2030,7 @@ gst_buffer_fill (GstBuffer * buffer, gsize offset, gconstpointer src,
  * @offset: the offset to extract
  * @dest: (out caller-allocates) (array length=size) (element-type guint8):
  *     the destination address
- * @size: the size to extract
+ * @size: (in): the size to extract
  *
  * Copies @size bytes starting from @offset in @buffer to @dest.
  *
@@ -2527,8 +2534,8 @@ gst_buffer_iterate_meta_filtered (GstBuffer * buffer, gpointer * state,
 /**
  * gst_buffer_foreach_meta:
  * @buffer: a #GstBuffer
- * @func: (scope call): a #GstBufferForeachMetaFunc to call
- * @user_data: (closure): user data passed to @func
+ * @func: (scope call) (closure user_data): a #GstBufferForeachMetaFunc to call
+ * @user_data: user data passed to @func
  *
  * Calls @func with @user_data for each meta in @buffer.
  *
@@ -2841,12 +2848,28 @@ static gboolean
 _gst_reference_timestamp_meta_transform (GstBuffer * dest, GstMeta * meta,
     GstBuffer * buffer, GQuark type, gpointer data)
 {
-  GstReferenceTimestampMeta *dmeta, *smeta;
+  const GstReferenceTimestampMeta *smeta, *ometa;
+  GstReferenceTimestampMeta *dmeta;
+  gpointer iter = NULL;
 
   /* we copy over the reference timestamp meta, independent of transformation
    * that happens. If it applied to the original buffer, it still applies to
    * the new buffer as it refers to the time when the media was captured */
-  smeta = (GstReferenceTimestampMeta *) meta;
+  smeta = (const GstReferenceTimestampMeta *) meta;
+
+  while ((ometa = (const GstReferenceTimestampMeta *)
+          gst_buffer_iterate_meta_filtered (dest, &iter,
+              GST_REFERENCE_TIMESTAMP_META_API_TYPE))) {
+    if (ometa->timestamp == smeta->timestamp
+        && ometa->duration == smeta->duration
+        && gst_caps_is_equal (ometa->reference, smeta->reference)) {
+      GST_CAT_TRACE (gst_reference_timestamp_meta_debug,
+          "Not copying reference timestamp metadata from buffer %p to %p because equal meta already exists",
+          buffer, dest);
+      return TRUE;
+    }
+  }
+
   dmeta =
       gst_buffer_add_reference_timestamp_meta (dest, smeta->reference,
       smeta->timestamp, smeta->duration);

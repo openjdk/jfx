@@ -23,6 +23,7 @@
 
 #include <gst/gstconfig.h>
 #include <gst/glib-compat.h>
+#include <gst/gstidstr.h>
 #include <glib-object.h>
 #include <glib.h>
 
@@ -73,16 +74,31 @@ GST_API
 GstCapsFeatures * gst_caps_features_new_single (const gchar *feature) G_GNUC_MALLOC;
 
 GST_API
+GstCapsFeatures * gst_caps_features_new_single_static_str (const gchar *feature) G_GNUC_MALLOC;
+
+GST_API
 GstCapsFeatures * gst_caps_features_new (const gchar *feature1, ...) G_GNUC_NULL_TERMINATED;
+
+GST_API
+GstCapsFeatures * gst_caps_features_new_static_str (const gchar *feature1, ...) G_GNUC_NULL_TERMINATED;
 
 GST_API
 GstCapsFeatures * gst_caps_features_new_valist (const gchar *feature1, va_list varargs);
 
 GST_API
+GstCapsFeatures * gst_caps_features_new_static_str_valist (const gchar *feature1, va_list varargs);
+
+GST_DEPRECATED_FOR(gst_caps_features_new_id_str)
 GstCapsFeatures * gst_caps_features_new_id (GQuark feature1, ...);
 
-GST_API
+GST_DEPRECATED_FOR(gst_caps_features_new_id_str_valist)
 GstCapsFeatures * gst_caps_features_new_id_valist (GQuark feature1, va_list varargs);
+
+GST_API
+GstCapsFeatures * gst_caps_features_new_id_str (const GstIdStr * feature1, ...);
+
+GST_API
+GstCapsFeatures * gst_caps_features_new_id_str_valist (const GstIdStr * feature1, va_list varargs);
 
 GST_API
 gboolean          gst_caps_features_set_parent_refcount  (GstCapsFeatures *features, gint * refcount);
@@ -105,14 +121,20 @@ guint             gst_caps_features_get_size (const GstCapsFeatures * features);
 GST_API
 const gchar *     gst_caps_features_get_nth (const GstCapsFeatures * features, guint i);
 
-GST_API
+GST_DEPRECATED_FOR(gst_caps_features_get_nth_id_str)
 GQuark            gst_caps_features_get_nth_id (const GstCapsFeatures * features, guint i);
+
+GST_API
+const GstIdStr *  gst_caps_features_get_nth_id_str (const GstCapsFeatures * features, guint i);
 
 GST_API
 gboolean          gst_caps_features_contains (const GstCapsFeatures * features, const gchar * feature);
 
-GST_API
+GST_DEPRECATED_FOR(gst_caps_features_contains_id_str)
 gboolean          gst_caps_features_contains_id (const GstCapsFeatures * features, GQuark feature);
+
+GST_API
+gboolean          gst_caps_features_contains_id_str (const GstCapsFeatures * features, const GstIdStr * feature);
 
 GST_API
 gboolean          gst_caps_features_is_equal (const GstCapsFeatures * features1, const GstCapsFeatures * features2);
@@ -124,13 +146,22 @@ GST_API
 void              gst_caps_features_add (GstCapsFeatures * features, const gchar * feature);
 
 GST_API
-void              gst_caps_features_add_id ( GstCapsFeatures * features, GQuark feature);
+void              gst_caps_features_add_static_str (GstCapsFeatures * features, const gchar * feature);
+
+GST_DEPRECATED_FOR(gst_caps_features_add_id_str)
+void              gst_caps_features_add_id (GstCapsFeatures * features, GQuark feature);
+
+GST_API
+void              gst_caps_features_add_id_str (GstCapsFeatures * features, const GstIdStr * feature);
 
 GST_API
 void              gst_caps_features_remove (GstCapsFeatures * features, const gchar * feature);
 
-GST_API
+GST_DEPRECATED_FOR(gst_caps_features_remove_id_str)
 void              gst_caps_features_remove_id (GstCapsFeatures * features, GQuark feature);
+
+GST_API
+void              gst_caps_features_remove_id_str (GstCapsFeatures * features, const GstIdStr * feature);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstCapsFeatures, gst_caps_features_free)
 

@@ -957,16 +957,11 @@ gst_base_parse_queue_tag_event_update (GstBaseParse * parse)
   GST_DEBUG_OBJECT (parse, "merged   : %" GST_PTR_FORMAT, merged_tags);
 
   if (merged_tags == NULL)
-    return;
-
-  if (gst_tag_list_is_empty (merged_tags)) {
-    gst_tag_list_unref (merged_tags);
-    return;
-  }
+    merged_tags = gst_tag_list_new_empty ();
 
   if (parse->priv->framecount >= MIN_FRAMES_TO_POST_BITRATE) {
-    /* only add bitrate tags to non-empty taglists for now, and only if neither
-     * upstream tags nor the subclass sets the bitrate tag in question already */
+    /* only add bitrate tags if neither upstream tags nor the subclass sets the
+     * bitrate tag in question already */
     if (parse->priv->min_bitrate != G_MAXUINT && parse->priv->post_min_bitrate) {
       GST_LOG_OBJECT (parse, "adding min bitrate %u", parse->priv->min_bitrate);
       gst_tag_list_add (merged_tags, GST_TAG_MERGE_KEEP,
@@ -983,6 +978,11 @@ gst_base_parse_queue_tag_event_update (GstBaseParse * parse)
       gst_tag_list_add (merged_tags, GST_TAG_MERGE_KEEP,
           GST_TAG_BITRATE, parse->priv->avg_bitrate, NULL);
     }
+  }
+
+  if (gst_tag_list_is_empty (merged_tags)) {
+    gst_tag_list_unref (merged_tags);
+    return;
   }
 
   parse->priv->pending_events =
@@ -1116,7 +1116,7 @@ gst_base_parse_convert (GstBaseParse * parse,
 }
 
 static gboolean
-update_upstream_provided (GQuark field_id, const GValue * value,
+update_upstream_provided (const GstIdStr * field, const GValue * value,
     gpointer user_data)
 {
   GstCaps *default_caps = user_data;
@@ -1126,8 +1126,8 @@ update_upstream_provided (GQuark field_id, const GValue * value,
   caps_size = gst_caps_get_size (default_caps);
   for (i = 0; i < caps_size; i++) {
     GstStructure *structure = gst_caps_get_structure (default_caps, i);
-    if (!gst_structure_id_has_field (structure, field_id)) {
-      gst_structure_id_set_value (structure, field_id, value);
+    if (!gst_structure_has_field (structure, gst_id_str_as_str (field))) {
+      gst_structure_id_str_set_value (structure, field, value);
     }
     /* XXX: maybe try to fixate better than gst_caps_fixate() the
      * downstream caps based on upstream values if possible */
@@ -1167,7 +1167,8 @@ gst_base_parse_negotiate_default_caps (GstBaseParse * parse)
 
   if (sinkcaps) {
     structure = gst_caps_get_structure (sinkcaps, 0);
-    gst_structure_foreach (structure, update_upstream_provided, default_caps);
+    gst_structure_foreach_id_str (structure, update_upstream_provided,
+        default_caps);
   }
 
   default_caps = gst_caps_fixate (default_caps);

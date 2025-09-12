@@ -65,11 +65,8 @@ GST_DEBUG_CATEGORY_STATIC (gst_spectrum_debug);
 #define GST_CAT_DEFAULT gst_spectrum_debug
 
 /* elementfactory information */
-#if G_BYTE_ORDER == G_LITTLE_ENDIAN
-# define FORMATS "{ S16LE, S24LE, S32LE, F32LE, F64LE }"
-#else
-# define FORMATS "{ S16BE, S24BE, S32BE, F32BE, F64BE }"
-#endif
+#define FORMATS "{ " GST_AUDIO_NE (S16) ", " GST_AUDIO_NE (S24) ", " \
+    GST_AUDIO_NE (S32) ", " GST_AUDIO_NE (F32) ", " GST_AUDIO_NE (F64) " }"
 
 #ifdef GSTREAMER_LITE
 #define MAX_BANDS    1024

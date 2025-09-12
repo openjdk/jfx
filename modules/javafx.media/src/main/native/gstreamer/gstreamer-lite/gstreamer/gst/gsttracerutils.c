@@ -34,6 +34,7 @@
 #include "gst_private.h"
 #include "gsttracer.h"
 #include "gsttracerfactory.h"
+#include "gstvalue.h"
 #include "gsttracerutils.h"
 
 #ifndef GST_DISABLE_GST_TRACER_HOOKS
@@ -56,7 +57,8 @@ static const gchar *_quark_strings[] = {
   "object-destroyed", "mini-object-reffed", "mini-object-unreffed",
   "object-reffed", "object-unreffed", "plugin-feature-loaded",
   "pad-chain-pre", "pad-chain-post", "pad-chain-list-pre",
-  "pad-chain-list-post",
+  "pad-chain-list-post", "pad-send-event-pre", "pad-send-event-post",
+  "memory-init", "memory-free-pre", "memory-free-post",
 };
 
 GQuark _priv_gst_tracer_quark_table[GST_TRACER_QUARK_MAX];
@@ -65,6 +67,180 @@ GQuark _priv_gst_tracer_quark_table[GST_TRACER_QUARK_MAX];
 
 gboolean _priv_tracer_enabled = FALSE;
 GHashTable *_priv_tracers = NULL;
+
+static gchar *
+list_available_tracer_properties (GObjectClass * class)
+{
+  GParamSpec **properties;
+  guint n_properties;
+  GString *props_str;
+  guint i;
+
+  props_str = g_string_new (NULL);
+  properties = g_object_class_list_properties (class, &n_properties);
+
+  if (n_properties == 0) {
+    g_string_append (props_str, "No properties available");
+    g_free (properties);
+    return g_string_free (props_str, FALSE);
+  }
+
+  g_string_append (props_str, "Available properties:");
+
+  for (i = 0; i < n_properties; i++) {
+    GParamSpec *prop = properties[i];
+
+    if (!((prop->flags & G_PARAM_CONSTRUCT)
+            || (prop->flags & G_PARAM_CONSTRUCT_ONLY))
+        || !(prop->flags & G_PARAM_WRITABLE))
+      continue;
+
+    if (!g_strcmp0 (g_param_spec_get_name (prop), "parent"))
+      continue;
+    if (!g_strcmp0 (g_param_spec_get_name (prop), "params"))
+      continue;
+
+    const gchar *type_name = G_PARAM_SPEC_TYPE_NAME (prop);
+    GValue default_value = G_VALUE_INIT;
+
+    /* Get default value if possible */
+    g_value_init (&default_value, prop->value_type);
+    g_param_value_set_default (prop, &default_value);
+    gchar *default_str = g_strdup_value_contents (&default_value);
+
+    g_string_append_printf (props_str,
+        "\n  '%s' (%s) (Default: %s): %s",
+        g_param_spec_get_name (prop),
+        type_name,
+        default_str,
+        g_param_spec_get_blurb (prop) ? g_param_spec_get_blurb (prop) :
+        "(no description available)");
+
+    g_free (default_str);
+    g_value_unset (&default_value);
+  }
+
+  g_free (properties);
+  return g_string_free (props_str, FALSE);
+}
+
+static void
+gst_tracer_utils_create_tracer (GstTracerFactory * factory, const gchar * name,
+    const gchar * params)
+{
+  gchar *available_props = NULL;
+  GObjectClass *gobject_class = g_type_class_ref (factory->type);
+  GstTracer *tracer = NULL;
+  const gchar **names = NULL;
+  GValue *values = NULL;
+  gint n_properties = 1;
+  GstStructure *structure = NULL;
+
+  if (gst_tracer_class_uses_structure_params (GST_TRACER_CLASS (gobject_class))) {
+    GST_DEBUG ("Use structure parameters for %s", params);
+
+    if (!params) {
+      n_properties = 0;
+      goto create;
+    }
+
+    gchar *struct_str = g_strdup_printf ("%s,%s", name, params);
+    structure = gst_structure_from_string (struct_str, NULL);
+    g_free (struct_str);
+
+    if (!structure) {
+      available_props = list_available_tracer_properties (gobject_class);
+      g_warning
+          ("Can't instantiate `%s` tracer: invalid parameters '%s'\n  %s\n",
+          name, params, available_props);
+      goto done;
+    }
+    n_properties = gst_structure_n_fields (structure);
+
+    names = g_new0 (const gchar *, n_properties);
+    values = g_new0 (GValue, n_properties);
+    for (gint i = 0; i < n_properties; i++) {
+      const gchar *field_name = gst_structure_nth_field_name (structure, i);
+      const GValue *field_value =
+          gst_structure_get_value (structure, field_name);
+      GParamSpec *pspec =
+          g_object_class_find_property (gobject_class, field_name);
+
+      if (!pspec) {
+        available_props = list_available_tracer_properties (gobject_class);
+        g_warning
+            ("Can't instantiate `%s` tracer: property '%s' not found\n  %s\n",
+            name, field_name, available_props);
+        goto done;
+      }
+
+      if (G_VALUE_TYPE (field_value) == pspec->value_type) {
+        names[i] = field_name;
+        g_value_init (&values[i], G_VALUE_TYPE (field_value));
+        g_value_copy (field_value, &values[i]);
+      } else if (G_VALUE_TYPE (field_value) == G_TYPE_STRING) {
+        names[i] = field_name;
+        g_value_init (&values[i], G_PARAM_SPEC_VALUE_TYPE (pspec));
+        if (!gst_value_deserialize_with_pspec (&values[i],
+                g_value_get_string (field_value), pspec)) {
+          available_props = list_available_tracer_properties (gobject_class);
+          g_warning
+              ("Can't instantiate `%s` tracer: invalid property '%s' value: '%s'\n  %s\n",
+              name, field_name, g_value_get_string (field_value),
+              available_props);
+          goto done;
+        }
+      } else {
+        available_props = list_available_tracer_properties (gobject_class);
+        g_warning
+            ("Can't instantiate `%s` tracer: property '%s' type mismatch, expected %s, got %s\n  %s\n",
+            name, field_name, g_type_name (pspec->value_type),
+            g_type_name (G_VALUE_TYPE (field_value)), available_props);
+        goto done;
+      }
+    }
+  } else {
+    names = g_new0 (const gchar *, n_properties);
+    names[0] = (const gchar *) "params";
+    values = g_new0 (GValue, 1);
+    g_value_init (&values[0], G_TYPE_STRING);
+    g_value_set_string (&values[0], params);
+  }
+  GST_INFO_OBJECT (factory, "creating tracer: type-id=%u",
+      (guint) factory->type);
+
+create:
+  tracer =
+      GST_TRACER (g_object_new_with_properties (factory->type,
+          n_properties, names, values));
+
+done:
+  g_free (available_props);
+
+  if (structure)
+    gst_structure_free (structure);
+
+  if (values) {
+    for (gint j = 0; j < n_properties; j++) {
+      if (G_VALUE_TYPE (&values[j]) != G_TYPE_INVALID)
+        g_value_unset (&values[j]);
+    }
+  }
+
+  g_free (names);
+  g_free (values);
+
+  if (tracer) {
+    /* Clear floating flag */
+    gst_object_ref_sink (tracer);
+
+    /* tracers register them self to the hooks */
+    gst_object_unref (tracer);
+
+  }
+
+  g_type_class_unref (gobject_class);
+}
 
 /* Initialize the tracing system */
 void
@@ -128,24 +304,14 @@ _priv_gst_tracing_init (void)
       if ((feature = gst_registry_lookup_feature (registry, t[i]))) {
         factory = GST_TRACER_FACTORY (gst_plugin_feature_load (feature));
         if (factory) {
-          GstTracer *tracer;
-
-          GST_INFO_OBJECT (factory, "creating tracer: type-id=%u",
-              (guint) factory->type);
-
-          tracer = g_object_new (factory->type, "params", params, NULL);
-
-          /* Clear floating flag */
-          gst_object_ref_sink (tracer);
-
-          /* tracers register them self to the hooks */
-          gst_object_unref (tracer);
+          gst_tracer_utils_create_tracer (factory, t[i], params);
+          gst_object_unref (factory);
         } else {
-          GST_WARNING_OBJECT (feature,
-              "loading plugin containing feature %s failed!", t[i]);
+          g_warning ("loading plugin containing feature %s failed!", t[i]);
         }
-      } else {
-        GST_WARNING ("no tracer named '%s'", t[i]);
+        gst_object_unref (feature);
+      } else if (t[i][0] != '\0') {
+        g_warning ("no tracer named '%s'", t[i]);
       }
       i++;
     }

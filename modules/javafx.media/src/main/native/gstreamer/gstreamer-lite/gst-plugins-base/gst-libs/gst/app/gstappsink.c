@@ -123,7 +123,7 @@ struct _GstAppSinkPrivate
 
   GCond cond;
   GMutex mutex;
-  GstQueueArray *queue;
+  GstVecDeque *queue;
   GstBuffer *preroll_buffer;
   GstCaps *preroll_caps;
   GstCaps *last_caps;
@@ -615,7 +615,7 @@ gst_app_sink_init (GstAppSink * appsink)
 
   g_mutex_init (&priv->mutex);
   g_cond_init (&priv->cond);
-  priv->queue = gst_queue_array_new (16);
+  priv->queue = gst_vec_deque_new (16);
   priv->sample = gst_sample_new (NULL, NULL, NULL, NULL);
 
   priv->emit_signals = DEFAULT_PROP_EMIT_SIGNALS;
@@ -646,7 +646,7 @@ gst_app_sink_dispose (GObject * obj)
   g_mutex_lock (&priv->mutex);
   if (priv->callbacks)
     callbacks = g_steal_pointer (&priv->callbacks);
-  while ((queue_obj = gst_queue_array_pop_head (priv->queue)))
+  while ((queue_obj = gst_vec_deque_pop_head (priv->queue)))
     gst_mini_object_unref (queue_obj);
   gst_buffer_replace (&priv->preroll_buffer, NULL);
   gst_caps_replace (&priv->preroll_caps, NULL);
@@ -670,7 +670,7 @@ gst_app_sink_finalize (GObject * obj)
 
   g_mutex_clear (&priv->mutex);
   g_cond_clear (&priv->cond);
-  gst_queue_array_free (priv->queue);
+  gst_vec_deque_free (priv->queue);
 
   G_OBJECT_CLASS (parent_class)->finalize (obj);
 }
@@ -807,7 +807,7 @@ gst_app_sink_flush_unlocked (GstAppSink * appsink)
   // caps event (preroll_caps is updated and event stored in queue (see gst_app_sink_setcaps()))
   // and then flush (during seek). After, seek is done first preroll buffer will be
   // send with preroll_caps and all sequential buffers will be send with last_caps.
-  while ((obj = gst_queue_array_pop_head (priv->queue))) {
+  while ((obj = gst_vec_deque_pop_head (priv->queue))) {
     if (GST_IS_EVENT (obj)) {
       if (GST_EVENT_TYPE (obj) == GST_EVENT_CAPS) {
         GstCaps *caps = NULL;
@@ -820,7 +820,7 @@ gst_app_sink_flush_unlocked (GstAppSink * appsink)
     gst_mini_object_unref (obj);
   }
 #else // GSTREAMER_LITE
-  while ((obj = gst_queue_array_pop_head (priv->queue)))
+  while ((obj = gst_vec_deque_pop_head (priv->queue)))
     gst_mini_object_unref (obj);
 #endif // GSTREAMER_LITE
 
@@ -888,9 +888,6 @@ gst_app_sink_setcaps (GstBaseSink * sink, GstCaps * caps)
 
   g_mutex_lock (&priv->mutex);
   GST_DEBUG_OBJECT (appsink, "receiving CAPS");
-
-  gst_queue_array_push_tail (priv->queue, gst_event_new_caps (caps));
-  gst_queue_status_info_push_event (&priv->queue_status_info);
 
   if (!priv->preroll_buffer)
     gst_caps_replace (&priv->preroll_caps, caps);
@@ -997,7 +994,7 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
     if (priv->callbacks)
       callbacks = callbacks_ref (priv->callbacks);
 
-    gst_queue_array_push_tail (priv->queue, gst_event_ref (event));
+    gst_vec_deque_push_tail (priv->queue, gst_event_ref (event));
     gst_queue_status_info_push_event (&priv->queue_status_info);
 
     if ((priv->wait_status & APP_WAITING))
@@ -1075,7 +1072,7 @@ dequeue_object (GstAppSink * appsink)
   GstAppSinkPrivate *priv = appsink->priv;
   GstMiniObject *obj;
 
-  obj = gst_queue_array_pop_head (priv->queue);
+  obj = gst_vec_deque_pop_head (priv->queue);
 
   if (GST_IS_BUFFER (obj) || GST_IS_BUFFER_LIST (obj)) {
     GST_DEBUG_OBJECT (appsink, "dequeued buffer/list %p", obj);
@@ -1200,7 +1197,7 @@ restart:
     }
   }
   /* we need to ref the buffer/list when pushing it in the queue */
-  gst_queue_array_push_tail (priv->queue, gst_mini_object_ref (data));
+  gst_vec_deque_push_tail (priv->queue, gst_mini_object_ref (data));
   gst_queue_status_info_push (&priv->queue_status_info, data,
       &priv->last_segment, GST_OBJECT_CAST (appsink));
 
@@ -1860,7 +1857,7 @@ gst_app_sink_pull_sample (GstAppSink * appsink)
 }
 
 /**
- * gst_app_sink_pull_object: (skip)
+ * gst_app_sink_pull_object:
  * @appsink: a #GstAppSink
  *
  * This function blocks until a sample or an event becomes available or the appsink
@@ -2061,7 +2058,7 @@ gst_app_sink_try_pull_sample (GstAppSink * appsink, GstClockTime timeout)
 }
 
 /**
- * gst_app_sink_try_pull_object: (skip)
+ * gst_app_sink_try_pull_object:
  * @appsink: a #GstAppSink
  * @timeout: the maximum amount of time to wait for a sample
  *

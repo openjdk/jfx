@@ -25,6 +25,7 @@
 #include <gst/gstclock.h>
 #include <gst/gstdatetime.h>
 #include <gst/glib-compat.h>
+#include <gst/gstidstr.h>
 
 G_BEGIN_DECLS
 
@@ -119,6 +120,61 @@ typedef gboolean (*GstStructureFilterMapFunc) (GQuark   field_id,
                                                gpointer user_data);
 
 /**
+ * GstStructureForeachIdStrFunc:
+ * @fieldname: the #GstIdStr field name
+ * @value: the #GValue of the field
+ * @user_data: user data
+ *
+ * A function that will be called in gst_structure_foreach_id_str(). The
+ * function may not modify @value.
+ *
+ * Returns: %TRUE if the foreach operation should continue, %FALSE if
+ * the foreach operation should stop with %FALSE.
+ *
+ * Since: 1.26
+ */
+typedef gboolean (*GstStructureForeachIdStrFunc) (const GstIdStr * fieldname,
+                                                  const GValue   * value,
+                                                  gpointer         user_data);
+
+/**
+ * GstStructureMapIdStrFunc:
+ * @fieldname: the #GstIdStr field name
+ * @value: the #GValue of the field
+ * @user_data: user data
+ *
+ * A function that will be called in gst_structure_map_in_place_id_str(). The
+ * function may modify @value.
+ *
+ * Returns: %TRUE if the map operation should continue, %FALSE if
+ * the map operation should stop with %FALSE.
+ *
+ * Since: 1.26
+ */
+typedef gboolean (*GstStructureMapIdStrFunc)     (const GstIdStr * fieldname,
+                                                  GValue         * value,
+                                                  gpointer         user_data);
+
+/**
+ * GstStructureFilterMapIdStrFunc:
+ * @fieldname: the #GstIdStr field name
+ * @value: the #GValue of the field
+ * @user_data: user data
+ *
+ * A function that will be called in gst_structure_filter_and_map_in_place_id_str().
+ * The function may modify @value, and the value will be removed from the
+ * structure if %FALSE is returned.
+ *
+ * Returns: %TRUE if the field should be preserved, %FALSE if it
+ * should be removed.
+ *
+ * Since: 1.26
+ */
+typedef gboolean (*GstStructureFilterMapIdStrFunc) (const GstIdStr * fieldname,
+                                                   GValue          * value,
+                                                   gpointer          user_data);
+
+/**
  * GstStructure:
  * @type: the GType of a structure
  *
@@ -138,20 +194,44 @@ GST_API
 GstStructure *        gst_structure_new_empty            (const gchar * name) G_GNUC_MALLOC;
 
 GST_API
+GstStructure *        gst_structure_new_static_str_empty (const gchar * name) G_GNUC_MALLOC;
+
+GST_DEPRECATED_FOR(gst_structure_new_id_str_empty)
 GstStructure *        gst_structure_new_id_empty         (GQuark quark) G_GNUC_MALLOC;
+
+GST_API
+GstStructure *        gst_structure_new_id_str_empty     (const GstIdStr *name) G_GNUC_MALLOC;
 
 GST_API
 GstStructure *        gst_structure_new                  (const gchar * name,
                                                           const gchar * firstfield,
                                                           ...) G_GNUC_NULL_TERMINATED  G_GNUC_MALLOC;
 GST_API
+GstStructure *        gst_structure_new_static_str       (const gchar * name,
+                                                          const gchar * firstfield,
+                                                          ...) G_GNUC_NULL_TERMINATED  G_GNUC_MALLOC;
+GST_API
+GstStructure *        gst_structure_new_id_str_valist    (const GstIdStr * name,
+                                                          const GstIdStr * firstfield,
+                                                          va_list       varargs) G_GNUC_MALLOC;
+GST_API
 GstStructure *        gst_structure_new_valist           (const gchar * name,
                                                           const gchar * firstfield,
                                                           va_list       varargs) G_GNUC_MALLOC;
 GST_API
+GstStructure *        gst_structure_new_static_str_valist(const gchar * name,
+                                                          const gchar * firstfield,
+                                                          va_list       varargs) G_GNUC_MALLOC;
+GST_DEPRECATED_FOR(gst_structure_new_id_str)
 GstStructure *        gst_structure_new_id               (GQuark name_quark,
                                                           GQuark field_quark,
                                                           ...) G_GNUC_MALLOC;
+
+GST_API
+GstStructure *        gst_structure_new_id_str           (const GstIdStr *name,
+                                                          const GstIdStr *fieldname,
+                                                          ...) G_GNUC_NULL_TERMINATED G_GNUC_MALLOC;
+
 GST_API
 GstStructure *        gst_structure_new_from_string      (const gchar * string);
 
@@ -174,21 +254,38 @@ gboolean              gst_structure_take                 (GstStructure ** oldstr
 GST_API
 const gchar *         gst_structure_get_name             (const GstStructure  * structure);
 
-GST_API
+GST_DEPRECATED_FOR(gst_structure_get_name_id_str)
 GQuark                gst_structure_get_name_id          (const GstStructure  * structure);
+
+GST_API
+const GstIdStr *      gst_structure_get_name_id_str      (const GstStructure  * structure);
 
 GST_API
 gboolean              gst_structure_has_name             (const GstStructure  * structure,
                                                           const gchar         * name);
 GST_API
+void                  gst_structure_set_name_id_str      (GstStructure        * structure,
+                                                          const GstIdStr      * name);
+GST_API
 void                  gst_structure_set_name             (GstStructure        * structure,
                                                           const gchar         * name);
 GST_API
+void                  gst_structure_set_name_static_str  (GstStructure        * structure,
+                                                          const gchar         * name);
+GST_DEPRECATED_FOR(gst_structure_id_str_set_value)
 void                  gst_structure_id_set_value         (GstStructure        * structure,
                                                           GQuark                field,
                                                           const GValue        * value);
 GST_API
+void                  gst_structure_id_str_set_value     (GstStructure        * structure,
+                                                          const GstIdStr      * fieldname,
+                                                          const GValue        * value);
+GST_API
 void                  gst_structure_set_value            (GstStructure        * structure,
+                                                          const gchar         * fieldname,
+                                                          const GValue        * value);
+GST_API
+void                  gst_structure_set_value_static_str (GstStructure        * structure,
                                                           const gchar         * fieldname,
                                                           const GValue        * value);
 GST_API
@@ -199,12 +296,20 @@ GST_API
 void                  gst_structure_set_list             (GstStructure        * structure,
                                                           const gchar         * fieldname,
                                                           const GValueArray   * array);
-GST_API
+GST_DEPRECATED_FOR(gst_structure_id_str_take_value)
 void                  gst_structure_id_take_value        (GstStructure        * structure,
                                                           GQuark                field,
                                                           GValue              * value);
 GST_API
+void                  gst_structure_id_str_take_value    (GstStructure        * structure,
+                                                          const GstIdStr      * fieldname,
+                                                          GValue              * value);
+GST_API
 void                  gst_structure_take_value           (GstStructure        * structure,
+                                                          const gchar         * fieldname,
+                                                          GValue              * value);
+GST_API
+void                  gst_structure_take_value_static_str(GstStructure        * structure,
                                                           const gchar         * fieldname,
                                                           GValue              * value);
 GST_API
@@ -212,16 +317,32 @@ void                  gst_structure_set                  (GstStructure        * 
                                                           const gchar         * fieldname,
                                                           ...) G_GNUC_NULL_TERMINATED;
 GST_API
+void                  gst_structure_set_static_str       (GstStructure        * structure,
+                                                          const gchar         * fieldname,
+                                                          ...) G_GNUC_NULL_TERMINATED;
+GST_API
 void                  gst_structure_set_valist           (GstStructure        * structure,
                                                           const gchar         * fieldname,
                                                           va_list varargs);
 GST_API
+void                  gst_structure_set_static_str_valist(GstStructure        * structure,
+                                                          const gchar         * fieldname,
+                                                          va_list varargs);
+GST_DEPRECATED_FOR(gst_structure_id_str_set)
 void                  gst_structure_id_set               (GstStructure        * structure,
                                                           GQuark                fieldname,
                                                           ...) G_GNUC_NULL_TERMINATED;
 GST_API
+void                  gst_structure_id_str_set           (GstStructure        * structure,
+                                                          const GstIdStr      * fieldname,
+                                                          ...) G_GNUC_NULL_TERMINATED;
+GST_DEPRECATED_FOR(gst_structure_id_str_set_valist)
 void                  gst_structure_id_set_valist        (GstStructure        * structure,
                                                           GQuark                fieldname,
+                                                          va_list varargs);
+GST_API
+void                  gst_structure_id_str_set_valist    (GstStructure        * structure,
+                                                          const GstIdStr      * fieldname,
                                                           va_list varargs);
 GST_API
 gboolean              gst_structure_get_valist           (const GstStructure  * structure,
@@ -232,16 +353,27 @@ gboolean              gst_structure_get                  (const GstStructure  * 
                                                           const char          * first_fieldname,
                                                           ...) G_GNUC_NULL_TERMINATED;
 GST_API
+gboolean              gst_structure_id_str_get_valist    (const GstStructure  * structure,
+                                                          const GstIdStr      * first_fieldname,
+                                                          va_list              args);
+GST_API
+gboolean              gst_structure_id_str_get           (const GstStructure  * structure,
+                                                          const GstIdStr      * first_fieldname,
+                                                          ...) G_GNUC_NULL_TERMINATED;
+GST_DEPRECATED_FOR(gst_structure_id_str_get_valist)
 gboolean              gst_structure_id_get_valist        (const GstStructure  * structure,
                                                           GQuark                first_field_id,
                                                           va_list               args);
-GST_API
+GST_DEPRECATED_FOR(gst_structure_id_str_get)
 gboolean              gst_structure_id_get               (const GstStructure  * structure,
                                                           GQuark                first_field_id,
                                                           ...) G_GNUC_NULL_TERMINATED;
-GST_API
+GST_DEPRECATED_FOR(gst_structure_id_str_get_value)
 const GValue *        gst_structure_id_get_value         (const GstStructure  * structure,
                                                           GQuark                field);
+GST_API
+const GValue *        gst_structure_id_str_get_value     (const GstStructure  * structure,
+                                                          const GstIdStr      * fieldname);
 GST_API
 const GValue *        gst_structure_get_value            (const GstStructure  * structure,
                                                           const gchar         * fieldname);
@@ -257,23 +389,49 @@ void                  gst_structure_remove_fields_valist (GstStructure        * 
                                                           const gchar         * fieldname,
                                                           va_list               varargs);
 GST_API
+void                  gst_structure_id_str_remove_field  (GstStructure        * structure,
+                                                          const GstIdStr      * fieldname);
+GST_API
+void                  gst_structure_id_str_remove_fields (GstStructure        * structure,
+                                                          const GstIdStr      * fieldname,
+                                                          ...) G_GNUC_NULL_TERMINATED;
+GST_API
+void                  gst_structure_id_str_remove_fields_valist(GstStructure  * structure,
+                                                          const GstIdStr      * fieldname,
+                                                          va_list               varargs);
+GST_API
 void                  gst_structure_remove_all_fields    (GstStructure        * structure);
 
 GST_API
 GType                 gst_structure_get_field_type       (const GstStructure  * structure,
                                                           const gchar         * fieldname);
 GST_API
+GType                 gst_structure_id_str_get_field_type(const GstStructure  * structure,
+                                                          const GstIdStr      * fieldname);
+GST_DEPRECATED_FOR(gst_structure_foreach_id_str)
 gboolean              gst_structure_foreach              (const GstStructure  * structure,
                                                           GstStructureForeachFunc   func,
                                                           gpointer              user_data);
-GST_API
+GST_DEPRECATED_FOR(gst_structure_map_in_place_id_str)
 gboolean              gst_structure_map_in_place         (GstStructure        * structure,
                                                           GstStructureMapFunc   func,
                                                           gpointer              user_data);
+GST_DEPRECATED_FOR(gst_structure_filter_and_map_in_place_id_str)
+void                  gst_structure_filter_and_map_in_place (GstStructure             * structure,
+                                                              GstStructureFilterMapFunc func,
+                                                              gpointer                  user_data);
 GST_API
-void                  gst_structure_filter_and_map_in_place (GstStructure        * structure,
-                                                          GstStructureFilterMapFunc   func,
-                                                          gpointer              user_data);
+gboolean              gst_structure_foreach_id_str       (const GstStructure         * structure,
+                                                          GstStructureForeachIdStrFunc func,
+                                                          gpointer                     user_data);
+GST_API
+gboolean              gst_structure_map_in_place_id_str  (GstStructure           * structure,
+                                                          GstStructureMapIdStrFunc func,
+                                                          gpointer                 user_data);
+GST_API
+void                  gst_structure_filter_and_map_in_place_id_str (GstStructure                 * structure,
+                                                                    GstStructureFilterMapIdStrFunc func,
+                                                                    gpointer                       user_data);
 GST_API
 gint                  gst_structure_n_fields             (const GstStructure  * structure);
 
@@ -281,9 +439,12 @@ GST_API
 const gchar *         gst_structure_nth_field_name       (const GstStructure  * structure,
                                                           guint                 index);
 GST_API
+const GstIdStr *      gst_structure_id_str_nth_field_name(const GstStructure  * structure,
+                                                          guint                 index);
+GST_DEPRECATED_FOR(gst_structure_id_str_has_field)
 gboolean              gst_structure_id_has_field         (const GstStructure  * structure,
                                                           GQuark                field);
-GST_API
+GST_DEPRECATED_FOR(gst_structure_id_str_has_field_typed)
 gboolean              gst_structure_id_has_field_typed   (const GstStructure  * structure,
                                                           GQuark                field,
                                                           GType                 type);
@@ -293,6 +454,13 @@ gboolean              gst_structure_has_field            (const GstStructure  * 
 GST_API
 gboolean              gst_structure_has_field_typed      (const GstStructure  * structure,
                                                           const gchar         * fieldname,
+                                                          GType                 type);
+GST_API
+gboolean              gst_structure_id_str_has_field     (const GstStructure  * structure,
+                                                          const GstIdStr      * fieldname);
+GST_API
+gboolean              gst_structure_id_str_has_field_typed(const GstStructure  * structure,
+                                                          const GstIdStr      * fieldname,
                                                           GType                 type);
 
 /* utility functions */
@@ -417,6 +585,9 @@ gboolean              gst_structure_can_intersect (const GstStructure * struct1,
 GST_API
 GstStructure *        gst_structure_intersect     (const GstStructure * struct1,
                                                    const GstStructure * struct2) G_GNUC_MALLOC;
+
+GST_API
+gboolean              gst_structure_is_writable   (const GstStructure        * structure);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstStructure, gst_structure_free)
 

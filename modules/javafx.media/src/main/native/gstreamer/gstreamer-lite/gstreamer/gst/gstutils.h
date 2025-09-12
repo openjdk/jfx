@@ -1222,6 +1222,9 @@ GST_API
 gboolean      gst_util_fraction_multiply        (gint a_n, gint a_d, gint b_n, gint b_d,
                                                  gint *res_n, gint *res_d);
 GST_API
+gboolean      gst_util_fraction_multiply_int64  (gint64 a_n, gint64 a_d, gint64 b_n, gint64 b_d,
+                                                 gint64 *res_n, gint64 *res_d);
+GST_API
 gboolean      gst_util_fraction_add             (gint a_n, gint a_d, gint b_n, gint b_d,
                                                  gint *res_n, gint *res_d);
 GST_API
@@ -1243,6 +1246,9 @@ gboolean      gst_type_is_plugin_api            (GType type, GstPluginAPIFlags *
 #ifndef GSTREAMER_LITE
 GST_API
 guint         gst_util_ceil_log2                (guint32 v);
+
+GST_API
+guint         gst_util_floor_log2               (guint32 v);
 
 GST_API
 gint          gst_util_filename_compare        (const gchar *a, const gchar *b);

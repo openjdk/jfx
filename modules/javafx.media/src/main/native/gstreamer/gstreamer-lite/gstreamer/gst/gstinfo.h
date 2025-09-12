@@ -27,6 +27,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <gst/gstconfig.h>
+#include <gst/gstsegment.h>
 
 G_BEGIN_DECLS
 
@@ -552,6 +553,12 @@ const gchar *   gst_debug_category_get_description   (GstDebugCategory *        
 GST_API
 GSList *        gst_debug_get_all_categories    (void);
 
+
+GST_API
+gchar * gst_debug_print_object  (gconstpointer ptr);
+
+GST_API
+gchar * gst_debug_print_segment (const GstSegment *segment);
 
 GST_API
 gchar * gst_debug_construct_term_color (guint colorinfo);

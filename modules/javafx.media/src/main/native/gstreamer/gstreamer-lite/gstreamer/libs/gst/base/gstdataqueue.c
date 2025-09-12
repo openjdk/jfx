@@ -63,7 +63,7 @@ enum
 struct _GstDataQueuePrivate
 {
   /* the array of data we're keeping our grubby hands on */
-  GstQueueArray *queue;
+  GstVecDeque *queue;
 
   GstDataQueueSize cur_level;   /* size of the queue */
   GstDataQueueCheckFullFunction checkfull;      /* Callback to check if the queue is full */
@@ -107,12 +107,12 @@ struct _GstDataQueuePrivate
   GST_CAT_LOG (data_queue_dataflow,                                     \
                "queue:%p " msg ": %u visible items, %u "                \
                "bytes, %"G_GUINT64_FORMAT                               \
-               " ns, %u elements",                                      \
+               " ns, %" G_GSIZE_FORMAT " elements",                     \
                queue,                                                   \
                q->priv->cur_level.visible,                              \
                q->priv->cur_level.bytes,                                \
                q->priv->cur_level.time,                                 \
-               gst_queue_array_get_length (q->priv->queue))
+               gst_vec_deque_get_length (q->priv->queue))
 
 static void gst_data_queue_finalize (GObject * object);
 
@@ -204,7 +204,7 @@ gst_data_queue_init (GstDataQueue * queue)
   g_mutex_init (&queue->priv->qlock);
   g_cond_init (&queue->priv->item_add);
   g_cond_init (&queue->priv->item_del);
-  queue->priv->queue = gst_queue_array_new (50);
+  queue->priv->queue = gst_vec_deque_new (50);
 
   GST_DEBUG ("initialized queue's not_empty & not_full conditions");
 }
@@ -250,8 +250,8 @@ gst_data_queue_cleanup (GstDataQueue * queue)
 {
   GstDataQueuePrivate *priv = queue->priv;
 
-  while (!gst_queue_array_is_empty (priv->queue)) {
-    GstDataQueueItem *item = gst_queue_array_pop_head (priv->queue);
+  while (!gst_vec_deque_is_empty (priv->queue)) {
+    GstDataQueueItem *item = gst_vec_deque_pop_head (priv->queue);
 
     /* Just call the destroy notify on the item */
     item->destroy (item);
@@ -271,7 +271,7 @@ gst_data_queue_finalize (GObject * object)
   GST_DEBUG ("finalizing queue");
 
   gst_data_queue_cleanup (queue);
-  gst_queue_array_free (priv->queue);
+  gst_vec_deque_free (priv->queue);
 
   GST_DEBUG ("free mutex");
   g_mutex_clear (&priv->qlock);
@@ -301,7 +301,7 @@ gst_data_queue_locked_is_empty (GstDataQueue * queue)
 {
   GstDataQueuePrivate *priv = queue->priv;
 
-  return (gst_queue_array_get_length (priv->queue) == 0);
+  return (gst_vec_deque_get_length (priv->queue) == 0);
 }
 
 static inline gboolean
@@ -419,7 +419,7 @@ gst_data_queue_push_force_unlocked (GstDataQueue * queue,
 {
   GstDataQueuePrivate *priv = queue->priv;
 
-  gst_queue_array_push_tail (priv->queue, item);
+  gst_vec_deque_push_tail (priv->queue, item);
 
   if (item->visible)
     priv->cur_level.visible++;
@@ -598,7 +598,7 @@ gst_data_queue_pop (GstDataQueue * queue, GstDataQueueItem ** item)
   }
 
   /* Get the item from the GQueue */
-  *item = gst_queue_array_pop_head (priv->queue);
+  *item = gst_vec_deque_pop_head (priv->queue);
 
   /* update current level counter */
   if ((*item)->visible)
@@ -668,7 +668,7 @@ gst_data_queue_peek (GstDataQueue * queue, GstDataQueueItem ** item)
   }
 
   /* Get the item from the GQueue */
-  *item = gst_queue_array_peek_head (priv->queue);
+  *item = gst_vec_deque_peek_head (priv->queue);
 
   STATUS (queue, "after peeking");
   GST_DATA_QUEUE_MUTEX_UNLOCK (queue);
@@ -708,12 +708,12 @@ gst_data_queue_drop_head (GstDataQueue * queue, GType type)
   GST_DEBUG ("queue:%p", queue);
 
   GST_DATA_QUEUE_MUTEX_LOCK (queue);
-  idx = gst_queue_array_find (priv->queue, is_of_type, GSIZE_TO_POINTER (type));
+  idx = gst_vec_deque_find (priv->queue, is_of_type, GSIZE_TO_POINTER (type));
 
   if (idx == -1)
     goto done;
 
-  leak = gst_queue_array_drop_element (priv->queue, idx);
+  leak = gst_vec_deque_drop_element (priv->queue, idx);
 
   if (leak->visible)
     priv->cur_level.visible--;

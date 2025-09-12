@@ -525,6 +525,7 @@ id3v2_frames_to_tag_list (ID3TagsWorking * work)
         break;
       case 3:
         read_synch_size = FALSE;        /* 2.3 frame size is not synch-safe */
+        /* FALLTHROUGH */
       case 4:
       default:
         frame_id[0] = work->hdr.frame_data[0];

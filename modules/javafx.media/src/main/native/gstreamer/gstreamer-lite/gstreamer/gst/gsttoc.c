@@ -83,7 +83,6 @@
 #include "gstvalue.h"
 #include "gsttoc.h"
 #include "gstpad.h"
-#include "gstquark.h"
 
 struct _GstTocEntry
 {

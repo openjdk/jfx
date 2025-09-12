@@ -44,7 +44,6 @@
 #include "gstinfo.h"
 #include "gstparse.h"
 #include "gstvalue.h"
-#include "gstquark.h"
 #include <glib/gi18n-lib.h>
 #include "glib-compat-private.h"
 #include <math.h>
@@ -3560,10 +3559,11 @@ gst_util_get_timestamp (void)
  * @array: the sorted input array
  * @num_elements: number of elements in the array
  * @element_size: size of every element in bytes
- * @search_func: (scope call): function to compare two elements, @search_data will always be passed as second argument
+ * @search_func: (scope call) (closure user_data): function to compare two
+ *    elements, @search_data will always be passed as second argument
  * @mode: search mode that should be used
  * @search_data: element that should be found
- * @user_data: (closure): data to pass to @search_func
+ * @user_data: data to pass to @search_func
  *
  * Searches inside @array for @search_data by using the comparison function
  * @search_func. @array must be sorted ascending.
@@ -3938,6 +3938,86 @@ gst_util_fraction_multiply (gint a_n, gint a_d, gint b_n, gint b_d,
   *res_d = a_d * b_d;
 
   gcd = gst_util_greatest_common_divisor (*res_n, *res_d);
+  *res_n /= gcd;
+  *res_d /= gcd;
+
+  return TRUE;
+}
+
+/**
+ * gst_util_fraction_multiply_int64:
+ * @a_n: Numerator of first value
+ * @a_d: Denominator of first value
+ * @b_n: Numerator of second value
+ * @b_d: Denominator of second value
+ * @res_n: (out): Pointer to #gint to hold the result numerator
+ * @res_d: (out): Pointer to #gint to hold the result denominator
+ *
+ * Multiplies the fractions @a_n/@a_d and @b_n/@b_d and stores
+ * the result in @res_n and @res_d.
+ *
+ * Returns: %FALSE on overflow, %TRUE otherwise.
+ *
+ * Since: 1.26
+ */
+gboolean
+gst_util_fraction_multiply_int64 (gint64 a_n, gint64 a_d, gint64 b_n,
+    gint64 b_d, gint64 * res_n, gint64 * res_d)
+{
+  gint gcd;
+  gint64 initial_a_n, initial_a_d;
+
+  initial_a_n = a_n;
+  initial_a_d = a_d;
+
+  g_return_val_if_fail (res_n != NULL, FALSE);
+  g_return_val_if_fail (res_d != NULL, FALSE);
+  g_return_val_if_fail (a_d != 0, FALSE);
+  g_return_val_if_fail (b_d != 0, FALSE);
+
+  /* early out if either is 0, as its gcd would be 0 */
+  if (a_n == 0 || b_n == 0) {
+    *res_n = 0;
+    *res_d = 1;
+    return TRUE;
+  }
+
+  gcd = gst_util_greatest_common_divisor_int64 (a_n, a_d);
+  a_n /= gcd;
+  a_d /= gcd;
+
+  gcd = gst_util_greatest_common_divisor_int64 (b_n, b_d);
+  b_n /= gcd;
+  b_d /= gcd;
+
+  gcd = gst_util_greatest_common_divisor_int64 (a_n, b_d);
+  a_n /= gcd;
+  b_d /= gcd;
+
+  gcd = gst_util_greatest_common_divisor_int64 (a_d, b_n);
+  a_d /= gcd;
+  b_n /= gcd;
+
+  /* This would result in overflow */
+  if (a_n != 0 && G_MAXINT64 / ABS (a_n) < ABS (b_n)) {
+    gcd = gst_util_greatest_common_divisor_int64 (initial_a_n, initial_a_d);
+    GST_INFO ("gcd(a_n(%" G_GINT64_FORMAT "), a_d(%" G_GINT64_FORMAT ")) = %d",
+        initial_a_n, initial_a_d, gcd);
+    GST_INFO ("Integer overflow in numerator multiplication: %" G_GINT64_FORMAT
+        " * %" G_GINT64_FORMAT " > G_MAXINT64", ABS (a_n), ABS (b_n));
+    return FALSE;
+  }
+  if (G_MAXINT64 / ABS (a_d) < ABS (b_d)) {
+    GST_ERROR ("Integer overflow in denominator multiplication: %"
+        G_GINT64_FORMAT " * %" G_GINT64_FORMAT " > G_MAXINT64", ABS (a_d),
+        ABS (b_d));
+    return FALSE;
+  }
+
+  *res_n = a_n * b_n;
+  *res_d = a_d * b_d;
+
+  gcd = gst_util_greatest_common_divisor_int64 (*res_n, *res_d);
   *res_n /= gcd;
   *res_d /= gcd;
 
@@ -4539,6 +4619,51 @@ gst_util_ceil_log2 (guint32 v)
 #endif // GSTREAMER_LITE
 
 /**
+ * gst_util_floor_log2:
+ * @v: a #guint32 value.
+ *
+ * Returns smallest integral value not bigger than log2(v).
+ *
+ * Returns: a computed #guint val.
+ *
+ * Since: 1.26
+ */
+guint
+gst_util_floor_log2 (guint32 v)
+{
+  guint32 result = 0;
+
+  g_return_val_if_fail (v != 0, -1);
+
+  if (v & 0xffff0000) {
+    v >>= 16;
+    result += 16;
+  }
+
+  if (v & 0xff00) {
+    v >>= 8;
+    result += 8;
+  }
+
+  if (v & 0xf0) {
+    v >>= 4;
+    result += 4;
+  }
+
+  if (v & 0xc) {
+    v >>= 2;
+    result += 2;
+  }
+
+  if (v & 0x2) {
+    v >>= 1;
+    result += 1;
+  }
+
+  return result;
+}
+
+/**
  * gst_calculate_linear_regression: (skip)
  * @xy: Pairs of (x,y) values
  * @temp: Temporary scratch space used by the function
@@ -4791,6 +4916,10 @@ invalid:
   }
 }
 
+/* Initialized in _priv_gst_plugin_initialize(). */
+GQuark _priv_gst_plugin_api_quark;
+GQuark _priv_gst_plugin_api_flags_quark;
+
 /**
  * gst_type_mark_as_plugin_api:
  * @type: a GType
@@ -4812,8 +4941,8 @@ invalid:
 void
 gst_type_mark_as_plugin_api (GType type, GstPluginAPIFlags flags)
 {
-  g_type_set_qdata (type, GST_QUARK (PLUGIN_API), GINT_TO_POINTER (TRUE));
-  g_type_set_qdata (type, GST_QUARK (PLUGIN_API_FLAGS),
+  g_type_set_qdata (type, _priv_gst_plugin_api_quark, GINT_TO_POINTER (TRUE));
+  g_type_set_qdata (type, _priv_gst_plugin_api_flags_quark,
       GINT_TO_POINTER (flags));
 }
 
@@ -4833,11 +4962,12 @@ gboolean
 gst_type_is_plugin_api (GType type, GstPluginAPIFlags * flags)
 {
   gboolean ret =
-      !!GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API)));
+      !!GPOINTER_TO_INT (g_type_get_qdata (type, _priv_gst_plugin_api_quark));
 
   if (ret && flags) {
     *flags =
-        GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API_FLAGS)));
+        GPOINTER_TO_INT (g_type_get_qdata (type,
+            _priv_gst_plugin_api_flags_quark));
   }
 
   return ret;

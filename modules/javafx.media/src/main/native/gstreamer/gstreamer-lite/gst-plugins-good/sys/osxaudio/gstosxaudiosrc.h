@@ -73,6 +73,11 @@ struct _GstOsxAudioSrc
   GstAudioBaseSrc src;
 
   AudioDeviceID device_id;
+  const char *unique_id;
+
+#ifdef HAVE_IOS
+  gboolean configure_session;
+#endif
 };
 
 struct _GstOsxAudioSrcClass

@@ -77,7 +77,7 @@ gst_buffer_pool_config_set_video_alignment (GstStructure * config,
  * Returns: %TRUE if @config could be parsed correctly.
  */
 gboolean
-gst_buffer_pool_config_get_video_alignment (GstStructure * config,
+gst_buffer_pool_config_get_video_alignment (const GstStructure * config,
     GstVideoAlignment * align)
 {
   g_return_val_if_fail (config != NULL, FALSE);
@@ -280,7 +280,7 @@ no_memory:
  * Returns: (transfer full): a new #GstBufferPool to allocate video frames
  */
 GstBufferPool *
-gst_video_buffer_pool_new ()
+gst_video_buffer_pool_new (void)
 {
   GstVideoBufferPool *pool;
 
