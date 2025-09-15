@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import test.javafx.util.ErrorLoggingUtility;
 
 /**
  * Unit test for launching modular FX applications
@@ -57,6 +58,16 @@ public class ModuleLauncherTest {
     private final int testExitCode = ERROR_NONE;
 
     private void doTestLaunchModule(String appModulePath, String testAppName) throws Exception {
+        ErrorLoggingUtility.suppressStderr();
+        try {
+            doTestLaunchModule2(appModulePath, testAppName);
+            ErrorLoggingUtility.checkStderrContains("TOBEREPLACED"); // FIX
+        } finally {
+            ErrorLoggingUtility.restoreStderr();
+        }
+    }
+
+    private void doTestLaunchModule2(String appModulePath, String testAppName) throws Exception {
         final String javafxModulePath = System.getProperty("worker.module.path");
         String modulePath;
         if (javafxModulePath != null) {

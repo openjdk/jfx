@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.ResourceBundle;
 import javafx.fxml.FXMLLoader;
 import org.junit.jupiter.api.Test;
-import test.util.ErrorLoggingUtility;
+import test.javafx.util.ErrorLoggingUtility;
 
 /**
  * https://bugs.openjdk.org/browse/JDK-8119985

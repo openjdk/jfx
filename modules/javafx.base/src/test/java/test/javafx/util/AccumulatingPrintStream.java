@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.util;
+package test.javafx.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;

@@ -1,5 +1,6 @@
 #
 --add-exports javafx.base/com.sun.javafx=ALL-UNNAMED
+--add-exports javafx.base/com.sun.javafx.binding=ALL-UNNAMED
 #
 --add-exports java.desktop/sun.awt.datatransfer=ALL-UNNAMED
 #

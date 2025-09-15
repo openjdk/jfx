@@ -56,7 +56,7 @@ import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.WeakInvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import test.javafx.beans.value.WeakChangeListenerMock;
-import test.util.ErrorLoggingUtility;
+import test.javafx.util.ErrorLoggingUtility;
 import test.util.memory.JMemoryBuddy;
 
 public class ExpressionHelperTest {

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.util;
+package test.javafx.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

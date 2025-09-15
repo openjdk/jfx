@@ -34,7 +34,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.util.ErrorLoggingUtility;
+import test.javafx.util.ErrorLoggingUtility;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BooleanPropertyTest {
