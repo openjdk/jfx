@@ -58,7 +58,7 @@ public class RT_27529Test {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_27529_2.fxml"),
                 ResourceBundle.getBundle("test/javafx/fxml/rt_27529"));
             fxmlLoader.load();
-    
+
             Widget widget = (Widget)fxmlLoader.getNamespace().get("widget1");
             assertEquals(Arrays.asList(new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}), widget.getStyles());
             assertTrue(Arrays.equals(  new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}, widget.getNames()));
