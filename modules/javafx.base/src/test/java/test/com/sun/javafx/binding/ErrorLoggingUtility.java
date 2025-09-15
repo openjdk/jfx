@@ -191,7 +191,6 @@ public class ErrorLoggingUtility {
                         "(?:Exception|Error)" +
                     ")" +
                 ")" +
-                //":" +
             ")" +
         ")" +
         "|" +
@@ -203,7 +202,6 @@ public class ErrorLoggingUtility {
                 "(?:[A-Z][a-zA-Z0-9]*)*" +
                 "(?:Exception|Error)" +
             ")" +
-            //":" +
         ")");
 
     private static String findException(String text) {
