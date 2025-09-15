@@ -96,10 +96,18 @@
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
+    NSMenu* menu = nil;
+
+    if (self->menubar != nil) {
+        menu = self->menubar->menu;
+    }
+
     // restore menu of host application if running embedded,
     // otherwise we just restore a default menu
-    [NSApp setMainMenu:self->hostMenu];
-    [[NSApp mainMenu] update];
+    if ([NSApp mainMenu] == menu) {
+        [NSApp setMainMenu:self->hostMenu];
+        [[NSApp mainMenu] update];
+    }
 
     //NSLog(@"windowDidResignKey: %p", self);
     [self _ungrabFocus];
