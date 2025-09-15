@@ -55,29 +55,29 @@ typedef enum {
 } xmlC14NMode;
 
 XMLPUBFUN int
-        xmlC14NDocSaveTo    (xmlDocPtr doc,
-                     xmlNodeSetPtr nodes,
-                     int mode, /* a xmlC14NMode */
-                     xmlChar **inclusive_ns_prefixes,
-                     int with_comments,
-                     xmlOutputBufferPtr buf);
+                xmlC14NDocSaveTo        (xmlDocPtr doc,
+                                         xmlNodeSetPtr nodes,
+                                         int mode, /* a xmlC14NMode */
+                                         xmlChar **inclusive_ns_prefixes,
+                                         int with_comments,
+                                         xmlOutputBufferPtr buf);
 
 XMLPUBFUN int
-        xmlC14NDocDumpMemory    (xmlDocPtr doc,
-                     xmlNodeSetPtr nodes,
-                     int mode, /* a xmlC14NMode */
-                     xmlChar **inclusive_ns_prefixes,
-                     int with_comments,
-                     xmlChar **doc_txt_ptr);
+                xmlC14NDocDumpMemory    (xmlDocPtr doc,
+                                         xmlNodeSetPtr nodes,
+                                         int mode, /* a xmlC14NMode */
+                                         xmlChar **inclusive_ns_prefixes,
+                                         int with_comments,
+                                         xmlChar **doc_txt_ptr);
 
 XMLPUBFUN int
-        xmlC14NDocSave        (xmlDocPtr doc,
-                     xmlNodeSetPtr nodes,
-                     int mode, /* a xmlC14NMode */
-                     xmlChar **inclusive_ns_prefixes,
-                     int with_comments,
-                     const char* filename,
-                     int compression);
+                xmlC14NDocSave          (xmlDocPtr doc,
+                                         xmlNodeSetPtr nodes,
+                                         int mode, /* a xmlC14NMode */
+                                         xmlChar **inclusive_ns_prefixes,
+                                         int with_comments,
+                                         const char* filename,
+                                         int compression);
 
 
 /**
@@ -93,18 +93,18 @@ XMLPUBFUN int
  *
  * Returns 1 if the node should be included
  */
-typedef int (*xmlC14NIsVisibleCallback)    (void* user_data,
-                     xmlNodePtr node,
-                     xmlNodePtr parent);
+typedef int (*xmlC14NIsVisibleCallback) (void* user_data,
+                                         xmlNodePtr node,
+                                         xmlNodePtr parent);
 
 XMLPUBFUN int
-        xmlC14NExecute        (xmlDocPtr doc,
-                     xmlC14NIsVisibleCallback is_visible_callback,
-                     void* user_data,
-                     int mode, /* a xmlC14NMode */
-                     xmlChar **inclusive_ns_prefixes,
-                     int with_comments,
-                     xmlOutputBufferPtr buf);
+                xmlC14NExecute          (xmlDocPtr doc,
+                                         xmlC14NIsVisibleCallback is_visible_callback,
+                                         void* user_data,
+                                         int mode, /* a xmlC14NMode */
+                                         xmlChar **inclusive_ns_prefixes,
+                                         int with_comments,
+                                         xmlOutputBufferPtr buf);
 
 #ifdef __cplusplus
 }
