@@ -128,6 +128,28 @@ public class ErrorLoggingUtility {
         }
     }
 
+    /// Checks the accumulated stderr buffer for the expected string fragments.
+    ///
+    /// When mismatch occurs, the accumulated output is dumped to the actual stderr.
+    ///
+    /// @param expected the expected patterns
+    ///
+    public static void checkStderrContains(String... expected) {
+        if (stderrCapture != null) {
+            String text = stderrCapture.getAccumulatedOutput();
+            boolean err = false;
+            for (String s : expected) {
+                if (!text.contains(s)) {
+                    stderr.println("Expected pattern not found: " + s);
+                    err = true;
+                }
+            }
+            if (err) {
+                stderr.println(text);
+            }
+        }
+    }
+
     /// Checks the accumulated stderr buffer for the expected exceptions, and restores the redirection.
     ///
     /// Verifies that the number and type of exceptions logged to stderr redirected to an internal buffer

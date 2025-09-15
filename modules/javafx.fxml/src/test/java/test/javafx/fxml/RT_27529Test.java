@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,19 @@
 
 package test.javafx.fxml;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.ResourceBundle;
 import javafx.fxml.FXMLLoader;
 import org.junit.jupiter.api.Test;
+import test.util.ErrorLoggingUtility;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+/**
+ * https://bugs.openjdk.org/browse/JDK-8119985
+ */
 public class RT_27529Test {
 
     @Test
@@ -50,14 +53,26 @@ public class RT_27529Test {
 
     @Test
     public void testListAndArrayWithEscapes() throws IOException {
-        System.err.println("Below warnings about - deprecated escape sequence - are expected from this test.");
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_27529_2.fxml"),
-            ResourceBundle.getBundle("test/javafx/fxml/rt_27529"));
-        fxmlLoader.load();
-
-        Widget widget = (Widget)fxmlLoader.getNamespace().get("widget1");
-        assertEquals(Arrays.asList(new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}), widget.getStyles());
-        assertTrue(Arrays.equals(  new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}, widget.getNames()));
+        ErrorLoggingUtility.suppressStderr();
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_27529_2.fxml"),
+                ResourceBundle.getBundle("test/javafx/fxml/rt_27529"));
+            fxmlLoader.load();
+    
+            Widget widget = (Widget)fxmlLoader.getNamespace().get("widget1");
+            assertEquals(Arrays.asList(new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}), widget.getStyles());
+            assertTrue(Arrays.equals(  new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}, widget.getNames()));
+            ErrorLoggingUtility.checkStderrContains(
+                "@@ is a deprecated escape sequence. Please use \\@ instead.",
+                "%% is a deprecated escape sequence. Please use \\% instead.",
+                "$$ is a deprecated escape sequence. Please use \\$ instead.",
+                "@@ is a deprecated escape sequence. Please use \\@ instead.",
+                "%% is a deprecated escape sequence. Please use \\% instead.",
+                "$$ is a deprecated escape sequence. Please use \\$ instead."
+                );
+        } finally {
+            ErrorLoggingUtility.restoreStderr();
+        }
     }
 
     @Test
