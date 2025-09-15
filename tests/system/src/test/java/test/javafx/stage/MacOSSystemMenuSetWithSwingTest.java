@@ -58,26 +58,53 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
+
+public class MacOSSystemMenuSetWithSwingTest extends MacOSSystemMenuTestBase {
+
+    private CountDownLatch latch;
 
     @Test
-    public void testMultiWindow() throws InterruptedException, IOException {
-        initJavaFX(List.of(TEST_MENUS_0, TEST_MENUS_1, TEST_MENUS_2));
+    public void testSet() throws InterruptedException, IOException {
+        initSwing(List.of(TEST_MENUS_0));
+        initJavaFX(List.of(TEST_MENUS_1));
 
         focusJavaFX(0);
-        List<Element> jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(false));
 
-        focusJavaFX(1);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
+        List<Element> elements = getMenusOfFocusedWindow();
+        compareMenus(elements, List.of());
 
-        focusJavaFX(2);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_2);
+        runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(true));
+        elements = getMenusOfFocusedWindow();
+        compareMenus(elements, TEST_MENUS_1);
+
+        focusSwing(0);
+        runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(false));
+        elements = getMenusOfFocusedWindow();
+        compareMenus(elements, TEST_MENUS_0);
 
         focusJavaFX(0);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        elements = getMenusOfFocusedWindow();
+        compareMenus(elements, List.of());
+
+        focusSwing(0);
+        runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(true));
+        elements = getMenusOfFocusedWindow();
+        compareMenus(elements, TEST_MENUS_0);
+
+        focusJavaFX(0);
+        elements = getMenusOfFocusedWindow();
+        compareMenus(elements, TEST_MENUS_1);
+    }
+
+    private void runOnFXThread(Runnable runnable) throws InterruptedException {
+        latch = new CountDownLatch(1);
+
+        Platform.runLater(() -> {
+            runnable.run();
+            latch.countDown();
+        });
+
+        latch.await();
     }
 }

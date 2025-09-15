@@ -59,7 +59,7 @@ import javax.swing.SwingUtilities;
 import test.util.Util;
 
 
-public class MacOSSystemMenuSingleWindowTest extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuSingleWindowWithSwingTest extends MacOSSystemMenuTestBase {
 
     @Test
     public void testSingleWindow() throws InterruptedException, IOException {
