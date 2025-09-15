@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.com.sun.javafx.binding;
+package test.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,7 +38,6 @@ import com.sun.javafx.binding.Logging;
 import com.sun.javafx.binding.Logging.ErrorLogger;
 import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
 import com.sun.javafx.logging.PlatformLogger.Level;
-import test.util.AccumulatingPrintStream;
 
 public class ErrorLoggingUtility {
 

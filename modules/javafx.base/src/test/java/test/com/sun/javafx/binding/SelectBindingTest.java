@@ -49,6 +49,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.javafx.beans.Person;
 import test.javafx.binding.Variable;
+import test.util.ErrorLoggingUtility;
 
 public class SelectBindingTest {
 

@@ -32,10 +32,9 @@ import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import test.com.sun.javafx.binding.ErrorLoggingUtility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
+import test.util.ErrorLoggingUtility;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LongPropertyTest {

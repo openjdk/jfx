@@ -35,11 +35,10 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import test.com.sun.javafx.binding.ErrorLoggingUtility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
+import test.util.ErrorLoggingUtility;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ListExpressionTest {

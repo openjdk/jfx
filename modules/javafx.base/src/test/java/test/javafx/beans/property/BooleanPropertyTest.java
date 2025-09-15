@@ -28,14 +28,13 @@ package test.javafx.beans.property;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import test.com.sun.javafx.binding.ErrorLoggingUtility;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
+import test.util.ErrorLoggingUtility;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BooleanPropertyTest {

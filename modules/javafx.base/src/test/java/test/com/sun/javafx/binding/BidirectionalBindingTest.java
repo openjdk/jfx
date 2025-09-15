@@ -53,6 +53,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.binding.BidirectionalBinding;
+import test.util.ErrorLoggingUtility;
 
 public class BidirectionalBindingTest<T> {
 
