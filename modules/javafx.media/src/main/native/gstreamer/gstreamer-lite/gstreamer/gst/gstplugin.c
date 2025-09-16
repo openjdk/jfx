@@ -325,6 +325,10 @@ _priv_gst_plugin_initialize (void)
 
   _gst_plugin_inited = TRUE;
 
+  _priv_gst_plugin_api_quark = g_quark_from_static_string ("plugin-api");
+  _priv_gst_plugin_api_flags_quark =
+      g_quark_from_static_string ("plugin-api-flags");
+
   whitelist = g_getenv ("GST_PLUGIN_LOADING_WHITELIST");
   if (whitelist != NULL && *whitelist != '\0') {
     _plugin_loading_whitelist = g_strsplit (whitelist,

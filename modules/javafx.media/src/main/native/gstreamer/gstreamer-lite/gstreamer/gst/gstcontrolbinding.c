@@ -207,6 +207,7 @@ gst_control_binding_set_property (GObject * object, guint prop_id,
       g_weak_ref_set (&self->ABI.abi.priv->object, self->__object);
       break;
     case PROP_NAME:
+      /* G_PARAM_CONSTRUCT_ONLY */
       self->name = g_value_dup_string (value);
       break;
     default:

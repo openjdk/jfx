@@ -58,7 +58,8 @@ struct _GstTracerRecordClass
 G_DEFINE_TYPE (GstTracerRecord, gst_tracer_record, GST_TYPE_OBJECT);
 
 static gboolean
-build_field_template (GQuark field_id, const GValue * value, gpointer user_data)
+build_field_template (const GstIdStr * field, const GValue * value,
+    gpointer user_data)
 {
   GString *s = (GString *) user_data;
   const GstStructure *sub;
@@ -69,7 +70,7 @@ build_field_template (GQuark field_id, const GValue * value, gpointer user_data)
 
   if (G_VALUE_TYPE (value) != GST_TYPE_STRUCTURE) {
     GST_ERROR ("expected field of type GstStructure, but %s is %s",
-        g_quark_to_string (field_id), G_VALUE_TYPE_NAME (value));
+        gst_id_str_as_str (field), G_VALUE_TYPE_NAME (value));
     return FALSE;
   }
 
@@ -78,18 +79,19 @@ build_field_template (GQuark field_id, const GValue * value, gpointer user_data)
       GST_TYPE_TRACER_VALUE_FLAGS, &flags, NULL);
 
   if (flags & GST_TRACER_VALUE_FLAGS_OPTIONAL) {
-    gchar *opt_name = g_strconcat ("have-", g_quark_to_string (field_id), NULL);
+    gchar *opt_name = g_strconcat ("have-", gst_id_str_as_str (field), NULL);
 
     /* add a boolean field, that indicates the presence of the next field */
     g_value_init (&template_value, G_TYPE_BOOLEAN);
-    priv__gst_structure_append_template_to_gstring (g_quark_from_string
-        (opt_name), &template_value, s);
+    priv__gst_structure_append_template_to_gstring (opt_name, &template_value,
+        s);
     g_value_unset (&template_value);
     g_free (opt_name);
   }
 
   g_value_init (&template_value, type);
-  res = priv__gst_structure_append_template_to_gstring (field_id,
+  res =
+      priv__gst_structure_append_template_to_gstring (gst_id_str_as_str (field),
       &template_value, s);
   g_value_unset (&template_value);
   return res;
@@ -100,7 +102,7 @@ gst_tracer_record_build_format (GstTracerRecord * self)
 {
   GstStructure *structure = self->spec;
   GString *s;
-  gchar *name = (gchar *) g_quark_to_string (structure->name);
+  gchar *name = (gchar *) gst_structure_get_name (structure);
   gchar *p;
 
   g_return_if_fail (g_str_has_suffix (name, ".class"));
@@ -116,7 +118,7 @@ gst_tracer_record_build_format (GstTracerRecord * self)
 
   s = g_string_sized_new (STRUCTURE_ESTIMATED_STRING_LEN (structure));
   g_string_append (s, name);
-  gst_structure_foreach (structure, build_field_template, s);
+  gst_structure_foreach_id_str (structure, build_field_template, s);
   g_string_append_c (s, ';');
 
   self->format = g_string_free (s, FALSE);
@@ -135,6 +137,8 @@ gst_tracer_record_dispose (GObject * object)
   }
   g_free (self->format);
   self->format = NULL;
+
+  G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
 static void
@@ -189,7 +193,6 @@ gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
   va_list varargs;
   gchar *err = NULL;
   GType type;
-  GQuark id;
 
   va_start (varargs, firstfield);
   structure = gst_structure_new_empty (name);
@@ -197,7 +200,6 @@ gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
   while (firstfield) {
     GValue val = { 0, };
 
-    id = g_quark_from_string (firstfield);
     type = va_arg (varargs, GType);
 
     /* all fields passed here must be GstStructures which we take over */
@@ -219,7 +221,7 @@ gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
      * to this structure by unsetting the NOCOPY_CONTENTS collect-flag.
      * see boxed_proxy_collect_value in glib's gobject/gboxed.c */
     val.data[1].v_uint &= ~G_VALUE_NOCOPY_CONTENTS;
-    gst_structure_id_take_value (structure, id, &val);
+    gst_structure_take_value (structure, firstfield, &val);
 
     firstfield = va_arg (varargs, gchar *);
   }
