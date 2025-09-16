@@ -141,7 +141,7 @@ public class OutputRedirect {
         HashMap<String, Integer> m = new HashMap<>();
         for (Object x : expected) {
             if (x instanceof Class c) {
-                if (c.isAssignableFrom(Throwable.class)) {
+                if (Throwable.class.isAssignableFrom(c)) {
                     String name = c.getName();
                     Integer v = m.get(name);
                     if (v == null) {
@@ -150,8 +150,12 @@ public class OutputRedirect {
                         m.put(name, Integer.valueOf(v + 1));
                     }
                 } else {
-                    throw new IllegalArgumentException("must specify either Class<? extends Throwable> or String " + c);
+                    throw new IllegalArgumentException("must specify either Class<? extends Throwable>: " + c);
                 }
+            } else if(x instanceof String) {
+                // ok
+            } else {
+                throw new IllegalArgumentException("must specify either Class<? extends Throwable> or String: " + x);
             }
         }
         return m;
