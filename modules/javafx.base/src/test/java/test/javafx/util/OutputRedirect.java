@@ -84,7 +84,7 @@ public class OutputRedirect {
     /// This method expects the arguments to contain either instances of `Class<? extends Throwable>`,
     /// or `String` patterns.  For exceptions, multiple instances of the same type are allowed so both the type
     /// and a number of exceptions can be verified.
-    /// 
+    ///
     /// For `String` patterns, the check is done via `String.contains()` on the entire captured output.
     ///
     /// When mismatch occurs, the accumulated output is dumped to the actual stderr, and the test `fail()`s.
