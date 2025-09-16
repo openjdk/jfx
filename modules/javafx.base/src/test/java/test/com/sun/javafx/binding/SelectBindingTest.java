@@ -49,7 +49,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.javafx.beans.Person;
 import test.javafx.binding.Variable;
-import test.javafx.util.ErrorLoggingUtility;
+import test.javafx.util.OutputRedirect;
 
 public class SelectBindingTest {
 
@@ -107,7 +107,7 @@ public class SelectBindingTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        ErrorLoggingUtility.suppressStderr();
+        OutputRedirect.suppressStderr();
         ErrorLoggingUtility.reset();
 
         a = new Variable("a");
@@ -122,7 +122,7 @@ public class SelectBindingTest {
 
     @AfterEach
     public void afterEach() {
-        ErrorLoggingUtility.checkAndRestoreStderr();
+        OutputRedirect.checkAndRestoreStderr();
     }
 
     @Test
@@ -403,7 +403,7 @@ public class SelectBindingTest {
         a.setName(null);
         assertNull(select.get());
         ErrorLoggingUtility.checkWarning(NullPointerException.class);
-        ErrorLoggingUtility.checkAndRestoreStderr(NullPointerException.class);
+        OutputRedirect.checkAndRestoreStderr(NullPointerException.class);
     }
 
     @Test

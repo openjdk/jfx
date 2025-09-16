@@ -34,7 +34,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.javafx.util.ErrorLoggingUtility;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class FloatPropertyTest {

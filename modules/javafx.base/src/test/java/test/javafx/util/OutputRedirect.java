@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,63 +22,24 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package test.javafx.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.binding.Logging;
-import com.sun.javafx.binding.Logging.ErrorLogger;
-import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
-import com.sun.javafx.logging.PlatformLogger.Level;
 
-public class ErrorLoggingUtility {
-
-    private static ErrorLogger errorLogger = Logging.getLogger();
-
-    public static void reset() {
-        Logging.setKeepException(true);
-        errorLogger.setErrorLogRecord(null);
-    }
-
-    public static boolean isEmpty() {
-        return errorLogger.getErrorLogRecord() == null;
-    }
-
-    /**
-     * Convenience method for check(Level.FINE, expectedException)
-     */
-    public static void checkFine(Class<?> expectedException) {
-        check(Level.FINE, expectedException);
-    }
-
-    /**
-     * Convenience method for check(Level.WARNING, expectedException)
-     */
-    public static void checkWarning(Class<?> expectedException) {
-        check(Level.WARNING, expectedException);
-    }
-
-    public static void check(Level expectedLevel, Class<?> expectedException) {
-        assertTrue(Logging.getKeepException());
-        ErrorLogRecord errorLogRecord = errorLogger.getErrorLogRecord();
-        assertNotNull(errorLogRecord);
-        assertEquals(expectedLevel, errorLogRecord.getLevel());
-        assertTrue(expectedException.isAssignableFrom(errorLogRecord.getThrown().getClass()));
-        reset();
-        checked++;
-    }
-
+/// This facility is used in the tests to redirect stderr output to an in-memory buffer
+/// for two reasons:
+/// 1. to suppress unrelated output in the logs
+/// 2. to check for the presence of expected exceptions and patterns
+///
+public class OutputRedirect {
     private static PrintStream stderr;
     private static AccumulatingPrintStream stderrCapture;
-    private static int checked;
 
     /// Redirects the stderr to an internal buffer, for the purpose of avoiding polluting the test logs.
     /// This method is typically placed inside of the `@BeforeEach` block.
@@ -94,7 +55,6 @@ public class ErrorLoggingUtility {
             stderr = System.err;
             stderrCapture = AccumulatingPrintStream.create();
             System.setErr(stderrCapture);
-            checked = 0;
         }
     }
 
@@ -106,6 +66,16 @@ public class ErrorLoggingUtility {
             stderr = null;
             stderrCapture = null;
         }
+    }
+
+    /// Returns the captured output, if any, or `null`.
+    /// @return the captured output string, or `null`
+    ///
+    public static String getCapturedOutput() {
+        if (stderrCapture != null) {
+            return stderrCapture.getAccumulatedOutput();
+        }
+        return null;
     }
 
     /// Checks the accumulated stderr buffer for the expected exceptions.

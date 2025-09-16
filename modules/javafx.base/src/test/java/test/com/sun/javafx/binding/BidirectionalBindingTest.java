@@ -53,7 +53,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.binding.BidirectionalBinding;
-import test.javafx.util.ErrorLoggingUtility;
+import test.javafx.util.OutputRedirect;
 
 public class BidirectionalBindingTest<T> {
 
@@ -87,12 +87,12 @@ public class BidirectionalBindingTest<T> {
 
     @BeforeEach
     public void beforeEach() {
-        ErrorLoggingUtility.suppressStderr();
+        OutputRedirect.suppressStderr();
     }
 
     @AfterEach
     public void afterEach() {
-        ErrorLoggingUtility.checkAndRestoreStderr();
+        OutputRedirect.checkAndRestoreStderr();
     }
 
     private void setUp(Factory<T> factory) {
@@ -332,7 +332,7 @@ public class BidirectionalBindingTest<T> {
         assertEquals(op3.getValue(), op1.getValue());
         assertEquals(op2.getValue(), op1.getValue());
 
-        ErrorLoggingUtility.checkAndRestoreStderr(RuntimeException.class);
+        OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @ParameterizedTest
@@ -354,7 +354,7 @@ public class BidirectionalBindingTest<T> {
         assertEquals(v[0], op1.getValue());
         assertEquals(v[1], op2.getValue());
 
-        ErrorLoggingUtility.checkAndRestoreStderr(RuntimeException.class);
+        OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @ParameterizedTest

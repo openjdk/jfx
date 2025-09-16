@@ -45,7 +45,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import test.javafx.util.ErrorLoggingUtility;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import test.javafx.util.OutputRedirect;
 
 /**
  */
@@ -68,13 +69,13 @@ public class BindingsCreateBindingTest<T> {
 
     @BeforeEach
     public void beforeEach() {
-        ErrorLoggingUtility.suppressStderr();
+        OutputRedirect.suppressStderr();
         ErrorLoggingUtility.reset();
     }
 
     @AfterEach
     public void afterEach() {
-        ErrorLoggingUtility.checkAndRestoreStderr();
+        OutputRedirect.checkAndRestoreStderr();
     }
 
     private void setup(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {

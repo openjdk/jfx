@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.ResourceBundle;
 import javafx.fxml.FXMLLoader;
 import org.junit.jupiter.api.Test;
-import test.javafx.util.ErrorLoggingUtility;
+import test.javafx.util.OutputRedirect;
 
 /**
  * https://bugs.openjdk.org/browse/JDK-8119985
@@ -53,7 +53,7 @@ public class RT_27529Test {
 
     @Test
     public void testListAndArrayWithEscapes() throws IOException {
-        ErrorLoggingUtility.suppressStderr();
+        OutputRedirect.suppressStderr();
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_27529_2.fxml"),
                 ResourceBundle.getBundle("test/javafx/fxml/rt_27529"));
@@ -62,7 +62,7 @@ public class RT_27529Test {
             Widget widget = (Widget)fxmlLoader.getNamespace().get("widget1");
             assertEquals(Arrays.asList(new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}), widget.getStyles());
             assertTrue(Arrays.equals(  new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}, widget.getNames()));
-            ErrorLoggingUtility.checkStderrContains(
+            OutputRedirect.checkStderrContains(
                 "@@ is a deprecated escape sequence. Please use \\@ instead.",
                 "%% is a deprecated escape sequence. Please use \\% instead.",
                 "$$ is a deprecated escape sequence. Please use \\$ instead.",
@@ -71,7 +71,7 @@ public class RT_27529Test {
                 "$$ is a deprecated escape sequence. Please use \\$ instead."
                 );
         } finally {
-            ErrorLoggingUtility.restoreStderr();
+            OutputRedirect.restoreStderr();
         }
     }
 
