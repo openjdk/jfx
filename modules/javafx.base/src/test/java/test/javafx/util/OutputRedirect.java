@@ -25,6 +25,7 @@
 package test.javafx.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -78,74 +79,79 @@ public class OutputRedirect {
         return null;
     }
 
-    /// Checks the accumulated stderr buffer for the expected exceptions.
-    /// Verifies that the number and type of exceptions logged to stderr redirected to an internal buffer
-    /// (by a prior call to {@link #suppressStderr()}) corresponds to the `expected` exceptions.
+    /// Checks the accumulated stderr buffer for the expected exceptions and string patterns.
     ///
-    /// When mismatch occurs, the accumulated output is dumped to the actual stderr.
+    /// This method expects the arguments to contain either instances of `Class<? extends Throwable>`,
+    /// or `String` patterns.  For exceptions, multiple instances of the same type are allowed so both the type
+    /// and a number of exceptions can be verified.
+    /// 
+    /// For `String` patterns, the check is done via `String.contains()` on the entire captured output.
     ///
-    /// @param expected the expected exceptions (duplicates allowed)
+    /// When mismatch occurs, the accumulated output is dumped to the actual stderr, and the test `fail()`s.
     ///
-    public static void checkStderr(Class<? extends Throwable> ... expected) {
+    /// @param expected the expected exception classes (duplicates allowed), and/or string patterns
+    ///
+    public static void checkStderr(Object ... expected) {
         if (stderrCapture != null) {
-            String text = stderrCapture.getAccumulatedOutput();
-            Map<String,Integer> errors = findErrors(text);
-            Map<String,Integer> exp = toMap(expected);
-            if(!errors.equals(exp)) {
-                stderr.println("Mismatch in thrown exceptions:\n  expected=" + exp + "\n  observed=" + errors);
-                stderr.println(text);
-            }
-        }
-    }
-
-    /// Checks the accumulated stderr buffer for the expected string fragments.
-    ///
-    /// When mismatch occurs, the accumulated output is dumped to the actual stderr.
-    ///
-    /// @param expected the expected patterns
-    ///
-    public static void checkStderrContains(String... expected) {
-        if (stderrCapture != null) {
-            String text = stderrCapture.getAccumulatedOutput();
             boolean err = false;
-            for (String s : expected) {
-                if (!text.contains(s)) {
-                    stderr.println("Expected pattern not found: " + s);
-                    err = true;
+            String text = stderrCapture.getAccumulatedOutput();
+
+            // exceptions
+            Map<String, Integer> errors = findErrors(text);
+            Map<String, Integer> exp = toMap(expected);
+            if (!errors.equals(exp)) {
+                stderr.println("Mismatch in thrown exceptions:\n  expected=" + exp + "\n  observed=" + errors);
+            }
+
+            // patterns
+            for (Object x : expected) {
+                if (x instanceof String s) {
+                    if (!text.contains(s)) {
+                        stderr.println("Expected pattern not found: " + s);
+                        err = true;
+                    }
                 }
             }
+
             if (err) {
                 stderr.println(text);
+                // mismatch fails the test
+                fail("Unexpected stderr output");
             }
         }
     }
 
-    /// Checks the accumulated stderr buffer for the expected exceptions, and restores the redirection.
+    /// Checks the accumulated stderr buffer for the expected exceptions and string patterns,
+    /// then restores the redirection.
     ///
-    /// Verifies that the number and type of exceptions logged to stderr redirected to an internal buffer
-    /// (by a prior call to {@link #suppressStderr()}) corresponds to the `expected` exceptions.
-    ///
-    /// When mismatch occurs, the accumulated output is dumped to the actual stderr.
-    ///
-    /// This method is equivalent to calling {@link #checkStderr(Class...)} followed by
+    /// This method is equivalent to calling {@link #checkStderr(Object...)} followed by
     /// {@link #restoreStderr()}.
     ///
-    /// @param expected the expected exceptions (duplicates allowed)
+    /// @param expected the expected exception classes (duplicates allowed), and/or string patterns
     ///
-    public static void checkAndRestoreStderr(Class<? extends Throwable> ... expected) {
-        checkStderr(expected);
-        restoreStderr();
+    public static void checkAndRestoreStderr(Object ... expected) {
+        try {
+            checkStderr(expected);
+        } finally {
+            restoreStderr();
+        }
     }
 
-    private static Map<String, Integer> toMap(Class<? extends Throwable> ... expected) {
+    private static Map<String, Integer> toMap(Object... expected) {
         HashMap<String, Integer> m = new HashMap<>();
-        for (Class<? extends Throwable> c : expected) {
-            String name = c.getName();
-            Integer v = m.get(name);
-            if (v == null) {
-                m.put(name, Integer.valueOf(1));
-            } else {
-                m.put(name, Integer.valueOf(v + 1));
+        for (Object x : expected) {
+            if (x instanceof Class c) {
+                if (c.isAssignableFrom(Throwable.class)) {
+                    String name = c.getName();
+                    Integer v = m.get(name);
+                    if (v == null) {
+                        m.put(name, Integer.valueOf(1));
+                    } else {
+                        m.put(name, Integer.valueOf(v + 1));
+                    }
+                } else {
+                    throw new IllegalArgumentException("must specify either Class<? extends Throwable> or String " + c);
+                }
             }
         }
         return m;

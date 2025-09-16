@@ -62,7 +62,7 @@ public class RT_27529Test {
             Widget widget = (Widget)fxmlLoader.getNamespace().get("widget1");
             assertEquals(Arrays.asList(new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}), widget.getStyles());
             assertTrue(Arrays.equals(  new String[]{"@a", "%b", "$c", "@c", "%d", "$e"}, widget.getNames()));
-            OutputRedirect.checkStderrContains(
+            OutputRedirect.checkStderr(
                 "@@ is a deprecated escape sequence. Please use \\@ instead.",
                 "%% is a deprecated escape sequence. Please use \\% instead.",
                 "$$ is a deprecated escape sequence. Please use \\$ instead.",
