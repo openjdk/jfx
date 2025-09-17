@@ -1,11 +1,11 @@
-## GStreamer v1.24.10
+## GStreamer v1.26.5
 
 ### GStreamer Notice
 ```
 
-You are receiving a copy of GStreamer, Version: 1.24.10 in either source or
+You are receiving a copy of GStreamer, Version: 1.26.5 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GStreamer, Version: 1.24.10; it is
+Oracle license do NOT apply to the GStreamer, Version: 1.26.5; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -67,7 +67,7 @@ Copyright (C) 2005 Ross Burton <ross@burtonini.com>
 Copyright (C) 2010 Brandon Lewis <brandon.lewis@collabora.co.uk>
 Copyright (C) <2003> Julien Moutte <julien@moutte.net>
 Copyright (C) <2016> Vivia Nikolaidou <vivia@toolsonair.com>
-Copyright (C) 2006-2009 Jan Schmidt <thaytan@noraisin.net>
+Copyright (C) 2007-2009 Jan Schmidt <thaytan@noraisin.net>
 Copyright (C) 2003-2007 David A. Schleef <ds@schleef.org>
 Copyright (C) <2011-2013> Intel Corporation
 Copyright (C) <2011> Thibault Saunier <thibault.saunier@collabora.com>
@@ -101,17 +101,18 @@ Copyright (C) 2009 Axis Communications <dev-gstreamer at axis dot com>
 Copyright (C) 2014 Tim-Philipp Müller <tim at centricular dot com>
 Copyright (C) 2023 Netflix Inc.
 Copyright (C) 2011-2016 Stefan Sauer <ensonic@users.sf.net>
+Copyright (C) 2024 Sebastian Dröge <sebastian@centricular.com>
 Copyright (C) 2007 Peter Kjellerstedt <pkj@axis.com>
 Copyright (C) 2008 Ole André Vadla Ravnås <ole.andre.ravnas@tandberg.com>
 Copyright (C) 2006 Josep Torra <josep@fluendo.com>
 Copyright (C) 2006 Mathieu Garcia  <matthieu@fluendo.com>
 Copyright (C) 2006 Stefan Kost <ensonic@sonicpulse.de>
 Copyright (C) 2010-2012 Alexander Saprykin <xelfium@gmail.com>
+Copyright (C) 2015 Tim-Philipp Müller <tim@centricular.com>
 Copyright (C) 2011, Hewlett-Packard Development Company, L.P.
 Copyright (C) 2008 Mark Nauwelaerts <mnauw@users.sourceforge.net>
 Copyright (C) 2006 Edward Hervey <edward@fluendo.com>
 Copyright (C) 2001 RidgeRun (http://www.ridgerun.com/)
-Copyright (C) 2015 Tim-Philipp Müller <tim@centricular.com>
 
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
