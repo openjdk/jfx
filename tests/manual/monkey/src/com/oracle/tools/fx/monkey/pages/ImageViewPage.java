@@ -81,6 +81,8 @@ public class ImageViewPage extends TestPaneBase {
         ContextMenu m = new ContextMenu();
         FX.item(m, "Load from Input Stream", () -> loadImageFromInputStream(false));
         FX.item(m, "Load from Input Stream in Background", () -> loadImageFromInputStream(true));
+        FX.separator(m);
+        FX.item(m, "Clear Image", () -> imageView.setImage(null));
         return m;
     }
 

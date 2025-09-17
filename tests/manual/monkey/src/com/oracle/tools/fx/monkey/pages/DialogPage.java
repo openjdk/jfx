@@ -29,6 +29,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.ToggleButton;
@@ -142,6 +143,7 @@ public class DialogPage extends TestPaneBase {
             p.headerTextProperty().bindBidirectional(dpHeaderText);
             d.setDialogPane(p);
         }
+        d.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         // window
         Utils.link(showing, d.showingProperty(), null);
@@ -156,16 +158,20 @@ public class DialogPage extends TestPaneBase {
         if (dialog == null) {
             dialog = createDialog();
             dialog.show();
+            updateButton(true);
             dialog.showingProperty().addListener((s, p, on) -> {
                 if (!on) {
-                    button.setSelected(false);
+                    updateButton(false);
                     dialog = null;
                 }
+            });
+            dialog.setOnHiding((ev) -> {
+                dialog.hide();
             });
         } else {
             dialog.hide();
             dialog = null;
-            button.setSelected(false);
+            updateButton(false);
         }
     }
 
@@ -173,8 +179,13 @@ public class DialogPage extends TestPaneBase {
         if (dialog != null) {
             dialog.hide();
             dialog = null;
-            button.setSelected(false);
+            updateButton(false);
         }
+    }
+
+    private void updateButton(boolean on) {
+        button.setSelected(on);
+        button.setText(on ? "Hide Dialog" : "Show Dialog");
     }
 
     @Override
