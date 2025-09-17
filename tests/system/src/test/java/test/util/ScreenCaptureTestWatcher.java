@@ -29,7 +29,12 @@ import org.junit.jupiter.api.extension.TestWatcher;
 
 /**
  * This TestWatcher writes a base-64 encoded PNG screenshot of the desktop to {@code stderr}
- * when a test fails.
+ * when a test fails.  The function is disabled by default and must be enabled using the system property
+ * by adding
+ * {@code -Dtest.screenshot=true} command line argument.
+ * <p>
+ * Using Safari, the screenshot {@code data:} URL can be pasted into the address bar
+ * to view the image (other browsers trim the URL string).
  * <p>
  * To use, simply add the following annotation to your class:
  * <pre>{@code
@@ -40,9 +45,13 @@ import org.junit.jupiter.api.extension.TestWatcher;
  * Make sure there is plenty of free disk space.
  */
 public class ScreenCaptureTestWatcher implements TestWatcher {
+
+    private static final String PROPERTY = "test.screenshot";
+
     @Override
     public void testFailed(ExtensionContext extensionContext, Throwable err) {
-        // the data url can be pasted into Safari address bar to view the screenshot
-        ScreenshotCapture.writeScreenshot();
+        if (Boolean.getBoolean(PROPERTY)) {
+            ScreenshotCapture.writeScreenshot();
+        }
     }
 }
