@@ -1,12 +1,13 @@
 # http://userguide.icu-project.org/howtouseicu#TOC-C-With-Your-Own-Build-System
 if(WIN32)
-set(CMAKE_CXX_FLAGS "" CACHE STRING "Clear CXX flags for this sub-project" FORCE)
-set(CMAKE_CXX_COMPILER "${MSVC_BIN_DIR}/cl.exe")
-#set(CMAKE_C_COMPILER "${MSVC_BIN_DIR}/cl.exe")
-set(CMAKE_LINKER "${MSVC_BIN_DIR}/link.exe")
-set(CMAKE_PROGRAM "${MSVC_BIN_DIR}/nmake.exe")
-set(CMAKE_AR "${MSVC_BIN_DIR}/lib.exe")
-add_compile_options(/FS)
+  set(CMAKE_CXX_FLAGS "" CACHE STRING "Clear CXX flags for this sub-project" FORCE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  set(CMAKE_C_COMPILER   "${MSVC_BIN_DIR}/cl.exe" CACHE FILEPATH "" FORCE)
+  set(CMAKE_CXX_COMPILER "${MSVC_BIN_DIR}/cl.exe" CACHE FILEPATH "" FORCE)
+  set(CMAKE_LINKER       "${MSVC_BIN_DIR}/link.exe" CACHE FILEPATH "" FORCE)
+  set(CMAKE_AR           "${MSVC_BIN_DIR}/lib.exe" CACHE FILEPATH "" FORCE)
+
+  add_compile_options(/FS)
 endif()
 
 set(ICU_PUBLIC_DEFINES
@@ -631,6 +632,7 @@ add_custom_command(
 if (MSVC)
     # On Windows, data_as_asm could generates .obj file directly.
     set(ICU_DATA_SYMBOL_FILE "${CMAKE_BINARY_DIR}/icu/data/${ICU_DATA_FILE_NAME}_dat.obj")
+    message(STATUS "ICU_DATA_SYMBOL_FILE = ${ICU_DATA_SYMBOL_FILE}")
     set_source_files_properties(${ICU_DATA_SYMBOL_FILE} PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
 else ()
     set(ICU_DATA_SYMBOL_FILE "${CMAKE_BINARY_DIR}/icu/data/${ICU_DATA_FILE_NAME}_dat.S")
