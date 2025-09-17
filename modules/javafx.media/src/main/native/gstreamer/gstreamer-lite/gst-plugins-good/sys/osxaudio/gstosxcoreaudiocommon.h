@@ -21,6 +21,8 @@
  *
  */
 
+#pragma once
+
 #include "gstosxcoreaudio.h"
 #include <gst/audio/audio-channels.h>
 
@@ -66,5 +68,10 @@ OSStatus gst_core_audio_render_notify                     (GstCoreAudio * core_a
 AudioChannelLabel gst_audio_channel_position_to_core_audio (GstAudioChannelPosition position, int channel);
 
 GstAudioChannelPosition gst_core_audio_channel_label_to_gst (AudioChannelLabel label, int channel, gboolean warn);
+
+#ifndef HAVE_IOS
+char * gst_core_audio_device_get_prop (AudioDeviceID device_id,
+                                       AudioObjectPropertyElement prop_id);
+#endif
 
 G_END_DECLS

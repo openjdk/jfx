@@ -32,6 +32,7 @@
 #include "gstinfo.h"
 #include "gsttracerfactory.h"
 #include "gstregistry.h"
+#include "gsttracer.h"
 
 GST_DEBUG_CATEGORY (tracer_debug);
 #define GST_CAT_DEFAULT tracer_debug

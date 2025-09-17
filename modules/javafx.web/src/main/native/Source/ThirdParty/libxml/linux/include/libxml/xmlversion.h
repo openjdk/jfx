@@ -15,14 +15,14 @@
  *
  * the version string like "1.2.3"
  */
-#define LIBXML_DOTTED_VERSION "2.13.6"
+#define LIBXML_DOTTED_VERSION "2.14.5"
 
 /**
  * LIBXML_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXML_VERSION 21306
+#define LIBXML_VERSION 21405
 
 /**
  * LIBXML_VERSION_STRING:
@@ -44,7 +44,7 @@
  * Macro to check that the libxml version in use is compatible with
  * the version the software has been compiled against
  */
-#define LIBXML_TEST_VERSION xmlCheckVersion(21306);
+#define LIBXML_TEST_VERSION xmlCheckVersion(21405);
 
 /**
  * LIBXML_THREAD_ENABLED:
@@ -67,11 +67,9 @@
 /**
  * LIBXML_TREE_ENABLED:
  *
- * Whether the DOM like tree manipulation API support is configured in
+ * Always enabled since 2.14.0
  */
-#if 1
 #define LIBXML_TREE_ENABLED
-#endif
 
 /**
  * LIBXML_OUTPUT_ENABLED:
@@ -128,15 +126,6 @@
 #endif
 
 /**
- * LIBXML_FTP_ENABLED:
- *
- * Whether the FTP support is configured in
- */
-#if 0
-#define LIBXML_FTP_ENABLED
-#endif
-
-/**
  * LIBXML_HTTP_ENABLED:
  *
  * Whether the HTTP support is configured in
@@ -166,11 +155,9 @@
 /**
  * LIBXML_LEGACY_ENABLED:
  *
- * Whether the deprecated APIs are compiled in for compatibility
+ * Removed in 2.14
  */
-#if 0
-#define LIBXML_LEGACY_ENABLED
-#endif
+#undef LIBXML_LEGACY_ENABLED
 
 /**
  * LIBXML_C14N_ENABLED:
@@ -206,15 +193,6 @@
  */
 #if 0
 #define LIBXML_XPTR_ENABLED
-#endif
-
-/**
- * LIBXML_XPTR_LOCS_ENABLED:
- *
- * Whether support for XPointer locations is configured in
- */
-#if 0
-#define LIBXML_XPTR_LOCS_ENABLED
 #endif
 
 /**
@@ -265,11 +243,9 @@
 /**
  * LIBXML_UNICODE_ENABLED:
  *
- * Whether the Unicode related interfaces are compiled in
+ * Removed in 2.14
  */
-#if 0
-#define LIBXML_UNICODE_ENABLED
-#endif
+#undef LIBXML_UNICODE_ENABLED
 
 /**
  * LIBXML_REGEXP_ENABLED:
