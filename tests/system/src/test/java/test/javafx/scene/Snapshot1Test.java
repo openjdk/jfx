@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import test.javafx.util.OutputRedirect;
 import test.util.Util;
 
 /**
@@ -221,22 +222,27 @@ public class Snapshot1Test extends SnapshotCommon {
         Util.runAndWait(() -> {
             tmpScene = new Scene(new Group(), 200, 100);
 
-            // NOTE: cannot use a lambda expression for the following callback
-            Callback<SnapshotResult, Void> cb = new Callback() {
-                @Override public Object call(Object param) {
-                    assertNotNull(param);
+            OutputRedirect.suppressStderr();
+            try {
+                // NOTE: cannot use a lambda expression for the following callback
+                Callback<SnapshotResult, Void> cb = new Callback() {
+                    @Override
+                    public Object call(Object param) {
+                        assertNotNull(param);
 
-                    latch.countDown();
-                    // The following will cause a ClassCastException warning
-                    // message to be printed.
-                    return "";
-                }
-            };
+                        latch.countDown();
+                        // The following will cause a ClassCastException warning
+                        // message to be printed.
+                        return "";
+                    }
+                };
 
-            tmpScene.snapshot(cb, null);
-            Util.sleep(SLEEP_TIME);
+                tmpScene.snapshot(cb, null);
+                Util.sleep(SLEEP_TIME);
+            } finally {
+                OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            }
             assertEquals(1, latch.getCount());
-            System.err.println("testBadSceneCallback1: a ClassCastException warning message is expected here");
         });
 
         try {
@@ -259,16 +265,20 @@ public class Snapshot1Test extends SnapshotCommon {
         Util.runAndWait(() -> {
             tmpScene = new Scene(new Group(), 200, 100);
 
-            Callback cb = (Callback<String, Integer>) param -> {
-                // Should not get here
-                latch.countDown();
-                throw new AssertionError("Should never get here");
-            };
+            OutputRedirect.suppressStderr();
+            try {
+                Callback cb = (Callback<String, Integer>) param -> {
+                    // Should not get here
+                    latch.countDown();
+                    throw new AssertionError("Should never get here");
+                };
 
-            tmpScene.snapshot(cb, null);
-            Util.sleep(SLEEP_TIME);
+                tmpScene.snapshot(cb, null);
+                Util.sleep(SLEEP_TIME);
+            } finally {
+                OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            }
             assertEquals(1, latch.getCount());
-            System.err.println("testBadSceneCallback2: a ClassCastException warning message is expected here");
         });
 
         try {
@@ -343,22 +353,27 @@ public class Snapshot1Test extends SnapshotCommon {
         Util.runAndWait(() -> {
             tmpNode = new Rectangle(10, 10);
 
-            // NOTE: cannot use a lambda expression for the following callback
-            Callback<SnapshotResult, Void> cb = new Callback() {
-                @Override public Object call(Object param) {
-                    assertNotNull(param);
+            OutputRedirect.suppressStderr();
+            try {
+                // NOTE: cannot use a lambda expression for the following callback
+                Callback<SnapshotResult, Void> cb = new Callback() {
+                    @Override
+                    public Object call(Object param) {
+                        assertNotNull(param);
 
-                    latch.countDown();
-                    // The following will cause a ClassCastException warning
-                    // message to be printed.
-                    return "";
-                }
-            };
+                        latch.countDown();
+                        // The following will cause a ClassCastException warning
+                        // message to be printed.
+                        return "";
+                    }
+                };
 
-            tmpNode.snapshot(cb, null, null);
-            Util.sleep(SLEEP_TIME);
+                tmpNode.snapshot(cb, null, null);
+                Util.sleep(SLEEP_TIME);
+            } finally {
+                OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            }
             assertEquals(1, latch.getCount());
-            System.err.println("testBadNodeCallback1: a ClassCastException warning message is expected here");
         });
 
         try {
@@ -381,16 +396,20 @@ public class Snapshot1Test extends SnapshotCommon {
         Util.runAndWait(() -> {
             tmpNode = new Rectangle(10, 10);
 
-            Callback cb = (Callback<String, Integer>) param -> {
-                // Should not get here
-                latch.countDown();
-                throw new AssertionError("Should never get here");
-            };
+            OutputRedirect.suppressStderr();
+            try {
+                Callback cb = (Callback<String, Integer>) param -> {
+                    // Should not get here
+                    latch.countDown();
+                    throw new AssertionError("Should never get here");
+                };
 
-            tmpNode.snapshot(cb, null, null);
-            Util.sleep(SLEEP_TIME);
+                tmpNode.snapshot(cb, null, null);
+                Util.sleep(SLEEP_TIME);
+            } finally {
+                OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            }
             assertEquals(1, latch.getCount());
-            System.err.println("testBadNodeCallback2: a ClassCastException warning message is expected here");
         });
 
         try {
