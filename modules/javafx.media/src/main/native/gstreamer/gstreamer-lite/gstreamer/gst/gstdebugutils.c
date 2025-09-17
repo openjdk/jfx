@@ -62,6 +62,7 @@
 #include "gstpad.h"
 #include "gstutils.h"
 #include "gstvalue.h"
+#include "gstidstr-private.h"
 
 /*** PIPELINE GRAPHS **********************************************************/
 
@@ -376,14 +377,14 @@ debug_dump_element_pad (GstPad * pad, GstElement * element,
 }
 
 static gboolean
-string_append_field (GQuark field, const GValue * value, gpointer ptr)
+string_append_field (const GstIdStr * field, const GValue * value, gpointer ptr)
 {
   GString *str = (GString *) ptr;
   gchar *value_str = gst_value_serialize (value);
   gchar *esc_value_str;
 
   if (value_str == NULL) {
-    g_string_append_printf (str, "  %18s: NULL\\l", g_quark_to_string (field));
+    g_string_append_printf (str, "  %18s: NULL\\l", gst_id_str_as_str (field));
     return TRUE;
   }
 
@@ -414,7 +415,7 @@ string_append_field (GQuark field, const GValue * value, gpointer ptr)
   }
   esc_value_str = g_strescape (value_str, NULL);
 
-  g_string_append_printf (str, "  %18s: %s\\l", g_quark_to_string (field),
+  g_string_append_printf (str, "  %18s: %s\\l", gst_id_str_as_str (field),
       esc_value_str);
 
   g_free (value_str);
@@ -458,7 +459,8 @@ debug_dump_describe_caps (GstCaps * caps, GstDebugGraphDetails details)
         }
         g_string_append (str, "\\l");
 
-        gst_structure_foreach (structure, string_append_field, (gpointer) str);
+        gst_structure_foreach_id_str (structure, string_append_field,
+            (gpointer) str);
       }
 
       media = g_string_free (str, FALSE);
@@ -852,7 +854,6 @@ gst_debug_bin_to_dot_file (GstBin * bin, GstDebugGraphDetails details,
     const gchar * file_name)
 {
   gchar *full_file_name = NULL;
-  FILE *out;
 
   g_return_if_fail (GST_IS_BIN (bin));
 
@@ -868,20 +869,17 @@ gst_debug_bin_to_dot_file (GstBin * bin, GstDebugGraphDetails details,
   full_file_name = g_strdup_printf ("%s" G_DIR_SEPARATOR_S "%s.dot",
       priv_gst_dump_dot_dir, file_name);
 
-  if ((out = fopen (full_file_name, "wb"))) {
-    gchar *buf;
+  GError *err = NULL;
+  gchar *buf;
 
-    buf = gst_debug_bin_to_dot_data (bin, details);
-    fputs (buf, out);
+  buf = gst_debug_bin_to_dot_data (bin, details);
+  if (!g_file_set_contents (full_file_name, buf, -1, &err)) {
+    GST_WARNING ("Failed to write file '%s' for writing: %s", full_file_name,
+        err->message);
 
-    g_free (buf);
-    fclose (out);
-
-    GST_INFO ("wrote bin graph to : '%s'", full_file_name);
-  } else {
-    GST_WARNING ("Failed to open file '%s' for writing: %s", full_file_name,
-        g_strerror (errno));
   }
+  g_clear_error (&err);
+  g_free (buf);
   g_free (full_file_name);
 }
 
