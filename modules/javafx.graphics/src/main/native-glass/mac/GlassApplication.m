@@ -82,6 +82,8 @@ static NSArray<NSString*> *runLoopModes = nil;
 // embedded mode.
 static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
 
+static NSEvent* menuKeyEvent = nil;
+
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
@@ -906,6 +908,30 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
     } else {
         return GetJavaKeyCodeFor([v unsignedShortValue]);
     }
+}
+
++ (void)setMenuKeyEvent:(NSEvent*)event
+{
+    if (menuKeyEvent != nil) {
+        [menuKeyEvent release];
+        menuKeyEvent = nil;
+    }
+    if (event != nil) {
+        menuKeyEvent = [event retain];
+    }
+}
+
++ (BOOL)handleMenuKeyEventForCode:(jint)code modifiers:(jint)modifiers;
+{
+    BOOL result = NO;
+    if (menuKeyEvent != nil) {
+        if (code == GetJavaKeyCode(menuKeyEvent) && modifiers == GetJavaKeyModifiers(menuKeyEvent)) {
+            result = [NSApp.mainMenu performKeyEquivalent: menuKeyEvent];
+            [menuKeyEvent release];
+            menuKeyEvent = nil;
+        }
+    }
+    return result;
 }
 
 + (BOOL)syncRenderingDisabled {
