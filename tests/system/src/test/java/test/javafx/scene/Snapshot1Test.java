@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import test.javafx.util.OutputRedirect;
 import test.util.Util;
 
 /**
@@ -218,41 +217,37 @@ public class Snapshot1Test extends SnapshotCommon {
     @Test
     public void testBadSceneCallback1() {
         final CountDownLatch latch = new CountDownLatch(1);
-        OutputRedirect.suppressStderr();
-        try {
-            Util.runAndWait(() -> {
-                tmpScene = new Scene(new Group(), 200, 100);
 
-                // NOTE: cannot use a lambda expression for the following callback
-                Callback<SnapshotResult, Void> cb = new Callback() {
-                    @Override
-                    public Object call(Object param) {
-                        assertNotNull(param);
+        Util.runAndWait(() -> {
+            tmpScene = new Scene(new Group(), 200, 100);
 
-                        latch.countDown();
-                        // The following will cause a ClassCastException warning
-                        // message to be printed.
-                        return "";
-                    }
-                };
+            // NOTE: cannot use a lambda expression for the following callback
+            Callback<SnapshotResult, Void> cb = new Callback() {
+                @Override public Object call(Object param) {
+                    assertNotNull(param);
 
-                tmpScene.snapshot(cb, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-            });
-
-            try {
-                if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                    fail("Timeout waiting for snapshot callback");
+                    latch.countDown();
+                    // The following will cause a ClassCastException warning
+                    // message to be printed.
+                    return "";
                 }
-            } catch (InterruptedException ex) {
-                fail(ex);
-            }
+            };
 
-            assertEquals(0, latch.getCount());
-        } finally {
-            OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            tmpScene.snapshot(cb, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
+            System.err.println("testBadSceneCallback1: a ClassCastException warning message is expected here");
+        });
+
+        try {
+            if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
+                fail("Timeout waiting for snapshot callback");
+            }
+        } catch (InterruptedException ex) {
+            fail(ex);
         }
+
+        assertEquals(0, latch.getCount());
     }
 
     // Test deferred snapshot with bad callback (should print a warning
@@ -260,34 +255,31 @@ public class Snapshot1Test extends SnapshotCommon {
     @Test
     public void testBadSceneCallback2() {
         final CountDownLatch latch = new CountDownLatch(1);
-        OutputRedirect.suppressStderr();
-        try {
-            Util.runAndWait(() -> {
-                tmpScene = new Scene(new Group(), 200, 100);
 
-                Callback cb = (Callback<String, Integer>)param -> {
-                    // Should not get here
-                    latch.countDown();
-                    throw new AssertionError("Should never get here");
-                };
+        Util.runAndWait(() -> {
+            tmpScene = new Scene(new Group(), 200, 100);
 
-                tmpScene.snapshot(cb, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-            });
+            Callback cb = (Callback<String, Integer>) param -> {
+                // Should not get here
+                latch.countDown();
+                throw new AssertionError("Should never get here");
+            };
 
-            try {
-                if (latch.await(SHORT_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                    fail("Snapshot callback unexpectedly called");
-                }
-            } catch (InterruptedException ex) {
-                fail(ex);
-            }
-
+            tmpScene.snapshot(cb, null);
+            Util.sleep(SLEEP_TIME);
             assertEquals(1, latch.getCount());
-        } finally {
-            OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            System.err.println("testBadSceneCallback2: a ClassCastException warning message is expected here");
+        });
+
+        try {
+            if (latch.await(SHORT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                fail("Snapshot callback unexpectedly called");
+            }
+        } catch (InterruptedException ex) {
+            fail(ex);
         }
+
+        assertEquals(1, latch.getCount());
     }
 
     // Test deferred snapshot with null callback (should throw NPE)
@@ -347,41 +339,37 @@ public class Snapshot1Test extends SnapshotCommon {
     @Test
     public void testBadNodeCallback1() {
         final CountDownLatch latch = new CountDownLatch(1);
-        OutputRedirect.suppressStderr();
-        try {
-            Util.runAndWait(() -> {
-                tmpNode = new Rectangle(10, 10);
 
-                // NOTE: cannot use a lambda expression for the following callback
-                Callback<SnapshotResult, Void> cb = new Callback() {
-                    @Override
-                    public Object call(Object param) {
-                        assertNotNull(param);
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 10);
 
-                        latch.countDown();
-                        // The following will cause a ClassCastException warning
-                        // message to be printed.
-                        return "";
-                    }
-                };
+            // NOTE: cannot use a lambda expression for the following callback
+            Callback<SnapshotResult, Void> cb = new Callback() {
+                @Override public Object call(Object param) {
+                    assertNotNull(param);
 
-                tmpNode.snapshot(cb, null, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-            });
-
-            try {
-                if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                    fail("Timeout waiting for snapshot callback");
+                    latch.countDown();
+                    // The following will cause a ClassCastException warning
+                    // message to be printed.
+                    return "";
                 }
-            } catch (InterruptedException ex) {
-                fail(ex);
-            }
+            };
 
-            assertEquals(0, latch.getCount());
-        } finally {
-            OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            tmpNode.snapshot(cb, null, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
+            System.err.println("testBadNodeCallback1: a ClassCastException warning message is expected here");
+        });
+
+        try {
+            if (!latch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
+                fail("Timeout waiting for snapshot callback");
+            }
+        } catch (InterruptedException ex) {
+            fail(ex);
         }
+
+        assertEquals(0, latch.getCount());
     }
 
     // Test deferred snapshot with bad callback (should print a warning
@@ -389,34 +377,31 @@ public class Snapshot1Test extends SnapshotCommon {
     @Test
     public void testBadNodeCallback2() {
         final CountDownLatch latch = new CountDownLatch(1);
-        OutputRedirect.suppressStderr();
-        try {
-            Util.runAndWait(() -> {
-                tmpNode = new Rectangle(10, 10);
 
-                Callback cb = (Callback<String, Integer>)param -> {
-                    // Should not get here
-                    latch.countDown();
-                    throw new AssertionError("Should never get here");
-                };
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 10);
 
-                tmpNode.snapshot(cb, null, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-            });
+            Callback cb = (Callback<String, Integer>) param -> {
+                // Should not get here
+                latch.countDown();
+                throw new AssertionError("Should never get here");
+            };
 
-            try {
-                if (latch.await(SHORT_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                    fail("Snapshot callback unexpectedly called");
-                }
-            } catch (InterruptedException ex) {
-                fail(ex);
-            }
-
+            tmpNode.snapshot(cb, null, null);
+            Util.sleep(SLEEP_TIME);
             assertEquals(1, latch.getCount());
-        } finally {
-            OutputRedirect.checkAndRestoreStderr(ClassCastException.class);
+            System.err.println("testBadNodeCallback2: a ClassCastException warning message is expected here");
+        });
+
+        try {
+            if (latch.await(SHORT_TIMEOUT, TimeUnit.MILLISECONDS)) {
+                fail("Snapshot callback unexpectedly called");
+            }
+        } catch (InterruptedException ex) {
+            fail(ex);
         }
+
+        assertEquals(1, latch.getCount());
     }
 
     // Test deferred snapshot with null callback (should throw NPE)
