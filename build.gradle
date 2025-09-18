@@ -496,11 +496,6 @@ ext.IS_HEADLESS_TEST = Boolean.parseBoolean(HEADLESS_TEST);
 defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
-// Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-// JDK-8356688 tracks the disablement of the SWT tests on Linux platform.
-defineProperty("SWT_TEST", (IS_LINUX) ? "false" : "true")
-ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
-
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
 // These tests should be protected with :
 //    assumeTrue(Boolean.getBoolean("unstable.test"));
@@ -3210,9 +3205,14 @@ project(":swt") {
     }
 
     test {
-        enabled = IS_FULL_TEST && IS_SWT_TEST
+        enabled = IS_FULL_TEST
 
         jvmArgs enableNativeGraphics
+
+        if (IS_LINUX) {
+            environment "GDK_BACKEND", "x11"
+        }
+
         if (IS_MAC) {
             jvmArgs "-XstartOnFirstThread"
         }

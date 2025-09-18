@@ -254,7 +254,6 @@ struct _GstBaseSinkPrivate
   /* seqnum of the last instant-rate event.
    * %GST_SEQNUM_INVALID if there isn't one */
   guint32 last_instant_rate_seqnum;
-  guint32 segment_seqnum;
   GstSegment upstream_segment;
   /* Running time at the start of the last segment event
    * or instant-rate switch in *our* segment, not upstream */
@@ -3281,7 +3280,6 @@ gst_base_sink_flush_stop (GstBaseSink * basesink, GstPad * pad,
       basesink->priv->last_instant_rate_seqnum = GST_SEQNUM_INVALID;
       basesink->priv->instant_rate_sync_seqnum = GST_SEQNUM_INVALID;
       basesink->priv->instant_rate_multiplier = 0;
-      basesink->priv->segment_seqnum = GST_SEQNUM_INVALID;
       basesink->priv->instant_rate_offset = 0;
       basesink->priv->last_anchor_running_time = 0;
     }
@@ -3558,7 +3556,6 @@ gst_base_sink_default_event (GstBaseSink * basesink, GstEvent * event)
 
       GST_DEBUG_OBJECT (basesink, "configured segment %" GST_SEGMENT_FORMAT,
           &basesink->segment);
-      basesink->priv->segment_seqnum = seqnum;
       basesink->have_newsegment = TRUE;
       gst_base_sink_reset_qos (basesink);
       GST_OBJECT_UNLOCK (basesink);
@@ -5719,7 +5716,6 @@ gst_base_sink_change_state (GstElement * element, GstStateChange transition)
       priv->instant_rate_sync_seqnum = GST_SEQNUM_INVALID;
       priv->instant_rate_multiplier = 0;
       priv->last_instant_rate_seqnum = GST_SEQNUM_INVALID;
-      priv->segment_seqnum = GST_SEQNUM_INVALID;
       priv->instant_rate_offset = 0;
       priv->last_anchor_running_time = 0;
       if (priv->async_enabled) {

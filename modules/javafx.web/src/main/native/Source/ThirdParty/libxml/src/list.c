@@ -81,7 +81,7 @@ xmlLinkCompare(const void *data0, const void *data1)
     if (data0 < data1)
         return (-1);
     else if (data0 == data1)
-    return (0);
+        return (0);
     return (1);
 }
 
@@ -188,14 +188,16 @@ xmlListPtr
 xmlListCreate(xmlListDeallocator deallocator, xmlListDataCompare compare)
 {
     xmlListPtr l;
-    if (NULL == (l = (xmlListPtr )xmlMalloc( sizeof(xmlList))))
+    l = (xmlListPtr)xmlMalloc(sizeof(xmlList));
+    if (l == NULL)
         return (NULL);
     /* Initialize the list to NULL */
     memset(l, 0, sizeof(xmlList));
 
     /* Add the sentinel */
-    if (NULL ==(l->sentinel = (xmlLinkPtr )xmlMalloc(sizeof(xmlLink)))) {
-    xmlFree(l);
+    l->sentinel = (xmlLinkPtr)xmlMalloc(sizeof(xmlLink));
+    if (l->sentinel == NULL) {
+        xmlFree(l);
         return (NULL);
     }
     l->sentinel->next = l->sentinel;
@@ -373,7 +375,7 @@ xmlListRemoveLast(xmlListPtr l, void *data)
     /*Find the last instance of this data */
     lk = xmlListLinkReverseSearch(l, data);
     if (lk != NULL) {
-    xmlLinkDeallocator(l, lk);
+        xmlLinkDeallocator(l, lk);
         return 1;
     }
     return 0;
@@ -565,7 +567,8 @@ xmlListPushBack(xmlListPtr l, void *data)
         return(0);
     lkPlace = l->sentinel->prev;
     /* Add the new link */
-    if (NULL ==(lkNew = (xmlLinkPtr )xmlMalloc(sizeof(xmlLink))))
+    lkNew = (xmlLinkPtr)xmlMalloc(sizeof(xmlLink));
+    if (lkNew == NULL)
         return (0);
     lkNew->data = data;
     lkNew->next = lkPlace->next;
@@ -638,12 +641,12 @@ xmlListSort(xmlListPtr l)
      * an insert. This is slow...
      */
 
-    if (NULL ==(lTemp = xmlListDup(l)))
+    lTemp = xmlListDup(l);
+    if (lTemp == NULL)
         return;
     xmlListClear(l);
     xmlListMerge(l, lTemp);
     xmlListDelete(lTemp);
-    return;
 }
 
 /**
@@ -724,7 +727,8 @@ xmlListDup(xmlListPtr old)
      * set it to be the old list for the time being whilst I work out
      * the answer
      */
-    if (NULL ==(cur = xmlListCreate(NULL, old->linkCompare)))
+    cur = xmlListCreate(NULL, old->linkCompare);
+    if (cur == NULL)
         return (NULL);
     if (0 != xmlListCopy(cur, old))
         return NULL;

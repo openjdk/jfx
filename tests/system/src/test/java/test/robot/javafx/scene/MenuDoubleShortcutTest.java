@@ -105,7 +105,6 @@ public class MenuDoubleShortcutTest {
 
     // On platforms other than Mac the menu bar should process the event
     // and the scene should not.
-    @Disabled("JDK-8364405")
     @Test
     void nonMacMenuBarComesBeforeScene() {
         Assumptions.assumeFalse(PlatformUtil.isMac());
@@ -200,6 +199,7 @@ public class MenuDoubleShortcutTest {
         public void testKey(KeyCode code) {
             sceneAcceleratorFired = false;
             menuBarItemFired = false;
+            CountDownLatch testKeyLatch = new CountDownLatch(1);
             Platform.runLater(() -> {
                 KeyCode shortcutCode = (PlatformUtil.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL);
                 Robot robot = new Robot();
@@ -207,7 +207,9 @@ public class MenuDoubleShortcutTest {
                 robot.keyPress(code);
                 robot.keyRelease(code);
                 robot.keyRelease(shortcutCode);
+                testKeyLatch.countDown();
             });
+            Util.waitForLatch(testKeyLatch, 5, "Timeout waiting for testKey execution.");
         }
 
         public TestResult testResult() {
