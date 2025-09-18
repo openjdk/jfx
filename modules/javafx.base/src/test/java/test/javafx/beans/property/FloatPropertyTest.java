@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,9 +32,10 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class FloatPropertyTest {
