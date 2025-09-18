@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Audio Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        /* Simple spinner animation */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #ffffff;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+        <!-- Header Section -->
+        <div class="text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800">AI Audio Generator</h1>
+            <p class="text-slate-500 mt-2">Bring your text to life with expressive, AI-powered voices.</p>
+        </div>
+
+        <!-- Text Input Section -->
+        <div>
+            <label for="text-input" class="block text-sm font-medium text-slate-700 mb-2">Your Text</label>
+            <textarea id="text-input" rows="8" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out" placeholder="Enter any amount of text here..."></textarea>
+        </div>
+
+        <!-- Voice & Style Configuration -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="voice-select" class="block text-sm font-medium text-slate-700 mb-2">Voice</label>
+                <select id="voice-select" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                    <option value="Kore">Kore (Firm)</option>
+                    <option value="Puck">Puck (Upbeat)</option>
+                    <option value="Zephyr">Zephyr (Bright)</option>
+                    <option value="Charon">Charon (Informative)</option>
+                    <option value="Fenrir">Fenrir (Excitable)</option>
+                    <option value="Leda">Leda (Youthful)</option>
+                    <option value="Orus">Orus (Firm)</option>
+                    <option value="Sadachbia">Sadachbia (Lively)</option>
+                    <option value="Sulafat">Sulafat (Warm)</option>
+                </select>
+            </div>
+            <div>
+                <label for="emotion-select" class="block text-sm font-medium text-slate-700 mb-2">Emotional Style</label>
+                <select id="emotion-select" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                    <option value="normal">Normal</option>
+                    <option value="happy">Happy / Cheerful</option>
+                    <option value="sad">Sad / Somber</option>
+                    <option value="angry">Angry / Annoyed</option>
+                    <option value="raised">Raised Voice / Shouting</option>
+                    <option value="whisper">Whispering</option>
+                    <option value="excited">Excited</option>
+                    <option value="custom">Custom...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Custom Style Input (hidden by default) -->
+        <div id="custom-style-container" class="hidden">
+            <label for="custom-style-input" class="block text-sm font-medium text-slate-700 mb-2">Custom Style Prompt</label>
+            <input type="text" id="custom-style-input" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="e.g., 'in a deep, booming voice'">
+        </div>
+
+
+        <!-- Action Button -->
+        <button id="generate-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition flex items-center justify-center disabled:bg-indigo-400 disabled:cursor-not-allowed">
+            <span id="btn-text">Generate Audio</span>
+            <div id="spinner" class="spinner hidden ml-3"></div>
+        </button>
+
+        <!-- Error Message Display -->
+        <div id="error-message" class="hidden text-center text-red-600 bg-red-100 p-3 rounded-lg"></div>
+
+        <!-- Output Section (hidden by default) -->
+        <div id="output-section" class="hidden space-y-4 pt-4 border-t border-slate-200">
+            <h2 class="text-lg font-semibold text-slate-800 text-center">Your Generated Audio</h2>
+            <audio id="audio-player" controls class="w-full"></audio>
+            <a id="download-link" href="#" download="generated_audio.wav" class="block w-full text-center bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition">Download Audio</a>
+        </div>
+    </div>
+
+    <script type="module">
+        // DOM Element References
+        const textInput = document.getElementById('text-input');
+        const voiceSelect = document.getElementById('voice-select');
+        const emotionSelect = document.getElementById('emotion-select');
+        const customStyleContainer = document.getElementById('custom-style-container');
+        const customStyleInput = document.getElementById('custom-style-input');
+        const generateBtn = document.getElementById('generate-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('spinner');
+        const errorMessage = document.getElementById('error-message');
+        const outputSection = document.getElementById('output-section');
+        const audioPlayer = document.getElementById('audio-player');
+        const downloadLink = document.getElementById('download-link');
+
+        // --- Event Listeners ---
+        
+        // Show/hide custom style input
+        emotionSelect.addEventListener('change', () => {
+            if (emotionSelect.value === 'custom') {
+                customStyleContainer.classList.remove('hidden');
+            } else {
+                customStyleContainer.classList.add('hidden');
+            }
+        });
+
+        // Main generate button click handler
+        generateBtn.addEventListener('click', handleGenerateAudio);
+
+        // --- Core Functions ---
+
+        /**
+         * Main function to handle the audio generation process.
+         */
+        async function handleGenerateAudio() {
+            const userText = textInput.value.trim();
+            if (!userText) {
+                showError("Please enter some text to generate audio.");
+                return;
+            }
+
+            setLoadingState(true);
+            hideError();
+            outputSection.classList.add('hidden');
+
+            const constructedPrompt = constructPrompt(userText);
+            const selectedVoice = voiceSelect.value;
+            const apiKey = ""; // API key is handled by the environment
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: constructedPrompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: selectedVoice }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            try {
+                // API call with exponential backoff
+                const response = await fetchWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (!sampleRateMatch) {
+                        throw new Error("Could not determine sample rate from mime type.");
+                    }
+                    const sampleRate = parseInt(sampleRateMatch[1], 10);
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    // API returns signed PCM16 audio data.
+                    const pcm16 = new Int16Array(pcmData);
+                    const wavBlob = pcmToWav(pcm16, 1, sampleRate); // 1 channel
+                    const audioUrl = URL.createObjectURL(wavBlob);
+
+                    updateUIAfterGeneration(audioUrl);
+                } else {
+                    throw new Error("No valid audio data received from the API. The model may have refused the request.");
+                }
+
+            } catch (error) {
+                console.error('Generation Error:', error);
+                showError(error.message || "An unknown error occurred.");
+            } finally {
+                setLoadingState(false);
+            }
+        }
+        
+        /**
+         * Implements fetch with exponential backoff for retries.
+         */
+        async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    // 429 is "Too Many Requests", a common reason for retries.
+                    if (response.status !== 429) {
+                        return response;
+                    }
+                } catch (error) {
+                    // This catches network errors, not HTTP error statuses
+                    if (i === retries - 1) throw error;
+                }
+                // Wait and increase delay for the next retry
+                await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+            }
+            throw new Error('Failed to fetch after multiple retries.');
+        }
+
+
+        /**
+         * Constructs the final prompt text based on user's style selection.
+         */
+        function constructPrompt(text) {
+            const style = emotionSelect.value;
+            switch (style) {
+                case 'happy':
+                    return `Say cheerfully: ${text}`;
+                case 'sad':
+                    return `Say in a sad, somber tone: ${text}`;
+                case 'angry':
+                    return `Say angrily: ${text}`;
+                case 'raised':
+                    return `Say this in a loud, raised voice: ${text}`;
+                case 'whisper':
+                    return `Whisper this: ${text}`;
+                case 'excited':
+                    return `Say this excitedly: ${text}`;
+                case 'custom':
+                    const customStyle = customStyleInput.value.trim();
+                    return customStyle ? `${customStyle}: ${text}` : text;
+                case 'normal':
+                default:
+                    return text;
+            }
+        }
+
+        /**
+         * Updates the UI to display the generated audio player and download link.
+         */
+        function updateUIAfterGeneration(audioUrl) {
+            audioPlayer.src = audioUrl;
+            downloadLink.href = audioUrl;
+            outputSection.classList.remove('hidden');
+        }
+
+
+        // --- UI Helper Functions ---
+        
+        function setLoadingState(isLoading) {
+            generateBtn.disabled = isLoading;
+            if (isLoading) {
+                btnText.textContent = 'Generating...';
+                spinner.classList.remove('hidden');
+            } else {
+                btnText.textContent = 'Generate Audio';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        // --- Audio Conversion Utilities ---
+
+        /**
+         * Decodes a base64 string into an ArrayBuffer.
+         */
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        /**
+         * Converts raw PCM audio data into a WAV file (Blob).
+         */
+        function pcmToWav(pcmData, numChannels, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+            const view = new DataView(buffer);
+
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcmData.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            // FMT sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Subchunk1Size
+            view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numChannels * 2, true); // ByteRate
+            view.setUint16(32, numChannels * 2, true); // BlockAlign
+            view.setUint16(34, 16, true); // BitsPerSample
+            // DATA sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcmData.length * 2, true);
+
+            // Write PCM data
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(44 + i * 2, pcmData[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+        
+        /**
+         * Helper to write a string to a DataView.
+         */
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+    </script>
+</body>
+</html>
