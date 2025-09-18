@@ -143,7 +143,7 @@ public class OutputRedirect {
                 } else {
                     throw new IllegalArgumentException("must specify Class<? extends Throwable>: " + c);
                 }
-            } else if(x instanceof String) {
+            } else if (x instanceof String) {
                 // ok
             } else {
                 throw new IllegalArgumentException("must specify either Class<? extends Throwable> or String: " + x);
@@ -154,17 +154,15 @@ public class OutputRedirect {
 
     private static Map<String, Integer> findErrors(String text) {
         HashMap<String, Integer> m = new HashMap<>();
-        text.
-            lines().
+        text.lines().
             map((s) -> findException(s)).
+            filter((c) -> c != null).
             forEach((c) -> {
-                if (c != null) {
-                    Integer v = m.get(c);
-                    if (v == null) {
-                        m.put(c, Integer.valueOf(1));
-                    } else {
-                        m.put(c, Integer.valueOf(v + 1));
-                    }
+                Integer v = m.get(c);
+                if (v == null) {
+                    m.put(c, Integer.valueOf(1));
+                } else {
+                    m.put(c, Integer.valueOf(v + 1));
                 }
             });
         return m;
@@ -216,7 +214,6 @@ public class OutputRedirect {
         return null;
     }
 
-    // should I leave this test here?  to test the test?
     @Test
     public void testFindException() {
         t("Exception in thread \"main\" java.lang.Error", "java.lang.Error");
