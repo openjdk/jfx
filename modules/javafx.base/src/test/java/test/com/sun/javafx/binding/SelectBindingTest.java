@@ -107,7 +107,7 @@ public class SelectBindingTest {
     private ObservableList<?> dependencies;
 
     @BeforeAll
-    public void setUpClass() throws Exception {
+    public static void setUpClass() throws Exception {
         ErrorLoggingUtiltity.reset();
     }
 
