@@ -33,8 +33,11 @@ import org.junit.jupiter.api.extension.TestWatcher;
  * by adding
  * {@code -Dtest.screenshot=true} command line argument.
  * <p>
- * Using Safari, the screenshot {@code data:} URL can be pasted into the address bar
- * to view the image (other browsers trim the URL string).
+ * Using Safari or Firefox, the screenshot {@code data:} URL can be pasted into the address bar
+ * to view the image (other browsers like Chrome might not accept a long URL).
+ * <p>
+ * Alternatively, the base-64 encoded string can be copied to a text file and decoded with `base64 -d INPUT OUTPUT.png`
+ * command or its equivalent.
  * <p>
  * To use, simply add the following annotation to your class:
  * <pre>{@code
