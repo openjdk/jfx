@@ -42,6 +42,7 @@ import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -67,10 +68,14 @@ public class BindingsCreateBindingTest<T> {
     private  T value1;
     private  T defaultValue;
 
+    @BeforeAll
+    public static void setUpClass() {
+        ErrorLoggingUtiltity.reset();
+    }
+
     @BeforeEach
     public void beforeEach() {
         OutputRedirect.suppressStderr();
-        ErrorLoggingUtiltity.reset();
     }
 
     @AfterEach

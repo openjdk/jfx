@@ -138,7 +138,8 @@ public class SingleExitCommon {
             boolean reEnableImplicitExit, boolean stageShown,
             boolean appShouldExit) {
 
-        doTestCommon(implicitExit, reEnableImplicitExit, stageShown, ThrowableType.NONE, appShouldExit);
+        doTestCommon(implicitExit, reEnableImplicitExit, stageShown,
+                ThrowableType.NONE, appShouldExit);
     }
 
     private void doTestCommon(boolean implicitExit,

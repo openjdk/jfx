@@ -45,6 +45,7 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.collections.ObservableList;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.javafx.beans.Person;
@@ -105,10 +106,14 @@ public class SelectBindingTest {
     private StringBinding select;
     private ObservableList<?> dependencies;
 
+    @BeforeAll
+    public void setUpClass() throws Exception {
+        ErrorLoggingUtiltity.reset();
+    }
+
     @BeforeEach
     public void setUp() throws Exception {
         OutputRedirect.suppressStderr();
-        ErrorLoggingUtiltity.reset();
 
         a = new Variable("a");
         b = new Variable("b");

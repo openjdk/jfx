@@ -57,12 +57,12 @@ public class ModuleLauncherTest {
 
     private final int testExitCode = ERROR_NONE;
 
-    private void doTestLaunchModule(String appModulePath, String testAppName, Object ... expected) throws Exception {
+    private void doTestLaunchModule(String appModulePath, String testAppName) throws Exception {
         OutputRedirect.suppressStderr();
         try {
             doTestLaunchModule2(appModulePath, testAppName);
         } finally {
-            OutputRedirect.checkAndRestoreStderr(expected);
+            OutputRedirect.checkAndRestoreStderr();
         }
     }
 

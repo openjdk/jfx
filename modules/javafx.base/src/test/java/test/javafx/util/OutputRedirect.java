@@ -69,16 +69,6 @@ public class OutputRedirect {
         }
     }
 
-    /// Returns the captured output, if any, or `null`.
-    /// @return the captured output string, or `null`
-    ///
-    public static String getCapturedOutput() {
-        if (stderrCapture != null) {
-            return stderrCapture.getAccumulatedOutput();
-        }
-        return null;
-    }
-
     /// Checks the accumulated stderr buffer for the expected exceptions and string patterns.
     ///
     /// This method expects the arguments to contain either instances of `Class<? extends Throwable>`,
@@ -101,6 +91,7 @@ public class OutputRedirect {
             Map<String, Integer> exp = toMap(expected);
             if (!errors.equals(exp)) {
                 stderr.println("Mismatch in thrown exceptions:\n  expected=" + exp + "\n  observed=" + errors);
+                err = true;
             }
 
             // patterns
@@ -150,7 +141,7 @@ public class OutputRedirect {
                         m.put(name, Integer.valueOf(v + 1));
                     }
                 } else {
-                    throw new IllegalArgumentException("must specify either Class<? extends Throwable>: " + c);
+                    throw new IllegalArgumentException("must specify Class<? extends Throwable>: " + c);
                 }
             } else if(x instanceof String) {
                 // ok
@@ -179,11 +170,18 @@ public class OutputRedirect {
         return m;
     }
 
+    /// This regex matches either of the two patterns which might appear in the output:
+    ///
+    /// `Exception in thread "main" java.lang.RuntimeException:`
+    ///
+    /// or
+    ///
+    /// `java.lang.NullPointerException: ...`
     private static final Pattern EXCEPTION_PATTERN = Pattern.compile(
         "(?:" +
             // catches lines starting with things like "Exception in thread "main" java.lang.RuntimeException:"
-            "^" +
-            "(?:" +
+            "^" + // start of line
+            "(?:" + // non-capturing group
                 "Exception in thread\s+\"[^\"]*\"\\s+" +
                 "(" + // capture group 1
                     "(?:[a-zA-Z_][a-zA-Z0-9_]*\\.)*" +
@@ -194,9 +192,9 @@ public class OutputRedirect {
                 ")" +
             ")" +
         ")" +
-        "|" +
+        "|" + // or
         "(?:" +
-            // // catches lines starting with things like "java.lang.NullPointerException: Cannot invoke..."
+            // catches lines starting with things like "java.lang.NullPointerException: Cannot invoke..."
             "^" +
             "(" + // capture group 2
                 "(?:[a-zA-Z_][a-zA-Z0-9_]*\\.)*" +
