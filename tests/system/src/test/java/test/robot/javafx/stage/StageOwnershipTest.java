@@ -27,10 +27,14 @@ package test.robot.javafx.stage;
 import com.sun.javafx.PlatformUtil;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Background;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
@@ -75,6 +79,14 @@ class StageOwnershipTest extends VisualTestBase {
     private static final double TOLERANCE = 0.07;
     private static final int WAIT_TIME = 500;
     private static final int LONG_WAIT_TIME = 1000;
+
+    @Override
+    protected Stage getStage(boolean alwaysOnTop) {
+        Stage stage = super.getStage(alwaysOnTop);
+        stage.setFullScreenExitHint(
+                "Will BEEP on macOS when exiting fullscreen due to OS trying to focus a disabled stage");
+        return stage;
+    }
 
     private void setupBottomStage() throws InterruptedException {
         final CountDownLatch shownLatch = new CountDownLatch(1);
@@ -130,7 +142,7 @@ class StageOwnershipTest extends VisualTestBase {
     private Stage createStage(StageStyle stageStyle, Color color, Stage owner, Modality modality, int x, int y) {
         Stage stage = getStage(true);
         stage.initStyle(stageStyle);
-        StackPane pane = getFocusedLabel(color, stage);
+        Pane pane = getFocusedLabel(color, stage);
         Scene scene = new Scene(pane, WIDTH, HEIGHT);
         scene.setFill(color);
         stage.setScene(scene);
@@ -149,16 +161,15 @@ class StageOwnershipTest extends VisualTestBase {
         return stage;
     }
 
-    private static StackPane getFocusedLabel(Color color, Stage stage) {
+    private static Pane getFocusedLabel(Color color, Stage stage) {
         Label label = new Label();
         label.textProperty().bind(Bindings.when(stage.focusedProperty())
                 .then("Focused").otherwise("Unfocused"));
 
-        stage.setFullScreenExitHint(
-                "Will BEEP on macOS when exiting fullscreen due to OS trying to focus a disabled stage");
-
-        StackPane pane = new StackPane(label);
+        BorderPane pane = new BorderPane();
         pane.setBackground(Background.EMPTY);
+        pane.setBottom(label);
+        BorderPane.setAlignment(label, Pos.CENTER_RIGHT);
 
         double luminance = 0.2126 * color.getRed()
                 + 0.7152 * color.getGreen()
@@ -173,11 +184,6 @@ class StageOwnershipTest extends VisualTestBase {
     private void assertColorEquals(Color expected, Stage stage) {
         Color color = getColor((int) stage.getX() + X_DELTA, (int) stage.getY() + Y_DELTA);
         assertColorEquals(expected, color, TOLERANCE);
-    }
-
-    private void assertColorNotEquals(Color notExpected, Stage stage) {
-        Color color = getColor((int) stage.getX() + X_DELTA, (int) stage.getY() + Y_DELTA);
-        assertColorDoesNotEqual(notExpected, color, TOLERANCE);
     }
 
     private static Stream<Arguments> getTestsParams() {
