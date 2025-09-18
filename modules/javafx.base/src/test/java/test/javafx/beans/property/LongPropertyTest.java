@@ -34,7 +34,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LongPropertyTest {
@@ -48,7 +48,7 @@ public class LongPropertyTest {
 
     @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
     }
 
     @Test
@@ -56,7 +56,7 @@ public class LongPropertyTest {
         final LongProperty p = new SimpleLongProperty(VALUE_1);
         p.setValue(null);
         assertEquals(DEFAULT, p.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test

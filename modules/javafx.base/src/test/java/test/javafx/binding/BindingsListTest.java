@@ -35,7 +35,7 @@ import javafx.collections.ObservableList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -55,7 +55,7 @@ public class BindingsListTest {
 
     @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
     }
 
     @BeforeEach
@@ -153,46 +153,46 @@ public class BindingsListTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), property);
         DependencyUtils.checkDependencies(binding2.getDependencies(), property);
         assertNull(binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertNull(binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertNull(binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.set(list1);
         assertEquals(data1, binding0.get());
         assertEquals(data2, binding1.get());
         assertNull(binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.remove(data2);
         assertEquals(data1, binding0.get());
         assertNull(binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertNull(binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.set(list2);
         assertNull(binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertNull(binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertNull(binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.addAll(data2, data2);
         assertEquals(data2, binding0.get());
         assertEquals(data2, binding1.get());
         assertNull(binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.set(null);
         assertNull(binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertNull(binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertNull(binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -218,60 +218,60 @@ public class BindingsListTest {
 
         index.set(-1);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.set(list1);
         index.set(-1);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(data1, binding.get());
         index.set(1);
         assertEquals(data2, binding.get());
         index.set(2);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.remove(data2);
         index.set(-1);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(data1, binding.get());
         index.set(1);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.set(list2);
         index.set(-1);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.addAll(data2, data2);
         index.set(-1);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(data2, binding.get());
         index.set(1);
         assertEquals(data2, binding.get());
         index.set(2);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         property.set(null);
         index.set(-1);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertNull(binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -306,46 +306,46 @@ public class BindingsListTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -379,71 +379,71 @@ public class BindingsListTest {
 
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -479,46 +479,46 @@ public class BindingsListTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         assertEquals(localData1, binding0.get(), EPSILON_DOUBLE);
         assertEquals(localData2, binding1.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         assertEquals(localData1, binding0.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         assertEquals(localData2, binding0.get(), EPSILON_DOUBLE);
         assertEquals(localData2, binding1.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -552,71 +552,71 @@ public class BindingsListTest {
 
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(1);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(2);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(1);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(2);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -652,46 +652,46 @@ public class BindingsListTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         assertEquals(localData1, binding0.get(), EPSILON_FLOAT);
         assertEquals(localData2, binding1.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         assertEquals(localData1, binding0.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         assertEquals(localData2, binding0.get(), EPSILON_FLOAT);
         assertEquals(localData2, binding1.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -725,71 +725,71 @@ public class BindingsListTest {
 
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(1);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(2);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(1);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(2);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         index.set(-1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -825,46 +825,46 @@ public class BindingsListTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -898,71 +898,71 @@ public class BindingsListTest {
 
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -998,46 +998,46 @@ public class BindingsListTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -1071,71 +1071,71 @@ public class BindingsListTest {
 
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(0, null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -1171,46 +1171,46 @@ public class BindingsListTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -1244,60 +1244,60 @@ public class BindingsListTest {
 
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.remove(1);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData1, binding.get());
         index.set(1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(localList2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.addAll(localData2, localData2);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(localData2, binding.get());
         index.set(1);
         assertEquals(localData2, binding.get());
         index.set(2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
 
         localProperty.set(null);
         index.set(-1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
         index.set(0);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test

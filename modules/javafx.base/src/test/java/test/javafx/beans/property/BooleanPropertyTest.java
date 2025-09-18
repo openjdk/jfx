@@ -34,7 +34,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BooleanPropertyTest {
@@ -48,7 +48,7 @@ public class BooleanPropertyTest {
 
     @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
     }
 
     @Test
@@ -56,7 +56,7 @@ public class BooleanPropertyTest {
         final BooleanProperty p = new SimpleBooleanProperty(VALUE_1);
         p.setValue(null);
         assertEquals(DEFAULT, p.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test

@@ -108,7 +108,7 @@ public class SelectBindingTest {
     @BeforeEach
     public void setUp() throws Exception {
         OutputRedirect.suppressStderr();
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
 
         a = new Variable("a");
         b = new Variable("b");
@@ -136,7 +136,7 @@ public class SelectBindingTest {
         assertEquals(person2, objectBinding.get());
         b.setNext(null);
         assertEquals(null, objectBinding.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -176,7 +176,7 @@ public class SelectBindingTest {
         assertEquals("P2", objectBinding.get());
         b.setNext(null);
         assertEquals(null, objectBinding.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -204,7 +204,7 @@ public class SelectBindingTest {
         assertEquals(true, binding1.get());
         b.setNext(null);
         assertEquals(false, binding1.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         person.setData(false);
         b.setNext(person);
@@ -214,10 +214,10 @@ public class SelectBindingTest {
         assertEquals(true, binding2.get());
         person.setData(null);
         assertEquals(false, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(false, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -246,7 +246,7 @@ public class SelectBindingTest {
         assertEquals(Math.PI, binding1.get(), EPSILON_DOUBLE);
         b.setNext(null);
         assertEquals(0.0, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         person.setData(-Math.E);
         b.setNext(person);
@@ -256,10 +256,10 @@ public class SelectBindingTest {
         assertEquals(Math.PI, binding2.get(), EPSILON_DOUBLE);
         person.setData(null);
         assertEquals(0.0, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0.0, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -288,7 +288,7 @@ public class SelectBindingTest {
         assertEquals((float) Math.PI, binding1.get(), EPSILON_FLOAT);
         b.setNext(null);
         assertEquals(0.0f, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         person.setData((float) -Math.E);
         b.setNext(person);
@@ -298,10 +298,10 @@ public class SelectBindingTest {
         assertEquals((float) Math.PI, binding2.get(), EPSILON_FLOAT);
         person.setData(null);
         assertEquals(0.0f, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0.0f, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -331,7 +331,7 @@ public class SelectBindingTest {
         assertEquals(-18, binding1.get());
         b.setNext(null);
         assertEquals(0, binding1.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         person.setData(42);
         b.setNext(person);
@@ -341,10 +341,10 @@ public class SelectBindingTest {
         assertEquals(-18, binding2.get());
         person.setData(null);
         assertEquals(0, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -371,7 +371,7 @@ public class SelectBindingTest {
         assertEquals(-987654321234567890L, binding1.get());
         b.setNext(null);
         assertEquals(0L, binding1.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         person.setData(1234567890987654321L);
         b.setNext(person);
@@ -381,10 +381,10 @@ public class SelectBindingTest {
         assertEquals(-987654321234567890L, binding2.get());
         person.setData(null);
         assertEquals(0L, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0L, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -402,7 +402,7 @@ public class SelectBindingTest {
         assertEquals("b", select.get());
         a.setName(null);
         assertNull(select.get());
-        ErrorLoggingUtility.checkWarning(NullPointerException.class);
+        ErrorLoggingUtiltity.checkWarning(NullPointerException.class);
         OutputRedirect.checkAndRestoreStderr(NullPointerException.class);
     }
 
@@ -417,7 +417,7 @@ public class SelectBindingTest {
     public void testNullIsReturnedFromAChainWithAPropertyThatIsNotOnTheAvailableObject() {
         select = Bindings.selectString(a.nextProperty(), "dummy", "name");
         assertNull(select.get());
-        ErrorLoggingUtility.checkWarning(NoSuchMethodException.class);
+        ErrorLoggingUtiltity.checkWarning(NoSuchMethodException.class);
     }
 
     @Test
@@ -451,7 +451,7 @@ public class SelectBindingTest {
         assertEquals(Arrays.asList(a.nextProperty()), dependencies);
         assertNull(select.get());
         assertEquals(Arrays.asList(a.nextProperty()), dependencies);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -459,12 +459,12 @@ public class SelectBindingTest {
 
         a.setNext(null);
         select.get(); // force it to be validated, for fun
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
         a.setNext(b);
         assertEquals(Arrays.asList(a.nextProperty()), dependencies);
         assertEquals("c", select.get());
         assertEquals(Arrays.asList(a.nextProperty(), b.nextProperty(), c.nameProperty()), dependencies);
-        assertTrue(ErrorLoggingUtility.isEmpty());
+        assertTrue(ErrorLoggingUtiltity.isEmpty());
     }
 
     @Test
@@ -475,7 +475,7 @@ public class SelectBindingTest {
         assertEquals(Arrays.asList(a.nextProperty()), dependencies);
         assertNull(select.get());
         assertEquals(Arrays.asList(a.nextProperty(), b.nextProperty()), dependencies);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -483,35 +483,35 @@ public class SelectBindingTest {
 
         b.setNext(null);
         select.get();
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
         b.setNext(c);
         assertEquals(Arrays.asList(a.nextProperty()), dependencies);
         assertEquals("c", select.get());
         assertEquals(Arrays.asList(a.nextProperty(), b.nextProperty(), c.nameProperty()), dependencies);
-        assertTrue(ErrorLoggingUtility.isEmpty());
+        assertTrue(ErrorLoggingUtiltity.isEmpty());
     }
 
     @Test
     public void testWhenAValidChangeIsBrokenBySettingTheLastLinkToNullThenTheValueIsNull() {
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
         assertEquals("c", select.get());
         c.setName("d");
         assertEquals(Arrays.asList(a.nextProperty()), dependencies);
         assertEquals("d", select.get());
         assertEquals(Arrays.asList(a.nextProperty(), b.nextProperty(), c.nameProperty()), dependencies);
-        assertTrue(ErrorLoggingUtility.isEmpty());
+        assertTrue(ErrorLoggingUtiltity.isEmpty());
     }
 
     @Test
     public void testWhenAnIncompleteChainIsMadeCompleteAtTheEndThatTheValueIsComputedCorrectly() {
-        ErrorLoggingUtility.reset();
+        ErrorLoggingUtiltity.reset();
         c.setName("d");
         select.get();
         c.setName("c");
         assertEquals(Arrays.asList(a.nextProperty()), dependencies);
         assertEquals("c", select.get());
         assertEquals(Arrays.asList(a.nextProperty(), b.nextProperty(), c.nameProperty()), dependencies);
-        assertTrue(ErrorLoggingUtility.isEmpty());
+        assertTrue(ErrorLoggingUtiltity.isEmpty());
     }
 
     @Test

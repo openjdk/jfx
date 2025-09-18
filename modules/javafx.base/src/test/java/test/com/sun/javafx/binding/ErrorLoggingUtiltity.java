@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,15 @@
 
 package test.com.sun.javafx.binding;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.sun.javafx.binding.Logging;
-import com.sun.javafx.binding.Logging.ErrorLogger;
-import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.sun.javafx.logging.PlatformLogger.Level;
 
-public class ErrorLoggingUtility {
+import com.sun.javafx.binding.Logging;
+import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
+import com.sun.javafx.binding.Logging.ErrorLogger;
+
+public class ErrorLoggingUtiltity {
 
     private static ErrorLogger errorLogger = Logging.getLogger();
 
