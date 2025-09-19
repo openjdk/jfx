@@ -72,7 +72,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static test.util.ReflectionUtils.*;
+import static test.javafx.util.ReflectionUtils.*;
 
 public class StyleableProperty_transition_Test {
 
