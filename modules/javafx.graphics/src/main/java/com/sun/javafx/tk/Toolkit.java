@@ -519,12 +519,17 @@ public abstract class Toolkit {
                                           boolean preserveRatio,
                                           boolean smooth);
     public abstract AsyncOperation loadImageAsync(
-                                          AsyncOperationListener<? extends ImageLoader> listener,
+                                          AsyncOperationListener<ImageLoader> listener,
                                           String url,
                                           double width, double height,
                                           boolean preserveRatio,
                                           boolean smooth);
-
+    public abstract AsyncOperation loadImageAsync(
+                                          AsyncOperationListener<ImageLoader> listener,
+                                          InputStream stream,
+                                          double width, double height,
+                                          boolean preserveRatio,
+                                          boolean smooth);
     /*
      * The loadPlatformImage method supports the following image types:
      *   - an object returned by the renderToImage method
