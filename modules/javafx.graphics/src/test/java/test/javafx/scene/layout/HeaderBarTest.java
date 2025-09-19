@@ -46,8 +46,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import test.com.sun.javafx.pgstub.StubScene;
-import test.util.ReflectionUtils;
-
+import test.javafx.util.ReflectionUtils;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("deprecation")

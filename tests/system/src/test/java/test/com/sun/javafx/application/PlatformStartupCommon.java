@@ -39,6 +39,7 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import com.sun.javafx.application.PlatformImplShim;
+import test.javafx.util.OutputRedirect;
 import test.util.Util;
 
 /**
@@ -69,7 +70,16 @@ public class PlatformStartupCommon {
         mainStage.setHeight(180);
     }
 
-    private void doTestCommon(final boolean implicitExit) {
+    private void doTestCommon(boolean implicitExit) {
+        OutputRedirect.suppressStderr();
+        try {
+            doTestCommon2(implicitExit);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
+        }
+    }
+
+    private void doTestCommon2(boolean implicitExit) {
         final Throwable[] testError = new Throwable[1];
         final Thread testThread = Thread.currentThread();
 

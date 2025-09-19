@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,13 +24,17 @@
  */
 package test.com.sun.javafx.binding;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import test.javafx.beans.Person;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
@@ -39,13 +43,14 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.LongBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
-import test.javafx.binding.Variable;
 import javafx.collections.ObservableList;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
+import test.javafx.beans.Person;
+import test.javafx.binding.Variable;
+import test.javafx.util.OutputRedirect;
 
 public class SelectBindingTest {
 
@@ -103,12 +108,13 @@ public class SelectBindingTest {
 
     @BeforeAll
     public static void setUpClass() {
-        System.err.println("SelectBindingTest : log messages are expected from these tests.");
         ErrorLoggingUtiltity.reset();
     }
 
     @BeforeEach
-    public void setUp() throws Exception {
+    public void setUp() {
+        OutputRedirect.suppressStderr();
+
         a = new Variable("a");
         b = new Variable("b");
         c = new Variable("c");
@@ -117,6 +123,11 @@ public class SelectBindingTest {
         b.setNext(c);
         select = Bindings.selectString(a.nextProperty(), "next", "name");
         dependencies = select.getDependencies();
+    }
+
+    @AfterEach
+    public void afterEach() {
+        OutputRedirect.checkAndRestoreStderr();
     }
 
     @Test
@@ -397,6 +408,7 @@ public class SelectBindingTest {
         a.setName(null);
         assertNull(select.get());
         ErrorLoggingUtiltity.checkWarning(NullPointerException.class);
+        OutputRedirect.checkAndRestoreStderr(NullPointerException.class);
     }
 
     @Test
