@@ -27,10 +27,20 @@ package test.robot.javafx.scene.layout;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.TimeUnit;
 import javafx.geometry.Bounds;
+import javafx.scene.Scene;
+import javafx.scene.Group;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
+import javafx.stage.Stage;
+import test.util.Util;
+import test.util.ScreenCaptureTestWatcher;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 
 /**************************************************************************
  *                                                                        *
@@ -39,7 +49,47 @@ import org.junit.jupiter.api.Timeout;
  *                                                                        *
  *************************************************************************/
 @Timeout(value=20000, unit=TimeUnit.MILLISECONDS)
+@ExtendWith(ScreenCaptureTestWatcher.class)
 public class RegionBackgroundImageUITest extends RegionUITestBase {
+
+    @BeforeEach
+    public void doSetup() {
+        runAndWait(() -> {
+            if (!stages.isEmpty()) {
+                for (final Stage stage : stages) {
+                    if (stage.isShowing()) {
+                        stage.hide();
+                    }
+                }
+                stages.clear();
+            }
+        });
+        runAndWait(() -> robot = new Robot());
+        Util.parkCursor(robot);
+        screenCapture = null;
+        runAndWait(() -> {
+            stage = getStage();
+            region = new Region();
+            region.setPrefSize(REGION_WIDTH, REGION_HEIGHT);
+            region.relocate(REGION_LEFT, REGION_TOP);
+            scene = new Scene(root = new Group(region), WIDTH, HEIGHT);
+            scene.setFill(SCENE_FILL);
+            stage.setScene(scene);
+            stage.setAlwaysOnTop(true);
+            stage.show();
+        });
+    }
+
+    /**
+     * This method is overridden and doing nothing, because we want the stage
+     * to be active until screen capture is done by ScreenCaptureTestWatcher
+     * utility on test failure. Stale test stage will be cleared before next
+     * test stage is created during setup.
+     */
+    @AfterEach
+    public void doTeardown() {
+
+    }
 
     @Test
     public void alignedImage() {
