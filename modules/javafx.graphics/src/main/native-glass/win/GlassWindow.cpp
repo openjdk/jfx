@@ -831,10 +831,9 @@ void GlassWindow::HandleFocusDisabledEvent()
 
 LRESULT GlassWindow::HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    // Capture the top and size before DefWindowProc applies the default frame.
+    // Capture the top before DefWindowProc applies the default frame.
     NCCALCSIZE_PARAMS *p = (NCCALCSIZE_PARAMS*)lParam;
     LONG originalTop = p->rgrc[0].top;
-    RECT originalSize = p->rgrc[0];
 
     // Apply the default window frame.
     LRESULT res = DefWindowProc(GetHWND(), msg, wParam, lParam);
@@ -924,7 +923,7 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
         RECT windowRect;
 
-        if (::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
+        if (m_isResizable && ::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
             result = LRESULT(HTTOP);
             return TRUE;
         }

@@ -79,10 +79,7 @@ public:
 
     bool run()
     {
-        if (DFGStoreBarrierInsertionPhaseInternal::verbose) {
-            dataLog("Starting store barrier insertion:\n");
-            m_graph.dump();
-        }
+        dataLogIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "Starting store barrier insertion:\n", m_graph);
 
         switch (mode) {
         case PhaseMode::Fast: {
@@ -109,8 +106,8 @@ public:
             // towards believing that all nodes need barriers. "Needing a barrier" is like
             // saying that the node is in a past epoch. "Not needing a barrier" is like saying
             // that the node is in the current epoch.
-            m_stateAtHead = makeUnique<BlockMap<HashSet<Node*>>>(m_graph);
-            m_stateAtTail = makeUnique<BlockMap<HashSet<Node*>>>(m_graph);
+            m_stateAtHead = makeUnique<BlockMap<UncheckedKeyHashSet<Node*>>>(m_graph);
+            m_stateAtTail = makeUnique<BlockMap<UncheckedKeyHashSet<Node*>>>(m_graph);
 
             BlockList postOrder = m_graph.blocksInPostOrder();
 
@@ -172,9 +169,8 @@ private:
     bool handleBlock(BasicBlock* block)
     {
         if (DFGStoreBarrierInsertionPhaseInternal::verbose) {
-            dataLog("Dealing with block ", pointerDump(block), "\n");
-            if (reallyInsertBarriers())
-                dataLog("    Really inserting barriers.\n");
+            dataLogLn("Dealing with block ", pointerDump(block));
+            dataLogLnIf(reallyInsertBarriers(), "    Really inserting barriers.");
         }
 
         m_currentEpoch = Epoch::first();
@@ -207,12 +203,13 @@ private:
 
         bool result = true;
 
-        HashMap<AbstractHeap, Node*> potentialStackEscapes;
+        UncheckedKeyHashMap<AbstractHeap, Node*> potentialStackEscapes;
 
         for (m_nodeIndex = 0; m_nodeIndex < block->size(); ++m_nodeIndex) {
             m_node = block->at(m_nodeIndex);
 
             if (DFGStoreBarrierInsertionPhaseInternal::verbose) {
+                WTF::dataFile().atomically([&](auto&) {
                 dataLog(
                     "    ", m_currentEpoch, ": Looking at node ", m_node, " with children: ");
                 CommaPrinter comma;
@@ -221,7 +218,8 @@ private:
                     [&] (Edge edge) {
                         dataLog(comma, edge, " (", edge->epoch(), ")");
                     });
-                dataLog("\n");
+                    dataLogLn();
+                });
             }
 
             if (mode == PhaseMode::Global) {
@@ -343,6 +341,7 @@ private:
 
             case MultiPutByOffset:
             case MultiDeleteByOffset: {
+                // These nodes may cause transition too.
                 considerBarrier(m_node->child1());
                 break;
             }
@@ -383,6 +382,7 @@ private:
             case NewArray:
             case NewArrayWithSize:
             case NewArrayWithConstantSize:
+            case NewArrayWithSizeAndStructure:
             case NewArrayBuffer:
             case NewInternalFieldObject:
             case NewTypedArray:
@@ -392,6 +392,7 @@ private:
             case NewSet:
             case NewSymbol:
             case MaterializeNewObject:
+            case MaterializeNewArrayWithConstantSize:
             case MaterializeCreateActivation:
             case MakeRope:
             case MakeAtomString:
@@ -521,6 +522,7 @@ private:
             }
 
             if (DFGStoreBarrierInsertionPhaseInternal::verbose) {
+                WTF::dataFile().atomically([&](auto&) {
                 dataLog(
                     "    ", m_currentEpoch, ": Done with node ", m_node, " (", m_node->epoch(),
                     ") with children: ");
@@ -530,7 +532,8 @@ private:
                     [&] (Edge edge) {
                         dataLog(comma, edge, " (", edge->epoch(), ")");
                     });
-                dataLog("\n");
+                    dataLogLn();
+                });
             }
 
             if (mode == PhaseMode::Global) {
@@ -558,8 +561,7 @@ private:
 
     void considerBarrier(Edge base, Edge child)
     {
-        if (DFGStoreBarrierInsertionPhaseInternal::verbose)
-            dataLog("        Considering adding barrier ", base, " => ", child, "\n");
+        dataLogLnIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "        Considering adding barrier ", base, " => ", child);
 
         // We don't need a store barrier if the child is guaranteed to not be a cell.
         switch (mode) {
@@ -567,8 +569,7 @@ private:
             // Don't try too hard because it's too expensive to run AI.
             if (child->hasConstant()) {
                 if (!child->asJSValue().isCell()) {
-                    if (DFGStoreBarrierInsertionPhaseInternal::verbose)
-                        dataLog("            Rejecting because of constant type.\n");
+                    dataLogLnIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "            Rejecting because of constant type.");
                     return;
                 }
             } else {
@@ -578,8 +579,7 @@ private:
                 case NodeResultInt32:
                 case NodeResultInt52:
                 case NodeResultBoolean:
-                    if (DFGStoreBarrierInsertionPhaseInternal::verbose)
-                        dataLog("            Rejecting because of result type.\n");
+                    dataLogLnIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "            Rejecting because of result type.");
                     return;
                 default:
                     break;
@@ -592,8 +592,7 @@ private:
             // Go into rage mode to eliminate any chance of a barrier with a non-cell child. We
             // can afford to keep around AI in Global mode.
             if (!m_interpreter->needsTypeCheck(child, ~SpecCell)) {
-                if (DFGStoreBarrierInsertionPhaseInternal::verbose)
-                    dataLog("            Rejecting because of AI type.\n");
+                dataLogLnIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "            Rejecting because of AI type.");
                 return;
             }
             break;
@@ -604,21 +603,18 @@ private:
 
     void considerBarrier(Edge base)
     {
-        if (DFGStoreBarrierInsertionPhaseInternal::verbose)
-            dataLog("        Considering adding barrier on ", base, "\n");
+        dataLogLnIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "        Considering adding barrier on ", base);
 
         // We don't need a store barrier if the epoch of the base is identical to the current
         // epoch. That means that we either just allocated the object and so it's guaranteed to
         // be in newgen, or we just ran a barrier on it so it's guaranteed to be remembered
         // already.
         if (base->epoch() == m_currentEpoch) {
-            if (DFGStoreBarrierInsertionPhaseInternal::verbose)
-                dataLog("            Rejecting because it's in the current epoch.\n");
+            dataLogLnIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "            Rejecting because it's in the current epoch.");
             return;
         }
 
-        if (DFGStoreBarrierInsertionPhaseInternal::verbose)
-            dataLog("            Inserting barrier.\n");
+        dataLogLnIf(DFGStoreBarrierInsertionPhaseInternal::verbose, "            Inserting barrier.");
         insertBarrier(m_nodeIndex + 1, base);
     }
 
@@ -663,8 +659,8 @@ private:
     // Things we only use in Global mode.
     std::unique_ptr<InPlaceAbstractState> m_state;
     std::unique_ptr<AbstractInterpreter<InPlaceAbstractState>> m_interpreter;
-    std::unique_ptr<BlockMap<HashSet<Node*>>> m_stateAtHead;
-    std::unique_ptr<BlockMap<HashSet<Node*>>> m_stateAtTail;
+    std::unique_ptr<BlockMap<UncheckedKeyHashSet<Node*>>> m_stateAtHead;
+    std::unique_ptr<BlockMap<UncheckedKeyHashSet<Node*>>> m_stateAtTail;
     bool m_isConverged;
 };
 

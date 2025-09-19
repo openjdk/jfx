@@ -304,8 +304,8 @@ gst_collect_pads_set_buffer_function_locked (GstCollectPads * pads,
 /**
  * gst_collect_pads_set_buffer_function:
  * @pads: the collectpads to use
- * @func: (scope call): the function to set
- * @user_data: (closure): user data passed to the function
+ * @func: (scope call) (closure user_data): the function to set
+ * @user_data: user data passed to the function
  *
  * Set the callback function and user data that will be called with
  * the oldest buffer when all pads have been collected, or %NULL on EOS.
@@ -329,8 +329,8 @@ gst_collect_pads_set_buffer_function (GstCollectPads * pads,
 /**
  * gst_collect_pads_set_compare_function:
  * @pads: the pads to use
- * @func: (scope call): the function to set
- * @user_data: (closure): user data passed to the function
+ * @func: (scope call) (closure user_data): the function to set
+ * @user_data: user data passed to the function
  *
  * Set the timestamp comparison function.
  *

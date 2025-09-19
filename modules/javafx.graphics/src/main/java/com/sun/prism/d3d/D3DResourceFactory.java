@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -442,6 +442,16 @@ class D3DResourceFactory extends BaseShaderFactory {
                 maxTexCoordIndex, isPixcoordUsed, isPerVertexColorUsed);
 
         return new D3DShader(context, shaderHandle, params);
+    }
+
+    @Override
+    public Shader createShader(String shaderName,
+                               Map<String, Integer> samplers,
+                               Map<String, Integer> params,
+                               int maxTexCoordIndex,
+                               boolean isPixcoordUsed,
+                               boolean isPerVertexColorUsed) {
+        throw new UnsupportedOperationException("Not supported for D3D pipeline");
     }
 
     @Override

@@ -36,10 +36,10 @@
 #include <mutex>
 #include <sqlite3.h>
 #include <thread>
-#include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Lock.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
@@ -51,12 +51,14 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SQLiteDatabase);
+
 static constexpr auto notOpenErrorMessage = "database is not open"_s;
 
 static void unauthorizedSQLFunction(sqlite3_context *context, int, sqlite3_value **)
 {
     auto* functionName = static_cast<const char*>(sqlite3_user_data(context));
-    sqlite3_result_error(context, makeString("Function "_s, span(functionName), " is unauthorized"_s).utf8().data(), -1);
+    sqlite3_result_error(context, makeString("Function "_s, unsafeSpan(functionName), " is unauthorized"_s).utf8().data(), -1);
 }
 
 static void initializeSQLiteIfNecessary()
@@ -474,6 +476,11 @@ bool SQLiteDatabase::executeCommand(ASCIILiteral query)
 bool SQLiteDatabase::tableExists(StringView tableName)
 {
     return !tableSQL(tableName).isEmpty();
+}
+
+bool SQLiteDatabase::indexExists(StringView indexName)
+{
+    return !indexSQL(indexName).isEmpty();
 }
 
 String SQLiteDatabase::tableSQL(StringView tableName)

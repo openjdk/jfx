@@ -32,6 +32,8 @@
 #include "JSObject.h"
 #include "Scribble.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 #if ASSERT_ENABLED
@@ -51,9 +53,9 @@ ObjectInitializationScope::~ObjectInitializationScope()
 
 void ObjectInitializationScope::notifyAllocated(JSObject* object)
 {
-    ASSERT(!m_disallowGC);
+    ASSERT(!m_assertNoGC);
     ASSERT(!m_disallowVMEntry);
-    m_disallowGC.emplace();
+    m_assertNoGC.emplace();
     m_disallowVMEntry.emplace(m_vm);
     m_object = object;
 }
@@ -61,7 +63,7 @@ void ObjectInitializationScope::notifyAllocated(JSObject* object)
 void ObjectInitializationScope::notifyInitialized(JSObject* object)
 {
     if (m_object) {
-        m_disallowGC.reset();
+        m_assertNoGC.reset();
         m_disallowVMEntry.reset();
         m_object = nullptr;
     }
@@ -116,3 +118,5 @@ void ObjectInitializationScope::verifyPropertiesAreInitialized(JSObject* object)
 #endif // ASSERT_ENABLED
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

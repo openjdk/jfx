@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -42,6 +42,8 @@
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -318,7 +320,7 @@ public:
     bool usesEval() const { return m_usesEval; }
     bool usesImportMeta() const { return m_usesImportMeta; }
 
-    const HashSet<UniquedStringImpl*>& closedVariableCandidates() const { return m_closedVariableCandidates; }
+    const UncheckedKeyHashSet<UniquedStringImpl*>& closedVariableCandidates() const { return m_closedVariableCandidates; }
     VariableEnvironment& declaredVariables() { return m_declaredVariables; }
     VariableEnvironment& lexicalVariables() { return m_lexicalVariables; }
     void finalizeLexicalEnvironment()
@@ -996,8 +998,8 @@ private:
     VariableEnvironment m_lexicalVariables;
     Vector<UniquedStringImplPtrSet, 6> m_usedVariables;
     UniquedStringImplPtrSet m_variablesBeingHoisted;
-    HashMap<FunctionMetadataNode*, NeedsDuplicateDeclarationCheck> m_sloppyModeFunctionHoistingCandidates;
-    HashSet<UniquedStringImpl*> m_closedVariableCandidates;
+    UncheckedKeyHashMap<FunctionMetadataNode*, NeedsDuplicateDeclarationCheck> m_sloppyModeFunctionHoistingCandidates;
+    UncheckedKeyHashSet<UniquedStringImpl*> m_closedVariableCandidates;
     DeclarationStacks::FunctionStack m_functionDeclarations;
 };
 
@@ -1040,7 +1042,7 @@ enum class ParsingContext { Normal, FunctionConstructor };
 template <typename LexerType>
 class Parser {
     WTF_MAKE_NONCOPYABLE(Parser);
-    WTF_MAKE_TZONE_ALLOCATED(Parser);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Parser);
 
 public:
     Parser(VM&, const SourceCode&, ImplementationVisibility, JSParserBuiltinMode, LexicallyScopedFeatures, JSParserScriptMode, SourceParseMode, FunctionMode, SuperBinding, ConstructorKind = ConstructorKind::None, DerivedContextType = DerivedContextType::None, bool isEvalContext = false, EvalContextType = EvalContextType::None, DebuggerParseData* = nullptr, bool isInsideOrdinaryFunction = false);
@@ -2018,6 +2020,7 @@ private:
         const Identifier* lastPrivateName { nullptr };
         bool allowAwait { true };
         bool isParsingClassFieldInitializer { false };
+        bool classFieldInitMasksAsync { false };
     };
 
     // If you're using this directly, you probably should be using
@@ -2167,7 +2170,6 @@ private:
     bool m_seenPrivateNameUseInNonReparsingFunctionMode { false };
     bool m_seenArgumentsDotLength { false };
 };
-
 
 template <typename LexerType>
 template <class ParsedNode>
@@ -2391,3 +2393,5 @@ inline std::unique_ptr<ProgramNode> parseFunctionForFunctionConstructor(VM& vm, 
 
 
 } // namespace
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

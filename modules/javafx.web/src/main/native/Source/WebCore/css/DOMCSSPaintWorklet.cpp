@@ -70,6 +70,7 @@ void PaintWorklet::addModule(const String& moduleURL, WorkletOptions&&, DOMPromi
         return;
     }
 
+
     // FIXME: We should download the source from the URL
     // https://bugs.webkit.org/show_bug.cgi?id=191136
     // PaintWorklets don't have access to any sensitive APIs so we don't bother tracking taintedness there.

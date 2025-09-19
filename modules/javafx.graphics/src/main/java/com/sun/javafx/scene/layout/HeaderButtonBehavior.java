@@ -28,17 +28,21 @@ package com.sun.javafx.scene.layout;
 import com.sun.javafx.PlatformUtil;
 import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
 import javafx.util.Subscription;
 import java.util.Objects;
 
-public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
+public final class HeaderButtonBehavior implements EventHandler<Event> {
 
     private static final PseudoClass MAXIMIZED_PSEUDO_CLASS = PseudoClass.getPseudoClass("maximized");
 
@@ -54,19 +58,23 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
             .flatMap(Scene::windowProperty)
             .map(w -> w instanceof Stage s ? s : null);
 
-        if (type == HeaderButtonType.MAXIMIZE) {
-            subscription = Subscription.combine(
+        Subscription subscription = Subscription.combine(
+            stage.flatMap(Stage::fullScreenProperty).subscribe(this::onFullScreenChanged),
+            () -> node.removeEventHandler(MouseEvent.MOUSE_RELEASED, this));
+
+        if (type != HeaderButtonType.CLOSE) {
+            subscription = Subscription.combine(subscription,
+                stage.subscribe(this::onStageChanged),
                 stage.flatMap(Stage::resizableProperty).subscribe(this::onResizableChanged),
-                stage.flatMap(Stage::fullScreenProperty).subscribe(this::onFullScreenChanged),
-                stage.flatMap(Stage::maximizedProperty).subscribe(this::onMaximizedChanged),
-                () -> node.removeEventHandler(MouseEvent.MOUSE_RELEASED, this)
-            );
-        } else {
-            subscription = Subscription.combine(
-                stage.flatMap(Stage::fullScreenProperty).subscribe(this::onFullScreenChanged),
-                () -> node.removeEventHandler(MouseEvent.MOUSE_RELEASED, this)
-            );
+                () -> { if (getStage() instanceof Stage s) s.removeEventFilter(WindowEvent.WINDOW_SHOWING, this); });
         }
+
+        if (type == HeaderButtonType.MAXIMIZE) {
+            subscription = Subscription.combine(subscription,
+                stage.flatMap(Stage::maximizedProperty).subscribe(this::onMaximizedChanged));
+        }
+
+        this.subscription = subscription;
 
         node.addEventHandler(MouseEvent.MOUSE_RELEASED, this);
 
@@ -80,8 +88,16 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
     }
 
     @Override
-    public void handle(MouseEvent event) {
-        if (!node.getLayoutBounds().contains(event.getX(), event.getY())) {
+    public void handle(Event event) {
+        if (event instanceof MouseEvent mouseEvent) {
+            handleMouseEvent(mouseEvent);
+        } else if (event instanceof WindowEvent windowEvent) {
+            handleWindowEvent(windowEvent);
+        }
+    }
+
+    private void handleMouseEvent(MouseEvent event) {
+        if (!node.getLayoutBounds().contains(event.getX(), event.getY()) || event.getButton() != MouseButton.PRIMARY) {
             return;
         }
 
@@ -91,7 +107,7 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
         }
 
         switch (type) {
-            case CLOSE -> stage.close();
+            case CLOSE -> Event.fireEvent(stage, new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
             case ICONIFY -> stage.setIconified(true);
             case MAXIMIZE -> {
                 // On macOS, a non-modal window is put into full-screen mode when the maximize button is clicked,
@@ -105,6 +121,12 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
         }
     }
 
+    private void handleWindowEvent(WindowEvent event) {
+        if (event.getEventType() == WindowEvent.WINDOW_SHOWING && getStage() instanceof Stage stage) {
+            updateButtonDisableState(stage);
+        }
+    }
+
     private Stage getStage() {
         Scene scene = node.getScene();
         if (scene == null) {
@@ -114,9 +136,32 @@ public final class HeaderButtonBehavior implements EventHandler<MouseEvent> {
         return scene.getWindow() instanceof Stage stage ? stage : null;
     }
 
-    private void onResizableChanged(Boolean resizable) {
+    private void onStageChanged(Stage oldStage, Stage newStage) {
+        if (oldStage != null) {
+            oldStage.removeEventFilter(WindowEvent.WINDOW_SHOWING, this);
+        }
+
+        if (newStage != null) {
+            newStage.addEventFilter(WindowEvent.WINDOW_SHOWING, this);
+        }
+    }
+
+    private void onResizableChanged(Boolean unused) {
+        if (getStage() instanceof Stage stage) {
+            updateButtonDisableState(stage);
+        }
+    }
+
+    private void updateButtonDisableState(Stage stage) {
         if (!node.disableProperty().isBound()) {
-            node.setDisable(resizable == Boolean.FALSE);
+            boolean utility = stage.getStyle() == StageStyle.UTILITY;
+            boolean modalOrOwned = stage.getOwner() != null || stage.getModality() != Modality.NONE;
+            boolean resizable = stage.isResizable();
+
+            switch (type) {
+                case ICONIFY -> node.setDisable(utility || modalOrOwned);
+                case MAXIMIZE -> node.setDisable(!resizable);
+            }
         }
     }
 

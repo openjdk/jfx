@@ -49,6 +49,7 @@
 #include <wtf/HashTraits.h>
 #include <wtf/RefPtr.h>
 #include <wtf/SHA1.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 
@@ -76,33 +77,33 @@ DOMPatchSupport::DOMPatchSupport(DOMEditor& domEditor, Document& document)
 void DOMPatchSupport::patchDocument(const String& markup)
 {
     RefPtr<Document> newDocument;
-    if (m_document.isHTMLDocument())
-        newDocument = HTMLDocument::create(nullptr, m_document.settings(), URL(), { });
-    else if (m_document.isXHTMLDocument())
-        newDocument = XMLDocument::createXHTML(nullptr, m_document.settings(), URL());
-    else if (m_document.isSVGDocument())
-        newDocument = XMLDocument::create(nullptr, m_document.settings(), URL());
+    if (m_document->isHTMLDocument())
+        newDocument = HTMLDocument::create(nullptr, m_document->settings(), URL(), { });
+    else if (m_document->isXHTMLDocument())
+        newDocument = XMLDocument::createXHTML(nullptr, m_document->settings(), URL());
+    else if (m_document->isSVGDocument())
+        newDocument = XMLDocument::create(nullptr, m_document->settings(), URL());
 
     ASSERT(newDocument);
     RefPtr<DocumentParser> parser;
-    if (newDocument->isHTMLDocument())
-        parser = HTMLDocumentParser::create(static_cast<HTMLDocument&>(*newDocument));
+    if (auto* htmlDocument = dynamicDowncast<HTMLDocument>(newDocument.get()))
+        parser = HTMLDocumentParser::create(*htmlDocument);
     else
         parser = XMLDocumentParser::create(*newDocument, XMLDocumentParser::IsInFrameView::No);
     parser->insert(markup); // Use insert() so that the parser will not yield.
     parser->finish();
     parser->detach();
 
-    if (!m_document.documentElement())
+    if (!m_document->documentElement())
         return;
     if (!newDocument->documentElement())
         return;
 
-    std::unique_ptr<Digest> oldInfo = createDigest(*m_document.documentElement(), nullptr);
+    std::unique_ptr<Digest> oldInfo = createDigest(*m_document->documentElement(), nullptr);
     std::unique_ptr<Digest> newInfo = createDigest(*newDocument->documentElement(), &m_unusedNodesMap);
 
     if (innerPatchNode(*oldInfo, *newInfo).hasException()) {
-        Ref document { m_document };
+        Ref document { m_document.get() };
         // Fall back to rewrite.
         document->write(nullptr, markup);
         document->close();
@@ -120,10 +121,10 @@ ExceptionOr<Node*> DOMPatchSupport::patchNode(Node& node, const String& markup)
     Node* previousSibling = node.previousSibling();
     // FIXME: This code should use one of createFragment* in markup.h
     auto fragment = DocumentFragment::create(m_document);
-    if (m_document.isHTMLDocument())
-        fragment->parseHTML(markup, node.parentElement() ? *node.parentElement() : *m_document.documentElement());
+    if (m_document->isHTMLDocument())
+        fragment->parseHTML(markup, node.parentElement() ? *node.parentElement() : *m_document->documentElement());
     else
-        fragment->parseXML(markup, node.parentElement() ? node.parentElement() : m_document.documentElement());
+        fragment->parseXML(markup, node.parentElement() ? node.parentElement() : m_document->documentElement());
 
     // Compose the old list.
     auto* parentNode = node.parentNode();
@@ -189,7 +190,7 @@ ExceptionOr<void> DOMPatchSupport::innerPatchNode(Digest& oldDigest, Digest& new
 
         // FIXME: Create a function in Element for copying properties. cloneDataFromElement() is close but not enough for this case.
         if (newElement.hasAttributesWithoutUpdate()) {
-            for (auto& attribute : newElement.attributesIterator()) {
+            for (auto& attribute : newElement.attributes()) {
                 auto result = m_domEditor.setAttribute(oldElement, attribute.name().localName(), attribute.value());
                 if (result.hasException())
                     return result.releaseException();
@@ -234,7 +235,7 @@ DOMPatchSupport::diff(const Vector<std::unique_ptr<Digest>>& oldList, const Vect
         newMap[newIndex].second = oldIndex;
     }
 
-    typedef HashMap<String, Vector<size_t>> DiffTable;
+    using DiffTable = HashMap<String, Vector<size_t>>;
     DiffTable newTable;
     DiffTable oldTable;
 
@@ -407,8 +408,7 @@ std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& nod
     digest->node = &node;
     SHA1 sha1;
 
-    auto nodeType = node.nodeType();
-    sha1.addBytes(std::span { reinterpret_cast<const uint8_t*>(&nodeType), sizeof(nodeType) });
+    sha1.addBytes(asByteSpan(node.nodeType()));
     addStringToSHA1(sha1, node.nodeName());
     addStringToSHA1(sha1, node.nodeValue());
 
@@ -424,7 +424,7 @@ std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& nod
 
         if (element.hasAttributesWithoutUpdate()) {
             SHA1 attrsSHA1;
-            for (auto& attribute : element.attributesIterator()) {
+            for (auto& attribute : element.attributes()) {
                 addStringToSHA1(attrsSHA1, attribute.name().toString());
                 addStringToSHA1(attrsSHA1, attribute.value());
             }

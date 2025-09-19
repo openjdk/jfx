@@ -72,6 +72,9 @@ MACRO_INSTRUCTIONS =
      "storei",
      "storeh",
      "storeb",
+     "transferi",
+     "transferq",
+     "transferp",
      "loadf",
      "loadd",
      "loadv",
@@ -411,6 +414,7 @@ ARM64_INSTRUCTIONS =
      "pcrtoaddr",   # Address from PC relative offset - adr instruction
      "globaladdr",
      "notq",
+     "loadqinc",
      "loadlinkacqb",
      "loadlinkacqh",
      "loadlinkacqi",

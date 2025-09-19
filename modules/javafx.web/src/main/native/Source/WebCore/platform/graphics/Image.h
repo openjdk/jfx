@@ -37,7 +37,7 @@
 #include "ImageTypes.h"
 #include "NativeImage.h"
 #include "Timer.h"
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/TypeCasts.h>
@@ -56,7 +56,7 @@ struct Length;
 // This class gets notified when an image creates or destroys decoded frames and when it advances animation frames.
 class ImageObserver;
 
-class Image : public RefCounted<Image>, public CanMakeWeakPtr<Image> {
+class Image : public RefCountedAndCanMakeWeakPtr<Image> {
     friend class CachedSubimage;
     friend class GraphicsContext;
 public:
@@ -65,7 +65,6 @@ public:
     WEBCORE_EXPORT static RefPtr<Image> create(ImageObserver&);
     WEBCORE_EXPORT static std::optional<Ref<Image>> create(RefPtr<ShareableBitmap>&&);
     WEBCORE_EXPORT static bool supportsType(const String&);
-    static bool isPDFResource(const String& mimeType, const URL&);
 
     virtual bool isBitmapImage() const { return false; }
     virtual bool isGeneratedImage() const { return false; }
@@ -121,6 +120,7 @@ public:
     const FragmentedSharedBuffer* data() const { return m_encodedImageData.get(); }
 
     virtual DestinationColorSpace colorSpace();
+    virtual Headroom headroom() const { return Headroom::None; }
 
     // Animation begins whenever someone draws the image, so startAnimation() is not normally called.
     // It will automatically pause once all observers no longer want to render the image anywhere.

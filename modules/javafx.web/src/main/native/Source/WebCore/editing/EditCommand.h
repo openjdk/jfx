@@ -43,6 +43,8 @@ class Element;
 ASCIILiteral inputTypeNameForEditingAction(EditAction);
 bool isInputMethodComposingForEditingAction(EditAction);
 
+using NodeSet = UncheckedKeyHashSet<Ref<Node>>;
+
 class EditCommand : public RefCounted<EditCommand> {
 public:
     virtual ~EditCommand();
@@ -96,25 +98,22 @@ public:
     virtual void doReapply(); // calls doApply()
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Ref<Node>>&) = 0;
+    virtual void getNodesInCommand(NodeSet&) = 0;
 #endif
 
 protected:
     explicit SimpleEditCommand(Ref<Document>&&, EditAction = EditAction::Unspecified);
 
 #ifndef NDEBUG
-    void addNodeAndDescendants(Node*, HashSet<Ref<Node>>&);
+    void addNodeAndDescendants(Node*, NodeSet&);
 #endif
 
 private:
     bool isSimpleEditCommand() const override { return true; }
 };
 
-inline SimpleEditCommand* toSimpleEditCommand(EditCommand* command)
-{
-    ASSERT(command);
-    ASSERT_WITH_SECURITY_IMPLICATION(command->isSimpleEditCommand());
-    return static_cast<SimpleEditCommand*>(command);
-}
-
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SimpleEditCommand)
+    static bool isType(const WebCore::EditCommand& command) { return command.isSimpleEditCommand(); }
+SPECIALIZE_TYPE_TRAITS_END()

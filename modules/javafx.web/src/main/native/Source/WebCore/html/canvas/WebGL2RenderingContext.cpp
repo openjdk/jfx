@@ -113,7 +113,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGL2RenderingContext);
 
 std::unique_ptr<WebGL2RenderingContext> WebGL2RenderingContext::create(CanvasBase& canvas, WebGLContextAttributes&& attributes)
 {
-    return std::unique_ptr<WebGL2RenderingContext>(new WebGL2RenderingContext(canvas, WTFMove(attributes)));
+    return std::unique_ptr<WebGL2RenderingContext>(new WebGL2RenderingContext(canvas, Type::WebGL2, WTFMove(attributes)));
 }
 
 WebGL2RenderingContext::~WebGL2RenderingContext()
@@ -633,7 +633,7 @@ void WebGL2RenderingContext::getBufferSubData(GCGLenum target, long long srcByte
         return;
 
     // FIXME: Coalesce multiple getBufferSubData() calls to use a single map() call
-    m_context->getBufferSubData(target, srcByteOffset, std::span(static_cast<uint8_t*>(dstData->baseAddress()) + dstOffset * elementSize, copyLength * elementSize));
+    m_context->getBufferSubData(target, srcByteOffset, dstData->mutableSpan().subspan(dstOffset * elementSize, copyLength * elementSize));
 }
 
 void WebGL2RenderingContext::bindFramebuffer(GCGLenum target, WebGLFramebuffer* buffer)
@@ -1164,7 +1164,7 @@ void WebGL2RenderingContext::compressedTexImage2D(GCGLenum target, GCGLint level
     auto slice = sliceArrayBufferView("compressedTexImage2D"_s, srcData, srcOffset, srcLengthOverride);
     if (!slice)
         return;
-    m_context->compressedTexImage2D(target, level, internalformat, width, height, border, slice->byteLength(), std::span(static_cast<const uint8_t*>(slice->baseAddress()), slice->byteLength()));
+    m_context->compressedTexImage2D(target, level, internalformat, width, height, border, slice->byteLength(), slice->span());
 }
 
 void WebGL2RenderingContext::compressedTexImage3D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLsizei imageSize, GCGLint64 offset)
@@ -1197,7 +1197,7 @@ void WebGL2RenderingContext::compressedTexImage3D(GCGLenum target, GCGLint level
     auto slice = sliceArrayBufferView("compressedTexImage3D"_s, srcData, srcOffset, srcLengthOverride);
     if (!slice)
         return;
-    m_context->compressedTexImage3D(target, level, internalformat, width, height, depth, border, slice->byteLength(), std::span(static_cast<const uint8_t*>(slice->baseAddress()), slice->byteLength()));
+    m_context->compressedTexImage3D(target, level, internalformat, width, height, depth, border, slice->byteLength(), slice->span());
 }
 
 void WebGL2RenderingContext::compressedTexSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, ArrayBufferView& srcData)
@@ -1243,7 +1243,7 @@ void WebGL2RenderingContext::compressedTexSubImage2D(GCGLenum target, GCGLint le
     auto slice = sliceArrayBufferView("compressedTexSubImage2D"_s, srcData, srcOffset, srcLengthOverride);
     if (!slice)
         return;
-    m_context->compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, slice->byteLength(), std::span(static_cast<const uint8_t*>(slice->baseAddress()), slice->byteLength()));
+    m_context->compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, slice->byteLength(), slice->span());
 }
 
 void WebGL2RenderingContext::compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLsizei imageSize, GCGLint64 offset)
@@ -1276,7 +1276,7 @@ void WebGL2RenderingContext::compressedTexSubImage3D(GCGLenum target, GCGLint le
     auto slice = sliceArrayBufferView("compressedTexSubImage3D"_s, srcData, srcOffset, srcLengthOverride);
     if (!slice)
         return;
-    m_context->compressedTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, slice->byteLength(), std::span(static_cast<const uint8_t*>(slice->baseAddress()), slice->byteLength()));
+    m_context->compressedTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, slice->byteLength(), slice->span());
 }
 
 GCGLint WebGL2RenderingContext::getFragDataLocation(WebGLProgram& program, const String& name)
@@ -1434,8 +1434,8 @@ void WebGL2RenderingContext::vertexAttribI4iv(GCGLuint index, Int32List&& list)
 {
     if (isContextLost())
         return;
-    auto data = list.data();
-    if (!data) {
+    auto data = list.span();
+    if (!data.data()) {
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "vertexAttribI4iv"_s, "no array"_s);
         return;
     }
@@ -1449,9 +1449,9 @@ void WebGL2RenderingContext::vertexAttribI4iv(GCGLuint index, Int32List&& list)
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "vertexAttribI4iv"_s, "index out of range"_s);
         return;
     }
-    m_context->vertexAttribI4iv(index, std::span<const GCGLint, 4> { data, 4 });
+    m_context->vertexAttribI4iv(index, data.first<4>());
     m_vertexAttribValue[index].type = GraphicsContextGL::INT;
-    memcpy(m_vertexAttribValue[index].iValue, data, sizeof(m_vertexAttribValue[index].iValue));
+    memcpySpan(std::span { m_vertexAttribValue[index].iValue }, data.first(4));
 }
 
 void WebGL2RenderingContext::vertexAttribI4ui(GCGLuint index, GCGLuint x, GCGLuint y, GCGLuint z, GCGLuint w)
@@ -1472,8 +1472,8 @@ void WebGL2RenderingContext::vertexAttribI4uiv(GCGLuint index, Uint32List&& list
 {
     if (isContextLost())
         return;
-    auto data = list.data();
-    if (!data) {
+    auto data = list.span();
+    if (!data.data()) {
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "vertexAttribI4uiv"_s, "no array"_s);
         return;
     }
@@ -1487,9 +1487,9 @@ void WebGL2RenderingContext::vertexAttribI4uiv(GCGLuint index, Uint32List&& list
         synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "vertexAttribI4uiv"_s, "index out of range"_s);
         return;
     }
-    m_context->vertexAttribI4uiv(index, std::span<const GCGLuint, 4> { data, 4 });
+    m_context->vertexAttribI4uiv(index, data.first<4>());
     m_vertexAttribValue[index].type = GraphicsContextGL::UNSIGNED_INT;
-    memcpy(m_vertexAttribValue[index].uiValue, data, sizeof(m_vertexAttribValue[index].uiValue));
+    memcpySpan(std::span { m_vertexAttribValue[index].uiValue }, data.first(4));
 }
 
 void WebGL2RenderingContext::vertexAttribIPointer(GCGLuint index, GCGLint size, GCGLenum type, GCGLsizei stride, GCGLint64 offset)
@@ -1598,7 +1598,7 @@ void WebGL2RenderingContext::drawBuffers(const Vector<GCGLenum>& buffers)
     if (isContextLost())
         return;
     GCGLsizei n = buffers.size();
-    const GCGLenum* bufs = buffers.data();
+    auto bufs = buffers.span();
     for (GCGLsizei i = 0; i < n; ++i) {
         switch (bufs[i]) {
         case GraphicsContextGL::NONE:
@@ -2393,6 +2393,10 @@ WebGLAny WebGL2RenderingContext::getIndexedParameter(GCGLenum target, GCGLuint i
             synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getIndexedParameter"_s, "invalid parameter name, OES_draw_buffers_indexed not enabled"_s);
             return nullptr;
         }
+        if (index >= static_cast<GCGLuint>(maxDrawBuffers())) {
+            synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "getIndexedParameter"_s, "index out of range"_s);
+            return nullptr;
+        }
         if (target == GraphicsContextGL::COLOR_WRITEMASK)
             return getIndexedBooleanArrayParameter(target, index);
         return m_context->getIntegeri(target, index);
@@ -2405,12 +2409,11 @@ WebGLAny WebGL2RenderingContext::getIndexedParameter(GCGLenum target, GCGLuint i
 Vector<bool> WebGL2RenderingContext::getIndexedBooleanArrayParameter(GCGLenum pname, GCGLuint index)
 {
     ASSERT(pname == GraphicsContextGL::COLOR_WRITEMASK);
-    GCGLint value[4];
+    std::array<GCGLint, 4> value;
     m_context->getIntegeri_v(pname, index, value);
-    Vector<bool> vector(4);
-    for (unsigned i = 0; i < 4; ++i)
-        vector[i] = value[i];
-    return vector;
+    return Vector<bool>(4, [&](size_t i) -> bool {
+        return value[i];
+    });
 }
 
 std::optional<Vector<GCGLuint>> WebGL2RenderingContext::getUniformIndices(WebGLProgram& program, const Vector<String>& names)
@@ -3264,14 +3267,14 @@ std::optional<std::span<const T>> WebGL2RenderingContext::validateClearBuffer(AS
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "invalid array size / srcOffset"_s);
             return { };
         }
-        return std::span { values.data() + srcOffset, 4 };
+        return values.span().subspan(srcOffset, 4);
     case GraphicsContextGL::DEPTH:
     case GraphicsContextGL::STENCIL:
         if (checkedSize < 1) {
             synthesizeGLError(GraphicsContextGL::INVALID_VALUE, functionName, "invalid array size / srcOffset"_s);
             return { };
         }
-        return std::span { values.data() + srcOffset, 1 };
+        return values.span().subspan(srcOffset, 1);
 
     default:
         synthesizeGLError(GraphicsContextGL::INVALID_ENUM, functionName, "invalid buffer"_s);

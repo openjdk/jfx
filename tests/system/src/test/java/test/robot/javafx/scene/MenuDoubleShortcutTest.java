@@ -45,6 +45,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.PlatformUtil;
@@ -198,6 +199,7 @@ public class MenuDoubleShortcutTest {
         public void testKey(KeyCode code) {
             sceneAcceleratorFired = false;
             menuBarItemFired = false;
+            CountDownLatch testKeyLatch = new CountDownLatch(1);
             Platform.runLater(() -> {
                 KeyCode shortcutCode = (PlatformUtil.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL);
                 Robot robot = new Robot();
@@ -205,7 +207,9 @@ public class MenuDoubleShortcutTest {
                 robot.keyPress(code);
                 robot.keyRelease(code);
                 robot.keyRelease(shortcutCode);
+                testKeyLatch.countDown();
             });
+            Util.waitForLatch(testKeyLatch, 5, "Timeout waiting for testKey execution.");
         }
 
         public TestResult testResult() {

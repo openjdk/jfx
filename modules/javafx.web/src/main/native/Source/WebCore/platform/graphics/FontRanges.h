@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FontRanges_h
-#define FontRanges_h
+#pragma once
 
 #include "Font.h"
 #include <wtf/Vector.h>
@@ -53,13 +52,7 @@ public:
         {
         }
 
-        Range(const Range& range)
-            : m_from(range.m_from)
-            , m_to(range.m_to)
-            , m_fontAccessor(range.m_fontAccessor.copyRef())
-        {
-        }
-
+        Range(const Range&) = default;
         Range(Range&&) = default;
         Range& operator=(const Range&) = delete;
         Range& operator=(Range&&) = default;
@@ -103,5 +96,3 @@ private:
 };
 
 }
-
-#endif

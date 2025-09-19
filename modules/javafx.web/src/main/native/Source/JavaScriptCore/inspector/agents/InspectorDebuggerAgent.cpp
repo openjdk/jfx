@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,7 +64,7 @@ namespace Inspector {
 const ASCIILiteral InspectorDebuggerAgent::backtraceObjectGroup = "backtrace"_s;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorDebuggerAgent);
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(InspectorDebuggerAgentProtocolBreakpoint, InspectorDebuggerAgent::ProtocolBreakpoint);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorDebuggerAgent::ProtocolBreakpoint);
 
 // Objects created and retained by evaluating breakpoint actions are put into object groups
 // according to the breakpoint action identifier assigned by the frontend. A breakpoint may
@@ -1309,7 +1309,7 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::setShouldBlackboxURL(const
         return makeUnexpected("Blackboxing of internal scripts is controlled by 'Debugger.setPauseForInternalScripts'"_s);
 
     if (shouldBlackbox) {
-        HashSet<JSC::Debugger::BlackboxRange> blackboxRanges;
+        UncheckedKeyHashSet<JSC::Debugger::BlackboxRange> blackboxRanges;
         if (protocolSourceRanges) {
             if (protocolSourceRanges->length() % 4)
                 return makeUnexpected("Unexpected format for given sourceRanges"_s);
@@ -1465,6 +1465,7 @@ void InspectorDebuggerAgent::didCreateNativeExecutable(JSC::NativeExecutable& na
     if (m_symbolicBreakpoints.isEmpty())
         return;
 
+    JSC::JSLockHolder apiLocker(vm);
     auto symbol = functionName(nativeExecutable);
     if (symbol.isEmpty())
         return;

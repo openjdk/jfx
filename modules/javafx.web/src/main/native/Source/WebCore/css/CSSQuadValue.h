@@ -35,7 +35,7 @@ public:
 
     const Quad& quad() const { return m_quad; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSQuadValue&) const;
     bool canBeCoalesced() const;
 

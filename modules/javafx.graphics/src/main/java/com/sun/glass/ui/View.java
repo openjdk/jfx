@@ -770,12 +770,12 @@ public abstract class View {
         _end(this.ptr);
     }
 
-    protected abstract int _getNativeFrameBuffer(long ptr);
+    protected abstract long _getNativeFrameBuffer(long ptr);
 
     /**
      * Called on the renderer thread and must be between lock and unlock
      */
-    public int getNativeFrameBuffer() {
+    public long getNativeFrameBuffer() {
         return _getNativeFrameBuffer(this.ptr);
     }
 

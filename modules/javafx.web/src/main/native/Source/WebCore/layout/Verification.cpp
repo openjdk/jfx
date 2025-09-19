@@ -31,6 +31,7 @@
 #if ASSERT_ENABLED
 
 #include "BlockFormattingState.h"
+#include "InlineDisplayContent.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutContext.h"

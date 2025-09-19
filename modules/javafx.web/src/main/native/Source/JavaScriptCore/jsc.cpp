@@ -84,7 +84,7 @@
 #include "VMTrapsInlines.h"
 #include "WasmCapabilities.h"
 #include "WasmFaultSignalHandler.h"
-#include "WasmMemory.h"
+#include "WebAssemblyMemoryConstructor.h"
 #include <span>
 #include <stdio.h>
 #include <stdlib.h>
@@ -141,9 +141,9 @@
 #endif
 
 #if OS(WINDOWS)
-#include <crtdbg.h>
 #include <mmsystem.h>
 #include <windows.h>
+#include <wtf/win/WTFCRTDebug.h>
 #endif
 
 #if OS(DARWIN) && CPU(ARM_THUMB2)
@@ -162,6 +162,8 @@
 #elif OS(LINUX)
 #include <wtf/linux/ProcessMemoryFootprint.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #if OS(DARWIN) || OS(LINUX)
 struct MemoryFootprint : ProcessMemoryFootprint {
@@ -385,6 +387,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionAsyncTestPassed);
 
 #if ENABLE(WEBASSEMBLY)
 static JSC_DECLARE_HOST_FUNCTION(functionWebAssemblyMemoryMode);
+static JSC_DECLARE_HOST_FUNCTION(functionCreateWebAssemblyMemoryWithMode);
 #endif
 
 #if ENABLE(SAMPLING_FLAGS)
@@ -422,6 +425,8 @@ static JSC_DECLARE_HOST_FUNCTION(functionSetUnhandledRejectionCallback);
 static JSC_DECLARE_HOST_FUNCTION(functionAsDoubleNumber);
 
 static JSC_DECLARE_HOST_FUNCTION(functionDropAllLocks);
+
+static JSC_DECLARE_HOST_FUNCTION(functionPerformanceNow);
 
 #if ENABLE(FUZZILLI)
 static JSC_DECLARE_HOST_FUNCTION(functionFuzzilli);
@@ -592,11 +597,11 @@ private:
         }
 
         bool contains(UniquedStringImpl* name) const { return m_names.contains(name); }
-        const HashSet<UniquedStringImpl*>& names() const { return m_names; }
+        const UncheckedKeyHashSet<UniquedStringImpl*>& names() const { return m_names; }
 
     private:
         Vector<AtomString> m_strings; // To keep the UniqueStringImpls alive.
-        HashSet<UniquedStringImpl*> m_names;
+        UncheckedKeyHashSet<UniquedStringImpl*> m_names;
     };
 
     void finishCreation(VM& vm, const Vector<String>& arguments)
@@ -625,6 +630,22 @@ private:
 
         Base::finishCreation(vm);
         JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
+
+        // Set loop counts based on enabled engine tiers.
+        unsigned testLoopCount = 10000;
+        if (!Options::useDFGJIT())
+            testLoopCount = 1000;
+        if (!Options::useBaselineJIT())
+            testLoopCount = 100;
+
+        unsigned wasmTestLoopCount = 10000;
+        if (!Options::useOMGJIT())
+            wasmTestLoopCount = 1000;
+        if (!Options::useBBQJIT())
+            wasmTestLoopCount = 100;
+
+        putDirect(vm, Identifier::fromString(vm, "testLoopCount"_s), jsNumber(testLoopCount), DontEnum);
+        putDirect(vm, Identifier::fromString(vm, "wasmTestLoopCount"_s), jsNumber(wasmTestLoopCount), DontEnum);
 
         addFunction(vm, "atob"_s, functionAtob, 1);
         addFunction(vm, "btoa"_s, functionBtoa, 1);
@@ -734,6 +755,7 @@ private:
 
 #if ENABLE(WEBASSEMBLY)
         addFunction(vm, "WebAssemblyMemoryMode"_s, functionWebAssemblyMemoryMode, 1);
+        addFunction(vm, "createWebAssemblyMemoryWithMode"_s, functionCreateWebAssemblyMemoryWithMode, 2);
 #endif
 
         if (!arguments.isEmpty()) {
@@ -795,6 +817,11 @@ private:
         addFunction(vm, "asDoubleNumber"_s, functionAsDoubleNumber, 1);
 
         addFunction(vm, "dropAllLocks"_s, functionDropAllLocks, 1);
+
+        // We'll probably have to make this a real class if we want to add performance.mark in the future.
+        JSObject* performance = JSFinalObject::create(vm, plainObjectStructure);
+        putDirect(vm, Identifier::fromString(vm, "performance"_s), performance, DontEnum);
+        addFunctionToObject(vm, performance, "now"_s, functionPerformanceNow, 0);
 
 #if ENABLE(FUZZILLI)
         addFunction(vm, "fuzzilli"_s, functionFuzzilli, 2);
@@ -949,6 +976,7 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
     &deriveShadowRealmGlobalObject,
     &codeForEval,
     &canCompileStrings,
+    &trustedScriptStructure,
 };
 
 GlobalObject::GlobalObject(VM& vm, Structure* structure)
@@ -1197,6 +1225,8 @@ static RefPtr<Uint8Array> fillBufferWithContentsOfFile(const String& fileName)
     return result;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 template<typename Vector>
 static bool fillBufferWithContentsOfFile(FILE* file, Vector& buffer)
 {
@@ -1214,21 +1244,28 @@ static bool fillBufferWithContentsOfFile(FILE* file, Vector& buffer)
     return readSize == buffer.size() - initialSize;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 static bool fillBufferWithContentsOfFile(const String& fileName, Vector<char>& buffer)
 {
     struct stat statBuf;
-    if (stat(fileName.utf8().data(), &statBuf) == -1) {
-        fprintf(stderr, "Could not open file: %s\n", fileName.utf8().data());
+    auto fileNameUTF = fileName.tryGetUTF8();
+    if (!fileNameUTF.has_value()) {
+        fprintf(stderr, "Error when parsing file name: %s\n", fileName.ascii().data());
+        return false;
+    }
+    if (stat(fileNameUTF->data(), &statBuf) == -1) {
+        fprintf(stderr, "Could not open file: %s\n", fileNameUTF->data());
         return false;
     }
 
     if ((statBuf.st_mode & S_IFMT) != S_IFREG) {
-        fprintf(stderr, "Trying to open a non-file: %s\n", fileName.utf8().data());
+        fprintf(stderr, "Trying to open a non-file: %s\n", fileNameUTF->data());
         return false;
     }
-    FILE* f = fopen(fileName.utf8().data(), "rb");
+    auto* f = fopen(fileNameUTF->data(), "rb");
     if (!f) {
-        fprintf(stderr, "Could not open file: %s\n", fileName.utf8().data());
+        fprintf(stderr, "Could not open file: %s\n", fileNameUTF->data());
         return false;
     }
 
@@ -1848,9 +1885,9 @@ JSC_DEFINE_HOST_FUNCTION(functionAddressOf, (JSGlobalObject*, CallFrame* callFra
     JSValue value = callFrame->argument(0);
     if (!value.isCell())
         return JSValue::encode(jsUndefined());
-    // Need to cast to uint64_t so bitwise_cast will play along.
-    uint64_t asNumber = bitwise_cast<uintptr_t>(value.asCell());
-    EncodedJSValue returnValue = JSValue::encode(jsNumber(bitwise_cast<double>(asNumber)));
+    // Need to cast to uint64_t so std::bit_cast will play along.
+    uint64_t asNumber = std::bit_cast<uintptr_t>(value.asCell());
+    EncodedJSValue returnValue = JSValue::encode(jsNumber(std::bit_cast<double>(asNumber)));
     return returnValue;
 }
 
@@ -1999,21 +2036,22 @@ JSC_DEFINE_HOST_FUNCTION(functionReadFile, (JSGlobalObject* globalObject, CallFr
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    String fileName = callFrame->argument(0).toWTFString(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-
     bool isBinary = false;
     if (callFrame->argumentCount() > 1) {
         String type = callFrame->argument(1).toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
-        if (type != "binary"_s)
-            return throwVMError(globalObject, scope, "Expected 'binary' as second argument."_s);
+        if (type == "binary"_s)
         isBinary = true;
+        else if (type != "caller relative"_s)
+            return throwVMError(globalObject, scope, "Expected 'binary' or 'caller relative' as second argument."_s);
     }
 
-    RefPtr<Uint8Array> content = fillBufferWithContentsOfFile(fileName);
+    URL filePath = computeFilePath(vm, globalObject, callFrame);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    RefPtr<Uint8Array> content = fillBufferWithContentsOfFile(filePath.fileSystemPath());
     if (!content)
-        return throwVMError(globalObject, scope, "Could not open file."_s);
+        return throwVMError(globalObject, scope, makeString("Could not open file: "_s, filePath.fileSystemPath()));
 
     if (!isBinary)
         return JSValue::encode(jsString(vm, String::fromUTF8WithLatin1Fallback(content->span())));
@@ -2024,6 +2062,8 @@ JSC_DEFINE_HOST_FUNCTION(functionReadFile, (JSGlobalObject* globalObject, CallFr
 
     return JSValue::encode(result);
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
@@ -2062,7 +2102,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
 
     int size = std::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
-        return FileSystem::writeToFile(handle, utf8.span());
+        return FileSystem::writeToFile(handle, byteCast<uint8_t>(utf8.span()));
     }, [&] (const std::span<const uint8_t>& data) {
         return FileSystem::writeToFile(handle, data);
     }), data);
@@ -2071,6 +2111,8 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
 
     return JSValue::encode(jsNumber(size));
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 JSC_DEFINE_HOST_FUNCTION(functionCheckSyntax, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
@@ -2297,7 +2339,13 @@ JSC_DEFINE_HOST_FUNCTION(functionCallerIsBBQOrOMGCompiled, (JSGlobalObject* glob
     ASSERT(wasmToJSFrame.callerFrame()->callee().isNativeCallee());
     CallerFunctor wasmFrame;
     StackVisitor::visit(wasmToJSFrame.callerFrame(), vm, wasmFrame);
+    if (!wasmFrame.callerFrame()->callee().isNativeCallee()) {
+        // This can happen if FTL directly calls wasm which tail calls this function, which fuzzers can produce, just bail out.
+        ASSERT(wasmFrame.callerFrame()->codeBlock()->jitType() == JITType::FTLJIT);
+        return throwVMError(globalObject, scope, "caller isn't a wasm function"_s);
+    }
     ASSERT(wasmFrame.callerFrame()->callee().isNativeCallee());
+    ASSERT(wasmFrame.callerFrame()->callee().asNativeCallee()->category() == NativeCallee::Category::Wasm);
 #if ENABLE(WEBASSEMBLY)
     auto mode = static_cast<Wasm::Callee*>(wasmFrame.callerFrame()->callee().asNativeCallee())->compilationMode();
     return JSValue::encode(jsBoolean(isAnyBBQ(mode) || isAnyOMG(mode)));
@@ -2575,8 +2623,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDollarAgentReceiveBroadcast, (JSGlobalObject* g
         }
 #if ENABLE(WEBASSEMBLY)
         if (std::holds_alternative<RefPtr<SharedArrayBufferContents>>(content)) {
-            JSWebAssemblyMemory* jsMemory = JSC::JSWebAssemblyMemory::tryCreate(globalObject, vm, globalObject->webAssemblyMemoryStructure());
-            scope.releaseAssertNoException();
+            JSWebAssemblyMemory* jsMemory = JSC::JSWebAssemblyMemory::create(vm, globalObject->webAssemblyMemoryStructure());
             auto handler = [&vm, jsMemory](Wasm::Memory::GrowSuccess, PageCount oldPageCount, PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); };
             RefPtr<Wasm::Memory> memory;
             if (auto shared = std::get<RefPtr<SharedArrayBufferContents>>(WTFMove(content)))
@@ -2921,7 +2968,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetTimeout, (JSGlobalObject* globalObject, Call
     // it will cause setTimeout starvation problem (see stress test settimeout-starvation.js).
     JSValue timeout = callFrame->argument(1);
     Seconds delay = timeout.isNumber() ? Seconds::fromMilliseconds(timeout.asNumber()) : Seconds(0);
-    RunLoop::current().dispatchAfter(delay, WTFMove(dispatch));
+    RunLoop::protectedCurrent()->dispatchAfter(delay, WTFMove(dispatch));
 
     return JSValue::encode(jsUndefined());
 }
@@ -3128,10 +3175,15 @@ JSC_DEFINE_HOST_FUNCTION(functionGenerateHeapSnapshot, (JSGlobalObject* globalOb
     DeferTermination deferScope(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    HeapSnapshotBuilder snapshotBuilder(vm.ensureHeapProfiler());
+    HeapSnapshotBuilder snapshotBuilder(vm.ensureHeapProfiler(), HeapSnapshotBuilder::SnapshotType::InspectorSnapshot, OverflowPolicy::RecordOverflow);
     snapshotBuilder.buildSnapshot();
 
     String jsonString = snapshotBuilder.json();
+    if (snapshotBuilder.hasOverflowed()) {
+        throwOutOfMemoryError(globalObject, scope);
+        return encodedJSUndefined();
+    }
+
     EncodedJSValue result = JSValue::encode(JSONParse(globalObject, jsonString));
     scope.releaseAssertNoException();
     return result;
@@ -3147,10 +3199,14 @@ JSC_DEFINE_HOST_FUNCTION(functionGenerateHeapSnapshotForGCDebugging, (JSGlobalOb
     {
         DeferGCForAWhile deferGC(vm); // Prevent concurrent GC from interfering with the full GC that the snapshot does.
 
-        HeapSnapshotBuilder snapshotBuilder(vm.ensureHeapProfiler(), HeapSnapshotBuilder::SnapshotType::GCDebuggingSnapshot);
+        HeapSnapshotBuilder snapshotBuilder(vm.ensureHeapProfiler(), HeapSnapshotBuilder::SnapshotType::GCDebuggingSnapshot, OverflowPolicy::RecordOverflow);
         snapshotBuilder.buildSnapshot();
 
         jsonString = snapshotBuilder.json();
+        if (snapshotBuilder.hasOverflowed()) {
+            throwOutOfMemoryError(globalObject, scope);
+            return encodedJSUndefined();
+        }
     }
     scope.releaseAssertNoException();
     return JSValue::encode(jsString(vm, WTFMove(jsonString)));
@@ -3199,9 +3255,11 @@ JSC_DEFINE_HOST_FUNCTION(functionSamplingProfilerStackTraces, (JSGlobalObject* g
 }
 #endif // ENABLE(SAMPLING_PROFILER)
 
-JSC_DEFINE_HOST_FUNCTION(functionMaxArguments, (JSGlobalObject*, CallFrame*))
+JSC_DEFINE_HOST_FUNCTION(functionMaxArguments, (JSGlobalObject* globalObject, CallFrame*))
 {
-    return JSValue::encode(jsNumber(JSC::maxArguments));
+    VM& vm = globalObject->vm();
+    unsigned result = std::min<unsigned>(JSC::maxArguments, static_cast<unsigned>((std::bit_cast<uint8_t*>(Thread::current().stack().origin()) - std::bit_cast<uint8_t*>(vm.softStackLimit())) / sizeof(EncodedJSValue)));
+    return JSValue::encode(jsNumber(result));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionAsyncTestStart, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3249,6 +3307,29 @@ JSC_DEFINE_HOST_FUNCTION(functionWebAssemblyMemoryMode, (JSGlobalObject* globalO
     return throwVMTypeError(globalObject, scope, "WebAssemblyMemoryMode expects either a WebAssembly.Memory or WebAssembly.Instance"_s);
 }
 
+JSC_DEFINE_HOST_FUNCTION(functionCreateWebAssemblyMemoryWithMode, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!Wasm::isSupported())
+        return throwVMTypeError(globalObject, scope, "createWebAssemblyMemoryWithMode should only be called if the useWebAssembly option is set"_s);
+
+    JSObject* memoryDescriptor = jsDynamicCast<JSObject*>(callFrame->argument(0));
+    if (!memoryDescriptor)
+        return throwVMTypeError(globalObject, scope, "createWebAssemblyMemoryWithMode expects the first argument to be an object"_s);
+
+    auto desiredMode = callFrame->argument(1).toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    MemoryMode mode = MemoryMode::Signaling;
+    if (desiredMode == "BoundsChecking"_s)
+        mode = MemoryMode::BoundsChecking;
+    else if (desiredMode != "Signaling"_s)
+        return throwVMError(globalObject, scope, "createWebAssemblyMemoryWithMode expects either 'BoundsChecking' or 'Signaling' as the second argument."_s);
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(WebAssemblyMemoryConstructor::createMemoryFromDescriptor(globalObject, globalObject->webAssemblyMemoryStructure(), memoryDescriptor, mode)));
+}
+
 #endif // ENABLE(WEBASSEMBLY)
 
 JSC_DEFINE_HOST_FUNCTION(functionSetUnhandledRejectionCallback, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3277,6 +3358,13 @@ JSC_DEFINE_HOST_FUNCTION(functionDropAllLocks, (JSGlobalObject* globalObject, Ca
 {
     JSLock::DropAllLocks dropAllLocks(globalObject);
     return JSValue::encode(jsUndefined());
+}
+
+// This is intended to match the resolution of WebCore's Performance::now when we're using a high resolution time.
+JSC_DEFINE_HOST_FUNCTION(functionPerformanceNow, (JSGlobalObject*, CallFrame*))
+{
+    static const MonotonicTime timeOrigin = MonotonicTime::now();
+    return JSValue::encode(jsNumber((MonotonicTime::now() - timeOrigin).reduceTimeResolution(Seconds::highTimePrecision()).milliseconds()));
 }
 
 #if ENABLE(FUZZILLI)
@@ -3458,6 +3546,8 @@ static void startTimeoutThreadIfNeeded(VM& vm)
     startTimeoutTimer(timeoutDuration);
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 int main(int argc, char** argv)
 {
 #if OS(DARWIN)
@@ -3479,14 +3569,7 @@ int main(int argc, char** argv)
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
 
-#if defined(_DEBUG)
-    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-#endif
+    WTF::disableCRTDebugAssertDialog();
 
     timeBeginPeriod(1);
 #endif
@@ -3500,9 +3583,11 @@ int main(int argc, char** argv)
     // yet, since that would do somethings that we'd like to defer until after we
     // have a chance to parse options.
     WTF::initialize();
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || OS(ANDROID)
     WTF::disableForwardingVPrintfStdErrToOSLog();
+#endif
 
+#if PLATFORM(COCOA)
     if (getenv("JSCTEST_CrashReportArgV")) {
         StringPrintStream out;
         CommaPrinter space(" "_s);
@@ -3552,6 +3637,8 @@ int main(int argc, char** argv)
 
     jscExit(res);
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 static void dumpException(GlobalObject* globalObject, JSValue exception)
 {
@@ -3899,7 +3986,7 @@ static NO_RETURN void printUsageStatement(bool help = false)
     fprintf(stderr, "  --options                  Dumps all JSC VM options and exits\n");
     fprintf(stderr, "  --dumpOptions              Dumps all non-default JSC VM options before continuing\n");
     fprintf(stderr, "  --<jsc VM option>=<value>  Sets the specified JSC VM option\n");
-#if PLATFORM(COCOA)
+#if USE(LIBPAS)
     fprintf(stderr, "  --crash-vm=<value>         Crash VM on startup due to PGM failure. Options PGMOOBLowerGuardPage, PGMOOBUpperGuardPage, or PGMUAF (For Testing Purposes).\n");
 #endif
     fprintf(stderr, "  --destroy-vm               Destroy VM before exiting\n");
@@ -3921,10 +4008,12 @@ static bool isMJSFile(char *filename)
     return false;
 }
 
-#if PLATFORM(COCOA)
+#if USE(LIBPAS)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 static NEVER_INLINE void crashPGMUAF()
 {
-    WTF::forceEnablePGM();
+    WTF::forceEnablePGM(1);
     size_t allocSize = getpagesize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     fastFree(result);
@@ -3933,7 +4022,7 @@ static NEVER_INLINE void crashPGMUAF()
 
 static NEVER_INLINE void crashPGMUpperGuardPage()
 {
-    WTF::forceEnablePGM();
+    WTF::forceEnablePGM(1);
     size_t allocSize = getpagesize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result + allocSize;
@@ -3942,13 +4031,17 @@ static NEVER_INLINE void crashPGMUpperGuardPage()
 
 static NEVER_INLINE void crashPGMLowerGuardPage()
 {
-    WTF::forceEnablePGM();
+    WTF::forceEnablePGM(1);
     size_t allocSize = getpagesize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result - 1;
     *result = 'a';
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 void CommandLine::parseArguments(int argc, char** argv)
 {
@@ -3956,7 +4049,7 @@ void CommandLine::parseArguments(int argc, char** argv)
     Options::initialize();
     Options::useSharedArrayBuffer() = true;
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(IOS_FAMILY) && !PLATFORM(APPLETV) && !PLATFORM(WATCHOS)
     Options::crashIfCantAllocateJITMemory() = true;
 #endif
 
@@ -4075,7 +4168,7 @@ void CommandLine::parseArguments(int argc, char** argv)
             m_dumpSamplingProfilerData = true;
             continue;
         }
-#if PLATFORM(COCOA)
+#if USE(LIBPAS)
         if (!strcmp(arg, "--crash-vm=PGMOOBLowerGuardPage"))
             crashPGMLowerGuardPage();
         if (!strcmp(arg, "--crash-vm=PGMOOBUpperGuardPage"))
@@ -4201,6 +4294,8 @@ void CommandLine::parseArguments(int argc, char** argv)
         jscExit(EXIT_SUCCESS);
     }
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 CommandLine::CommandLine(CommandLineForWorkersTag)
     : m_treatWatchdogExceptionAsSuccess(mainCommandLine->m_treatWatchdogExceptionAsSuccess)
@@ -4338,7 +4433,7 @@ int runJSC(const CommandLine& options, bool isWorker, const Func& func)
         JSLockHolder locker(vm);
         // This is needed because we don't want the worker's main
         // thread to die before its compilation threads finish.
-        vm.deref();
+        vm.derefSuppressingSaferCPPChecking();
     }
 
     return result;
@@ -4353,6 +4448,7 @@ int jscmain(int argc, char** argv)
 {
     // Need to override and enable restricted options before we start parsing options below.
     JSC::Config::enableRestrictedOptions();
+    JSC::Options::machExceptionHandlerSandboxPolicy = JSC::Options::SandboxPolicy::Allow;
 
     WTF::initializeMainThread();
 
@@ -4467,3 +4563,5 @@ int jscmain(int argc, char** argv)
 
     return result;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

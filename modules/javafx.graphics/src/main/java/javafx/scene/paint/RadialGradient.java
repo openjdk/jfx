@@ -234,17 +234,21 @@ public final class RadialGradient extends Paint {
 
     /**
      * Creates a new instance of RadialGradient.
+     *
      * @param focusAngle the angle in degrees from the center of the gradient
-     * to the focus point to which the first color is mapped
+     *                   to the focus point to which the first color is mapped
      * @param focusDistance the distance from the center of the gradient to the
-     * focus point to which the first color is mapped
+     *                      focus point to which the first color is mapped,
+     *                      must be greater than or equal to zero
      * @param centerX the X coordinate of the center point of the gradient's circle
      * @param centerY the Y coordinate of the center point of the gradient's circle
-     * @param radius the radius of the circle defining the extents of the color gradient
+     * @param radius the radius of the circle defining the extents of the color gradient,
+     *               must be greater than or equal to zero
      * @param proportional whether the coordinates and sizes are proportional
-     * to the shape which this gradient fills
+     *                     to the shape which this gradient fills
      * @param cycleMethod cycle method applied to the gradient
      * @param stops the gradient's color specification
+     * @throws IllegalArgumentException if {@code focusDistance} or {@code radius} is negative
      */
     public RadialGradient(
             @NamedArg("focusAngle") double focusAngle,
@@ -255,6 +259,7 @@ public final class RadialGradient extends Paint {
             @NamedArg(value="proportional", defaultValue="true") boolean proportional,
             @NamedArg("cycleMethod") CycleMethod cycleMethod,
             @NamedArg("stops") Stop... stops) {
+        checkInvariants(radius, focusDistance);
         this.focusAngle = focusAngle;
         this.focusDistance = focusDistance;
         this.centerX = centerX;
@@ -268,17 +273,21 @@ public final class RadialGradient extends Paint {
 
     /**
      * Creates a new instance of RadialGradient.
+     *
      * @param focusAngle the angle in degrees from the center of the gradient
-     * to the focus point to which the first color is mapped
+     *                   to the focus point to which the first color is mapped
      * @param focusDistance the distance from the center of the gradient to the
-     * focus point to which the first color is mapped
+     *                      focus point to which the first color is mapped,
+     *                      must be greater than or equal to zero
      * @param centerX the X coordinate of the center point of the gradient's circle
      * @param centerY the Y coordinate of the center point of the gradient's circle
-     * @param radius the radius of the circle defining the extents of the color gradient
+     * @param radius the radius of the circle defining the extents of the color gradient,
+     *               must be greater than or equal to zero
      * @param proportional whether the coordinates and sizes are proportional
-     * to the shape which this gradient fills
+     *                     to the shape which this gradient fills
      * @param cycleMethod cycle method applied to the gradient
      * @param stops the gradient's color specification
+     * @throws IllegalArgumentException if {@code focusDistance} or {@code radius} is negative
      */
     public RadialGradient(
             @NamedArg("focusAngle") double focusAngle,
@@ -289,6 +298,7 @@ public final class RadialGradient extends Paint {
             @NamedArg(value="proportional", defaultValue="true") boolean proportional,
             @NamedArg("cycleMethod") CycleMethod cycleMethod,
             @NamedArg("stops") List<Stop> stops) {
+        checkInvariants(radius, focusDistance);
         this.focusAngle = focusAngle;
         this.focusDistance = focusDistance;
         this.centerX = centerX;
@@ -316,6 +326,16 @@ public final class RadialGradient extends Paint {
         this.cycleMethod = cycleMethod;
         this.stops = stops;
         this.opaque = determineOpacity();
+    }
+
+    private static void checkInvariants(double radius, double focusDistance) {
+        if (radius < 0) {
+            throw new IllegalArgumentException("radius cannot be negative");
+        }
+
+        if (focusDistance < 0) {
+            throw new IllegalArgumentException("focusDistance cannot be negative");
+        }
     }
 
     /**
@@ -360,11 +380,11 @@ public final class RadialGradient extends Paint {
 
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
-        if (t <= 0.0) {
+        if (t == 0.0) {
             return this;
         }
 
-        if (t >= 1.0) {
+        if (t == 1.0) {
             return endValue;
         }
 
@@ -374,7 +394,7 @@ public final class RadialGradient extends Paint {
         if (this.proportional == endValue.proportional) {
             newCenterX = InterpolationUtils.interpolate(this.centerX, endValue.centerX, t);
             newCenterY = InterpolationUtils.interpolate(this.centerY, endValue.centerY, t);
-            newRadius = InterpolationUtils.interpolate(this.radius, endValue.radius, t);
+            newRadius = Math.max(0, InterpolationUtils.interpolate(this.radius, endValue.radius, t));
             newProportional = this.proportional;
         } else if (t < 0.5) {
             newCenterX = this.centerX;
@@ -389,7 +409,7 @@ public final class RadialGradient extends Paint {
         }
 
         double newFocusAngle = InterpolationUtils.interpolate(this.focusAngle, endValue.focusAngle, t);
-        double newFocusDistance = InterpolationUtils.interpolate(this.focusDistance, endValue.focusDistance, t);
+        double newFocusDistance = Math.max(0, InterpolationUtils.interpolate(this.focusDistance, endValue.focusDistance, t));
         CycleMethod newCycleMethod = InterpolationUtils.interpolateDiscrete(this.cycleMethod, endValue.cycleMethod, t);
 
         // Optimization: if both lists are equal, we don't compute a new intermediate list.
@@ -585,8 +605,11 @@ public final class RadialGradient extends Paint {
         if ("focus-distance".equals(tokens[0])) {
             GradientUtils.Parser.checkNumberOfArguments(tokens, 1);
             distance = GradientUtils.Parser.parsePercentage(tokens[1]);
-
             parser.shift();
+
+            if (distance < 0) {
+                throw new IllegalArgumentException("Invalid gradient specification: focus-distance cannot be negative");
+            }
         }
 
         tokens = parser.splitCurrentToken();
@@ -605,9 +628,12 @@ public final class RadialGradient extends Paint {
             GradientUtils.Parser.checkNumberOfArguments(tokens, 1);
             radius = parser.parsePoint(tokens[1]);
             parser.shift();
+
+            if (radius.value < 0) {
+                throw new IllegalArgumentException("Invalid gradient specification: radius cannot be negative");
+            }
         } else {
-            throw new IllegalArgumentException("Invalid gradient specification: "
-                    + "radius must be specified");
+            throw new IllegalArgumentException("Invalid gradient specification: radius must be specified");
         }
 
         CycleMethod method = CycleMethod.NO_CYCLE;

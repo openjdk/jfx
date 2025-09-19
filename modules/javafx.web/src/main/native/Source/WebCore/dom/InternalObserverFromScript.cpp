@@ -48,50 +48,38 @@ Ref<InternalObserverFromScript> InternalObserverFromScript::create(ScriptExecuti
 
 void InternalObserverFromScript::next(JSC::JSValue value)
 {
-    if (m_next)
-        m_next->handleEvent(value);
+    if (RefPtr next = m_next)
+        next->handleEvent(value);
 }
 
-void InternalObserverFromScript::error(JSC::JSValue error)
+void InternalObserverFromScript::error(JSC::JSValue value)
 {
-    if (m_error) {
-        m_error->handleEvent(error);
+    if (RefPtr error = m_error) {
+        error->handleEvent(value);
         return;
     }
 
-    InternalObserver::error(error);
+    InternalObserver::error(value);
 }
 
 void InternalObserverFromScript::complete()
 {
-    if (m_complete)
-        m_complete->handleEvent();
+    if (RefPtr complete = m_complete)
+        complete->handleEvent();
 
     m_active = false;
 }
 
 void InternalObserverFromScript::visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const
 {
-    if (m_next)
-        m_next->visitJSFunction(visitor);
+    if (RefPtr next = m_next)
+        next->visitJSFunction(visitor);
 
-    if (m_error)
-        m_error->visitJSFunction(visitor);
+    if (RefPtr error = m_error)
+        error->visitJSFunction(visitor);
 
-    if (m_complete)
-        m_complete->visitJSFunction(visitor);
-}
-
-void InternalObserverFromScript::visitAdditionalChildren(JSC::SlotVisitor& visitor) const
-{
-    if (m_next)
-        m_next->visitJSFunction(visitor);
-
-    if (m_error)
-        m_error->visitJSFunction(visitor);
-
-    if (m_complete)
-        m_complete->visitJSFunction(visitor);
+    if (RefPtr complete = m_complete)
+        complete->visitJSFunction(visitor);
 }
 
 InternalObserverFromScript::InternalObserverFromScript(ScriptExecutionContext& context, RefPtr<JSSubscriptionObserverCallback> callback)

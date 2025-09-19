@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,19 @@
 #include "config.h"
 #include "RenderTreeBuilderBlock.h"
 
+#include "RenderBlockInlines.h"
+#include "RenderBoxInlines.h"
 #include "RenderButton.h"
 #include "RenderChildIterator.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderStyleInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeBuilderMultiColumn.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Block);
 
 static void moveAllChildrenToInternal(RenderBoxModelObject& from, RenderElement& newParent)
 {
@@ -69,7 +74,7 @@ static bool canMergeContiguousAnonymousBlocks(const RenderObject& rendererToBeRe
     return previous && next && previous != anonymousDestroyRoot && next != anonymousDestroyRoot;
 }
 
-static RenderBlock* continuationBefore(RenderBlock& parent, RenderObject* beforeChild)
+RenderBlock* RenderTreeBuilder::Block::continuationBefore(RenderBlock& parent, RenderObject* beforeChild)
 {
     if (beforeChild && beforeChild->parent() == &parent)
         return &parent;
@@ -164,7 +169,7 @@ static std::optional<ParentAndBeforeChild> findParentAndBeforeChildForNonSibling
     if (beforeChildContainer->isInline() && child.isInline()) {
                 // The before child happens to be a block level box wrapped in an anonymous inline-block in an inline context (e.g. ruby).
                 // Let's attach this new child before the anonymous inline-block wrapper.
-                ASSERT(beforeChildContainer->isInlineBlockOrInlineTable());
+        ASSERT(beforeChildContainer->isNonReplacedAtomicInline());
         return ParentAndBeforeChild { &parent, beforeChildContainer };
             }
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!beforeChildContainer->isInline() || beforeChildContainer->isRenderTable());

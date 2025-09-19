@@ -31,12 +31,12 @@
 namespace WebCore {
 
 CSSLineBoxContainValue::CSSLineBoxContainValue(OptionSet<LineBoxContain> value)
-    : CSSValue(LineBoxContainClass)
+    : CSSValue(ClassType::LineBoxContain)
     , m_value(value)
 {
 }
 
-String CSSLineBoxContainValue::customCSSText() const
+String CSSLineBoxContainValue::customCSSText(const CSS::SerializationContext&) const
 {
     StringBuilder text;
     if (m_value.contains(LineBoxContain::Block))

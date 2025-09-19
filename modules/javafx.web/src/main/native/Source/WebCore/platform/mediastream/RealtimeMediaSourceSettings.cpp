@@ -174,7 +174,7 @@ OptionSet<RealtimeMediaSourceSettings::Flag> RealtimeMediaSourceSettings::differ
 
 String convertEnumerationToString(VideoFacingMode enumerationValue)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 5> values {
         MAKE_STATIC_STRING_IMPL("unknown"),
         MAKE_STATIC_STRING_IMPL("user"),
         MAKE_STATIC_STRING_IMPL("environment"),
@@ -192,7 +192,7 @@ String convertEnumerationToString(VideoFacingMode enumerationValue)
 
 String RealtimeMediaSourceSettings::displaySurface(DisplaySurfaceType surface)
 {
-    static const NeverDestroyed<String> values[] = {
+    static const std::array<NeverDestroyed<String>, 5> values {
         MAKE_STATIC_STRING_IMPL("monitor"),
         MAKE_STATIC_STRING_IMPL("window"),
         MAKE_STATIC_STRING_IMPL("application"),

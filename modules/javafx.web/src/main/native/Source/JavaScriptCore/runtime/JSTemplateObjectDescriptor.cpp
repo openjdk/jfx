@@ -82,8 +82,8 @@ JSArray* JSTemplateObjectDescriptor::createTemplateObject(JSGlobalObject* global
 
     templateObject->putDirect(vm, vm.propertyNames->raw, rawObject, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
 
+    scope.release();
     objectConstructorFreeze(globalObject, templateObject);
-    scope.assertNoExceptionExceptTermination();
 
     return templateObject;
 }

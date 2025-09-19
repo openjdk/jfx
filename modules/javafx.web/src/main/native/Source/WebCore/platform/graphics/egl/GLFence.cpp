@@ -23,6 +23,7 @@
 #include "GLContext.h"
 #include "GLFenceEGL.h"
 #include "GLFenceGL.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
@@ -32,10 +33,13 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GLFence);
+
 const GLFence::Capabilities& GLFence::capabilities()
 {
-    static std::once_flag onceFlag;
     static Capabilities capabilities;
+#if HAVE(GL_FENCE)
+    static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         auto& display = PlatformDisplay::sharedDisplay();
         const auto& extensions = display.eglExtensions();
@@ -51,6 +55,7 @@ const GLFence::Capabilities& GLFence::capabilities()
 #endif
         capabilities.glSupported = GLContext::versionFromString(reinterpret_cast<const char*>(glGetString(GL_VERSION))) >= 300;
     });
+#endif
     return capabilities;
 }
 
@@ -62,6 +67,7 @@ bool GLFence::isSupported()
 
 std::unique_ptr<GLFence> GLFence::create()
 {
+#if HAVE(GL_FENCE)
     if (!GLContextWrapper::currentContext())
         return nullptr;
 
@@ -74,32 +80,36 @@ std::unique_ptr<GLFence> GLFence::create()
 
     if (fenceCapabilities.eglSupported)
         return GLFenceEGL::create();
-
+#endif
     return nullptr;
 }
 
 #if OS(UNIX)
 std::unique_ptr<GLFence> GLFence::createExportable()
 {
+#if HAVE(GL_FENCE)
     if (!GLContextWrapper::currentContext())
         return nullptr;
 
     const auto& fenceCapabilities = capabilities();
     if (fenceCapabilities.eglSupported && fenceCapabilities.eglExportableSupported)
         return GLFenceEGL::createExportable();
-
+#endif
     return nullptr;
 }
 
 std::unique_ptr<GLFence> GLFence::importFD(UnixFileDescriptor&& fd)
 {
+#if HAVE(GL_FENCE)
     if (!GLContextWrapper::currentContext())
         return nullptr;
 
     const auto& fenceCapabilities = capabilities();
     if (fenceCapabilities.eglSupported && fenceCapabilities.eglExportableSupported)
         return GLFenceEGL::importFD(WTFMove(fd));
-
+#else
+    UNUSED_PARAM(fd);
+#endif
     return nullptr;
 }
 #endif

@@ -27,6 +27,7 @@
 #include "InternalWritableStream.h"
 
 #include "Exception.h"
+#include "JSDOMExceptionHandling.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/JSArrayBufferViewInlines.h>
 #include <JavaScriptCore/JSObjectInlines.h>
@@ -52,9 +53,40 @@ static ExceptionOr<JSC::JSValue> invokeWritableStreamFunction(JSC::JSGlobalObjec
     return result;
 }
 
+ExceptionOr<JSC::JSValue> InternalWritableStream::writeChunkForBingings(JSC::JSGlobalObject& globalObject, JSC::JSValue chunk)
+{
+    auto* clientData = downcast<JSVMClientData>(globalObject.vm().clientData);
+    JSC::MarkedArgumentBuffer arguments;
+    arguments.append(guardedObject());
+    ASSERT(!arguments.hasOverflowed());
+    auto& writerPrivateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().acquireWritableStreamDefaultWriterPrivateName();
+    auto writerResult = invokeWritableStreamFunction(globalObject, writerPrivateName, arguments);
+    if (UNLIKELY(writerResult.hasException()))
+        return writerResult.releaseException();
+
+    arguments.clear();
+    arguments.append(writerResult.returnValue());
+    arguments.append(chunk);
+    ASSERT(!arguments.hasOverflowed());
+    auto& writePrivateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamDefaultWriterWritePrivateName();
+    auto writeResult = invokeWritableStreamFunction(globalObject, writePrivateName, arguments);
+    if (UNLIKELY(writeResult.hasException()))
+        return writeResult.releaseException();
+
+    arguments.clear();
+    arguments.append(writerResult.returnValue());
+    ASSERT(!arguments.hasOverflowed());
+    auto& releasePrivateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamDefaultWriterReleasePrivateName();
+    auto releaseResult = invokeWritableStreamFunction(globalObject, releasePrivateName, arguments);
+    if (UNLIKELY(releaseResult.hasException()))
+        return releaseResult.releaseException();
+
+    return writeResult;
+}
+
 ExceptionOr<Ref<InternalWritableStream>> InternalWritableStream::createFromUnderlyingSink(JSDOMGlobalObject& globalObject, JSC::JSValue underlyingSink, JSC::JSValue strategy)
 {
-    auto* clientData = static_cast<JSVMClientData*>(globalObject.vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject.vm().clientData);
     auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().createInternalWritableStreamFromUnderlyingSinkPrivateName();
 
     JSC::MarkedArgumentBuffer arguments;
@@ -83,7 +115,7 @@ bool InternalWritableStream::locked() const
 
     auto scope = DECLARE_CATCH_SCOPE(globalObject->vm());
 
-    auto* clientData = static_cast<JSVMClientData*>(globalObject->vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject->vm().clientData);
     auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().isWritableStreamLockedPrivateName();
 
     JSC::MarkedArgumentBuffer arguments;
@@ -105,7 +137,7 @@ void InternalWritableStream::lock()
 
     auto scope = DECLARE_CATCH_SCOPE(globalObject->vm());
 
-    auto* clientData = static_cast<JSVMClientData*>(globalObject->vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject->vm().clientData);
     auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().acquireWritableStreamDefaultWriterPrivateName();
 
     JSC::MarkedArgumentBuffer arguments;
@@ -119,7 +151,7 @@ void InternalWritableStream::lock()
 
 JSC::JSValue InternalWritableStream::abortForBindings(JSC::JSGlobalObject& globalObject, JSC::JSValue reason)
 {
-    auto* clientData = static_cast<JSVMClientData*>(globalObject.vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject.vm().clientData);
     auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamAbortForBindingsPrivateName();
 
     JSC::MarkedArgumentBuffer arguments;
@@ -136,7 +168,7 @@ JSC::JSValue InternalWritableStream::abortForBindings(JSC::JSGlobalObject& globa
 
 JSC::JSValue InternalWritableStream::closeForBindings(JSC::JSGlobalObject& globalObject)
 {
-    auto* clientData = static_cast<JSVMClientData*>(globalObject.vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject.vm().clientData);
     auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamCloseForBindingsPrivateName();
 
     JSC::MarkedArgumentBuffer arguments;
@@ -158,7 +190,7 @@ void InternalWritableStream::closeIfPossible()
 
     auto scope = DECLARE_CATCH_SCOPE(globalObject->vm());
 
-    auto* clientData = static_cast<JSVMClientData*>(globalObject->vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject->vm().clientData);
     auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamCloseIfPossiblePrivateName();
 
     JSC::MarkedArgumentBuffer arguments;
@@ -170,9 +202,34 @@ void InternalWritableStream::closeIfPossible()
         scope.clearException();
 }
 
+void InternalWritableStream::errorIfPossible(Exception&& exception)
+{
+    auto* globalObject = this->globalObject();
+    if (!globalObject)
+        return;
+
+    Ref vm = globalObject->vm();
+    JSC::JSLockHolder lock(vm);
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    auto* clientData = downcast<JSVMClientData>(vm->clientData);
+    auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().writableStreamErrorIfPossiblePrivateName();
+
+    auto reason = createDOMException(*globalObject, WTFMove(exception));
+
+    JSC::MarkedArgumentBuffer arguments;
+    arguments.append(guardedObject());
+    arguments.append(reason);
+    ASSERT(!arguments.hasOverflowed());
+
+    invokeWritableStreamFunction(*globalObject, privateName, arguments);
+    if (UNLIKELY(scope.exception()))
+        scope.clearException();
+}
+
 JSC::JSValue InternalWritableStream::getWriter(JSC::JSGlobalObject& globalObject)
 {
-    auto* clientData = static_cast<JSVMClientData*>(globalObject.vm().clientData);
+    auto* clientData = downcast<JSVMClientData>(globalObject.vm().clientData);
     auto& privateName = clientData->builtinFunctions().writableStreamInternalsBuiltins().acquireWritableStreamDefaultWriterPrivateName();
 
     JSC::MarkedArgumentBuffer arguments;

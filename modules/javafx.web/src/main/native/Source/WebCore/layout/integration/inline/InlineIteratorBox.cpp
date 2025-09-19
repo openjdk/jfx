@@ -62,24 +62,45 @@ bool BoxIterator::atEnd() const
     });
 }
 
-LeafBoxIterator Box::nextOnLine() const
+BoxIterator& BoxIterator::traverseLineRightwardOnLine()
 {
-    return LeafBoxIterator(*this).traverseNextOnLine();
+    WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
+        path.traverseNextBoxOnLine();
+    });
+    return *this;
 }
 
-LeafBoxIterator Box::previousOnLine() const
+BoxIterator& BoxIterator::traverseLineRightwardOnLineSkippingChildren()
 {
-    return LeafBoxIterator(*this).traversePreviousOnLine();
+    WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
+        path.traverseNextBoxOnLineSkippingChildren();
+    });
+    return *this;
 }
 
-LeafBoxIterator Box::nextOnLineIgnoringLineBreak() const
+bool Box::isSVGText() const
 {
-    return LeafBoxIterator(*this).traverseNextOnLineIgnoringLineBreak();
+    return isText() && renderer().isRenderSVGInlineText();
 }
 
-LeafBoxIterator Box::previousOnLineIgnoringLineBreak() const
+LeafBoxIterator Box::nextLineRightwardOnLine() const
 {
-    return LeafBoxIterator(*this).traversePreviousOnLineIgnoringLineBreak();
+    return LeafBoxIterator(*this).traverseLineRightwardOnLine();
+}
+
+LeafBoxIterator Box::nextLineLeftwardOnLine() const
+{
+    return LeafBoxIterator(*this).traverseLineLeftwardOnLine();
+}
+
+LeafBoxIterator Box::nextLineRightwardOnLineIgnoringLineBreak() const
+{
+    return LeafBoxIterator(*this).traverseLineRightwardOnLineIgnoringLineBreak();
+}
+
+LeafBoxIterator Box::nextLineLeftwardOnLineIgnoringLineBreak() const
+{
+    return LeafBoxIterator(*this).traverseLineLeftwardOnLineIgnoringLineBreak();
 }
 
 InlineBoxIterator Box::parentInlineBox() const
@@ -129,34 +150,34 @@ LeafBoxIterator::LeafBoxIterator(const Box& run)
 {
 }
 
-LeafBoxIterator& LeafBoxIterator::traverseNextOnLine()
+LeafBoxIterator& LeafBoxIterator::traverseLineRightwardOnLine()
 {
     WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
-        path.traverseNextOnLine();
+        path.traverseNextLeafOnLine();
     });
     return *this;
 }
 
-LeafBoxIterator& LeafBoxIterator::traversePreviousOnLine()
+LeafBoxIterator& LeafBoxIterator::traverseLineLeftwardOnLine()
 {
     WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
-        path.traversePreviousOnLine();
+        path.traversePreviousLeafOnLine();
     });
     return *this;
 }
 
-LeafBoxIterator& LeafBoxIterator::traverseNextOnLineIgnoringLineBreak()
+LeafBoxIterator& LeafBoxIterator::traverseLineRightwardOnLineIgnoringLineBreak()
 {
     do {
-        traverseNextOnLine();
+        traverseLineRightwardOnLine();
     } while (!atEnd() && m_box.isLineBreak());
     return *this;
 }
 
-LeafBoxIterator& LeafBoxIterator::traversePreviousOnLineIgnoringLineBreak()
+LeafBoxIterator& LeafBoxIterator::traverseLineLeftwardOnLineIgnoringLineBreak()
 {
     do {
-        traversePreviousOnLine();
+        traverseLineLeftwardOnLine();
     } while (!atEnd() && m_box.isLineBreak());
     return *this;
 }

@@ -66,7 +66,6 @@ void compile(State& state, Safepoint::Result& safepointResult)
         graph.freeDFGIRAfterLowering();
 
     {
-        SetForScope disallowFreeze { state.graph.m_frozenValuesAreFinalized, true };
         GraphSafepoint safepoint(state.graph, safepointResult);
         B3::prepareForGeneration(*state.proc);
     }
@@ -78,19 +77,17 @@ void compile(State& state, Safepoint::Result& safepointResult)
         return;
 
     RegisterAtOffsetList registerOffsets = state.proc->calleeSaveRegisterAtOffsetList();
-    if (shouldDumpDisassembly())
-        dataLog(tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", registerOffsets, "\n");
+    dataLogLnIf(shouldDumpDisassembly(), tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", registerOffsets);
     state.jitCode->m_calleeSaveRegisters = RegisterAtOffsetList(WTFMove(registerOffsets));
     ASSERT(!(state.proc->frameSize() % sizeof(EncodedJSValue)));
     state.jitCode->common.frameRegisterCount = state.proc->frameSize() / sizeof(EncodedJSValue);
 
     int localsOffset =
         state.capturedValue->offsetFromFP() / sizeof(EncodedJSValue) + graph.m_nextMachineLocal;
-    if (shouldDumpDisassembly()) {
-        dataLog(tierName,
+    dataLogLnIf(shouldDumpDisassembly(),
+        tierName,
             "localsOffset = ", localsOffset, " for stack slot: ",
-            pointerDump(state.capturedValue), " at ", RawPointer(state.capturedValue), "\n");
-    }
+        pointerDump(state.capturedValue), " at ", RawPointer(state.capturedValue));
 
     for (unsigned i = graph.m_inlineVariableData.size(); i--;) {
         InlineCallFrame* inlineCallFrame = graph.m_inlineVariableData[i].inlineCallFrame;
@@ -128,7 +125,6 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     CCallHelpers jit(codeBlock);
     {
-        SetForScope disallowFreeze { state.graph.m_frozenValuesAreFinalized, true };
         GraphSafepoint safepoint(state.graph, safepointResult, true);
     B3::generate(*state.proc, jit);
     }
@@ -176,10 +172,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
             stackOverflowWithEntry.link(&jit);
             jit.emitFunctionPrologue();
-            jit.move(CCallHelpers::TrustedImmPtr(codeBlock), GPRInfo::argumentGPR0);
-            jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
-            jit.callOperation<OperationPtrTag>(operationThrowStackOverflowError);
-            jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()));
+            jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()));
             mainPathJumps.linkTo(mainPathLabel, &jit);
         }
         break;

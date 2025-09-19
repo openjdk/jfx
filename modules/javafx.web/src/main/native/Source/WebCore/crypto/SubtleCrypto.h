@@ -31,7 +31,7 @@
 #include <JavaScriptCore/Strong.h>
 #include <variant>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
 
@@ -50,9 +50,9 @@ class CryptoKey;
 class DeferredPromise;
 
 enum class CryptoAlgorithmIdentifier : uint8_t;
-enum class CryptoKeyUsage;
+enum class CryptoKeyUsage : uint8_t;
 
-class SubtleCrypto : public ContextDestructionObserver, public RefCounted<SubtleCrypto>, public CanMakeWeakPtr<SubtleCrypto> {
+class SubtleCrypto : public RefCountedAndCanMakeWeakPtr<SubtleCrypto>, public ContextDestructionObserver {
 public:
     static Ref<SubtleCrypto> create(ScriptExecutionContext* context) { return adoptRef(*new SubtleCrypto(context)); }
     ~SubtleCrypto();
