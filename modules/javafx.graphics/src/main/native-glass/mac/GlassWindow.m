@@ -381,6 +381,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         bool isPopup = (jStyleMask & com_sun_glass_ui_Window_POPUP) != 0;
         bool isUnified = (jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0;
         bool isExtended = (jStyleMask & com_sun_glass_ui_Window_EXTENDED) != 0;
+        bool isDarkFrame = (jStyleMask & com_sun_glass_ui_Window_DARK_FRAME) != 0;
 
         NSUInteger styleMask = NSWindowStyleMaskBorderless;
         // only titled windows get title
@@ -506,6 +507,9 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         window->isLocationAssigned = NO;
         window->isResizable = NO;
         [window _setResizable:NO]; // actual value will be set later with a separate JNI downcall
+        [window->nsWindow setAppearance:isDarkFrame
+            ? [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]
+            : [NSAppearance appearanceNamed:NSAppearanceNameAqua]];
     }
     [pool drain];
 
@@ -1374,6 +1378,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
         } else {
             [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:nil];
         }
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setDarkFrame
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setDarkFrame
+(JNIEnv *env, jobject jWindow, jlong jPtr, jboolean dark)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setDarkFrame");
+    if (!jPtr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        [window->nsWindow setAppearance:dark
+            ? [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]
+            : [NSAppearance appearanceNamed:NSAppearanceNameAqua]];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
