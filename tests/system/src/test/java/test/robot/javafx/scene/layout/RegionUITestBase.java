@@ -61,12 +61,20 @@ public abstract class RegionUITestBase extends VisualTestBase {
     protected Scene scene;
     protected Group root;
     protected Region region;
-    static volatile WritableImage screenCapture;
+    private volatile WritableImage screenCapture;
 
     @BeforeEach
     @Override
     public void doSetup() {
         super.doSetup();
+    }
+
+    protected void setStyle(final String style) {
+        runAndWait(() -> region.setStyle(style));
+        waitFirstFrame();
+    }
+
+    protected void initialize() {
         screenCapture = null;
         runAndWait(() -> {
             stage = getStage();
@@ -79,11 +87,6 @@ public abstract class RegionUITestBase extends VisualTestBase {
             stage.setAlwaysOnTop(true);
             stage.show();
         });
-    }
-
-    protected void setStyle(final String style) {
-        runAndWait(() -> region.setStyle(style));
-        waitFirstFrame();
     }
 
     static final double TOLERANCE = 0.07;

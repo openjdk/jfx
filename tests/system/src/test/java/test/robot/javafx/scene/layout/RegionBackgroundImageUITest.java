@@ -66,18 +66,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         });
         runAndWait(() -> robot = new Robot());
         Util.parkCursor(robot);
-        screenCapture = null;
-        runAndWait(() -> {
-            stage = getStage();
-            region = new Region();
-            region.setPrefSize(REGION_WIDTH, REGION_HEIGHT);
-            region.relocate(REGION_LEFT, REGION_TOP);
-            scene = new Scene(root = new Group(region), WIDTH, HEIGHT);
-            scene.setFill(SCENE_FILL);
-            stage.setScene(scene);
-            stage.setAlwaysOnTop(true);
-            stage.show();
-        });
+        initialize();
     }
 
     /**
