@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,9 +30,12 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
 
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 /**
  * A Map wrapper class that implements observability.
@@ -48,67 +51,6 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
     public ObservableMapWrapper(Map<K, V> map) {
         this.backingMap = map;
-    }
-
-    private class SimpleChange extends MapChangeListener.Change<K,V> {
-
-        private final K key;
-        private final V old;
-        private final V added;
-        private final boolean wasAdded;
-        private final boolean wasRemoved;
-
-        public SimpleChange(K key, V old, V added, boolean wasAdded, boolean wasRemoved) {
-            super(ObservableMapWrapper.this);
-            assert(wasAdded || wasRemoved);
-            this.key = key;
-            this.old = old;
-            this.added = added;
-            this.wasAdded = wasAdded;
-            this.wasRemoved = wasRemoved;
-        }
-
-        @Override
-        public boolean wasAdded() {
-            return wasAdded;
-        }
-
-        @Override
-        public boolean wasRemoved() {
-            return wasRemoved;
-        }
-
-        @Override
-        public K getKey() {
-            return key;
-        }
-
-        @Override
-        public V getValueAdded() {
-            return added;
-        }
-
-        @Override
-        public V getValueRemoved() {
-            return old;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder builder = new StringBuilder();
-            if (wasAdded) {
-                if (wasRemoved) {
-                    builder.append(old).append(" replaced by ").append(added);
-                } else {
-                    builder.append(added).append(" added");
-                }
-            } else {
-                builder.append(old).append(" removed");
-            }
-            builder.append(" at key ").append(key);
-            return builder.toString();
-        }
-
     }
 
     protected void callObservers(MapChangeListener.Change<K,V> change) {
@@ -188,20 +130,154 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
-            put(e.getKey(), e.getValue());
+        int size = m.size();
+
+        if (size == 1) {
+            var entry = m.entrySet().iterator().next();
+            put(entry.getKey(), entry.getValue());
+        } else if (size > 1) {
+            var change = new BulkChange.AddReplace<>(this, size);
+
+            for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
+                K key = e.getKey();
+                V newValue = e.getValue();
+
+                if (!backingMap.containsKey(key)) {
+                    change.nextAdded(key, newValue);
+                } else {
+                    V oldValue = backingMap.get(key);
+
+                    if (!Objects.equals(oldValue, newValue)) {
+                        change.nextReplaced(key, oldValue, newValue);
+                    }
+                }
+            }
+
+            change.complete();
+            backingMap.putAll(m);
+            callObservers(change);
         }
     }
 
     @Override
-    public void clear() {
-        for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext(); ) {
-            Entry<K, V> e = i.next();
-            K key = e.getKey();
-            V val = e.getValue();
-            i.remove();
-            callObservers(new SimpleChange(key, val, null, false, true));
+    public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+        Objects.requireNonNull(function);
+        MapChangeListener.Change<K, V> change = null;
+        int i = 0;
+
+        for (Map.Entry<K, V> entry : backingMap.entrySet()) {
+            K key;
+            V oldValue;
+
+            try {
+                key = entry.getKey();
+                oldValue = entry.getValue();
+            } catch (IllegalStateException ex) {
+                // This usually means the entry is no longer in the map.
+                throw new ConcurrentModificationException(ex);
+            }
+
+            // IllegalStateException thrown from function is not a ConcurrentModificationException.
+            V newValue = function.apply(key, oldValue);
+
+            try {
+                if (!Objects.equals(oldValue, newValue)) {
+                    entry.setValue(newValue);
+
+                    if (change instanceof SimpleChange) {
+                        int capacity = backingMap.size() - i + 1;
+                        var bulkChange = new BulkChange.AddReplace<>(ObservableMapWrapper.this, capacity);
+                        bulkChange.nextReplaced(change.getKey(), change.getValueRemoved(), change.getValueAdded());
+                        bulkChange.nextReplaced(key, oldValue, newValue);
+                        change = bulkChange;
+                    } else if (change instanceof BulkChange.AddReplace<K, V> bulkChange) {
+                        bulkChange.nextReplaced(key, oldValue, newValue);
+                    } else {
+                        change = new SimpleChange(key, oldValue, newValue, true, true);
+                    }
+                }
+            } catch (IllegalStateException ex) {
+                // This usually means the entry is no longer in the map.
+                throw new ConcurrentModificationException(ex);
+            }
+
+            ++i;
         }
+
+        if (change == null) {
+            return;
+        }
+
+        if (change instanceof BulkChange<K, V> bulkChange) {
+            bulkChange.complete();
+        }
+
+        callObservers(change);
+    }
+
+    @Override
+    public void clear() {
+        int size = backingMap.size();
+
+        if (size == 1) {
+            Iterator<Entry<K, V>> it = backingMap.entrySet().iterator();
+            Entry<K, V> entry = it.next();
+            K key = entry.getKey();
+            V val = entry.getValue();
+            it.remove();
+            callObservers(new SimpleChange(key, val, null, false, true));
+        } else if (size > 1) {
+            var change = new BulkChange.Remove<>(this, size);
+
+            for (Map.Entry<? extends K, ? extends V> e : backingMap.entrySet()) {
+                change.nextRemoved(e.getKey(), e.getValue());
+            }
+
+            change.complete();
+            backingMap.clear();
+            callObservers(change);
+        }
+    }
+
+    private boolean removeRetain(Collection<?> c, ContainsPredicate<K, V> p, boolean remove) {
+        MapChangeListener.Change<K, V> change = null;
+
+        for (Iterator<Entry<K, V>> it = backingMap.entrySet().iterator(); it.hasNext();) {
+            Entry<K, V> e = it.next();
+
+            if (remove == p.contains(c, e)) {
+                K key = e.getKey();
+                V value = e.getValue();
+
+                if (change instanceof SimpleChange) {
+                    int capacity = remove
+                        ? Math.min(backingMap.size() + 1, c.size())
+                        : backingMap.size() + 1;
+
+                    var bulkChange = new BulkChange.Remove<>(ObservableMapWrapper.this, capacity);
+                    bulkChange.nextRemoved(change.getKey(), change.getValueRemoved());
+                    bulkChange.nextRemoved(key, value);
+                    change = bulkChange;
+                } else if (change instanceof BulkChange.Remove<K, V> bulkChange) {
+                    bulkChange.nextRemoved(key, value);
+                } else {
+                    change = new SimpleChange(key, value, null, false, true);
+                }
+
+                it.remove();
+            }
+        }
+
+        if (change == null) {
+            return false;
+        }
+
+        if (change instanceof BulkChange<K, V> bulkChange) {
+            bulkChange.complete();
+        }
+
+        callObservers(change);
+        return true;
     }
 
     @Override
@@ -243,7 +319,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         return backingMap.hashCode();
     }
 
-    private class ObservableKeySet implements Set<K>{
+    private class ObservableKeySet implements Set<K>, ContainsPredicate<K, V> {
 
         @Override
         public int size() {
@@ -331,22 +407,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 return false;
             }
 
-            return removeRetain(c, false);
-        }
-
-        private boolean removeRetain(Collection<?> c, boolean remove) {
-            boolean removed = false;
-            for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
-                Entry<K, V> e = i.next();
-                if (remove == c.contains(e.getKey())) {
-                    removed = true;
-                    K key = e.getKey();
-                    V value = e.getValue();
-                    i.remove();
-                    callObservers(new SimpleChange(key, value, null, false, true));
-                }
-            }
-            return removed;
+            return removeRetain(c, this, false);
         }
 
         @Override
@@ -356,7 +417,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 return false;
             }
 
-            return removeRetain(c, true);
+            return removeRetain(c, this, true);
         }
 
         @Override
@@ -379,9 +440,13 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
             return backingMap.keySet().hashCode();
         }
 
+        @Override
+        public boolean contains(Collection<?> c, Entry<K, V> e) {
+            return c.contains(e.getKey());
+        }
     }
 
-    private class ObservableValues implements Collection<V> {
+    private class ObservableValues implements Collection<V>, ContainsPredicate<K, V> {
 
         @Override
         public int size() {
@@ -470,22 +535,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 return false;
             }
 
-            return removeRetain(c, true);
-        }
-
-        private boolean removeRetain(Collection<?> c, boolean remove) {
-            boolean removed = false;
-            for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
-                Entry<K, V> e = i.next();
-                if (remove == c.contains(e.getValue())) {
-                    removed = true;
-                    K key = e.getKey();
-                    V value = e.getValue();
-                    i.remove();
-                    callObservers(new SimpleChange(key, value, null, false, true));
-                }
-            }
-            return removed;
+            return removeRetain(c, this, true);
         }
 
         @Override
@@ -500,7 +550,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 return false;
             }
 
-            return removeRetain(c, false);
+            return removeRetain(c, this, false);
         }
 
         @Override
@@ -523,9 +573,10 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
             return backingMap.values().hashCode();
         }
 
-
-
-
+        @Override
+        public boolean contains(Collection<?> c, Entry<K, V> e) {
+            return c.contains(e.getValue());
+        }
     }
 
     private class ObservableEntry implements Entry<K,V> {
@@ -549,7 +600,11 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         @Override
         public V setValue(V value) {
             V oldValue = backingEntry.setValue(value);
-            callObservers(new SimpleChange(getKey(), oldValue, value, true, true));
+
+            if (!Objects.equals(oldValue, value)) {
+                callObservers(new SimpleChange(getKey(), oldValue, value, true, true));
+            }
+
             return oldValue;
         }
 
@@ -686,22 +741,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 return false;
             }
 
-            return removeRetain(c, false);
-        }
-
-        private boolean removeRetain(Collection<?> c, boolean remove) {
-            boolean removed = false;
-            for (Iterator<Entry<K, V>> i = backingMap.entrySet().iterator(); i.hasNext();) {
-                Entry<K, V> e = i.next();
-                if (remove == c.contains(e)) {
-                    removed = true;
-                    K key = e.getKey();
-                    V value = e.getValue();
-                    i.remove();
-                    callObservers(new SimpleChange(key, value, null, false, true));
-                }
-            }
-            return removed;
+            return removeRetain(c, Collection::contains, false);
         }
 
         @Override
@@ -711,7 +751,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 return false;
             }
 
-            return removeRetain(c, true);
+            return removeRetain(c, Collection::contains, true);
         }
 
         @Override
@@ -736,4 +776,220 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
     }
 
+    private static String changeToString(MapChangeListener.Change<?, ?> change) {
+        StringBuilder builder = new StringBuilder();
+
+        if (change.wasAdded()) {
+            if (change.wasRemoved()) {
+                builder.append(change.getValueRemoved()).append(" replaced by ").append(change.getValueAdded());
+            } else {
+                builder.append(change.getValueAdded()).append(" added");
+            }
+        } else {
+            builder.append(change.getValueRemoved()).append(" removed");
+        }
+
+        return builder.append(" at key ").append(change.getKey()).toString();
+    }
+
+    private class SimpleChange extends MapChangeListener.Change<K,V> {
+
+        private final K key;
+        private final V old;
+        private final V added;
+        private final boolean wasAdded;
+        private final boolean wasRemoved;
+
+        public SimpleChange(K key, V old, V added, boolean wasAdded, boolean wasRemoved) {
+            super(ObservableMapWrapper.this);
+            assert(wasAdded || wasRemoved);
+            this.key = key;
+            this.old = old;
+            this.added = added;
+            this.wasAdded = wasAdded;
+            this.wasRemoved = wasRemoved;
+        }
+
+        @Override
+        public boolean wasAdded() {
+            return wasAdded;
+        }
+
+        @Override
+        public boolean wasRemoved() {
+            return wasRemoved;
+        }
+
+        @Override
+        public K getKey() {
+            return key;
+        }
+
+        @Override
+        public V getValueAdded() {
+            return added;
+        }
+
+        @Override
+        public V getValueRemoved() {
+            return old;
+        }
+
+        @Override
+        public String toString() {
+            return changeToString(this);
+        }
+    }
+
+    private static abstract sealed class BulkChange<K, V> extends IterableMapChange<K, V> {
+
+        final int capacity;
+        final K[] keys;
+        int size;
+        int index;
+
+        @SuppressWarnings("unchecked")
+        BulkChange(ObservableMapWrapper<K, V> map, int capacity) {
+            super(map);
+            this.capacity = capacity;
+            this.keys = (K[])new Object[capacity];
+        }
+
+        final void complete() {
+            size = index;
+            index = 0;
+        }
+
+        @Override
+        public final boolean nextChange() {
+            if (index < size - 1) {
+                ++index;
+                return true;
+            }
+
+            return false;
+        }
+
+        @Override
+        public final MapChangeListener.Change<K, V> next() {
+            if (index < size - 1) {
+                ++index;
+                return this;
+            }
+
+            return null;
+        }
+
+        @Override
+        public final void reset() {
+            index = 0;
+        }
+
+        @Override
+        public final String toString() {
+            return changeToString(this);
+        }
+
+        final static class Remove<K, V> extends BulkChange<K, V> {
+
+            private final V[] values;
+
+            @SuppressWarnings("unchecked")
+            Remove(ObservableMapWrapper<K, V> map, int capacity) {
+                super(map, capacity);
+                this.values = (V[])new Object[capacity];
+            }
+
+            void nextRemoved(K key, V value) {
+                keys[index] = key;
+                values[index] = value;
+                ++index;
+            }
+
+            @Override
+            public boolean wasAdded() {
+                return false;
+            }
+
+            @Override
+            public boolean wasRemoved() {
+                return true;
+            }
+
+            @Override
+            public K getKey() {
+                return keys[index];
+            }
+
+            @Override
+            public V getValueAdded() {
+                return values[index];
+            }
+
+            @Override
+            public V getValueRemoved() {
+                return values[index];
+            }
+        }
+
+        final static class AddReplace<K, V> extends BulkChange<K, V> {
+
+            private static final int ADDED = 1;
+            private static final int REMOVED = 2;
+
+            private final V[] values;
+            private final int[] addedRemoved;
+
+            @SuppressWarnings("unchecked")
+            AddReplace(ObservableMapWrapper<K, V> map, int capacity) {
+                super(map, capacity);
+                this.values = (V[])new Object[capacity * 2];
+                this.addedRemoved = new int[capacity];
+            }
+
+            void nextAdded(K key, V value) {
+                keys[index] = key;
+                values[index * 2 + 1] = value;
+                addedRemoved[index] = ADDED;
+                ++index;
+            }
+
+            void nextReplaced(K key, V oldValue, V newValue) {
+                keys[index] = key;
+                values[index * 2] = oldValue;
+                values[index * 2 + 1] = newValue;
+                addedRemoved[index] = ADDED | REMOVED;
+                ++index;
+            }
+
+            @Override
+            public boolean wasAdded() {
+                return (addedRemoved[index] & ADDED) != 0;
+            }
+
+            @Override
+            public boolean wasRemoved() {
+                return (addedRemoved[index] & REMOVED) != 0;
+            }
+
+            @Override
+            public K getKey() {
+                return keys[index];
+            }
+
+            @Override
+            public V getValueAdded() {
+                return values[index * 2 + 1];
+            }
+
+            @Override
+            public V getValueRemoved() {
+                return values[index * 2];
+            }
+        }
+    }
+
+    private interface ContainsPredicate<K, V> {
+        boolean contains(Collection<?> c, Entry<K, V> e);
+    }
 }
