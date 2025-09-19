@@ -67,6 +67,7 @@ public abstract class RegionUITestBase extends VisualTestBase {
     @Override
     public void doSetup() {
         super.doSetup();
+        initialize();
     }
 
     protected void setStyle(final String style) {
