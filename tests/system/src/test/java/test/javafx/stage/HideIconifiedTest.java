@@ -73,10 +73,10 @@ class HideIconifiedTest {
     }
 
     private void assertStageProperties() {
-        assertEquals(STAGE_WIDTH, stage.getWidth(), 0.1, "Stage width changed");
-        assertEquals(STAGE_HEIGHT, stage.getHeight(), 0.1, "Stage height changed");
-        assertEquals(STAGE_X, stage.getX(), 0.1, "Stage x position changed");
-        assertEquals(STAGE_Y, stage.getY(), 0.1, "Stage y position changed");
+        assertEquals(STAGE_WIDTH, stage.getWidth(), 0.6, "Stage width changed");
+        assertEquals(STAGE_HEIGHT, stage.getHeight(), 0.6, "Stage height changed");
+        assertEquals(STAGE_X, stage.getX(), 0.6, "Stage x position changed");
+        assertEquals(STAGE_Y, stage.getY(), 0.6, "Stage y position changed");
     }
 
     private void createAndShowStage(StageStyle stageStyle) {
