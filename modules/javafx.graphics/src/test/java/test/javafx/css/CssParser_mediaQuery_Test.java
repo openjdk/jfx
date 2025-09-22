@@ -425,4 +425,21 @@ public class CssParser_mediaQuery_Test {
         assertEquals(List.of(), stylesheet.getRules().get(0).getDeclarations());
         assertEquals("qux", stylesheet.getRules().get(1).getDeclarations().getFirst().getProperty());
     }
+
+    @Test
+    void missingClosingCurlyBraceEmitsParserError() {
+        CssParser.errorsProperty().clear();
+
+        var stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark) {
+                .foo { bar: baz; }
+            """);
+
+        assertTrue(CssParser.errorsProperty().getFirst().getMessage().startsWith("Expected RBRACE"));
+        assertEquals(1, stylesheet.getRules().size());
+        assertEquals(Set.of("foo"), stylesheet.getRules().getFirst().getSelectors().getFirst().getStyleClassNames());
+        assertEquals(
+            List.of(new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)),
+            RuleHelper.getMediaRule(stylesheet.getRules().getFirst()).getQueries());
+    }
 }

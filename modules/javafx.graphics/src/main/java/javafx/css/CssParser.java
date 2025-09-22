@@ -4329,12 +4329,26 @@ final public class CssParser {
 
             stylesheet.getRules().add(new Rule(mediaRule, selectors, declarations));
 
+            Token lastToken = currentToken;
             currentToken = nextToken(lexer);
 
             while (expectedRBraces > 0 && currentToken != null && currentToken.getType() == CssLexer.RBRACE) {
                 mediaRule = mediaRule.getParent();
+                lastToken = currentToken;
                 currentToken = nextToken(lexer);
                 expectedRBraces--;
+            }
+
+            if (expectedRBraces > 0 && currentToken != null && currentToken.getType() == Token.EOF) {
+                String msg = String.format("Expected RBRACE at [%d,%d]", lastToken.getLine(), lastToken.getOffset() + 1);
+                ParseError error = createError(msg);
+                if (LOGGER.isLoggable(Level.WARNING)) {
+                    LOGGER.warning(error.toString());
+                }
+
+                reportError(error);
+                currentToken = null;
+                return;
             }
         }
 
