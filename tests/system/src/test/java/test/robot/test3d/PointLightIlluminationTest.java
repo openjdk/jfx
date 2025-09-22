@@ -82,6 +82,8 @@ public class PointLightIlluminationTest extends VisualTestBase {
             });
             // Ensure that the scene is really displayed, before the tests begin
             waitFirstFrame();
+            // The same scene can be used for all the illumination tests by this class
+            clearStage = false;
         }
     }
 

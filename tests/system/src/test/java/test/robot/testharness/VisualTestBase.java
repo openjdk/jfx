@@ -60,6 +60,8 @@ public abstract class VisualTestBase {
     // Glass Robot instance
     Robot robot;
 
+    protected static boolean clearStage = true;
+
     protected Robot getRobot() {
         return robot;
     }
@@ -96,16 +98,18 @@ public abstract class VisualTestBase {
 
     @BeforeEach
     public void doSetup() {
-        runAndWait(() -> {
-            if (!stages.isEmpty()) {
-                for (final Stage stage : stages) {
-                    if (stage.isShowing()) {
-                        stage.hide();
+        if (clearStage) {
+            runAndWait(() -> {
+                if (!stages.isEmpty()) {
+                    for (final Stage stage : stages) {
+                        if (stage.isShowing()) {
+                            stage.hide();
+                        }
                     }
+                    stages.clear();
                 }
-                stages.clear();
-            }
-        });
+            });
+        }
         runAndWait(() -> robot = new Robot());
         Util.parkCursor(robot);
     }
