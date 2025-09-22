@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,20 +27,12 @@ package test.robot.javafx.scene.layout;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.TimeUnit;
 import javafx.scene.layout.BackgroundFill;
-import javafx.scene.Scene;
-import javafx.scene.Group;
-import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import javafx.scene.robot.Robot;
-import javafx.stage.Stage;
-import test.util.Util;
 import test.util.ScreenCaptureTestWatcher;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
 
 /**
  */
@@ -59,34 +51,6 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     final String EXPECTED_WARNING = "EXPECTED WARNING: This is a negative test"
         + " to verify that negative value is not accepted for -fx-background-radius."
         + " A 'No radii value may be < 0' warning message is expected.";
-
-    @BeforeEach
-    public void doSetup() {
-        runAndWait(() -> {
-            if (!stages.isEmpty()) {
-                for (final Stage stage : stages) {
-                    if (stage.isShowing()) {
-                        stage.hide();
-                    }
-                }
-                stages.clear();
-            }
-        });
-        runAndWait(() -> robot = new Robot());
-        Util.parkCursor(robot);
-        initialize();
-    }
-
-    /**
-     * This method is overridden and doing nothing, because we want the stage
-     * to be active until screen capture is done by ScreenCaptureTestWatcher
-     * utility on test failure. Stale test stage will be cleared before next
-     * test stage is created during setup.
-     */
-    @AfterEach
-    public void doTeardown() {
-
-    }
 
     @Test
     public void basicFill() {

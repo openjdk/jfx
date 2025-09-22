@@ -38,7 +38,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
 import javafx.stage.Stage;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -68,8 +67,10 @@ public class PointLightIlluminationTest extends VisualTestBase {
     private static volatile Scene testScene = null;
 
     @BeforeEach
-    public void setupEach() {
+    @Override
+    public void doSetup() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+        super.doSetup();
 
         // Use the same test scene for all tests
         if (testScene == null) {
@@ -132,16 +133,6 @@ public class PointLightIlluminationTest extends VisualTestBase {
             Color color = getColor(testScene, SCENE_WIDTH_HEIGHT / 2, SCENE_WIDTH_HEIGHT / 2);
             assertColorEquals(Color.RED, color, COLOR_TOLERANCE);
         });
-    }
-
-    /**
-     * This method is overridden and doing nothing, so that the test stage and scene
-     * will not be hidden (which is the default behavior in the super class). The same
-     * scene can be used for all the illumination tests by this class.
-     */
-    @Override
-    @AfterEach
-    public void doTeardown() {
     }
 
     /**

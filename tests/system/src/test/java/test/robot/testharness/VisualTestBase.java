@@ -55,10 +55,10 @@ public abstract class VisualTestBase {
     // Singleton Application instance
     private static MyApp myApp;
     // Scene instances used for testing
-    protected static List<Stage> stages = new ArrayList<>();
+    private static List<Stage> stages = new ArrayList<>();
 
     // Glass Robot instance
-    protected static Robot robot;
+    Robot robot;
 
     protected Robot getRobot() {
         return robot;
@@ -96,12 +96,6 @@ public abstract class VisualTestBase {
 
     @BeforeEach
     public void doSetup() {
-        runAndWait(() -> robot = new Robot());
-        Util.parkCursor(robot);
-    }
-
-    @AfterEach
-    public void doTeardown() {
         runAndWait(() -> {
             if (!stages.isEmpty()) {
                 for (final Stage stage : stages) {
@@ -112,6 +106,8 @@ public abstract class VisualTestBase {
                 stages.clear();
             }
         });
+        runAndWait(() -> robot = new Robot());
+        Util.parkCursor(robot);
     }
 
     protected void runAndWait(final Runnable r) {
