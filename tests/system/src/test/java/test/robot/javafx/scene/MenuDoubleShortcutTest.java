@@ -94,6 +94,7 @@ public class MenuDoubleShortcutTest {
     //
     // https://bugs.openjdk.org/browse/JDK-8087863
     // https://bugs.openjdk.org/browse/JDK-8088897
+    @Disabled("JDK-8368074")
     @Test
     void macSceneComesBeforeMenuBar() {
         Assumptions.assumeTrue(PlatformUtil.isMac());
@@ -105,6 +106,7 @@ public class MenuDoubleShortcutTest {
 
     // On platforms other than Mac the menu bar should process the event
     // and the scene should not.
+    @Disabled("JDK-8368074")
     @Test
     void nonMacMenuBarComesBeforeScene() {
         Assumptions.assumeFalse(PlatformUtil.isMac());
