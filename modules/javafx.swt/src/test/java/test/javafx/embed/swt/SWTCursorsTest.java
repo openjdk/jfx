@@ -35,7 +35,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Disabled;
 
 import java.util.concurrent.TimeUnit;
 
@@ -44,18 +44,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class SWTCursorsTest extends SWTTest {
 
     private FXCanvas canvas;
-    private static final String os = System.getProperty("os.name");
-    private static String javafxPlatform =
-        System.getProperty("javafx.platform");
-    private static final boolean ANDROID = "android".equals(javafxPlatform) ||
-        "Dalvik".equals(System.getProperty("java.vm.name"));
 
+    @Disabled("JDK-8367599")
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testImageCursor() throws Throwable {
-        // Skip this test on Linux & macOS because of JDK-8367599
-        Assumptions.assumeFalse(os.startsWith("Mac") ||
-            (os.startsWith("Linux") && !ANDROID));
         runOnSwtThread(() -> {
             Display display = Display.getCurrent();
             final Shell shell = new Shell(display);
