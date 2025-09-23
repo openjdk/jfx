@@ -23,6 +23,11 @@
  * questions.
  */
 
+import org.gradle.process.ExecOperations
+import org.gradle.process.JavaExecSpec
+
+def execOps = project.services.get(ExecOperations)
+
 ext.WIN = [:]
 
 WIN.canBuild = IS_WINDOWS
@@ -64,7 +69,7 @@ setupTools("windows_tools",
             // Create the properties file
             ByteArrayOutputStream results = new ByteArrayOutputStream();
             String winsdkDir = System.getenv().get("WINSDK_DIR");
-            exec({
+            execOps.exec { ExecSpec spec ->
                 environment([
                         "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
                         "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
@@ -73,7 +78,7 @@ setupTools("windows_tools",
                 ]);
                 commandLine("cmd", "/q", "/c", "buildSrc\\genVSproperties.bat");
                 setStandardOutput(results);
-            });
+            }
             BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
             reader.readLine();
             reader.readLine();

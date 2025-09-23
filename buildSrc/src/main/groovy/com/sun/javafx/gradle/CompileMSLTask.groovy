@@ -23,16 +23,33 @@
  * questions.
  */
 
+import org.gradle.process.ExecOperations
+import org.gradle.process.ExecSpec
+
+import javax.inject.Inject
+
 class CompileMSLTask extends NativeCompileTask {
+    @Inject
+    CompileMSLTask(ExecOperations execOperations) {
+        super(execOperations);
+    }
+
     protected File outputFile(File sourceFile) {
         new File("$output/${sourceFile.name.replace('.metal', '.air')}");
     }
 
     protected void doCompile(File sourceFile, File outputFile){
         def headerDir = 'gensrc/mtl-headers';
-        def includeDir = "$project.buildDir/$headerDir"
-        project.exec({
-            commandLine = ["${project.metalCompiler}", "-Wdeprecated", "-std=macos-metal2.4", "-I", "$includeDir", "-c", "$sourceFile", "-o", "$outputFile"]
-        });
+        def includeDir = "$project.buildDir/$headerDir";
+        execCompile { ExecSpec spec ->
+            spec.commandLine = [
+                "${project.metalCompiler}",
+                "-Wdeprecated",
+                "-std=macos-metal2.4",
+                "-I", "$includeDir",
+                "-c", "$sourceFile",
+                "-o", "$outputFile"
+            ]
+        }
     }
 }
