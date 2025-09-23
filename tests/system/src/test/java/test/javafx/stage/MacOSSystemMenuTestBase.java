@@ -150,7 +150,6 @@ public class MacOSSystemMenuTestBase {
     }
 
     protected void initJavaFX(boolean fullscreen, List<List<Element>> menus) {
-        assert menus.size() > 0;
         initLock();
 
         Platform.startup(() -> {
@@ -165,11 +164,11 @@ public class MacOSSystemMenuTestBase {
     }
 
     protected void initSwing(List<List<Element>> menus) {
+        java.awt.Toolkit.getDefaultToolkit();
         initSwing(false, menus);
     }
 
     protected void initSwing(boolean fullscreen, List<List<Element>> menus) {
-        assert menus.size() > 0;
         System.setProperty("apple.laf.useScreenMenuBar", "true");
 
         for (int i = 0; i < menus.size(); i++) {

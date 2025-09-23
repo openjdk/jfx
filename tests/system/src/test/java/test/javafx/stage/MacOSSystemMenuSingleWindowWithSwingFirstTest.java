@@ -59,10 +59,10 @@ import javax.swing.SwingUtilities;
 import test.util.Util;
 
 
-public class MacOSSystemMenuSingleWindowWithSwingTest extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuSingleWindowWithSwingFirstTest extends MacOSSystemMenuTestBase {
 
     @Test
-    public void testSingleWindow() throws InterruptedException, IOException {
+    public void test() throws InterruptedException, IOException {
         initSwing(List.of(TEST_MENUS_0));
         initJavaFX(List.of(TEST_MENUS_1));
 
