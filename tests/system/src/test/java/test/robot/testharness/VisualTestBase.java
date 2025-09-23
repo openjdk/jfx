@@ -60,7 +60,7 @@ public abstract class VisualTestBase {
     // Glass Robot instance
     Robot robot;
 
-    protected static boolean clearStage = true;
+    protected static boolean clearStages = true;
 
     protected Robot getRobot() {
         return robot;
@@ -98,7 +98,7 @@ public abstract class VisualTestBase {
 
     @BeforeEach
     public void doSetup() {
-        if (clearStage) {
+        if (clearStages) {
             runAndWait(() -> {
                 if (!stages.isEmpty()) {
                     for (final Stage stage : stages) {
