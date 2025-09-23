@@ -58,26 +58,23 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuMultiWindowFXOnlySwingFirst extends MacOSSystemMenuTestBase {
 
     @Test
     public void test() throws InterruptedException, IOException {
-        initJavaFX(List.of(TEST_MENUS_0, TEST_MENUS_1, TEST_MENUS_2));
+        initSwing(List.of());
+        initJavaFX(List.of(TEST_MENUS_1, TEST_MENUS_3));
 
         focusJavaFX(0);
         List<Element> jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        compareMenus(jfxElements, TEST_MENUS_1);
 
         focusJavaFX(1);
         jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
-
-        focusJavaFX(2);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_2);
+        compareMenus(jfxElements, TEST_MENUS_3);
 
         focusJavaFX(0);
         jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        compareMenus(jfxElements, TEST_MENUS_1);
     }
 }

@@ -58,26 +58,31 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuMultiWindowWithSwingFirstTest extends MacOSSystemMenuTestBase {
 
     @Test
     public void test() throws InterruptedException, IOException {
-        initJavaFX(List.of(TEST_MENUS_0, TEST_MENUS_1, TEST_MENUS_2));
+        initSwing(List.of(TEST_MENUS_0, TEST_MENUS_2));
+        initJavaFX(List.of(TEST_MENUS_1, TEST_MENUS_3));
 
         focusJavaFX(0);
         List<Element> jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        compareMenus(jfxElements, TEST_MENUS_1);
 
         focusJavaFX(1);
         jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
+        compareMenus(jfxElements, TEST_MENUS_3);
 
-        focusJavaFX(2);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_2);
+        focusSwing(0);
+        List<Element> swingElements = getMenusOfFocusedWindow();
+        compareMenus(swingElements, TEST_MENUS_0);
 
-        focusJavaFX(0);
+        focusJavaFX(1);
         jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        compareMenus(jfxElements, TEST_MENUS_3);
+
+        focusSwing(1);
+        swingElements = getMenusOfFocusedWindow();
+        compareMenus(swingElements, TEST_MENUS_2);
     }
 }
