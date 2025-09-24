@@ -46,7 +46,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
 import test.javafx.util.OutputRedirect;
 
 /**
@@ -70,7 +70,7 @@ public class BindingsCreateBindingTest<T> {
 
     @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.reset();
     }
 
     @BeforeEach
@@ -119,7 +119,7 @@ public class BindingsCreateBindingTest<T> {
         final Binding<T> binding2 = f.create(func2, new Observable [0]);
 
         f.check(defaultValue, binding2.getValue());
-        ErrorLoggingUtiltity.checkWarning(Exception.class);
+        ErrorLoggingUtility.checkWarning(Exception.class);
         assertTrue(binding2.getDependencies().isEmpty());
         binding2.dispose();
     }
