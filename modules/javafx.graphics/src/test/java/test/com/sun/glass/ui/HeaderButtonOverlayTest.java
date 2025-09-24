@@ -28,6 +28,7 @@ package test.com.sun.glass.ui;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.javafx.binding.ObjectConstant;
+import test.javafx.util.ReflectionUtils;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.NodeOrientation;
@@ -40,7 +41,6 @@ import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import test.util.ReflectionUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 

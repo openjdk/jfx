@@ -496,16 +496,16 @@ ext.IS_HEADLESS_TEST = Boolean.parseBoolean(HEADLESS_TEST);
 defineProperty("AWT_TEST", "true")
 ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 
-// Specifies whether to run system tests that depend on SWT (only used when FULL_TEST is also enabled)
-// JDK-8356687 and JDK-8356688 track the disablement of the SWT tests on both platforms.
-defineProperty("SWT_TEST", (IS_MAC || IS_LINUX) ? "false" : "true")
-ext.IS_SWT_TEST = Boolean.parseBoolean(SWT_TEST);
-
 // Specifies whether to run unstable tests (true) - tests that don't run well with Hudson builds
 // These tests should be protected with :
 //    assumeTrue(Boolean.getBoolean("unstable.test"));
 defineProperty("UNSTABLE_TEST", "false")
 ext.IS_UNSTABLE_TEST = Boolean.parseBoolean(UNSTABLE_TEST);
+
+// Specifies whether to enable a screenshot on failing system tests that
+// use the ScreenCaptureTestWatcher annotation
+defineProperty("TEST_SCREENSHOT", "false")
+ext.IS_TEST_SCREENSHOT = Boolean.parseBoolean(TEST_SCREENSHOT);
 
 // Default timeout values to use in JUnit for tests and lifecycle methods
 // that don't specify one
@@ -2187,6 +2187,7 @@ allprojects {
         }
 
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
+        systemProperty 'test.screenshot', IS_TEST_SCREENSHOT
         systemProperty 'junit.jupiter.execution.timeout.test.method.default', JUNIT_TEST_TIMEOUT
         systemProperty 'junit.jupiter.execution.timeout.lifecycle.method.default', JUNIT_LIFECYCLE_TIMEOUT
         systemProperty 'javafx.enablePreview', 'true'
@@ -3210,9 +3211,17 @@ project(":swt") {
     }
 
     test {
-        enabled = IS_FULL_TEST && IS_SWT_TEST
+        enabled = IS_FULL_TEST
 
         jvmArgs enableNativeGraphics
+
+        if (IS_LINUX) {
+            environment "GDK_BACKEND", "x11"
+        }
+
+        if (IS_MAC) {
+            jvmArgs "-XstartOnFirstThread"
+        }
 
     }
 

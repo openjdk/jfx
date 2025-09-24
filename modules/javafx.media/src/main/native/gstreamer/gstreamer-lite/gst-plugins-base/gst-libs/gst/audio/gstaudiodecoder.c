@@ -2549,9 +2549,8 @@ gst_audio_decoder_sink_eventfunc (GstAudioDecoder * dec, GstEvent * event)
           break;
         }
       }
-
-      /* fall through */
     }
+      /* FALLTHROUGH */
     default:
       if (!GST_EVENT_IS_SERIALIZED (event)) {
         ret =
@@ -2908,8 +2907,8 @@ gst_audio_decoder_sink_query_default (GstAudioDecoder * dec, GstQuery * query)
         res = FALSE;
         break;
       }
-      /* fall-through */
     }
+      /* FALLTHROUGH */
     default:
       res = gst_pad_query_default (pad, GST_OBJECT_CAST (dec), query);
       break;
