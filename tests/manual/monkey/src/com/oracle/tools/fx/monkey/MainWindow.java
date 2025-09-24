@@ -50,13 +50,16 @@ import com.oracle.tools.fx.monkey.tools.ClipboardViewer;
 import com.oracle.tools.fx.monkey.tools.CssPlaygroundPane;
 import com.oracle.tools.fx.monkey.tools.EmbeddedFxTextArea;
 import com.oracle.tools.fx.monkey.tools.EmbeddedJTextAreaWindow;
+import com.oracle.tools.fx.monkey.tools.JTextPanel;
 import com.oracle.tools.fx.monkey.tools.KeyboardEventViewer;
+import com.oracle.tools.fx.monkey.tools.ModalWindow;
 import com.oracle.tools.fx.monkey.tools.Native2AsciiPane;
 import com.oracle.tools.fx.monkey.tools.StageTesterWindow;
 import com.oracle.tools.fx.monkey.tools.SystemInfoViewer;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.SingleInstance;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
  * Monkey Tester Main Window
@@ -146,6 +149,7 @@ public class MainWindow extends Stage {
         FX.item(m, "CSS Playground", this::openCssPlayground);
         FX.item(m, "FX TextArea Embedded in JFXPanel", this::openJFXPanel);
         FX.item(m, "JTextArea/JTextField Embedded in SwingNode", this::openJTextArea);
+        FX.item(m, "JTextArea/JTextField in Pure Swing", this::openJTextAreaSwing);
         FX.item(m, "Keyboard Event Viewer", this::openKeyboardViewer);
         FX.item(m, "Native to ASCII", this::openNative2Ascii);
         FX.item(m, "Platform Preferences Monitor", this::openPlatformPreferencesMonitor);
@@ -157,12 +161,16 @@ public class MainWindow extends Stage {
         // Window
         FX.menu(m, "_Window");
         FX.item(m, orientation);
-
+        FX.separator(m);
+        FX.item(m, "Open Modal Window", this::openModalWindow);
         return m;
     }
 
     private void updatePage(DemoPage p) {
         FxSettings.store(contentPane);
+        if (contentPane.getCenter() instanceof TestPaneBase t) {
+            t.deactivate();
+        }
         currentPage = p;
         contentPane.setCenter(p == null ? null : p.createPane());
         updateTitle();
@@ -218,7 +226,11 @@ public class MainWindow extends Stage {
 
     private void openStageTesterWindow() {
         new StageTesterWindow(this).show();
-     }
+    }
+
+    private void openModalWindow() {
+        new ModalWindow(this).show();
+    }
 
     private void openNative2Ascii() {
         SingleInstance.openSingleInstance(
@@ -266,6 +278,10 @@ public class MainWindow extends Stage {
             "JTextArea/JTextField Embedded in SwingNode",
             EmbeddedJTextAreaWindow::new
         );
+    }
+
+    private void openJTextAreaSwing() {
+        JTextPanel.openSwing();
     }
 
     private void openJFXPanel() {

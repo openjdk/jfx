@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,8 @@ public abstract class TransitionMediator {
      * Derived classes should implement this method to compute a new intermediate value
      * based on the current progress, and update the {@link StyleableProperty} accordingly.
      *
-     * @param progress the progress of the transition, ranging from 0 to 1
+     * @param progress the progress of the transition along the output progress axis,
+     *                 can be less than 0 or larger than 1
      */
     public abstract void onUpdate(double progress);
 

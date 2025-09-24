@@ -315,10 +315,12 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             // It's possible that move/size events are reported by the platform
             // before the peer listener is set. As a result, location/size are
             // not reported, so resending them from here.
-            HandleMoveEvent(NULL);
-            HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
-            // The call below may be restricted to WS_POPUP windows
-            NotifyViewSize(GetHWND());
+            if (!::IsIconic(GetHWND())) {
+                HandleMoveEvent(NULL);
+                HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
+                // The call below may be restricted to WS_POPUP windows
+                NotifyViewSize(GetHWND());
+            }
 
             if (!wParam) {
                 ResetMouseTracking(GetHWND());
