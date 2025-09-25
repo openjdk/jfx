@@ -52,9 +52,9 @@ xmlIsCatastrophicError(int level, int code) {
 }
 
 /************************************************************************
- *                                                                      *
- *                      Error struct                                    *
- *                                                                      *
+ *									*
+ *			Error struct					*
+ *									*
  ************************************************************************/
 
 static int
@@ -209,9 +209,9 @@ xmlVUpdateError(xmlError *err,
 }
 
 /************************************************************************
- *                                                                      *
- *                      Handling of out of context errors               *
- *                                                                      *
+ *									*
+ *			Handling of out of context errors		*
+ *									*
  ************************************************************************/
 
 /**
@@ -227,7 +227,7 @@ xmlGenericErrorDefaultFunc(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...) {
     va_list args;
 
     if (xmlGenericErrorContext == NULL)
-        xmlGenericErrorContext = (void *) stderr;
+	xmlGenericErrorContext = (void *) stderr;
 
     va_start(args, msg);
     vfprintf((FILE *)xmlGenericErrorContext, msg, args);
@@ -259,9 +259,9 @@ void
 xmlSetGenericErrorFunc(void *ctx, xmlGenericErrorFunc handler) {
     xmlGenericErrorContext = ctx;
     if (handler != NULL)
-        xmlGenericError = handler;
+	xmlGenericError = handler;
     else
-        xmlGenericError = xmlGenericErrorDefaultFunc;
+	xmlGenericError = xmlGenericErrorDefaultFunc;
 }
 
 /**
@@ -301,9 +301,9 @@ xmlSetStructuredErrorFunc(void *ctx, xmlStructuredErrorFunc handler) {
 }
 
 /************************************************************************
- *                                                                      *
- *                      Handling of parsing errors                      *
- *                                                                      *
+ *									*
+ *			Handling of parsing errors			*
+ *									*
  ************************************************************************/
 
 /**
@@ -318,13 +318,13 @@ xmlSetStructuredErrorFunc(void *ctx, xmlStructuredErrorFunc handler) {
 void
 xmlParserPrintFileInfo(xmlParserInputPtr input) {
     if (input != NULL) {
-        if (input->filename)
-            xmlGenericError(xmlGenericErrorContext,
-                    "%s:%d: ", input->filename,
-                    input->line);
-        else
-            xmlGenericError(xmlGenericErrorContext,
-                    "Entity: line %d: ", input->line);
+	if (input->filename)
+	    xmlGenericError(xmlGenericErrorContext,
+		    "%s:%d: ", input->filename,
+		    input->line);
+	else
+	    xmlGenericError(xmlGenericErrorContext,
+		    "Entity: line %d: ", input->line);
     }
 }
 
@@ -337,9 +337,9 @@ xmlParserPrintFileInfo(xmlParserInputPtr input) {
 
 static void
 xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
-                xmlGenericErrorFunc channel, void *data ) {
+		xmlGenericErrorFunc channel, void *data ) {
     const xmlChar *cur, *base, *start;
-    unsigned int n, col;        /* GCC warns if signed, because compared with sizeof() */
+    unsigned int n, col;	/* GCC warns if signed, because compared with sizeof() */
     xmlChar  content[81]; /* space for 80 chars + line terminator */
     xmlChar *ctnt;
 
@@ -350,12 +350,12 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
     base = input->base;
     /* skip backwards over any end-of-lines */
     while ((cur > base) && ((*(cur) == '\n') || (*(cur) == '\r'))) {
-        cur--;
+	cur--;
     }
     n = 0;
     /* search backwards for beginning-of-line (to max buff size) */
     while ((n < sizeof(content) - 1) && (cur > base) &&
-           (*cur != '\n') && (*cur != '\r')) {
+	   (*cur != '\n') && (*cur != '\r')) {
         cur--;
         n++;
     }
@@ -379,7 +379,7 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
         if ((c < 0) || (n + len > sizeof(content)-1))
             break;
         cur += len;
-        n += len;
+	n += len;
     }
     memcpy(content, start, n);
     content[n] = 0;
@@ -390,9 +390,9 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
     ctnt = content;
     /* (leave buffer space for pointer + line terminator) */
     while ((n<col) && (n++ < sizeof(content)-2) && (*ctnt != 0)) {
-        if (*(ctnt) != '\t')
-            *(ctnt) = ' ';
-        ctnt++;
+	if (*(ctnt) != '\t')
+	    *(ctnt) = ' ';
+	ctnt++;
     }
     *ctnt++ = '^';
     *ctnt = 0;
@@ -457,8 +457,8 @@ xmlFormatError(const xmlError *err, xmlGenericErrorFunc channel, void *data)
 
     if ((domain == XML_FROM_PARSER) || (domain == XML_FROM_HTML) ||
         (domain == XML_FROM_DTD) || (domain == XML_FROM_NAMESPACE) ||
-        (domain == XML_FROM_IO) || (domain == XML_FROM_VALID)) {
-        ctxt = err->ctxt;
+	(domain == XML_FROM_IO) || (domain == XML_FROM_VALID)) {
+	ctxt = err->ctxt;
     }
 
     if ((node != NULL) && (node->type == XML_ELEMENT_NODE) &&
@@ -483,9 +483,9 @@ xmlFormatError(const xmlError *err, xmlGenericErrorFunc channel, void *data)
         if (file != NULL)
             channel(data, "%s:%d: ", file, line);
         else if ((line != 0) &&
-                 ((domain == XML_FROM_PARSER) || (domain == XML_FROM_SCHEMASV)||
-                  (domain == XML_FROM_SCHEMASP)||(domain == XML_FROM_DTD) ||
-                  (domain == XML_FROM_RELAXNGP)||(domain == XML_FROM_RELAXNGV)))
+	         ((domain == XML_FROM_PARSER) || (domain == XML_FROM_SCHEMASV)||
+		  (domain == XML_FROM_SCHEMASP)||(domain == XML_FROM_DTD) ||
+		  (domain == XML_FROM_RELAXNGP)||(domain == XML_FROM_RELAXNGV)))
             channel(data, "Entity: line %d: ", line);
     }
     if (name != NULL) {
@@ -581,11 +581,11 @@ xmlFormatError(const xmlError *err, xmlGenericErrorFunc channel, void *data)
     }
     if (message != NULL) {
         int len;
-        len = xmlStrlen((const xmlChar *) message);
-        if ((len > 0) && (message[len - 1] != '\n'))
-            channel(data, "%s\n", message);
-        else
-            channel(data, "%s", message);
+	len = xmlStrlen((const xmlChar *) message);
+	if ((len > 0) && (message[len - 1] != '\n'))
+	    channel(data, "%s\n", message);
+	else
+	    channel(data, "%s", message);
     } else {
         channel(data, "%s\n", "No error message provided");
     }
@@ -618,16 +618,16 @@ xmlFormatError(const xmlError *err, xmlGenericErrorFunc channel, void *data)
     }
     if ((domain == XML_FROM_XPATH) && (err->str1 != NULL) &&
         (err->int1 < 100) &&
-        (err->int1 < xmlStrlen((const xmlChar *)err->str1))) {
-        xmlChar buf[150];
-        int i;
+	(err->int1 < xmlStrlen((const xmlChar *)err->str1))) {
+	xmlChar buf[150];
+	int i;
 
-        channel(data, "%s\n", err->str1);
-        for (i=0;i < err->int1;i++)
-             buf[i] = ' ';
-        buf[i++] = '^';
-        buf[i] = 0;
-        channel(data, "%s\n", buf);
+	channel(data, "%s\n", err->str1);
+	for (i=0;i < err->int1;i++)
+	     buf[i] = ' ';
+	buf[i++] = '^';
+	buf[i] = 0;
+	channel(data, "%s\n", buf);
     }
 }
 
@@ -722,8 +722,8 @@ xmlVRaiseError(xmlStructuredErrorFunc schannel,
 
     if ((domain == XML_FROM_PARSER) || (domain == XML_FROM_HTML) ||
         (domain == XML_FROM_DTD) || (domain == XML_FROM_NAMESPACE) ||
-        (domain == XML_FROM_IO) || (domain == XML_FROM_VALID)) {
-        ctxt = (xmlParserCtxtPtr) ctx;
+	(domain == XML_FROM_IO) || (domain == XML_FROM_VALID)) {
+	ctxt = (xmlParserCtxtPtr) ctx;
 
         if (ctxt != NULL)
             to = &ctxt->lastError;
@@ -739,7 +739,7 @@ xmlVRaiseError(xmlStructuredErrorFunc schannel,
     }
 
     if (schannel != NULL) {
-        schannel(data, to);
+	schannel(data, to);
     } else if (xmlStructuredError != NULL) {
         xmlStructuredError(xmlStructuredErrorContext, to);
     } else if (channel != NULL) {
@@ -751,7 +751,7 @@ xmlVRaiseError(xmlStructuredErrorFunc schannel,
             (channel == xmlParserValidityWarning))
             xmlFormatError(to, xmlGenericError, xmlGenericErrorContext);
         else
-            channel(data, "%s", to->message);
+	    channel(data, "%s", to->message);
     }
 
     return(0);
@@ -812,13 +812,13 @@ xmlVFormatLegacyError(void *ctx, const char *level,
     xmlChar *str = NULL;
 
     if (ctxt != NULL) {
-        input = ctxt->input;
-        if ((input != NULL) && (input->filename == NULL) &&
-            (ctxt->inputNr > 1)) {
-            cur = input;
-            input = ctxt->inputTab[ctxt->inputNr - 2];
-        }
-        xmlParserPrintFileInfo(input);
+	input = ctxt->input;
+	if ((input != NULL) && (input->filename == NULL) &&
+	    (ctxt->inputNr > 1)) {
+	    cur = input;
+	    input = ctxt->inputTab[ctxt->inputNr - 2];
+	}
+	xmlParserPrintFileInfo(input);
     }
 
     xmlGenericError(xmlGenericErrorContext, "%s: ", level);
@@ -826,16 +826,16 @@ xmlVFormatLegacyError(void *ctx, const char *level,
     xmlStrVASPrintf(&str, MAX_ERR_MSG_SIZE, fmt, ap);
     if (str != NULL) {
         xmlGenericError(xmlGenericErrorContext, "%s", (char *) str);
-        xmlFree(str);
+	xmlFree(str);
     }
 
     if (ctxt != NULL) {
-        xmlParserPrintFileContext(input);
-        if (cur != NULL) {
-            xmlParserPrintFileInfo(cur);
-            xmlGenericError(xmlGenericErrorContext, "\n");
-            xmlParserPrintFileContext(cur);
-        }
+	xmlParserPrintFileContext(input);
+	if (cur != NULL) {
+	    xmlParserPrintFileInfo(cur);
+	    xmlGenericError(xmlGenericErrorContext, "\n");
+	    xmlParserPrintFileContext(cur);
+	}
     }
 }
 
@@ -917,9 +917,9 @@ xmlParserValidityWarning(void *ctx, const char *msg ATTRIBUTE_UNUSED, ...)
 
 
 /************************************************************************
- *                                                                      *
- *                      Extended Error Handling                         *
- *                                                                      *
+ *									*
+ *			Extended Error Handling				*
+ *									*
  ************************************************************************/
 
 /**

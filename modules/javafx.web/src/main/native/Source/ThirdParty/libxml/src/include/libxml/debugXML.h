@@ -26,50 +26,50 @@ extern "C" {
  * The standard Dump routines.
  */
 XMLPUBFUN void
-        xmlDebugDumpString      (FILE *output,
-                                 const xmlChar *str);
+	xmlDebugDumpString	(FILE *output,
+				 const xmlChar *str);
 XMLPUBFUN void
-        xmlDebugDumpAttr        (FILE *output,
-                                 xmlAttrPtr attr,
-                                 int depth);
+	xmlDebugDumpAttr	(FILE *output,
+				 xmlAttrPtr attr,
+				 int depth);
 XMLPUBFUN void
-        xmlDebugDumpAttrList    (FILE *output,
-                                 xmlAttrPtr attr,
-                                 int depth);
+	xmlDebugDumpAttrList	(FILE *output,
+				 xmlAttrPtr attr,
+				 int depth);
 XMLPUBFUN void
-        xmlDebugDumpOneNode     (FILE *output,
-                                 xmlNodePtr node,
-                                 int depth);
+	xmlDebugDumpOneNode	(FILE *output,
+				 xmlNodePtr node,
+				 int depth);
 XMLPUBFUN void
-        xmlDebugDumpNode        (FILE *output,
-                                 xmlNodePtr node,
-                                 int depth);
+	xmlDebugDumpNode	(FILE *output,
+				 xmlNodePtr node,
+				 int depth);
 XMLPUBFUN void
-        xmlDebugDumpNodeList    (FILE *output,
-                                 xmlNodePtr node,
-                                 int depth);
+	xmlDebugDumpNodeList	(FILE *output,
+				 xmlNodePtr node,
+				 int depth);
 XMLPUBFUN void
-        xmlDebugDumpDocumentHead(FILE *output,
-                                 xmlDocPtr doc);
+	xmlDebugDumpDocumentHead(FILE *output,
+				 xmlDocPtr doc);
 XMLPUBFUN void
-        xmlDebugDumpDocument    (FILE *output,
-                                 xmlDocPtr doc);
+	xmlDebugDumpDocument	(FILE *output,
+				 xmlDocPtr doc);
 XMLPUBFUN void
-        xmlDebugDumpDTD         (FILE *output,
-                                 xmlDtdPtr dtd);
+	xmlDebugDumpDTD		(FILE *output,
+				 xmlDtdPtr dtd);
 XMLPUBFUN void
-        xmlDebugDumpEntities    (FILE *output,
-                                 xmlDocPtr doc);
+	xmlDebugDumpEntities	(FILE *output,
+				 xmlDocPtr doc);
 
 /****************************************************************
- *                                                              *
- *                      Checking routines                       *
- *                                                              *
+ *								*
+ *			Checking routines			*
+ *								*
  ****************************************************************/
 
 XMLPUBFUN int
-        xmlDebugCheckDocument   (FILE * output,
-                                 xmlDocPtr doc);
+	xmlDebugCheckDocument	(FILE * output,
+				 xmlDocPtr doc);
 
 #ifdef __cplusplus
 }

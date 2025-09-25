@@ -460,7 +460,7 @@ xmlStrncat(xmlChar *cur, const xmlChar *add, int len) {
     if ((add == NULL) || (len == 0))
         return(cur);
     if (len < 0)
-        return(NULL);
+	return(NULL);
     if (cur == NULL)
         return(xmlStrndup(add, len));
 
@@ -908,7 +908,7 @@ xmlGetUTF8Char(const unsigned char *utf, int *len) {
 
 error:
     if (len != NULL)
-        *len = 0;
+	*len = 0;
     return(-1);
 }
 
@@ -943,25 +943,25 @@ xmlCheckUTF8(const unsigned char *utf)
      */
     while ((c = utf[0])) {      /* string is 0-terminated */
         ix = 0;
-        if ((c & 0x80) == 0x00) {       /* 1-byte code, starts with 10 */
+        if ((c & 0x80) == 0x00) {	/* 1-byte code, starts with 10 */
             ix = 1;
-        } else if ((c & 0xe0) == 0xc0) {/* 2-byte code, starts with 110 */
-            if ((utf[1] & 0xc0 ) != 0x80)
-                return 0;
-            ix = 2;
-        } else if ((c & 0xf0) == 0xe0) {/* 3-byte code, starts with 1110 */
-            if (((utf[1] & 0xc0) != 0x80) ||
-                ((utf[2] & 0xc0) != 0x80))
-                    return 0;
-            ix = 3;
-        } else if ((c & 0xf8) == 0xf0) {/* 4-byte code, starts with 11110 */
-            if (((utf[1] & 0xc0) != 0x80) ||
-                ((utf[2] & 0xc0) != 0x80) ||
-                ((utf[3] & 0xc0) != 0x80))
-                    return 0;
-            ix = 4;
-        } else                          /* unknown encoding */
-            return 0;
+	} else if ((c & 0xe0) == 0xc0) {/* 2-byte code, starts with 110 */
+	    if ((utf[1] & 0xc0 ) != 0x80)
+	        return 0;
+	    ix = 2;
+	} else if ((c & 0xf0) == 0xe0) {/* 3-byte code, starts with 1110 */
+	    if (((utf[1] & 0xc0) != 0x80) ||
+	        ((utf[2] & 0xc0) != 0x80))
+		    return 0;
+	    ix = 3;
+	} else if ((c & 0xf8) == 0xf0) {/* 4-byte code, starts with 11110 */
+	    if (((utf[1] & 0xc0) != 0x80) ||
+	        ((utf[2] & 0xc0) != 0x80) ||
+		((utf[3] & 0xc0) != 0x80))
+		    return 0;
+	    ix = 4;
+	} else				/* unknown encoding */
+	    return 0;
         utf += ix;
       }
       return(1);
@@ -997,9 +997,9 @@ xmlUTF8Strsize(const xmlChar *utf, int len) {
         ch = *ptr++;
         if ((ch & 0x80))
             while ((ch<<=1) & 0x80 ) {
-                if (*ptr == 0) break;
+		if (*ptr == 0) break;
                 ptr++;
-            }
+	    }
     }
     ret = ptr - utf;
     return (ret > INT_MAX ? 0 : ret);

@@ -20,6 +20,10 @@
  * Set if the validation context is part of a parser context.
  */
 #define XML_VCTXT_USE_PCTXT (1u << 1)
+/**
+ * Set when parsing entities.
+ */
+#define XML_VCTXT_IN_ENTITY (1u << 3)
 
 /*
  * TODO: Rename to avoid confusion with xmlParserInputFlags
@@ -55,7 +59,7 @@
  * The parser tries to always have that amount of input ready.
  * One of the point is providing context when reporting errors.
  */
-#define INPUT_CHUNK     250
+#define INPUT_CHUNK	250
 
 struct _xmlAttrHashBucket {
     int index;
