@@ -39,6 +39,10 @@
     // A reference to an NSWindow or NSPanel descendant - the native window
     NSWindow            *nsWindow;
 
+    // KCR: keep our own list of children (not added as child of owner window)
+    NSMutableArray<GlassWindow> childWindows;
+    GlassWindow         *ownerWindow;
+
     NSWindow            *owner;
     GlassView3D<GlassView>   *view;
     NSScreen            *currentScreen;

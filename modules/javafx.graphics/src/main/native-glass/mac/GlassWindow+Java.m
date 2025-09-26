@@ -282,6 +282,7 @@ extern NSSize maxScreenDimensions;
         [self->nsWindow orderFront:nil];
     }
 
+    // KCR: FIXME
     if ((self->owner != nil) && ([self->nsWindow parentWindow] == nil))
     {
         [self->owner addChildWindow:self->nsWindow ordered:NSWindowAbove];
