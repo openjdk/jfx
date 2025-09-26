@@ -32,7 +32,6 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.util.PatternFilterable
 import org.gradle.api.tasks.util.PatternSet
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -100,7 +99,7 @@ class JavaHeaderTask extends DefaultTask {
             })
         }
         // Execute javah
-        execOperations.exec { ExecSpec spec ->
+        execOperations.exec { spec ->
             spec.commandLine("$project.JAVAH", "-d", "$output", "-classpath", "${classpath.asPath}");
             spec.args(classNames);
         }

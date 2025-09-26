@@ -25,7 +25,6 @@
 
 import org.gradle.api.tasks.Input
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -44,7 +43,7 @@ class CompileResourceTask extends NativeCompileTask {
     }
 
     protected void doCompile(File sourceFile, File outputFile){
-        execCompile { ExecSpec spec ->
+        execCompile { spec ->
             spec.commandLine(compiler);
             if (rcParams) spec.args(rcParams);
             spec.args("/Fo$outputFile", "$sourceFile");

@@ -27,7 +27,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -59,7 +58,7 @@ class CCTask extends NativeCompileTask {
 
         // TODO the PDB file is never being built -- maybe because it is only built during
         // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
-        execCompile { ExecSpec spec ->
+        execCompile { spec ->
             spec.commandLine(compiler);
 
             // Add in any additional compilation params

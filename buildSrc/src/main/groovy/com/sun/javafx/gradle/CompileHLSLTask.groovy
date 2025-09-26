@@ -24,7 +24,6 @@
  */
 
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -39,7 +38,7 @@ class CompileHLSLTask extends NativeCompileTask {
     }
 
     protected void doCompile(File sourceFile, File outputFile){
-        execCompile { ExecSpec spec ->
+        execCompile { spec ->
             spec.commandLine = [
                 "$project.FXC",
                 "/nologo",

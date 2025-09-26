@@ -29,7 +29,6 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -49,7 +48,7 @@ class LinkTask extends DefaultTask {
     @TaskAction void compile() {
         // Link & generate the library (.dll, .so, .dylib)
         lib.getParentFile().mkdirs();
-        execOperations.exec { ExecSpec spec ->
+        execOperations.exec { spec ->
             spec.commandLine(linker);
             if ((project.IS_LINUX) && (project.IS_STATIC_BUILD)) {
                 if (linker.equals("ld")) {

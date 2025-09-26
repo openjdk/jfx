@@ -24,7 +24,6 @@
  */
 
 import org.gradle.process.ExecOperations
-import org.gradle.process.JavaExecSpec
 
 def execOps = project.services.get(ExecOperations)
 
@@ -69,7 +68,7 @@ setupTools("windows_tools",
             // Create the properties file
             ByteArrayOutputStream results = new ByteArrayOutputStream();
             String winsdkDir = System.getenv().get("WINSDK_DIR");
-            execOps.exec { ExecSpec spec ->
+            execOps.exec { spec ->
                 environment([
                         "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
                         "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?

@@ -30,7 +30,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -59,7 +58,7 @@ class ExportedSymbolsTask extends DefaultTask {
         def baos = new ByteArrayOutputStream();
 
         // Execute nm on .a libraries
-        execOperations.exec { ExecSpec spec ->
+        execOperations.exec { spec ->
             spec.commandLine("nm", "-jg");
             spec.args(libNames);
             spec.setStandardOutput(baos);

@@ -28,7 +28,6 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -54,7 +53,7 @@ class LipoTask extends DefaultTask {
             }
         }
         // Create a fat library (.a)
-        execOperations.exec { ExecSpec spec ->
+        execOperations.exec { spec ->
             spec.commandLine("lipo", "-create", "-output", "$lib");
             spec.args(libNames);
         }

@@ -24,7 +24,6 @@
  */
 
 import org.gradle.process.ExecOperations
-import org.gradle.process.ExecSpec
 
 import javax.inject.Inject
 
@@ -41,7 +40,7 @@ class CompileMSLTask extends NativeCompileTask {
     protected void doCompile(File sourceFile, File outputFile){
         def headerDir = 'gensrc/mtl-headers';
         def includeDir = "$project.buildDir/$headerDir";
-        execCompile { ExecSpec spec ->
+        execCompile { spec ->
             spec.commandLine = [
                 "${project.metalCompiler}",
                 "-Wdeprecated",

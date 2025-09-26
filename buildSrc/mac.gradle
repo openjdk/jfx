@@ -24,7 +24,6 @@
  */
 
 import org.gradle.process.ExecOperations
-import org.gradle.process.JavaExecSpec
 
 def execOps = project.services.get(ExecOperations)
 
@@ -76,7 +75,7 @@ setupTools("mac_tools",
         } else if (!file(defaultSdkPath).isDirectory()) {
             // Get list of all macosx sdks
             ByteArrayOutputStream results = new ByteArrayOutputStream();
-            def xcodeBuildResult = execOps.exec { ExecSpec spec ->
+            def xcodeBuildResult = execOps.exec { spec ->
                 commandLine("xcodebuild", "-version", "-showsdks");
                 setStandardOutput(results);
                 ignoreExitValue(true);
@@ -96,14 +95,14 @@ setupTools("mac_tools",
                 }
 
                 results = new ByteArrayOutputStream();
-                execOps.exec { ExecSpec spec ->
+                execOps.exec { spec ->
                     commandLine("xcodebuild", "-version", "-sdk", sdk, "Path");
                     setStandardOutput(results);
                 }
             } else {
                 // try with command line developer tools
                 results = new ByteArrayOutputStream();
-                execOps.exec { ExecSpec spec ->
+                execOps.exec { spec ->
                     commandLine("xcrun", "--show-sdk-path");
                     setStandardOutput(results);
                 }
@@ -183,7 +182,7 @@ if (hasProperty('toolchainDir')) {
 } else {
     toolchainDir = ""
     ByteArrayOutputStream path = new ByteArrayOutputStream();
-    execOps.exec { ExecSpec spec ->
+    execOps.exec { spec ->
         // xcrun -f --sdk macosx metal
         commandLine("xcrun", "-f", "--sdk", "macosx", "metal");
         setStandardOutput(path);
@@ -192,7 +191,7 @@ if (hasProperty('toolchainDir')) {
     metalCompiler = path.toString().trim();
 
     path = new ByteArrayOutputStream();
-    execOps.exec { ExecSpec spec ->
+    execOps.exec { spec ->
         // xcrun -f --sdk macosx metallib
         commandLine("xcrun", "-f", "--sdk", "macosx", "metallib");
         setStandardOutput(path);
