@@ -191,6 +191,7 @@ extern NSSize maxScreenDimensions;
 
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
+    // KCR: FIXME
     for (NSWindow * window = self->nsWindow; window; window = [window parentWindow]) {
         if (window == s_grabWindow) {
             return;

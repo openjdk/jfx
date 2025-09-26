@@ -246,7 +246,6 @@ GLASS_NS_WINDOW_IMPLEMENTATION
      * descendants created.  Without it, the menu  will
      * not be seen by the assistive technology.
      */
-    // KCR: Check this to see whether it is affected by my change
     __block BOOL ignored = [super accessibilityIsIgnored];
     NSArray* children = [self accessibilityAttributeValue: NSAccessibilityChildrenAttribute];
     if (children) {
@@ -290,9 +289,6 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 @implementation GlassWindow
 
-    // KCR: FIXME -- we will need to get a Glass Window here, which might
-    // not be available for the full screen window itself
-            // KCR: FIXME
 - (void)close
 {
     [self _ungrabFocus];
@@ -472,7 +468,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
         if (jOwnerPtr != 0L)
         {
-            // KCR
+            // KCR: FIXME
             window->ownerWindow = getGlassWindow(env, jOwnerPtr);
             window->owner = window->ownerWindow->nsWindow; // not retained (use weak reference?)
         }
@@ -1232,6 +1228,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         else
         {
             [window _ungrabFocus];
+            // KCR: FIXME
             if (window->owner != nil)
             {
                 LOG("   removeChildWindow: %p", window);

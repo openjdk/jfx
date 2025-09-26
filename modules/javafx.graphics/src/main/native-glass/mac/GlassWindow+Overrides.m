@@ -62,6 +62,7 @@
 #pragma mark --- Delegate
 
 
+// KCR: remove this hack
 /*
 - (void)fixChildWindow
 {
@@ -161,6 +162,7 @@
           origin.x, origin.y, [self->nsWindow screen]);
     [self _sendJavaWindowMoveEventForFrame:[self _flipFrame]];
 
+    // KCR: FIXME
     NSWindow *parent = [self->nsWindow parentWindow];
     if (parent)
     {
