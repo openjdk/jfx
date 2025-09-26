@@ -81,7 +81,7 @@ xmlLinkCompare(const void *data0, const void *data1)
     if (data0 < data1)
         return (-1);
     else if (data0 == data1)
-	return (0);
+        return (0);
     return (1);
 }
 
@@ -197,7 +197,7 @@ xmlListCreate(xmlListDeallocator deallocator, xmlListDataCompare compare)
     /* Add the sentinel */
     l->sentinel = (xmlLinkPtr)xmlMalloc(sizeof(xmlLink));
     if (l->sentinel == NULL) {
-	xmlFree(l);
+        xmlFree(l);
         return (NULL);
     }
     l->sentinel->next = l->sentinel;
@@ -375,7 +375,7 @@ xmlListRemoveLast(xmlListPtr l, void *data)
     /*Find the last instance of this data */
     lk = xmlListLinkReverseSearch(l, data);
     if (lk != NULL) {
-	xmlLinkDeallocator(l, lk);
+        xmlLinkDeallocator(l, lk);
         return 1;
     }
     return 0;

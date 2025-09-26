@@ -26,9 +26,9 @@ static unsigned long  debugMemBlocks = 0;
 static xmlMutex xmlMemMutex;
 
 /************************************************************************
- *									*
- *		Macros, variables and associated types			*
- *									*
+ *                                                                      *
+ *              Macros, variables and associated types                  *
+ *                                                                      *
  ************************************************************************/
 
 /*
@@ -48,7 +48,7 @@ typedef struct memnod {
 #define ALIGN_SIZE  sizeof(double)
 #endif
 #define RESERVE_SIZE (((sizeof(MEMHDR) + ALIGN_SIZE - 1) \
-		      / ALIGN_SIZE ) * ALIGN_SIZE)
+                      / ALIGN_SIZE ) * ALIGN_SIZE)
 
 #define MAX_SIZE_T ((size_t)-1)
 
@@ -287,7 +287,7 @@ xmlMemSize(void *ptr) {
     MEMHDR *p;
 
     if (ptr == NULL)
-	return(0);
+        return(0);
 
     p = CLIENT_2_HDR(ptr);
     if (p->mh_tag != MEMTAG)
@@ -374,9 +374,9 @@ xmlMemoryDump(void)
 
 
 /****************************************************************
- *								*
- *		Initialization Routines				*
- *								*
+ *                                                              *
+ *              Initialization Routines                         *
+ *                                                              *
  ****************************************************************/
 
 /**
@@ -453,13 +453,13 @@ int
 xmlMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
             xmlReallocFunc reallocFunc, xmlStrdupFunc strdupFunc) {
     if (freeFunc == NULL)
-	return(-1);
+        return(-1);
     if (mallocFunc == NULL)
-	return(-1);
+        return(-1);
     if (reallocFunc == NULL)
-	return(-1);
+        return(-1);
     if (strdupFunc == NULL)
-	return(-1);
+        return(-1);
     xmlFree = freeFunc;
     xmlMalloc = mallocFunc;
     xmlMallocAtomic = mallocFunc;
@@ -481,7 +481,7 @@ xmlMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
  */
 int
 xmlMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
-	  xmlReallocFunc *reallocFunc, xmlStrdupFunc *strdupFunc) {
+          xmlReallocFunc *reallocFunc, xmlStrdupFunc *strdupFunc) {
     if (freeFunc != NULL) *freeFunc = xmlFree;
     if (mallocFunc != NULL) *mallocFunc = xmlMalloc;
     if (reallocFunc != NULL) *reallocFunc = xmlRealloc;
@@ -512,17 +512,17 @@ xmlMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
 int
 xmlGcMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
               xmlMallocFunc mallocAtomicFunc, xmlReallocFunc reallocFunc,
-	      xmlStrdupFunc strdupFunc) {
+              xmlStrdupFunc strdupFunc) {
     if (freeFunc == NULL)
-	return(-1);
+        return(-1);
     if (mallocFunc == NULL)
-	return(-1);
+        return(-1);
     if (mallocAtomicFunc == NULL)
-	return(-1);
+        return(-1);
     if (reallocFunc == NULL)
-	return(-1);
+        return(-1);
     if (strdupFunc == NULL)
-	return(-1);
+        return(-1);
     xmlFree = freeFunc;
     xmlMalloc = mallocFunc;
     xmlMallocAtomic = mallocAtomicFunc;
@@ -550,7 +550,7 @@ xmlGcMemSetup(xmlFreeFunc freeFunc, xmlMallocFunc mallocFunc,
 int
 xmlGcMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
             xmlMallocFunc *mallocAtomicFunc, xmlReallocFunc *reallocFunc,
-	    xmlStrdupFunc *strdupFunc) {
+            xmlStrdupFunc *strdupFunc) {
     if (freeFunc != NULL) *freeFunc = xmlFree;
     if (mallocFunc != NULL) *mallocFunc = xmlMalloc;
     if (mallocAtomicFunc != NULL) *mallocAtomicFunc = xmlMallocAtomic;

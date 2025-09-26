@@ -45,14 +45,14 @@
  */
 
 struct _xmlBuf {
-    xmlChar *content;		/* The buffer content UTF8 */
+    xmlChar *content;           /* The buffer content UTF8 */
 #ifdef WITH_BUFFER_COMPAT
     unsigned int compat_use;    /* for binary compatibility */
     unsigned int compat_size;   /* for binary compatibility */
 #endif
-    xmlChar *mem;		/* Start of the allocation */
-    size_t use;		        /* The buffer size used */
-    size_t size;		/* The buffer size, excluding terminating 0 */
+    xmlChar *mem;               /* Start of the allocation */
+    size_t use;                 /* The buffer size used */
+    size_t size;                /* The buffer size, excluding terminating 0 */
     size_t maxSize;             /* The maximum buffer size */
     unsigned flags;             /* flags */
 };
@@ -62,9 +62,9 @@ struct _xmlBuf {
  * Macro for compatibility with xmlBuffer to be used after an xmlBuf
  * is updated. This makes sure the compat fields are updated too.
  */
-#define UPDATE_COMPAT(buf)				    \
+#define UPDATE_COMPAT(buf)                                  \
      if (buf->size < INT_MAX) buf->compat_size = buf->size; \
-     else buf->compat_size = INT_MAX;			    \
+     else buf->compat_size = INT_MAX;                       \
      if (buf->use < INT_MAX) buf->compat_use = buf->use; \
      else buf->compat_use = INT_MAX;
 
@@ -73,13 +73,13 @@ struct _xmlBuf {
  * entry points, it checks that the compat fields have not been modified
  * by direct call to xmlBuffer function from code compiled before 2.9.0 .
  */
-#define CHECK_COMPAT(buf)				    \
-     if (buf->size != (size_t) buf->compat_size)	    \
-         if (buf->compat_size < INT_MAX)		    \
-	     buf->size = buf->compat_size;		    \
-     if (buf->use != (size_t) buf->compat_use)		    \
-         if (buf->compat_use < INT_MAX)			    \
-	     buf->use = buf->compat_use;
+#define CHECK_COMPAT(buf)                                   \
+     if (buf->size != (size_t) buf->compat_size)            \
+         if (buf->compat_size < INT_MAX)                    \
+             buf->size = buf->compat_size;                  \
+     if (buf->use != (size_t) buf->compat_use)              \
+         if (buf->compat_use < INT_MAX)                     \
+             buf->use = buf->compat_use;
 
 #else /* ! WITH_BUFFER_COMPAT */
 #define UPDATE_COMPAT(buf)
@@ -246,7 +246,7 @@ xmlBufDetach(xmlBufPtr buf) {
 void
 xmlBufFree(xmlBufPtr buf) {
     if (buf == NULL)
-	return;
+        return;
 
     if (!BUF_STATIC(buf))
         xmlFree(buf->mem);
@@ -539,7 +539,7 @@ xmlBufAdd(xmlBufPtr buf, const xmlChar *str, size_t len) {
     if (len == 0)
         return(0);
     if (str == NULL)
-	return(-1);
+        return(-1);
     CHECK_COMPAT(buf)
 
     if (len > buf->size - buf->use) {
@@ -698,9 +698,9 @@ xmlBufUpdateInput(xmlBufPtr buf, xmlParserInputPtr input, size_t pos) {
 }
 
 /************************************************************************
- *									*
- *			Old buffer implementation			*
- *									*
+ *                                                                      *
+ *                      Old buffer implementation                       *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -757,7 +757,7 @@ xmlBufferCreate(void) {
     ret->alloc = XML_BUFFER_ALLOC_IO;
     ret->contentIO = xmlMalloc(ret->size);
     if (ret->contentIO == NULL) {
-	xmlFree(ret);
+        xmlFree(ret);
         return(NULL);
     }
     ret->content = ret->contentIO;
@@ -798,7 +798,7 @@ xmlBufferCreateSize(size_t size) {
         ret->content[0] = 0;
     } else {
         ret->contentIO = NULL;
-	ret->content = NULL;
+        ret->content = NULL;
     }
 
     return(ret);
@@ -877,7 +877,7 @@ xmlBufferSetAllocationScheme(xmlBufferPtr buf ATTRIBUTE_UNUSED,
 void
 xmlBufferFree(xmlBufferPtr buf) {
     if (buf == NULL)
-	return;
+        return;
 
     if (buf->alloc == XML_BUFFER_ALLOC_IO)
         xmlFree(buf->contentIO);
@@ -903,7 +903,7 @@ xmlBufferEmpty(xmlBufferPtr buf) {
     buf->use = 0;
 
     if (buf->alloc == XML_BUFFER_ALLOC_IO) {
-	buf->size += buf->content - buf->contentIO;
+        buf->size += buf->content - buf->contentIO;
         buf->content = buf->contentIO;
         buf->content[0] = 0;
     } else {
@@ -935,9 +935,9 @@ xmlBufferShrink(xmlBufferPtr buf, unsigned int len) {
 
     if (buf->alloc == XML_BUFFER_ALLOC_IO) {
         buf->content += len;
-	buf->size -= len;
+        buf->size -= len;
     } else {
-	memmove(buf->content, &buf->content[len], buf->use + 1);
+        memmove(buf->content, &buf->content[len], buf->use + 1);
     }
 
     return(len);
@@ -1013,11 +1013,11 @@ xmlBufferDump(FILE *file, xmlBufferPtr buf) {
     size_t ret;
 
     if (buf == NULL)
-	return(0);
+        return(0);
     if (buf->content == NULL)
-	return(0);
+        return(0);
     if (file == NULL)
-	file = stdout;
+        file = stdout;
     ret = fwrite(buf->content, 1, buf->use, file);
     return(ret > INT_MAX ? INT_MAX : ret);
 }
@@ -1097,7 +1097,7 @@ xmlBufferResize(xmlBufferPtr buf, unsigned int size)
 int
 xmlBufferAdd(xmlBufferPtr buf, const xmlChar *str, int len) {
     if ((buf == NULL) || (str == NULL))
-	return(XML_ERR_ARGUMENT);
+        return(XML_ERR_ARGUMENT);
     if (len < 0)
         len = xmlStrlen(str);
     if (len == 0)
@@ -1131,7 +1131,7 @@ xmlBufferAddHead(xmlBufferPtr buf, const xmlChar *str, int len) {
     unsigned start = 0;
 
     if ((buf == NULL) || (str == NULL))
-	return(XML_ERR_ARGUMENT);
+        return(XML_ERR_ARGUMENT);
     if (len < 0)
         len = xmlStrlen(str);
     if (len == 0)
@@ -1244,7 +1244,7 @@ xmlBufferWriteQuotedString(xmlBufferPtr buf, const xmlChar *string) {
         return;
     if (xmlStrchr(string, '\"')) {
         if (xmlStrchr(string, '\'')) {
-	    xmlBufferCCat(buf, "\"");
+            xmlBufferCCat(buf, "\"");
             base = cur = string;
             while(*cur != 0){
                 if(*cur == '"'){
@@ -1260,12 +1260,12 @@ xmlBufferWriteQuotedString(xmlBufferPtr buf, const xmlChar *string) {
             }
             if (base != cur)
                 xmlBufferAdd(buf, base, cur - base);
-	    xmlBufferCCat(buf, "\"");
-	}
+            xmlBufferCCat(buf, "\"");
+        }
         else{
-	    xmlBufferCCat(buf, "\'");
+            xmlBufferCCat(buf, "\'");
             xmlBufferCat(buf, string);
-	    xmlBufferCCat(buf, "\'");
+            xmlBufferCCat(buf, "\'");
         }
     } else {
         xmlBufferCCat(buf, "\"");
