@@ -55,10 +55,11 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     jbyte attr = com_sun_glass_ui_View_IME_ATTR_INPUT;
     do {
-        if (pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
+        // Fix: Use proper comparison instead of assignment
+        if ((pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) != NULL) {
              attr = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
              break;
-        } else if ((pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE))
+        } else if ((pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE)) != NULL
                 && (((PangoAttrInt *)pangoAttr)->value == PANGO_UNDERLINE_SINGLE)) {
             attr = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
             break;
@@ -76,6 +77,8 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
             cursor_pos,
             attr);
     LOG_EXCEPTION(mainEnv)
+
+    mainEnv->DeleteLocalRef(jstr);
 }
 
 static void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
@@ -110,6 +113,9 @@ void WindowContextBase::commitIME(gchar *str) {
                 slen,
                 0);
         LOG_EXCEPTION(mainEnv)
+
+        mainEnv->DeleteLocalRef(jstr);
+
     } else {
         im_ctx.send_keypress = true;
     }
@@ -120,12 +126,25 @@ bool WindowContextBase::hasIME() {
 }
 
 bool WindowContextBase::filterIME(GdkEvent *event) {
-    if (!hasIME()) {
+    if (!hasIME() || !event || event->type != GDK_KEY_PRESS && event->type != GDK_KEY_RELEASE) {
+        return false;
+    }
+
+    // Additional validation to prevent IBUS warnings
+    if (!im_ctx.ctx) {
         return false;
     }
 
     im_ctx.on_key_event = true;
-    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
+
+    // Validate key event before passing to IBUS
+    GdkEventKey *key_event = &event->key;
+    if (key_event->keyval == 0 || key_event->hardware_keycode == 0) {
+        im_ctx.on_key_event = false;
+        return false;
+    }
+
+    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, key_event);
 
     if (filtered && im_ctx.send_keypress) {
         im_ctx.send_keypress = false;
@@ -159,6 +178,8 @@ void WindowContextBase::updateCaretPos() {
         mainEnv->ReleaseDoubleArrayElements(pos, nativePos, 0);
         gtk_im_context_set_cursor_location(im_ctx.ctx, &rect);
     }
+
+    mainEnv->DeleteLocalRef(pos);
 }
 
 void WindowContextBase::enableOrResetIME() {
@@ -170,6 +191,11 @@ void WindowContextBase::enableOrResetIME() {
         im_ctx.ctx = gtk_im_multicontext_new();
         gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);
         gtk_im_context_set_use_preedit(GTK_IM_CONTEXT(im_ctx.ctx), true);
+
+        // Add IBUS-specific configuration to prevent type warnings
+        g_object_set(im_ctx.ctx, "input-purpose", GTK_INPUT_PURPOSE_FREE_FORM, NULL);
+        g_object_set(im_ctx.ctx, "input-hints", GTK_INPUT_HINT_NONE, NULL);
+
         g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
         g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
