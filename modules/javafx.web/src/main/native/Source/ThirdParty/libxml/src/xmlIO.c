@@ -1037,6 +1037,32 @@ xmlIODefaultMatch(const char *filename ATTRIBUTE_UNUSED) {
     return(1);
 }
 
+#if defined(LIBXML_LZMA_ENABLED) || defined(LIBXML_ZLIB_ENABLED)
+
+#ifdef _WIN32
+typedef __int64 xmlFileOffset;
+#else
+typedef off_t xmlFileOffset;
+#endif
+
+static xmlFileOffset
+xmlSeek(int fd, xmlFileOffset offset, int whence) {
+#ifdef _WIN32
+    HANDLE h = (HANDLE) _get_osfhandle(fd);
+
+    /*
+     * Windows doesn't return an error on unseekable files like pipes.
+     */
+    if (h != INVALID_HANDLE_VALUE && GetFileType(h) != FILE_TYPE_DISK)
+        return -1;
+    return _lseeki64(fd, offset, whence);
+#else
+    return lseek(fd, offset, whence);
+#endif
+}
+
+#endif /* defined(LIBXML_LZMA_ENABLED) || defined(LIBXML_ZLIB_ENABLED) */
+
 /**
  * xmlInputFromFd:
  * @buf:  parser input buffer
@@ -1059,9 +1085,9 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd,
 #ifdef LIBXML_LZMA_ENABLED
     if (flags & XML_INPUT_UNZIP) {
         xzFile xzStream;
-        off_t pos;
+        xmlFileOffset pos;
 
-        pos = lseek(fd, 0, SEEK_CUR);
+        pos = xmlSeek(fd, 0, SEEK_CUR);
 
         copy = dup(fd);
         if (copy == -1)
@@ -1077,7 +1103,7 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd,
             if ((compressed) ||
                 /* Try to rewind if not gzip compressed */
                 (pos < 0) ||
-                (lseek(fd, pos, SEEK_SET) < 0)) {
+                (xmlSeek(fd, pos, SEEK_SET) < 0)) {
                 /*
                  * If a file isn't seekable, we pipe uncompressed
                  * input through xzlib.
@@ -1098,9 +1124,9 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd,
 #ifdef LIBXML_ZLIB_ENABLED
     if (flags & XML_INPUT_UNZIP) {
         gzFile gzStream;
-        off_t pos;
+        xmlFileOffset pos;
 
-        pos = lseek(fd, 0, SEEK_CUR);
+        pos = xmlSeek(fd, 0, SEEK_CUR);
 
         copy = dup(fd);
         if (copy == -1)
@@ -1116,7 +1142,7 @@ xmlInputFromFd(xmlParserInputBufferPtr buf, int fd,
             if ((compressed) ||
                 /* Try to rewind if not gzip compressed */
                 (pos < 0) ||
-                (lseek(fd, pos, SEEK_SET) < 0)) {
+                (xmlSeek(fd, pos, SEEK_SET) < 0)) {
                 /*
                  * If a file isn't seekable, we pipe uncompressed
                  * input through zlib.

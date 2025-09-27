@@ -1,5 +1,25 @@
 NEWS file for libxml2
 
+v2.14.6: Sep 8 2025
+
+### Regressions
+
+- valid: Don't add ids when validating entity content
+- Fix initGenericErrorDefaultFunc(NULL) (Samuel Thibault)
+- valid: Undeprecate xmlAdd*Decl
+- globals: Include HTMLparser.h, fixing Windows build
+- io: Fix reading from pipes like stdin on Windows
+
+### Security
+
+- regexp: Avoid integer overflow and OOB array access
+- tree: Guard against atype corruption
+
+### Improvements
+
+- parser: Fix xmlSaturatedAddSizeT argument type
+
+
 v2.14.5: Jul 10 2025
 
 ### Regressions
