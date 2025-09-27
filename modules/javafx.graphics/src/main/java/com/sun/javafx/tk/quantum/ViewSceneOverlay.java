@@ -27,6 +27,7 @@ package com.sun.javafx.tk.quantum;
 
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -49,7 +50,9 @@ final class ViewSceneOverlay {
     ViewSceneOverlay(Scene scene, ViewPainter painter) {
         this.scene = scene;
         this.painter = painter;
-        this.subscription = scene.rootProperty().subscribe(this::onSceneRootChanged);
+        this.subscription = Subscription.combine(
+            scene.rootProperty().subscribe(this::onSceneRootChanged),
+            scene.effectiveNodeOrientationProperty().subscribe(this::onEffectiveNodeOrientationInvalidated));
     }
 
     public void dispose() {
@@ -95,6 +98,7 @@ final class ViewSceneOverlay {
         if (this.root != null) {
             NodeHelper.setParent(this.root, null);
             NodeHelper.setScenes(this.root, null, null);
+            NodeHelper.setInheritOrientationFromScene(this.root, false);
         }
 
         this.root = root;
@@ -102,6 +106,7 @@ final class ViewSceneOverlay {
         if (root != null) {
             NodeHelper.setParent(root, scene.getRoot());
             NodeHelper.setScenes(root, scene, null);
+            NodeHelper.setInheritOrientationFromScene(root, true);
         }
 
         rootDirty = true;
@@ -140,6 +145,12 @@ final class ViewSceneOverlay {
     private void onSceneRootChanged(Parent sceneRoot) {
         if (root != null) {
             NodeHelper.setParent(root, sceneRoot);
+        }
+    }
+
+    private void onEffectiveNodeOrientationInvalidated(NodeOrientation unused) {
+        if (root != null) {
+            NodeHelper.nodeResolvedOrientationInvalidated(root);
         }
     }
 }
