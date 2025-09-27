@@ -25,6 +25,8 @@
 
 package test.javafx.binding;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
@@ -39,14 +41,13 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import static org.junit.jupiter.api.Assertions.*;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import test.javafx.util.OutputRedirect;
 
 /**
  */
@@ -69,7 +70,17 @@ public class BindingsCreateBindingTest<T> {
 
     @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.reset();
+    }
+
+    @BeforeEach
+    public void beforeEach() {
+        OutputRedirect.suppressStderr();
+    }
+
+    @AfterEach
+    public void afterEach() {
+        OutputRedirect.checkAndRestoreStderr();
     }
 
     private void setup(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
@@ -108,7 +119,7 @@ public class BindingsCreateBindingTest<T> {
         final Binding<T> binding2 = f.create(func2, new Observable [0]);
 
         f.check(defaultValue, binding2.getValue());
-        ErrorLoggingUtiltity.checkWarning(Exception.class);
+        ErrorLoggingUtility.checkWarning(Exception.class);
         assertTrue(binding2.getDependencies().isEmpty());
         binding2.dispose();
     }
