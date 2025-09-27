@@ -89,9 +89,10 @@ public class HeaderButtonOverlayTest {
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
             """), false, false, true);
 
-        var unused = new Scene(overlay);
+        var scene = new Scene(overlay);
+        scene.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+
         var children = overlay.getChildrenUnmodifiable();
-        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         overlay.resize(200, 100);
         overlay.applyCss();
         overlay.layout();
@@ -144,9 +145,10 @@ public class HeaderButtonOverlayTest {
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false, true);
 
-        var unused = new Scene(overlay);
+        var scene = new Scene(overlay);
+        scene.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+
         var children = overlay.getChildrenUnmodifiable();
-        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         overlay.resize(200, 100);
         overlay.applyCss();
         overlay.layout();
@@ -197,9 +199,10 @@ public class HeaderButtonOverlayTest {
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; }
             """), false, false, true);
 
-        var unused = new Scene(overlay);
+        var scene = new Scene(overlay);
+        scene.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+
         var children = overlay.getChildrenUnmodifiable();
-        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         overlay.resize(200, 100);
         overlay.applyCss();
         overlay.layout();
@@ -252,9 +255,10 @@ public class HeaderButtonOverlayTest {
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
             """), false, false, true);
 
-        var unused = new Scene(overlay);
+        var scene = new Scene(overlay);
+        scene.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+
         var children = overlay.getChildrenUnmodifiable();
-        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         overlay.resize(200, 100);
         overlay.applyCss();
         overlay.layout();
@@ -307,9 +311,10 @@ public class HeaderButtonOverlayTest {
                 .-FX-INTERNAL-close-button { -fx-button-order: 3; }
             """), false, false, true);
 
-        var unused = new Scene(overlay);
+        var scene = new Scene(overlay);
+        scene.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+
         var children = overlay.getChildrenUnmodifiable();
-        overlay.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         overlay.resize(200, 100);
         overlay.applyCss();
         overlay.layout();
@@ -524,8 +529,9 @@ public class HeaderButtonOverlayTest {
     }
 
     private static void assertLayoutBounds(Node node, double x, double y, double width, double height) {
-        assertEquals(x, node.getLayoutX());
-        assertEquals(y, node.getLayoutY());
+        var bounds = node.localToScene(node.getBoundsInLocal());
+        assertEquals(x, bounds.getMinX());
+        assertEquals(y, bounds.getMinY());
         assertSize(node, width, height);
     }
 

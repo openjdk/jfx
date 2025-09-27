@@ -221,6 +221,14 @@ public abstract class NodeHelper {
         nodeAccessor.layoutBoundsChanged(node);
     }
 
+    public static void nodeResolvedOrientationInvalidated(Node node) {
+        nodeAccessor.nodeResolvedOrientationInvalidated(node);
+    }
+
+    public static void setInheritOrientationFromScene(Node node, boolean value) {
+        nodeAccessor.setInheritOrientationFromScene(node, value);
+    }
+
     public static void setShowMnemonics(Node node, boolean value) {
         nodeAccessor.setShowMnemonics(node, value);
     }
@@ -383,6 +391,8 @@ public abstract class NodeHelper {
         void syncPeer(Node node);
         <P extends NGNode> P getPeer(Node node);
         void layoutBoundsChanged(Node node);
+        void nodeResolvedOrientationInvalidated(Node node);
+        void setInheritOrientationFromScene(Node node, boolean value);
         void setShowMnemonics(Node node, boolean value);
         boolean isShowMnemonics(Node node);
         BooleanProperty showMnemonicsProperty(Node node);
