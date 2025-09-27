@@ -1499,6 +1499,16 @@ public abstract non-sealed class Parent extends Node {
         }
     }
 
+    @Override
+    protected boolean isFocusScope() { // Overridden to make the method protected
+        return false;
+    }
+
+    @Override
+    protected Node getFocusDelegate(Node hoistingNode) { // Overridden to make the method protected
+        return null;
+    }
+
     /* *************************************************************************
      *                                                                         *
      *                         Bounds Computations                             *

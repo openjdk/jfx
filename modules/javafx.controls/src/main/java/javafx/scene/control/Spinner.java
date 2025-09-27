@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.FakeFocusTextField;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.beans.NamedArg;
@@ -37,7 +36,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
-import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -152,17 +150,6 @@ public class Spinner<T> extends Control {
         getEditor().editableProperty().bind(editableProperty());
 
         value.addListener((o, oldValue, newValue) -> setText(newValue));
-
-        // Fix for JDK-8115009
-        getProperties().addListener((MapChangeListener<Object, Object>) change -> {
-            if (change.wasAdded()) {
-                if (change.getKey() == "FOCUSED") {
-                    setFocused((Boolean)change.getValueAdded());
-                    getProperties().remove("FOCUSED");
-                }
-            }
-        });
-        // End of fix for JDK-8115009
 
         focusedProperty().addListener(o -> {
             if (!isFocused()) {
@@ -610,7 +597,7 @@ public class Spinner<T> extends Control {
     public final ReadOnlyObjectProperty<TextField> editorProperty() {
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<>(this, "editor");
-            textField = new FakeFocusTextField();
+            textField = new TextField();
             textField.tooltipProperty().bind(tooltipProperty());
             editor.set(textField);
         }
