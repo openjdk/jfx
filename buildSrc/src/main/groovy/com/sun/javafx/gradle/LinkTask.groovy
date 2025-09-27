@@ -28,7 +28,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 
+import javax.inject.Inject
 
 class LinkTask extends DefaultTask {
     @Input List<String> linkParams = new ArrayList<String>();
@@ -36,39 +38,45 @@ class LinkTask extends DefaultTask {
     @OutputFile File lib;
     @Input String linker;
 
+    private final ExecOperations execOperations;
+
+    @Inject
+    LinkTask(ExecOperations execOperations) {
+        this.execOperations = execOperations;
+    }
+
     @TaskAction void compile() {
         // Link & generate the library (.dll, .so, .dylib)
         lib.getParentFile().mkdirs();
-        project.exec({
-            commandLine(linker);
+        execOperations.exec { spec ->
+            spec.commandLine(linker);
             if ((project.IS_LINUX) && (project.IS_STATIC_BUILD)) {
                 if (linker.equals("ld")) {
-                    args("-r");
-                    args("-o");
+                    spec.args("-r");
+                    spec.args("-o");
                 } else {
-                    args("rcs");
+                    spec.args("rcs");
                 }
-                args("$lib");
+                spec.args("$lib");
             }
             // Exclude parfait files (.bc)
-            args(objectDir.listFiles().sort().findAll{ !it.getAbsolutePath().endsWith(".bc") });
+            spec.args(objectDir.listFiles().sort().findAll{ !it.getAbsolutePath().endsWith(".bc") });
             if (project.IS_WINDOWS) {
-                args("/out:$lib");
+                spec.args("/out:$lib");
             } else {
                 if (! ((project.IS_LINUX) && (project.IS_STATIC_BUILD))) {
-                    args("-o", "$lib");
+                    spec.args("-o", "$lib");
                 }
             }
-            if (project.IS_DEBUG_NATIVE && !project.IS_WINDOWS) args("-g");
-            if (linkParams != null) args(linkParams);
+            if (project.IS_DEBUG_NATIVE && !project.IS_WINDOWS) spec.args("-g");
+            if (linkParams != null) spec.args(linkParams);
             if (project.IS_WINDOWS){
                 final String libPath = lib.toString();
                 final String libPrefix = libPath.substring(0, libPath.lastIndexOf("."))
-                args("/pdb:${libPrefix}.pdb",
-                    "/map:${libPrefix}.map");
-                environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+                spec.args("/pdb:${libPrefix}.pdb",
+                          "/map:${libPrefix}.map");
+                spec.environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
             }
-        });
+        }
     }
 }
-
