@@ -46,10 +46,10 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
                                                            Callable<V> {
 
     protected final FutureTask<V> future;
-    protected final AsyncOperationListener listener;
+    protected final AsyncOperationListener<V> listener;
 
-    private int progressGranularity = 100;
-    private int progressMax, lastProgress, progressIncrement, nextProgress, bytesRead;
+    private long progressGranularity = 100;
+    private long progressMax, lastProgress, progressIncrement, nextProgress, bytesRead;
 
     protected AbstractAsyncOperation(final AsyncOperationListener<V> listener) {
         this.listener = listener;
@@ -109,8 +109,8 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
     }
 
     protected void notifyProgress() {
-        final int last = lastProgress;
-        final int max = progressMax;
+        final long last = lastProgress;
+        final long max = progressMax;
         Platform.runLater(() -> listener.onProgress(last, max));
     }
 
@@ -123,11 +123,11 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
         }
     }
 
-    protected int getProgressMax() {
+    protected long getProgressMax() {
         return progressMax;
     }
 
-    protected void setProgressMax(int progressMax) {
+    protected void setProgressMax(long progressMax) {
         if (progressMax == 0) {
             progressIncrement = progressGranularity;
         }
@@ -145,11 +145,11 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
         notifyProgress();
     }
 
-    protected int getProgressGranularity() {
+    protected long getProgressGranularity() {
         return progressGranularity;
     }
 
-    protected void setProgressGranularity(int progressGranularity) {
+    protected void setProgressGranularity(long progressGranularity) {
         this.progressGranularity = progressGranularity;
         progressIncrement = progressMax / progressGranularity;
         nextProgress = ((lastProgress / progressIncrement) + 1) * progressIncrement;
