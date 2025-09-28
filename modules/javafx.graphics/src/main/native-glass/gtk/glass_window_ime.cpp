@@ -115,7 +115,6 @@ void WindowContextBase::commitIME(gchar *str) {
         LOG_EXCEPTION(mainEnv)
 
         mainEnv->DeleteLocalRef(jstr);
-
     } else {
         im_ctx.send_keypress = true;
     }
@@ -131,13 +130,6 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
     }
 
     im_ctx.on_key_event = true;
-
-    // Validate key event before passing to IBUS
-    GdkEventKey *key_event = &event->key;
-    if (key_event->keyval == 0 || key_event->hardware_keycode == 0) {
-        im_ctx.on_key_event = false;
-        return false;
-    }
 
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, key_event);
 
