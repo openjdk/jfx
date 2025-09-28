@@ -55,7 +55,6 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     jbyte attr = com_sun_glass_ui_View_IME_ATTR_INPUT;
     do {
-        // Fix: Use proper comparison instead of assignment
         if ((pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) != NULL) {
              attr = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
              break;
@@ -131,7 +130,7 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
 
     im_ctx.on_key_event = true;
 
-    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, event->key);
+    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
     if (filtered && im_ctx.send_keypress) {
         im_ctx.send_keypress = false;
