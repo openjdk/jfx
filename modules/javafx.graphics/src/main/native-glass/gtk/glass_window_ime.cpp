@@ -100,7 +100,7 @@ static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) 
 }
 
 void WindowContextBase::commitIME(gchar *str) {
-    if (im_ctx.on_preedit || !im_ctx.on_key_event) {
+    if (im_ctx.on_preedit) {
         jstring jstr = mainEnv->NewStringUTF(str);
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
@@ -124,11 +124,11 @@ bool WindowContextBase::hasIME() {
 }
 
 bool WindowContextBase::filterIME(GdkEvent *event) {
-    if (!hasIME() || !event || event->type != GDK_KEY_PRESS) {
+    if (!hasIME()) {
         return false;
     }
 
-    im_ctx.on_key_event = true;
+//    im_ctx.on_key_event = true;
 
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
@@ -137,7 +137,7 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
-    im_ctx.on_key_event = false;
+//    im_ctx.on_key_event = false;
     return filtered;
 }
 
