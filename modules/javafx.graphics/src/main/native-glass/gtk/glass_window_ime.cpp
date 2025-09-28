@@ -130,11 +130,6 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
-    // Additional validation to prevent IBUS warnings
-    if (!im_ctx.ctx) {
-        return false;
-    }
-
     im_ctx.on_key_event = true;
 
     // Validate key event before passing to IBUS
@@ -191,10 +186,6 @@ void WindowContextBase::enableOrResetIME() {
         im_ctx.ctx = gtk_im_multicontext_new();
         gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);
         gtk_im_context_set_use_preedit(GTK_IM_CONTEXT(im_ctx.ctx), true);
-
-        // Add IBUS-specific configuration to prevent type warnings
-        g_object_set(im_ctx.ctx, "input-purpose", GTK_INPUT_PURPOSE_FREE_FORM, NULL);
-        g_object_set(im_ctx.ctx, "input-hints", GTK_INPUT_HINT_NONE, NULL);
 
         g_signal_connect(im_ctx.ctx, "preedit-start", G_CALLBACK(on_preedit_start), this);
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
