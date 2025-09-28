@@ -196,6 +196,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
     gdk_window_set_events(root, static_cast<GdkEventMask>(gdk_window_get_events(root) | GDK_PROPERTY_CHANGE_MASK));
 
     platformSupport = new PlatformSupport(env, obj);
+
+    // Set ibus to sync mode
+    // This seems to have been patched on Ubuntu, but left here for compatibility
+    setenv("IBUS_ENABLE_SYNC_MODE", "1", 1);
 }
 
 /*
