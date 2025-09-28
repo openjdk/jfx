@@ -124,7 +124,7 @@ bool WindowContextBase::hasIME() {
 }
 
 bool WindowContextBase::filterIME(GdkEvent *event) {
-    if (!hasIME() || !event || event->type != GDK_KEY_PRESS && event->type != GDK_KEY_RELEASE) {
+    if (!hasIME() || !event || event->type != GDK_KEY_PRESS) {
         return false;
     }
 
