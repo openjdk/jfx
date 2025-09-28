@@ -120,14 +120,7 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
-    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
-
-    if (filtered && im_ctx.send_keypress) {
-        im_ctx.send_keypress = false;
-        return false;
-    }
-
-    return filtered;
+    return gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 }
 
 void WindowContextBase::setOnPreEdit(bool preedit) {
