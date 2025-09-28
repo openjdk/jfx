@@ -184,7 +184,6 @@ class WindowContextBase: public WindowContext {
         GtkIMContext *ctx;
         bool enabled;
         bool on_preedit;
-        bool send_keypress;
     } im_ctx;
 
     size_t events_processing_cnt;
