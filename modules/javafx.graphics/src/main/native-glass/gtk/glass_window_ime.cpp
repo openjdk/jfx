@@ -100,23 +100,19 @@ static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) 
 }
 
 void WindowContextBase::commitIME(gchar *str) {
-    if (im_ctx.on_preedit) {
-        jstring jstr = mainEnv->NewStringUTF(str);
-        EXCEPTION_OCCURED(mainEnv);
-        jsize slen = mainEnv->GetStringLength(jstr);
+    jstring jstr = mainEnv->NewStringUTF(str);
+    EXCEPTION_OCCURED(mainEnv);
+    jsize slen = mainEnv->GetStringLength(jstr);
 
-        mainEnv->CallVoidMethod(jview,
-                jViewNotifyInputMethodLinux,
-                jstr,
-                slen,
-                slen,
-                0);
-        LOG_EXCEPTION(mainEnv)
+    mainEnv->CallVoidMethod(jview,
+            jViewNotifyInputMethodLinux,
+            jstr,
+            slen,
+            slen,
+            0);
+    LOG_EXCEPTION(mainEnv)
 
-        mainEnv->DeleteLocalRef(jstr);
-    } else {
-        im_ctx.send_keypress = true;
-    }
+    mainEnv->DeleteLocalRef(jstr);
 }
 
 bool WindowContextBase::hasIME() {
