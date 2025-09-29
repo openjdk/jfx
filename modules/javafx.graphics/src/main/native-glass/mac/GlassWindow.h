@@ -39,11 +39,11 @@
     // A reference to an NSWindow or NSPanel descendant - the native window
     NSWindow            *nsWindow;
 
-    // KCR: keep our own owner window and list of child windows (we don't create an actual child of the owner NSWindow)
+    // KCR: keep our own owner window and list of child windows
+    // (we don't create an actual child of the owner NSWindow)
     NSMutableArray<GlassWindow*> *childWindows;
-    GlassWindow         *ownerWindow;
+    GlassWindow         *owner;
 
-    NSWindow            *owner;
     GlassView3D<GlassView>   *view;
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
@@ -72,6 +72,10 @@
 @private
     BOOL                isWindowResizable;
 }
+
+//
+- (void) addChildWindow:(GlassWindow*)childWindow;
+- (void) reorderChildWindows:(BOOL)focus;
 
 // NSWindow overrides delegate methods
 - (void)close;

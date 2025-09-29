@@ -292,6 +292,10 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 - (void)close
 {
     [self _ungrabFocus];
+    if (self->owner != nil) {
+        [self->owner removeChildWindow:self];
+        [self->owner reorderChildWindows:YES];
+    }
 }
 
 - (void)sendEvent:(NSEvent *)event
@@ -309,6 +313,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         }
 
         [self _checkUngrab];
+        [self reorderChildWindows:YES];
     }
 }
 
@@ -343,6 +348,37 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         return YES;
     }
     return self->isFocusable;
+}
+
+- (void) addChildWindow:(GlassWindow*)childWindow
+{
+    NSLog(@"addChildWindow: %p  child: %p", self, childWindow);
+    if (self->childWindows == nil) {
+        self->childWindows = [[NSMutableArray alloc] init];
+    }
+    [self->childWindows addObject:childWindow];
+}
+
+- (void) removeChildWindow:(GlassWindow*)childWindow
+{
+    NSLog(@"removeChildWindow: %p  child: %p", self, childWindow);
+    if (self->childWindows != nil) {
+        [self->childWindows removeObject:childWindow];
+    }
+}
+
+- (void) reorderChildWindows:(BOOL)focus
+{
+    NSLog(@"reorderChildWindows: %p", self);
+    if (self->childWindows != nil) {
+        NSLog(@"    childWindows: %p", self->childWindows);
+        for (GlassWindow *window in self->childWindows)
+        {
+            NSLog(@"    child: %p", window);
+//            [window->nsWindow setLevel:NSFloatingWindowLevel];
+            [window->nsWindow orderWindow:NSWindowAbove relativeTo:[window->owner->nsWindow windowNumber]];
+        }
+    }
 }
 
 - (NSColor*)setBackgroundColor:(NSColor *)color
@@ -441,6 +477,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow];
         window->isStandardButtonsVisible = YES;
+        NSLog(@"create glass window: %p", window);
 
         if (isExtended) {
             [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
@@ -468,9 +505,10 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
         if (jOwnerPtr != 0L)
         {
-            // KCR: FIXME
-            window->ownerWindow = getGlassWindow(env, jOwnerPtr);
-            window->owner = window->ownerWindow->nsWindow; // not retained (use weak reference?)
+            // KCR: Get owner glass window and add this window as a child window
+            window->owner = getGlassWindow(env, jOwnerPtr);
+            NSLog(@"owner window: %p", window->owner);
+            [window->owner addChildWindow:window];
         }
 
         /* 10.7 full screen window support */
@@ -1205,8 +1243,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jVisible)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setVisible: %d", jVisible);
-    LOG("   window: %p", jPtr);
+    NSLog(@"Java_com_sun_glass_ui_mac_MacWindow__1setVisible: %d", jVisible);
+    NSLog(@"   window: 0x%lx", jPtr);
     if (!jPtr) return JNI_FALSE;
 
     jboolean now = JNI_FALSE;
@@ -1231,9 +1269,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
             // KCR: FIXME
             if (window->owner != nil)
             {
-                LOG("   removeChildWindow: %p", window);
-                // KCR: FIXME
-                [window->owner removeChildWindow:window->nsWindow];
+                NSLog(@"   removeChildWindow: %p", window);
+                // KCR: DO: [window->owner removeChildWindow:window];
             }
             [window->nsWindow orderOut:window->nsWindow];
         }

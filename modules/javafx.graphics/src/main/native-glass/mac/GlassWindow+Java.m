@@ -191,9 +191,9 @@ extern NSSize maxScreenDimensions;
 
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
-    // KCR: FIXME
-    for (NSWindow * window = self->nsWindow; window; window = [window parentWindow]) {
-        if (window == s_grabWindow) {
+    // KCR: check
+    for (GlassWindow * window = self; window; window = window->owner) {
+        if (window->nsWindow == s_grabWindow) {
             return;
         }
     }
@@ -271,23 +271,33 @@ extern NSSize maxScreenDimensions;
 
 - (void)_setVisible
 {
-    LOG("_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);
+    NSLog(@"_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);
 
+    BOOL focus = NO;
     if (self->isFocusable == YES && self->isEnabled == YES)
     {
         [self->nsWindow makeMainWindow];
         [self->nsWindow makeKeyAndOrderFront:nil];
+        focus = YES;
     }
     else
     {
         [self->nsWindow orderFront:nil];
     }
 
+/*
     // KCR: FIXME
-    if ((self->owner != nil) && ([self->nsWindow parentWindow] == nil))
+    if ((self->ownerNSWindow != nil) && ([self->nsWindow parentWindow] == nil))
     {
-        [self->owner addChildWindow:self->nsWindow ordered:NSWindowAbove];
+        [self->ownerNSWindow addChildWindow:self->nsWindow ordered:NSWindowAbove];
     }
+*/
+
+    if (self->owner != nil)
+    {
+        [self->owner reorderChildWindows:focus];
+    }
+
     // Make sure we synchronize scale factors which could have changed while
     // we were not visible without invoking the overrides we watch.
     if ([self->nsWindow screen] && (self->view != nil)) {

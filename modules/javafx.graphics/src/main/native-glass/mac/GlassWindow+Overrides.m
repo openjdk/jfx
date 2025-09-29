@@ -95,6 +95,7 @@
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
+    NSLog(@"windowDidBecomeKey: %p", self);
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -110,6 +111,9 @@
         [NSApp setMainMenu:self->menubar->menu];
     }
     [[NSApp mainMenu] update];
+
+    // Fix up order
+    [self reorderChildWindows:YES];
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification
@@ -156,12 +160,15 @@
 
 - (void)windowDidMove:(NSNotification *)notification
 {
+/*
     NSLog(@"");
     NSPoint origin = [self->nsWindow frame].origin;
     NSLog(@"windowDidMove: %f, %f  screen: %p",
           origin.x, origin.y, [self->nsWindow screen]);
+*/
     [self _sendJavaWindowMoveEventForFrame:[self _flipFrame]];
 
+/*
     // KCR: FIXME
     NSWindow *parent = [self->nsWindow parentWindow];
     if (parent)
@@ -183,6 +190,7 @@
                   childOrigin.x, childOrigin.y, [child screen]);
         }
     }
+*/
 }
 
 - (void)windowDidChangeBackingProperties:(NSNotification *)notification
