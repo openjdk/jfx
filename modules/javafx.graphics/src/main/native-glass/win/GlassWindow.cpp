@@ -1267,20 +1267,20 @@ void GlassWindow::SetDarkFrame(bool dark)
     // See: https://github.com/MicrosoftDocs/sdk-api/commit/c19f1c8a148b930444dce998d3c717c8fb7751e1
     static const DWORD DWMWA_USE_IMMERSIVE_DARK_MODE = []() {
         DWORD ignored;
-        DWORD infoSize = GetFileVersionInfoSizeEx(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", &ignored);
+        DWORD infoSize = GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", &ignored);
         if (infoSize <= 0) {
             return 0;
         }
 
         std::vector<char> buffer(infoSize);
-        if (!GetFileVersionInfoEx(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", ignored,
-                                  static_cast<DWORD>(buffer.size()), &buffer[0])) {
+        if (!GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", ignored,
+                                   static_cast<DWORD>(buffer.size()), &buffer[0])) {
             return 0;
         }
 
         UINT size = 0;
         VS_FIXEDFILEINFO* fileInfo = nullptr;
-        if (!VerQueryValue(buffer.data(), L"\\", reinterpret_cast<LPVOID*>(&fileInfo), &size)) {
+        if (!VerQueryValueW(buffer.data(), L"\\", reinterpret_cast<LPVOID*>(&fileInfo), &size)) {
             return 0;
         }
 
