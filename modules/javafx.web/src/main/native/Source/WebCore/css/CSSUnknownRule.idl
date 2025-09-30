@@ -23,4 +23,3 @@
     LegacyNoInterfaceObject,
 ] interface CSSUnknownRule : CSSRule {
 };
-

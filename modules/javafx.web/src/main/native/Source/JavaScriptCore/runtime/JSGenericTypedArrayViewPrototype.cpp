@@ -33,6 +33,8 @@
 #include "ParseInt.h"
 #include <wtf/text/Base64.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeSetFromBase64, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -138,9 +140,9 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeSetFromHex, (JSGlobalObject* globalO
 
     bool success = false;
     if (view.is8Bit())
-        success = decodeHex(view.span8().subspan(0, readCount), result) == WTF::notFound;
+        success = decodeHex(view.span8().first(readCount), result) == WTF::notFound;
     else
-        success = decodeHex(view.span16().subspan(0, readCount), result) == WTF::notFound;
+        success = decodeHex(view.span16().first(readCount), result) == WTF::notFound;
 
     if (UNLIKELY(!success))
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.prototype.setFromHex requires a string containing only \"0123456789abcdefABCDEF\""_s));
@@ -195,7 +197,13 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeToBase64, (JSGlobalObject* globalObj
 
     const uint8_t* data = uint8Array->typedVector();
     size_t length = uint8Array->length();
-    return JSValue::encode(jsString(vm, base64EncodeToString({ data, length }, options)));
+    auto result = base64EncodeToStringReturnNullIfOverflow({ data, length }, options);
+    if (UNLIKELY(result.isNull())) {
+        throwOutOfMemoryError(globalObject, scope, "generated stirng is too long"_s);
+        return { };
+    }
+
+    return JSValue::encode(jsString(vm, WTFMove(result)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeToHex, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -223,9 +231,9 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeToHex, (JSGlobalObject* globalObject
         return { };
     }
 
-    LChar* buffer = nullptr;
+    std::span<LChar> buffer;
     auto result = StringImpl::createUninitialized(length * 2, buffer);
-    LChar* bufferEnd = buffer + length * 2;
+    LChar* bufferEnd = std::to_address(buffer.end());
     constexpr size_t stride = 8; // Because loading uint8x8_t.
     if (length >= stride) {
         auto encodeVector = [&](auto input) {
@@ -251,14 +259,14 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeToHex, (JSGlobalObject* globalObject
         };
 
         const auto* cursor = data;
-        auto* output = buffer;
-        for (; cursor + (stride - 1) < end; cursor += stride, output += stride * 2)
+        auto* output = buffer.data();
+        for (; cursor + stride <= end; cursor += stride, output += stride * 2)
             simde_vst1q_u8(output, encodeVector(simde_vld1_u8(cursor)));
         if (cursor < end)
             simde_vst1q_u8(bufferEnd - stride * 2, encodeVector(simde_vld1_u8(end - stride)));
     } else {
         const auto* cursor = data;
-        auto* output = buffer;
+        auto* output = buffer.data();
         for (; cursor < end; cursor += 1, output += 2) {
             auto character = *cursor;
             *output = radixDigits[character / 16];
@@ -270,3 +278,5 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayPrototypeToHex, (JSGlobalObject* globalObject
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

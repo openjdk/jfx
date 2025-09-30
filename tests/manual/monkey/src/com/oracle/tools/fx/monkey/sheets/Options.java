@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.sheets;
 
+import java.io.File;
 import java.util.ArrayList;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
@@ -31,6 +32,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -38,9 +40,13 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -55,10 +61,12 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
+import javafx.stage.FileChooser;
 import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.options.TextChoiceOption;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.TextTemplates;
@@ -94,6 +102,21 @@ public class Options {
 
     public static Node gaps(String name, DoubleProperty p) {
         return DoubleOption.of(name, p, 0, 1, 1.5, 4, 10, 20, 33.33, 100);
+    }
+
+    public static ObjectOption<Image> createImageOption(String name, ObjectProperty<Image> p) {
+        ObjectOption<Image> op = new ObjectOption<>(name, p);
+        op.addChoice("<null>", null);
+        op.addChoice("1x1", ImageTools.createImage(1, 1));
+        op.addChoice("16 x 16", ImageTools.createImage(16, 16));
+        op.addChoice("32 x 32", ImageTools.createImage(32, 32));
+        op.addChoice("64 x 64", ImageTools.createImage(64, 64));
+        op.addChoiceSupplier("128 x 16", () -> ImageTools.createImage(128, 16));
+        op.addChoiceSupplier("16 x 128", () -> ImageTools.createImage(16, 128));
+        op.addChoiceSupplier("256 x 256", () -> ImageTools.createImage(256, 256));
+        op.addChoiceSupplier("4096 x 4096", () -> ImageTools.createImage(4096, 4096));
+        op.selectFirst();
+        return op;
     }
 
     public static Node tabPaneConstraints(String name, DoubleProperty p) {
@@ -322,5 +345,36 @@ public class Options {
             }
             getElements().setAll(a);
         }
+    }
+
+    public static Node createSourceUriOption(Node parent, String name, SimpleStringProperty sourceURI) {
+        TextField uriField = new TextField();
+        uriField.setPromptText("URI");
+        Button button = new Button("Browse...");
+        button.setOnAction((ev) -> {
+            FileChooser fc = new FileChooser();
+            String uri = sourceURI.get();
+            if (uri != null) {
+                File f = parseFileURI(uri);
+                if (f != null) {
+                    fc.setInitialDirectory(f.getParentFile());
+                    fc.setInitialFileName(f.getName());
+                }
+            }
+            File file = fc.showOpenDialog(FX.getParentWindow(parent));
+            if (file != null) {
+                String s = file.toURI().toString();
+                uriField.setText(s);
+                sourceURI.set(s);
+            }
+        });
+        HBox hb = new HBox(5, uriField, button);
+        HBox.setHgrow(uriField, Priority.ALWAYS);
+        return hb;
+    }
+
+    private static File parseFileURI(String text) {
+        // TODO
+        return null;
     }
 }

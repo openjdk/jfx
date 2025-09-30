@@ -56,7 +56,7 @@
 namespace WebCore {
 
 #if !PLATFORM(MAC) && !PLATFORM(IOS_FAMILY) && !USE(GSTREAMER)
-CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, PageIdentifier pageIdentifier)
+CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, const MediaConstraints* constraints, std::optional<PageIdentifier> pageIdentifier)
 {
 #ifndef NDEBUG
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(deviceID);
@@ -135,13 +135,15 @@ const FontCascade& MockRealtimeVideoSource::DrawingState::statsFont()
     return *m_statsFont;
 }
 
-MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, PageIdentifier pageIdentifier)
+MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : RealtimeVideoCaptureSource(CaptureDevice { WTFMove(deviceID), CaptureDevice::DeviceType::Camera, WTFMove(name) }, WTFMove(hashSalts), pageIdentifier)
     , m_runLoop(RunLoop::create("WebKit::MockRealtimeVideoSource generateFrame runloop"_s))
-    , m_emitFrameTimer(m_runLoop, [protectedThis = Ref { *this }] { protectedThis->generateFrame(); })
+    , m_emitFrameTimer(m_runLoop.get(), [weakThis = ThreadSafeWeakPtr { *this }]() {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->generateFrame();
+      })
     , m_deviceOrientation { VideoFrameRotation::None }
 {
-
     allMockRealtimeVideoSource().add(*this);
 
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(persistentID());
@@ -204,11 +206,14 @@ const RealtimeMediaSourceCapabilities& MockRealtimeVideoSource::capabilities()
 
     auto supportedConstraints = settings().supportedConstraints();
     RealtimeMediaSourceCapabilities capabilities(supportedConstraints);
+
+    capabilities.setDeviceId(hashedId());
+
         if (mockCamera()) {
             auto facingMode = std::get<MockCameraProperties>(m_device.properties).facingMode;
             if (facingMode != VideoFacingMode::Unknown)
                 capabilities.addFacingMode(facingMode);
-            capabilities.setDeviceId(hashedId());
+        capabilities.setGroupId(hashedGroupId());
             updateCapabilities(capabilities);
 
             if (facingMode == VideoFacingMode::Environment) {
@@ -317,7 +322,7 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
         settings.setLogicalSurface(false);
     }
     settings.setDeviceId(hashedId());
-    settings.setGroupId(captureDevice().groupId());
+    settings.setGroupId(hashedGroupId());
 
     settings.setFrameRate(frameRate());
     auto size = this->size();
@@ -542,8 +547,9 @@ void MockRealtimeVideoSource::drawText(GraphicsContext& context)
 
     unsigned milliseconds = lround(elapsedTime().milliseconds());
     unsigned seconds = milliseconds / 1000 % 60;
-    unsigned minutes = seconds / 60 % 60;
-    unsigned hours = minutes / 60 % 60;
+    unsigned minutes = (milliseconds / (1000 * 60)) % 60;
+    // There is no field for days, so pad the hours on 2 digits and let it wrap around at the 100th hour.
+    unsigned hours = (milliseconds / (1000 * 60 * 60)) % 100;
 
     auto drawingState = this->drawingState();
     IntSize captureSize = this->captureSize();
@@ -570,6 +576,7 @@ void MockRealtimeVideoSource::drawText(GraphicsContext& context)
     string = makeString("Size: "_s, size.width(), " x "_s, size.height());
     context.drawText(drawingState.statsFont(), TextRun(StringView(string)), statsLocation);
 
+    String deviceString;
     if (mockCamera()) {
         statsLocation.move(0, drawingState.statsFontSize());
         string = makeString("Preset size: "_s, captureSize.width(), " x "_s, captureSize.height());
@@ -593,13 +600,18 @@ void MockRealtimeVideoSource::drawText(GraphicsContext& context)
             camera = "Unknown"_s;
             break;
         }
-        string = makeString("Camera: "_s, camera);
+        deviceString = makeString("Camera: "_s, camera);
+    } else if (mockDisplay())
+        deviceString = "Display capture"_s;
+    else if (mockScreen())
+        deviceString = "Screen capture"_s;
+    else if (mockWindow())
+        deviceString = "Window capture"_s;
+    else
+        deviceString = "Unknown capture"_s;
+
         statsLocation.move(0, drawingState.statsFontSize());
         context.drawText(drawingState.statsFont(), TextRun(string), statsLocation);
-    } else if (!name().isNull()) {
-        statsLocation.move(0, drawingState.statsFontSize());
-        context.drawText(drawingState.statsFont(), TextRun { name() }, statsLocation);
-    }
 
     FloatPoint bipBopLocation(captureSize.width() * .6, captureSize.height() * .6);
     unsigned frameMod = m_frameNumber % 60;
@@ -682,7 +694,7 @@ ImageBuffer* MockRealtimeVideoSource::imageBufferInternal()
     if (m_imageBuffer)
         return m_imageBuffer.get();
 
-    m_imageBuffer = ImageBuffer::create(captureSize(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    m_imageBuffer = ImageBuffer::create(captureSize(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
     if (!m_imageBuffer)
         return nullptr;
 
@@ -699,8 +711,26 @@ bool MockRealtimeVideoSource::mockDisplayType(CaptureDevice::DeviceType type) co
     return std::get<MockDisplayProperties>(m_device.properties).type == type;
 }
 
+void MockRealtimeVideoSource::rotationAngleForHorizonLevelDisplayChanged(const String& persistentID, VideoFrameRotation rotation)
+{
+    if (this->persistentID() != persistentID) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    m_isUsingRotationAngleForHorizonLevelDisplayChanged = true;
+    if (rotation == m_deviceOrientation)
+        return;
+
+    m_deviceOrientation = rotation;
+    notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
+}
+
 void MockRealtimeVideoSource::orientationChanged(IntDegrees orientation)
 {
+    if (m_isUsingRotationAngleForHorizonLevelDisplayChanged)
+        return;
+
     auto deviceOrientation = m_deviceOrientation;
     switch (orientation) {
     case 0:
@@ -745,6 +775,23 @@ void MockRealtimeVideoSource::setIsInterrupted(bool isInterrupted)
         else
             source.startCaptureTimer();
         source.notifyMutedChange(isInterrupted);
+    }
+}
+
+void MockRealtimeVideoSource::triggerCameraConfigurationChange()
+{
+    for (auto& source : allMockRealtimeVideoSource()) {
+        if (!source.isProducingData() || source.deviceType() != CaptureDevice::DeviceType::Camera)
+            continue;
+
+        std::get<MockCameraProperties>(source.m_device.properties).hasBackgroundBlur = !std::get<MockCameraProperties>(source.m_device.properties).hasBackgroundBlur;
+
+        source.m_currentSettings = { };
+        source.m_capabilities = { };
+
+        source.forEachObserver([](auto& observer) {
+            observer.sourceConfigurationChanged();
+        });
     }
 }
 

@@ -86,6 +86,16 @@ public:
         this->scale(scale, scale);
     }
 
+    constexpr IntPoint scaled(float scale) const
+    {
+        return { static_cast<int>(std::lround(m_x * scale)), static_cast<int>(std::lround(m_y * scale)) };
+    }
+
+    constexpr IntPoint scaled(float scaleX, float scaleY) const
+    {
+        return { static_cast<int>(std::lround(m_x * scaleX)), static_cast<int>(std::lround(m_y * scaleY)) };
+    }
+
     constexpr IntPoint expandedTo(const IntPoint& other) const
     {
         return {

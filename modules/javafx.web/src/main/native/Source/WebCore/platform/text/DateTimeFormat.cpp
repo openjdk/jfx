@@ -26,13 +26,12 @@
 #include "config.h"
 #include "DateTimeFormat.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 #include <wtf/ASCIICType.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-static const DateTimeFormat::FieldType lowerCaseToFieldTypeMap[26] = {
+static constexpr std::array lowerCaseToFieldTypeMap {
     DateTimeFormat::FieldTypePeriod, // a
     DateTimeFormat::FieldTypeInvalid, // b
     DateTimeFormat::FieldTypeLocalDayOfWeekStandAlon, // c
@@ -61,7 +60,7 @@ static const DateTimeFormat::FieldType lowerCaseToFieldTypeMap[26] = {
     DateTimeFormat::FieldTypeZone, // z
 };
 
-static const DateTimeFormat::FieldType upperCaseToFieldTypeMap[26] = {
+static constexpr std::array upperCaseToFieldTypeMap {
     DateTimeFormat::FieldTypeMillisecondsInDay, // A
     DateTimeFormat::FieldTypeInvalid, // B
     DateTimeFormat::FieldTypeInvalid, // C
@@ -272,5 +271,3 @@ void DateTimeFormat::quoteAndAppendLiteral(const String& literal, StringBuilder&
 }
 
 } // namespace WebCore
-
-#endif

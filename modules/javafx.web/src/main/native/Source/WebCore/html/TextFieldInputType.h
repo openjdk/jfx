@@ -37,6 +37,7 @@
 #include "DataListSuggestionsClient.h"
 #include "InputType.h"
 #include "SpinButtonElement.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -46,10 +47,10 @@ class TextControlInnerTextElement;
 // The class represents types of which UI contain text fields.
 // It supports not only the types for BaseTextInputType but also type=number.
 class TextFieldInputType : public InputType, protected SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner
-#if ENABLE(DATALIST_ELEMENT)
     , private DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
-#endif
 {
+    WTF_MAKE_TZONE_ALLOCATED(TextFieldInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextFieldInputType);
 public:
     bool valueMissing(const String&) const final;
 
@@ -58,18 +59,14 @@ protected:
     virtual ~TextFieldInputType();
     ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) override;
     void handleKeydownEventForSpinButton(KeyboardEvent&);
-#if ENABLE(DATALIST_ELEMENT)
     void handleClickEvent(MouseEvent&) final;
-#endif
 
     HTMLElement* containerElement() const final;
     HTMLElement* innerBlockElement() const final;
     RefPtr<TextControlInnerTextElement> innerTextElement() const final;
     HTMLElement* innerSpinButtonElement() const final;
     HTMLElement* autoFillButtonElement() const final;
-#if ENABLE(DATALIST_ELEMENT)
     HTMLElement* dataListButtonElement() const final;
-#endif
 
     virtual bool needsContainer() const;
     void createShadowSubtree() override;
@@ -108,7 +105,6 @@ private:
     // SpinButtonOwner functions.
     void focusAndSelectSpinButtonOwner() final;
     bool shouldSpinButtonRespondToMouseEvents() const final;
-    bool shouldSpinButtonRespondToWheelEvents() const final;
     void spinButtonStepDown() final;
     void spinButtonStepUp() final;
 
@@ -124,7 +120,6 @@ private:
     void createContainer(PreserveSelectionRange = PreserveSelectionRange::Yes);
     void createAutoFillButton(AutoFillButtonType);
 
-#if ENABLE(DATALIST_ELEMENT)
     void createDataListDropdownIndicator();
     bool isPresentingAttachedView() const final;
     bool isFocusingWithDataListDropdown() const final;
@@ -145,8 +140,7 @@ private:
     RefPtr<DataListButtonElement> m_dataListDropdownIndicator;
 
     std::pair<String, Vector<DataListSuggestion>> m_cachedSuggestions;
-    std::unique_ptr<DataListSuggestionPicker> m_suggestionPicker;
-#endif
+    RefPtr<DataListSuggestionPicker> m_suggestionPicker;
 
     RefPtr<HTMLElement> m_container;
     RefPtr<HTMLElement> m_innerBlock;

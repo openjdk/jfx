@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,9 @@ import javafx.scene.control.skin.TabPaneSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
@@ -123,7 +126,7 @@ public class TabPanePage extends TestPaneBase implements HasSkinnable {
                 Tab t = new Tab(name, n);
                 if (graphic) {
                     Image im;
-                    switch (r.nextInt(5)) {
+                    switch (r.nextInt(6)) {
                     case 0:
                         im = ImageTools.createImage(name, 70, 20);
                         break;
@@ -132,6 +135,14 @@ public class TabPanePage extends TestPaneBase implements HasSkinnable {
                         break;
                     case 3:
                         im = ImageTools.createImage(20, 20);
+                        break;
+                    case 4:
+                        im = null;
+                        t.setText("Circle" + i);
+                        // Add a custom graphic, this will not be visible in the drop-down menu
+                        Circle rectangle = new Circle(30);
+                        rectangle.setFill(new Color(Math.random(), Math.random(), Math.random(), 1.0));
+                        t.setGraphic(rectangle);
                         break;
                     default:
                         im = null;

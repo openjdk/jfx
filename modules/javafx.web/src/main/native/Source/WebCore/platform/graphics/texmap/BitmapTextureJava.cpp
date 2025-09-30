@@ -42,7 +42,7 @@ void BitmapTextureJava::updateContents(const void*, const IntRect& target, const
 void BitmapTextureJava::didReset()
 {
     float devicePixelRatio = 1.0;
-    m_image = ImageBuffer::create(contentSize(), RenderingPurpose::Unspecified, devicePixelRatio,
+    m_image = ImageBuffer::create(contentSize(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, devicePixelRatio,
                      DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
 }
 

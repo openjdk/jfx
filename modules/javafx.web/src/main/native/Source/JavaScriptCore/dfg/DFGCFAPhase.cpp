@@ -59,10 +59,7 @@ public:
 
         m_count = 0;
 
-        if (m_verbose && !shouldDumpGraphAtEachPhase(m_graph.m_plan.mode())) {
-            dataLog("Graph before CFA:\n");
-            m_graph.dump();
-        }
+        dataLogIf((m_verbose && !shouldDumpGraphAtEachPhase(m_graph.m_plan.mode())), "Graph before CFA:\n", m_graph);
 
         // This implements a pseudo-worklist-based forward CFA, except that the visit order
         // of blocks is the bytecode program order (which is nearly topological), and
@@ -78,8 +75,7 @@ public:
         m_state.initialize();
 
         if (m_graph.m_form != SSA) {
-            if (m_verbose)
-                dataLog("   Widening state at OSR entry block.\n");
+            dataLogLnIf(m_verbose, "   Widening state at OSR entry block.");
 
             // Widen the abstract values at the block that serves as the must-handle OSR entry.
             for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
@@ -160,8 +156,7 @@ public:
 private:
     bool injectOSR(BasicBlock* block)
     {
-        if (m_verbose)
-            dataLog("   Found must-handle block: ", *block, "\n");
+        dataLogLnIf(m_verbose, "   Found must-handle block: ", *block);
 
         // This merges snapshot of stack values while CFA phase want to have proven types and values. This is somewhat tricky.
         // But this is OK as long as DFG OSR entry validates the inputs with *proven* AbstractValue values. And it turns out that this
@@ -173,19 +168,16 @@ private:
             Operand operand = mustHandleValues.operandForIndex(i);
             std::optional<JSValue> value = mustHandleValues[i];
             if (!value) {
-                if (m_verbose)
-                    dataLog("   Not live in bytecode: ", operand, "\n");
+                dataLogLnIf(m_verbose, "   Not live in bytecode: ", operand);
                 continue;
             }
             Node* node = block->variablesAtHead.operand(operand);
             if (!node) {
-                if (m_verbose)
-                    dataLog("   Not live: ", operand, "\n");
+                dataLogLnIf(m_verbose, "   Not live: ", operand);
                 continue;
             }
 
-            if (m_verbose)
-                dataLog("   Widening ", operand, " with ", value.value(), "\n");
+            dataLogLnIf(m_verbose, "   Widening ", operand, " with ", value.value());
 
             AbstractValue& target = block->valuesAtHead.operand(operand);
             changed |= target.mergeOSREntryValue(m_graph, value.value(), node->variableAccessData(), node);
@@ -205,33 +197,30 @@ private:
             return;
         if (!block->cfaShouldRevisit)
             return;
-        if (m_verbose)
-            dataLog("   Block ", *block, ":\n");
+        dataLogLnIf(m_verbose, "   Block ", *block, ":");
 
         if (m_blocksWithOSR.remove(block))
             injectOSR(block);
 
         m_state.beginBasicBlock(block);
-        if (m_verbose) {
-            dataLog("      head vars: ", block->valuesAtHead, "\n");
+        if (UNLIKELY(m_verbose)) {
+            dataLogLn("      head vars: ", block->valuesAtHead);
             if (m_graph.m_form == SSA)
-                dataLog("      head regs: ", nodeValuePairListDump(block->ssa->valuesAtHead), "\n");
+                dataLogLn("      head regs: ", nodeValuePairListDump(block->ssa->valuesAtHead));
         }
         for (unsigned i = 0; i < block->size(); ++i) {
             Node* node = block->at(i);
-            if (m_verbose) {
-                dataLogF("      %s @%u: ", Graph::opName(node->op()).characters(), node->index());
-
+            if (UNLIKELY(m_verbose)) {
+                WTF::dataFile().atomically([&](auto&) {
+                    dataLog("      ", Graph::opName(node->op()), " @", node->index(), ": ");
                 if (!safeToExecute(m_state, m_graph, node))
                     dataLog("(UNSAFE) ");
-
                 dataLog(m_state.variablesForDebugging(), " ", m_interpreter);
-
-                dataLogF("\n");
+                    dataLogLn();
+                });
             }
             if (!m_interpreter.execute(i)) {
-                if (m_verbose)
-                    dataLogF("         Expect OSR exit.\n");
+                dataLogLnIf(m_verbose, "         Expect OSR exit.");
                 break;
             }
 
@@ -240,24 +229,27 @@ private:
                 DFG_CRASH(m_graph, node, toCString("AI-clobberize disagreement; AI says ", m_state.clobberState(), " while clobberize says ", writeSet(m_graph, node)).data());
         }
         if (m_verbose) {
-            dataLogF("      tail regs: ");
+            WTF::dataFile().atomically([&](auto&) {
+                dataLog("      tail regs: ");
             m_interpreter.dump(WTF::dataFile());
-            dataLogF("\n");
+                dataLogLn();
+            });
         }
         m_changed |= m_state.endBasicBlock();
 
         if (m_verbose) {
-            dataLog("      tail vars: ", block->valuesAtTail, "\n");
+            WTF::dataFile().atomically([&](auto&) {
+                dataLogLn("      tail vars: ", block->valuesAtTail);
             if (m_graph.m_form == SSA)
-                dataLog("      head regs: ", nodeValuePairListDump(block->ssa->valuesAtTail), "\n");
+                    dataLogLn("      head regs: ", nodeValuePairListDump(block->ssa->valuesAtTail));
+            });
         }
     }
 
     void performForwardCFA()
     {
         ++m_count;
-        if (m_verbose)
-            dataLogF("CFA [%u]\n", m_count);
+        dataLogLnIf(m_verbose, "CFA [", m_count, "]");
 
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex)
             performBlockCFA(m_graph.block(blockIndex));

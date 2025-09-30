@@ -56,7 +56,7 @@ static bool isAncestorAndWithinBlock(const RenderInline& ancestor, const RenderO
 static float minLogicalTopForTextDecorationLineUnder(const InlineIterator::LineBoxIterator& lineBox, float textRunLogicalTop, const RenderElement& decoratingBoxRendererForUnderline)
 {
     auto minLogicalTop = textRunLogicalTop;
-    for (auto run = lineBox->firstLeafBox(); run; run.traverseNextOnLine()) {
+    for (auto run = lineBox->lineLeftmostLeafBox(); run; run.traverseLineRightwardOnLine()) {
         if (run->renderer().isOutOfFlowPositioned())
             continue; // Positioned placeholders don't affect calculations.
 
@@ -75,7 +75,7 @@ static float minLogicalTopForTextDecorationLineUnder(const InlineIterator::LineB
 static float maxLogicalBottomForTextDecorationLineUnder(const InlineIterator::LineBoxIterator& lineBox, float textRunLogicalBottom, const RenderElement& decoratingBoxRendererForUnderline)
 {
     auto maxLogicalBottom = textRunLogicalBottom;
-    for (auto run = lineBox->firstLeafBox(); run; run.traverseNextOnLine()) {
+    for (auto run = lineBox->lineLeftmostLeafBox(); run; run.traverseLineRightwardOnLine()) {
         if (run->renderer().isOutOfFlowPositioned())
             continue; // Positioned placeholders don't affect calculations.
 
@@ -118,7 +118,7 @@ static const RenderElement* enclosingRendererWithTextDecoration(const RenderText
 
 static float boxOffsetFromBottomMost(const InlineIterator::LineBoxIterator& lineBox, const RenderElement& decoratingInlineBoxRenderer, float boxLogicalTop, float boxLogicalBottom)
 {
-    if (decoratingInlineBoxRenderer.style().isFlippedLinesWritingMode())
+    if (decoratingInlineBoxRenderer.writingMode().isLineInverted())
         return boxLogicalTop - minLogicalTopForTextDecorationLineUnder(lineBox, boxLogicalTop, decoratingInlineBoxRenderer);
     return maxLogicalBottomForTextDecorationLineUnder(lineBox, boxLogicalBottom, decoratingInlineBoxRenderer) - boxLogicalBottom;
 }
@@ -160,18 +160,18 @@ static float computedUnderlineOffset(const UnderlineOffsetArguments& context)
         if (textUnderlinePosition.contains(TextUnderlinePosition::Right)) {
             ASSERT(!textUnderlinePosition.contains(TextUnderlinePosition::Left));
             // In vertical typographic modes, the underline is aligned as for under, except it is always aligned to the right edge of the text.
-            underlineOffset = 0.f - (styleToUse.textUnderlineOffset().lengthOr(0.f) + defaultGap(styleToUse));
+            underlineOffset = 0.f - (styleToUse.textUnderlineOffset().resolve(styleToUse.computedFontSize()) + defaultGap(styleToUse));
         } else {
             // Position underline relative to the bottom edge of the lowest element's content box.
             auto desiredOffset = context.textUnderlinePositionUnder->textRunLogicalHeight + std::max(context.textUnderlinePositionUnder->textRunOffsetFromBottomMost, 0.f);
-            desiredOffset += styleToUse.textUnderlineOffset().lengthOr(0.f) + defaultGap(styleToUse);
+            desiredOffset += styleToUse.textUnderlineOffset().resolve(styleToUse.computedFontSize()) + defaultGap(styleToUse);
             underlineOffset = std::max<float>(desiredOffset, fontMetrics.intAscent());
     }
     } else if (textUnderlinePosition.contains(TextUnderlinePosition::FromFont)) {
         ASSERT(!textUnderlinePosition.contains(TextUnderlinePosition::Under));
-        underlineOffset = fontMetrics.intAscent() + fontMetrics.underlinePosition().value_or(0) + styleToUse.textUnderlineOffset().lengthOr(0.f);
+        underlineOffset = fontMetrics.intAscent() + fontMetrics.underlinePosition().value_or(0) + styleToUse.textUnderlineOffset().resolve(styleToUse.computedFontSize());
     } else
-        underlineOffset = fontMetrics.intAscent() + styleToUse.textUnderlineOffset().lengthOr(defaultGap(styleToUse));
+        underlineOffset = fontMetrics.intAscent() + styleToUse.textUnderlineOffset().resolve(styleToUse.computedFontSize(), defaultGap(styleToUse));
     return underlineOffset;
 }
 
@@ -184,7 +184,7 @@ WavyStrokeParameters wavyStrokeParameters(float fontSize)
     return result;
 }
 
-static GlyphOverflow computedVisualOverflowForDecorations(const RenderStyle& lineStyle, std::optional<float> underlineOffset)
+static GlyphOverflow computedInkOverflowForDecorations(const RenderStyle& lineStyle, std::optional<float> underlineOffset)
 {
     // Compensate for the integral ceiling in GraphicsContext::computeLineBoundsAndAntialiasingModeForText()
     if (underlineOffset)
@@ -256,7 +256,8 @@ bool isAlignedForUnder(const RenderStyle& decoratingBoxStyle)
     auto underlinePosition = decoratingBoxStyle.textUnderlinePosition();
     if (underlinePosition.contains(TextUnderlinePosition::Under))
         return true;
-    if (decoratingBoxStyle.typographicMode() == TypographicMode::Horizontal || decoratingBoxStyle.textOrientation() == TextOrientation::Sideways)
+    if (!decoratingBoxStyle.writingMode().isVerticalTypographic()
+        || decoratingBoxStyle.writingMode().isSidewaysOrientation())
         return false;
     if (underlinePosition.contains(TextUnderlinePosition::Left) || underlinePosition.contains(TextUnderlinePosition::Right)) {
         // In vertical typographic modes, the underline is aligned as for under for 'left' and 'right'.
@@ -267,7 +268,7 @@ bool isAlignedForUnder(const RenderStyle& decoratingBoxStyle)
     return underlinePosition.isEmpty() && decoratingBoxStyle.textUnderlineOffset().isAuto();
 }
 
-GlyphOverflow visualOverflowForDecorations(const InlineIterator::LineBoxIterator& lineBox, const RenderText& renderer, float textBoxLogicalTop, float textBoxLogicalBottom)
+GlyphOverflow inkOverflowForDecorations(const InlineIterator::LineBoxIterator& lineBox, const RenderText& renderer, float textBoxLogicalTop, float textBoxLogicalBottom)
 {
     auto& style = lineBox->isFirst() ? renderer.firstLineStyle() : renderer.style();
     auto textUnderlinePositionUnder = std::optional<TextUnderlinePositionUnder> { };
@@ -280,23 +281,23 @@ GlyphOverflow visualOverflowForDecorations(const InlineIterator::LineBoxIterator
     auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, textUnderlinePositionUnder }))
         : std::nullopt;
-    return computedVisualOverflowForDecorations(style, underlineOffset);
+    return computedInkOverflowForDecorations(style, underlineOffset);
 }
 
-GlyphOverflow visualOverflowForDecorations(const RenderStyle& style, TextUnderlinePositionUnder textUnderlinePositionUnder)
+GlyphOverflow inkOverflowForDecorations(const RenderStyle& style, TextUnderlinePositionUnder textUnderlinePositionUnder)
 {
     auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, textUnderlinePositionUnder }))
         : std::nullopt;
-    return computedVisualOverflowForDecorations(style, underlineOffset);
+    return computedInkOverflowForDecorations(style, underlineOffset);
 }
 
-GlyphOverflow visualOverflowForDecorations(const RenderStyle& style)
+GlyphOverflow inkOverflowForDecorations(const RenderStyle& style)
 {
     auto underlineOffset = style.textDecorationsInEffect().contains(TextDecorationLine::Underline)
         ? std::make_optional(computedUnderlineOffset({ style, { } }))
         : std::nullopt;
-    return computedVisualOverflowForDecorations(style, underlineOffset);
+    return computedInkOverflowForDecorations(style, underlineOffset);
 }
 
 static inline float inlineBoxContentBoxHeight(const InlineIterator::InlineBox& inlineBox)
@@ -318,17 +319,14 @@ float underlineOffsetForTextBoxPainting(const InlineIterator::InlineBox& inlineB
 
 float overlineOffsetForTextBoxPainting(const InlineIterator::InlineBox& inlineBox, const RenderStyle& style)
 {
-    if (style.typographicMode() == TypographicMode::Horizontal || style.textOrientation() == TextOrientation::Sideways)
+    if (!style.writingMode().isVerticalTypographic())
         return { };
 
-    auto underlinePosition = style.textUnderlinePosition();
-    auto overBecomesUnder = [&] {
     // If 'right' causes the underline to be drawn on the "over" side of the text, then an overline also switches sides and is drawn on the "under" side.
-        if (underlinePosition.contains(TextUnderlinePosition::Right))
-            return style.typographicMode() == TypographicMode::Vertical || style.blockFlowDirection() == BlockFlowDirection::RightToLeft;
-        return false;
-    };
-    return overBecomesUnder() ? inlineBoxContentBoxHeight(inlineBox) + defaultGap(style) : (0.f - defaultGap(style));
+    auto underlinePosition = style.textUnderlinePosition();
+    return underlinePosition.contains(TextUnderlinePosition::Right)
+        ? inlineBoxContentBoxHeight(inlineBox) + defaultGap(style)
+        : (0.f - defaultGap(style));
 }
 
 }

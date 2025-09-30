@@ -39,8 +39,8 @@
 #include "Timer.h"
 #include <array>
 #include <limits.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
@@ -48,6 +48,7 @@
 #include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkQueue.h>
@@ -70,6 +71,8 @@
 #include <windows.h>
 #include <objidl.h>
 #include <mlang.h>
+struct IDWriteFactory;
+struct IDWriteFontCollection;
 #endif
 
 #if USE(FREETYPE)
@@ -112,8 +115,10 @@ enum class FontLookupOptions : uint8_t {
     DisallowObliqueSynthesis = 1 << 2,
 };
 
-class FontCache {
-    WTF_MAKE_NONCOPYABLE(FontCache); WTF_MAKE_FAST_ALLOCATED;
+class FontCache : public CanMakeCheckedPtr<FontCache> {
+    WTF_MAKE_TZONE_ALLOCATED(FontCache);
+    WTF_MAKE_NONCOPYABLE(FontCache);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FontCache);
 public:
     WEBCORE_EXPORT static FontCache& forCurrentThread();
     static FontCache* forCurrentThreadIfExists();
@@ -205,7 +210,7 @@ public:
 
 #if USE(SKIA)
     static Vector<hb_feature_t> computeFeatures(const FontDescription&, const FontCreationContext&);
-    SkFontMgr& fontManager() const;
+    WEBCORE_EXPORT SkFontMgr& fontManager() const;
     SkiaHarfBuzzFontCache& harfBuzzFontCache() { return m_harfBuzzFontCache; }
 #endif
 
@@ -222,8 +227,8 @@ private:
     // These functions are implemented by each platform (unclear which functions this comment applies to).
     WEBCORE_EXPORT std::unique_ptr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions>);
 
-    static std::optional<ASCIILiteral> alternateFamilyName(const String&);
-    static std::optional<ASCIILiteral> platformAlternateFamilyName(const String&);
+    static ASCIILiteral alternateFamilyName(const String&);
+    static ASCIILiteral platformAlternateFamilyName(const String&);
 
 #if PLATFORM(MAC)
     bool shouldAutoActivateFontIfNeeded(const AtomString& family);
@@ -249,14 +254,14 @@ private:
 #endif
 
 #if PLATFORM(MAC)
-    HashSet<AtomString> m_knownFamilies;
+    UncheckedKeyHashSet<AtomString> m_knownFamilies;
 #endif
 
 #if PLATFORM(COCOA)
     FontDatabase m_databaseAllowingUserInstalledFonts { AllowUserInstalledFonts::Yes };
     FontDatabase m_databaseDisallowingUserInstalledFonts { AllowUserInstalledFonts::No };
 
-    using FallbackFontSet = HashSet<RetainPtr<CTFontRef>, WTF::RetainPtrObjectHash<CTFontRef>, WTF::RetainPtrObjectHashTraits<CTFontRef>>;
+    using FallbackFontSet = UncheckedKeyHashSet<RetainPtr<CTFontRef>, WTF::RetainPtrObjectHash<CTFontRef>, WTF::RetainPtrObjectHashTraits<CTFontRef>>;
     FallbackFontSet m_fallbackFonts;
 
     ListHashSet<String> m_seenFamiliesForPrewarming;
@@ -276,6 +281,14 @@ private:
 #if USE(SKIA)
     mutable sk_sp<SkFontMgr> m_fontManager;
     SkiaHarfBuzzFontCache m_harfBuzzFontCache;
+#endif
+
+#if PLATFORM(WIN) && USE(SKIA)
+    struct CreateDWriteFactoryResult {
+        COMPtr<IDWriteFactory> factory;
+        COMPtr<IDWriteFontCollection> fontCollection;
+    };
+    static CreateDWriteFactoryResult createDWriteFactory();
 #endif
 
     friend class Font;

@@ -38,12 +38,13 @@ class PageWorkerAgent final : public InspectorWorkerAgent {
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PageWorkerAgent);
 public:
     explicit PageWorkerAgent(PageAgentContext&);
+
     ~PageWorkerAgent();
 
 private:
     void connectToAllWorkerInspectorProxies() override;
 
-    Page& m_page;
+    WeakRef<Page> m_page;
 };
 
 } // namespace WebCore

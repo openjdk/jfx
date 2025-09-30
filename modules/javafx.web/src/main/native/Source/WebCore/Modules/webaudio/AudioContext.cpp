@@ -44,6 +44,7 @@
 #include "Performance.h"
 #include "PlatformMediaSessionManager.h"
 #include "Quirks.h"
+#include <wtf/MediaTime.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MEDIA_STREAM)
@@ -89,7 +90,8 @@ static bool shouldDocumentAllowWebAudioToAutoPlay(const Document& document)
 {
     if (document.isCapturing())
         return true;
-    if (document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && document.topDocument().hasHadUserInteraction())
+    RefPtr mainDocument = document.protectedMainFrameDocument();
+    if (document.quirks().shouldAutoplayWebAudioForArbitraryUserGesture() && mainDocument && mainDocument->hasHadUserInteraction())
         return true;
     RefPtr window = document.domWindow();
     return window && window->hasTransientActivation();
@@ -126,8 +128,8 @@ ExceptionOr<Ref<AudioContext>> AudioContext::create(Document& document, AudioCon
 
 AudioContext::AudioContext(Document& document, const AudioContextOptions& contextOptions)
     : BaseAudioContext(document)
-    , m_destinationNode(makeUniqueRef<DefaultAudioDestinationNode>(*this, contextOptions.sampleRate))
-    , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::sharedManager(), *this))
+    , m_destinationNode(makeUniqueRefWithoutRefCountedCheck<DefaultAudioDestinationNode>(*this, contextOptions.sampleRate))
+    , m_mediaSession(PlatformMediaSession::create(PlatformMediaSessionManager::singleton(), *this))
     , m_currentIdentifier(MediaUniqueIdentifier::generate())
 {
     constructCommon();
@@ -149,7 +151,8 @@ AudioContext::AudioContext(Document& document, const AudioContextOptions& contex
 void AudioContext::constructCommon()
 {
     ASSERT(document());
-    if (document()->topDocument().requiresUserGestureForAudioPlayback())
+    RefPtr mainFrameDocument = document()->mainFrameDocument();
+    if (!mainFrameDocument || mainFrameDocument->requiresUserGestureForAudioPlayback())
         addBehaviorRestriction(RequireUserGestureForAudioStartRestriction);
     else
         m_restrictions = NoRestrictions;
@@ -185,6 +188,18 @@ double AudioContext::baseLatency()
     lazyInitialize();
 
     return static_cast<double>(destination().framesPerBuffer()) / sampleRate();
+}
+
+double AudioContext::outputLatency()
+{
+    lazyInitialize();
+
+    if (!isPlaying())
+        return 0;
+    if (noiseInjectionPolicies())
+        return 512 / sampleRate(); // A fixed, but reasonable value for most platforms.
+
+    return destination().outputLatency().toDouble();
 }
 
 AudioTimestamp AudioContext::getOutputTimestamp()
@@ -307,9 +322,9 @@ void AudioContext::startRendering()
         return;
 
     lazyInitialize();
-    destination().startRendering([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    destination().startRendering([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (!exception)
-            setState(State::Running);
+            protectedThis->setState(State::Running);
     });
 }
 
@@ -385,8 +400,8 @@ void AudioContext::mayResumePlayback(bool shouldResume)
 
     lazyInitialize();
 
-    destination().resume([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
-        setState(exception ? State::Suspended : State::Running);
+    destination().resume([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+        protectedThis->setState(exception ? State::Suspended : State::Running);
     });
 }
 
@@ -447,12 +462,12 @@ void AudioContext::suspendPlayback()
 
     lazyInitialize();
 
-    destination().suspend([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
+    destination().suspend([protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) {
         if (exception)
             return;
 
-        bool interrupted = m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
-        setState(interrupted ? State::Interrupted : State::Suspended);
+        bool interrupted = protectedThis->m_mediaSession->state() == PlatformMediaSession::State::Interrupted;
+        protectedThis->setState(interrupted ? State::Interrupted : State::Suspended);
     });
 }
 
@@ -495,10 +510,10 @@ void AudioContext::didReceiveRemoteControlCommand(PlatformMediaSession::RemoteCo
     }
 }
 
-MediaSessionGroupIdentifier AudioContext::mediaSessionGroupIdentifier() const
+std::optional<MediaSessionGroupIdentifier> AudioContext::mediaSessionGroupIdentifier() const
 {
     RefPtr document = downcast<Document>(scriptExecutionContext());
-    return document && document->page() ? document->page()->mediaSessionGroupIdentifier() : MediaSessionGroupIdentifier { };
+    return document && document->page() ? document->page()->mediaSessionGroupIdentifier() : std::nullopt;
 }
 
 static bool hasPlayBackAudioSession(Document* document)
@@ -558,7 +573,8 @@ std::optional<NowPlayingInfo> AudioContext::nowPlayingInfo() const
         false,
         m_currentIdentifier,
         isPlaying(),
-        !page->isVisibleAndActive()
+        !page->isVisibleAndActive(),
+        false
     };
 
     if (page->usesEphemeralSession() && !document->settings().allowPrivacySensitiveOperationsInNonPersistentDataStores())
@@ -659,7 +675,7 @@ bool AudioContext::shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSess
 void AudioContext::defaultDestinationWillBecomeConnected()
 {
     // We might need to interrupt if we previously overrode a background interruption.
-    if (!PlatformMediaSessionManager::sharedManager().isApplicationInBackground() || m_mediaSession->state() == PlatformMediaSession::State::Interrupted) {
+    if (!PlatformMediaSessionManager::singleton().isApplicationInBackground() || m_mediaSession->state() == PlatformMediaSession::State::Interrupted) {
         PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary();
         return;
     }
@@ -678,6 +694,16 @@ void AudioContext::isActiveNowPlayingSessionChanged()
         if (RefPtr page = document->protectedPage())
             page->hasActiveNowPlayingSessionChanged();
     }
+}
+
+ProcessID AudioContext::presentingApplicationPID() const
+{
+    if (RefPtr document = this->document()) {
+        if (RefPtr page = document->protectedPage())
+            return page->presentingApplicationPID();
+    }
+
+    return { };
 }
 
 #if !RELEASE_LOG_DISABLED

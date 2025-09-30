@@ -32,9 +32,7 @@
 #include "WorkerGlobalScope.h"
 #include "WorkerLocation.h"
 #include "WorkerNavigator.h"
-#include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 #include <JavaScriptCore/Error.h>
-#include <JavaScriptCore/JSCJSValueInlines.h>
 
 namespace WebCore {
 using namespace JSC;

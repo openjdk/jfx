@@ -54,55 +54,62 @@
 
 namespace PAL {
 
-const size_t maxEncodingNameLength = 63;
+constexpr size_t maxEncodingNameLength = 63;
 
 // Hash for all-ASCII strings that does case folding.
 struct TextEncodingNameHash {
-    static bool equal(const char* s1, const char* s2)
+    static bool equal(std::span<const LChar> s1, std::span<const LChar> s2)
     {
-        char c1;
-        char c2;
-        do {
-            c1 = *s1++;
-            c2 = *s2++;
-            if (toASCIILower(c1) != toASCIILower(c2))
+        if (s1.size() != s2.size())
                 return false;
-        } while (c1 && c2);
-        return !c1 && !c2;
+
+        for (size_t i = 0; i < s1.size(); ++i) {
+            if (toASCIILower(s1[i]) != toASCIILower(s2[i]))
+                return false;
+        }
+
+        return true;
+    }
+
+    static bool equal(ASCIILiteral s1, ASCIILiteral s2)
+    {
+        return equal(s1.span8(), s2.span8());
     }
 
     // This algorithm is the one-at-a-time hash from:
     // http://burtleburtle.net/bob/hash/hashfaq.html
     // http://burtleburtle.net/bob/hash/doobs.html
-    static unsigned hash(const char* s)
+    static unsigned hash(std::span<const LChar> s)
     {
         unsigned h = WTF::stringHashingStartValue;
-        for (;;) {
-            char c = *s++;
-            if (!c) {
+        for (char c : s) {
+            h += toASCIILower(c);
+            h += (h << 10);
+            h ^= (h >> 6);
+        }
                 h += (h << 3);
                 h ^= (h >> 11);
                 h += (h << 15);
                 return h;
             }
-            h += toASCIILower(c);
-            h += (h << 10);
-            h ^= (h >> 6);
-        }
+
+    static unsigned hash(ASCIILiteral s)
+    {
+        return hash(s.span8());
     }
 
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
 struct HashTranslatorTextEncodingName {
-    static unsigned hash(const char* literal)
+    static unsigned hash(std::span<const LChar> literal)
     {
         return TextEncodingNameHash::hash(literal);
     }
 
-    static bool equal(const ASCIILiteral& a, const char* b)
+    static bool equal(const ASCIILiteral& a, std::span<const LChar> b)
     {
-        return TextEncodingNameHash::equal(a.characters(), b);
+        return TextEncodingNameHash::equal(a.span8(), b);
     }
 };
 
@@ -114,15 +121,15 @@ static Lock encodingRegistryLock;
 static TextEncodingNameMap* textEncodingNameMap WTF_GUARDED_BY_LOCK(encodingRegistryLock);
 static TextCodecMap* textCodecMap WTF_GUARDED_BY_LOCK(encodingRegistryLock);
 static bool didExtendTextCodecMaps;
-static HashSet<ASCIILiteral>* japaneseEncodings;
-static HashSet<ASCIILiteral>* nonBackslashEncodings;
+static UncheckedKeyHashSet<ASCIILiteral>* japaneseEncodings;
+static UncheckedKeyHashSet<ASCIILiteral>* nonBackslashEncodings;
 
 static constexpr ASCIILiteral textEncodingNameBlocklist[] = { "UTF-7"_s, "BOCU-1"_s, "SCSU"_s };
 
 static bool isUndesiredAlias(ASCIILiteral alias)
 {
     // Reject aliases with version numbers that are supported by some back-ends (such as "ISO_2022,locale=ja,version=0" in ICU).
-    if (strchr(alias.characters(), ','))
+    if (contains(alias.span(), ','))
             return true;
     // 8859_1 is known to (at least) ICU, but other browsers don't support this name - and having it caused a compatibility
     // problem, see bug 43554.
@@ -133,7 +140,7 @@ static bool isUndesiredAlias(ASCIILiteral alias)
 
 static void addToTextEncodingNameMap(ASCIILiteral alias, ASCIILiteral name) WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
-    ASSERT(strlen(alias) <= maxEncodingNameLength);
+    ASSERT(alias.length() <= maxEncodingNameLength);
     if (isUndesiredAlias(alias))
         return;
     ASCIILiteral atomName = textEncodingNameMap->get(name);
@@ -194,7 +201,7 @@ static void buildBaseTextCodecMaps() WTF_REQUIRES_LOCK(encodingRegistryLock)
     TextCodecUserDefined::registerCodecs(addToTextCodecMap);
 }
 
-static void addEncodingName(HashSet<ASCIILiteral>& set, ASCIILiteral name) WTF_REQUIRES_LOCK(encodingRegistryLock)
+static void addEncodingName(UncheckedKeyHashSet<ASCIILiteral>& set, ASCIILiteral name) WTF_REQUIRES_LOCK(encodingRegistryLock)
 {
     // We must not use atomCanonicalTextEncodingName() because this function is called in it.
     ASCIILiteral atomName = textEncodingNameMap->get(name);
@@ -210,7 +217,7 @@ static void buildQuirksSets() WTF_REQUIRES_LOCK(encodingRegistryLock)
     ASSERT(!japaneseEncodings);
     ASSERT(!nonBackslashEncodings);
 
-    japaneseEncodings = new HashSet<ASCIILiteral>;
+    japaneseEncodings = new UncheckedKeyHashSet<ASCIILiteral>;
     addEncodingName(*japaneseEncodings, "EUC-JP"_s);
     addEncodingName(*japaneseEncodings, "ISO-2022-JP"_s);
     addEncodingName(*japaneseEncodings, "ISO-2022-JP-1"_s);
@@ -226,7 +233,7 @@ static void buildQuirksSets() WTF_REQUIRES_LOCK(encodingRegistryLock)
     addEncodingName(*japaneseEncodings, "cp932"_s);
     addEncodingName(*japaneseEncodings, "x-mac-japanese"_s);
 
-    nonBackslashEncodings = new HashSet<ASCIILiteral>;
+    nonBackslashEncodings = new UncheckedKeyHashSet<ASCIILiteral>;
     // The text encodings below treat backslash as a currency symbol for IE compatibility.
     // See http://blogs.msdn.com/michkap/archive/2005/09/17/469941.aspx for more information.
     addEncodingName(*nonBackslashEncodings, "x-mac-japanese"_s);
@@ -291,9 +298,9 @@ std::unique_ptr<TextCodec> newTextCodec(const TextEncoding& encoding)
     return result->value();
 }
 
-ASCIILiteral atomCanonicalTextEncodingName(const char* name)
+static ASCIILiteral atomCanonicalTextEncodingName(std::span<const LChar> name)
 {
-    if (!name || !name[0])
+    if (name.empty())
         return { };
 
     Locker locker { encodingRegistryLock };
@@ -311,17 +318,21 @@ ASCIILiteral atomCanonicalTextEncodingName(const char* name)
     return textEncodingNameMap->get<HashTranslatorTextEncodingName>(name);
 }
 
-template<typename CharacterType> static ASCIILiteral atomCanonicalTextEncodingName(std::span<const CharacterType> characters)
+static ASCIILiteral atomCanonicalTextEncodingName(std::span<const UChar> characters)
 {
-    char buffer[maxEncodingNameLength + 1];
-    size_t j = 0;
-    for (auto character : characters) {
-        if (j == maxEncodingNameLength)
+    if (characters.size() > maxEncodingNameLength)
             return { };
-        buffer[j++] = character;
-    }
-    buffer[j] = 0;
-    return atomCanonicalTextEncodingName(buffer);
+
+    std::array<LChar, maxEncodingNameLength> buffer;
+    for (size_t i = 0; i < characters.size(); ++i)
+        buffer[i] = characters[i];
+
+    return atomCanonicalTextEncodingName(std::span { buffer }.first(characters.size()));
+}
+
+ASCIILiteral atomCanonicalTextEncodingName(ASCIILiteral name)
+{
+    return atomCanonicalTextEncodingName(name.span8());
 }
 
 ASCIILiteral atomCanonicalTextEncodingName(StringView alias)

@@ -41,10 +41,8 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define STRICT          /* Strict typing, please */
 #include <winsock2.h>
 #include <windows.h>
-#undef STRICT
 #ifndef G_WITH_CYGWIN
 #include <direct.h>
 #endif

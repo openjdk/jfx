@@ -55,6 +55,7 @@
 #include <gst/gsterror.h>
 #include <gst/gstevent.h>
 #include <gst/gstghostpad.h>
+#include <gst/gstidstr.h>
 #include <gst/gstinfo.h>
 #include <gst/gstiterator.h>
 #include <gst/gstmessage.h>
@@ -96,6 +97,7 @@
 #include <gst/gsturi.h>
 #include <gst/gstutils.h>
 #include <gst/gstvalue.h>
+#include <gst/gstvecdeque.h>
 
 #include <gst/gstparse.h>
 

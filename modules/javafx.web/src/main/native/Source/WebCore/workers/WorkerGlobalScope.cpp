@@ -35,6 +35,7 @@
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
 #include "Crypto.h"
+#include "CryptoKeyData.h"
 #include "DocumentInlines.h"
 #include "FontCustomPlatformData.h"
 #include "FontFaceSet.h"
@@ -81,6 +82,10 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WorkQueue.h>
 #include <wtf/threads/BinarySemaphore.h>
+
+#if ENABLE(WEBDRIVER_BIDI)
+#include "AutomationInstrumentation.h"
+#endif
 
 namespace WebCore {
 using namespace Inspector;
@@ -162,7 +167,8 @@ void WorkerGlobalScope::prepareForDestruction()
 {
     WorkerOrWorkletGlobalScope::prepareForDestruction();
 
-    removeSupplement(WindowOrWorkerGlobalScopeTrustedTypes::workerGlobalSupplementName());
+    if (auto* trustedTypes = static_cast<WorkerGlobalScopeTrustedTypes*>(requireSupplement(WorkerGlobalScopeTrustedTypes::supplementName())))
+        trustedTypes->prepareForDestruction();
 
     if (settingsValues().serviceWorkersEnabled)
         swClientConnection().unregisterServiceWorkerClient(identifier());
@@ -465,6 +471,9 @@ void WorkerGlobalScope::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMess
     if (UNLIKELY(settingsValues().logsPageMessagesToSystemConsoleEnabled && sessionID && !sessionID->isEphemeral()))
         PageConsoleClient::logMessageToSystemConsole(*message);
 
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(message);
+#endif
     InspectorInstrumentation::addMessageToConsole(*this, WTFMove(message));
 }
 
@@ -485,6 +494,10 @@ void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, con
         message = makeUnique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, callStack.releaseNonNull(), requestIdentifier);
     else
         message = makeUnique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, sourceURL, lineNumber, columnNumber, state, requestIdentifier);
+
+#if ENABLE(WEBDRIVER_BIDI)
+    AutomationInstrumentation::addMessageToConsole(message);
+#endif
     InspectorInstrumentation::addMessageToConsole(*this, WTFMove(message));
 }
 
@@ -500,6 +513,23 @@ std::optional<Vector<uint8_t>> WorkerGlobalScope::wrapCryptoKey(const Vector<uin
     std::optional<Vector<uint8_t>> wrappedKey;
     workerLoaderProxy->postTaskToLoader([&semaphore, &key, &wrappedKey](auto& context) {
         wrappedKey = context.wrapCryptoKey(key);
+        semaphore.signal();
+    });
+    semaphore.wait();
+    return wrappedKey;
+}
+
+std::optional<Vector<uint8_t>> WorkerGlobalScope::serializeAndWrapCryptoKey(CryptoKeyData&& keyData)
+{
+    Ref protectedThis { *this };
+    auto* workerLoaderProxy = thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return std::nullopt;
+
+    BinarySemaphore semaphore;
+    std::optional<Vector<uint8_t>> wrappedKey;
+    workerLoaderProxy->postTaskToLoader([&semaphore, &wrappedKey, keyData = crossThreadCopy(WTFMove(keyData))](auto& context) mutable  {
+        wrappedKey = context.serializeAndWrapCryptoKey(WTFMove(keyData));
         semaphore.signal();
     });
     semaphore.wait();
@@ -617,6 +647,11 @@ void WorkerGlobalScope::beginLoadingFontSoon(FontLoadRequest& request)
 WorkerThread& WorkerGlobalScope::thread() const
 {
     return *static_cast<WorkerThread*>(workerOrWorkletThread());
+}
+
+Ref<WorkerThread> WorkerGlobalScope::protectedThread() const
+{
+    return thread();
 }
 
 void WorkerGlobalScope::releaseMemory(Synchronous synchronous)

@@ -32,7 +32,7 @@ namespace JSC {
 
 inline StringReplaceCache::Entry* StringReplaceCache::get(const String& subject, RegExp* regExp)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     if (!subject.impl() || !subject.impl()->isAtom())
         return nullptr;
     ASSERT(regExp->global());
@@ -55,7 +55,7 @@ inline StringReplaceCache::Entry* StringReplaceCache::get(const String& subject,
 
 inline void StringReplaceCache::set(const String& subject, RegExp* regExp, JSImmutableButterfly* result, MatchResult matchResult, const Vector<int>& lastMatch)
 {
-    DisallowGC disallowGC;
+    AssertNoGC assertNoGC;
     if (!subject.impl() || !subject.impl()->isAtom())
         return;
 

@@ -178,6 +178,7 @@
 || defined(__ARM_ARCH_6J__) \
 || defined(__ARM_ARCH_6K__) \
 || defined(__ARM_ARCH_6Z__) \
+|| defined(__ARM_ARCH_6KZ__) \
 || defined(__ARM_ARCH_6ZK__) \
 || defined(__ARM_ARCH_6T2__) \
 || defined(__ARMV6__)
@@ -339,7 +340,7 @@
 
 /* BENABLE(LIBPAS) is enabling libpas build. But this does not mean we use libpas for bmalloc replacement. */
 #if !defined(BENABLE_LIBPAS)
-#if BCPU(ADDRESS64) && (BOS(DARWIN) || (!BOS(LINUX) && !BPLATFORM(GTK) && !BPLATFORM(WPE)))
+#if BCPU(ADDRESS64) && (BOS(DARWIN) || (BOS(LINUX) && (BCPU(X86_64) || BCPU(ARM64))) || BPLATFORM(PLAYSTATION))
 #define BENABLE_LIBPAS 1
 #ifndef PAS_BMALLOC
 #define PAS_BMALLOC 1
@@ -374,10 +375,10 @@
 #define BENABLE_MALLOC_SIZE 0
 #define BENABLE_MALLOC_GOOD_SIZE 0
 #endif
-/*disbale BUSE_TZONE for ARM64 too*/
+
 #if !defined(BUSE_TZONE)
-#if BUSE(LIBPAS) && BOS(DARWIN) && BCPU(ARM64)
-#define BUSE_TZONE 0
+#if BUSE(LIBPAS) && BOS(DARWIN) && (BCPU(ARM64) || BCPU(X86_64))
+#define BUSE_TZONE 1
 #else
 #define BUSE_TZONE 0
 #endif

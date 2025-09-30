@@ -30,9 +30,12 @@
 #include "ColorSerialization.h"
 #include <cmath>
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Color);
 
 static constexpr auto lightenedBlack = SRGBA<uint8_t> { 84, 84, 84 };
 static constexpr auto darkenedWhite = SRGBA<uint8_t> { 171, 171, 171 };
@@ -73,8 +76,7 @@ std::optional<ColorDataForIPC> Color::data() const
         return std::nullopt;
 
     if (isOutOfLine()) {
-        auto& outOfLineComponents = asOutOfLine();
-        auto [c1, c2, c3, alpha] = outOfLineComponents.unresolvedComponents();
+        auto [c1, c2, c3, alpha] = asOutOfLine().unresolvedComponents();
 
         OutOfLineColorDataForIPC oolcd = {
             .colorSpace = colorSpace(),
@@ -170,9 +172,7 @@ double Color::lightness() const
 
 double Color::luminance() const
 {
-    return callOnUnderlyingType([&] (const auto& underlyingColor) {
-        return WebCore::relativeLuminance(underlyingColor);
-    });
+    return WebCore::relativeLuminance(*this);
 }
 
 bool Color::anyComponentIsNone() const
@@ -217,7 +217,7 @@ Color Color::semanticColor() const
         return *this;
 
     if (isOutOfLine())
-        return { asOutOfLineRef(), colorSpace(), Flags::Semantic };
+        return { protectedAsOutOfLine(), colorSpace(), Flags::Semantic };
     return { asInline(), Flags::Semantic };
 }
 
@@ -236,7 +236,7 @@ ColorComponents<float, 4> Color::toResolvedColorComponentsInColorSpace(const Des
 std::pair<ColorSpace, ColorComponents<float, 4>> Color::colorSpaceAndResolvedColorComponents() const
 {
     if (isOutOfLine())
-        return { colorSpace(), resolveColorComponents(asOutOfLine().resolvedComponents()) };
+        return { colorSpace(), resolveColorComponents(protectedAsOutOfLine()->resolvedComponents()) };
     return { ColorSpace::SRGB, asColorComponents(convertColor<SRGBA<float>>(asInline()).resolved()) };
 }
 

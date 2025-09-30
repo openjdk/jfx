@@ -38,6 +38,8 @@ public:
 
     const StringWithDirection& textWithDirection() const { return m_title; }
 
+    void didFinishInsertingNode() final;
+
 private:
     HTMLTitleElement(const QualifiedName&, Document&);
 

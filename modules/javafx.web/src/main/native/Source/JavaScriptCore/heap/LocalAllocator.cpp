@@ -138,7 +138,7 @@ void* LocalAllocator::allocateSlowCase(JSC::Heap& heap, size_t cellSize, GCDefer
 
     Subspace* subspace = m_directory->m_subspace;
     if (subspace->isIsoSubspace()) {
-        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocatePreciseOrLowerTierPrecise(cellSize))
+        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocateLowerTierPrecise(cellSize))
             return result;
     }
 
@@ -272,16 +272,6 @@ void LocalAllocator::doTestCollectionsIfNeeded(JSC::Heap& heap, GCDeferralContex
     }
     if (++allocationCount >= Options::slowPathAllocsBetweenGCs())
         allocationCount = 0;
-}
-
-bool LocalAllocator::isFreeListedCell(const void* target) const
-{
-    // This abomination exists to detect when an object is in the dead-but-not-destructed state.
-    // Therefore, it's not even clear that this needs to do anything beyond returning "false", since
-    // if we know that the block owning the object is free-listed, then it's impossible for any
-    // objects to be in the dead-but-not-destructed state.
-    // FIXME: Get rid of this abomination. https://bugs.webkit.org/show_bug.cgi?id=181655
-    return m_freeList.contains(bitwise_cast<HeapCell*>(target));
 }
 
 } // namespace JSC

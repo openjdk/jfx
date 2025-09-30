@@ -639,7 +639,7 @@ gst_tag_demux_chain_buffer (GstTagDemux * demux, GstBuffer * buf,
       gst_tag_demux_chain_parse_tag (demux);
       if (demux->priv->state != GST_TAG_DEMUX_TYPEFINDING)
         break;
-      /* Fall-through */
+      /* FALLTHROUGH */
     case GST_TAG_DEMUX_TYPEFINDING:{
       GstTypeFindProbability probability = 0;
       GstBuffer *typefind_buf = NULL;
@@ -696,8 +696,8 @@ gst_tag_demux_chain_buffer (GstTagDemux * demux, GstBuffer * buf,
       /* Move onto streaming and fall-through to push out existing
        * data */
       demux->priv->state = GST_TAG_DEMUX_STREAMING;
-      /* fall-through */
     }
+      /* FALLTHROUGH */
     case GST_TAG_DEMUX_STREAMING:{
       GstBuffer *outbuf = NULL;
       gsize outbuf_size;

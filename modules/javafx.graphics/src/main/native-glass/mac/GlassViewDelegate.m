@@ -23,7 +23,6 @@
  * questions.
  */
 
-#include "GlassDraggingSource.h"
 #import "common.h"
 #import "com_sun_glass_events_ViewEvent.h"
 #import "com_sun_glass_events_MouseEvent.h"
@@ -36,13 +35,9 @@
 #import "GlassMacros.h"
 #import "GlassViewDelegate.h"
 #import "GlassKey.h"
-#import "GlassScreen.h"
 #import "GlassWindow.h"
 #import "GlassApplication.h"
-#import "GlassLayer3D.h"
-#import "GlassPasteboard.h"
 #import "GlassHelper.h"
-#import "GlassStatics.h"
 #import "GlassPasteboard.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

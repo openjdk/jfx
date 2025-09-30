@@ -35,8 +35,8 @@ public:
     inline void deref() const;
 
     WEBCORE_EXPORT ~ImmutableStyleProperties();
-    static Ref<ImmutableStyleProperties> create(const CSSProperty* properties, unsigned count, CSSParserMode);
-    static Ref<ImmutableStyleProperties> createDeduplicating(const CSSProperty* properties, unsigned count, CSSParserMode);
+    static Ref<ImmutableStyleProperties> create(std::span<const CSSProperty> properties, CSSParserMode);
+    static Ref<ImmutableStyleProperties> createDeduplicating(std::span<const CSSProperty> properties, CSSParserMode);
 
     unsigned propertyCount() const { return m_arraySize; }
     bool isEmpty() const { return !propertyCount(); }
@@ -58,7 +58,7 @@ public:
 private:
     PackedPtr<const CSSValue>* valueArray() const;
     const StylePropertyMetadata* metadataArray() const;
-    ImmutableStyleProperties(const CSSProperty*, unsigned count, CSSParserMode);
+    ImmutableStyleProperties(std::span<const CSSProperty>, CSSParserMode);
 };
 
 inline void ImmutableStyleProperties::deref() const
@@ -67,16 +67,19 @@ inline void ImmutableStyleProperties::deref() const
         delete this;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 inline PackedPtr<const CSSValue>* ImmutableStyleProperties::valueArray() const
 {
-    return bitwise_cast<PackedPtr<const CSSValue>*>(bitwise_cast<const uint8_t*>(metadataArray()) + (m_arraySize * sizeof(StylePropertyMetadata)));
+    return std::bit_cast<PackedPtr<const CSSValue>*>(std::bit_cast<const uint8_t*>(metadataArray()) + (m_arraySize * sizeof(StylePropertyMetadata)));
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 inline const StylePropertyMetadata* ImmutableStyleProperties::metadataArray() const
 {
     return reinterpret_cast<const StylePropertyMetadata*>(const_cast<const void**>((&(this->m_storage))));
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 inline ImmutableStyleProperties::PropertyReference ImmutableStyleProperties::propertyAt(unsigned index) const
 {
     return PropertyReference(metadataArray()[index], valueArray()[index].get());
@@ -86,6 +89,7 @@ constexpr size_t ImmutableStyleProperties::objectSize(unsigned count)
 {
     return sizeof(ImmutableStyleProperties) - sizeof(void*) + sizeof(StylePropertyMetadata) * count + sizeof(PackedPtr<const CSSValue>) * count;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 }
 
