@@ -224,6 +224,10 @@ public class StubStage implements TKStage {
     }
 
     @Override
+    public void setDarkFrame(boolean value) {
+    }
+
+    @Override
     public void requestFocus() {
         notificationSender.changedFocused(true, FocusCause.ACTIVATED);
     }
