@@ -42,7 +42,7 @@ final class ViewSceneOverlay {
 
     private final Scene scene;
     private final ViewPainter painter;
-    private final Subscription subscription;
+    private final Subscription subscriptions;
     private Parent root;
     private boolean rootDirty;
     private double width, height;
@@ -50,13 +50,13 @@ final class ViewSceneOverlay {
     ViewSceneOverlay(Scene scene, ViewPainter painter) {
         this.scene = scene;
         this.painter = painter;
-        this.subscription = Subscription.combine(
+        this.subscriptions = Subscription.combine(
             scene.rootProperty().subscribe(this::onSceneRootChanged),
             scene.effectiveNodeOrientationProperty().subscribe(this::onEffectiveNodeOrientationInvalidated));
     }
 
     public void dispose() {
-        subscription.unsubscribe();
+        subscriptions.unsubscribe();
     }
 
     public void reapplyCSS() {
