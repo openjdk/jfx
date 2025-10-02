@@ -33,6 +33,16 @@
 }
 
 - (NSString * _Nullable)accessibilityLabel {
+    if ([super accessibilityTitle] == NULL) {
+        if ([super accessibilityChildren] != NULL && [[super accessibilityChildren] count] != 0) {
+            id object = [super accessibilityChildren][0];
+            if ([object respondsToSelector:@selector(accessibilityValue)]) {
+                return [object accessibilityValue];
+            }
+        } else {
+            return @"";
+        }
+    }
     return [super accessibilityTitle];
 }
 

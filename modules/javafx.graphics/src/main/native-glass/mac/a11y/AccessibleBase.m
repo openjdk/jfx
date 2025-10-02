@@ -62,7 +62,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU_ITEM"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"RADIO_MENU_ITEM"];
-    [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU_BAR"];
+    [rolesMap setObject:@"JFXMenuBarAccessibility" forKey:@"MENU_BAR"];
 
 }
 
