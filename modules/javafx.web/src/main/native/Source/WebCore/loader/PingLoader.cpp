@@ -112,7 +112,7 @@ void PingLoader::loadImage(LocalFrame& frame, const URL& url)
     String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), request.url(), frame.loader().outgoingReferrerURL(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
-    frame.checkedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
+    frame.protectedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes, ContentSecurityPolicyImposition::DoPolicyCheck, ReferrerPolicy::EmptyString);
 }
@@ -140,7 +140,7 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
 
     request.setHTTPMethod("POST"_s);
     request.setHTTPContentType("text/ping"_s);
-    request.setHTTPBody(FormData::create("PING"));
+    request.setHTTPBody(FormData::create("PING"_s));
     request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
@@ -148,10 +148,10 @@ void PingLoader::sendPing(LocalFrame& frame, const URL& pingURL, const URL& dest
     Ref sourceOrigin = document->securityOrigin();
     FrameLoader::addHTTPOriginIfNeeded(request, SecurityPolicy::generateOriginHeader(document->referrerPolicy(), request.url(), sourceOrigin, OriginAccessPatternsForWebProcess::singleton()));
 
-    frame.checkedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
+    frame.protectedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     // https://html.spec.whatwg.org/multipage/links.html#hyperlink-auditing
-    if (document->securityOrigin().isSameOriginAs(SecurityOrigin::create(pingURL).get())
+    if (document->protectedSecurityOrigin()->isSameOriginAs(SecurityOrigin::create(pingURL).get())
         || !document->url().protocolIs("https"_s))
         request.setHTTPHeaderField(HTTPHeaderName::PingFrom, document->url().string());
     request.setHTTPHeaderField(HTTPHeaderName::PingTo, destinationURL.string());
@@ -185,6 +185,7 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
         break;
     case ViolationReportType::COEPInheritenceViolation:
     case ViolationReportType::CORPViolation:
+    case ViolationReportType::CSPHashReport:
     case ViolationReportType::CrossOriginOpenerPolicy:
     case ViolationReportType::Deprecation:
     case ViolationReportType::StandardReportingAPIViolation:
@@ -202,7 +203,7 @@ void PingLoader::sendViolationReport(LocalFrame& frame, const URL& reportURL, Re
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
     if (reportType == ViolationReportType::ContentSecurityPolicy)
-        frame.checkedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
+        frame.protectedLoader()->updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     String referrer = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), reportURL, frame.loader().outgoingReferrerURL(), OriginAccessPatternsForWebProcess::singleton());
     if (!referrer.isEmpty())
@@ -219,7 +220,7 @@ void PingLoader::startPingLoad(LocalFrame& frame, ResourceRequest& request, HTTP
     // Document in the Frame, but the activeDocumentLoader will be associated
     // with the provisional DocumentLoader if there is a provisional
     // DocumentLoader.
-    bool shouldUseCredentialStorage = frame.checkedLoader()->client().shouldUseCredentialStorage(frame.loader().activeDocumentLoader(), identifier);
+    bool shouldUseCredentialStorage = frame.protectedLoader()->client().shouldUseCredentialStorage(frame.loader().activeDocumentLoader(), identifier);
     ResourceLoaderOptions options;
     options.credentials = shouldUseCredentialStorage ? FetchOptions::Credentials::Include : FetchOptions::Credentials::Omit;
     options.redirect = shouldFollowRedirects == ShouldFollowRedirects::Yes ? FetchOptions::Redirect::Follow : FetchOptions::Redirect::Error;

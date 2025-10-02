@@ -36,6 +36,7 @@
 #include "RotateTransformOperation.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
@@ -50,6 +51,13 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatAnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransformAnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FilterAnimationValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(KeyframeValueList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GraphicsLayer);
 
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 String acceleratedEffectPropertyIDAsString(AcceleratedEffectProperty property)
@@ -111,7 +119,7 @@ String animatedPropertyIDAsString(AnimatedProperty property)
     return ""_s;
 }
 
-typedef HashMap<const GraphicsLayer*, Vector<FloatRect>> RepaintMap;
+typedef UncheckedKeyHashMap<const GraphicsLayer*, Vector<FloatRect>> RepaintMap;
 static RepaintMap& repaintRectMap()
 {
     static NeverDestroyed<RepaintMap> map;
@@ -157,17 +165,19 @@ bool GraphicsLayer::supportsLayerType(Type type)
 }
 #endif
 
-#if !USE(COORDINATED_GRAPHICS)
 bool GraphicsLayer::supportsContentsTiling()
 {
+#if USE(COORDINATED_GRAPHICS)
+    return true;
+#else
     // FIXME: Enable the feature on different ports.
     return false;
-}
 #endif
+}
 
 // Singleton client used for layers on which clearClient has been called.
 class EmptyGraphicsLayerClient final : public GraphicsLayerClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(EmptyGraphicsLayerClient);
 public:
     static EmptyGraphicsLayerClient& singleton();
 };
@@ -204,6 +214,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_shouldPaintUsingCompositeCopy(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     , m_isSeparated(false)
+    , m_isSeparatedImage(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
     , m_isSeparatedPortal(false)
     , m_isDescendentOfSeparatedPortal(false)
@@ -406,6 +417,15 @@ void GraphicsLayer::removeFromParentInternal()
     }
 }
 
+bool GraphicsLayer::needsBackdrop() const
+{
+#if HAVE(CORE_MATERIAL)
+    if (appleVisualEffectNeedsBackdrop(m_appleVisualEffectData.effect))
+        return true;
+#endif
+    return !m_backdropFilters.isEmpty();
+}
+
 void GraphicsLayer::setPreserves3D(bool b)
 {
     ASSERT_IMPLIES(m_type == Type::Structural, b);
@@ -423,6 +443,14 @@ void GraphicsLayer::setDrawsContent(bool b)
     ASSERT_IMPLIES(m_type == Type::Structural, false);
     m_drawsContent = b;
 }
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+void GraphicsLayer::setDrawsHDRContent(bool b)
+{
+    ASSERT(m_type != Type::Structural);
+    m_drawsHDRContent = b;
+}
+#endif
 
 const TransformationMatrix& GraphicsLayer::transform() const
 {
@@ -633,7 +661,7 @@ void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase
     m_paintingPhase = phase;
 }
 
-void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior)
+void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior) const
 {
     auto offset = offsetFromRenderer() - toFloatSize(scrollOffset());
     auto clipRect = clip;
@@ -857,7 +885,7 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     repaintRectMap().add(this, Vector<FloatRect>()).iterator->value.append(WTFMove(largestRepaintRect));
 }
 
-void GraphicsLayer::traverse(GraphicsLayer& layer, const Function<void(GraphicsLayer&)>& traversalFunc)
+void GraphicsLayer::traverse(GraphicsLayer& layer, NOESCAPE const Function<void(GraphicsLayer&)>& traversalFunc)
 {
     traversalFunc(layer);
 
@@ -956,6 +984,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent"_s, options))
         ts << indent << "(drawsContent "_s << m_drawsContent << ")\n"_s;
 
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    if (m_drawsHDRContent)
+        ts << indent << "(drawsHDRContent "_s << m_drawsHDRContent << ")\n"_s;
+#endif
+
     if (!m_contentsVisible)
         ts << indent << "(contentsVisible "_s << m_contentsVisible << ")\n"_s;
 
@@ -994,6 +1027,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
         ts << '[' << m_childrenTransform->m31() << ' ' << m_childrenTransform->m32() << ' ' << m_childrenTransform->m33() << ' ' << m_childrenTransform->m34() << "] "_s;
         ts << '[' << m_childrenTransform->m41() << ' ' << m_childrenTransform->m42() << ' ' << m_childrenTransform->m43() << ' ' << m_childrenTransform->m44() << "])\n"_s;
     }
+
+#if HAVE(CORE_MATERIAL)
+    if (m_appleVisualEffectData.effect != AppleVisualEffect::None)
+        ts << indent << "(appleVisualEffectData "_s << m_appleVisualEffectData << ")\n"_s;
+#endif
 
     if (m_maskLayer) {
         ts << indent << "(mask layer"_s;
@@ -1067,6 +1105,8 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
             ts << indent << ")\n"_s;
         }
     }
+
+    client().dumpProperties(this, ts, options);
 }
 
 TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& layers)
@@ -1104,9 +1144,10 @@ TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& cu
     return ts;
 }
 
-String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options) const
+String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options, uint32_t baseIndent) const
 {
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
+    ts.setIndent(baseIndent);
 
     dumpLayer(ts, options);
     return ts.release();
@@ -1127,7 +1168,7 @@ void showGraphicsLayerTree(const WebCore::GraphicsLayer* layer)
     // to a file in case we don't have easy access to stderr.
     auto [tempFilePath, fileHandle] = FileSystem::openTemporaryFile("GraphicsLayerTree"_s);
     if (FileSystem::isHandleValid(fileHandle)) {
-        FileSystem::writeToFile(fileHandle, output.utf8().span());
+        FileSystem::writeToFile(fileHandle, byteCast<uint8_t>(output.utf8().span()));
         FileSystem::closeFile(fileHandle);
         WTFLogAlways("Saved GraphicsLayer Tree to %s", tempFilePath.utf8().data());
     } else

@@ -151,7 +151,7 @@ LayoutUnit RenderSVGRoot::computeReplacedLogicalWidth(ShouldComputePreferred sho
         return m_containerSize.width();
 
     if (isEmbeddedThroughFrameContainingSVGDocument())
-        return containingBlock()->availableLogicalWidth();
+        return containingBlock()->contentBoxLogicalWidth();
 
     // Standalone SVG / SVG embedded via SVGImage (background-image/border-image/etc) / Inline SVG.
     auto result = RenderReplaced::computeReplacedLogicalWidth(shouldComputePreferred);
@@ -171,7 +171,7 @@ LayoutUnit RenderSVGRoot::computeReplacedLogicalHeight(std::optional<LayoutUnit>
         return m_containerSize.height();
 
     if (isEmbeddedThroughFrameContainingSVGDocument())
-        return containingBlock()->availableLogicalHeight(IncludeMarginBorderPadding);
+        return containingBlock()->availableLogicalHeight(AvailableLogicalHeightType::IncludeMarginBorderPadding);
 
     // Standalone SVG / SVG embedded via SVGImage (background-image/border-image/etc) / Inline SVG.
     auto result = RenderReplaced::computeReplacedLogicalHeight(estimatedUsedWidth);
@@ -571,12 +571,12 @@ void RenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* repaintCon
             }
 }
 
-LayoutRect RenderSVGRoot::overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy, PaintPhase) const
+LayoutRect RenderSVGRoot::overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy, PaintPhase) const
 {
     // SVG2: For those elements to which the overflow property can apply. If the overflow property has the value hidden or scroll, a clip, the exact size of the SVG viewport is applied.
     // Unlike RenderBox, RenderSVGRoot explicitely includes the padding in the overflow clip rect. In SVG the padding applied to the outermost <svg>
     // shrinks the area available for child renderers to paint into -- reflect this by shrinking the overflow clip rect itself.
-    auto clipRect = borderBoxRectInFragment(fragment);
+    auto clipRect = borderBoxRect();
     clipRect.setLocation(location + clipRect.location() + toLayoutSize(contentBoxLocation()));
     clipRect.setSize(clipRect.size() - LayoutSize(horizontalBorderAndPaddingExtent(), verticalBorderAndPaddingExtent()));
     return clipRect;
@@ -589,8 +589,7 @@ void RenderSVGRoot::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& 
 
 void RenderSVGRoot::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
-    auto* fragmentedFlow = enclosingFragmentedFlow();
-    if (fragmentedFlow && fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, *this))
+    if (CheckedPtr fragmentedFlow = enclosingFragmentedFlow(); fragmentedFlow && fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, *this))
         return;
 
     quads.append(localToAbsoluteQuad(FloatRect { borderBoxRect() }, UseTransforms, wasFixed));

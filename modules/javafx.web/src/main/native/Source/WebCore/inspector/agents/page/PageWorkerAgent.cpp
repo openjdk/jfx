@@ -35,6 +35,7 @@ namespace WebCore {
 using namespace Inspector;
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PageWorkerAgent);
+
 PageWorkerAgent::PageWorkerAgent(PageAgentContext& context)
     : InspectorWorkerAgent(context)
     , m_page(context.inspectedPage)
@@ -45,7 +46,7 @@ PageWorkerAgent::~PageWorkerAgent() = default;
 
 void PageWorkerAgent::connectToAllWorkerInspectorProxies()
 {
-    for (Ref proxy : WorkerInspectorProxy::proxiesForPage(*m_page.identifier()))
+    for (Ref proxy : WorkerInspectorProxy::proxiesForPage(*m_page->identifier()))
                 connectToWorkerInspectorProxy(proxy);
 }
 

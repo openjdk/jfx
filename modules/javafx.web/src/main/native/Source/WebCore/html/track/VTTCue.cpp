@@ -69,12 +69,12 @@ namespace WebCore {
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VTTCue);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VTTCueBox);
 
-static const CSSValueID displayWritingModeMap[] = {
+static constexpr std::array<CSSValueID, 3> displayWritingModeMap {
     CSSValueHorizontalTb, CSSValueVerticalRl, CSSValueVerticalLr
 };
 static_assert(std::size(displayWritingModeMap) == static_cast<size_t>(WebCore::VTTDirectionSetting::MaxValue) + 1, "displayWritingModeMap has wrong size");
 
-static const CSSValueID displayAlignmentMap[] = {
+static constexpr std::array<CSSValueID, 5> displayAlignmentMap {
     CSSValueStart, CSSValueCenter, CSSValueEnd, CSSValueLeft, CSSValueRight
 };
 static_assert(std::size(displayAlignmentMap) == static_cast<size_t>(WebCore::VTTAlignSetting::MaxValue) + 1, "displayAlignmentMap has wrong size");
@@ -540,7 +540,7 @@ RefPtr<DocumentFragment> VTTCue::createCueRenderingTree()
     // The cloned fragment is never exposed to author scripts so it's safe to dispatch events here.
     ScriptDisallowedScope::EventAllowedScope allowedScope(clonedFragment);
 
-    m_webVTTNodeTree->cloneChildNodes(clonedFragment);
+    m_webVTTNodeTree->cloneChildNodes(*document, nullptr, clonedFragment);
     return clonedFragment;
 }
 
@@ -1128,17 +1128,17 @@ std::pair<double, double> VTTCue::getPositionCoordinates() const
 VTTCue::CueSetting VTTCue::settingName(VTTScanner& input)
 {
     CueSetting parsedSetting = None;
-    if (input.scan("vertical"))
+    if (input.scan("vertical"_span8))
         parsedSetting = Vertical;
-    else if (input.scan("line"))
+    else if (input.scan("line"_span8))
         parsedSetting = Line;
-    else if (input.scan("position"))
+    else if (input.scan("position"_span8))
         parsedSetting = Position;
-    else if (input.scan("size"))
+    else if (input.scan("size"_span8))
         parsedSetting = Size;
-    else if (input.scan("align"))
+    else if (input.scan("align"_span8))
         parsedSetting = Align;
-    else if (input.scan("region"))
+    else if (input.scan("region"_span8))
         parsedSetting = Region;
 
     // Verify that a ':' follows.
@@ -1464,7 +1464,7 @@ void VTTCue::prepareToSpeak(SpeechSynthesis& speechSynthesis, double rate, doubl
 }
 
 #if !RELEASE_LOG_DISABLED
-const void* VTTCue::logIdentifier() const
+uint64_t VTTCue::logIdentifier() const
 {
     if (!m_logIdentifier && track())
         m_logIdentifier = childLogIdentifier(track()->logIdentifier(), cryptographicallyRandomNumber<uint64_t>());

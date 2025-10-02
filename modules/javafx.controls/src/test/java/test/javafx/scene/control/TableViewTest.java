@@ -1073,6 +1073,8 @@ public class TableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 5); // rows 0 - 5 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 5, -1); // rows 5+ should be empty
 
@@ -1081,6 +1083,7 @@ public class TableViewTest {
         table.setItems(FXCollections.observableArrayList(
             new Person("*_*Emma", "Jones", "emma.jones@example.com"),
             new Person("_Michael", "Brown", "michael.brown@example.com")));
+        Toolkit.getToolkit().firePulse();
 
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
@@ -1420,6 +1423,8 @@ public class TableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
+        stageLoader = new StageLoader(table);
+
         // test the state before we hide and re-add a column
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
@@ -1429,6 +1434,7 @@ public class TableViewTest {
 
         // hide the last name column, and test cells again
         table.getColumns().remove(lastNameCol);
+        Toolkit.getToolkit().firePulse();
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
@@ -1441,6 +1447,7 @@ public class TableViewTest {
         // some of the last name values will not be where we expect them to be.
         // This is clearly not ideal!
         table.getColumns().add(1, lastNameCol);
+        Toolkit.getToolkit().firePulse();
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
@@ -1476,6 +1483,8 @@ public class TableViewTest {
 
         tableView.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(tableView);
+
         // we want the vertical scrollbar
         VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
 
@@ -1503,6 +1512,8 @@ public class TableViewTest {
         firstNameCol.setCellFactory(CheckBoxTableCell.forTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
+        stageLoader = new StageLoader(tableView);
+
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
         VirtualFlowTestUtils.assertRowsNotEmpty(tableView, 0, 1);
@@ -1528,6 +1539,8 @@ public class TableViewTest {
         firstNameCol.setEditable(true);
 
         tableView.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(tableView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 1, 0);
         assertEquals("Jim", cell.getText());
@@ -1560,6 +1573,8 @@ public class TableViewTest {
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         tableView.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(tableView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
         assertEquals(jacobSmith, cell.getItem());
@@ -1722,6 +1737,8 @@ public class TableViewTest {
                 ccc = new Person("CCC", "Giles", "jim.bob@example.com")
         ));
 
+        stageLoader = new StageLoader(table);
+
         final TableView.TableViewSelectionModel sm = table.getSelectionModel();
 
         // test pre-conditions
@@ -1815,6 +1832,8 @@ public class TableViewTest {
             }
         });
 
+        stageLoader = new StageLoader(table);
+
         // First two rows have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
 
@@ -1856,6 +1875,8 @@ public class TableViewTest {
                 };
             }
         });
+
+        stageLoader = new StageLoader(table);
 
         // First two rows have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
@@ -1961,6 +1982,8 @@ public class TableViewTest {
         table.setItems(FXCollections.observableArrayList(
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
+
+        stageLoader = new StageLoader(table);
 
         TableRow<Person> rowCell = (TableRow<Person>)VirtualFlowTestUtils.getCell(table, 0);
         final double initialWidth = ControlShim.computePrefWidth(rowCell, -1);
@@ -4828,7 +4851,7 @@ public class TableViewTest {
 
         TableView.TableViewFocusModel fm = stringTableView.getFocusModel();
 
-        StageLoader sl = new StageLoader(stringTableView);
+        stageLoader = new StageLoader(stringTableView);
 
         // click on row 0
         sm.select(0, column);
@@ -4867,8 +4890,6 @@ public class TableViewTest {
         assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
         assertEquals(1, anchor.getRow());
         assertEquals(column, anchor.getTableColumn());
-
-        sl.dispose();
     }
 
     private final ObservableList<String> rt_39256_list = FXCollections.observableArrayList();
@@ -5520,6 +5541,8 @@ public class TableViewTest {
         c2.setCellValueFactory(new PropertyValueFactory<>("lastName"));
         t.getColumns().addAll(c1, c2);
 
+        stageLoader = new StageLoader(t);
+
         final int startIndex = toRight ? 0 : 2;
         final int endIndex = toRight ? 2 : 0;
         final TableColumn<Person,String> startColumn = toBottom ? c1 : c2;
@@ -5823,7 +5846,7 @@ public class TableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        StageLoader sl = new StageLoader(table);
+        stageLoader = new StageLoader(table);
         KeyEventFirer keyboard = new KeyEventFirer(table);
 
         assertEquals(0, sm.getSelectedItems().size());
@@ -5851,8 +5874,6 @@ public class TableViewTest {
         sm.clearAndSelect(0, firstNameCol);
         assertEquals(1, sm.getSelectedCells().size());
         assertEquals(1, sm.getSelectedItems().size());
-
-        sl.dispose();
     }
 
     @Test
@@ -5918,6 +5939,8 @@ public class TableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
+        stageLoader = new StageLoader(table);
+
         // Call change::toString
         table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<Person>) Object::toString);
 
@@ -5951,6 +5974,8 @@ public class TableViewTest {
 
         TableSelectionModel<String> sm = stringTableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        stageLoader = new StageLoader(stringTableView);
 
         // click on row 1
         Cell startCell = VirtualFlowTestUtils.getCell(stringTableView, 1, 0);

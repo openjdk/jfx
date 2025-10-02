@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Alexey Shvayka <shvaikalesh@gmail.com>.
+ * Copyright (C) 2025 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +35,8 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace Yarr {
 
 enum class CreateDisjunctionPurpose : uint8_t { NotForNextAlternative, ForNextAlternative };
@@ -45,13 +48,76 @@ enum class CharacterClassSetOp : uint8_t {
     Subtraction
 };
 
+template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Vector<char32_t>>& disjunctionStrings, const String& subpatternName) {
+    { checker.assertionBOL() } -> std::same_as<void>;
+    { checker.assertionEOL() } -> std::same_as<void>;
+    { checker.assertionWordBoundary(bool{}) } -> std::same_as<void>;
+    { checker.atomPatternCharacter(char32_t{}) } -> std::same_as<void>;
+    { checker.atomBuiltInCharacterClass(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBegin() } -> std::same_as<void>;
+    { checker.atomCharacterClassAtom(UChar{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassRange(UChar{}, UChar{}) } -> std::same_as<void>;
+    { checker.atomPatternCharacter(char32_t{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassBuiltIn(BuiltInCharacterClassID{}, bool{}) } -> std::same_as<void>;
+    { checker.atomClassStringDisjunction(disjunctionStrings) } -> std::same_as<void>;
+    { checker.atomCharacterClassSetOp(CharacterClassSetOp{}) } -> std::same_as<void>;
+    { checker.atomCharacterClassPushNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassPopNested() } -> std::same_as<void>;
+    { checker.atomCharacterClassEnd() } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin() } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool{}) } -> std::same_as<void>;
+    { checker.atomParenthesesSubpatternBegin(bool{}, std::optional<String>{}) } -> std::same_as<void>;
+    { checker.atomParentheticalAssertionBegin(bool{}, MatchDirection{}) } -> std::same_as<void>;
+    { checker.atomParentheticalModifierBegin(OptionSet<Flags>{}, OptionSet<Flags>{})} -> std::same_as<void>;
+    { checker.atomParenthesesEnd() } -> std::same_as<void>;
+    { checker.atomBackReference(unsigned{}) } -> std::same_as<void>;
+    { checker.atomNamedBackReference(subpatternName) } -> std::same_as<void>;
+    { checker.atomNamedForwardReference(subpatternName) } -> std::same_as<void>;
+    { checker.quantifyAtom(unsigned{}, unsigned{}, bool{}) } -> std::same_as<void>;
+    { checker.disjunction(CreateDisjunctionPurpose{}) } -> std::same_as<void>;
+    { checker.resetForReparsing() } -> std::same_as<void>;
+};
+
 // The Parser class should not be used directly - only via the Yarr::parse() method.
-template<class Delegate, typename CharType>
+template<YarrSyntaxCheckable Delegate, typename CharType>
 class Parser {
+public:
+    Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
+        : m_delegate(delegate)
+        , m_data(pattern.span<CharType>().data())
+        , m_size(pattern.length())
+        , m_compileMode(compileMode)
+        , m_backReferenceLimit(backReferenceLimit)
+        , m_isNamedForwardReferenceAllowed(isNamedForwardReferenceAllowed)
+    {
+    }
+
+    /*
+     * parse():
+     *
+     * This method calls parseTokens() to parse over the input and returns error code for a result.
+     */
+    ErrorCode parse()
+    {
+        if (m_size > MAX_PATTERN_SIZE)
+            return ErrorCode::PatternTooLarge;
+
+        parseTokens();
+
+        if (!hasError(m_errorCode)) {
+            ASSERT(atEndOfPattern());
+            handleIllegalReferences();
+            ASSERT(atEndOfPattern());
+        }
+
+        return m_errorCode;
+    }
+
 private:
     static constexpr char32_t errorCodePoint = 0xFFFFFFFFu;
 
-    template<class FriendDelegate>
+    template<YarrSyntaxCheckable FriendDelegate>
     friend ErrorCode parse(FriendDelegate&, StringView pattern, CompileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed);
 
     enum class UnicodeParseContext : uint8_t { PatternCodePoint, GroupName };
@@ -67,7 +133,7 @@ private:
     };
 
     class NamedCaptureGroups {
-        typedef HashSet<String> GroupNameHashSet;
+        typedef UncheckedKeyHashSet<String> GroupNameHashSet;
 
     public:
         NamedCaptureGroups()
@@ -790,16 +856,6 @@ private:
         Vector<Vector<char32_t>> m_strings;
     };
 
-    Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
-        : m_delegate(delegate)
-        , m_data(pattern.span<CharType>().data())
-        , m_size(pattern.length())
-        , m_compileMode(compileMode)
-        , m_backReferenceLimit(backReferenceLimit)
-        , m_isNamedForwardReferenceAllowed(isNamedForwardReferenceAllowed)
-    {
-    }
-
     // The handling of IdentityEscapes is different depending on which unicode flag if any is active.
     // For both Unicode and UnicodeSet patterns, IdentityEscapes only include SyntaxCharacters or '/'.
     // For UnicodeSet patterns when parsing ClassSet expressions and ClassStringDisjunctions, escapes include SyntaxCharacters, '/'
@@ -1466,22 +1522,26 @@ private:
                 return;
             }
 
-            switch (consume()) {
+            switch (peek()) {
             case ':':
+                consume();
                 m_delegate.atomParenthesesSubpatternBegin(false);
                 break;
 
             case '=':
+                consume();
                 m_delegate.atomParentheticalAssertionBegin(false, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
             case '!':
+                consume();
                 m_delegate.atomParentheticalAssertionBegin(true, Forward);
                 type = ParenthesesType::Assertion;
                 break;
 
             case '<': {
+                consume();
                 auto groupName = tryConsumeGroupName();
                 if (hasError(m_errorCode))
                     break;
@@ -1511,6 +1571,67 @@ private:
                     }
                     m_errorCode = ErrorCode::InvalidGroupName;
                 }
+
+                break;
+            }
+
+#define REGEXP_MOD_CASE(key, name, lowerCaseName) \
+            case key:
+
+            // Valid RegularExpressionFlags for regexp modifiers
+            case '-':
+            JSC_REGEXP_MOD_FLAGS(REGEXP_MOD_CASE)
+
+#undef REGEXP_MOD_CASE
+            {
+                // consume characters until :
+                OptionSet<Flags> set;
+                OptionSet<Flags> unset;
+                bool hasHitNegation = false;
+                char32_t c;
+                while (!atEndOfPattern() && (c = consume()) != ':') {
+                    switch (c) {
+                    case '-':
+                        if (hasHitNegation)
+                            m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
+                        hasHitNegation = true;
+                        break;
+
+                    // It is a Syntax Error if the source text matched by RegularExpressionModifiers contains the same code point more than once
+#define HANDLE_REGEXP_MOD_FLAG(key, name, lowerCaseName) \
+                    case key: \
+                        if (hasHitNegation) { \
+                            if (unset.contains(Flags::name)) \
+                                m_errorCode = ErrorCode::InvalidRegularExpressionModifier; \
+                            unset.add(Flags::name); \
+                        } else { \
+                            if (set.contains(Flags::name)) \
+                                m_errorCode = ErrorCode::InvalidRegularExpressionModifier; \
+                            set.add(Flags::name); \
+                        } \
+                        break;
+
+                        JSC_REGEXP_MOD_FLAGS(HANDLE_REGEXP_MOD_FLAG)
+#undef HANDLE_REGEXP_MOD_FLAG
+
+                    default:
+                        m_errorCode = ErrorCode::ParenthesesTypeInvalid;
+                        break;
+                    }
+                }
+
+                if (hasError(m_errorCode))
+                    break;
+
+                // we've consumed (?<flags>:
+
+                // It is a Syntax Error if any code point in the source text matched by the first RegularExpressionModifiers is also contained in the source text matched by the second RegularExpressionModifiers.
+                if (set.containsAny(unset))
+                    m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
+                // It is a Syntax Error if the source text matched by the first RegularExpressionModifiers and the source text matched by the second RegularExpressionModifiers are both empty.
+                if (set.isEmpty() && unset.isEmpty())
+                    m_errorCode = ErrorCode::InvalidRegularExpressionModifier;
+                m_delegate.atomParentheticalModifierBegin(set, unset);
 
                 break;
             }
@@ -1712,31 +1833,15 @@ private:
 
             if (hasError(m_errorCode))
                 return;
+
+            if (m_delegate.abortedDueToError()) {
+                m_errorCode = m_delegate.abortErrorCode();
+                return;
+    }
         }
 
         if (!m_parenthesesStack.isEmpty())
             m_errorCode = ErrorCode::MissingParentheses;
-    }
-
-    /*
-     * parse():
-     *
-     * This method calls parseTokens() to parse over the input and returns error code for a result.
-     */
-    ErrorCode parse()
-    {
-        if (m_size > MAX_PATTERN_SIZE)
-            return ErrorCode::PatternTooLarge;
-
-        parseTokens();
-
-        if (!hasError(m_errorCode)) {
-            ASSERT(atEndOfPattern());
-            handleIllegalReferences();
-            ASSERT(atEndOfPattern());
-        }
-
-        return m_errorCode;
     }
 
     void handleIllegalReferences()
@@ -2098,7 +2203,7 @@ private:
     bool m_kIdentityEscapeSeen { false };
     Vector<ParenthesesType, 16> m_parenthesesStack;
     NamedCaptureGroups m_namedCaptureGroups;
-    HashSet<String> m_forwardReferenceNames;
+    UncheckedKeyHashSet<String> m_forwardReferenceNames;
 
     // Derived by empirical testing of compile time in PCRE and WREC.
     static constexpr unsigned MAX_PATTERN_SIZE = 1024 * 1024;
@@ -2139,6 +2244,9 @@ private:
  *    void quantifyAtom(unsigned min, unsigned max, bool greedy);
  *
  *    void disjunction(CreateDisjunctionPurpose purpose);
+ *
+ *    bool abortedDueToError() const;
+ *    ErrorCode abortErrorCode() const;
  *
  *    void resetForReparsing();
  *
@@ -2182,7 +2290,7 @@ inline CompileMode compileMode(std::optional<OptionSet<Flags>> flags)
     return CompileMode::Legacy;
 }
 
-template<class Delegate>
+template<YarrSyntaxCheckable Delegate>
 ErrorCode parse(Delegate& delegate, const StringView pattern, CompileMode compileMode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
 {
     if (pattern.is8Bit())
@@ -2191,3 +2299,5 @@ ErrorCode parse(Delegate& delegate, const StringView pattern, CompileMode compil
 }
 
 } } // namespace JSC::Yarr
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

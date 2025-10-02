@@ -33,6 +33,7 @@
 #include "ProbeContext.h"
 #include <wtf/PrintStream.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 

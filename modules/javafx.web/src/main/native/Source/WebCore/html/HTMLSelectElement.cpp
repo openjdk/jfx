@@ -53,7 +53,6 @@
 #include "NodeName.h"
 #include "NodeRareData.h"
 #include "Page.h"
-#include "PlatformMouseEvent.h"
 #include "RenderListBox.h"
 #include "RenderMenuList.h"
 #include "RenderTheme.h"
@@ -226,18 +225,20 @@ int HTMLSelectElement::activeSelectionEndListIndex() const
 ExceptionOr<void> HTMLSelectElement::add(const OptionOrOptGroupElement& element, const std::optional<HTMLElementOrInt>& before)
 {
     RefPtr<HTMLElement> beforeElement;
+    Ref<ContainerNode> parent = *this;
     if (before) {
         beforeElement = WTF::switchOn(before.value(),
             [](const RefPtr<HTMLElement>& element) -> HTMLElement* { return element.get(); },
             [this](int index) -> HTMLElement* { return item(index); }
         );
+        if (std::holds_alternative<int>(before.value()) && beforeElement && beforeElement->parentNode())
+            parent = *beforeElement->parentNode();
     }
     Ref toInsert = WTF::switchOn(element,
         [](const auto& htmlElement) -> HTMLElement& { return *htmlElement; }
     );
 
-
-    return insertBefore(toInsert, WTFMove(beforeElement));
+    return parent->insertBefore(toInsert, WTFMove(beforeElement));
 }
 
 void HTMLSelectElement::remove(int optionIndex)
@@ -251,6 +252,8 @@ void HTMLSelectElement::remove(int optionIndex)
 
 String HTMLSelectElement::value() const
 {
+    if (protectedDocument()->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::FormControls))
+        return emptyString();
     for (auto& item : listItems()) {
         if (RefPtr option = dynamicDowncast<HTMLOptionElement>(item.get())) {
             if (option->selected())
@@ -1447,12 +1450,12 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
             return;
 
         CheckedPtr renderer = this->renderer();
-        bool isHorizontalWritingMode = renderer ? renderer->style().isHorizontalWritingMode() : true;
-        bool isFlippedBlocksWritingMode = renderer ? renderer->style().isFlippedBlocksWritingMode() : false;
+        bool isHorizontalWritingMode = renderer ? renderer->writingMode().isHorizontal() : true;
+        bool isBlockFlipped = renderer ? renderer->writingMode().isBlockFlipped() : false;
 
         auto nextKeyIdentifier = isHorizontalWritingMode ? "Down"_s : "Right"_s;
         auto previousKeyIdentifier = isHorizontalWritingMode ? "Up"_s : "Left"_s;
-        if (isFlippedBlocksWritingMode)
+        if (isBlockFlipped)
             std::swap(nextKeyIdentifier, previousKeyIdentifier);
 
         const String& keyIdentifier = keyboardEvent->keyIdentifier();
@@ -1700,7 +1703,7 @@ ExceptionOr<void> HTMLSelectElement::showPicker()
         return Exception { ExceptionCode::SecurityError, "Select showPicker() called from cross-origin iframe."_s };
 
     RefPtr window = frame->window();
-    if (!window || !window->hasTransientActivation())
+    if (!window || !window->consumeTransientActivation())
         return Exception { ExceptionCode::NotAllowedError, "Select showPicker() requires a user gesture."_s };
 
 #if !PLATFORM(IOS_FAMILY)

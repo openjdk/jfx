@@ -32,9 +32,13 @@
 #include "PathStream.h"
 #include "PathTraversalState.h"
 #include "PlatformPathImpl.h"
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Path);
 
 Path::Path(const Vector<FloatPoint>& points)
     : m_data(DataRef<PathImpl> { PathStream::create(points) })
@@ -60,6 +64,32 @@ Path::Path(Ref<PathImpl>&& impl)
 Path::Path(const Path& other)
 {
     *this = other;
+}
+
+bool Path::definitelyEqual(const Path& other) const
+{
+    if (&other == this)
+        return true;
+
+    return WTF::switchOn(m_data,
+        [&](std::monostate) {
+            return other.isEmpty();
+        },
+        [&](const PathSegment& segment) {
+            auto otherSegment = other.singleSegment();
+            return otherSegment && segment == otherSegment.value();
+        },
+        [&](const DataRef<PathImpl>& impl) {
+            if (impl->isEmpty())
+                return other.isEmpty();
+
+            if (auto singleSegment = impl->singleSegment()) {
+                auto otherSegment = other.singleSegment();
+                return otherSegment && singleSegment == otherSegment.value();
+            }
+
+            return impl.ptr() && other.asImpl() && impl->definitelyEqual(*other.asImpl());
+        });
 }
 
 Path::Path(PathSegment&& segment)
@@ -97,6 +127,11 @@ PathImpl& Path::ensureImpl()
         return *impl;
 
     return setImpl(PathStream::create());
+}
+
+void Path::ensureImplForTesting()
+{
+    ensureImpl();
 }
 
 PathImpl* Path::asImpl()
@@ -271,6 +306,17 @@ void Path::addRoundedRect(const RoundedRect& rect)
     addRoundedRect(FloatRoundedRect(rect));
 }
 
+void Path::addContinuousRoundedRect(const FloatRect& rect, const float cornerWidth, const float cornerHeight)
+{
+    if (rect.isEmpty())
+        return;
+
+    if (isEmpty())
+        m_data = PathSegment(PathContinuousRoundedRect { rect, cornerWidth, cornerHeight });
+    else
+        ensureImpl().add(PathContinuousRoundedRect { rect, cornerWidth, cornerHeight });
+}
+
 void Path::closeSubpath()
 {
     if (isEmpty() || isClosed())
@@ -360,6 +406,45 @@ std::optional<PathDataLine> Path::singleDataLine() const
 
     if (auto impl = asImpl())
         return impl->singleDataLine();
+
+    return std::nullopt;
+}
+
+std::optional<PathRect> Path::singleRect() const
+{
+    if (auto segment = asSingle()) {
+        if (auto data = std::get_if<PathRect>(&segment->data()))
+            return *data;
+    }
+
+    if (auto impl = asImpl())
+        return impl->singleRect();
+
+    return std::nullopt;
+}
+
+std::optional<PathRoundedRect> Path::singleRoundedRect() const
+{
+    if (auto segment = asSingle()) {
+        if (auto data = std::get_if<PathRoundedRect>(&segment->data()))
+            return *data;
+    }
+
+    if (auto impl = asImpl())
+        return impl->singleRoundedRect();
+
+    return std::nullopt;
+}
+
+std::optional<PathContinuousRoundedRect> Path::singleContinuousRoundedRect() const
+{
+    if (auto segment = asSingle()) {
+        if (auto data = std::get_if<PathContinuousRoundedRect>(&segment->data()))
+            return *data;
+    }
+
+    if (auto impl = asImpl())
+        return impl->singleContinuousRoundedRect();
 
     return std::nullopt;
 }
@@ -519,7 +604,7 @@ bool Path::contains(const FloatPoint& point, WindRule rule) const
     return const_cast<Path&>(*this).ensurePlatformPathImpl().contains(point, rule);
 }
 
-bool Path::strokeContains(const FloatPoint& point, const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+bool Path::strokeContains(const FloatPoint& point, NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     ASSERT(strokeStyleApplier);
 
@@ -531,10 +616,10 @@ bool Path::strokeContains(const FloatPoint& point, const Function<void(GraphicsC
 
 bool Path::hasSubpaths() const
 {
-    if (auto segment = asSingle())
-        return PathStream::computeHasSubpaths({ segment, 1 });
+    if (auto* segment = asSingle())
+        return PathStream::computeHasSubpaths(singleElementSpan(*segment));
 
-    if (auto impl = asImpl())
+    if (auto* impl = asImpl())
         return impl->hasSubpaths();
 
     return false;
@@ -542,10 +627,10 @@ bool Path::hasSubpaths() const
 
 FloatRect Path::fastBoundingRect() const
 {
-    if (auto segment = asSingle())
-        return PathStream::computeFastBoundingRect({ segment, 1 });
+    if (auto* segment = asSingle())
+        return PathStream::computeFastBoundingRect(singleElementSpan(*segment));
 
-    if (auto impl = asImpl())
+    if (auto* impl = asImpl())
         return impl->fastBoundingRect();
 
     return { };
@@ -553,16 +638,16 @@ FloatRect Path::fastBoundingRect() const
 
 FloatRect Path::boundingRect() const
 {
-    if (auto segment = asSingle())
-        return PathStream::computeBoundingRect({ segment, 1 });
+    if (auto* segment = asSingle())
+        return PathStream::computeBoundingRect(singleElementSpan(*segment));
 
-    if (auto impl = asImpl())
+    if (auto* impl = asImpl())
         return impl->boundingRect();
 
     return { };
 }
 
-FloatRect Path::strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const
+FloatRect Path::strokeBoundingRect(NOESCAPE const Function<void(GraphicsContext&)>& strokeStyleApplier) const
 {
     return const_cast<Path&>(*this).ensurePlatformPathImpl().strokeBoundingRect(strokeStyleApplier);
 }

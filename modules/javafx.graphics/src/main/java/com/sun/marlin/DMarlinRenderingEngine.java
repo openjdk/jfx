@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -219,8 +219,8 @@ public final class DMarlinRenderingEngine implements MarlinConst
                 + MarlinConst.USE_LOGGER);
         logInfo("prism.marlin.logCreateContext = "
                 + MarlinConst.LOG_CREATE_CONTEXT);
-        logInfo("prism.marlin.logUnsafeMalloc  = "
-                + MarlinConst.LOG_UNSAFE_MALLOC);
+        logInfo("prism.marlin.logOffHeapMalloc  = "
+                + MarlinConst.LOG_OFF_HEAP_MALLOC);
 
         // quality settings
         logInfo("prism.marlin.curve_len_err    = "

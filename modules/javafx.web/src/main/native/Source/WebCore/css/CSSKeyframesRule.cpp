@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,11 +79,16 @@ void StyleRuleKeyframes::wrapperRemoveKeyframe(unsigned index)
 
 std::optional<size_t> StyleRuleKeyframes::findKeyframeIndex(const String& key) const
 {
-    auto keys = CSSParser::parseKeyframeKeyList(key);
+    auto keys = CSSParser::parseKeyframeKeyList(key, strictCSSParserContext());
     if (keys.isEmpty())
         return std::nullopt;
+
+    auto convertedKeys = keys.map([](auto& pair) -> StyleRuleKeyframe::Key {
+        return { pair.first, pair.second };
+    });
+
     for (auto i = m_keyframes.size(); i--; ) {
-        if (m_keyframes[i]->keys() == keys)
+        if (m_keyframes[i]->keys() == convertedKeys)
             return i;
     }
     return std::nullopt;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -608,9 +608,10 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -693,7 +694,7 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false);
         stage.setIsPopup();
         stage.init(systemMenu);
         return stage;
@@ -1232,6 +1233,8 @@ public final class QuantumToolkit extends Toolkit {
                 return Application.GetApplication().supportsTransparentWindows();
             case UNIFIED_WINDOW:
                 return Application.GetApplication().supportsUnifiedWindows();
+            case EXTENDED_WINDOW:
+                return Application.GetApplication().supportsExtendedWindows();
             case TWO_LEVEL_FOCUS:
                 return Application.GetApplication().hasTwoLevelFocus();
             case VIRTUAL_KEYBOARD:

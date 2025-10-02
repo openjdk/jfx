@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,8 @@ public class ListViewMouseInputTest {
 
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
         sm.clearAndSelect(0);
+
+        stageLoader = new StageLoader(listView);
     }
 
     @AfterEach
@@ -132,6 +134,8 @@ public class ListViewMouseInputTest {
 
         sm.clearAndSelect(9);
 
+        stageLoader = new StageLoader(listView);
+
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
         assertTrue(isSelected(7,8,9), debug());
@@ -145,6 +149,8 @@ public class ListViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
+
+        stageLoader = new StageLoader(listView);
 
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
@@ -172,6 +178,8 @@ public class ListViewMouseInputTest {
         assertEquals(0,rt30394_count);
         assertFalse(fm.isFocused(0));
 
+        stageLoader = new StageLoader(listView);
+
         // select the first row with the shift key held down. The focus event
         // should only fire once - for focus on 0 (never -1 as this bug shows).
         VirtualFlowTestUtils.clickOnRow(listView, 0, KeyModifier.SHIFT);
@@ -182,6 +190,8 @@ public class ListViewMouseInputTest {
     @Test public void test_rt32119() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearSelection();
+
+        stageLoader = new StageLoader(listView);
 
         // select rows 2, 3, and 4
         VirtualFlowTestUtils.clickOnRow(listView, 2);
@@ -253,6 +263,8 @@ public class ListViewMouseInputTest {
             listView.getItems().add("Row " + i);
         }
 
+        stageLoader = new StageLoader(listView);
+
         final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -279,6 +291,8 @@ public class ListViewMouseInputTest {
             listView.getItems().add("Row " + i);
         }
 
+        stageLoader = new StageLoader(listView);
+
         final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -304,6 +318,8 @@ public class ListViewMouseInputTest {
             listView.getItems().add("Row " + i);
         }
 
+        stageLoader = new StageLoader(listView);
+
         final MultipleSelectionModel sm = listView.getSelectionModel();
         final FocusModel fm = listView.getFocusModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
@@ -321,7 +337,7 @@ public class ListViewMouseInputTest {
 
     @Test public void test_rt_37069() {
         final int items = 8;
-        listView.getItems().clear();
+        listView = new ListView<>();
         for (int i = 0; i < items; i++) {
             listView.getItems().add("Row " + i);
         }
@@ -364,6 +380,8 @@ public class ListViewMouseInputTest {
             assertFalse(copy.contains(null));
         });
 
+        stageLoader = new StageLoader(listView);
+
         // select all
         VirtualFlowTestUtils.clickOnRow(listView, 0, KeyModifier.getShortcutKey());
         assertEquals(1, hitCount.get());
@@ -391,8 +409,6 @@ public class ListViewMouseInputTest {
 
     @Test public void testClickWithNullSelectionModelDoesNotThrowNPE() {
         listView.setSelectionModel(null);
-
-        stageLoader = new StageLoader(listView);
 
         assertDoesNotThrow(()  -> VirtualFlowTestUtils.clickOnRow(listView, 2));
     }

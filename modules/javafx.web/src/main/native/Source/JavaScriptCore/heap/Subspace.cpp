@@ -37,8 +37,9 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Subspace);
 
-Subspace::Subspace(CString name, JSC::Heap& heap)
+Subspace::Subspace(SubspaceKind kind, CString name, JSC::Heap& heap)
     : m_space(heap.objectSpace())
+    , m_kind(kind)
     , m_name(name)
 {
 }

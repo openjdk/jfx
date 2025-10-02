@@ -2858,7 +2858,7 @@ h264_video_type_find (GstTypeFind * tf, gpointer unused)
       break;
 
     if (IS_MPEG_HEADER (c.data)) {
-      nut = c.data[3] & 0x9f;   /* forbiden_zero_bit | nal_unit_type */
+      nut = c.data[3] & 0x9f;   /* forbidden_zero_bit | nal_unit_type */
       ref = c.data[3] & 0x60;   /* nal_ref_idc */
 
       /* if forbidden bit is different to 0 won't be h264 */
@@ -2960,7 +2960,7 @@ h265_video_type_find (GstTypeFind * tf, gpointer unused)
       break;
 
     if (IS_MPEG_HEADER (c.data)) {
-      /* forbiden_zero_bit | nal_unit_type */
+      /* forbidden_zero_bit | nal_unit_type */
       nut = c.data[3] & 0xfe;
 
       /* if forbidden bit is different to 0 won't be h265 */
@@ -3025,6 +3025,100 @@ h265_video_type_find (GstTypeFind * tf, gpointer unused)
       probability = GST_TYPE_FIND_LIKELY;
 
     gst_type_find_suggest (tf, probability, H265_VIDEO_CAPS);
+  }
+}
+
+/*** video/x-h266 H266 elementary video stream ***/
+
+static GstStaticCaps h266_video_caps =
+GST_STATIC_CAPS ("video/x-h266,stream-format=byte-stream");
+
+#define H266_VIDEO_CAPS gst_static_caps_get(&h266_video_caps)
+
+#define H266_MAX_PROBE_LENGTH (128 * 1024)      /* 128kB for HD should be enough. */
+
+static void
+h266_video_type_find (GstTypeFind * tf, gpointer unused)
+{
+  DataScanCtx c = { 0, NULL, 0 };
+
+  /* Stream consists of: a series of sync codes (00 00 00 01) followed
+   * by NALs
+   */
+  gboolean seen_irap = FALSE;
+  gboolean seen_vps = FALSE;
+  gboolean seen_sps = FALSE;
+  gboolean seen_pps = FALSE;
+  int nuh, nut;
+  int good = 0;
+  int bad = 0;
+
+  while (c.offset < H266_MAX_PROBE_LENGTH) {
+    if (G_UNLIKELY (!data_scan_ctx_ensure_data (tf, &c, 5)))
+      break;
+
+    if (IS_MPEG_HEADER (c.data)) {
+      /* forbidden_zero_bit(1) | nuh_reserved_zero_bit(1) | nuh_layer_id(6) */
+      nuh = c.data[3] & 0xc0;
+      /* nal_unit_type(5) | nuh_temporal_id_plus1(3) */
+      nut = c.data[4] & 0xf8;
+
+      /* if forbidden bit and nuh_reserved_zero_bit are different to 0 won't be h266 */
+      if (nuh) {
+        bad++;
+        break;
+      }
+      nut = nut >> 3;
+
+      /* if nuh_temporal_id_plus1 is zero then it won't be h266 */
+      if (!(c.data[4] & 0x07)) {
+        bad++;
+        break;
+      }
+
+      /* collect statistics about the NAL types */
+      if ((nut >= 0 && nut <= 27)) {
+        if (nut == 14)
+          seen_vps = TRUE;
+        else if (nut == 15)
+          seen_sps = TRUE;
+        else if (nut == 16)
+          seen_pps = TRUE;
+        else if (nut >= 7 && nut <= 9) {
+          /* BLA, IDR and CRA pictures are belongs to be IRAP picture */
+          /* we are not counting the reserved IRAP pictures (22 and 23) to good */
+          seen_irap = TRUE;
+        }
+
+        good++;
+      } else if (nut >= 27) {
+        /* reserved values are counting as bad */
+        bad++;
+      }
+
+      GST_LOG ("good:%d, bad:%d, pps:%d, sps:%d, vps:%d, irap:%d", good, bad,
+          seen_pps, seen_sps, seen_vps, seen_irap);
+
+      if (seen_sps && seen_pps && seen_irap && good >= 10 && bad < 4) {
+        gst_type_find_suggest (tf, GST_TYPE_FIND_LIKELY, H266_VIDEO_CAPS);
+        return;
+      }
+
+      data_scan_ctx_advance (tf, &c, 5);
+    }
+    data_scan_ctx_advance (tf, &c, 1);
+  }
+
+  GST_LOG ("good:%d, bad:%d, pps:%d, sps:%d, vps:%d, irap:%d", good, bad,
+      seen_pps, seen_sps, seen_vps, seen_irap);
+
+  if (good >= 2 && bad == 0) {
+    GstTypeFindProbability probability = GST_TYPE_FIND_POSSIBLE;
+
+    if (seen_pps && seen_sps && seen_vps)
+      probability = GST_TYPE_FIND_LIKELY;
+
+    gst_type_find_suggest (tf, probability, H266_VIDEO_CAPS);
   }
 }
 
@@ -6683,6 +6777,154 @@ aa_type_find (GstTypeFind * tf, gpointer private)
   }
 }
 
+/*** video/x-av1 ***/
+
+static GstStaticCaps av1_caps =
+    GST_STATIC_CAPS
+    ("video/x-av1,stream-format={obu-stream, annexb},alignment=none");
+
+#define AV1_CAPS gst_static_caps_get(&av1_caps)
+
+static gboolean
+av1_is_valid_obu_type (guint obu_type)
+{
+  if ((obu_type > 0 && obu_type < 9) || obu_type == 15)
+    return TRUE;
+
+  return FALSE;
+}
+
+static gboolean
+av1_leb128 (const guint8 * data, guint32 * retval, gint * read_bytes)
+{
+  guint8 leb128_byte = 0;
+  guint64 value = 0;
+  gint i;
+
+  *retval = 0;
+  *read_bytes = 0;
+
+  for (i = 0; i < 8; i++) {
+    leb128_byte = data[i];
+    value |= (((gint) leb128_byte & 0x7f) << (i * 7));
+    if (!(leb128_byte & 0x80))
+      break;
+
+    if (i == 7 && leb128_byte & 0x80)
+      return FALSE;
+  }
+
+  if (i == 8)
+    return FALSE;
+
+  /* check for bitstream conformance see chapter 4.10.5 */
+  if (value < G_MAXUINT32) {
+    *retval = (guint32) value;
+    *read_bytes = i + 1;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
+av1_is_valid_obu (const guint8 * data, guint * obu_type, gint * read_bytes)
+{
+  gboolean obu_forbidden_bit;
+  gboolean obu_extension_flag;
+  gboolean obu_has_size_field;
+  gboolean obu_reserved_1bit;
+  int offset = 1;
+
+  *obu_type = 0;
+  *read_bytes = 0;
+
+  /* Detect OBU header */
+  obu_forbidden_bit = !!(data[0] & 0x80);
+  if (obu_forbidden_bit)
+    return FALSE;
+
+  *obu_type = (data[0] & 0x78) >> 3;
+  obu_extension_flag = !!(data[0] & 0x4);
+  obu_has_size_field = !!(data[0] & 0x2);
+  obu_reserved_1bit = !!(data[0] & 0x1);
+
+  /* if obu_extension_flag is set temporal_id (3 bits)
+   * spatial_id (2 bits) and extension_header_reserved_3bits (3 bits)
+   * field are coded in the header so OBU size field is
+   * 1 byte after */
+  if (obu_extension_flag)
+    offset++;
+
+  *read_bytes += offset;
+
+  if (av1_is_valid_obu_type (*obu_type) && !obu_reserved_1bit) {
+    if (obu_has_size_field) {
+      guint32 obu_size;
+      gint bytes;
+
+      if (!av1_leb128 (data + offset, &obu_size, &bytes))
+        return FALSE;
+      *read_bytes += bytes;
+    }
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static void
+av1_type_find (GstTypeFind * tf, gpointer unused)
+{
+  guint32 temporal_unit_size;
+  guint32 frame_unit_size;
+  guint32 obu_length;
+  const guint8 *data;
+  guint obu_type;
+  gint read_bytes;
+  gint offset = 0;
+
+  data = gst_type_find_peek (tf, 0, 25);
+  if (!data)
+    return;
+
+  if (av1_is_valid_obu (data, &obu_type, &read_bytes)) {
+    gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MINIMUM, "video/x-av1",
+        "stream-format", G_TYPE_STRING, "obu-stream",
+        "alignment", G_TYPE_STRING, "none", NULL);
+    return;
+  }
+
+  if (!av1_leb128 (data, &temporal_unit_size, &read_bytes))
+    return;
+  offset += read_bytes;
+
+  if (!av1_leb128 (data + offset, &frame_unit_size, &read_bytes))
+    return;
+  offset += read_bytes;
+
+  if (frame_unit_size > temporal_unit_size)
+    return;
+
+  if (!av1_leb128 (data + offset, &obu_length, &read_bytes))
+    return;
+  offset += read_bytes;
+
+  if (obu_length > frame_unit_size)
+    return;
+
+  if (!av1_is_valid_obu (data + offset, &obu_type, &read_bytes))
+    return;
+  offset += read_bytes;
+
+  /* The first OBU must be a temporal delimiter */
+  if (obu_type == 2)
+    gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MINIMUM, "video/x-av1",
+        "stream-format", G_TYPE_STRING, "annexb",
+        "alignment", G_TYPE_STRING, "none", NULL);
+}
+
 /*Type find definition by functions */
 #ifndef GSTREAMER_LITE
 GST_TYPE_FIND_REGISTER_DEFINE (musepack, "audio/x-musepack", GST_RANK_PRIMARY,
@@ -6743,6 +6985,8 @@ GST_TYPE_FIND_REGISTER_DEFINE (h264_video, "video/x-h264", GST_RANK_PRIMARY,
     h264_video_type_find, "h264,x264,264", H264_VIDEO_CAPS, NULL, NULL);
 GST_TYPE_FIND_REGISTER_DEFINE (h265_video, "video/x-h265", GST_RANK_PRIMARY,
     h265_video_type_find, "h265,x265,265", H265_VIDEO_CAPS, NULL, NULL);
+GST_TYPE_FIND_REGISTER_DEFINE (h266_video, "video/x-h266", GST_RANK_PRIMARY,
+    h266_video_type_find, "h266,266", H266_VIDEO_CAPS, NULL, NULL);
 GST_TYPE_FIND_REGISTER_DEFINE (nuv, "video/x-nuv", GST_RANK_SECONDARY,
     nuv_type_find, "nuv", NUV_CAPS, NULL, NULL);
 /* ISO formats */
@@ -6947,4 +7191,6 @@ GST_TYPE_FIND_REGISTER_DEFINE (wsaud, "application/x-wsaud", GST_RANK_MARGINAL,
     wsaud_type_find, "wsaud", WSAUD_CAPS, NULL, NULL);
 GST_TYPE_FIND_REGISTER_DEFINE (wsvqa, "application/x-wsvqa", GST_RANK_MARGINAL,
     wsvqa_type_find, "wsvqa", WSVQA_CAPS, NULL, NULL);
+GST_TYPE_FIND_REGISTER_DEFINE (av1, "video/x-av1", GST_RANK_MARGINAL,
+    av1_type_find, "av1", AV1_CAPS, NULL, NULL);
 #endif // GSTREAMER_LITE

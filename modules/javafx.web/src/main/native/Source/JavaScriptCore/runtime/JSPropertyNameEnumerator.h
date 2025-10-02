@@ -28,7 +28,10 @@
 #include "JSCast.h"
 #include "Operations.h"
 #include "PropertyNameArray.h"
+#include "ResourceExhaustion.h"
 #include "StructureChain.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -54,7 +57,13 @@ public:
         return &vm.propertyNameEnumeratorSpace();
     }
 
-    static JSPropertyNameEnumerator* create(VM&, Structure*, uint32_t, uint32_t, PropertyNameArray&&);
+    static JSPropertyNameEnumerator* tryCreate(VM&, Structure*, uint32_t, uint32_t, PropertyNameArray&&);
+    static JSPropertyNameEnumerator* create(VM& vm, Structure* structure, uint32_t indexedLength, uint32_t numberStructureProperties, PropertyNameArray&& propertyNames)
+    {
+        auto* result = tryCreate(vm, structure, indexedLength, numberStructureProperties, WTFMove(propertyNames));
+        RELEASE_ASSERT_RESOURCE_AVAILABLE(result, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
+        return result;
+    }
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
@@ -125,7 +134,7 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalOb
         uintptr_t enumeratorAndFlag = structure->cachedPropertyNameEnumeratorAndFlag();
         if (enumeratorAndFlag) {
             if (!(enumeratorAndFlag & StructureRareData::cachedPropertyNameEnumeratorIsValidatedViaTraversingFlag))
-                return bitwise_cast<JSPropertyNameEnumerator*>(enumeratorAndFlag);
+                return std::bit_cast<JSPropertyNameEnumerator*>(enumeratorAndFlag);
             structure->prototypeChain(vm, globalObject, base); // Refresh cached structure chain.
             if (auto* enumerator = structure->cachedPropertyNameEnumerator())
                 return enumerator;
@@ -151,8 +160,13 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalOb
     JSPropertyNameEnumerator* enumerator = nullptr;
     if (!indexedLength && !propertyNames.size())
         enumerator = vm.emptyPropertyNameEnumerator();
-    else
-        enumerator = JSPropertyNameEnumerator::create(vm, structureAfterGettingPropertyNames, indexedLength, numberStructureProperties, WTFMove(propertyNames));
+    else {
+        enumerator = JSPropertyNameEnumerator::tryCreate(vm, structureAfterGettingPropertyNames, indexedLength, numberStructureProperties, WTFMove(propertyNames));
+        if (UNLIKELY(!enumerator)) {
+            throwOutOfMemoryError(globalObject, scope);
+            return nullptr;
+        }
+    }
     if (!indexedLength && successfullyNormalizedChain && structureAfterGettingPropertyNames == structure) {
         StructureChain* chain = structure->prototypeChain(vm, globalObject, base);
         if (structure->canCachePropertyNameEnumerator(vm))
@@ -164,3 +178,5 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalOb
 using EnumeratorMetadata = std::underlying_type_t<JSPropertyNameEnumerator::Flag>;
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

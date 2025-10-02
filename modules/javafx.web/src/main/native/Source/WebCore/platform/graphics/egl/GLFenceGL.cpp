@@ -20,6 +20,8 @@
 #include "config.h"
 #include "GLFenceGL.h"
 
+#if HAVE(GL_FENCE)
+
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
 #else
@@ -59,3 +61,5 @@ void GLFenceGL::serverWait()
 }
 
 } // namespace WebCore
+
+#endif // HAVE(GL_FENCE)

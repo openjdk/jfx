@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AnchorPositionEvaluator.h"
+#include "PropertyCascade.h"
 #include "SelectorChecker.h"
 #include "SelectorMatchingState.h"
 #include "StyleChange.h"
@@ -42,6 +43,7 @@ class Element;
 class Node;
 class RenderStyle;
 class ShadowRoot;
+struct PositionTryFallback;
 
 namespace Style {
 
@@ -82,7 +84,11 @@ private:
 
     ElementUpdate createAnimatedElementUpdate(ResolvedStyle&&, const Styleable&, Change, const ResolutionContext&, IsInDisplayNoneTree = IsInDisplayNoneTree::No);
     std::unique_ptr<RenderStyle> resolveStartingStyle(const ResolvedStyle&, const Styleable&, const ResolutionContext&) const;
-    HashSet<AnimatableCSSProperty> applyCascadeAfterAnimation(RenderStyle&, const HashSet<AnimatableCSSProperty>&, bool isTransition, const MatchResult&, const Element&, const ResolutionContext&);
+    std::unique_ptr<RenderStyle> resolveAfterChangeStyleForNonAnimated(const ResolvedStyle&, const Styleable&, const ResolutionContext&) const;
+    std::unique_ptr<RenderStyle> resolveAgainInDifferentContext(const ResolvedStyle&, const Styleable&, const RenderStyle& parentStyle,  OptionSet<PropertyCascade::PropertyType>, const std::optional<PositionTryFallback>&, const ResolutionContext&) const;
+    const RenderStyle& parentAfterChangeStyle(const Styleable&, const ResolutionContext&) const;
+
+    UncheckedKeyHashSet<AnimatableCSSProperty> applyCascadeAfterAnimation(RenderStyle&, const UncheckedKeyHashSet<AnimatableCSSProperty>&, bool isTransition, const MatchResult&, const Element&, const ResolutionContext&);
 
     std::optional<ElementUpdate> resolvePseudoElement(Element&, const PseudoElementIdentifier&, const ElementUpdate&, IsInDisplayNoneTree);
     std::optional<ElementUpdate> resolveAncestorPseudoElement(Element&, const PseudoElementIdentifier&, const ElementUpdate&);
@@ -143,23 +149,33 @@ private:
 
     AnchorPositionedElementAction updateAnchorPositioningState(Element&, const RenderStyle*);
 
+    void generatePositionOptionsIfNeeded(const ResolvedStyle&, const Styleable&, const ResolutionContext&);
+    std::unique_ptr<RenderStyle> generatePositionOption(const PositionTryFallback&, const ResolvedStyle&, const Styleable&, const ResolutionContext&);
+    std::optional<ResolvedStyle> tryChoosePositionOption(const Styleable&, const RenderStyle* existingStyle);
+
     struct QueryContainerState {
         Change change { Change::None };
         DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
     };
 
-    Document& m_document;
+    CheckedRef<Document> m_document;
     std::unique_ptr<RenderStyle> m_documentElementStyle;
 
     Vector<Ref<Scope>, 4> m_scopeStack;
     Vector<Parent, 32> m_parentStack;
     bool m_didSeePendingStylesheet { false };
 
-    HashMap<Ref<Element>, std::optional<QueryContainerState>> m_queryContainerStates;
+    UncheckedKeyHashMap<Ref<Element>, std::optional<QueryContainerState>> m_queryContainerStates;
     bool m_hasUnresolvedQueryContainers { false };
-
     bool m_hasUnresolvedAnchorPositionedElements { false };
-    bool m_canFindAnchorsForNextAnchorPositionedElement { false };
+
+    struct PositionOptions {
+        std::unique_ptr<RenderStyle> originalStyle;
+        Vector<std::unique_ptr<RenderStyle>> optionStyles { };
+        size_t index { 0 };
+        bool chosen { false };
+    };
+    HashMap<Ref<Element>, PositionOptions> m_positionOptions;
 
     std::unique_ptr<Update> m_update;
 };

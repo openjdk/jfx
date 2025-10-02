@@ -29,6 +29,7 @@
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -37,13 +38,13 @@ class Attribute;
 class ShareableElementData;
 
 class DocumentSharedObjectPool {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DocumentSharedObjectPool);
 public:
     Ref<ShareableElementData> cachedShareableElementDataWithAttributes(std::span<const Attribute>);
 
 private:
     struct ShareableElementDataHash;
-    using ShareableElementDataCache = HashSet<Ref<ShareableElementData>, ShareableElementDataHash>;
+    using ShareableElementDataCache = UncheckedKeyHashSet<Ref<ShareableElementData>, ShareableElementDataHash>;
     ShareableElementDataCache m_shareableElementDataCache;
 };
 

@@ -43,6 +43,7 @@
 #include "JSWebAssemblyHelpers.h"
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyModule.h"
+#include "JSWebAssemblyTag.h"
 #include "ObjectConstructor.h"
 #include "Options.h"
 #include "StrongInlines.h"
@@ -70,6 +71,7 @@ FOR_EACH_WEBASSEMBLY_CONSTRUCTOR_TYPE(DEFINE_CALLBACK_FOR_CONSTRUCTOR)
 static JSC_DECLARE_HOST_FUNCTION(webAssemblyCompileFunc);
 static JSC_DECLARE_HOST_FUNCTION(webAssemblyInstantiateFunc);
 static JSC_DECLARE_HOST_FUNCTION(webAssemblyValidateFunc);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyGetterJSTag);
 
 }
 
@@ -118,6 +120,7 @@ void JSWebAssembly::finishCreation(VM& vm, JSGlobalObject* globalObject)
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("compileStreaming"_s, webAssemblyCompileStreamingCodeGenerator, static_cast<unsigned>(0));
     if (globalObject->globalObjectMethodTable()->instantiateStreaming)
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("instantiateStreaming"_s, webAssemblyInstantiateStreamingCodeGenerator, static_cast<unsigned>(0));
+    JSC_NATIVE_GETTER_WITHOUT_TRANSITION("JSTag"_s, webAssemblyGetterJSTag, PropertyAttribute::ReadOnly);
 }
 
 JSWebAssembly::JSWebAssembly(VM& vm, Structure* structure)
@@ -145,8 +148,8 @@ void JSWebAssembly::webAssemblyModuleValidateAsync(JSGlobalObject* globalObject,
 {
     VM& vm = globalObject->vm();
 
-    Vector<Weak<JSCell>> dependencies;
-    dependencies.append(Weak<JSCell>(globalObject));
+    Vector<JSCell*> dependencies;
+    dependencies.append(globalObject);
 
     auto ticket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::ImminentlyScheduled, vm, promise, WTFMove(dependencies));
     Wasm::Module::validateAsync(vm, WTFMove(source), createSharedTask<Wasm::Module::CallbackType>([ticket, promise, globalObject, &vm] (Wasm::Module::ValidationResult&& result) mutable {
@@ -185,9 +188,9 @@ static void instantiate(VM& vm, JSGlobalObject* globalObject, JSPromise* promise
         return;
     }
 
-    Vector<Weak<JSCell>> dependencies;
+    Vector<JSCell*> dependencies;
     // The instance keeps the module alive.
-    dependencies.append(Weak<JSCell>(promise));
+    dependencies.append(promise);
 
     scope.release();
     auto ticket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::ImminentlyScheduled, vm, instance, WTFMove(dependencies));
@@ -245,10 +248,10 @@ static void compileAndInstantiate(VM& vm, JSGlobalObject* globalObject, JSPromis
     }
 
     JSCell* moduleKeyCell = identifierToJSValue(vm, moduleKey).asCell();
-    Vector<Weak<JSCell>> dependencies;
+    Vector<JSCell*> dependencies;
     if (importObject)
-        dependencies.append(Weak<JSCell>(importObject));
-    dependencies.append(Weak<JSCell>(moduleKeyCell));
+        dependencies.append(importObject);
+    dependencies.append(moduleKeyCell);
     auto ticket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::ImminentlyScheduled, vm, promise, WTFMove(dependencies));
     Wasm::Module::validateAsync(vm, WTFMove(source), createSharedTask<Wasm::Module::CallbackType>([ticket, promise, importObject, moduleKeyCell, globalObject, resolveKind, creationMode, &vm] (Wasm::Module::ValidationResult&& result) mutable {
         vm.deferredWorkTimer->scheduleWorkSoon(ticket, [promise, importObject, moduleKeyCell, globalObject, result = WTFMove(result), resolveKind, creationMode, &vm](DeferredWorkTimer::Ticket) mutable {
@@ -337,6 +340,13 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyInstantiateStreamingInternal, (JSGlobalObjec
     ASSERT(globalObject->globalObjectMethodTable()->instantiateStreaming);
     // FIXME: <http://webkit.org/b/184888> if there's an importObject and it contains a Memory, then we can compile the module with the right memory type (fast or not) by looking at the memory's type.
     return JSValue::encode(globalObject->globalObjectMethodTable()->instantiateStreaming(globalObject, callFrame->argument(0), importObject));
+}
+
+JSC_DEFINE_HOST_FUNCTION(webAssemblyGetterJSTag, (JSGlobalObject* globalObject, CallFrame*))
+{
+    // https://webassembly.github.io/exception-handling/js-api/#dom-webassembly-jstag
+    VM& vm = globalObject->vm();
+    return JSValue::encode(JSWebAssemblyTag::create(vm, globalObject, globalObject->webAssemblyTagStructure(), Wasm::Tag::jsExceptionTag()));
 }
 
 } // namespace JSC

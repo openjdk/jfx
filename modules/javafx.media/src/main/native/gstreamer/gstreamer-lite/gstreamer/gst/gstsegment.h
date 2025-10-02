@@ -27,6 +27,10 @@
 
 G_BEGIN_DECLS
 
+#ifdef _MSC_VER
+#pragma warning(disable: 5287)
+#endif
+
 #define GST_TYPE_SEGMENT             (gst_segment_get_type())
 
 typedef struct _GstSegment GstSegment;

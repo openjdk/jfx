@@ -179,6 +179,7 @@ void CanvasCaptureMediaStreamTrack::Source::canvasDisplayBufferPrepared(CanvasBa
 void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
 {
     ASSERT(m_canvas);
+    Ref canvas = *m_canvas;
 
     if (!isProducingData())
         return;
@@ -189,14 +190,14 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
         m_shouldEmitFrame = false;
     }
 
-    if (!m_canvas->originClean())
+    if (!canvas->originClean())
         return;
     RefPtr<VideoFrame> videoFrame = [&]() -> RefPtr<VideoFrame> {
 #if ENABLE(WEBGL)
-        if (auto* gl = dynamicDowncast<WebGLRenderingContextBase>(m_canvas->renderingContext()))
+        if (auto* gl = dynamicDowncast<WebGLRenderingContextBase>(canvas->renderingContext()))
             return gl->surfaceBufferToVideoFrame(CanvasRenderingContext::SurfaceBuffer::DisplayBuffer);
 #endif
-        return m_canvas->toVideoFrame();
+        return canvas->toVideoFrame();
     }();
     if (!videoFrame)
         return;

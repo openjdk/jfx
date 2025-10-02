@@ -32,14 +32,14 @@
 namespace WebCore {
 
 CSSNamedImageValue::CSSNamedImageValue(String&& name)
-    : CSSValue { NamedImageClass }
+    : CSSValue { ClassType::NamedImage }
     , m_name { WTFMove(name) }
 {
 }
 
 CSSNamedImageValue::~CSSNamedImageValue() = default;
 
-String CSSNamedImageValue::customCSSText() const
+String CSSNamedImageValue::customCSSText(const CSS::SerializationContext&) const
 {
     return makeString("-webkit-named-image("_s, m_name, ')');
 }
@@ -49,7 +49,7 @@ bool CSSNamedImageValue::equals(const CSSNamedImageValue& other) const
     return m_name == other.m_name;
 }
 
-RefPtr<StyleImage> CSSNamedImageValue::createStyleImage(Style::BuilderState&) const
+RefPtr<StyleImage> CSSNamedImageValue::createStyleImage(const Style::BuilderState&) const
 {
     if (m_cachedStyleImage)
         return m_cachedStyleImage;

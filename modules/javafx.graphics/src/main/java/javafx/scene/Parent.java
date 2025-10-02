@@ -1021,7 +1021,7 @@ public abstract non-sealed class Parent extends Node {
      * rendered. This is batched up asynchronously to happen once per
      * "pulse", or frame of animation.
      * <p>
-     * If this parent is either a layout root or unmanaged, then it will be
+     * If this parent is either a scene root or unmanaged, then it will be
      * added directly to the scene's dirty layout list, otherwise requestParentLayout
      * will be invoked.
      * @since JavaFX 8.0
@@ -1066,7 +1066,15 @@ public abstract non-sealed class Parent extends Node {
         if (!layoutRoot) {
             final Parent p = getParent();
             if (p != null && (!p.performingLayout || forceParentLayout)) {
-                p.requestLayout();
+
+                /*
+                 * The forceParentLayout flag must be propagated to mark all ancestors
+                 * as needing layout. Failure to do so while performingLayout is true
+                 * would stop the propagation mid-tree. This leaves some nodes as needing
+                 * layout, while its ancestors are clean, which is an inconsistent state.
+                 */
+
+                p.requestLayout(forceParentLayout);
             }
         }
     }
@@ -1927,6 +1935,15 @@ public abstract non-sealed class Parent extends Node {
             return;
         }
 
+        // When we have a scene overlay (like the full-screen notification message or default window buttons
+        // of an extended stage), the scene root is the parent of the overlay node. However, the overlay node
+        // is not contained in the scene root's children list, because it is not a publicly accessible part of
+        // the scene graph. When this method is called on the root node, we need to check whether the supposed
+        // child is actually contained in the children list.
+        if (!childSet.contains(node)) {
+            return;
+        }
+
         cachedBoundsInvalid = true;
 
         // mark the node such that the parent knows that the child's bounds
@@ -1945,6 +1962,11 @@ public abstract non-sealed class Parent extends Node {
      * Called by node whenever the visibility of the node changes.
      */
     void childVisibilityChanged(Node node) {
+        // See comment above in childBoundsChanged(Node)
+        if (!childSet.contains(node)) {
+            return;
+        }
+
         if (node.isVisible()) {
             childIncluded(node);
         } else {

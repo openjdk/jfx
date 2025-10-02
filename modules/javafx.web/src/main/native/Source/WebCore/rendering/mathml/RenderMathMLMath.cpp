@@ -57,9 +57,7 @@ void RenderMathMLMath::centerChildren(LayoutUnit contentWidth)
 
     if (!style().isLeftToRightDirection())
         centerBlockOffset = -centerBlockOffset;
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-        if (!child->isInFlow())
-            continue;
+    for (auto* child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox()) {
         auto repaintRect = child->checkForRepaintDuringLayout() ? std::make_optional(child->frameRect()) : std::nullopt;
         child->move(centerBlockOffset, { });
         if (repaintRect) {
@@ -69,7 +67,7 @@ void RenderMathMLMath::centerChildren(LayoutUnit contentWidth)
     }
 }
 
-void RenderMathMLMath::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight)
+void RenderMathMLMath::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit pageLogicalHeight)
 {
     ASSERT(needsLayout());
 
@@ -78,8 +76,12 @@ void RenderMathMLMath::layoutBlock(bool relayoutChildren, LayoutUnit pageLogical
         return;
     }
 
-    if (!relayoutChildren && simplifiedLayout())
+    insertPositionedChildrenIntoContainingBlock();
+
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
 
     recomputeLogicalWidth();
     computeAndSetBlockDirectionMarginsOfChildren();
@@ -97,7 +99,7 @@ void RenderMathMLMath::layoutBlock(bool relayoutChildren, LayoutUnit pageLogical
         centerChildren(width);
     else
         setLogicalWidth(width);
-    shiftRowItems(0_lu, borderAndPaddingBefore());
+    shiftInFlowChildren(0_lu, borderAndPaddingBefore());
 
     setLogicalHeight(ascent + descent + borderAndPaddingLogicalHeight() + horizontalScrollbarHeight());
     updateLogicalHeight();

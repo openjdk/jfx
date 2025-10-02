@@ -115,6 +115,8 @@ public:
 
     WEBCORE_EXPORT RealtimeMediaSource& source();
     const RealtimeMediaSource& source() const;
+    Ref<RealtimeMediaSource> protectedSource();
+    Ref<const RealtimeMediaSource> protectedSource() const;
     RealtimeMediaSource& sourceForProcessor();
     bool hasSource(const RealtimeMediaSource*) const;
 
@@ -151,7 +153,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger; }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
 #endif
 
     friend class MediaStreamTrackPrivateSourceObserver;
@@ -179,7 +181,7 @@ private:
 
     void updateReadyState();
 
-    void forEachObserver(const Function<void(MediaStreamTrackPrivateObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(MediaStreamTrackPrivateObserver&)>&);
 
 #if !RELEASE_LOG_DISABLED
     ASCIILiteral logClassName() const final { return "MediaStreamTrackPrivate"_s; }
@@ -206,7 +208,7 @@ private:
     MediaStreamTrackHintValue m_contentHint { MediaStreamTrackHintValue::Empty };
     Ref<const Logger> m_logger;
 #if !RELEASE_LOG_DISABLED
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
 #endif
     bool m_isProducingData { false };
     bool m_isMuted { false };

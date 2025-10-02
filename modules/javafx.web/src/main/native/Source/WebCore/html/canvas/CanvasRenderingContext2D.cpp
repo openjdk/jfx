@@ -36,8 +36,8 @@
 #include "CSSFilter.h"
 #include "CSSFontSelector.h"
 #include "CSSPropertyNames.h"
-#include "CSSPropertyParserHelpers.h"
-#include "CSSPropertyParserWorkerSafe.h"
+#include "CSSPropertyParserConsumer+Filter.h"
+#include "CSSPropertyParserConsumer+Font.h"
 #include "DocumentInlines.h"
 #include "Gradient.h"
 #include "ImageBuffer.h"
@@ -54,7 +54,7 @@
 #include "StyleBuilder.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleProperties.h"
-#include "StyleResolveForFontRaw.h"
+#include "StyleResolveForFont.h"
 #include "StyleTreeResolver.h"
 #include "TextMetrics.h"
 #include "TextRun.h"
@@ -80,7 +80,7 @@ std::unique_ptr<CanvasRenderingContext2D> CanvasRenderingContext2D::create(Canva
 }
 
 CanvasRenderingContext2D::CanvasRenderingContext2D(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings, bool usesCSSCompatibilityParseMode)
-    : CanvasRenderingContext2DBase(canvas, WTFMove(settings), usesCSSCompatibilityParseMode)
+    : CanvasRenderingContext2DBase(canvas, Type::CanvasElement2D, WTFMove(settings), usesCSSCompatibilityParseMode)
 {
 }
 
@@ -98,8 +98,8 @@ std::optional<FilterOperations> CanvasRenderingContext2D::setFilterStringWithout
     if (!style)
         return std::nullopt;
 
-    auto parserMode = strictToCSSParserMode(!usesCSSCompatibilityParseMode());
-    return CSSPropertyParserWorkerSafe::parseFilterString(document, const_cast<RenderStyle&>(*style), filterString, parserMode);
+    auto parserContext = CSSParserContext(strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
+    return CSSPropertyParserHelpers::parseFilterValueListOrNoneRaw(filterString, parserContext, document, const_cast<RenderStyle&>(*style));
 }
 
 RefPtr<Filter> CanvasRenderingContext2D::createFilter(const FloatRect& bounds) const
@@ -126,7 +126,7 @@ RefPtr<Filter> CanvasRenderingContext2D::createFilter(const FloatRect& bounds) c
 
     auto outsets = calculateFilterOutsets(bounds);
 
-    filter->setFilterRegion(bounds + outsets);
+    filter->setFilterRegion(bounds + toFloatBoxExtent(outsets));
     return filter;
 }
 
@@ -185,9 +185,9 @@ void CanvasRenderingContext2D::setFontWithoutUpdatingStyle(const String& newFont
         return;
 
     // According to http://lists.w3.org/Archives/Public/public-html/2009Jul/0947.html,
-    // the "inherit" and "initial" values must be ignored. CSSPropertyParserWorkerSafe::parseFont() ignores these.
-    auto fontRaw = CSSPropertyParserWorkerSafe::parseFont(newFont, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
-    if (!fontRaw)
+    // the "inherit" and "initial" values must be ignored. CSSPropertyParserHelpers::parseUnresolvedFont() ignores these.
+    auto unresolvedFont = CSSPropertyParserHelpers::parseUnresolvedFont(newFont, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
+    if (!unresolvedFont)
         return;
 
     FontCascadeDescription fontDescription;
@@ -203,7 +203,7 @@ void CanvasRenderingContext2D::setFontWithoutUpdatingStyle(const String& newFont
     // Map the <canvas> font into the text style. If the font uses keywords like larger/smaller, these will work
     // relative to the canvas.
     Document& document = canvas().document();
-    auto fontCascade = Style::resolveForFontRaw(*fontRaw, WTFMove(fontDescription), document);
+    auto fontCascade = Style::resolveForUnresolvedFont(*unresolvedFont, WTFMove(fontDescription), document);
     if (!fontCascade)
         return;
 
@@ -214,6 +214,12 @@ void CanvasRenderingContext2D::setFontWithoutUpdatingStyle(const String& newFont
     modifiableState().font.initialize(document.fontSelector(), *fontCascade);
     ASSERT(state().font.realized());
     ASSERT(state().font.isPopulated());
+
+    // Recompute the word and the letter spacing for the new font.
+    String letterSpacing;
+    setLetterSpacing(std::exchange(modifiableState().letterSpacing, letterSpacing));
+    String wordSpacing;
+    setWordSpacing(std::exchange(modifiableState().wordSpacing, wordSpacing));
 }
 
 inline TextDirection CanvasRenderingContext2D::toTextDirection(Direction direction, const RenderStyle** computedStyle) const
@@ -223,7 +229,7 @@ inline TextDirection CanvasRenderingContext2D::toTextDirection(Direction directi
         *computedStyle = style;
     switch (direction) {
     case Direction::Inherit:
-        return style ? style->direction() : TextDirection::LTR;
+        return style ? style->writingMode().computedTextDirection() : TextDirection::LTR;
     case Direction::Rtl:
         return TextDirection::RTL;
     case Direction::Ltr:

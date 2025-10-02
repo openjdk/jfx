@@ -46,15 +46,19 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
+#if USE(SKIA)
+#include "CanvasRenderingContext2DBase.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CanvasRenderingContext);
 
 Lock CanvasRenderingContext::s_instancesLock;
 
-HashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances()
+UncheckedKeyHashSet<CanvasRenderingContext*>& CanvasRenderingContext::instances()
 {
-    static NeverDestroyed<HashSet<CanvasRenderingContext*>> instances;
+    static NeverDestroyed<UncheckedKeyHashSet<CanvasRenderingContext*>> instances;
     return instances;
 }
 
@@ -63,8 +67,9 @@ Lock& CanvasRenderingContext::instancesLock()
     return s_instancesLock;
 }
 
-CanvasRenderingContext::CanvasRenderingContext(CanvasBase& canvas)
+CanvasRenderingContext::CanvasRenderingContext(CanvasBase& canvas, Type type)
     : m_canvas(canvas)
+    , m_type(type)
 {
     Locker locker { instancesLock() };
     instances().add(this);
@@ -79,12 +84,12 @@ CanvasRenderingContext::~CanvasRenderingContext()
 
 void CanvasRenderingContext::ref() const
 {
-    m_canvas.refCanvasBase();
+    m_canvas->ref();
 }
 
 void CanvasRenderingContext::deref() const
 {
-    m_canvas.derefCanvasBase();
+    m_canvas->deref();
 }
 
 RefPtr<ImageBuffer> CanvasRenderingContext::surfaceBufferToImageBuffer(SurfaceBuffer)
@@ -100,7 +105,11 @@ bool CanvasRenderingContext::isSurfaceBufferTransparentBlack(SurfaceBuffer) cons
 
 bool CanvasRenderingContext::delegatesDisplay() const
 {
-    return false;
+#if USE(SKIA)
+    if (auto* context2D = dynamicDowncast<CanvasRenderingContext2DBase>(*this))
+        return context2D->isAccelerated();
+#endif
+    return isPlaceholder() || isGPUBased();
 }
 
 RefPtr<GraphicsLayerContentsDisplayDelegate> CanvasRenderingContext::layerContentsDisplayDelegate()
@@ -162,9 +171,9 @@ bool CanvasRenderingContext::taintsOrigin(const CachedImage* cachedImage)
     if (cachedImage->isCORSCrossOrigin())
         return true;
 
-    ASSERT(m_canvas.securityOrigin());
+    ASSERT(m_canvas->securityOrigin());
     ASSERT(cachedImage->origin());
-    ASSERT(m_canvas.securityOrigin()->toString() == cachedImage->origin()->toString());
+    ASSERT(m_canvas->securityOrigin()->toString() == cachedImage->origin()->toString());
     return false;
 }
 
@@ -181,7 +190,7 @@ bool CanvasRenderingContext::taintsOrigin(const SVGImageElement* element)
 bool CanvasRenderingContext::taintsOrigin(const HTMLVideoElement* video)
 {
 #if ENABLE(VIDEO)
-    return video && video->taintsOrigin(*m_canvas.securityOrigin());
+    return video && video->taintsOrigin(*m_canvas->securityOrigin());
 #else
     UNUSED_PARAM(video);
     return false;
@@ -195,18 +204,18 @@ bool CanvasRenderingContext::taintsOrigin(const ImageBitmap* imageBitmap)
 
 bool CanvasRenderingContext::taintsOrigin(const URL& url)
 {
-    return !url.protocolIsData() && !m_canvas.securityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
+    return !url.protocolIsData() && !m_canvas->securityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
 }
 
 void CanvasRenderingContext::checkOrigin(const URL& url)
 {
-    if (m_canvas.originClean() && taintsOrigin(url))
-        m_canvas.setOriginTainted();
+    if (m_canvas->originClean() && taintsOrigin(url))
+        m_canvas->setOriginTainted();
 }
 
 void CanvasRenderingContext::checkOrigin(const CSSStyleImageValue&)
 {
-    m_canvas.setOriginTainted();
+    m_canvas->setOriginTainted();
 }
 
 } // namespace WebCore

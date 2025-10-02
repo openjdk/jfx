@@ -35,9 +35,12 @@
 #include "WebFakeXRInputController.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SimulatedXRDevice);
 
 static constexpr Seconds FakeXRFrameTime = 15_ms;
 
@@ -170,6 +173,9 @@ void SimulatedXRDevice::frameTimerFired()
 
         auto layerData = makeUniqueRef<PlatformXR::FrameData::LayerData>(PlatformXR::FrameData::LayerData {
             .layerSetup = layerSetupData,
+            .renderingFrameIndex = 0,
+            .textureData = std::nullopt,
+            .requestDepth = false
         });
         data.layers.add(layer.key, WTFMove(layerData));
 #else
@@ -190,7 +196,7 @@ void SimulatedXRDevice::frameTimerFired()
         m_FrameCallback(WTFMove(data));
 }
 
-void SimulatedXRDevice::requestFrame(RequestFrameCallback&& callback)
+void SimulatedXRDevice::requestFrame(std::optional<PlatformXR::RequestData>&&, RequestFrameCallback&& callback)
 {
     m_FrameCallback = WTFMove(callback);
     if (!m_frameTimer.isActive())

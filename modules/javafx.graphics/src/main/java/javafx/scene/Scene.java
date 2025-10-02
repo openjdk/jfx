@@ -27,12 +27,14 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.scene.ScenePreferences;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.event.EventUtil;
@@ -60,6 +62,7 @@ import com.sun.prism.impl.PrismSettings;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -78,6 +81,9 @@ import javafx.event.*;
 import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
+import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderButtonType;
+import javafx.scene.layout.HeaderDragType;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.PopupWindow;
@@ -587,6 +593,10 @@ public class Scene implements EventTarget {
     }
 
     private void doCSSPass() {
+        if (peer != null) {
+            peer.processOverlayCSS();
+        }
+
         final Parent sceneRoot = getRoot();
         //
         // JDK-8120624: when the tree is synchronized, the dirty bits are
@@ -636,6 +646,10 @@ public class Scene implements EventTarget {
     }
 
     void doLayoutPass() {
+        if (peer != null) {
+            peer.layoutOverlay();
+        }
+
         final Parent r = getRoot();
         if (r != null) {
             r.layout();
@@ -1661,16 +1675,11 @@ public class Scene implements EventTarget {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().stylesheetsChanged(Scene.this, c);
-            // JDK-8110059 - if stylesheet is removed, reset styled properties to
-            // their initial value.
-            c.reset();
-            while(c.next()) {
-                if (c.wasRemoved() == false) {
-                    continue;
-                }
-                break; // no point in resetting more than once...
-            }
             getRoot().reapplyCSS();
+
+            if (peer != null) {
+                peer.reapplyOverlayCSS();
+            }
         }
     };
 
@@ -1734,6 +1743,10 @@ public class Scene implements EventTarget {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(Scene.this);
                     getRoot().reapplyCSS();
+
+                    if (peer != null) {
+                        peer.reapplyOverlayCSS();
+                    }
                 }
             };
         }
@@ -1934,7 +1947,7 @@ public class Scene implements EventTarget {
         mouseHandler.process(e, false);
     }
 
-    private void processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
+    private boolean processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
         EventTarget eventTarget = null;
         Scene.inMousePick = true;
         if (isKeyboardTrigger) {
@@ -1968,12 +1981,16 @@ public class Scene implements EventTarget {
             }
         }
 
+        boolean handled = false;
+
         if (eventTarget != null) {
             ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
                     x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
-            Event.fireEvent(eventTarget, context);
+            handled = EventUtil.fireEvent(eventTarget, context) == null;
         }
         Scene.inMousePick = false;
+
+        return handled;
     }
 
     private void processGestureEvent(GestureEvent e, TouchGesture gesture) {
@@ -2521,6 +2538,10 @@ public class Scene implements EventTarget {
 
             Scene.inSynchronizer = true;
 
+            if (peer != null) {
+                peer.synchronizeOverlay();
+            }
+
             // if dirtyNodes is null then that means this Scene has not yet been
             // synchronized, and so we will simply synchronize every node in the
             // scene and then create the dirty nodes array list
@@ -2781,9 +2802,9 @@ public class Scene implements EventTarget {
         }
 
         @Override
-        public void menuEvent(double x, double y, double xAbs, double yAbs,
+        public boolean menuEvent(double x, double y, double xAbs, double yAbs,
                 boolean isKeyboardTrigger) {
-            Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
+            return Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
         }
 
         @Override
@@ -3036,6 +3057,41 @@ public class Scene implements EventTarget {
                 // gesture finished
                 touchEventSetId = 0;
             }
+        }
+
+        @Override
+        public HeaderAreaType pickHeaderArea(double x, double y) {
+            PickResult result = pick(x, y);
+            Node intersectedNode = result.getIntersectedNode();
+            HeaderDragType dragType = intersectedNode instanceof HeaderBar ? HeaderDragType.DRAGGABLE : null;
+
+            while (intersectedNode != null) {
+                if (intersectedNode instanceof HeaderBar) {
+                    return dragType == HeaderDragType.DRAGGABLE_SUBTREE
+                        || dragType == HeaderDragType.DRAGGABLE
+                        || HeaderBar.getDragType(result.getIntersectedNode()) == HeaderDragType.DRAGGABLE
+                            ? HeaderAreaType.DRAGBAR
+                            : null;
+                }
+
+                if (HeaderBar.getButtonType(intersectedNode) instanceof HeaderButtonType type) {
+                    return switch (type) {
+                        case ICONIFY -> HeaderAreaType.ICONIFY;
+                        case MAXIMIZE -> HeaderAreaType.MAXIMIZE;
+                        case CLOSE -> HeaderAreaType.CLOSE;
+                    };
+                }
+
+                if (dragType == null
+                        && HeaderBar.getDragType(intersectedNode) instanceof HeaderDragType type
+                        && type != HeaderDragType.DRAGGABLE) {
+                    dragType = type;
+                }
+
+                intersectedNode = intersectedNode.getParent();
+            }
+
+            return null;
         }
 
         @Override
@@ -5651,6 +5707,18 @@ public class Scene implements EventTarget {
         return getProperties().get(USER_DATA_KEY);
     }
 
+    final ScenePreferences preferences = new ScenePreferences(this);
+
+    /**
+     * Gets the scene preferences that can override {@link Platform.Preferences platform} preferences.
+     *
+     * @return the {@code Preferences} instance
+     * @since 25
+     */
+    public final Preferences getPreferences() {
+        return preferences;
+    }
+
     /* *************************************************************************
      *                                                                         *
      *                       Component Orientation Properties                  *
@@ -5907,5 +5975,160 @@ public class Scene implements EventTarget {
             PlatformImpl.accessibilityActiveProperty().set(true);
         }
         return accessible;
+    }
+
+    /**
+     * Contains scene preferences that can override {@link Platform.Preferences platform} preferences.
+     * <p>
+     * All preferences are <em>null-coalesting</em> properties: if set to {@code null} (using the setter method,
+     * {@link Property#setValue(Object)}, or with a binding), the property evalutes to the value of the corresponding
+     * platform-provided preference. Likewise, specifying a non-null value for any given property will override the
+     * platform-provided value.
+     *
+     * @see Platform.Preferences
+     * @since 25
+     */
+    public sealed interface Preferences permits ScenePreferences {
+
+        /**
+         * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
+         * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code -fx-prefers-persistent-scrollbars}</a> media feature.
+         *
+         * @return the {@code persistentScrollBars} property
+         * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
+         * @see Platform.Preferences#persistentScrollBarsProperty()
+         */
+        ObjectProperty<Boolean> persistentScrollBarsProperty();
+
+        /**
+         * Gets the value of the {@code persistentScrollBars} property.
+         *
+         * @return the value of the {@code persistentScrollBars} property
+         * @see #persistentScrollBarsProperty()
+         * @see #setPersistentScrollBars(Boolean)
+         */
+        boolean isPersistentScrollBars();
+
+        /**
+         * Sets the value of the {@code persistentScrollBars} property.
+         *
+         * @param value the value
+         * @see #persistentScrollBarsProperty()
+         * @see #isPersistentScrollBars()
+         */
+        void setPersistentScrollBars(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of non-essential animations,
+         * reducing discomfort for users who experience motion sickness or vertigo.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-motion}</a> media feature.
+         *
+         * @return the {@code reducedMotion} property
+         * @defaultValue {@link Platform.Preferences#isReducedMotion()}
+         * @see Platform.Preferences#reducedMotionProperty()
+         */
+        ObjectProperty<Boolean> reducedMotionProperty();
+
+        /**
+         * Gets the value of the {@code reducedMotion} property.
+         *
+         * @return the value of the {@code reducedMotion} property
+         * @see #reducedMotionProperty()
+         * @see #setReducedMotion(Boolean)
+         */
+        boolean isReducedMotion();
+
+        /**
+         * Sets the value of the {@code reducedMotion} property.
+         *
+         * @param value the value
+         * @see #reducedMotionProperty()
+         * @see #isReducedMotion()
+         */
+        void setReducedMotion(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of transparent or translucent
+         * layer effects, which can help to increase contrast and readability for some users.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-transparency}</a> media feature.
+         *
+         * @return the {@code reducedTransparency} property
+         * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
+         * @see Platform.Preferences#reducedTransparencyProperty()
+         */
+        ObjectProperty<Boolean> reducedTransparencyProperty();
+
+        /**
+         * Gets the value of the {@code reducedTransparency} property.
+         *
+         * @return the value of the {@code reducedTransparency} property
+         * @see #reducedTransparencyProperty()
+         * @see #setReducedTransparency(Boolean)
+         */
+        boolean isReducedTransparency();
+
+        /**
+         * Sets the value of the {@code reducedTransparency} property.
+         *
+         * @param value the value
+         * @see #reducedTransparencyProperty()
+         * @see #isReducedTransparency()
+         */
+        void setReducedTransparency(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of internet traffic, which users
+         * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-data}</a> media feature.
+         *
+         * @return the {@code reducedData} property
+         * @defaultValue {@link Platform.Preferences#isReducedData()}
+         * @see Platform.Preferences#reducedDataProperty()
+         */
+        ObjectProperty<Boolean> reducedDataProperty();
+
+        /**
+         * Gets the value of the {@code reducedData} property.
+         *
+         * @return the value of the {@code reducedData} property
+         * @see #reducedDataProperty()
+         * @see #setReducedData(Boolean)
+         */
+        boolean isReducedData();
+
+        /**
+         * Sets the value of the {@code reducedData} property.
+         *
+         * @param value the value
+         * @see #reducedDataProperty()
+         * @see #isReducedData()
+         */
+        void setReducedData(Boolean value);
+
+        /**
+         * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
+         * on light backgrounds.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-color-scheme}</a> media feature.
+         *
+         * @return the {@code colorScheme} property
+         * @defaultValue {@link Platform.Preferences#getColorScheme()}
+         * @see Platform.Preferences#colorSchemeProperty()
+         */
+        ObjectProperty<ColorScheme> colorSchemeProperty();
+
+        ColorScheme getColorScheme();
+
+        void setColorScheme(ColorScheme colorScheme);
     }
 }

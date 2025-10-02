@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,34 +212,30 @@ extern NSSize maxScreenDimensions;
     s_grabWindow = window;
 }
 
-- (void)_setResizable
+- (void)_setResizable:(bool)resizable
 {
-    NSUInteger mask = [self->nsWindow styleMask];
-    if ((mask & NSWindowStyleMaskResizable) != 0)
-    {
-        if (self->isDecorated == YES)
-        {
-            mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
-            [self->nsWindow setStyleMask: mask];
-            [self->nsWindow setShowsResizeIndicator:NO];
+    self->isResizable = resizable;
 
-            NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
-            [zoomButton setEnabled:NO];
-        }
-        self->isResizable = NO;
+    if (self->isDecorated == NO) {
+        return;
     }
-    else
-    {
-        if (self->isDecorated == YES)
-        {
-            mask |= NSWindowStyleMaskResizable;
-            [self->nsWindow setStyleMask: mask];
-            [self->nsWindow setShowsResizeIndicator:YES];
 
-            NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
-            [zoomButton setEnabled:YES];
-        }
-        self->isResizable = YES;
+    NSUInteger mask = [self->nsWindow styleMask];
+
+    if (resizable) {
+        mask |= NSWindowStyleMaskResizable;
+        [self->nsWindow setStyleMask: mask];
+        [self->nsWindow setShowsResizeIndicator:YES];
+
+        NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
+        [zoomButton setEnabled:YES];
+    } else {
+        mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
+        [self->nsWindow setStyleMask: mask];
+        [self->nsWindow setShowsResizeIndicator:NO];
+
+        NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
+        [zoomButton setEnabled:NO];
     }
 }
 
@@ -300,23 +296,7 @@ extern NSSize maxScreenDimensions;
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate
 {
     NSRect frame = [self _constrainFrame:rect];
-    NSString *const constantRestorePreZoomRect = @"_restorePreZoomedRect";
-    NSArray *syms = [NSThread  callStackSymbols];
-    NSString *callerMethod;
-
-    bool callFlipFrame = true;
-    if ([syms count] > 1) {
-        callerMethod = [syms objectAtIndex:1];
-        if([callerMethod rangeOfString:constantRestorePreZoomRect].location != NSNotFound){
-            callFlipFrame = false;
-        }
-    }
-    if (callFlipFrame) {
-        [self _setFlipFrame:frame display:(BOOL)display animate:(BOOL)animate];
-    }
-    else {
-        [self->nsWindow setFrame:frame display:(BOOL)display animate:(BOOL)animate];
-    }
+    [self _setFlipFrame:frame display:(BOOL)display animate:(BOOL)animate];
 }
 
 - (void)_setBounds:(jint)x y:(jint)y xSet:(jboolean)xSet ySet:(jboolean)ySet w:(jint)w h:(jint)h cw:(jint)cw ch:(jint)ch
@@ -340,13 +320,6 @@ extern NSSize maxScreenDimensions;
         // as it is possible that the windowDidMove event is not triggered.
         [self _sendJavaWindowMoveEventForFrame:flipFrame];
     }
-}
-
-- (void)_restorePreZoomedRect
-{
-    [self _setWindowFrameWithRect:NSMakeRect(self->preZoomedRect.origin.x, self->preZoomedRect.origin.y, self->preZoomedRect.size.width, self->preZoomedRect.size.height) withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
-    [self _sendJavaWindowMoveEventForFrame:[self _flipFrame]];
-    [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESTORE forFrame:[self _flipFrame]];
 }
 
 - (NSScreen*)_getScreen

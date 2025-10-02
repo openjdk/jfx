@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -359,8 +359,6 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     }
 
     private void updateDisclosureNode() {
-        if (getSkinnable().isEmpty()) return;
-
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode == null) return;
 

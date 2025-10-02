@@ -163,6 +163,11 @@ std::optional<Color> BitmapImageDescriptor::singlePixelSolidColor() const
     return primaryNativeImageMetadata(m_singlePixelSolidColor, std::optional<Color>(), CachedFlag::SinglePixelSolidColor, &NativeImage::singlePixelSolidColor);
 }
 
+Headroom BitmapImageDescriptor::headroom() const
+{
+    return primaryImageFrameMetadata(m_headroom, CachedFlag::Headroom, &ImageFrame::headroom);
+}
+
 String BitmapImageDescriptor::uti() const
 {
 #if USE(CG)

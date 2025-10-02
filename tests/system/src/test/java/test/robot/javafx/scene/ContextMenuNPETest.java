@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.robot.javafx.scene;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -45,7 +44,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 /*
@@ -104,9 +102,6 @@ public class ContextMenuNPETest {
 
     @Test
     public void testContextMenuNPE() throws Throwable {
-        if (PlatformUtil.isLinux()) {
-            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321625
-        }
 
         showMenuButtonContextMenu();
         selectSubmenuItem();

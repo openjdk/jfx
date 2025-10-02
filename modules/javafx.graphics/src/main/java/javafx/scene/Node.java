@@ -131,6 +131,7 @@ import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.media.MediaQueryContext;
 import javafx.css.Selector;
 import javafx.css.Style;
 import javafx.css.converter.BooleanConverter;
@@ -499,6 +500,21 @@ public abstract sealed class Node
             }
 
             @Override
+            public void setScenes(Node node, Scene newScene, SubScene newSubScene) {
+                node.setScenes(newScene, newSubScene);
+            }
+
+            @Override
+            public void setParent(Node node, Parent parent) {
+                node.setParent(parent);
+            }
+
+            @Override
+            public void updateBounds(Node node) {
+                node.updateBounds();
+            }
+
+            @Override
             public void syncPeer(Node node) {
                 node.syncPeer();
             }
@@ -506,6 +522,16 @@ public abstract sealed class Node
             @Override
             public void layoutBoundsChanged(Node node) {
                 node.layoutBoundsChanged();
+            }
+
+            @Override
+            public void nodeResolvedOrientationInvalidated(Node node) {
+                node.nodeResolvedOrientationInvalidated();
+            }
+
+            @Override
+            public void setInheritOrientationFromScene(Node node, boolean value) {
+                node.setInheritOrientationFromScene(value);
             }
 
             @Override
@@ -675,6 +701,11 @@ public abstract sealed class Node
             @Override
             public TransitionTimer findTransitionTimer(Node node, String propertyName) {
                 return node.findTransitionTimer(propertyName);
+            }
+
+            @Override
+            public MediaQueryContext getMediaQueryContext(Node node) {
+                return node.getMediaQueryContext();
             }
         });
     }
@@ -1153,8 +1184,8 @@ public abstract sealed class Node
         if (oldScene != null) {
             oldScene.clearNodeMnemonics(this);
         }
-        if (getParent() == null) {
-            // if we are the root we need to handle scene change
+
+        if (getParent() == null || isInheritOrientationFromScene(resolvedNodeOrientation)) {
             parentResolvedOrientationInvalidated();
         }
 
@@ -6516,6 +6547,13 @@ public abstract sealed class Node
     private static final byte AUTOMATIC_ORIENTATION_RTL = 2;
     private static final byte AUTOMATIC_ORIENTATION_MASK = 2;
 
+    /**
+     * Indicates that the effective node orientation only depends on the explicit value set on this node
+     * and on the scene (if the node orientation is inherited), but not on the parent. This flag must only
+     * be set with {@link NodeHelper#setInheritOrientationFromScene(Node, boolean)} for scene overlays.
+     */
+    private static final byte INHERIT_ORIENTATION_FROM_SCENE = 4;
+
     private byte resolvedNodeOrientation =
             EFFECTIVE_ORIENTATION_LTR | AUTOMATIC_ORIENTATION_LTR;
 
@@ -6614,6 +6652,10 @@ public abstract sealed class Node
                 (byte) (calcEffectiveNodeOrientation()
                             | calcAutomaticNodeOrientation());
 
+        if (isInheritOrientationFromScene(oldResolvedNodeOrientation)) {
+            resolvedNodeOrientation |= INHERIT_ORIENTATION_FROM_SCENE;
+        }
+
         if ((effectiveNodeOrientationProperty != null)
                 && (getEffectiveOrientation(resolvedNodeOrientation)
                         != getEffectiveOrientation(
@@ -6634,6 +6676,10 @@ public abstract sealed class Node
     }
 
     private Node getMirroringOrientationParent() {
+        if (isInheritOrientationFromScene(resolvedNodeOrientation)) {
+            return null;
+        }
+
         Node parentValue = getParent();
         while (parentValue != null) {
             if (parentValue.usesMirroring()) {
@@ -6651,6 +6697,10 @@ public abstract sealed class Node
     }
 
     private Node getOrientationParent() {
+        if (isInheritOrientationFromScene(resolvedNodeOrientation)) {
+            return null;
+        }
+
         final Node parentValue = getParent();
         if (parentValue != null) {
             return parentValue;
@@ -6742,6 +6792,18 @@ public abstract sealed class Node
     private static byte getAutomaticOrientation(
             final byte resolvedNodeOrientation) {
         return (byte) (resolvedNodeOrientation & AUTOMATIC_ORIENTATION_MASK);
+    }
+
+    private static boolean isInheritOrientationFromScene(byte resolvedNodeOrientation) {
+        return (resolvedNodeOrientation & INHERIT_ORIENTATION_FROM_SCENE) != 0;
+    }
+
+    private void setInheritOrientationFromScene(boolean value) {
+        if (value) {
+            resolvedNodeOrientation |= INHERIT_ORIENTATION_FROM_SCENE;
+        } else {
+            resolvedNodeOrientation &= ~INHERIT_ORIENTATION_FROM_SCENE;
+        }
     }
 
     private final class EffectiveOrientationProperty
@@ -10115,6 +10177,11 @@ public abstract sealed class Node
 
     void clearInitialCssStateFlag() {
         initialCssState = false;
+    }
+
+    private MediaQueryContext getMediaQueryContext() {
+        Scene scene = getScene();
+        return scene != null ? scene.preferences : null;
     }
 
     /**

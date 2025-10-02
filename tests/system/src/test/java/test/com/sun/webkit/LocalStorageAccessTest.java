@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,11 +66,6 @@ public class LocalStorageAccessTest {
 
         final List<String> cmd = new ArrayList<>();
         cmd.add(workerJavaCmd);
-
-        // FIXME: Remove this when JDK-8334137 is fixed
-        if (Runtime.version().feature() >= 24) {
-            cmd.add("--sun-misc-unsafe-memory-access=allow");
-        }
 
         cmd.addAll(List.of(
             "--enable-native-access=ALL-UNNAMED",

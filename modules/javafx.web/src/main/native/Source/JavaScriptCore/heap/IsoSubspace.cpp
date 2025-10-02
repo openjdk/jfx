@@ -36,20 +36,15 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(IsoSubspace);
 
-IsoSubspace::IsoSubspace(CString name, JSC::Heap& heap, const HeapCellType& heapCellType, size_t size, bool preciseOnly, uint8_t numberOfLowerTierPreciseCells, std::unique_ptr<IsoMemoryAllocatorBase>&& allocator)
-    : Subspace(name, heap)
+IsoSubspace::IsoSubspace(CString name, JSC::Heap& heap, const HeapCellType& heapCellType, size_t size, uint8_t numberOfLowerTierPreciseCells, std::unique_ptr<IsoMemoryAllocatorBase>&& allocator)
+    : Subspace(SubspaceKind::IsoSubspace, name, heap)
     , m_directory(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size))
     , m_isoAlignedMemoryAllocator(allocator ? WTFMove(allocator) : makeUnique<IsoAlignedMemoryAllocator>(name))
 {
-    if (preciseOnly)
-        m_isPreciseOnly = true;
-    else {
         m_remainingLowerTierPreciseCount = numberOfLowerTierPreciseCells;
     ASSERT(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size) == cellSize());
         ASSERT(m_remainingLowerTierPreciseCount <= MarkedBlock::maxNumberOfLowerTierPreciseCells);
-    }
 
-    m_isIsoSubspace = true;
     initialize(heapCellType, m_isoAlignedMemoryAllocator.get());
 
     Locker locker { m_space.directoryLock() };
@@ -85,23 +80,17 @@ void IsoSubspace::didBeginSweepingToFreeList(MarkedBlock::Handle* block)
         });
 }
 
-void* IsoSubspace::tryAllocatePreciseOrLowerTierPrecise(size_t size)
+void* IsoSubspace::tryAllocateLowerTierPrecise(size_t size)
 {
     auto revive = [&] (PreciseAllocation* allocation) {
-        allocation->setIndexInSpace(m_space.m_preciseAllocations.size());
-        allocation->m_hasValidCell = true;
-        m_space.m_preciseAllocations.append(allocation);
-        if (auto* set = m_space.preciseAllocationSet())
-            set->add(allocation->cell());
-        ASSERT(allocation->indexInSpace() == m_space.m_preciseAllocations.size() - 1);
+        // Lower-tier cells never report capacity. This is intentional since it will not be freed until VM dies.
+        // Whether we will do GC or not does not affect on the used memory by lower-tier cells. So we should not
+        // count them in capacity since it is not interesting to decide whether we should do GC.
         m_preciseAllocations.append(allocation);
+        m_space.registerPreciseAllocation(allocation, /* isNewAllocation */ false);
+        ASSERT(allocation->indexInSpace() == m_space.m_preciseAllocations.size() - 1);
         return allocation->cell();
     };
-
-    if (UNLIKELY(m_isPreciseOnly)) {
-        PreciseAllocation* allocation = PreciseAllocation::tryCreate(m_space.heap(), size, this, 0);
-        return allocation ? revive(allocation) : nullptr;
-    }
 
     ASSERT_WITH_MESSAGE(cellSize() == size, "non-preciseOnly IsoSubspaces shouldn't have variable size");
     if (!m_lowerTierPreciseFreeList.isEmpty()) {
@@ -119,7 +108,6 @@ void* IsoSubspace::tryAllocatePreciseOrLowerTierPrecise(size_t size)
 
 void IsoSubspace::sweepLowerTierPreciseCell(PreciseAllocation* preciseAllocation)
 {
-    ASSERT(!m_isPreciseOnly);
     preciseAllocation = preciseAllocation->reuseForLowerTierPrecise();
     m_lowerTierPreciseFreeList.append(preciseAllocation);
 }

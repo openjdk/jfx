@@ -29,30 +29,33 @@
 
 #pragma once
 
+#include "BackForwardItemIdentifier.h"
 #include "FrameLoader.h"
-#include <wtf/CheckedPtr.h>
 
 namespace WebCore {
 
-class Frame;
 class HistoryItem;
 class HistoryItemClient;
 class LocalFrame;
 class SerializedScriptValue;
 
+enum class ShouldGoToHistoryItem : uint8_t;
 enum class ShouldTreatAsContinuingLoad : uint8_t;
 
+struct NavigationAPIMethodTracker;
 struct StringWithDirection;
 
-class HistoryController final : public CanMakeCheckedPtr<HistoryController> {
+class HistoryController final : public CanMakeWeakPtr<HistoryController>  {
     WTF_MAKE_NONCOPYABLE(HistoryController);
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HistoryController);
 public:
     enum HistoryUpdateType { UpdateAll, UpdateAllExceptBackForwardList };
 
-    explicit HistoryController(Frame&);
+    explicit HistoryController(LocalFrame&);
     ~HistoryController();
+
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
 
     WEBCORE_EXPORT void saveScrollPositionAndViewStateToItem(HistoryItem*);
     WEBCORE_EXPORT void restoreScrollPositionAndViewState();
@@ -75,7 +78,7 @@ public:
     void updateForFrameLoadCompleted();
 
     HistoryItem* currentItem() const { return m_currentItem.get(); }
-    RefPtr<HistoryItem> protectedCurrentItem() const;
+    WEBCORE_EXPORT RefPtr<HistoryItem> protectedCurrentItem() const;
     WEBCORE_EXPORT void setCurrentItem(Ref<HistoryItem>&&);
     void setCurrentItemTitle(const StringWithDirection&);
     bool currentItemShouldBeReplaced() const;
@@ -88,44 +91,58 @@ public:
     HistoryItem* provisionalItem() const { return m_provisionalItem.get(); }
     RefPtr<HistoryItem> protectedProvisionalItem() const;
     void setProvisionalItem(RefPtr<HistoryItem>&&);
+    void clearProvisionalItem();
 
     void pushState(RefPtr<SerializedScriptValue>&&, const String& url);
     void replaceState(RefPtr<SerializedScriptValue>&&, const String& url);
 
     void setDefersLoading(bool);
 
+    Ref<HistoryItem> createItemWithLoader(HistoryItemClient&, DocumentLoader*);
+
+    WEBCORE_EXPORT RefPtr<HistoryItem> createItemTree(LocalFrame& targetFrame, bool clipAtTarget, BackForwardItemIdentifier);
+
+    void clearPolicyItem();
+
 private:
     friend class Page;
     bool shouldStopLoadingForHistoryItem(HistoryItem&) const;
     void goToItem(HistoryItem&, FrameLoadType, ShouldTreatAsContinuingLoad);
+    void goToItemForNavigationAPI(HistoryItem&, FrameLoadType, LocalFrame& triggeringFrame, NavigationAPIMethodTracker*);
+    void goToItemShared(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&);
 
-    void initializeItem(HistoryItem&);
-    Ref<HistoryItem> createItem(HistoryItemClient&);
-    Ref<HistoryItem> createItemTree(HistoryItemClient&, LocalFrame& targetFrame, bool clipAtTarget);
+    void initializeItem(HistoryItem&, RefPtr<DocumentLoader>);
+    Ref<HistoryItem> createItem(HistoryItemClient&, BackForwardItemIdentifier);
+    Ref<HistoryItem> createItemTree(HistoryItemClient&, LocalFrame& targetFrame, bool clipAtTarget, BackForwardItemIdentifier);
 
-    void recursiveSetProvisionalItem(HistoryItem&, HistoryItem*);
+    enum class ForNavigationAPI : bool { No, Yes };
+    void recursiveSetProvisionalItem(HistoryItem&, HistoryItem*, ForNavigationAPI = ForNavigationAPI::No);
     void recursiveGoToItem(HistoryItem&, HistoryItem*, FrameLoadType, ShouldTreatAsContinuingLoad);
     bool isReplaceLoadTypeWithProvisionalItem(FrameLoadType);
     bool isReloadTypeWithProvisionalItem(FrameLoadType);
     void recursiveUpdateForCommit();
     void recursiveUpdateForSameDocumentNavigation();
-    bool itemsAreClones(HistoryItem&, HistoryItem*) const;
+    static bool itemsAreClones(HistoryItem&, HistoryItem*);
     void updateBackForwardListClippedAtTarget(bool doClip);
     void updateCurrentItem();
+    bool isFrameLoadComplete() const { return m_frameLoadComplete; }
 
-    Ref<Frame> protectedFrame() const;
+    struct FrameToNavigate;
+    static void recursiveGatherFramesToNavigate(LocalFrame&, Vector<FrameToNavigate>&, HistoryItem& targetItem, HistoryItem* fromItem);
+    Ref<LocalFrame> protectedFrame() const;
 
-    WeakRef<Frame> m_frame;
+    const WeakRef<LocalFrame> m_frame;
 
     RefPtr<HistoryItem> m_currentItem;
     RefPtr<HistoryItem> m_previousItem;
     RefPtr<HistoryItem> m_provisionalItem;
+    RefPtr<HistoryItem> m_policyItem;
 
     bool m_frameLoadComplete;
 
     bool m_defersLoading;
-    RefPtr<HistoryItem> m_deferredItem;
     FrameLoadType m_deferredFrameLoadType;
+    RefPtr<HistoryItem> m_deferredItem;
 };
 
 } // namespace WebCore

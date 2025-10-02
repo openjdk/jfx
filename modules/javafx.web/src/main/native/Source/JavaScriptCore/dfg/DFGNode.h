@@ -82,9 +82,9 @@ class Snippet;
 
 namespace DFG {
 
+class BasicBlock;
 class Graph;
 class PromotedLocationDescriptor;
-struct BasicBlock;
 
 struct StorageAccessData {
     PropertyOffset offset;
@@ -132,7 +132,7 @@ struct NewArrayWithSpeciesData {
     unsigned arrayMode { 0 };
     unsigned indexingMode { 0 };
 
-    uint64_t asQuadWord() const { return bitwise_cast<uint64_t>(*this); }
+    uint64_t asQuadWord() const { return std::bit_cast<uint64_t>(*this); }
 };
 static_assert(sizeof(IndexingType) <= sizeof(unsigned));
 static_assert(sizeof(ArrayMode) <= sizeof(unsigned));
@@ -166,9 +166,9 @@ struct BranchTarget {
 
     void setBytecodeIndex(unsigned bytecodeIndex)
     {
-        block = bitwise_cast<BasicBlock*>(static_cast<uintptr_t>(bytecodeIndex));
+        block = std::bit_cast<BasicBlock*>(static_cast<uintptr_t>(bytecodeIndex));
     }
-    unsigned bytecodeIndex() const { return bitwise_cast<uintptr_t>(block); }
+    unsigned bytecodeIndex() const { return std::bit_cast<uintptr_t>(block); }
 
     void dump(PrintStream&) const;
 
@@ -181,8 +181,8 @@ struct BranchData {
         unsigned takenBytecodeIndex, unsigned notTakenBytecodeIndex)
     {
         BranchData result;
-        result.taken.block = bitwise_cast<BasicBlock*>(static_cast<uintptr_t>(takenBytecodeIndex));
-        result.notTaken.block = bitwise_cast<BasicBlock*>(static_cast<uintptr_t>(notTakenBytecodeIndex));
+        result.taken.block = std::bit_cast<BasicBlock*>(static_cast<uintptr_t>(takenBytecodeIndex));
+        result.notTaken.block = std::bit_cast<BasicBlock*>(static_cast<uintptr_t>(notTakenBytecodeIndex));
         return result;
     }
 
@@ -324,6 +324,8 @@ public:
     enum VarArgTag { VarArg };
 
     Node() { }
+
+    Node(const Node&) = default;
 
     Node(NodeType op, NodeOrigin nodeOrigin, const AdjacencyList& children)
         : origin(nodeOrigin)
@@ -695,6 +697,17 @@ public:
         m_op = MultiPutByOffset;
     }
 
+    void convertToPhantomNewArrayWithConstantSize()
+    {
+        ASSERT(m_op == NewArrayWithConstantSize);
+        m_op = PhantomNewArrayWithConstantSize;
+        m_flags &= ~NodeHasVarArgs;
+        m_flags |= NodeMustGenerate;
+        // No need to clear the infos, as the indexing type and array
+        // size are still required for materialization when an OSR exit occurs.
+        children = AdjacencyList();
+    }
+
     void convertToPhantomNewObject()
     {
         ASSERT(m_op == NewObject);
@@ -874,6 +887,7 @@ public:
     void convertToNewArrayBuffer(FrozenValue* immutableButterfly);
     void convertToNewArrayWithSize();
     void convertToNewArrayWithConstantSize(Graph&, uint32_t);
+    void convertToNewArrayWithSizeAndStructure(Graph&, RegisteredStructure);
 
     void convertToNewBoundFunction(FrozenValue*);
 
@@ -891,6 +905,13 @@ public:
     {
         setOp(SetRegExpObjectLastIndex);
         m_opInfo = false;
+    }
+
+    void convertToPurifyNaN(Node* input)
+    {
+        setOpAndDefaultFlags(PurifyNaN);
+        children.reset();
+        children.setChild1(Edge(input, DoubleRepUse));
     }
 
     JSValue asJSValue()
@@ -1388,6 +1409,8 @@ public:
     {
         switch (op()) {
         case NewArrayWithConstantSize:
+        case PhantomNewArrayWithConstantSize:
+        case MaterializeNewArrayWithConstantSize:
             return true;
         default:
             return false;
@@ -1397,7 +1420,7 @@ public:
     unsigned newArraySize()
     {
         ASSERT(hasNewArraySize());
-        return m_opInfo2.as<unsigned>();
+        return op() == MaterializeNewArrayWithConstantSize ? objectMaterializationData().m_newArraySize : m_opInfo2.as<unsigned>();
     }
 
     bool hasIndexingType()
@@ -1406,6 +1429,8 @@ public:
         case NewArray:
         case NewArrayWithSize:
         case NewArrayWithConstantSize:
+        case PhantomNewArrayWithConstantSize:
+        case MaterializeNewArrayWithConstantSize:
         case NewArrayBuffer:
         case PhantomNewArrayBuffer:
         case NewArrayWithSpecies:
@@ -1814,7 +1839,7 @@ public:
     BasicBlock*& targetBlock()
     {
         ASSERT(isJump());
-        return *bitwise_cast<BasicBlock**>(&m_opInfo.u.pointer);
+        return *std::bit_cast<BasicBlock**>(&m_opInfo.u.pointer);
     }
 
     BranchData* branchData()
@@ -2012,7 +2037,7 @@ public:
         case GetArgument:
         case ArrayPop:
         case ArrayPush:
-        case ArraySpliceExtract:
+        case ArraySplice:
         case RegExpExec:
         case RegExpExecNonGlobalOrSticky:
         case RegExpTest:
@@ -2206,6 +2231,7 @@ public:
         case GetTypedArrayLengthAsInt52:
         case HasIndexedProperty:
         case EnumeratorNextUpdateIndexAndMode:
+        case ArrayIncludes:
         case ArrayIndexOf:
             return true;
         default:
@@ -2330,6 +2356,7 @@ public:
         case NewStringObject:
         case NewMap:
         case NewSet:
+        case NewArrayWithSizeAndStructure:
             return true;
         default:
             return false;
@@ -2408,6 +2435,7 @@ public:
     {
         switch (op()) {
         case MaterializeNewObject:
+        case MaterializeNewArrayWithConstantSize:
         case MaterializeNewInternalFieldObject:
         case MaterializeCreateActivation:
             return true;
@@ -2495,6 +2523,7 @@ public:
     bool isPhantomAllocation()
     {
         switch (op()) {
+        case PhantomNewArrayWithConstantSize:
         case PhantomNewObject:
         case PhantomDirectArguments:
         case PhantomCreateRest:
@@ -2538,6 +2567,7 @@ public:
         case EnumeratorGetByVal:
         case EnumeratorInByVal:
         case EnumeratorHasOwnProperty:
+        case StringAt:
         case StringCharAt:
         case StringCharCodeAt:
         case StringCodePointAt:
@@ -2547,6 +2577,7 @@ public:
         case ArrayifyToStructure:
         case ArrayPush:
         case ArrayPop:
+        case ArrayIncludes:
         case ArrayIndexOf:
         case HasIndexedProperty:
         case AtomicsAdd:
@@ -2755,7 +2786,7 @@ public:
     DataViewData dataViewData()
     {
         ASSERT(op() == DataViewGetInt || op() == DataViewGetFloat || op() == DataViewSet);
-        return bitwise_cast<DataViewData>(m_opInfo.as<uint64_t>());
+        return std::bit_cast<DataViewData>(m_opInfo.as<uint64_t>());
     }
 
     bool shouldGenerate()
@@ -2773,6 +2804,11 @@ public:
     unsigned refCount()
     {
         return m_refCount;
+    }
+
+    unsigned decRef()
+    {
+        return m_refCount--;
     }
 
     unsigned postfixRef()
@@ -3460,7 +3496,7 @@ public:
 
     bool hasBucketOwnerType()
     {
-        return op() == MapIterationNext || op() == MapIterationEntry || op() == MapIterationEntryKey || op() == MapIterationEntryValue || op() == MapStorage;
+        return op() == MapIterationNext || op() == MapIterationEntry || op() == MapIterationEntryKey || op() == MapIterationEntryValue || op() == MapStorage || op() == MapStorageOrSentinel;
     }
 
     unsigned numberOfBoundArguments()
@@ -3627,6 +3663,11 @@ public:
         m_opInfo2 = OpInfoWrapper();
     }
 
+    void setOpInfo(OpInfo info)
+    {
+        m_opInfo = info.m_value;
+    }
+
     void dumpChildren(PrintStream& out)
     {
         if (!child1())
@@ -3689,12 +3730,12 @@ private:
         OpInfoWrapper(RegisteredStructure structure)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(structure);
+            u.pointer = std::bit_cast<void*>(structure);
         }
         OpInfoWrapper(CacheableIdentifier identifier)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(identifier.rawBits());
+            u.pointer = std::bit_cast<void*>(identifier.rawBits());
         }
         OpInfoWrapper& operator=(uint32_t int32)
         {
@@ -3728,18 +3769,18 @@ private:
         OpInfoWrapper& operator=(RegisteredStructure structure)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(structure);
+            u.pointer = std::bit_cast<void*>(structure);
             return *this;
         }
         OpInfoWrapper& operator=(CacheableIdentifier identifier)
         {
             u.int64 = 0;
-            u.pointer = bitwise_cast<void*>(identifier.rawBits());
+            u.pointer = std::bit_cast<void*>(identifier.rawBits());
             return *this;
         }
         OpInfoWrapper& operator=(NewArrayBufferData newArrayBufferData)
         {
-            u.int64 = bitwise_cast<uint64_t>(newArrayBufferData);
+            u.int64 = std::bit_cast<uint64_t>(newArrayBufferData);
             return *this;
         }
         template <typename T>
@@ -3764,16 +3805,16 @@ private:
         }
         ALWAYS_INLINE RegisteredStructure asRegisteredStructure() const
         {
-            return bitwise_cast<RegisteredStructure>(u.pointer);
+            return std::bit_cast<RegisteredStructure>(u.pointer);
         }
         ALWAYS_INLINE NewArrayBufferData asNewArrayBufferData() const
         {
-            return bitwise_cast<NewArrayBufferData>(u.int64);
+            return std::bit_cast<NewArrayBufferData>(u.int64);
         }
 
         ALWAYS_INLINE NewArrayWithSpeciesData asNewArrayWithSpeciesData() const
         {
-            return bitwise_cast<NewArrayWithSpeciesData>(u.int64);
+            return std::bit_cast<NewArrayWithSpeciesData>(u.int64);
         }
 
         union {
@@ -3807,7 +3848,7 @@ public:
 
 // Uncomment this to log NodeSet operations.
 // typedef LoggingHashSet<Node::HashSetTemplateInstantiationString, Node*> NodeSet;
-typedef HashSet<Node*> NodeSet;
+typedef UncheckedKeyHashSet<Node*> NodeSet;
 
 struct NodeComparator {
     template<typename NodePtrType>
@@ -3868,7 +3909,7 @@ template<>
 struct LoggingHashKeyTraits<JSC::DFG::Node*> {
     static void print(PrintStream& out, JSC::DFG::Node* key)
     {
-        out.print("bitwise_cast<::JSC::DFG::Node*>(", RawPointer(key), "lu)");
+        out.print("std::bit_cast<::JSC::DFG::Node*>(", RawPointer(key), "lu)");
     }
 };
 

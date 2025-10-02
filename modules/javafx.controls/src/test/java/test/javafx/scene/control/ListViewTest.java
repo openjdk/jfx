@@ -569,6 +569,8 @@ public class ListViewTest {
                 new Person("Emma", "Jones", "emma.jones@example.com"),
                 new Person("Michael", "Brown", "michael.brown@example.com")));
 
+        stageLoader = new StageLoader(list);
+
         VirtualFlowTestUtils.assertRowsNotEmpty(list, 0, 5); // rows 0 - 5 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(list, 5, -1); // rows 5+ should be empty
 
@@ -577,6 +579,7 @@ public class ListViewTest {
         list.setItems(FXCollections.observableArrayList(
                 new Person("*_*Emma", "Jones", "emma.jones@example.com"),
                 new Person("_Michael", "Brown", "michael.brown@example.com")));
+        Toolkit.getToolkit().firePulse();
 
         VirtualFlowTestUtils.assertRowsNotEmpty(list, 0, 2); // rows 0 - 2 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(list, 2, -1); // rows 2+ should be empty
@@ -664,12 +667,17 @@ public class ListViewTest {
 
         final ListView<String> listView = new ListView<>();
         listView.setItems(emptyModel);
+        stageLoader = new StageLoader(listView);
+
         VirtualFlowTestUtils.assertRowsEmpty(listView, 0, 5);
 
         ObservableList<String> mod = FXCollections.observableArrayList();
         String value = System.currentTimeMillis()+"";
         mod.add(value);
+
         listView.setItems(mod);
+        Toolkit.getToolkit().firePulse();
+
         VirtualFlowTestUtils.assertCellCount(listView, 1);
         VirtualFlowTestUtils.assertCellTextEquals(listView, 0, value);
     }
@@ -679,12 +687,17 @@ public class ListViewTest {
 
         final ListView<String> listView = new ListView<>();
         listView.setItems(emptyModel);
+        stageLoader = new StageLoader(listView);
+
         VirtualFlowTestUtils.assertRowsEmpty(listView, 0, 5);
 
         ObservableList<String> mod1 = FXCollections.observableArrayList();
         String value1 = System.currentTimeMillis()+"";
         mod1.add(value1);
+
         listView.getItems().setAll(mod1);
+        Toolkit.getToolkit().firePulse();
+
         VirtualFlowTestUtils.assertCellCount(listView, 1);
         VirtualFlowTestUtils.assertCellTextEquals(listView, 0, value1);
     }
@@ -700,6 +713,8 @@ public class ListViewTest {
         final ListView<String> listView = new ListView<>(items);
         listView.setMaxHeight(50);
         listView.setPrefHeight(50);
+
+        stageLoader = new StageLoader(listView);
 
         // we want the vertical scrollbar
         VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(listView);
@@ -724,6 +739,8 @@ public class ListViewTest {
         listView.setMinHeight(100);
         listView.setPrefHeight(100);
         listView.setCellFactory(CheckBoxListCell.forListView(param -> new ReadOnlyBooleanWrapper(true)));
+
+        stageLoader = new StageLoader(listView);
 
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
@@ -773,6 +790,8 @@ public class ListViewTest {
         listView.setEditable(true);
         listView.setCellFactory(ComboBoxListCell.forListView(names));
 
+        stageLoader = new StageLoader(listView);
+
         IndexedCell cell = VirtualFlowTestUtils.getCell(listView, 1);
         assertEquals("1", cell.getText());
         assertFalse(cell.isEditing());
@@ -792,6 +811,8 @@ public class ListViewTest {
     @Test public void test_rt31471() {
         final ObservableList names = FXCollections.observableArrayList("Adam", "Alex", "Alfred", "Albert");
         final ListView listView = new ListView(names);
+
+        stageLoader = new StageLoader(listView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(listView, 0);
         assertEquals("Adam", cell.getItem());
@@ -872,6 +893,8 @@ public class ListViewTest {
         // First two rows have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
         listView.getItems().setAll("one", "two");
+
+        stageLoader = new StageLoader(listView);
 
         VirtualFlowTestUtils.assertGraphicIsVisible(listView, 0);
         VirtualFlowTestUtils.assertGraphicIsVisible(listView, 1);
@@ -1018,6 +1041,8 @@ public class ListViewTest {
             rt_35889_cancel_count++;
             //System.out.println("On Edit Cancel: " + t);
         });
+
+        stageLoader = new StageLoader(textFieldListView);
 
         ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);
         assertNull(cell0.getGraphic());
@@ -1579,6 +1604,8 @@ public class ListViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         FocusModel<String> fm = stringListView.getFocusModel();
+
+        stageLoader = new StageLoader(stringListView);
 
         // click on row 0
         VirtualFlowTestUtils.clickOnRow(stringListView, 0);
