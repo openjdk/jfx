@@ -369,13 +369,13 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     NSLog(@"reorderChildWindows: %p", self);
     if (self->childWindows != nil) {
         NSLog(@"    childWindows: %p", self->childWindows);
-        for (GlassWindow *window in self->childWindows)
+        for (GlassWindow *child in self->childWindows)
         {
-            NSLog(@"    child: %p", window);
-            NSWindowLevel level = MAX(window->winLevel, [self->nsWindow level]);
-            [window->nsWindow setLevel:level];
-            [window->nsWindow orderWindow:NSWindowAbove relativeTo:[window->owner->nsWindow windowNumber]];
-            [window reorderChildWindows:unused];
+            NSLog(@"    child: %p", child);
+            NSWindowLevel level = MAX(child->winLevel, [self->nsWindow level]);
+            [child->nsWindow setLevel:level];
+            [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
+            [child reorderChildWindows:unused];
         }
     }
 }
@@ -721,8 +721,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
                 NSLog(@"        level: NSNormalWindowLevel");
                 break;
         }
+        window->winLevel = level; // Save original level
+        if (window->owner != nil) {
+            // Owned windows must set their level to at least the current level
+            // of their owner
+            level = MAX(level, [window->owner->nsWindow level]);
+        }
         [window->nsWindow setLevel:level];
-        window->winLevel = level;
+        [window reorderChildWindows:YES];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
