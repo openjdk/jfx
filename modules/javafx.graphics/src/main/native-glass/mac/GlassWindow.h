@@ -63,6 +63,8 @@
 
     BOOL                isClosed;
 
+    NSWindowLevel       winLevel; // Desired level for this window
+
     // We track whether an explicit size/location have been assigned to the window
     // in order to differentiate between an explicitly assigned zero bounds, and the
     // deafult bounds (which are also zeros - see a comment in _createWindowCommon().)
@@ -75,7 +77,8 @@
 
 //
 - (void) addChildWindow:(GlassWindow*)childWindow;
-- (void) reorderChildWindows:(BOOL)focus;
+- (void) removeChildWindow:(GlassWindow*)childWindow;
+- (void) reorderChildWindows:(BOOL)unused;
 
 // NSWindow overrides delegate methods
 - (void)close;

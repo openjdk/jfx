@@ -292,10 +292,6 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 - (void)close
 {
     [self _ungrabFocus];
-    if (self->owner != nil) {
-        [self->owner removeChildWindow:self];
-        [self->owner reorderChildWindows:YES];
-    }
 }
 
 - (void)sendEvent:(NSEvent *)event
@@ -367,7 +363,8 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
-- (void) reorderChildWindows:(BOOL)focus
+// KCR: FIXME: remove the unused parameter once we determine that we don't need it.
+- (void) reorderChildWindows:(BOOL)unused
 {
     NSLog(@"reorderChildWindows: %p", self);
     if (self->childWindows != nil) {
@@ -375,8 +372,10 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         for (GlassWindow *window in self->childWindows)
         {
             NSLog(@"    child: %p", window);
-//            [window->nsWindow setLevel:NSFloatingWindowLevel];
+            NSWindowLevel level = MAX(window->winLevel, [self->nsWindow level]);
+            [window->nsWindow setLevel:level];
             [window->nsWindow orderWindow:NSWindowAbove relativeTo:[window->owner->nsWindow windowNumber]];
+            [window reorderChildWindows:unused];
         }
     }
 }
@@ -723,6 +722,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
                 break;
         }
         [window->nsWindow setLevel:level];
+        window->winLevel = level;
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
