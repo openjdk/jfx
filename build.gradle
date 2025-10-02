@@ -2140,15 +2140,16 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "${junitJupiterVersion}"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "${junitJupiterVersion}"
-        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "${junitJupiterVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "${junitVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "${junitVersion}"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "${junitVersion}"
         testImplementation group: "org.opentest4j", name: "opentest4j", version: "${opentest4jVersion}"
         testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "${apiguardianVersion}"
-        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "${junitJupiterVersion}"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "${junitPlatformVersion}"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "${junitPlatformVersion}"
-        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "${junitPlatformVersion}"
+        testImplementation group: "org.jspecify", name: "jspecify", version: "${jspecifyVersion}"
+        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "${junitVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "${junitVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "${junitVersion}"
+        testRuntimeOnly group: "org.junit.platform", name: "junit-platform-launcher", version: "${junitVersion}"
 
         if (BUILD_CLOSED && DO_JCOV)  {
             testImplementation name: "jcov"
