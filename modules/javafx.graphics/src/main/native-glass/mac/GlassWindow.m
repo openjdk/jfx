@@ -1298,12 +1298,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         else
         {
             [window _ungrabFocus];
-            // KCR: FIXME
-            if (window->owner != nil)
-            {
-                NSLog(@"   KCR: FIXME: removeChildWindow: %p", window);
-                // KCR: DO: [window->owner removeChildWindow:window];
-            }
             [window->nsWindow orderOut:window->nsWindow];
         }
         now = [window->nsWindow isVisible] ? JNI_TRUE : JNI_FALSE;
