@@ -59,17 +59,17 @@
 
 #pragma mark --- Delegate
 
-// KCR: FIXME: temporary for debugging, delete when no longer needed
+// KCR: DEBUG BEGIN
 - (void)windowDidChangeScreen:(NSNotification *)notification
 {
     NSLog(@"windowDidChangeScreen: %p", [self->nsWindow screen]);
     //[self fixChildWindow];
 }
-
+// KCR: DEBUG END
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
-    NSLog(@"windowDidBecomeKey: %p", self);
+    NSLog(@"windowDidBecomeKey: %p", self); // KCR: Comment out
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -92,7 +92,7 @@
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
-    NSLog(@"windowDidResignKey: %p", self);
+    NSLog(@"windowDidResignKey: %p", self); // KCR: Comment out
     [self _ungrabFocus];
 
     GET_MAIN_JENV_NOWARN;
@@ -106,20 +106,20 @@
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-    NSLog(@"windowWillClose");
+    NSLog(@"windowWillClose"); // KCR: Comment out
     // Remove self from list of child windows
     if (self->owner != nil) {
         [self->owner removeChildWindow:self];
-//        [self->owner reorderChildWindows];
+//        [self->owner reorderChildWindows]; // KCR: REMOVE IF NOT NEEDED
     }
 
     // Finally, close owned windows to mimic MS Windows behavior
     if (self->childWindows != nil) {
         NSArray *children = [[NSArray alloc] initWithArray:self->childWindows];
-        NSLog(@"    childWindows: %p", self->childWindows);
+        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
         // FIXME: make a copy
         for (GlassWindow *child in children) {
-            NSLog(@"    close: %p", child);
+            NSLog(@"    close: %p", child); // KCR: DEBUG
             [child->nsWindow close];
         }
         [children release];

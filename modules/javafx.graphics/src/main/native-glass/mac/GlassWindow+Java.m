@@ -191,7 +191,6 @@ extern NSSize maxScreenDimensions;
 
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
-    // KCR: check
     for (GlassWindow * window = self; window; window = window->owner) {
         if (window->nsWindow == s_grabWindow) {
             return;
@@ -271,7 +270,7 @@ extern NSSize maxScreenDimensions;
 
 - (void)_setVisible
 {
-    NSLog(@"_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);
+    NSLog(@"_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled); // KCR: REVERT BACK TO LOG
 
     if (self->isFocusable == YES && self->isEnabled == YES)
     {
@@ -287,7 +286,6 @@ extern NSSize maxScreenDimensions;
     {
         [self->owner reorderChildWindows];
     }
-
     // Make sure we synchronize scale factors which could have changed while
     // we were not visible without invoking the overrides we watch.
     if ([self->nsWindow screen] && (self->view != nil)) {
