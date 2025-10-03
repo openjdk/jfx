@@ -367,37 +367,17 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 {
     NSLog(@"reorderChildWindows: %p", self); // KCR: Change to "LOG"
     if (self->childWindows != nil) {
-        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
+//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
         for (GlassWindow *child in self->childWindows)
         {
-            // KCR: DEBUG BEGIN
-            NSLog(@"    child: %p", child);
+//            NSLog(@"    child: %p", child); // KCR: DEBUG
+            // Owned windows must set their level to at least the level of their owner
             NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
-            if (level != [child->nsWindow level]) {
-                NSLog(@"*** ERROR: level expected = %d, actual = %d", (int)level, (int)[child->nsWindow level]);
-            }
-            // KCR: DEBUG END
-
-            [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
-            [child reorderChildWindows];
-        }
-    }
-}
-
-- (void) setLevelChildWindows
-{
-    NSLog(@"setLevelChildWindows: %p", self); // KCR: Change to "LOG"
-    if (self->childWindows != nil) {
-        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
-        for (GlassWindow *child in self->childWindows)
-        {
-            NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
-            // KCR: DEBUG BEGIN
-            NSLog(@"    child: %p, level: %d, prefLevel: %d, self level: %d",
-                 child, (int)level, (int)child->prefLevel, (int)[self->nsWindow level]);
-            // KCR: DEBUG END
             [child->nsWindow setLevel:level];
-            [child setLevelChildWindows];
+            // Order child above the owner window
+            [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
+
+            [child reorderChildWindows];
         }
     }
 }
@@ -729,7 +709,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSLog(@"MacWindow::setLevel"); // KCR: DEBUG
         GlassWindow *window = getGlassWindow(env, jPtr);
         NSInteger level = NSNormalWindowLevel;
         switch (jLevel)
@@ -754,7 +733,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
             level = MAX(level, [window->owner->nsWindow level]);
         }
         [window->nsWindow setLevel:level];
-        [window setLevelChildWindows];
+        [window reorderChildWindows];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

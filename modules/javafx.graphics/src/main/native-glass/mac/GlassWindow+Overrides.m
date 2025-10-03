@@ -60,11 +60,13 @@
 #pragma mark --- Delegate
 
 // KCR: DEBUG BEGIN
+/*
 - (void)windowDidChangeScreen:(NSNotification *)notification
 {
     NSLog(@"windowDidChangeScreen: %p", [self->nsWindow screen]);
     //[self fixChildWindow];
 }
+*/
 // KCR: DEBUG END
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
@@ -110,16 +112,15 @@
     // Remove self from list of child windows
     if (self->owner != nil) {
         [self->owner removeChildWindow:self];
-//        [self->owner reorderChildWindows]; // KCR: REMOVE IF NOT NEEDED
     }
 
     // Finally, close owned windows to mimic MS Windows behavior
     if (self->childWindows != nil) {
         NSArray *children = [[NSArray alloc] initWithArray:self->childWindows];
-        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
+//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
         // FIXME: make a copy
         for (GlassWindow *child in children) {
-            NSLog(@"    close: %p", child); // KCR: DEBUG
+            NSLog(@"    close child: %p", child); // KCR: DEBUG
             [child->nsWindow close];
         }
         [children release];

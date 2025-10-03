@@ -79,7 +79,6 @@
 - (void) addChildWindow:(GlassWindow*)childWindow;
 - (void) removeChildWindow:(GlassWindow*)childWindow;
 - (void) reorderChildWindows;
-- (void) setLevelChildWindows;
 
 // NSWindow overrides delegate methods
 - (void)close;
