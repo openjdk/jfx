@@ -603,10 +603,18 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public AsyncOperation loadImageAsync(
-            AsyncOperationListener listener, String url, double width, double height,
+            AsyncOperationListener<ImageLoader> listener, String url, double width, double height,
             boolean preserveRatio, boolean smooth) {
         return imageLoaderFactory.createAsyncImageLoader(
                 listener, url, width, height, preserveRatio, smooth);
+    }
+
+    @Override
+    public AsyncOperation loadImageAsync(
+            AsyncOperationListener<ImageLoader> listener, InputStream stream, double width, double height,
+            boolean preserveRatio, boolean smooth) {
+        return imageLoaderFactory.createAsyncImageLoader(
+                listener, stream, width, height, preserveRatio, smooth);
     }
 
     @Override
