@@ -25,10 +25,10 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
 
-/* Define if history library is there (-lhistory) */
+/* Define if history library is available */
 /* #undef HAVE_LIBHISTORY */
 
-/* Define if readline library is there (-lreadline) */
+/* Define if readline library is available */
 /* #undef HAVE_LIBREADLINE */
 
 /* Define to 1 if you have the <lzma.h> header file. */
@@ -83,7 +83,7 @@
 #define PACKAGE_NAME "libxml2"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libxml2 2.14.5"
+#define PACKAGE_STRING "libxml2 2.14.6"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libxml2"
@@ -92,7 +92,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.14.5"
+#define PACKAGE_VERSION "2.14.6"
 
 /* Define to 1 if all of the C90 standard headers exist (not just the ones
    required in a freestanding environment). This macro is provided for
@@ -100,7 +100,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "2.14.5"
+#define VERSION "2.14.6"
 
 /* System configuration directory (/etc) */
 #define XML_SYSCONFDIR "/usr/local/etc"
