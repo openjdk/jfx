@@ -87,7 +87,7 @@
     [[NSApp mainMenu] update];
 
     // Fix up window stacking order
-    [self reorderChildWindows:YES];
+    [self reorderChildWindows];
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification
@@ -101,7 +101,7 @@
     }
 
     // Fix up order
-    [self reorderChildWindows:NO];
+    [self reorderChildWindows];
 }
 
 - (void)windowWillClose:(NSNotification *)notification
@@ -110,7 +110,7 @@
     // Remove self from list of child windows
     if (self->owner != nil) {
         [self->owner removeChildWindow:self];
-//        [self->owner reorderChildWindows:NO];
+//        [self->owner reorderChildWindows];
     }
 
     // Finally, close owned windows to mimic MS Windows behavior

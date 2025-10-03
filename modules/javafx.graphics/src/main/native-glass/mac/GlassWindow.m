@@ -309,7 +309,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         }
 
         [self _checkUngrab];
-        [self reorderChildWindows:YES];
+        [self reorderChildWindows];
     }
 }
 
@@ -363,8 +363,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
-// KCR: FIXME: remove the unused parameter once we determine that we don't need it.
-- (void) reorderChildWindows:(BOOL)unused
+- (void) reorderChildWindows
 {
     NSLog(@"reorderChildWindows: %p", self);
     if (self->childWindows != nil) {
@@ -372,10 +371,29 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         for (GlassWindow *child in self->childWindows)
         {
             NSLog(@"    child: %p", child);
-            NSWindowLevel level = MAX(child->winLevel, [self->nsWindow level]);
-            [child->nsWindow setLevel:level];
+            NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
+            if (level != [child->nsWindow level]) {
+                NSLog(@"*** ERROR: level expected = %d, actual = %d", (int)level, (int)[child->nsWindow level]);
+            }
+
             [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
-            [child reorderChildWindows:unused];
+            [child reorderChildWindows];
+        }
+    }
+}
+
+- (void) setLevelChildWindows
+{
+    NSLog(@"setLevelChildWindows: %p", self);
+    if (self->childWindows != nil) {
+        NSLog(@"    childWindows: %p", self->childWindows);
+        for (GlassWindow *child in self->childWindows)
+        {
+            NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
+            NSLog(@"    child: %p, level: %d, prefLevel: %d, self level: %d",
+                 child, (int)level, (int)child->prefLevel, (int)[self->nsWindow level]);
+            [child->nsWindow setLevel:level];
+            [child setLevelChildWindows];
         }
     }
 }
@@ -502,12 +520,18 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             }
         }
 
+        window->prefLevel = [window->nsWindow level];
         if (jOwnerPtr != 0L)
         {
-            // KCR: Get owner glass window and add this window as a child window
+            // Get owner glass window and add this window as a child window
             window->owner = getGlassWindow(env, jOwnerPtr);
             NSLog(@"owner window: %p", window->owner);
             [window->owner addChildWindow:window];
+
+            // Owned windows must set their level to at least the level of their owner
+            NSWindowLevel level = MAX(window->prefLevel, [window->owner->nsWindow level]);
+            level = MAX(level, [window->owner->nsWindow level]);
+            [window->nsWindow setLevel:level];
         }
 
         /* 10.7 full screen window support */
@@ -698,7 +722,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createWindow
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
 (JNIEnv *env, jobject jWindow, jlong jPtr, jint jLevel)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setLevel");
+    NSLog(@"Java_com_sun_glass_ui_mac_MacWindow__1setLevel");
     if (!jPtr) return;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
@@ -721,14 +745,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
                 NSLog(@"        level: NSNormalWindowLevel");
                 break;
         }
-        window->winLevel = level; // Save original level
+        window->prefLevel = level; // Save preferred level
         if (window->owner != nil) {
-            // Owned windows must set their level to at least the current level
-            // of their owner
+            // Owned windows must set their level to at least the level of their owner
             level = MAX(level, [window->owner->nsWindow level]);
         }
         [window->nsWindow setLevel:level];
-        [window reorderChildWindows:YES];
+        [window setLevelChildWindows];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

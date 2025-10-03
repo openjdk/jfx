@@ -273,12 +273,10 @@ extern NSSize maxScreenDimensions;
 {
     NSLog(@"_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);
 
-    BOOL focus = NO;
     if (self->isFocusable == YES && self->isEnabled == YES)
     {
         [self->nsWindow makeMainWindow];
         [self->nsWindow makeKeyAndOrderFront:nil];
-        focus = YES;
     }
     else
     {
@@ -287,7 +285,7 @@ extern NSSize maxScreenDimensions;
 
     if (self->owner != nil)
     {
-        [self->owner reorderChildWindows:focus];
+        [self->owner reorderChildWindows];
     }
 
     // Make sure we synchronize scale factors which could have changed while
