@@ -116,9 +116,8 @@
 
     // Finally, close owned windows to mimic MS Windows behavior
     if (self->childWindows != nil) {
+        // Iterate over an immutable copy
         NSArray *children = [[NSArray alloc] initWithArray:self->childWindows];
-//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
-        // FIXME: make a copy
         for (GlassWindow *child in children) {
             NSLog(@"    close child: %p", child); // KCR: DEBUG
             [child->nsWindow close];
