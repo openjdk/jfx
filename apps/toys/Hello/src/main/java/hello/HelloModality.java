@@ -35,10 +35,13 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.stage.StageStyle;
 
 public class HelloModality extends Application {
@@ -65,6 +68,13 @@ public class HelloModality extends Application {
         checker.setLayoutX(25);
         checker.setLayoutY(40);
         root.getChildren().add(checker);
+
+        // Setup AlwaysOnTop checker
+        final CheckBox onTopChecker = new CheckBox("AlwaysOnTop");
+        onTopChecker.setSelected(false);
+        onTopChecker.setLayoutX(25);
+        onTopChecker.setLayoutY(70);
+        root.getChildren().add(onTopChecker);
 
         // Setup Modality Selection
         final ToggleGroup modalityGroup = new ToggleGroup();
@@ -112,6 +122,7 @@ public class HelloModality extends Application {
         root.getChildren().add(suButton);
 
         Button button = new Button("Create Dialog");
+        button.setTooltip(new Tooltip("Creates a new stage"));
         button.setLayoutX(100);
         button.setLayoutY(200);
         button.setOnAction(new EventHandler<ActionEvent>() {
@@ -120,6 +131,9 @@ public class HelloModality extends Application {
 
                 boolean owned = checker.isSelected();
                 dialog.initOwner(owned ? stage : null);
+
+                boolean alwaysOnTop = onTopChecker.isSelected();
+                dialog.setAlwaysOnTop(alwaysOnTop);
 
                 Modality modality;
                 if (applicationButton.isSelected()) {
@@ -153,7 +167,8 @@ public class HelloModality extends Application {
                 Group dialogRoot = (Group) dialogScene.getRoot();
 
                 Button dialogButton = new Button("Dismiss");
-                dialogButton.setLayoutX(275);
+                dialogButton.setTooltip(new Tooltip("Hides (closes) this stage"));
+                dialogButton.setLayoutX(375);
                 dialogButton.setLayoutY(200);
                 dialogButton.setOnAction(new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent e) {
@@ -170,6 +185,7 @@ public class HelloModality extends Application {
         root.getChildren().add(button);
 
         Button button2 = new Button("Click Me");
+        button2.setTooltip(new Tooltip("Prints a message"));
         button2.setLayoutX(200);
         button2.setLayoutY(200);
         button2.setOnAction(new EventHandler<ActionEvent>() {
@@ -178,6 +194,18 @@ public class HelloModality extends Application {
             }
         });
         root.getChildren().add(button2);
+
+        ToggleButton onTopButton = new ToggleButton("AlwaysOnTop");
+        onTopButton.setTooltip(new Tooltip("Toggles the alwaysOnTop property"));
+        onTopButton.setSelected(stage.isAlwaysOnTop());
+        onTopButton.setLayoutX(275);
+        onTopButton.setLayoutY(200);
+        onTopButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent e) {
+                stage.setAlwaysOnTop(onTopButton.isSelected());
+            }
+        });
+        root.getChildren().add(onTopButton);
 
         // Owned file dialog checkbox
         final CheckBox ownedFileChooser = new CheckBox("Owned file chooser");
