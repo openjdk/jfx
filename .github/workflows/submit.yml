@@ -150,7 +150,7 @@ jobs:
   macos_x64_build:
     name: macOS x64
     needs: validation
-    runs-on: "macos-13"
+    runs-on: "macos-15-intel"
 
     env:
       # FIXME: read this information from a property file
@@ -212,8 +212,8 @@ jobs:
           java -version
           which ant
           ant -version
-          # We want to use Xcode 15.4, but 15.2 is the highest that the GHA macOS 13 runner supports
-          sudo xcode-select --switch /Applications/Xcode_15.2.app/Contents/Developer
+          # Production builds use Xcode 15.4, but 16.0 is the lowest that the GHA macOS 15 runner supports
+          sudo xcode-select --switch /Applications/Xcode_16.0.app/Contents/Developer
           xcodebuild -version
 
       - name: Build JavaFX artifacts
