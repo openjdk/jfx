@@ -23,51 +23,12 @@
  * questions.
  */
 
-#import "JFXMenuItemAccessibility.h"
+#import "AccessibleBase.h"
 
-@implementation JFXMenuItemAccessibility
+#import <AppKit/AppKit.h>
 
-- (NSAccessibilityRole)accessibilityRole
-{
-    return NSAccessibilityMenuItemRole;
-}
+@interface JFXMenuBarAccessibility : AccessibleBase {
 
-- (NSString * _Nullable)accessibilityLabel {
-    if ([super accessibilityTitle] == NULL) {
-        if ([super accessibilityChildren] != NULL && [[super accessibilityChildren] count] != 0) {
-            id object = [super accessibilityChildren][0];
-            if ([object respondsToSelector:@selector(accessibilityValue)]) {
-                return [object accessibilityValue];
-            }
-        } else {
-            return @"";
-        }
-    }
-    return [super accessibilityTitle];
-}
-
-- (NSString * _Nullable)accessibilityTitle {
-    return [self requestNodeAttribute:@"AXMenuItemMarkChar"];
-}
-
-- (id)accessibilityTitleUIElement
-{
-    return [super accessibilityTitleUIElement];
-}
-
-- (id)accessibilityValue
-{
-    return [super accessibilityValue];
-}
-
-- (NSRect)accessibilityFrame
-{
-    return [super accessibilityFrame];
-}
-
-- (id)accessibilityParent
-{
-    return [super accessibilityParent];
-}
+};
+- (NSAccessibilityRole)accessibilityRole;
 @end
-

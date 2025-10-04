@@ -23,51 +23,20 @@
  * questions.
  */
 
-#import "JFXMenuItemAccessibility.h"
+#import "JFXMenuBarAccessibility.h"
 
-@implementation JFXMenuItemAccessibility
-
+/*
+ * Accessibility protocol for the MenuBar component
+ */
+@implementation JFXMenuBarAccessibility
 - (NSAccessibilityRole)accessibilityRole
 {
-    return NSAccessibilityMenuItemRole;
+    return NSAccessibilityMenuBarRole;
 }
 
-- (NSString * _Nullable)accessibilityLabel {
-    if ([super accessibilityTitle] == NULL) {
-        if ([super accessibilityChildren] != NULL && [[super accessibilityChildren] count] != 0) {
-            id object = [super accessibilityChildren][0];
-            if ([object respondsToSelector:@selector(accessibilityValue)]) {
-                return [object accessibilityValue];
-            }
-        } else {
-            return @"";
-        }
-    }
-    return [super accessibilityTitle];
-}
-
-- (NSString * _Nullable)accessibilityTitle {
-    return [self requestNodeAttribute:@"AXMenuItemMarkChar"];
-}
-
-- (id)accessibilityTitleUIElement
+- (BOOL)isAccessibilityElement
 {
-    return [super accessibilityTitleUIElement];
+    return YES;
 }
 
-- (id)accessibilityValue
-{
-    return [super accessibilityValue];
-}
-
-- (NSRect)accessibilityFrame
-{
-    return [super accessibilityFrame];
-}
-
-- (id)accessibilityParent
-{
-    return [super accessibilityParent];
-}
 @end
-
