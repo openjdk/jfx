@@ -276,7 +276,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
         if (ctxInfo->glXSwapIntervalEXT == NULL) {
             ctxInfo->glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)
                 glXGetProcAddress((const GLubyte *)"glXSwapIntervalEXT");
-            ctxInfo->glXSwapIntervalEXT(dInfo->display, dInfo->win, 0);
         }
     } else if (isExtensionSupported(ctxInfo->glxExtensionStr,
             "GLX_SGI_swap_control")) {
@@ -286,8 +285,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
         if (ctxInfo->glXSwapIntervalSGI == NULL) {
             ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
                 glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
-            ctxInfo->glXSwapIntervalSGI(0);
         }
+    }
+
+    if (ctxInfo->glXSwapIntervalEXT != NULL) {
+        ctxInfo->glXSwapIntervalEXT(dInfo->display, dInfo->win, 0);
+    } else if (ctxInfo->glXSwapIntervalSGI != NULL) {
+        ctxInfo->glXSwapIntervalSGI(0);
     }
 
     ctxInfo->state.vSyncEnabled = JNI_FALSE;
