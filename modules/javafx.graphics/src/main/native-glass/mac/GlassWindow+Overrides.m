@@ -59,8 +59,19 @@
 
 #pragma mark --- Delegate
 
+// KCR: DEBUG BEGIN
+/*
+- (void)windowDidChangeScreen:(NSNotification *)notification
+{
+    NSLog(@"windowDidChangeScreen: %p", [self->nsWindow screen]);
+    //[self fixChildWindow];
+}
+*/
+// KCR: DEBUG END
+
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
+    NSLog(@"windowDidBecomeKey: %p", self); // KCR: Comment out
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -76,32 +87,42 @@
         [NSApp setMainMenu:self->menubar->menu];
     }
     [[NSApp mainMenu] update];
+
+    // Fix up window stacking order
+    [self reorderChildWindows];
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
+    NSLog(@"windowDidResignKey: %p", self); // KCR: Comment out
     [self _ungrabFocus];
 
     GET_MAIN_JENV_NOWARN;
     if (env != NULL) {
         (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_LOST);
     }
+
+    // Fix up order
+    [self reorderChildWindows];
 }
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-    // Unparent self. Otherwise the code hangs
-    if ([self->nsWindow parentWindow])
-    {
-        [[self->nsWindow parentWindow] removeChildWindow:self->nsWindow];
+    NSLog(@"windowWillClose"); // KCR: Comment out
+    // Remove self from list of child windows
+    if (self->owner != nil) {
+        [self->owner removeChildWindow:self];
     }
 
     // Finally, close owned windows to mimic MS Windows behavior
-    NSArray *children = [self->nsWindow childWindows];
-    for (NSUInteger i=0; i<[children count]; i++)
-    {
-        NSWindow *child = (NSWindow*)[children objectAtIndex:i];
-        [child close];
+    if (self->childWindows != nil) {
+        // Iterate over an immutable copy
+        NSArray *children = [[NSArray alloc] initWithArray:self->childWindows];
+        for (GlassWindow *child in children) {
+            NSLog(@"    close child: %p", child); // KCR: DEBUG
+            [child->nsWindow close];
+        }
+        [children release];
     }
 
     // Call the notification method
