@@ -25,13 +25,29 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.SelectedCellsMap;
-import com.sun.javafx.scene.control.TableColumnBaseHelper;
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import com.sun.javafx.scene.control.VirtualScrollBar;
-import com.sun.javafx.scene.control.behavior.TableCellBehavior;
-import com.sun.javafx.tk.Toolkit;
+
+import static javafx.collections.FXCollections.observableArrayList;
+import static javafx.scene.control.TableColumn.SortType.ASCENDING;
+import static javafx.scene.control.TableColumn.SortType.DESCENDING;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
@@ -103,6 +119,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
+import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -112,30 +135,6 @@ import test.com.sun.javafx.scene.control.infrastructure.TableColumnHeaderUtil;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 import test.com.sun.javafx.scene.control.test.RT_22463_Person;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
-
-import static javafx.collections.FXCollections.observableArrayList;
-import static javafx.scene.control.TableColumn.SortType.ASCENDING;
-import static javafx.scene.control.TableColumn.SortType.DESCENDING;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 
 public class TableViewTest {
     private TableView<String> table;
@@ -6432,30 +6431,38 @@ public class TableViewTest {
 
     @Test
     void testRefreshShouldNotResetCells() {
-        final AtomicInteger creationCounter = new AtomicInteger();
+        final AtomicInteger cellCreationCounter = new AtomicInteger();
+        final AtomicInteger rowCreationCounter = new AtomicInteger();
 
         TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         firstNameCol.setCellFactory(_ -> {
-            creationCounter.incrementAndGet();
+            cellCreationCounter.incrementAndGet();
             return new TableCell<>();
         });
 
         TableView<Person> table = new TableView<>();
+        table.setRowFactory(_ -> {
+            rowCreationCounter.incrementAndGet();
+            return new TableRow<>();
+        });
         table.setItems(FXCollections.observableArrayList(new Person("name")));
         table.getColumns().add(firstNameCol);
 
         stageLoader = new StageLoader(table);
         Toolkit.getToolkit().firePulse();
 
-        assertTrue(creationCounter.get() > 0);
-        creationCounter.set(0);
+        assertTrue(cellCreationCounter.get() > 0);
+        assertTrue(rowCreationCounter.get() > 0);
+        rowCreationCounter.set(0);
+        cellCreationCounter.set(0);
 
         table.refresh();
         Toolkit.getToolkit().firePulse();
 
-        assertEquals(0, creationCounter.get());
+        assertEquals(0, rowCreationCounter.get());
+        assertEquals(0, cellCreationCounter.get());
     }
 
     @Test
