@@ -25,7 +25,6 @@
 
 package test.javafx.scene.control;
 
-
 import static javafx.collections.FXCollections.observableArrayList;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
