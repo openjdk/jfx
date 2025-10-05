@@ -33,6 +33,7 @@ import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 
 public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, ?>, C extends IndexedCell<T>> extends CellBehaviorBase<C> {
 
@@ -95,7 +96,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      **************************************************************************/
 
     @Override
-    protected void doSelect(final double x, final double y, final MouseButton button,
+    protected void doSelect(MouseEvent e, final double x, final double y, final MouseButton button,
                           final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // Note that table.select will reset selection
         // for out of bounds indexes. So, need to check
@@ -146,7 +147,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // what modifiers the user held down as they released the mouse.
         if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-                simpleSelect(button, clickCount, shortcutDown);
+                simpleSelect(e, button, clickCount, shortcutDown);
             } else {
                 if (shortcutDown) {
                     if (selected) {
@@ -195,14 +196,14 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                     // return selection back to the focus owner
                     // focus(anchor.getRow(), tableColumn);
                 } else {
-                    simpleSelect(button, clickCount, shortcutDown);
+                    simpleSelect(e, button, clickCount, shortcutDown);
                 }
             }
         }
     }
 
     @Override
-    protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
+    protected void simpleSelect(MouseEvent e, MouseButton button, int clickCount, boolean shortcutDown) {
         final TableSelectionModel<S> sm = getSelectionModel();
         boolean isAlreadySelected;
 
@@ -223,7 +224,10 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
             }
         }
 
-        handleClicks(button, clickCount, isAlreadySelected);
+        // Consume the event if we handled the click.
+        if (handleClicks(button, clickCount, isAlreadySelected)) {
+            e.consume();
+        }
     }
 
     private int getColumn() {

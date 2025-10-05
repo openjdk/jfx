@@ -362,9 +362,9 @@ public class Cell<T> extends Labeled {
             @Override public void invalidated(Observable property) {
                 pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED, isFocused()); // TODO is this necessary??
 
-                // The user has shifted focus, so we should cancel the editing on this cell
+                // The user has shifted focus, so we should stop the editing on this cell.
                 if (!isFocused() && isEditing()) {
-                    cancelEdit();
+                    stopEdit();
                 }
             }
         });
@@ -373,6 +373,21 @@ public class Cell<T> extends Labeled {
         pseudoClassStateChanged(PSEUDO_CLASS_EMPTY, true);
     }
 
+    /**
+     * Stops the edit operation of the cell.
+     * This method is called when another cell is edited or the focus changed.
+     * <p>
+     * The default behavior is to cancel the edit.
+     * This method is meant to be subclassed in case the default behavior is not enough.
+     * For example, subclasses decide to rather commit the edit operation instead of cancelling.
+     */
+    public void stopEdit() {
+        if (!isEditing()) {
+            return;
+        }
+
+        cancelEdit();
+    }
 
 
     /* *************************************************************************

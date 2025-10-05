@@ -592,23 +592,28 @@ public class ListCell<T> extends IndexedCell<T> {
         if (match && !editing) {
             startEdit();
         } else if (!match && editing) {
-            // If my index is not the one being edited then I need to cancel
-            // the edit. The tricky thing here is that as part of this call
-            // I cannot end up calling list.edit(-1) the way that the standard
-            // cancelEdit method would do. Yet, I need to call cancelEdit
-            // so that subclasses which override cancelEdit can execute. So,
-            // I have to use a kind of hacky flag workaround.
-            try {
-                // try-finally to make certain that the flag is reliably reset to true
-                updateEditingIndex = false;
-                cancelEdit();
-            } finally {
-                updateEditingIndex = true;
-            }
+            doStopEdit();
         }
     }
 
-
+    /**
+     * Stops the edit operation.
+     * If not overwritten, will cancel the edit without changing control'sediting state.
+     */
+    private void doStopEdit() {
+        // If my index is not the one being edited then I need to cancel
+        // the edit. The tricky thing here is that as part of this call
+        // I cannot end up calling list.edit(-1) the way that the standard
+        // cancelEdit method would do. Yet, I need to call cancelEdit
+        // so that subclasses which override cancelEdit can execute. So,
+        // I have to use a kind of hacky flag workaround.
+        try {
+            updateEditingIndex = false;
+            stopEdit();
+        } finally {
+            updateEditingIndex = true;
+        }
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -654,4 +659,3 @@ public class ListCell<T> extends IndexedCell<T> {
         }
     }
 }
-
