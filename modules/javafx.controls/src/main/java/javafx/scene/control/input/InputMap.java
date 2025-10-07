@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jfx.incubator.scene.control.input;
+package javafx.scene.control.input;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,15 +33,14 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
-import com.sun.javafx.ModuleUtil;
-import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
-import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
-import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
-import com.sun.jfx.incubator.scene.control.input.PHList;
-import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
+import com.sun.javafx.scene.control.input.EventHandlerPriority;
+import com.sun.javafx.scene.control.input.InputMapHelper;
+import com.sun.javafx.scene.control.input.KeyEventMapper;
+import com.sun.javafx.scene.control.input.PHList;
 
 /**
  * InputMap is a property of the {@link Control} class which enables customization
@@ -74,11 +73,11 @@ import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
  * <p>
  * This mechanism allows for customizing the key mappings and the underlying functions independently and separately.
  *
- * @since 24
+ * @since 999 TODO
  */
 public final class InputMap {
     private static final Object NULL = new Object();
-    private final Control control;
+    private final EventTarget eventTarget;
     /**
      * <pre> KeyBinding -> FunctionTag or Runnable
      * FunctionTag -> Runnable
@@ -90,16 +89,15 @@ public final class InputMap {
     private final EventHandler<Event> eventHandler = this::handleEvent;
 
     static {
-        ModuleUtil.incubatorWarning();
         initAccessor();
     }
 
     /**
      * The constructor.
-     * @param control the owner control
+     * @param target the owner
      */
-    public InputMap(Control control) {
-        this.control = control;
+    public InputMap(EventTarget target) {
+        this.eventTarget = target;
     }
 
     /**
@@ -126,7 +124,7 @@ public final class InputMap {
         if (x instanceof PHList hs) {
             if (hs.remove(handler)) {
                 map.remove(type);
-                control.removeEventHandler(type, eventHandler);
+                eventTarget.removeEventHandler(type, eventHandler);
             }
         }
     }
@@ -136,7 +134,7 @@ public final class InputMap {
         if (x instanceof PHList hs) {
             if (hs.removeHandlers(Set.of(pri))) {
                 map.remove(type);
-                control.removeEventHandler(type, eventHandler);
+                eventTarget.removeEventHandler(type, eventHandler);
             }
         }
     }
@@ -150,7 +148,7 @@ public final class InputMap {
             // first entry for this event type
             hs = new PHList();
             map.put(t, hs);
-            control.addEventHandler(t, eventHandler);
+            eventTarget.addEventHandler(t, eventHandler);
         }
 
         hs.add(pri, handler);
@@ -392,9 +390,7 @@ public final class InputMap {
      * This method removes all the mappings from the previous skin input map, if any.
      * @param m the skin input map
      */
-    // TODO change to public once SkinInputMap is public
-    // or add getSkinInputMap() to Skin.
-    private void setSkinInputMap(SkinInputMap m) {
+    public void setSkinInputMap(SkinInputMap m) {
         if (skinInputMap != null) {
             // uninstall all handlers with SKIN_* priority
             Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
@@ -404,7 +400,7 @@ public final class InputMap {
                     PHList hs = (PHList)en.getValue();
                     if (hs.removeHandlers(EventHandlerPriority.ALL_SKIN)) {
                         it.remove();
-                        control.removeEventHandler(t, eventHandler);
+                        eventTarget.removeEventHandler(t, eventHandler);
                     }
                 }
             }
@@ -443,12 +439,6 @@ public final class InputMap {
             @Override
             public void execute(Object source, InputMap inputMap, FunctionTag tag) {
                 inputMap.execute(source, tag);
-            }
-
-            // TODO will be unnecessary once SkinInputMap is public
-            @Override
-            public void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
-                inputMap.setSkinInputMap(sm);
             }
         });
     }
