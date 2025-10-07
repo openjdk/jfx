@@ -25,6 +25,8 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.LayoutFlags;
+
 import java.util.List;
 import javafx.collections.ObservableList;
 
@@ -47,6 +49,10 @@ public class ParentShim extends Parent {
 
     public static void setNeedsLayout(Parent p, boolean value) {
         p.setNeedsLayout(value);
+    }
+
+    public static LayoutFlags getLayoutFlag(Parent p) {
+        return p.layoutFlag;
     }
 
     public static List<Node> test_getRemoved(Parent p) {
