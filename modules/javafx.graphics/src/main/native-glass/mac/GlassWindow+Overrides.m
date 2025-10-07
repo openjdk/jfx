@@ -101,15 +101,12 @@
     if (env != NULL) {
         (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_LOST);
     }
-
-    // Fix up order
-    [self reorderChildWindows];
 }
 
 - (void)windowWillClose:(NSNotification *)notification
 {
     NSLog(@"windowWillClose"); // KCR: Comment out
-    // Remove self from list of child windows
+    // Remove self from list of owner's child windows
     if (self->owner != nil) {
         [self->owner removeChildWindow:self];
     }
@@ -123,6 +120,11 @@
             [child->nsWindow close];
         }
         [children release];
+    }
+
+    // If we have an owner, reorder its remaining children
+    if (self->owner != nil) {
+        [self->owner reorderChildWindows];
     }
 
     // Call the notification method
