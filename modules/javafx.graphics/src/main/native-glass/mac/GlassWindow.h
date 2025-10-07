@@ -80,6 +80,7 @@
 - (void) removeChildWindow:(GlassWindow*)childWindow;
 - (void) reorderChildWindows;
 - (void) minimizeChildWindows:(BOOL)minimize;
+- (void) setMoveToActiveSpaceChildWindows:(BOOL)moveToActiveSpace;
 
 // NSWindow overrides delegate methods
 - (void)close;

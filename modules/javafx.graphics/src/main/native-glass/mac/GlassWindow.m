@@ -348,7 +348,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 - (void) addChildWindow:(GlassWindow*)childWindow
 {
-    NSLog(@"addChildWindow: %p  child: %p", self, childWindow);
+    NSLog(@"addChildWindow: %p  child: %p", self, childWindow); // KCR: Change to "LOG"
     if (self->childWindows == nil) {
         self->childWindows = [[NSMutableArray alloc] init];
     }
@@ -357,12 +357,15 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 - (void) removeChildWindow:(GlassWindow*)childWindow
 {
-    NSLog(@"removeChildWindow: %p  child: %p", self, childWindow);
+    NSLog(@"removeChildWindow: %p  child: %p", self, childWindow); // KCR: Change to "LOG"
     if (self->childWindows != nil) {
         [self->childWindows removeObject:childWindow];
     }
 }
 
+//
+// Recursively orders all child windows so that they are above their owner.
+//
 - (void) reorderChildWindows
 {
     NSLog(@"reorderChildWindows: %p", self); // KCR: Change to "LOG"
@@ -382,6 +385,9 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
+//
+// Recursively minimize or unminimize all child windows.
+//
 - (void) minimizeChildWindows:(BOOL)minimize
 {
     NSLog(@"minimizeChildWindows: %p  minimize:%d", self, minimize); // KCR: Change to "LOG"
@@ -396,6 +402,34 @@ GLASS_NS_WINDOW_IMPLEMENTATION
                 [child->nsWindow orderFront:child];
             }
             [child minimizeChildWindows:minimize];
+        }
+    }
+}
+
+//
+// Recursively set the collection behavior for the child windows to enable or
+// disable the "move to active space" behavior. This is used when the owner
+// enters full-screen, so that the children will follow the owner to the
+// full-screen space. It is called with "true" when first entering full screen
+// and "false" once the transition to full-screen is complete.
+//
+- (void) setMoveToActiveSpaceChildWindows:(BOOL)moveToActiveSpace
+{
+    NSLog(@"setMoveToActiveSpaceChildWindows: %p  moveToActiveSpace:%d", self, moveToActiveSpace); // KCR: Change to "LOG"
+    if (self->childWindows != nil) {
+//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
+        for (GlassWindow *child in self->childWindows)
+        {
+//            NSLog(@"    child: %p", child); // KCR: DEBUG
+            NSWindowCollectionBehavior behavior = [child->nsWindow collectionBehavior];
+            if (moveToActiveSpace) {
+                behavior |= NSWindowCollectionBehaviorMoveToActiveSpace;
+            } else {
+                behavior &= ~NSWindowCollectionBehaviorMoveToActiveSpace;
+            }
+            [child->nsWindow setCollectionBehavior: behavior];
+
+            [child setMoveToActiveSpaceChildWindows:moveToActiveSpace];
         }
     }
 }

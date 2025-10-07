@@ -59,15 +59,11 @@
 
 #pragma mark --- Delegate
 
-// KCR: DEBUG BEGIN
-/*
 - (void)windowDidChangeScreen:(NSNotification *)notification
 {
-    NSLog(@"windowDidChangeScreen: %p", [self->nsWindow screen]);
-    //[self fixChildWindow];
+    NSLog(@"windowDidChangeScreen: %p  screen: %p", self, [self->nsWindow screen]); // KCR: Comment out
+    [self reorderChildWindows];
 }
-*/
-// KCR: DEBUG END
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
@@ -220,7 +216,7 @@
 
 - (void)windowWillEnterFullScreen:(NSNotification *)notification
 {
-    //NSLog(@"windowWillEnterFullScreen");
+    NSLog(@"windowWillEnterFullScreen"); // KCR: Coment back out
 
     NSUInteger mask = [self->nsWindow styleMask];
     self->isWindowResizable = ((mask & NSWindowStyleMaskResizable) != 0);
@@ -234,18 +230,21 @@
     if (nsWindow.toolbar != nil) {
         nsWindow.toolbar.visible = NO;
     }
+    [self setMoveToActiveSpaceChildWindows:YES];
 }
 
 - (void)windowDidEnterFullScreen:(NSNotification *)notification
 {
-    //NSLog(@"windowDidEnterFullScreen");
+    NSLog(@"windowDidEnterFullScreen"); // KCR: Coment back out
     [(GlassViewDelegate*)[self->view delegate] sendJavaFullScreenEvent:YES withNativeWidget:YES];
     [GlassApplication leaveFullScreenExitingLoopIfNeeded];
+    [self reorderChildWindows];
+    [self setMoveToActiveSpaceChildWindows:NO];
 }
 
 - (void)windowWillExitFullScreen:(NSNotification *)notification
 {
-    //NSLog(@"windowWillExitFullScreen");
+    NSLog(@"windowWillExitFullScreen"); // KCR: Coment back out
 
     // When we exit full-screen mode, hide the standard window buttons if they were previously hidden.
     if (!self->isStandardButtonsVisible) {
@@ -257,7 +256,7 @@
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification
 {
-    //NSLog(@"windowDidExitFullScreen");
+    NSLog(@"windowDidExitFullScreen"); // KCR: Coment back out
 
     if (nsWindow.toolbar != nil) {
         nsWindow.toolbar.visible = YES;
@@ -268,6 +267,7 @@
 
     [delegate sendJavaFullScreenEvent:NO withNativeWidget:YES];
     [GlassApplication leaveFullScreenExitingLoopIfNeeded];
+    [self reorderChildWindows];
 }
 
 - (BOOL)windowShouldClose:(NSNotification *)notification
