@@ -181,14 +181,25 @@
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESIZE forFrame:frame];
 }
 
+- (void)windowWillMiniaturize:(NSNotification *)notification
+{
+    NSLog(@"windowWillMiniaturize: %p", self); // KCR: Comment out
+    // KCR: FIXME: set flag to inhibit reorder until minimize is done (presuming it is effective)
+}
+
 - (void)windowDidMiniaturize:(NSNotification *)notification
 {
+    NSLog(@"windowDidMiniaturize: %p", self); // KCR: Comment out
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_MINIMIZE forFrame:[self _flipFrame]];
+    [self minimizeChildWindows:YES];
 }
 
 - (void)windowDidDeminiaturize:(NSNotification *)notification
 {
+    NSLog(@"windowDidDeminiaturize: %p", self); // KCR: Comment out
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESTORE forFrame:[self _flipFrame]];
+    [self minimizeChildWindows:NO];
+    [self reorderChildWindows];
 }
 
 - (BOOL)windowShouldZoom:(NSWindow *)window toFrame:(NSRect)newFrame

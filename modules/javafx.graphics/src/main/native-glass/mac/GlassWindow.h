@@ -79,6 +79,7 @@
 - (void) addChildWindow:(GlassWindow*)childWindow;
 - (void) removeChildWindow:(GlassWindow*)childWindow;
 - (void) reorderChildWindows;
+- (void) minimizeChildWindows:(BOOL)minimize;
 
 // NSWindow overrides delegate methods
 - (void)close;

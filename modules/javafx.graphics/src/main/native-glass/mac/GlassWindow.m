@@ -382,6 +382,24 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
+- (void) minimizeChildWindows:(BOOL)minimize
+{
+    NSLog(@"minimizeChildWindows: %p  minimize:%d", self, minimize); // KCR: Change to "LOG"
+    if (self->childWindows != nil) {
+//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
+        for (GlassWindow *child in self->childWindows)
+        {
+//            NSLog(@"    child: %p", child); // KCR: DEBUG
+            if (minimize) {
+                [child->nsWindow orderOut:child];
+            } else {
+                [child->nsWindow orderFront:child];
+            }
+            [child minimizeChildWindows:minimize];
+        }
+    }
+}
+
 - (NSColor*)setBackgroundColor:(NSColor *)color
 {
     if (self->isTransparent == NO)
