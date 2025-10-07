@@ -121,7 +121,7 @@ public class CssParser_mediaQuery_Test {
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(
-            new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+            FunctionExpression.of("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
             mediaRule.getQueries().getFirst());
     }
 
@@ -475,7 +475,7 @@ public class CssParser_mediaQuery_Test {
         assertEquals(1, stylesheet.getRules().size());
         assertEquals(Set.of("foo"), stylesheet.getRules().getFirst().getSelectors().getFirst().getStyleClassNames());
         assertEquals(
-            List.of(new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)),
+            List.of(FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)),
             RuleHelper.getMediaRule(stylesheet.getRules().getFirst()).getQueries());
     }
 
