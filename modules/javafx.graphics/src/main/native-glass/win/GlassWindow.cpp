@@ -1259,6 +1259,55 @@ void GlassWindow::SetIcon(HICON hIcon)
     m_hIcon = hIcon;
 }
 
+void GlassWindow::SetDarkFrame(bool dark)
+{
+    // The value of the DWMWA_USE_IMMERSIVE_DARK_MODE constant may be different depending on the OS version.
+    // We are going to query the file version of dwmapi.dll to make sure we use the right constant, or the
+    // value 0 to indicate that we don't support this feature.
+    // See: https://github.com/MicrosoftDocs/sdk-api/commit/c19f1c8a148b930444dce998d3c717c8fb7751e1
+    static const DWORD DWMWA_USE_IMMERSIVE_DARK_MODE = []() {
+        DWORD ignored;
+        DWORD infoSize = GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", &ignored);
+        if (infoSize <= 0) {
+            return 0;
+        }
+
+        std::vector<char> buffer(infoSize);
+        if (!GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", ignored,
+                                   static_cast<DWORD>(buffer.size()), &buffer[0])) {
+            return 0;
+        }
+
+        UINT size = 0;
+        VS_FIXEDFILEINFO* fileInfo = nullptr;
+        if (!VerQueryValueW(buffer.data(), L"\\", reinterpret_cast<LPVOID*>(&fileInfo), &size)) {
+            return 0;
+        }
+
+        WORD major = HIWORD(fileInfo->dwFileVersionMS);
+        WORD minor = LOWORD(fileInfo->dwFileVersionMS);
+        WORD build = HIWORD(fileInfo->dwFileVersionLS);
+
+        // Windows 10 before build 10.0.17763: not supported
+        if (major < 10 || (major == 10 && minor == 0 && build < 17763)) {
+            return 0;
+        }
+
+        // Windows 10 build 10.0.17763 until 10.0.18985
+        if (major == 10 && minor == 0 && build >= 17763 && build < 18985) {
+            return 19;
+        }
+
+        // Windows 10 build 10.0.18985 or later
+        return 20;
+    }();
+
+    if (DWMWA_USE_IMMERSIVE_DARK_MODE) {
+        BOOL darkMode = dark;
+        DwmSetWindowAttribute(GetHWND(), DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
+    }
+}
+
 void GlassWindow::ShowSystemMenu(int x, int y)
 {
     WINDOWPLACEMENT placement;
@@ -1454,6 +1503,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
                     ::EnableMenuItem(hSysMenu, SC_CLOSE,
                             MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
                 }
+            }
+
+            if (mask & com_sun_glass_ui_Window_DARK_FRAME) {
+                pWindow->SetDarkFrame(true);
             }
         }
 
@@ -1693,6 +1746,28 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground2
     PERFORM();
 
     return JNI_TRUE;
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _setDarkFrame
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setDarkFrame
+    (JNIEnv *env, jobject jThis, jlong ptr, jboolean dark)
+{
+    ENTER_MAIN_THREAD()
+    {
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+        if (pWindow) {
+            pWindow->SetDarkFrame(dark);
+        }
+    }
+    jboolean dark;
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+
+    ARG(dark) = dark;
+    PERFORM();
 }
 
 /*
