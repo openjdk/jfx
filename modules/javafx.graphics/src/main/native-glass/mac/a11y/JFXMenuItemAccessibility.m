@@ -33,17 +33,18 @@
 }
 
 - (NSString * _Nullable)accessibilityLabel {
-    if ([super accessibilityTitle] == NULL) {
-        if ([super accessibilityChildren] != NULL && [[super accessibilityChildren] count] != 0) {
-            id object = [super accessibilityChildren][0];
-            if ([object respondsToSelector:@selector(accessibilityValue)]) {
-                return [object accessibilityValue];
+    NSString *title = [super accessibilityTitle];
+    if (title == nil) {
+        NSArray *children = [super accessibilityChildren];
+        if (children != nil && [children count] != 0) {
+            if ([children[0] respondsToSelector:@selector(accessibilityValue)]) {
+                return [children[0] accessibilityValue];
             }
         } else {
             return @"";
         }
     }
-    return [super accessibilityTitle];
+    return title;
 }
 
 - (NSString * _Nullable)accessibilityTitle {
