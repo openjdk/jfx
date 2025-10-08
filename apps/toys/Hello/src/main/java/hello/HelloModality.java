@@ -26,8 +26,10 @@
 package hello;
 
 import java.io.File;
+import java.util.Optional;
 
 import javafx.application.Application;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -40,8 +42,8 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javafx.stage.Window;
 import javafx.stage.StageStyle;
 
 public class HelloModality extends Application {
@@ -56,7 +58,6 @@ public class HelloModality extends Application {
     }
 
     Scene createScene(final Stage stage) {
-
         Group root = new Group();
         int xyOffset = offset * counter++;
         if (xyOffset > 200) xyOffset = 0;
@@ -73,8 +74,19 @@ public class HelloModality extends Application {
         final CheckBox onTopChecker = new CheckBox("AlwaysOnTop");
         onTopChecker.setSelected(false);
         onTopChecker.setLayoutX(25);
-        onTopChecker.setLayoutY(70);
+        onTopChecker.setLayoutY(65);
         root.getChildren().add(onTopChecker);
+
+        // Setup secondary screen checker
+        final CheckBox secondaryScreenChecker = new CheckBox("2nd Screen");
+        secondaryScreenChecker.setSelected(false);
+        secondaryScreenChecker.setDisable(Screen.getScreens().size() < 2);
+        secondaryScreenChecker.setLayoutX(25);
+        secondaryScreenChecker.setLayoutY(90);
+        Screen.getScreens().addListener((ListChangeListener.Change<? extends Screen> change) -> {
+            secondaryScreenChecker.setDisable(Screen.getScreens().size() < 2);
+        });
+        root.getChildren().add(secondaryScreenChecker);
 
         // Setup Modality Selection
         final ToggleGroup modalityGroup = new ToggleGroup();
@@ -177,8 +189,23 @@ public class HelloModality extends Application {
                 });
                 dialogRoot.getChildren().add(dialogButton);
 
-
                 dialog.setScene(dialogScene);
+
+                if (secondaryScreenChecker.isSelected()) {
+                    Optional<Screen> otherScreen = Screen.getScreens()
+                            .stream()
+                            .filter(scr -> !Screen.getPrimary().equals(scr))
+                            .findFirst();
+                    otherScreen.ifPresent(scr -> {
+                        double x = (scr.getVisualBounds().getWidth() - scene.getWidth()) / 2.0 +
+                                scr.getVisualBounds().getMinX();
+                        double y = (scr.getVisualBounds().getHeight()- scene.getHeight()) / 2.0 +
+                                scr.getVisualBounds().getMinY();
+                        dialog.setX(x);
+                        dialog.setY(y);
+                    });
+                }
+
                 dialog.show();
             }
         });
