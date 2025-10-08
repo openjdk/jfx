@@ -348,7 +348,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 - (void) addChildWindow:(GlassWindow*)childWindow
 {
-    NSLog(@"addChildWindow: %p  child: %p", self, childWindow); // KCR: Change to "LOG"
+    LOG("addChildWindow: %p  child: %p", self, childWindow);
     if (self->childWindows == nil) {
         self->childWindows = [[NSMutableArray alloc] init];
     }
@@ -357,7 +357,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 - (void) removeChildWindow:(GlassWindow*)childWindow
 {
-    NSLog(@"removeChildWindow: %p  child: %p", self, childWindow); // KCR: Change to "LOG"
+    LOG("removeChildWindow: %p  child: %p", self, childWindow);
     if (self->childWindows != nil) {
         [self->childWindows removeObject:childWindow];
     }
@@ -368,12 +368,10 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 //
 - (void) reorderChildWindows
 {
-    NSLog(@"reorderChildWindows: %p", self); // KCR: Change to "LOG"
+    LOG("reorderChildWindows: %p", self);
     if (self->childWindows != nil) {
-//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
         for (GlassWindow *child in self->childWindows)
         {
-//            NSLog(@"    child: %p", child); // KCR: DEBUG
             // Owned windows must set their level to at least the level of their owner
             NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
             [child->nsWindow setLevel:level];
@@ -390,17 +388,16 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 //
 - (void) minimizeChildWindows:(BOOL)minimize
 {
-    NSLog(@"minimizeChildWindows: %p  minimize:%d", self, minimize); // KCR: Change to "LOG"
+    LOG("minimizeChildWindows: %p  minimize:%d", self, minimize);
     if (self->childWindows != nil) {
-//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
         for (GlassWindow *child in self->childWindows)
         {
-//            NSLog(@"    child: %p", child); // KCR: DEBUG
             if (minimize) {
                 [child->nsWindow orderOut:child];
             } else {
                 [child->nsWindow orderFront:child];
             }
+
             [child minimizeChildWindows:minimize];
         }
     }
@@ -415,12 +412,10 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 //
 - (void) setMoveToActiveSpaceChildWindows:(BOOL)moveToActiveSpace
 {
-    NSLog(@"setMoveToActiveSpaceChildWindows: %p  moveToActiveSpace:%d", self, moveToActiveSpace); // KCR: Change to "LOG"
+    LOG("setMoveToActiveSpaceChildWindows: %p  moveToActiveSpace:%d", self, moveToActiveSpace);
     if (self->childWindows != nil) {
-//        NSLog(@"    childWindows: %p", self->childWindows); // KCR: DEBUG
         for (GlassWindow *child in self->childWindows)
         {
-//            NSLog(@"    child: %p", child); // KCR: DEBUG
             NSWindowCollectionBehavior behavior = [child->nsWindow collectionBehavior];
             if (moveToActiveSpace) {
                 behavior |= NSWindowCollectionBehaviorMoveToActiveSpace;
@@ -531,7 +526,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow];
         window->isStandardButtonsVisible = YES;
-        NSLog(@"create glass window: %p", window); // KCR: DEBUG
 
         if (isExtended) {
             [window->nsWindow setTitleVisibility:NSWindowTitleHidden];
@@ -560,7 +554,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         {
             // Get owner glass window and add this window as a child window
             window->owner = getGlassWindow(env, jOwnerPtr);
-            NSLog(@"owner window: %p", window->owner); // KCR: DEBUG
             [window->owner addChildWindow:window];
 
             // Owned windows must set their level to at least the level of their owner
@@ -759,7 +752,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createWindow
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
 (JNIEnv *env, jobject jWindow, jlong jPtr, jint jLevel)
 {
-    NSLog(@"Java_com_sun_glass_ui_mac_MacWindow__1setLevel"); // KCR: Change to LOG
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setLevel");
     if (!jPtr) return;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
@@ -771,17 +764,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
         {
             case com_sun_glass_ui_Window_Level_FLOATING:
                 level = NSFloatingWindowLevel;
-                NSLog(@"        level: NSFloatingWindowLevel"); // KCR: DEBUG
                 break;
             case com_sun_glass_ui_Window_Level_TOPMOST:
-                NSLog(@"        level: NSScreenSaverWindowLevel"); // KCR: DEBUG
                 level = NSScreenSaverWindowLevel;
                 break;
-            // KCR: DEBUG BEGIN
-            default:
-                NSLog(@"        level: NSNormalWindowLevel");
-                break;
-            // KCR: DEBUG END
         }
         window->prefLevel = level; // Save preferred level
         if (window->owner != nil) {
@@ -1310,8 +1296,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jVisible)
 {
-    NSLog(@"Java_com_sun_glass_ui_mac_MacWindow__1setVisible: %d", jVisible); // KCR: REVERT BACK TO LOG
-    NSLog(@"   window: 0x%lx", jPtr); // KCR: REVERT BACK TO LOG
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setVisible: %d", jVisible);
+    LOG("   window: %p", jPtr);
     if (!jPtr) return JNI_FALSE;
 
     jboolean now = JNI_FALSE;

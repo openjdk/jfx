@@ -270,7 +270,7 @@ extern NSSize maxScreenDimensions;
 
 - (void)_setVisible
 {
-    NSLog(@"_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled); // KCR: REVERT BACK TO LOG
+    LOG("_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);
 
     if (self->isFocusable == YES && self->isEnabled == YES)
     {

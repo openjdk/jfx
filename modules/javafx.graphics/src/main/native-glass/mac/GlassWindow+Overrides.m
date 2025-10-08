@@ -61,7 +61,7 @@
 
 - (void)windowDidChangeScreen:(NSNotification *)notification
 {
-    NSLog(@"windowDidChangeScreen: %p  screen: %p", self, [self->nsWindow screen]); // KCR: Comment out
+    //NSLog(@"windowDidChangeScreen: %p  screen: %p", self, [self->nsWindow screen]);
 
     // Fix up window stacking order
     [self reorderChildWindows];
@@ -69,7 +69,7 @@
 
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
-    NSLog(@"windowDidBecomeKey: %p", self); // KCR: Comment out
+    //NSLog(@"windowDidBecomeKey: %p", self);
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -92,7 +92,7 @@
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
-    NSLog(@"windowDidResignKey: %p", self); // KCR: Comment out
+    //NSLog(@"windowDidResignKey: %p", self);
     [self _ungrabFocus];
 
     GET_MAIN_JENV_NOWARN;
@@ -103,7 +103,7 @@
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-    NSLog(@"windowWillClose"); // KCR: Comment out
+    //NSLog(@"windowWillClose");
     // Remove self from list of owner's child windows
     if (self->owner != nil) {
         [self->owner removeChildWindow:self];
@@ -114,7 +114,6 @@
         // Iterate over an immutable copy
         NSArray *children = [[NSArray alloc] initWithArray:self->childWindows];
         for (GlassWindow *child in children) {
-            NSLog(@"    close child: %p", child); // KCR: DEBUG
             [child->nsWindow close];
         }
         [children release];
@@ -183,20 +182,19 @@
 
 - (void)windowWillMiniaturize:(NSNotification *)notification
 {
-    NSLog(@"windowWillMiniaturize: %p", self); // KCR: Comment out
-    // KCR: FIXME: set flag to inhibit reorder until minimize is done (presuming it is effective)
+    //NSLog(@"windowWillMiniaturize: %p", self);
 }
 
 - (void)windowDidMiniaturize:(NSNotification *)notification
 {
-    NSLog(@"windowDidMiniaturize: %p", self); // KCR: Comment out
+    //NSLog(@"windowDidMiniaturize: %p", self);
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_MINIMIZE forFrame:[self _flipFrame]];
     [self minimizeChildWindows:YES];
 }
 
 - (void)windowDidDeminiaturize:(NSNotification *)notification
 {
-    NSLog(@"windowDidDeminiaturize: %p", self); // KCR: Comment out
+    //NSLog(@"windowDidDeminiaturize: %p", self);
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESTORE forFrame:[self _flipFrame]];
     [self minimizeChildWindows:NO];
     [self reorderChildWindows];
@@ -218,7 +216,7 @@
 
 - (void)windowWillEnterFullScreen:(NSNotification *)notification
 {
-    NSLog(@"windowWillEnterFullScreen"); // KCR: Coment back out
+    //NSLog(@"windowWillEnterFullScreen");
 
     NSUInteger mask = [self->nsWindow styleMask];
     self->isWindowResizable = ((mask & NSWindowStyleMaskResizable) != 0);
@@ -238,7 +236,7 @@
 
 - (void)windowDidEnterFullScreen:(NSNotification *)notification
 {
-    NSLog(@"windowDidEnterFullScreen"); // KCR: Coment back out
+    //NSLog(@"windowDidEnterFullScreen");
     [(GlassViewDelegate*)[self->view delegate] sendJavaFullScreenEvent:YES withNativeWidget:YES];
     [GlassApplication leaveFullScreenExitingLoopIfNeeded];
 
@@ -249,7 +247,7 @@
 
 - (void)windowWillExitFullScreen:(NSNotification *)notification
 {
-    NSLog(@"windowWillExitFullScreen"); // KCR: Coment back out
+    //NSLog(@"windowWillExitFullScreen");
 
     // When we exit full-screen mode, hide the standard window buttons if they were previously hidden.
     if (!self->isStandardButtonsVisible) {
@@ -261,7 +259,7 @@
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification
 {
-    NSLog(@"windowDidExitFullScreen"); // KCR: Coment back out
+    //NSLog(@"windowDidExitFullScreen");
 
     if (nsWindow.toolbar != nil) {
         nsWindow.toolbar.visible = YES;
