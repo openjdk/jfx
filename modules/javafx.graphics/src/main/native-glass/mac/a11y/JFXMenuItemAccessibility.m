@@ -40,9 +40,8 @@
             if ([children[0] respondsToSelector:@selector(accessibilityValue)]) {
                 return [children[0] accessibilityValue];
             }
-        } else {
-            return @"";
         }
+        return @"";
     }
     return title;
 }
