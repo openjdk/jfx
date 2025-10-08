@@ -29,7 +29,7 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/WorkQueue.h>
-#if ENABLE(WEB_CRYPTO)
+#if ENABLE(WEB_CRYPTO) && PLATFORM(JAVA)
 namespace WebCore {
 
 void getDefaultWebCryptoMasterKey(CompletionHandler<void(std::optional<Vector<uint8_t>>&&)>&& handler)

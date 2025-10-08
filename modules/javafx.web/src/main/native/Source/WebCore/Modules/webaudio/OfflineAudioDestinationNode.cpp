@@ -92,6 +92,7 @@ void OfflineAudioDestinationNode::uninitialize()
             m_renderThread->waitForCompletion();
             m_renderThread = nullptr;
         }
+
     if (m_startedRendering) {
         if (RefPtr workletProxy = context().audioWorklet().proxy()) {
             BinarySemaphore semaphore;

@@ -3275,6 +3275,15 @@ llintOpWithMetadata(op_instanceof, OpInstanceof, macro (size, get, dispatch, met
         store(result, m_hasInstanceOrPrototype)
         jmp .getPrototype
     end)
+    jmp .getPrototype
+
+.getHasInstanceInlinedGetterOSRReturnPoint:
+    # This can only be reached if we're exiting to the LLInt and we're exiting
+    # from an inlined getter for Symbol.hasInstance. Other exits e.g. for a "prototype"
+    # getter will exit directly to op_checkpoint_osr_exit_from_inlined_call_trampoline.
+    getterSetterOSRExitReturnPoint(op_instanceof, size)
+    valueProfile(size, OpInstanceof, m_hasInstanceValueProfile, r0, t2)
+    store(r0, m_hasInstanceOrPrototype)
 
 .getPrototype:
     overridesHasInstance(m_hasInstanceOrPrototype, m_constructor, .instanceofCustom)

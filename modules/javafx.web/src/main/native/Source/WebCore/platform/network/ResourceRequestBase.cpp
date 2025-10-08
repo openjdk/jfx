@@ -291,6 +291,7 @@ void ResourceRequestBase::resetTimeoutInterval()
 {
     setTimeoutInterval(s_defaultTimeoutInterval);
 }
+
 const URL& ResourceRequestBase::firstPartyForCookies() const
 {
     updateResourceRequest();
