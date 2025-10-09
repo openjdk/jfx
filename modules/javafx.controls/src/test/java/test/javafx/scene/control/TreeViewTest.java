@@ -4239,6 +4239,65 @@ public class TreeViewTest {
         }
     }
 
+    @Test
+    void testRefreshShouldNotResetCells() {
+        final AtomicInteger creationCounter = new AtomicInteger();
+
+        TreeView<Person> treeView = new TreeView<>();
+        treeView.setRoot(new TreeItem<>(new Person("text")));
+        treeView.setCellFactory(_ -> {
+            creationCounter.incrementAndGet();
+            return new TreeCell<>();
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(creationCounter.get() > 0);
+        creationCounter.set(0);
+
+        treeView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(0, creationCounter.get());
+    }
+
+    @Test
+    void testRefreshShouldReflectChangeInCell() {
+        String initialName = "Initial";
+        Person person = new Person(initialName);
+
+        TreeView<Person> treeView = new TreeView<>();
+        treeView.setRoot(new TreeItem<>(person));
+        treeView.setCellFactory(_ -> new TreeCell<>() {
+            @Override
+            protected void updateItem(Person item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(item.getFirstName());
+                }
+            }
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        String newName = "Other Name";
+        person.setFirstName(newName);
+
+        IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals(initialName, cell.getText());
+
+        treeView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals(newName, cell.getText());
+    }
+
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {
 
         @Override
