@@ -191,8 +191,8 @@ extern NSSize maxScreenDimensions;
 
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
-    for (NSWindow * window = self->nsWindow; window; window = [window parentWindow]) {
-        if (window == s_grabWindow) {
+    for (GlassWindow * window = self; window; window = window->owner) {
+        if (window->nsWindow == s_grabWindow) {
             return;
         }
     }
@@ -282,9 +282,10 @@ extern NSSize maxScreenDimensions;
         [self->nsWindow orderFront:nil];
     }
 
-    if ((self->owner != nil) && ([self->nsWindow parentWindow] == nil))
+    // Fix up window stacking order
+    if (self->owner != nil)
     {
-        [self->owner addChildWindow:self->nsWindow ordered:NSWindowAbove];
+        [self->owner reorderChildWindows];
     }
     // Make sure we synchronize scale factors which could have changed while
     // we were not visible without invoking the overrides we watch.
