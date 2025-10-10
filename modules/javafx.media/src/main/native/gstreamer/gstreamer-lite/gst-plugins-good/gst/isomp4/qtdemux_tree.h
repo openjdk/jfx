@@ -41,6 +41,8 @@ GNode *qtdemux_tree_get_sibling_by_type (GNode * node, guint32 fourcc);
 GNode *qtdemux_tree_get_sibling_by_type_full (GNode * node,
     guint32 fourcc, GstByteReader * parser);
 GNode *qtdemux_tree_get_child_by_index (GNode * node, guint index);
+GNode *qtdemux_tree_get_child_by_index_full (GNode * node, guint index,
+    GstByteReader * parser);
 
 G_END_DECLS
 
