@@ -57,8 +57,8 @@ public class HeadlessApplication1Test {
             new Thread(() -> {
                 assertFalse(Platform.isFxApplicationThread());
                 Application.invokeAndWait(counter::incrementAndGet);
-                waitLatch.countDown();
                 assertEquals(1, counter.get());
+                waitLatch.countDown();
             }).start();
         });
         try {
