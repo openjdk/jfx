@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,9 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.MapChangeListener.Change;
 import javafx.collections.ObservableMap;
 
-public class MapAdapterChange<K, V> extends MapChangeListener.Change<K, V> {
-    private final Change<? extends K, ? extends V> change;
+public final class MapAdapterChange<K, V> extends MapChangeListener.Change<K, V> {
+
+    private Change<? extends K, ? extends V> change;
 
     public MapAdapterChange(ObservableMap<K, V> map, Change<? extends K, ? extends V> change) {
         super(map);
@@ -63,8 +64,18 @@ public class MapAdapterChange<K, V> extends MapChangeListener.Change<K, V> {
     }
 
     @Override
+    public Change<K, V> next() {
+        Change<? extends K, ? extends V> nextChange = change.next();
+        if (nextChange != null) {
+            change = nextChange;
+            return this;
+        }
+
+        return null;
+    }
+
+    @Override
     public String toString() {
         return change.toString();
     }
-
 }

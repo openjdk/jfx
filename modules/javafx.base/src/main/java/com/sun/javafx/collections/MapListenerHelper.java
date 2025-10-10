@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,11 +157,13 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(MapChangeListener.Change<? extends K, ? extends V> change) {
-            try {
-                listener.onChanged(change);
-            } catch (Exception e) {
-                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-            }
+            do {
+                try {
+                    listener.onChanged(change);
+                } catch (Exception e) {
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                }
+            } while (change instanceof IterableMapChange<? extends K, ? extends V> c && c.nextChange());
         }
     }
 
@@ -320,17 +322,43 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
                         Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
                 }
-                for (int i = 0; i < curChangeSize; i++) {
-                    try {
-                        curChangeList[i].onChanged(change);
-                    } catch (Exception e) {
-                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
-                    }
+
+                if (change instanceof IterableMapChange<? extends K, ? extends V> iterableChange) {
+                    fireMapChangeEvent(iterableChange, curChangeList, curChangeSize);
+                } else {
+                    fireMapChangeEvent(change, curChangeList, curChangeSize);
                 }
             } finally {
                 locked = false;
             }
         }
-    }
 
+        private static <K, V> void fireMapChangeEvent(MapChangeListener.Change<? extends K, ? extends V> change,
+                                                      MapChangeListener<? super K, ? super V>[] curChangeList,
+                                                      int curChangeSize) {
+            for (int i = 0; i < curChangeSize; i++) {
+                try {
+                    curChangeList[i].onChanged(change);
+                } catch (Exception e) {
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                }
+            }
+        }
+
+        private static <K, V> void fireMapChangeEvent(IterableMapChange<? extends K, ? extends V> change,
+                                                      MapChangeListener<? super K, ? super V>[] curChangeList,
+                                                      int curChangeSize) {
+            for (int i = 0; i < curChangeSize; i++) {
+                do {
+                    try {
+                        curChangeList[i].onChanged(change);
+                    } catch (Exception e) {
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    }
+                } while (change.nextChange());
+
+                change.reset();
+            }
+        }
+    }
 }
