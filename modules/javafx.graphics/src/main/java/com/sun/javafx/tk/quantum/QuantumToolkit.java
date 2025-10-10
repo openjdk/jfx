@@ -826,7 +826,7 @@ public final class QuantumToolkit extends Toolkit {
             URL u = new URL(url);
             String protocol = u.getProtocol();
 
-            if(protocol.equals("http") || protocol.equals("https")) {
+            if ("http".equals(protocol) || "https".equals(protocol)) {
                 HttpURLConnection conn = (HttpURLConnection) u.openConnection();
 
                 conn.setRequestMethod("GET");
