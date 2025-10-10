@@ -4738,11 +4738,12 @@ public class Scene implements EventTarget {
         return onMouseDragExited;
     }
 
-
-    /// Defines a function to be called when a full press-drag-release gesture ends.
-    ///
-    /// @see MouseDragEvent#MOUSE_DRAG_DONE
-    /// @since 26
+    /**
+     * Defines a function to be called when a full press-drag-release gesture ends.
+     *
+     * @see MouseDragEvent#MOUSE_DRAG_DONE
+     * @since 26
+     */
     private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDone;
 
     public final void setOnMouseDragDone(EventHandler<? super MouseDragEvent> value) {

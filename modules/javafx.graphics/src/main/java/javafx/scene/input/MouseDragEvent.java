@@ -127,10 +127,12 @@ public final class MouseDragEvent extends MouseEvent{
             new EventType<>(MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
                     "MOUSE-DRAG_EXITED");
 
-    /// This event occurs when the gesture ends. It is delivered exactly once to the source node/scene, and is always the
-    /// last event in the full press-drag-release process. It is delivered even when the mouse is outside the application.
-    ///
-    /// @since 26
+    /**
+     * This event occurs when the gesture ends. It is delivered exactly once to the source node/scene, and is always the
+     * last event in the full press-drag-release process. It is delivered even when the mouse is outside the application.
+     *
+     * @since 26
+     */
     public static final EventType<MouseDragEvent> MOUSE_DRAG_DONE =
             new EventType<>(MouseDragEvent.ANY, "MOUSE-DRAG_DONE");
 
