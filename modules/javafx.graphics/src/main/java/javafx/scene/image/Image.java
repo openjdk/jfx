@@ -620,6 +620,9 @@ public class Image {
 
     /**
      * Constructs an {@code Image} with content loaded from the specified URL.
+     * <p>
+     * The image loading is performed immediately and is completed when this
+     * constructor returns.
      *
      * @param url a resource path, file path, or URL
      * @throws NullPointerException if {@code url} is null
@@ -633,10 +636,14 @@ public class Image {
     /**
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
+     * <p>
+     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
+     * be monitored for loading progress. Otherwise, the image loading is performed
+     * immediately and is completed when this constructor returns.
      *
      * @param url a resource path, file path, or URL
      * @param backgroundLoading indicates whether the image
-     *      is being loaded in the background
+     *      should be loaded in the background
      * @throws NullPointerException if {@code url} is null
      * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
@@ -648,6 +655,9 @@ public class Image {
     /**
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
+     * <p>
+     * The image loading is performed immediately and is completed when this
+     * constructor returns.
      *
      * @param url a resource path, file path, or URL
      * @param requestedWidth the image's bounding box width
@@ -671,6 +681,10 @@ public class Image {
     /**
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
+     * <p>
+     * If loading in the background is requested, then the {@link #progressProperty() progress} property can
+     * be monitored for loading progress. Otherwise, the image loading is performed
+     * immediately and is completed when this constructor returns.
      *
      * @param url a resource path, file path, or URL
      * @param requestedWidth the image's bounding box width
@@ -682,7 +696,7 @@ public class Image {
      *      algorithm or a faster one when scaling this image to fit within
      *      the specified bounding box
      * @param backgroundLoading indicates whether the image
-     *      is being loaded in the background
+     *      should be loaded in the background
      * @throws NullPointerException if {@code url} is null
      * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
@@ -701,6 +715,9 @@ public class Image {
     /**
      * Constructs an {@code Image} with content loaded from the specified
      * input stream.
+     * <p>
+     * The image loading is performed immediately and is completed when this
+     * constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
      * @throws NullPointerException if input stream is null
@@ -711,7 +728,32 @@ public class Image {
     }
 
     /**
+     * Constructs an {@code Image} with content loaded from the specified
+     * input stream.
+     * <p>
+     * If {@code backgroundLoading} is {@code true}, the {@link #progressProperty() progress} property
+     * can be monitored for loading progress. The stream will be consumed asynchronously;
+     * the caller must not read from or close it. It will be closed automatically when loading completes.
+     * <p>
+     * If {@code backgroundLoading} is {@code false}, the image is loaded immediately and
+     * completed when this constructor returns. The stream is consumed but not closed.
+     *
+     * @param is the stream from which to load the image
+     * @param backgroundLoading indicates whether the image
+     *      should be loaded in the background
+     * @throws NullPointerException if input stream is null
+     * @since 26
+     */
+    public Image(@NamedArg("is") InputStream is, @NamedArg("backgroundLoading") boolean backgroundLoading) {
+        this(null, validateInputStream(is), 0, 0, false, false, backgroundLoading);
+        initialize(null);
+    }
+
+    /**
      * Constructs a new {@code Image} with the specified parameters.
+     * <p>
+     * The image loading is performed immediately and is completed when this
+     * constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
      * @param requestedWidth the image's bounding box width
@@ -728,6 +770,37 @@ public class Image {
                  @NamedArg("preserveRatio") boolean preserveRatio, @NamedArg("smooth") boolean smooth) {
         this(null, validateInputStream(is), requestedWidth, requestedHeight,
              preserveRatio, smooth, false);
+        initialize(null);
+    }
+
+    /**
+     * Constructs a new {@code Image} with the specified parameters.
+     * <p>
+     * If {@code backgroundLoading} is {@code true}, the {@link #progressProperty() progress} property
+     * can be monitored for loading progress. The stream will be consumed asynchronously;
+     * the caller must not read from or close it. It will be closed automatically when loading completes.
+     * <p>
+     * If {@code backgroundLoading} is {@code false}, the image is loaded immediately and
+     * completed when this constructor returns. The stream is consumed but not closed.
+     *
+     * @param is the stream from which to load the image
+     * @param requestedWidth the image's bounding box width
+     * @param requestedHeight the image's bounding box height
+     * @param preserveRatio indicates whether to preserve the aspect ratio of
+     *      the original image when scaling to fit the image within the
+     *      specified bounding box
+     * @param smooth indicates whether to use a better quality filtering
+     *      algorithm or a faster one when scaling this image to fit within
+     *      the specified bounding box
+     * @param backgroundLoading indicates whether the image
+     *      should be loaded in the background
+     * @throws NullPointerException if input stream is null
+     * @since 26
+     */
+    public Image(@NamedArg("is") InputStream is, @NamedArg("requestedWidth") double requestedWidth, @NamedArg("requestedHeight") double requestedHeight,
+                 @NamedArg("preserveRatio") boolean preserveRatio, @NamedArg("smooth") boolean smooth, @NamedArg("backgroundLoading") boolean backgroundLoading) {
+        this(null, validateInputStream(is), requestedWidth, requestedHeight,
+             preserveRatio, smooth, backgroundLoading);
         initialize(null);
     }
 
@@ -810,7 +883,7 @@ public class Image {
             // object (e.g. a BufferedImage in the case of the Swing profile)
             ImageLoader loader = loadPlatformImage(externalImage);
             finishImage(loader);
-        } else if (isBackgroundLoading() && (inputSource == null)) {
+        } else if (isBackgroundLoading()) {
             // Load image in the background.
             loadInBackground();
         } else {
@@ -1047,7 +1120,7 @@ public class Image {
         }
 
         @Override
-        public void onProgress(int cur, int max) {
+        public void onProgress(long cur, long max) {
             if (max > 0) {
                 double curProgress = (double) cur / max;
                 if ((curProgress < 1) && (curProgress >= (getProgress() + 0.1))) {
@@ -1065,9 +1138,11 @@ public class Image {
         }
 
         private AsyncOperation constructPeer() {
-            return loadImageAsync(this, url,
-                                  requestedWidth, requestedHeight,
-                                  preserveRatio, smooth);
+            if(inputSource == null) {
+                return loadImageAsync(this, url, requestedWidth, requestedHeight, preserveRatio, smooth);
+            }
+
+            return loadImageAsync(this, inputSource, requestedWidth, requestedHeight, preserveRatio, smooth);
         }
     }
 
@@ -1088,10 +1163,19 @@ public class Image {
     }
 
     private static AsyncOperation loadImageAsync(
-            AsyncOperationListener<? extends ImageLoader> listener,
+            AsyncOperationListener<ImageLoader> listener,
             String url, double width, double height,
             boolean preserveRatio, boolean smooth) {
         return Toolkit.getToolkit().loadImageAsync(listener, url,
+                                                   width, height,
+                                                   preserveRatio, smooth);
+    }
+
+    private static AsyncOperation loadImageAsync(
+        AsyncOperationListener<ImageLoader> listener,
+        InputStream stream, double width, double height,
+        boolean preserveRatio, boolean smooth) {
+        return Toolkit.getToolkit().loadImageAsync(listener, stream,
                                                    width, height,
                                                    preserveRatio, smooth);
     }
