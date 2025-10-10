@@ -621,7 +621,7 @@ public class Image {
     /**
      * Constructs an {@code Image} with content loaded from the specified URL.
      * <p>
-     * The image loading is performed immediately and is completed after this
+     * The image loading is performed immediately and is completed when this
      * constructor returns.
      *
      * @param url a resource path, file path, or URL
@@ -639,7 +639,7 @@ public class Image {
      * <p>
      * If loading in the background is requested, then the {@link #progressProperty() progress} property can
      * be monitored for loading progress. Otherwise, the image loading is performed
-     * immediately and is completed after this constructor returns.
+     * immediately and is completed when this constructor returns.
      *
      * @param url a resource path, file path, or URL
      * @param backgroundLoading indicates whether the image
@@ -656,7 +656,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
      * <p>
-     * The image loading is performed immediately and is completed after this
+     * The image loading is performed immediately and is completed when this
      * constructor returns.
      *
      * @param url a resource path, file path, or URL
@@ -684,7 +684,7 @@ public class Image {
      * <p>
      * If loading in the background is requested, then the {@link #progressProperty() progress} property can
      * be monitored for loading progress. Otherwise, the image loading is performed
-     * immediately and is completed after this constructor returns.
+     * immediately and is completed when this constructor returns.
      *
      * @param url a resource path, file path, or URL
      * @param requestedWidth the image's bounding box width
@@ -716,7 +716,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified
      * input stream.
      * <p>
-     * The image loading is performed immediately and is completed after this
+     * The image loading is performed immediately and is completed when this
      * constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
@@ -752,7 +752,7 @@ public class Image {
     /**
      * Constructs a new {@code Image} with the specified parameters.
      * <p>
-     * The image loading is performed immediately and is completed after this
+     * The image loading is performed immediately and is completed when this
      * constructor returns. The stream is consumed but not closed.
      *
      * @param is the stream from which to load the image
