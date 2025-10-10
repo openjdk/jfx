@@ -61,7 +61,7 @@ public class HeadlessApplication extends Application {
 
     @Override
     protected void _invokeAndWait(Runnable runnable) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        processor.invokeAndWait(runnable);
     }
 
     @Override
@@ -77,6 +77,13 @@ public class HeadlessApplication extends Application {
     @Override
     protected void _leaveNestedEventLoop(Object retValue) {
         processor.leaveCurrentLoop(retValue);
+    }
+
+    @Override
+    protected void finishTerminating() {
+        processor.stopProcessing();
+        setEventThread(null);
+        super.finishTerminating();
     }
 
     @Override
