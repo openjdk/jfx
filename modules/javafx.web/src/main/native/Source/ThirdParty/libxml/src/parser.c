@@ -413,7 +413,7 @@ xmlSaturatedAdd(unsigned long *dst, unsigned long val) {
 }
 
 static void
-xmlSaturatedAddSizeT(unsigned long *dst, unsigned long val) {
+xmlSaturatedAddSizeT(unsigned long *dst, size_t val) {
     if (val > ULONG_MAX - *dst)
         *dst = ULONG_MAX;
     else
