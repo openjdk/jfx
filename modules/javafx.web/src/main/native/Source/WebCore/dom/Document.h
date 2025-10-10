@@ -1968,6 +1968,7 @@ public:
     void invalidateDOMCookieCache();
 
     void detachFromFrame();
+    void willBeDisconnectedFromFrame(Document&);
 
     PermissionsPolicy permissionsPolicy() const;
 

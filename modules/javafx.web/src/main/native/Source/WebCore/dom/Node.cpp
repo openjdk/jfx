@@ -462,11 +462,11 @@ Node::~Node()
         document.decrementReferencingNodeCount(); // This may destroy the document.
     }
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS))
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && ASSERT_ENABLED
     for (auto& document : Document::allDocuments()) {
-        ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventListenersContain(*this));
-        ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventHandlersContain(*this));
-        ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventTargetsContain(*this));
+        ASSERT(!document->touchEventListenersContain(*this));
+        ASSERT(!document->touchEventHandlersContain(*this));
+        ASSERT(!document->touchEventTargetsContain(*this));
     }
 #endif
 
