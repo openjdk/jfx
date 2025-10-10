@@ -24,28 +24,50 @@
  */
 package test.com.sun.glass.ui.headless;
 
+import com.sun.javafx.application.PlatformImplShim;
 import javafx.application.Platform;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HeadlessApplication2Test {
 
+    private final CountDownLatch exitLatch = PlatformImplShim.test_getPlatformExitLatch();
+
     @BeforeAll
     public static void setup() throws Exception {
         System.setProperty("glass.platform", "Headless");
+        System.setProperty("prism.order", "sw");
     }
 
     @Test
     public void userThreadIsShutdownOnPlatformExitTest() {
         assertFalse(Platform.isFxApplicationThread());
+        AtomicBoolean fail = new AtomicBoolean();
         Platform.startup(() -> {
             assertTrue(Platform.isFxApplicationThread());
+            assertEquals(1, exitLatch.getCount());
             Platform.runLater(Platform::exit);
         });
+        try {
+            if (!exitLatch.await(1, TimeUnit.SECONDS)) {
+                fail.set(true);
+            }
+        } catch (InterruptedException e) {
+            fail.set(true);
+        }
+
+        assertEquals(0, exitLatch.getCount());
+        assertFalse(fail.get());
+
         Util.sleep(10);
         assertFalse(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> "JavaFX Application Thread".equals(t.getName())));
     }

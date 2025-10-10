@@ -43,6 +43,7 @@ public class HeadlessApplication1Test {
     @BeforeAll
     public static void setup() throws Exception {
         System.setProperty("glass.platform", "Headless");
+        System.setProperty("prism.order", "sw");
     }
 
     @Test
