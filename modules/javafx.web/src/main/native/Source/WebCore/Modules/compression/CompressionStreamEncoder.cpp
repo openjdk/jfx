@@ -88,6 +88,7 @@ static bool didDeflateFail(int result)
 #if !PLATFORM(JAVA)
     return result != Z_OK && result != Z_STREAM_END && result != Z_BUF_ERROR;
 #endif
+    return true;
 }
 ExceptionOr<Ref<JSC::ArrayBuffer>> CompressionStreamEncoder::compress(std::span<const uint8_t> input)
 {
