@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.javafx.stage;
+package test.com.sun.glass.ui.mac;
 
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
@@ -58,23 +58,26 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-public class MacOSSystemMenuMultiWindowFXOnlySwingFirst extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
 
     @Test
     public void test() throws InterruptedException, IOException {
-        initSwing(List.of());
-        initJavaFX(List.of(TEST_MENUS_1, TEST_MENUS_3));
+        initJavaFX(List.of(TEST_MENUS_0, TEST_MENUS_1, TEST_MENUS_2));
 
         focusJavaFX(0);
         List<Element> jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
+        compareMenus(jfxElements, TEST_MENUS_0);
 
         focusJavaFX(1);
         jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_3);
+        compareMenus(jfxElements, TEST_MENUS_1);
+
+        focusJavaFX(2);
+        jfxElements = getMenusOfFocusedWindow();
+        compareMenus(jfxElements, TEST_MENUS_2);
 
         focusJavaFX(0);
         jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
+        compareMenus(jfxElements, TEST_MENUS_0);
     }
 }

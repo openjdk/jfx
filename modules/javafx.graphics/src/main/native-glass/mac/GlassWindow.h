@@ -67,7 +67,7 @@
     // Stores the menu of the host application when running embedded.
     // This is used to allow JFX to install its own system menu
     // without interfering with the hosting application.
-    NSMenu* hostMenu;
+    NSMenu*             hostMenu;
 
 @private
     BOOL                isWindowResizable;
