@@ -129,7 +129,7 @@ public final class MouseDragEvent extends MouseEvent{
 
     /**
      * This event occurs when the gesture ends. It is delivered exactly once to the source node/scene, and is always the
-     * last event in the full press-drag-release process. It is delivered even when the mouse is outside the application.
+     * last event in the full press-drag-release process. It is delivered even when the mouse is outside the window.
      *
      * @since 26
      */
