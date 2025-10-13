@@ -1109,7 +1109,7 @@ public class TreeView<T> extends Control {
     }
 
     /**
-     * Calling {@code refresh()} forces the TreeView control to repopulate the
+     * Calling {@code refresh()} forces the TreeView control to rebuild the
      * cells necessary to populate the visual bounds of the control.
      * In other words, this forces the TreeView to update what it is showing to
      * the user. This is useful in cases where the underlying data source has

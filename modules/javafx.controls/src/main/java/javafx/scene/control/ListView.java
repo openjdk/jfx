@@ -1032,7 +1032,7 @@ public class ListView<T> extends Control {
     }
 
     /**
-     * Calling {@code refresh()} forces the ListView control to repopulate the
+     * Calling {@code refresh()} forces the ListView control to rebuild the
      * cells necessary to populate the visual bounds of the control.
      * In other words, this forces the ListView to update what it is showing to
      * the user. This is useful in cases where the underlying data source has
