@@ -28,7 +28,6 @@ import com.sun.javafx.application.PlatformImplShim;
 import javafx.application.Platform;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,11 +35,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HeadlessApplication2Test {
 
     private final CountDownLatch exitLatch = PlatformImplShim.test_getPlatformExitLatch();
+    private Thread fxThread;
 
     @BeforeAll
     public static void setup() throws Exception {
@@ -54,6 +55,7 @@ public class HeadlessApplication2Test {
         AtomicBoolean fail = new AtomicBoolean();
         Platform.startup(() -> {
             assertTrue(Platform.isFxApplicationThread());
+            fxThread = Thread.currentThread();
             assertEquals(1, exitLatch.getCount());
             Platform.runLater(Platform::exit);
         });
@@ -68,7 +70,14 @@ public class HeadlessApplication2Test {
         assertEquals(0, exitLatch.getCount());
         assertFalse(fail.get());
 
-        Util.sleep(10);
+        assertNotNull(fxThread);
+        try {
+            fxThread.join(10);
+        }  catch (InterruptedException e) {
+            fail.set(true);
+        }
+
+        assertFalse(fail.get());
         assertFalse(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> "JavaFX Application Thread".equals(t.getName())));
     }
 
