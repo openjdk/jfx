@@ -91,7 +91,9 @@ public class NestedRunnableProcessor implements Runnable {
 
     private static class RunLoopEntry {
 
+        // This is only accessed on the event thread
         boolean active;
+
         Object returnValue;
     }
 
