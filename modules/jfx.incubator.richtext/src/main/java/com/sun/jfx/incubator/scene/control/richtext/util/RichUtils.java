@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,7 +61,10 @@ import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * RichTextArea specific utility methods.
@@ -694,5 +697,30 @@ public final class RichUtils {
         }
 
         return b.build();
+    }
+
+    /** returns true if both control and model are editable */
+    public static boolean canEdit(RichTextArea rta) {
+        if (rta.isEditable()) {
+            StyledTextModel m = rta.getModel();
+            if (m != null) {
+                return m.isWritable();
+            }
+        }
+        return false;
+    }
+
+    // Returns the text positions at a positive offset relative to the 'start' position.
+    public static TextPos advancePosition(StyledTextModel model, TextPos start, int offset) {
+        // TODO should it account for newlines?
+        return TextPos.ofLeading(start.index(), start.offset() + offset);
+    }
+
+    /// Returns the distance (in characters) between the `start` and the `end` positions.
+    public static int computeDistance(StyledTextModel model, TextPos start, TextPos end) {
+        if (start.index() != end.index()) {
+            throw new Error(start + " " + end);
+        }
+        return end.offset() - start.offset();
     }
 }

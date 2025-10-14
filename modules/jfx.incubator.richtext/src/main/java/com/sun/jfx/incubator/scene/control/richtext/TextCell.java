@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -210,6 +210,20 @@ public final class TextCell extends BorderPane {
             };
         }
         return RichUtils.translatePath(target, content, p, dx, dy);
+    }
+
+    /**
+     * Returns the {@code PathElement} array for the underline shape,
+     * translated to the {@code target} frame of reference.
+     *
+     * @param target the Region that provides the target frame of reference
+     * @param start the start offset
+     * @param end the end offset
+     * @return the array of path elements translated to the target coordinates
+     */
+    public PathElement[] getUnderlineShape(Region target, int start, int end) {
+        // FIX
+        return getRangeShape(target, start, end);
     }
 
     /**

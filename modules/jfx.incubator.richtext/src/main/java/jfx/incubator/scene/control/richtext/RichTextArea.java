@@ -1414,6 +1414,69 @@ public class RichTextArea extends Control {
         return styleHandlerRegistry;
     }
 
+    /// Copies the plain text between `start` and `end` positions to the provided buffer.
+    ///
+    /// This method copies plain text into the provided StringBuilder, up to `limit` characters.
+    /// When the amount of text between the two positions exceeds the provided `limit`,
+    /// the method returns `false`.
+    /// The method does nothing and returns `true` of the model is `null`.
+    ///
+    /// @param start the start position
+    /// @param end the end position
+    /// @param sb the buffer to copy to
+    /// @param limit the maximum number of characters to copy, must be >= 0
+    /// @param newLineSeparator the newline separator sequence, or `null` to use the platform default
+    /// @return `true` if all the text fit in the buffer
+    /// @since 26
+    public final boolean getText(TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
+        StyledTextModel m = getModel();
+        if (m == null) {
+            return true;
+        }
+
+        if (start.compareTo(end) > 0) {
+            TextPos tmp = start;
+            start = end;
+            end = tmp;
+        }
+
+        if (lineSeparator == null) {
+            lineSeparator = System.getProperty("line.separator");
+        }
+
+        int toCopy = limit;
+        int index = start.index();
+        boolean first = true;
+        boolean all = true;
+        while (toCopy > 0) {
+            int beg;
+            if (first) {
+                first = false;
+                beg = start.offset();
+            } else {
+                sb.append(lineSeparator);
+                beg = 0;
+            }
+            String text = getPlainText(index);
+            int len = Math.min(toCopy, text.length() - beg);
+            sb.append(text, beg, beg + len);
+            toCopy -= len;
+            index++;
+
+            // did we copy all?
+            if (toCopy == 0) {
+                if (index < end.index()) {
+                    all = false;
+                } else if (index == end.index()) {
+                    if (beg + len < end.offset()) {
+                        all = false;
+                    }
+                }
+            }
+        }
+        return all;
+    }
+
     /**
      * Finds a text position corresponding to the specified screen coordinates.
      * This method returns {@code null} if the specified coordinates are outside of the content area.
