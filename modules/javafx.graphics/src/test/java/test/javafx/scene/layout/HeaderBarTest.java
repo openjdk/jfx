@@ -61,9 +61,9 @@ public class HeaderBarTest {
 
     @Test
     void emptyHeaderBar() {
-        assertNull(headerBar.getLeading());
+        assertNull(headerBar.getLeft());
         assertNull(headerBar.getCenter());
-        assertNull(headerBar.getTrailing());
+        assertNull(headerBar.getRight());
     }
 
     @Test
@@ -91,11 +91,11 @@ public class HeaderBarTest {
             "BOTTOM_CENTER, 10, 10, 100, 80",
             "BOTTOM_RIGHT, 10, 10, 100, 80"
         })
-        void alignmentOfLeadingChildOnly_resizable(Pos pos, double x, double y, double width, double height) {
+        void alignmentOfLeftChildOnly_resizable(Pos pos, double x, double y, double width, double height) {
             var content = new MockResizable(100, 50);
             HeaderBar.setAlignment(content, pos);
             HeaderBar.setMargin(content, new Insets(10));
-            headerBar.setLeading(content);
+            headerBar.setLeft(content);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
@@ -114,11 +114,11 @@ public class HeaderBarTest {
             "BOTTOM_CENTER, 10, 40, 100, 50",
             "BOTTOM_RIGHT, 10, 40, 100, 50"
         })
-        void alignmentOfLeadingChildOnly_notResizable(Pos pos, double x, double y, double width, double height) {
+        void alignmentOfLeftChildOnly_notResizable(Pos pos, double x, double y, double width, double height) {
             var content = new Rectangle(100, 50);
             HeaderBar.setAlignment(content, pos);
             HeaderBar.setMargin(content, new Insets(10));
-            headerBar.setLeading(content);
+            headerBar.setLeft(content);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
@@ -137,11 +137,11 @@ public class HeaderBarTest {
             "BOTTOM_CENTER, 890, 10, 100, 80",
             "BOTTOM_RIGHT, 890, 10, 100, 80"
         })
-        void alignmentOfTrailingChildOnly_resizable(Pos pos, double x, double y, double width, double height) {
+        void alignmentOfRightChildOnly_resizable(Pos pos, double x, double y, double width, double height) {
             var content = new MockResizable(100, 50);
             HeaderBar.setAlignment(content, pos);
             HeaderBar.setMargin(content, new Insets(10));
-            headerBar.setTrailing(content);
+            headerBar.setRight(content);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
@@ -160,11 +160,11 @@ public class HeaderBarTest {
             "BOTTOM_CENTER, 890, 40, 100, 50",
             "BOTTOM_RIGHT, 890, 40, 100, 50"
         })
-        void alignmentOfTrailingChildOnly_notResizable(Pos pos, double x, double y, double width, double height) {
+        void alignmentOfRightChildOnly_notResizable(Pos pos, double x, double y, double width, double height) {
             var content = new Rectangle(100, 50);
             HeaderBar.setAlignment(content, pos);
             HeaderBar.setMargin(content, new Insets(10));
-            headerBar.setTrailing(content);
+            headerBar.setRight(content);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
@@ -230,16 +230,16 @@ public class HeaderBarTest {
             "BOTTOM_CENTER, 400, 10, 200, 80",
             "BOTTOM_RIGHT, 640, 10, 200, 80"
         })
-        void alignmentOfCenterChild_resizable_withNonEmptyLeadingAndTrailingChild(
+        void alignmentOfCenterChild_resizable_withNonEmptyLeftAndRightChild(
                 Pos pos, double x, double y, double width, double height) {
-            var leading = new MockResizable(50, 50);
+            var left = new MockResizable(50, 50);
             var center = new MockResizable(0, 0, 100, 50, 200, 100);
-            var trailing = new MockResizable(150, 50);
+            var right = new MockResizable(150, 50);
             HeaderBar.setAlignment(center, pos);
             HeaderBar.setMargin(center, new Insets(10));
-            headerBar.setLeading(leading);
+            headerBar.setLeft(left);
             headerBar.setCenter(center);
-            headerBar.setTrailing(trailing);
+            headerBar.setRight(right);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
@@ -258,16 +258,16 @@ public class HeaderBarTest {
             "BOTTOM_CENTER, 450, 40, 100, 50",
             "BOTTOM_RIGHT, 740, 40, 100, 50"
         })
-        void alignmentOfCenterChild_notResizable_withNonEmptyLeadingAndTrailingChild(
+        void alignmentOfCenterChild_notResizable_withNonEmptyLeftAndRightChild(
                 Pos pos, double x, double y, double width, double height) {
-            var leading = new Rectangle(50, 50);
+            var left = new Rectangle(50, 50);
             var center = new Rectangle(100, 50);
-            var trailing = new Rectangle(150, 50);
+            var right = new Rectangle(150, 50);
             HeaderBar.setAlignment(center, pos);
             HeaderBar.setMargin(center, new Insets(10));
-            headerBar.setLeading(leading);
+            headerBar.setLeft(left);
             headerBar.setCenter(center);
-            headerBar.setTrailing(trailing);
+            headerBar.setRight(right);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
@@ -376,14 +376,14 @@ public class HeaderBarTest {
 
         private void alignmentOfCenterChildImpl(Pos pos, double headerBarWidth, double maxWidth,
                                                 double x, double y, double width, double height) {
-            var leading = new MockResizable(50, 50);
+            var left = new MockResizable(50, 50);
             var center = new MockResizable(0, 0, 100, 50, maxWidth, 100);
-            var trailing = new MockResizable(150, 50);
+            var right = new MockResizable(150, 50);
             HeaderBar.setAlignment(center, pos);
             HeaderBar.setMargin(center, new Insets(10));
-            headerBar.setLeading(leading);
+            headerBar.setLeft(left);
             headerBar.setCenter(center);
-            headerBar.setTrailing(trailing);
+            headerBar.setRight(right);
             headerBar.resize(headerBarWidth, 100);
             headerBar.layout();
 
@@ -396,19 +396,19 @@ public class HeaderBarTest {
             "CENTER, 10, 25, 50, 50",
             "BOTTOM_LEFT, 10, 40, 50, 50"
         })
-        void alignmentOfLeadingChild_notResizable_withoutReservedArea(
+        void alignmentOfLeftChild_notResizable_withoutReservedArea(
                 Pos pos, double x, double y, double width, double height) {
             ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
             leftSystemInset.set(new Dimension2D(100, 100));
-            var leading = new Rectangle(50, 50);
-            HeaderBar.setAlignment(leading, pos);
-            HeaderBar.setMargin(leading, new Insets(10));
-            headerBar.setLeadingSystemPadding(false);
-            headerBar.setLeading(leading);
+            var left = new Rectangle(50, 50);
+            HeaderBar.setAlignment(left, pos);
+            HeaderBar.setMargin(left, new Insets(10));
+            headerBar.setLeftSystemPadding(false);
+            headerBar.setLeft(left);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
-            assertBounds(x, y, width, height, leading);
+            assertBounds(x, y, width, height, left);
         }
 
         @ParameterizedTest
@@ -417,19 +417,19 @@ public class HeaderBarTest {
             "CENTER, 940, 25, 50, 50",
             "BOTTOM_RIGHT, 940, 40, 50, 50"
         })
-        void alignmentOfTrailingChild_notResizable_withoutReservedArea(
+        void alignmentOfRightChild_notResizable_withoutReservedArea(
                 Pos pos, double x, double y, double width, double height) {
             ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
             rightSystemInset.set(new Dimension2D(100, 100));
-            var trailing = new Rectangle(50, 50);
-            HeaderBar.setAlignment(trailing, pos);
-            HeaderBar.setMargin(trailing, new Insets(10));
-            headerBar.setTrailingSystemPadding(false);
-            headerBar.setTrailing(trailing);
+            var right = new Rectangle(50, 50);
+            HeaderBar.setAlignment(right, pos);
+            HeaderBar.setMargin(right, new Insets(10));
+            headerBar.setRightSystemPadding(false);
+            headerBar.setRight(right);
             headerBar.resize(1000, 100);
             headerBar.layout();
 
-            assertBounds(x, y, width, height, trailing);
+            assertBounds(x, y, width, height, right);
         }
 
         private void assertBounds(double x, double y, double width, double height, Node node) {

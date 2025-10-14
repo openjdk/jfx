@@ -65,7 +65,7 @@ import javafx.util.Subscription;
  * method.
  * <p>
  * {@code HeaderBar} is a layout container that allows applications to place scene graph nodes in three areas:
- * {@link #leadingProperty() leading}, {@link #centerProperty() center}, and {@link #trailingProperty() trailing}.
+ * {@link #leftProperty() left}, {@link #centerProperty() center}, and {@link #rightProperty() right}.
  * All areas can be {@code null}. The default {@link #minHeightProperty() minHeight} of the {@code HeaderBar} is
  * set to match the height of the platform-specific default header buttons.
  *
@@ -80,8 +80,8 @@ import javafx.util.Subscription;
  * Applications that use multiple header bars might need to configure the additional padding inserted into the
  * layout to account for the system-reserved areas. For example, when two header bars are placed next to each
  * other in the horizontal direction, the default configuration incorrectly adds additional padding between the
- * two header bars. In this case, the {@link #leadingSystemPaddingProperty() leadingSystemPadding} and
- * {@link #trailingSystemPaddingProperty() trailingSystemPadding} properties can be used to remove the padding
+ * two header bars. In this case, the {@link #leftSystemPaddingProperty() leftSystemPadding} and
+ * {@link #rightSystemPaddingProperty() rightSystemPadding} properties can be used to remove the padding
  * that is not needed.
  *
  * <h2>Header button height</h2>
@@ -89,6 +89,12 @@ import javafx.util.Subscription;
  * {@link #setPrefButtonHeight(Stage, double)} property on the {@code Stage} associated with the header bar.
  * This can be used to achieve a more cohesive visual appearance by having the system-provided header buttons
  * match the height of the client-area header bar.
+ *
+ * <h2>Color scheme</h2>
+ * The color scheme of the default header buttons is automatically adjusted to remain easily recognizable
+ * by inspecting the {@link Scene#fillProperty() Scene.fill} property to gauge the brightness of the user
+ * interface. Applications should set the scene fill to a color that matches the user interface of the header
+ * bar area, even if the scene fill is not visible because it is obscured by other controls.
  *
  * <h2>Custom header buttons</h2>
  * If more control over the header buttons is desired, applications can opt out of the system-provided header
@@ -106,7 +112,7 @@ import javafx.util.Subscription;
  * </ol>
  *
  * <h2>Layout constraints</h2>
- * The {@code leading} and {@code trailing} children will be resized to their preferred widths and extend the
+ * The {@code left} and {@code right} children will be resized to their preferred widths and extend the
  * height of the {@code HeaderBar}. The {@code center} child will be resized to fill the available space.
  * {@code HeaderBar} honors the minimum, preferred, and maximum sizes of its children. If a child's resizable
  * range prevents it from be resized to fit within its position, it will be vertically centered relative to the
@@ -328,6 +334,8 @@ public class HeaderBar extends Region {
         // user code changes the property value before we set it to the height of the native title bar.
         minHeightProperty();
 
+        effectiveNodeOrientationProperty().subscribe(this::updateInsets);
+
         ObservableValue<Stage> stage = sceneProperty()
             .flatMap(Scene::windowProperty)
             .map(w -> w instanceof Stage s ? s : null);
@@ -342,15 +350,15 @@ public class HeaderBar extends Region {
     /**
      * Creates a new {@code HeaderBar} with the specified children.
      *
-     * @param leading the leading node, or {@code null}
+     * @param left the left node, or {@code null}
      * @param center the center node, or {@code null}
-     * @param trailing the trailing node, or {@code null}
+     * @param right the right node, or {@code null}
      */
-    public HeaderBar(Node leading, Node center, Node trailing) {
+    public HeaderBar(Node left, Node center, Node right) {
         this();
-        setLeading(leading);
+        setLeft(left);
         setCenter(center);
-        setTrailing(trailing);
+        setRight(right);
     }
 
     private void onStageChanged(Stage stage) {
@@ -363,22 +371,26 @@ public class HeaderBar extends Region {
 
     private void onMetricsChanged(HeaderButtonMetrics metrics) {
         currentMetrics = metrics;
-        updateInsets();
+        updateInsets(getEffectiveNodeOrientation());
     }
 
     private void onFullScreenChanged(boolean fullScreen) {
         currentFullScreen = fullScreen;
-        updateInsets();
+        updateInsets(getEffectiveNodeOrientation());
     }
 
-    private void updateInsets() {
+    private void updateInsets(NodeOrientation orientation) {
         if (currentFullScreen || currentMetrics == null) {
             leftSystemInset.set(EMPTY);
             rightSystemInset.set(EMPTY);
             minSystemHeight.set(0);
-        } else {
+        } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
             leftSystemInset.set(currentMetrics.leftInset());
             rightSystemInset.set(currentMetrics.rightInset());
+            minSystemHeight.set(currentMetrics.minHeight());
+        } else {
+            leftSystemInset.set(currentMetrics.rightInset());
+            rightSystemInset.set(currentMetrics.leftInset());
             minSystemHeight.set(currentMetrics.minHeight());
         }
     }
@@ -387,8 +399,6 @@ public class HeaderBar extends Region {
      * Describes the size of the left system-reserved inset, which is an area reserved for the iconify, maximize,
      * and close window buttons. If there are no window buttons on the left side of the window, the returned area
      * is an empty {@code Dimension2D}.
-     * <p>
-     * Note that the left system inset refers to the left side of the window, independent of layout orientation.
      */
     private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset =
         new ReadOnlyObjectWrapper<>(this, "leftSystemInset", EMPTY) {
@@ -410,8 +420,6 @@ public class HeaderBar extends Region {
      * Describes the size of the right system-reserved inset, which is an area reserved for the iconify, maximize,
      * and close window buttons. If there are no window buttons on the right side of the window, the returned area
      * is an empty {@code Dimension2D}.
-     * <p>
-     * Note that the right system inset refers to the right side of the window, independent of layout orientation.
      */
     private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset =
         new ReadOnlyObjectWrapper<>(this, "rightSystemInset", EMPTY) {
@@ -460,25 +468,22 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * The leading area of the {@code HeaderBar}.
-     * <p>
-     * The leading area corresponds to the left area in a left-to-right layout, and to the right area
-     * in a right-to-left layout.
+     * The left area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
      */
-    private final ObjectProperty<Node> leading = new NodeProperty("leading");
+    private final ObjectProperty<Node> left = new NodeProperty("left");
 
-    public final ObjectProperty<Node> leadingProperty() {
-        return leading;
+    public final ObjectProperty<Node> leftProperty() {
+        return left;
     }
 
-    public final Node getLeading() {
-        return leading.get();
+    public final Node getLeft() {
+        return left.get();
     }
 
-    public final void setLeading(Node value) {
-        leading.set(value);
+    public final void setLeft(Node value) {
+        left.set(value);
     }
 
     /**
@@ -501,41 +506,38 @@ public class HeaderBar extends Region {
     }
 
     /**
-     * The trailing area of the {@code HeaderBar}.
-     * <p>
-     * The trailing area corresponds to the right area in a left-to-right layout, and to the left area
-     * in a right-to-left layout.
+     * The right area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
      */
-    private final ObjectProperty<Node> trailing = new NodeProperty("trailing");
+    private final ObjectProperty<Node> right = new NodeProperty("right");
 
-    public final ObjectProperty<Node> trailingProperty() {
-        return trailing;
+    public final ObjectProperty<Node> rightProperty() {
+        return right;
     }
 
-    public final Node getTrailing() {
-        return trailing.get();
+    public final Node getRight() {
+        return right.get();
     }
 
-    public final void setTrailing(Node value) {
-        trailing.set(value);
+    public final void setRight(Node value) {
+        right.set(value);
     }
 
     /**
-     * Specifies whether additional padding should be added to the leading side of the {@code HeaderBar}.
+     * Specifies whether additional padding should be added to the left side of the {@code HeaderBar}.
      * The size of the additional padding corresponds to the size of the system-reserved area that contains
      * the default header buttons (iconify, maximize, and close). If the system-reserved area contains no
-     * header buttons, no additional padding is added to the leading side of the {@code HeaderBar}.
+     * header buttons, no additional padding is added to the left side of the {@code HeaderBar}.
      * <p>
      * Applications that use a single {@code HeaderBar} extending the entire width of the window should
      * set this property to {@code true} to prevent the header buttons from overlapping the content of the
      * {@code HeaderBar}.
      *
      * @defaultValue {@code true}
-     * @see #trailingSystemPaddingProperty() trailingSystemPadding
+     * @see #rightSystemPaddingProperty() rightSystemPadding
      */
-    private final BooleanProperty leadingSystemPadding = new BooleanPropertyBase(true) {
+    private final BooleanProperty leftSystemPadding = new BooleanPropertyBase(true) {
         @Override
         public Object getBean() {
             return HeaderBar.this;
@@ -543,7 +545,7 @@ public class HeaderBar extends Region {
 
         @Override
         public String getName() {
-            return "leadingSystemPadding";
+            return "leftSystemPadding";
         }
 
         @Override
@@ -552,32 +554,32 @@ public class HeaderBar extends Region {
         }
     };
 
-    public final BooleanProperty leadingSystemPaddingProperty() {
-        return leadingSystemPadding;
+    public final BooleanProperty leftSystemPaddingProperty() {
+        return leftSystemPadding;
     }
 
-    public final boolean isLeadingSystemPadding() {
-        return leadingSystemPadding.get();
+    public final boolean isLeftSystemPadding() {
+        return leftSystemPadding.get();
     }
 
-    public final void setLeadingSystemPadding(boolean value) {
-        leadingSystemPadding.set(value);
+    public final void setLeftSystemPadding(boolean value) {
+        leftSystemPadding.set(value);
     }
 
     /**
-     * Specifies whether additional padding should be added to the trailing side of the {@code HeaderBar}.
+     * Specifies whether additional padding should be added to the right side of the {@code HeaderBar}.
      * The size of the additional padding corresponds to the size of the system-reserved area that contains
      * the default header buttons (iconify, maximize, and close). If the system-reserved area contains no
-     * header buttons, no additional padding is added to the trailing side of the {@code HeaderBar}.
+     * header buttons, no additional padding is added to the right side of the {@code HeaderBar}.
      * <p>
      * Applications that use a single {@code HeaderBar} extending the entire width of the window should
      * set this property to {@code true} to prevent the header buttons from overlapping the content of the
      * {@code HeaderBar}.
      *
      * @defaultValue {@code true}
-     * @see #leadingSystemPaddingProperty() leadingSystemPadding
+     * @see #leftSystemPaddingProperty() leftSystemPadding
      */
-    private final BooleanProperty trailingSystemPadding = new BooleanPropertyBase(true) {
+    private final BooleanProperty rightSystemPadding = new BooleanPropertyBase(true) {
         @Override
         public Object getBean() {
             return HeaderBar.this;
@@ -585,7 +587,7 @@ public class HeaderBar extends Region {
 
         @Override
         public String getName() {
-            return "trailingSystemPadding";
+            return "rightSystemPadding";
         }
 
         @Override
@@ -594,153 +596,119 @@ public class HeaderBar extends Region {
         }
     };
 
-    public final BooleanProperty trailingSystemPaddingProperty() {
-        return trailingSystemPadding;
+    public final BooleanProperty rightSystemPaddingProperty() {
+        return rightSystemPadding;
     }
 
-    public final boolean isTrailingSystemPadding() {
-        return trailingSystemPadding.get();
+    public final boolean isRightSystemPadding() {
+        return rightSystemPadding.get();
     }
 
-    public final void setTrailingSystemPadding(boolean value) {
-        trailingSystemPadding.set(value);
-    }
-
-    private boolean isLeftSystemPadding(NodeOrientation nodeOrientation) {
-        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && isLeadingSystemPadding()
-            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && isTrailingSystemPadding();
-    }
-
-    private boolean isRightSystemPadding(NodeOrientation nodeOrientation) {
-        return nodeOrientation == NodeOrientation.LEFT_TO_RIGHT && isTrailingSystemPadding()
-            || nodeOrientation == NodeOrientation.RIGHT_TO_LEFT && isLeadingSystemPadding();
+    public final void setRightSystemPadding(boolean value) {
+        rightSystemPadding.set(value);
     }
 
     @Override
     protected double computeMinWidth(double height) {
-        Node leading = getLeading();
+        Node left = getLeft();
         Node center = getCenter();
-        Node trailing = getTrailing();
+        Node right = getRight();
         Insets insets = getInsets();
         double leftPrefWidth;
         double rightPrefWidth;
         double centerMinWidth;
-        double systemPaddingWidth = 0;
 
         if (height != -1
-                && (childHasContentBias(leading, Orientation.VERTICAL) ||
-                    childHasContentBias(trailing, Orientation.VERTICAL) ||
+                && (childHasContentBias(left, Orientation.VERTICAL) ||
+                    childHasContentBias(right, Orientation.VERTICAL) ||
                     childHasContentBias(center, Orientation.VERTICAL))) {
             double areaHeight = Math.max(0, height);
-            leftPrefWidth = getAreaWidth(leading, areaHeight, false);
-            rightPrefWidth = getAreaWidth(trailing, areaHeight, false);
+            leftPrefWidth = getAreaWidth(left, areaHeight, false);
+            rightPrefWidth = getAreaWidth(right, areaHeight, false);
             centerMinWidth = getAreaWidth(center, areaHeight, true);
         } else {
-            leftPrefWidth = getAreaWidth(leading, -1, false);
-            rightPrefWidth = getAreaWidth(trailing, -1, false);
+            leftPrefWidth = getAreaWidth(left, -1, false);
+            rightPrefWidth = getAreaWidth(right, -1, false);
             centerMinWidth = getAreaWidth(center, -1, true);
         }
 
-        NodeOrientation nodeOrientation = getEffectiveNodeOrientation();
-
-        if (isLeftSystemPadding(nodeOrientation)) {
-            systemPaddingWidth += getLeftSystemInset().getWidth();
-        }
-
-        if (isRightSystemPadding(nodeOrientation)) {
-            systemPaddingWidth += getRightSystemInset().getWidth();
-        }
+        double leftSystemPaddingWidth = isLeftSystemPadding() ? getLeftSystemInset().getWidth() : 0;
+        double rightSystemPaddingWidth = isRightSystemPadding() ? getRightSystemInset().getWidth() : 0;
 
         return insets.getLeft()
              + leftPrefWidth
              + centerMinWidth
              + rightPrefWidth
              + insets.getRight()
-             + systemPaddingWidth;
+             + leftSystemPaddingWidth
+             + rightSystemPaddingWidth;
     }
 
     @Override
     protected double computeMinHeight(double width) {
-        Node leading = getLeading();
+        Node left = getLeft();
         Node center = getCenter();
-        Node trailing = getTrailing();
+        Node right = getRight();
         Insets insets = getInsets();
-        double leadingMinHeight = getAreaHeight(leading, -1, true);
-        double trailingMinHeight = getAreaHeight(trailing, -1, true);
+        double leftMinHeight = getAreaHeight(left, -1, true);
+        double rightMinHeight = getAreaHeight(right, -1, true);
         double centerMinHeight;
 
         if (width != -1 && childHasContentBias(center, Orientation.HORIZONTAL)) {
-            double leadingPrefWidth = getAreaWidth(leading, -1, false);
-            double trailingPrefWidth = getAreaWidth(trailing, -1, false);
-            centerMinHeight = getAreaHeight(center, Math.max(0, width - leadingPrefWidth - trailingPrefWidth), true);
+            double leftPrefWidth = getAreaWidth(left, -1, false);
+            double rightPrefWidth = getAreaWidth(right, -1, false);
+            centerMinHeight = getAreaHeight(center, Math.max(0, width - leftPrefWidth - rightPrefWidth), true);
         } else {
             centerMinHeight = getAreaHeight(center, -1, true);
         }
 
         return insets.getTop()
              + insets.getBottom()
-             + Math.max(centerMinHeight, Math.max(trailingMinHeight, leadingMinHeight));
+             + Math.max(centerMinHeight, Math.max(rightMinHeight, leftMinHeight));
     }
 
     @Override
     protected double computePrefHeight(double width) {
-        Node leading = getLeading();
+        Node left = getLeft();
         Node center = getCenter();
-        Node trailing = getTrailing();
+        Node right = getRight();
         Insets insets = getInsets();
-        double leadingPrefHeight = getAreaHeight(leading, -1, false);
-        double trailingPrefHeight = getAreaHeight(trailing, -1, false);
+        double leftPrefHeight = getAreaHeight(left, -1, false);
+        double rightPrefHeight = getAreaHeight(right, -1, false);
         double centerPrefHeight;
 
         if (width != -1 && childHasContentBias(center, Orientation.HORIZONTAL)) {
-            double leadingPrefWidth = getAreaWidth(leading, -1, false);
-            double trailingPrefWidth = getAreaWidth(trailing, -1, false);
-            centerPrefHeight = getAreaHeight(center, Math.max(0, width - leadingPrefWidth - trailingPrefWidth), false);
+            double leftPrefWidth = getAreaWidth(left, -1, false);
+            double rightPrefWidth = getAreaWidth(right, -1, false);
+            centerPrefHeight = getAreaHeight(center, Math.max(0, width - leftPrefWidth - rightPrefWidth), false);
         } else {
             centerPrefHeight = getAreaHeight(center, -1, false);
         }
 
         return insets.getTop()
              + insets.getBottom()
-             + Math.max(centerPrefHeight, Math.max(trailingPrefHeight, leadingPrefHeight));
-    }
-
-    @Override
-    public boolean usesMirroring() {
-        return false;
+             + Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
     }
 
     @Override
     protected void layoutChildren() {
+        Node left = getLeft();
         Node center = getCenter();
-        Node left, right;
+        Node right = getRight();
         Insets insets = getInsets();
-        NodeOrientation nodeOrientation = getEffectiveNodeOrientation();
-        boolean rtl = nodeOrientation == NodeOrientation.RIGHT_TO_LEFT;
         double width = Math.max(getWidth(), minWidth(-1));
         double height = Math.max(getHeight(), minHeight(-1));
         double leftWidth = 0;
         double rightWidth = 0;
         double insideY = insets.getTop();
         double insideHeight = height - insideY - insets.getBottom();
-        double insideX, insideWidth;
-        double leftSystemPaddingWidth = isLeftSystemPadding(nodeOrientation) ? getLeftSystemInset().getWidth() : 0;
-        double rightSystemPaddingWidth = isRightSystemPadding(nodeOrientation) ? getRightSystemInset().getWidth() : 0;
-
-        if (rtl) {
-            left = getTrailing();
-            right = getLeading();
-            insideX = insets.getRight() + leftSystemPaddingWidth;
-            insideWidth = width - insideX - insets.getLeft() - rightSystemPaddingWidth;
-        } else {
-            left = getLeading();
-            right = getTrailing();
-            insideX = insets.getLeft() + leftSystemPaddingWidth;
-            insideWidth = width - insideX - insets.getRight() - rightSystemPaddingWidth;
-        }
+        double leftSystemPaddingWidth = isLeftSystemPadding() ? getLeftSystemInset().getWidth() : 0;
+        double rightSystemPaddingWidth = isRightSystemPadding() ? getRightSystemInset().getWidth() : 0;
+        double insideX = insets.getLeft() + leftSystemPaddingWidth;
+        double insideWidth = width - insideX - insets.getRight() - rightSystemPaddingWidth;
 
         if (left != null && left.isManaged()) {
-            Insets leftMargin = adjustMarginForRTL(getNodeMargin(left), rtl);
+            Insets leftMargin = getNodeMargin(left);
             double adjustedWidth = adjustWidthByMargin(insideWidth, leftMargin);
             double childWidth = resizeChild(left, adjustedWidth, false, insideHeight, leftMargin);
             leftWidth = snapSpaceX(leftMargin.getLeft()) + childWidth + snapSpaceX(leftMargin.getRight());
@@ -756,7 +724,7 @@ public class HeaderBar extends Region {
         }
 
         if (right != null && right.isManaged()) {
-            Insets rightMargin = adjustMarginForRTL(getNodeMargin(right), rtl);
+            Insets rightMargin = getNodeMargin(right);
             double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth, rightMargin);
             double childWidth = resizeChild(right, adjustedWidth, false, insideHeight, rightMargin);
             rightWidth = snapSpaceX(rightMargin.getLeft()) + childWidth + snapSpaceX(rightMargin.getRight());
@@ -772,7 +740,7 @@ public class HeaderBar extends Region {
         }
 
         if (center != null && center.isManaged()) {
-            Insets centerMargin = adjustMarginForRTL(getNodeMargin(center), rtl);
+            Insets centerMargin = getNodeMargin(center);
             Pos alignment = getAlignment(center);
 
             if (alignment == null || alignment.getHpos() == HPos.CENTER) {
@@ -807,16 +775,6 @@ public class HeaderBar extends Region {
                     alignment.getHpos(), alignment.getVpos());
             }
         }
-    }
-
-    private Insets adjustMarginForRTL(Insets margin, boolean rtl) {
-        if (margin == null) {
-            return null;
-        }
-
-        return rtl
-            ? new Insets(margin.getTop(), margin.getLeft(), margin.getBottom(), margin.getRight())
-            : margin;
     }
 
     private boolean childHasContentBias(Node child, Orientation orientation) {
