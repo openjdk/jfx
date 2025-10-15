@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,6 @@ import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
-import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaBehavior;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
@@ -136,9 +135,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     @Override
     public void install() {
-        // TODO fix once SkinInputMap is public
-        InputMapHelper.setSkinInputMap(getSkinnable().getInputMap(), behavior.getSkinInputMap());
-        //getSkinnable().getInputMap().setSkinInputMap(behavior.getSkinInputMap());
+        getSkinnable().getInputMap().setSkinInputMap(behavior.getSkinInputMap());
 
         // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
         if (getSkinnable().getOnInputMethodTextChanged() == null) {
