@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
 import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
@@ -81,6 +82,12 @@ public final class StyleAttributeMap {
 
     /** Strike-through text attribute. */
     public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false);
+
+    /**
+     * Tab stops paragraph attribute.
+     * @since 25
+     */
+    public static final StyleAttribute<TabStop[]> TAB_STOPS = new StyleAttribute<>("TAB_STOPS", TabStop[].class, true);
 
     /** Text alignment paragraph attribute. */
     public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true);
@@ -347,6 +354,14 @@ public final class StyleAttributeMap {
      */
     public Double getSpaceRight() {
         return get(SPACE_RIGHT);
+    }
+
+    /**
+     * This convenience method returns the value of {@link #TAB_STOPS} attribute, or null.
+     * @return the paragraph alignment attribute value
+     */
+    public TabStop[] getTabStops() {
+        return get(TAB_STOPS);
     }
 
     /**
