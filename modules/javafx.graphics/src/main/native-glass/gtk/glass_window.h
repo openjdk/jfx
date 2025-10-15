@@ -214,6 +214,7 @@ private:
         bool on_preedit;
         bool send_keypress;
         bool on_key_event;
+        bool in_preedit_window;
     } im_ctx;
 
     size_t events_processing_cnt{};

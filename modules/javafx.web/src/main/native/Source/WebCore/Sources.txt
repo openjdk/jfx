@@ -831,6 +831,7 @@ crypto/CryptoAlgorithm.cpp
 crypto/CryptoAlgorithmRegistry.cpp
 crypto/CryptoAlgorithmTZoneImpls.cpp
 crypto/CryptoKey.cpp
+crypto/SerializedCryptoKeyWrap.cpp
 crypto/SubtleCrypto.cpp
 crypto/algorithms/CryptoAlgorithmAESCBC.cpp
 crypto/algorithms/CryptoAlgorithmAESCFB.cpp

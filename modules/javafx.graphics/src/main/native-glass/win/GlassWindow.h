@@ -102,6 +102,7 @@ public:
     virtual void ExitFullScreenMode(BOOL animate);
 
     void SetIcon(HICON hIcon);
+    void SetDarkFrame(bool);
     void HandleWindowPosChangedEvent();
     void ShowSystemMenu(int x, int y);
 

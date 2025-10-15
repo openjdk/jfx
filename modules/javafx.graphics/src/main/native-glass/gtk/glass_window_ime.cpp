@@ -98,7 +98,7 @@ static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) 
 }
 
 void WindowContext::commitIME(gchar *str) {
-    if (im_ctx.on_preedit || !im_ctx.on_key_event) {
+    if (im_ctx.in_preedit_window || !im_ctx.on_key_event) {
         jstring jstr = mainEnv->NewStringUTF(str);
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
@@ -125,7 +125,16 @@ bool WindowContext::filterIME(GdkEvent *event) {
     }
 
     im_ctx.on_key_event = true;
+    // If "commit" arrives while pre-editing is active we send out an
+    // InputMethodEvent; otherwise we send out a KeyEvent. Normally the
+    // "commit" signal arrives before "preedit-end" but sometimes when
+    // processing dead keys on a system with no input method
+    // framework these signals arrive in reverse order. This flag
+    // ensures that if we're in the pre-edit window when we start
+    // filtering the event we stay there until we're done.
+    im_ctx.in_preedit_window = im_ctx.on_preedit;
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
+    im_ctx.in_preedit_window = im_ctx.on_preedit;
 
     if (filtered && im_ctx.send_keypress) {
         im_ctx.send_keypress = false;
@@ -183,6 +192,8 @@ void WindowContext::enableOrResetIME() {
 
     im_ctx.on_preedit = false;
     im_ctx.enabled = true;
+    im_ctx.on_key_event = false;
+    im_ctx.in_preedit_window = false;
 }
 
 void WindowContext::disableIME() {
