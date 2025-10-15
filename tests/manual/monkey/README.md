@@ -7,7 +7,7 @@ This is a testing tool developed to support manual ad-hoc testing of individual 
 
 ## Prerequisites
 
-JavaFX SDK 24+ and JDK 23+ are required to build and run the tool.
+JavaFX SDK 24+ and JDK 24+ are required to build and run the tool.
 You can use a JavaFX SDK that you build or you can download the JavaFX SDK found here:
 
 https://jdk.java.net/
@@ -27,7 +27,7 @@ ant -Djavafx.home=<JAVAFX>
 To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 
 ```
-java -p <JAVAFX>/javafx-sdk-24/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
+java -p <JAVAFX>/lib/ --add-modules ALL-MODULE-PATH -jar MonkeyTester.jar
 ```
 
 
@@ -39,4 +39,4 @@ To use a different directory, for example to run multiple instances of MonkeyTes
 having them fight over the preferences, one can redefine the `user.home` system property,
 `-Duser.home=<DIR>`.
 
-To disable loading and saving, specify `-Ddisable.settings=true` VM agrument.
+To disable loading and saving, specify `-Ddisable.settings=true` VM argument.
