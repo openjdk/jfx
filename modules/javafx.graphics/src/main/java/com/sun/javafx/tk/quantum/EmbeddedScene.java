@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,31 @@
 
 package com.sun.javafx.tk.quantum;
 
-import com.sun.javafx.embed.HostDragStartListener;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
+import javafx.scene.TraversalDirection;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.image.PixelFormat;
-import java.nio.IntBuffer;
+import com.sun.glass.ui.Pixels;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.embed.AbstractEvents;
 import com.sun.javafx.embed.EmbeddedSceneDTInterface;
 import com.sun.javafx.embed.EmbeddedSceneInterface;
+import com.sun.javafx.embed.HostDragStartListener;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.scene.input.KeyCodeMap;
-import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
-import com.sun.glass.ui.Pixels;
-import java.nio.ByteOrder;
 
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
@@ -194,10 +194,10 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public boolean traverseOut(Direction dir) {
-        if (dir == Direction.NEXT) {
+    public boolean traverseOut(TraversalDirection dir) {
+        if (dir == TraversalDirection.NEXT) {
             return host.traverseFocusOut(true);
-        } else if (dir == Direction.PREVIOUS) {
+        } else if (dir == TraversalDirection.PREVIOUS) {
             return host.traverseFocusOut(false);
         }
         return false;
