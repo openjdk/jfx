@@ -912,6 +912,10 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
     return disableSyncRendering;
 }
 
++ (BOOL)isEmbedded {
+    return isEmbedded;
+}
+
 @end
 
 #pragma mark --- JNI
@@ -1219,18 +1223,6 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacApplication_staticSc
     GLASS_CHECK_EXCEPTION(env);
 
     return screenArray;
-}
-
-
-/*
- * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _supportsSystemMenu
- * Signature: ()Z;
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSystemMenu
-(JNIEnv *env, jobject japplication)
-{
-    return !isEmbedded;
 }
 
 /*
