@@ -57,9 +57,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
 import javafx.scene.text.Font;
-import javafx.stage.Window;
 import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
-import com.sun.jfx.incubator.scene.control.richtext.CaretInfo;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaBehavior;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
@@ -171,36 +169,20 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         if (rta.getInputMethodRequests() == null) {
             inputMethodRequests = new InputMethodRequests() {
                 // returns the lower left corner of the character bounds
+                // content is relative to the start of selection
                 @Override
                 public Point2D getTextLocation(int offset) {
-                    var rv = getTextLocation2(offset);
-                    //System.err.println("getTextLocation (offset=" + offset + ")=" + rv); // FIX
-                    return rv;
-                }
-                public Point2D getTextLocation2(int offset) { // FIX
-                    // offset relative to the selection start
-                    Scene sc = rta.getScene();
-                    if (sc != null) {
-                        Window w = sc.getWindow();
-                        if (w != null) {
-                            // don't use imeStart here because it isn't initialized yet.
-                            TextPos pos = rta.getSelection().getMin();
-                            pos = RichUtils.advancePosition(pos, offset);
-                            Point2D loc = getImeLocation(pos);
-                            Point2D p = rta.localToScene(loc.getX(), loc.getY());
-                            return new Point2D(w.getX() + sc.getX() + p.getX(), w.getY() + sc.getY() + p.getY());
-                        }
+                    SelectionSegment sel = rta.getSelection();
+                    if (sel != null) {
+                        TextPos p = sel.getMin();
+                        p = RichUtils.advancePosition(p, offset);
+                        return vflow.getImeLocationOnScreen(p);
                     }
                     return new Point2D(0, 0);
                 }
 
                 @Override
                 public String getSelectedText() {
-                    var rv = getSelectedText2();
-                    System.err.println("getSelectedText=\"" + rv + "\""); // FIX
-                    return rv;
-                }
-                public String getSelectedText2() {
                     SelectionSegment sel = rta.getSelection();
                     if (sel != null) {
                         if (!sel.isCollapsed()) {
@@ -216,7 +198,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 // Gets the offset within the composed text for the specified absolute x and y coordinates on the screen.
                 // This information is used, for example to handle mouse clicks and the mouse cursor.
                 // The offset is relative to the composed text, so offset 0 indicates the beginning of the composed text.
-                // WTH is the composed text?
                 @Override
                 public int getLocationOffset(int x, int y) {
                     var rv = getLocationOffset2(x, y);
@@ -224,6 +205,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                     return rv;
                 }
                 public int getLocationOffset2(int x, int y) {
+                    // TODO screen location??
                     TextPos pos = vflow.getTextPosLocal(x, y);
                     return pos.offset() - imeStart.offset();
                 }
@@ -312,7 +294,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         }
     }
 
-    // see TextInputControlSkin:843
     private void appendImeShapes(List<Shape> shapes, InputMethodHighlight highlight, TextPos start, TextPos end) {
         double minX = 0.0;
         double maxX = 0.0;
@@ -393,11 +374,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             }
         }
         return Color.BLACK;
-    }
-
-    private Point2D getImeLocation(TextPos pos) {
-        CaretInfo ci = vflow.getCaretInfo(pos);
-        return new Point2D(ci.getMinX(), ci.getMaxY());
     }
 
     private void handleModelChange(Object src, StyledTextModel old, StyledTextModel m) {

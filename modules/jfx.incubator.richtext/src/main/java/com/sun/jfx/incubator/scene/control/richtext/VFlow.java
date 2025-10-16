@@ -43,6 +43,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.ScrollBar;
@@ -1707,10 +1708,15 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public void addImHighlights(List<Shape> shapes, TextPos start) {
-        getChildren().addAll(shapes);
+        content.getChildren().addAll(shapes);
     }
 
     public void removeImHighlight(List<Shape> shapes) {
-        getChildren().removeAll(shapes);
+        content.getChildren().removeAll(shapes);
+    }
+
+    public Point2D getImeLocationOnScreen(TextPos pos) {
+        CaretInfo ci = getCaretInfo(pos);
+        return content.localToScreen(ci.getMinX(), ci.getMaxY());
     }
 }
