@@ -96,9 +96,9 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final ScrollBar hscroll;
     private final EventHandler<InputMethodEvent> inputMethodTextChangedHandler = this::handleInputMethodEvent;
     private InputMethodRequests inputMethodRequests;
-    private TextPos imStart;
-    private int imLength;
-    private final List<Shape> imShapes = new ArrayList<>();
+    private TextPos imeStart;
+    private int imeLength;
+    private List<Shape> imeShapes;
 
     static {
         RichTextAreaSkinHelper.setAccessor(new RichTextAreaSkinHelper.Accessor() {
@@ -173,21 +173,22 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 // returns the lower left corner of the character bounds
                 @Override
                 public Point2D getTextLocation(int offset) {
+                    var rv = getTextLocation2(offset);
+                    //System.err.println("getTextLocation (offset=" + offset + ")=" + rv); // FIX
+                    return rv;
+                }
+                public Point2D getTextLocation2(int offset) { // FIX
                     // offset relative to the selection start
-                    System.err.println("getTextLocation offset=" + offset); // FIX
                     Scene sc = rta.getScene();
                     if (sc != null) {
                         Window w = sc.getWindow();
                         if (w != null) {
-                            StyledTextModel m = rta.getModel();
-                            if (m != null) {
-                                // don't use imstart here because it isn't initialized yet.
-                                TextPos pos = rta.getSelection().getMin();
-                                pos = RichUtils.advancePosition(m, pos, offset);
-                                Point2D loc = getImLocation(pos);
-                                Point2D p = rta.localToScene(loc.getX(), loc.getY());
-                                return new Point2D(w.getX() + sc.getX() + p.getX(), w.getY() + sc.getY() + p.getY());
-                            }
+                            // don't use imeStart here because it isn't initialized yet.
+                            TextPos pos = rta.getSelection().getMin();
+                            pos = RichUtils.advancePosition(pos, offset);
+                            Point2D loc = getImeLocation(pos);
+                            Point2D p = rta.localToScene(loc.getX(), loc.getY());
+                            return new Point2D(w.getX() + sc.getX() + p.getX(), w.getY() + sc.getY() + p.getY());
                         }
                     }
                     return new Point2D(0, 0);
@@ -195,7 +196,11 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
                 @Override
                 public String getSelectedText() {
-                    System.err.println("getSelectedText"); // FIX
+                    var rv = getSelectedText2();
+                    System.err.println("getSelectedText=\"" + rv + "\""); // FIX
+                    return rv;
+                }
+                public String getSelectedText2() {
                     SelectionSegment sel = rta.getSelection();
                     if (sel != null) {
                         if (!sel.isCollapsed()) {
@@ -209,26 +214,23 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 }
 
                 // Gets the offset within the composed text for the specified absolute x and y coordinates on the screen.
-                // CORRECTION: looks like it's not screen coordinates, but relative to the control?
                 // This information is used, for example to handle mouse clicks and the mouse cursor.
                 // The offset is relative to the composed text, so offset 0 indicates the beginning of the composed text.
                 // WTH is the composed text?
                 @Override
                 public int getLocationOffset(int x, int y) {
-                    System.err.println("getLocationOffset x=" + x + " y=" + y); // FIX
-                    StyledTextModel m = rta.getModel();
-                    if (m != null) {
-                        TextPos pos = vflow.getTextPosLocal(x, y);
-                        // TODO is imstart always non-null?
-                        return RichUtils.computeDistance(m, imStart, pos);
-                    }
-                    return -1;
+                    var rv = getLocationOffset2(x, y);
+                    System.err.println("getLocationOffset (x=" + x + " y=" + y + ")=" + rv); // FIX
+                    return rv;
+                }
+                public int getLocationOffset2(int x, int y) {
+                    TextPos pos = vflow.getTextPosLocal(x, y);
+                    return pos.offset() - imeStart.offset();
                 }
 
                 @Override
                 public void cancelLatestCommittedText() {
-                    System.err.println("cancelLatestCommittedText"); // FIX
-                    // TODO same as TextInputControlSkin!
+                    // no-op as in TextInputControlSkin
                 }
             };
             rta.setInputMethodRequests(inputMethodRequests);
@@ -237,12 +239,13 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     @Override
     public void dispose() {
-        if (getSkinnable() != null) {
-            if (getSkinnable().getInputMethodRequests() == inputMethodRequests) {
-                getSkinnable().setInputMethodRequests(null);
+        RichTextArea rta = getSkinnable();
+        if (rta != null) {
+            if (rta.getInputMethodRequests() == inputMethodRequests) {
+                rta.setInputMethodRequests(null);
             }
-            if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
-                getSkinnable().setOnInputMethodTextChanged(null);
+            if (rta.getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
+                rta.setOnInputMethodTextChanged(null);
             }
 
             listenerHelper.disconnect();
@@ -253,7 +256,146 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         }
     }
 
-    private Point2D getImLocation(TextPos pos) {
+    private void handleInputMethodEvent(InputMethodEvent ev) {
+        RichTextArea rta = getSkinnable();
+        if (RichUtils.canEdit(rta) && !rta.isDisabled()) {
+            SelectionSegment sel = rta.getSelection();
+            if (sel == null) {
+                return; // should not happen
+            }
+
+            // remove previous input method text (if any) or selected text
+            if (imeLength > 0) {
+                if (imeShapes != null) {
+                    vflow.removeImHighlight(imeShapes);
+                    imeShapes = null;
+                }
+                // imeStart is valid
+                TextPos end = RichUtils.advancePosition(imeStart, imeLength);
+                rta.select(imeStart, end);
+            } else {
+                imeStart = sel.getMin();
+            }
+
+            String text;
+            // I think it's either composed or committed but not both
+            if (ev.getComposed().size() > 0) {
+                imeShapes = new ArrayList<>();
+                StringBuilder composed = new StringBuilder();
+                TextPos pos = imeStart;
+                for (InputMethodTextRun run : ev.getComposed()) {
+                    composed.append(run.getText());
+                    TextPos endPos = RichUtils.advancePosition(pos, run.getText().length());
+                    appendImeShapes(imeShapes, run.getHighlight(), pos, endPos);
+                    pos = endPos;
+                }
+                text = composed.toString();
+            } else {
+                imeShapes = null;
+                text = ev.getCommitted();
+            }
+
+            // replace selection or previous ime text with composed or committed text
+            sel = rta.getSelection();
+            rta.replaceText(sel.getMin(), sel.getMax(), text, false);
+            imeLength = text.length();
+            TextPos pos = RichUtils.advancePosition(imeStart, imeLength);
+            rta.select(pos);
+
+            if (ev.getCommitted().length() > 0) {
+                imeLength = 0;
+            }
+            if (imeLength == 0) {
+                imeStart = null;
+            }
+            ev.consume();
+        }
+    }
+
+    // see TextInputControlSkin:843
+    private void appendImeShapes(List<Shape> shapes, InputMethodHighlight highlight, TextPos start, TextPos end) {
+        double minX = 0.0;
+        double maxX = 0.0;
+        double minY = 0.0;
+        double maxY = 0.0;
+
+        List<PathElement> elements = vflow.getUnderlineShape(start, end);
+        int sz = elements.size();
+        for (int i = 0; i < sz; i++) {
+            PathElement pe = elements.get(i);
+            if (pe instanceof MoveTo em) {
+                minX = maxX = em.getX();
+                minY = maxY = em.getY();
+            } else if (pe instanceof LineTo em) {
+                minX = (minX < em.getX() ? minX : em.getX());
+                maxX = (maxX > em.getX() ? maxX : em.getX());
+                minY = (minY < em.getY() ? minY : em.getY());
+                maxY = (maxY > em.getY() ? maxY : em.getY());
+            } else if (pe instanceof HLineTo em) {
+                minX = (minX < em.getX() ? minX : em.getX());
+                maxX = (maxX > em.getX() ? maxX : em.getX());
+            } else if (pe instanceof VLineTo em) {
+                minY = (minY < em.getY() ? minY : em.getY());
+                maxY = (maxY > em.getY() ? maxY : em.getY());
+            }
+            // don't assume that shapes are ended with ClosePath
+            if (
+                pe instanceof ClosePath ||
+                i == sz - 1 ||
+                (i < sz - 1 && elements.get(i + 1) instanceof MoveTo)
+            )
+            {
+                // create the shape
+                Shape sh = null;
+                switch(highlight) {
+                case SELECTED_RAW:
+                    // blue background
+                    sh = new Path(vflow.getRangeShape(start, end));
+                    sh.setFill(Color.BLUE); // FIX
+                    sh.setOpacity(0.3);
+                    break;
+                case UNSELECTED_RAW:
+                    // dash underline
+                    sh = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
+                    sh.setStroke(imeColor());
+                    sh.setStrokeWidth(maxY - minY);
+                    ObservableList<Double> dashArray = sh.getStrokeDashArray();
+                    dashArray.add(2.0);
+                    dashArray.add(2.0);
+                    break;
+                case SELECTED_CONVERTED:
+                    // thick underline
+                    sh = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
+                    sh.setStroke(imeColor());
+                    sh.setStrokeWidth((maxY - minY) * 3);
+                    break;
+                case UNSELECTED_CONVERTED:
+                    // single underline
+                    sh = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
+                    sh.setStroke(imeColor());
+                    sh.setStrokeWidth(maxY - minY);
+                    break;
+                }
+
+                if (sh != null) {
+                    sh.setManaged(false);
+                    shapes.add(sh);
+                }
+            }
+        }
+    }
+
+    private Color imeColor() {
+        Scene sc = getSkinnable().getScene();
+        if (sc != null) {
+            if (sc.getPreferences().getColorScheme() == ColorScheme.DARK) {
+                return Color.WHITE;
+            }
+        }
+        return Color.BLACK;
+    }
+
+    private Point2D getImeLocation(TextPos pos) {
         CaretInfo ci = vflow.getCaretInfo(pos);
         return new Point2D(ci.getMinX(), ci.getMaxY());
     }
@@ -379,138 +521,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     @Override
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Params.MIN_WIDTH;
-    }
-
-    /**
-     * Handles an input method event.
-     * @param ev the {@code InputMethodEvent} to be handled
-     */
-    private void handleInputMethodEvent(InputMethodEvent ev) {
-        RichTextArea rta = getSkinnable();
-        System.err.println(ev);
-        SelectionSegment sel = rta.getSelection();
-        if (sel == null) {
-            return; // should not happen
-        }
-        // similar to TextInputControlSkin:763
-        if (RichUtils.canEdit(rta) && !rta.isDisabled()) {
-            StyledTextModel m = rta.getModel();
-            // remove previous input method text (if any) or selected text
-            if (imLength != 0) {
-                vflow.removeImHighlight(imShapes);
-                imShapes.clear();
-                TextPos end = RichUtils.advancePosition(m, imStart, imLength);
-                rta.select(imStart, end);
-            }
-
-            // Insert committed text
-            if (ev.getCommitted().length() != 0) {
-                String committed = ev.getCommitted();
-                rta.replaceText(sel.getMin(), sel.getMax(), committed, true);
-            }
-
-            // Replace composed text
-            imStart = sel.getMin();
-            StringBuilder composed = new StringBuilder();
-            for (InputMethodTextRun run : ev.getComposed()) {
-                composed.append(run.getText());
-            }
-            rta.replaceText(sel.getMin(), sel.getMax(), composed.toString(), true);
-            imLength = composed.length();
-            if (imLength != 0) {
-                TextPos pos = imStart;
-                for (InputMethodTextRun run : ev.getComposed()) {
-                    TextPos endPos = RichUtils.advancePosition(m, pos, run.getText().length());
-                    createInputMethodAttributes(run.getHighlight(), pos, endPos);
-                    pos = endPos;
-                }
-                vflow.addImHighlight(imShapes, imStart);
-
-                // Set caret position in composed text
-                int caretPos = ev.getCaretPosition();
-                if (caretPos >= 0 && caretPos < imLength) {
-                    TextPos next = RichUtils.advancePosition(m, imStart, caretPos);
-                    rta.select(next, next);
-                }
-            }
-        }
-    }
-
-    // see TextInputControlSkin:843
-    private void createInputMethodAttributes(InputMethodHighlight highlight, TextPos start, TextPos end) {
-        double minX = 0.0;
-        double maxX = 0.0;
-        double minY = 0.0;
-        double maxY = 0.0;
-
-        List<PathElement> elements = vflow.getUnderlineShape(start, end);
-        int sz = elements.size();
-        for (int i = 0; i < sz; i++) {
-            PathElement pe = elements.get(i);
-            if (pe instanceof MoveTo em) {
-                minX = maxX = em.getX();
-                minY = maxY = em.getY();
-            } else if (pe instanceof LineTo em) {
-                minX = (minX < em.getX() ? minX : em.getX());
-                maxX = (maxX > em.getX() ? maxX : em.getX());
-                minY = (minY < em.getY() ? minY : em.getY());
-                maxY = (maxY > em.getY() ? maxY : em.getY());
-            } else if (pe instanceof HLineTo em) {
-                minX = (minX < em.getX() ? minX : em.getX());
-                maxX = (maxX > em.getX() ? maxX : em.getX());
-            } else if (pe instanceof VLineTo em) {
-                minY = (minY < em.getY() ? minY : em.getY());
-                maxY = (maxY > em.getY() ? maxY : em.getY());
-            }
-            // don't assume that shapes are ended with ClosePath
-            if (
-                pe instanceof ClosePath ||
-                i == sz - 1 ||
-                (i < sz - 1 && elements.get(i + 1) instanceof MoveTo))
-            {
-                // create the shape
-                Shape sh = null;
-                if (highlight == InputMethodHighlight.SELECTED_RAW) {
-                    // blue background
-                    sh = new Path(vflow.getRangeShape(start, end));
-                    sh.setFill(Color.BLUE); // FIX
-                    sh.setOpacity(0.3);
-                } else if (highlight == InputMethodHighlight.UNSELECTED_RAW) {
-                    // dash underline
-                    sh = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
-                    sh.setStroke(imeColor());
-                    sh.setStrokeWidth(maxY - minY);
-                    ObservableList<Double> dashArray = sh.getStrokeDashArray();
-                    dashArray.add(2.0);
-                    dashArray.add(2.0);
-                } else if (highlight == InputMethodHighlight.SELECTED_CONVERTED) {
-                    // thick underline
-                    sh = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
-                    sh.setStroke(imeColor());
-                    sh.setStrokeWidth((maxY - minY) * 3);
-                } else if (highlight == InputMethodHighlight.UNSELECTED_CONVERTED) {
-                    // single underline
-                    sh = new Line(minX + 2, maxY + 1, maxX - 2, maxY + 1);
-                    sh.setStroke(imeColor());
-                    sh.setStrokeWidth(maxY - minY);
-                }
-
-                if (sh != null) {
-                    sh.setManaged(false);
-                    imShapes.add(sh);
-                }
-            }
-        }
-    }
-
-    private Color imeColor() {
-        Scene sc = getSkinnable().getScene();
-        if (sc != null) {
-            if (sc.getPreferences().getColorScheme() == ColorScheme.DARK) {
-                return Color.WHITE;
-            }
-        }
-        return Color.BLACK;
     }
 
     @Override

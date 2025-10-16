@@ -710,17 +710,8 @@ public final class RichUtils {
         return false;
     }
 
-    // Returns the text positions at a positive offset relative to the 'start' position.
-    public static TextPos advancePosition(StyledTextModel model, TextPos start, int offset) {
-        // TODO should it account for newlines?
+    /** Returns the text positions at a positive offset relative to the 'start' position. */
+    public static TextPos advancePosition(TextPos start, int offset) {
         return TextPos.ofLeading(start.index(), start.offset() + offset);
-    }
-
-    /// Returns the distance (in characters) between the `start` and the `end` positions.
-    public static int computeDistance(StyledTextModel model, TextPos start, TextPos end) {
-        if (start.index() != end.index()) {
-            throw new Error(start + " " + end);
-        }
-        return end.offset() - start.offset();
     }
 }

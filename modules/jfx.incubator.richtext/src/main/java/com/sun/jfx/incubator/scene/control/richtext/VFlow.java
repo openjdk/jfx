@@ -1686,7 +1686,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
             int beginOffset = (ix == ix1) ? start.offset() : 0;
             int endOffset = (ix == ix2) ? end.offset() : cell.getTextLength();
-            PathElement[] es = cell.getRangeShape(this, beginOffset, endOffset);
+            PathElement[] es = gen.generate(cell, beginOffset, endOffset);
             for (PathElement em : es) {
                 ss.add(em);
             }
@@ -1706,7 +1706,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         });
     }
 
-    public void addImHighlight(List<Shape> shapes, TextPos start) {
+    public void addImHighlights(List<Shape> shapes, TextPos start) {
         getChildren().addAll(shapes);
     }
 

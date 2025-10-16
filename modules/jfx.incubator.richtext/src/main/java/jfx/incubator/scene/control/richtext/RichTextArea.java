@@ -1425,7 +1425,7 @@ public class RichTextArea extends Control {
     /// @param end the end position
     /// @param sb the buffer to copy to
     /// @param limit the maximum number of characters to copy, must be >= 0
-    /// @param newLineSeparator the newline separator sequence, or `null` to use the platform default
+    /// @param lineSeparator the newline separator sequence, or `null` to use the platform default
     /// @return `true` if all the text fit in the buffer
     /// @since 26
     public final boolean getText(TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
