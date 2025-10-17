@@ -29,6 +29,7 @@ import java.text.Collator;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import javafx.beans.Observable;
@@ -81,6 +82,63 @@ public interface ObservableList<E> extends List<E>, Observable {
      * @throws NullPointerException if the specified collection contains one or more null elements
      */
     public boolean setAll(Collection<? extends E> col);
+
+    /**
+     * Replaces a contiguous range of elements in this list, starting at the specified index,
+     * with the elements from the given collection. The range replaced has the same length
+     * as the collection.
+     *
+     * @param index the start index at which to replace elements, must be in
+     *              {@code 0 .. size() - col.size()}
+     * @param col collection containing elements to be inserted, cannot be {@code null}
+     * @return {@code true} if this list changed as a result of the call
+     * @throws ClassCastException if the class of an element of the specified
+     *         collection prevents it from being added to this list
+     * @throws NullPointerException if the specified collection contains one
+     *         or more null elements and this list does not permit null
+     *         elements, or if the specified collection is null
+     * @throws IllegalArgumentException if some property of an element of the
+     *         specified collection prevents it from being added to this list
+     * @throws IndexOutOfBoundsException if {@code index < 0} or
+     *         {@code index + col.size() > size()}
+     */
+    public default boolean setAll(int index, Collection<? extends E> col) {
+        // implicit check to ensure col != null
+        return setAll(index, index + col.size(), col);
+    }
+
+    /**
+     * Replaces the elements in the range {@code [from, to)} with the elements
+     * from the given collection. The existing elements in the specified range
+     * are removed, and the new elements are inserted at position {@code from}.
+     *
+     * @param from start of the range (inclusive), must be in {@code 0..size()}
+     * @param to end of the range (exclusive), must be in {@code from..size()}
+     * @param col collection containing elements to be inserted, cannot be {@code null}
+     * @return {@code true} if this list changed as a result of the call
+     * @throws ClassCastException if the class of an element of the specified
+     *         collection prevents it from being added to this list
+     * @throws NullPointerException if the specified collection contains one
+     *         or more null elements and this list does not permit null
+     *         elements, or if the specified collection is null
+     * @throws IllegalArgumentException if some property of an element of the
+     *         specified collection prevents it from being added to this list
+     * @throws IndexOutOfBoundsException if {@code from < 0}, {@code to > size()},
+     *         or {@code from > to}
+     */
+    public default boolean setAll(int from, int to, Collection<? extends E> col) {
+        Objects.checkFromToIndex(from, to, size());
+
+        // implicit check to ensure col != null
+        if (col.isEmpty() && from == to) {
+            return false;
+        }
+
+        remove(from, to);
+        addAll(from, col);
+
+        return true;
+    }
 
     /**
      * A convenience method for var-arg usage of the {@link #removeAll(Collection) removeAll} method.
