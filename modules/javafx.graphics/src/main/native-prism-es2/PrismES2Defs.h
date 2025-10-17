@@ -179,6 +179,7 @@ struct DrawableInfoRec {
 #endif /* WIN32 */
 
 #ifdef UNIX /* LINUX || SOLARIS */
+    jboolean perDrwawableVSync;
 #ifdef IS_EGL
     EGLDisplay *egldisplay;
     EGLSurface eglsurface;
@@ -263,6 +264,7 @@ struct ContextInfoRec {
 #ifdef UNIX /* LINUX || SOLARIS */
     char *glxExtensionStr;
     PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
+    PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT;
 #endif /* LINUX || SOLARIS */
 
     /* gl function pointers */
