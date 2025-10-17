@@ -60,6 +60,7 @@ import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RTAccessibilityHelper;
+import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
@@ -311,6 +312,14 @@ public class RichTextArea extends Control {
 
     /** The style handler registry instance, made available for use by subclasses to add support for new style attributes. */
     protected static final StyleHandlerRegistry styleHandlerRegistry = initStyleHandlerRegistry();
+    static {
+        RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
+            @Override
+            public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
+                return t.getText(start, end, sb, limit, lineSeparator);
+            }
+        });
+    }
 
     /**
      * Creates the instance with the in-memory model {@link RichTextModel}.
@@ -1430,7 +1439,8 @@ public class RichTextArea extends Control {
      * @return {@code true} if all the text fit in the buffer
      * @since 26
      */
-    public final boolean getText(TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
+    // TODO depends on JDK-8370140 (line separator property), private for now
+    private final boolean getText(TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
         StyledTextModel m = getModel();
         if (m == null) {
             return true;

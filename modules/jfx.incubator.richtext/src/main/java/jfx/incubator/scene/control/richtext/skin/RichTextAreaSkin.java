@@ -58,6 +58,7 @@ import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaBehavior;
+import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.richtext.TextCell;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
@@ -184,19 +185,24 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                         if (!sel.isCollapsed()) {
                             int limit = Params.IME_MAX_TEXT_LENGTH;
                             StringBuilder sb = new StringBuilder(limit);
-                            rta.getText(sel.getMin(), sel.getMax(), sb, limit, null);
+                            RichTextAreaHelper.getText(rta, sel.getMin(), sel.getMax(), sb, limit, null);
                             return sb.toString();
                         }
                     }
                     return "";
                 }
 
-                // Gets the offset within the composed text for the specified absolute x and y coordinates on the screen.
-                // This information is used, for example to handle mouse clicks and the mouse cursor.
-                // The offset is relative to the composed text, so offset 0 indicates the beginning of the composed text.
                 @Override
                 public int getLocationOffset(int x, int y) {
-                    // TODO screen location??
+                    // TODO this is weird: the caller CInputMethod.characterIndexForPoint() talks about screen coordinates,
+                    // but the implementation in TextArea treats it as local coordinates (and simply returns 0 in TextField)
+                    // which makes no sense!
+                    // BTW, could never hit this breakpoint.
+                    //
+                    // CInputMethod.characterIndexForPoint():
+                    // Gets the offset within the composed text for the specified absolute x and y coordinates on the screen.
+                    // This information is used, for example to handle mouse clicks and the mouse cursor.
+                    // The offset is relative to the composed text, so offset 0 indicates the beginning of the composed text.
                     TextPos pos = vflow.getTextPosLocal(x, y);
                     return pos.offset() - ime.start.offset();
                 }
