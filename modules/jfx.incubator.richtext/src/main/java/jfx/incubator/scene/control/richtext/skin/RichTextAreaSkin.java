@@ -238,45 +238,46 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             }
 
             // remove previous input method text (if any) or selected text
+            TextPos rEnd = sel.getMax();
             if (ime != null) {
                 if (ime.shapes != null) {
                     vflow.removeImHighlight(ime.shapes);
                     ime.shapes = null;
                 }
                 // imeStart is valid
-                TextPos end = RichUtils.advancePosition(ime.start, ime.length);
-                rta.select(ime.start, end);
+                rEnd = RichUtils.advancePosition(ime.start, ime.length);
             } else {
                 ime = new Ime();
                 ime.start = sel.getMin();
             }
 
-            String text;
-            // I think it's either composed or committed but not both
-            if (ev.getComposed().size() > 0) {
-                ime.shapes = new ArrayList<>();
-                StringBuilder composed = new StringBuilder();
-                TextPos pos = ime.start;
-                for (InputMethodTextRun run : ev.getComposed()) {
-                    composed.append(run.getText());
-                    TextPos endPos = RichUtils.advancePosition(pos, run.getText().length());
-                    appendImeShapes(ime.shapes, run.getHighlight(), pos, endPos);
-                    pos = endPos;
-                }
-                text = composed.toString();
-            } else {
-                ime.shapes = null;
-                text = ev.getCommitted();
-            }
+            String text = RichUtils.getImeText(ev);
+            ime.length = text.length();
 
             // replace selection or previous ime text with composed or committed text
-            sel = rta.getSelection();
-            rta.replaceText(sel.getMin(), sel.getMax(), text, false);
-            ime.length = text.length();
-            TextPos pos = RichUtils.advancePosition(ime.start, ime.length);
-            rta.select(pos);
+            rta.replaceText(ime.start, rEnd, text, false);
+
+            // add ime shapes
+            TextPos end = ime.start;
+            if (ev.getComposed().size() > 0) {
+                ime.shapes = new ArrayList<>();
+                TextPos pos = ime.start;
+                for (InputMethodTextRun run : ev.getComposed()) {
+                    end = RichUtils.advancePosition(pos, run.getText().length());
+                    appendImeShapes(ime.shapes, run.getHighlight(), pos, end);
+                    pos = end;
+                }
+                vflow.addImeHighlights(ime.shapes, ime.start);
+            } else {
+                ime.shapes = null;
+                end = RichUtils.advancePosition(ime.start, text.length());
+            }
+            rta.select(end);
 
             if ((ev.getCommitted().length() > 0) || (ime.length == 0)) {
+                if (ime.shapes != null) {
+                    vflow.removeImHighlight(ime.shapes);
+                }
                 ime = null;
             }
             ev.consume();

@@ -1697,17 +1697,17 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     public List<PathElement> getRangeShape(TextPos start, TextPos end) {
         return getShapes(start, end, (cell, beginOffset, endOffset) -> {
-            return cell.getRangeShape(this, beginOffset, endOffset);
+            return cell.getRangeShape(content, beginOffset, endOffset);
         });
     }
 
     public List<PathElement> getUnderlineShape(TextPos start, TextPos end) {
         return getShapes(start, end, (cell, beginOffset, endOffset) -> {
-            return cell.getUnderlineShape(this, beginOffset, endOffset);
+            return cell.getUnderlineShape(content, beginOffset, endOffset);
         });
     }
 
-    public void addImHighlights(List<Shape> shapes, TextPos start) {
+    public void addImeHighlights(List<Shape> shapes, TextPos start) {
         content.getChildren().addAll(shapes);
     }
 

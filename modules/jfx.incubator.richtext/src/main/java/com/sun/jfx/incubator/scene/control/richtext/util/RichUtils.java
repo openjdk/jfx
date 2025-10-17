@@ -50,6 +50,8 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -724,5 +726,19 @@ public final class RichUtils {
             return (sc.getPreferences().getColorScheme() == ColorScheme.DARK);
         }
         return (Platform.getPreferences().getColorScheme() == ColorScheme.DARK);
+    }
+
+    /** Returns composed or committed text. */
+    public static String getImeText(InputMethodEvent ev) {
+        // it's either composed or committed but not both
+        if (ev.getComposed().size() > 0) {
+            StringBuilder sb = new StringBuilder();
+            for (InputMethodTextRun run : ev.getComposed()) {
+                sb.append(run.getText());
+            }
+            return sb.toString();
+        } else {
+            return ev.getCommitted();
+        }
     }
 }
