@@ -358,7 +358,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private Color imeColor() {
         return RichUtils.isDarkScheme(getSkinnable()) ? Color.WHITE : Color.BLACK;
     }
-    
+
     private Color imeSelectColor() {
         // TODO might depend on the color scheme
         return Color.BLUE;
