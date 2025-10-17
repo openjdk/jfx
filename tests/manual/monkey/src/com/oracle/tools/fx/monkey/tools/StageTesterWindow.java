@@ -180,11 +180,11 @@ public final class StageTesterWindow extends Stage {
             switch (sizeComboBox.getValue().toLowerCase(Locale.ROOT)) {
                 case "large" -> 80;
                 case "medium" -> 50;
-                default -> headerBar.getMinSystemHeight();
+                default -> HeaderBar.getMinSystemHeight(stage);
             });
 
         sizeComboBox.valueProperty().subscribe(event -> updateMinHeight.run());
-        headerBar.minSystemHeightProperty().subscribe(event -> updateMinHeight.run());
+        HeaderBar.minSystemHeightProperty(stage).subscribe(event -> updateMinHeight.run());
 
         var menuBar = new MenuBar(
             new Menu("File", null,
@@ -259,11 +259,11 @@ public final class StageTesterWindow extends Stage {
             switch (sizeComboBox.getValue().toLowerCase(Locale.ROOT)) {
                 case "large" -> 80;
                 case "medium" -> 50;
-                default -> rightHeaderBar.getMinSystemHeight();
+                default -> HeaderBar.getMinSystemHeight(stage);
             });
 
         sizeComboBox.valueProperty().subscribe(event -> updateMinHeight.run());
-        rightHeaderBar.minSystemHeightProperty().subscribe(event -> updateMinHeight.run());
+        HeaderBar.minSystemHeightProperty(stage).subscribe(event -> updateMinHeight.run());
 
         var rightNodes = new HBox(sizeComboBox);
         rightNodes.setAlignment(Pos.CENTER);

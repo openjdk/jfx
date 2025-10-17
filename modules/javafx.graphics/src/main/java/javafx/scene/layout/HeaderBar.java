@@ -30,6 +30,9 @@ import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.scene.layout.HeaderButtonBehavior;
 import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -38,7 +41,6 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.css.StyleableDoubleProperty;
 import javafx.event.Event;
 import javafx.geometry.Dimension2D;
@@ -72,7 +74,7 @@ import javafx.util.Subscription;
  * <h2>Single header bar</h2>
  * Most applications should only add a single {@code HeaderBar} to the scene graph, placed at the top of the
  * scene and extending its entire width. This ensures that the reported values for
- * {@link #leftSystemInsetProperty() leftSystemInset} and {@link #rightSystemInsetProperty() rightSystemInset},
+ * {@link #leftSystemInsetProperty(Stage) leftSystemInset} and {@link #rightSystemInsetProperty(Stage) rightSystemInset},
  * which describe the area reserved for the system-provided window buttons, correctly align with the location
  * of the {@code HeaderBar} and are taken into account when the contents of the {@code HeaderBar} are laid out.
  *
@@ -277,6 +279,75 @@ public class HeaderBar extends Region {
     }
 
     /**
+     * Describes the size of the left system-reserved inset, which is an area reserved for the iconify, maximize,
+     * and close window buttons. If there are no window buttons on the left side of the window, the returned area
+     * is an empty {@code Dimension2D}.
+     *
+     * @param stage the {@code Stage}
+     * @return the {@code leftSystemInset} property
+     */
+    public static ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty(Stage stage) {
+        return AttachedProperties.of(stage).leftSystemInset.getReadOnlyProperty();
+    }
+
+    /**
+     * Gets the value of the {@link #leftSystemInsetProperty(Stage) leftSystemInset} property.
+     *
+     * @param stage the {@code Stage}
+     * @return the size of the left system-reserved inset
+     */
+    public static Dimension2D getLeftSystemInset(Stage stage) {
+        return AttachedProperties.of(stage).leftSystemInset.get();
+    }
+
+    /**
+     * Describes the size of the right system-reserved inset, which is an area reserved for the iconify, maximize,
+     * and close window buttons. If there are no window buttons on the right side of the window, the returned area
+     * is an empty {@code Dimension2D}.
+     *
+     * @param stage the {@code Stage}
+     * @return the {@code rightSystemInset} property
+     */
+    public static ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty(Stage stage) {
+        return AttachedProperties.of(stage).rightSystemInset.getReadOnlyProperty();
+    }
+
+    /**
+     * Gets the value of the {@link #rightSystemInsetProperty(Stage) rightSystemInset} property.
+     *
+     * @param stage the {@code Stage}
+     * @return the size of the right system-reserved inset
+     */
+    public static Dimension2D getRightSystemInset(Stage stage) {
+        return AttachedProperties.of(stage).rightSystemInset.get();
+    }
+
+    /**
+     * The system-provided minimum recommended height for the {@code HeaderBar}, which usually corresponds
+     * to the height of the default header buttons. Applications can use this value as a sensible lower limit
+     * for the height of the {@code HeaderBar}.
+     * <p>
+     * By default, {@code HeaderBar}.{@link #minHeightProperty() minHeight} is set to the value of
+     * {@code minSystemHeight}, unless {@code minHeight} is explicitly set by a stylesheet or application code.
+     *
+     * @param stage the {@code Stage}
+     * @return the {@code minSystemHeight} property
+     */
+    public static ReadOnlyDoubleProperty minSystemHeightProperty(Stage stage) {
+        return AttachedProperties.of(stage).minSystemHeight.getReadOnlyProperty();
+    }
+
+    /**
+     * Gets the value of the {@link #minSystemHeightProperty(Stage) minSystemHeight} property.
+     *
+     * @param stage the {@code Stage}
+     * @return the system-provided minimum recommended height for the {@code HeaderBar}
+     */
+    public static double getMinSystemHeight(Stage stage) {
+        return AttachedProperties.of(stage).minSystemHeight.get();
+    }
+
+    /**
      * Sets the alignment for the child when contained in a {@code HeaderBar}.
      * If set, will override the header bar's default alignment for the child's position.
      * Setting the value to {@code null} will remove the constraint.
@@ -320,9 +391,7 @@ public class HeaderBar extends Region {
         return (Insets)Pane.getConstraint(child, MARGIN);
     }
 
-    private Subscription subscription = Subscription.EMPTY;
-    private HeaderButtonMetrics currentMetrics;
-    private boolean currentFullScreen;
+    private Subscription subscriptions = Subscription.EMPTY;
 
     /**
      * Creates a new {@code HeaderBar}.
@@ -334,17 +403,10 @@ public class HeaderBar extends Region {
         // user code changes the property value before we set it to the height of the native title bar.
         minHeightProperty();
 
-        effectiveNodeOrientationProperty().subscribe(this::updateInsets);
-
-        ObservableValue<Stage> stage = sceneProperty()
+        sceneProperty()
             .flatMap(Scene::windowProperty)
-            .map(w -> w instanceof Stage s ? s : null);
-
-        stage.flatMap(Stage::fullScreenProperty)
-            .orElse(false)
-            .subscribe(this::onFullScreenChanged);
-
-        stage.subscribe(this::onStageChanged);
+            .map(w -> w instanceof Stage stage ? stage : null)
+            .subscribe(this::onStageChanged);
     }
 
     /**
@@ -359,112 +421,6 @@ public class HeaderBar extends Region {
         setLeft(left);
         setCenter(center);
         setRight(right);
-    }
-
-    private void onStageChanged(Stage stage) {
-        subscription.unsubscribe();
-
-        if (stage != null) {
-            subscription = StageHelper.getHeaderButtonMetrics(stage).subscribe(this::onMetricsChanged);
-        }
-    }
-
-    private void onMetricsChanged(HeaderButtonMetrics metrics) {
-        currentMetrics = metrics;
-        updateInsets(getEffectiveNodeOrientation());
-    }
-
-    private void onFullScreenChanged(boolean fullScreen) {
-        currentFullScreen = fullScreen;
-        updateInsets(getEffectiveNodeOrientation());
-    }
-
-    private void updateInsets(NodeOrientation orientation) {
-        if (currentFullScreen || currentMetrics == null) {
-            leftSystemInset.set(EMPTY);
-            rightSystemInset.set(EMPTY);
-            minSystemHeight.set(0);
-        } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            leftSystemInset.set(currentMetrics.leftInset());
-            rightSystemInset.set(currentMetrics.rightInset());
-            minSystemHeight.set(currentMetrics.minHeight());
-        } else {
-            leftSystemInset.set(currentMetrics.rightInset());
-            rightSystemInset.set(currentMetrics.leftInset());
-            minSystemHeight.set(currentMetrics.minHeight());
-        }
-    }
-
-    /**
-     * Describes the size of the left system-reserved inset, which is an area reserved for the iconify, maximize,
-     * and close window buttons. If there are no window buttons on the left side of the window, the returned area
-     * is an empty {@code Dimension2D}.
-     */
-    private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset =
-        new ReadOnlyObjectWrapper<>(this, "leftSystemInset", EMPTY) {
-            @Override
-            protected void invalidated() {
-                requestLayout();
-            }
-        };
-
-    public final ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty() {
-        return leftSystemInset.getReadOnlyProperty();
-    }
-
-    public final Dimension2D getLeftSystemInset() {
-        return leftSystemInset.get();
-    }
-
-    /**
-     * Describes the size of the right system-reserved inset, which is an area reserved for the iconify, maximize,
-     * and close window buttons. If there are no window buttons on the right side of the window, the returned area
-     * is an empty {@code Dimension2D}.
-     */
-    private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset =
-        new ReadOnlyObjectWrapper<>(this, "rightSystemInset", EMPTY) {
-            @Override
-            protected void invalidated() {
-                requestLayout();
-            }
-        };
-
-    public final ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty() {
-        return rightSystemInset.getReadOnlyProperty();
-    }
-
-    public final Dimension2D getRightSystemInset() {
-        return rightSystemInset.get();
-    }
-
-    /**
-     * The system-provided minimum recommended height for the {@code HeaderBar}, which usually corresponds
-     * to the height of the default header buttons. Applications can use this value as a sensible lower limit
-     * for the height of the {@code HeaderBar}.
-     * <p>
-     * By default, {@link #minHeightProperty() minHeight} is set to the value of {@code minSystemHeight},
-     * unless {@code minHeight} is explicitly set by a stylesheet or application code.
-     */
-    private final ReadOnlyDoubleWrapper minSystemHeight =
-        new ReadOnlyDoubleWrapper(this, "minSystemHeight") {
-            @Override
-            protected void invalidated() {
-                double height = get();
-                var minHeight = (StyleableDoubleProperty)minHeightProperty();
-
-                // Only change minHeight if it was not set by a stylesheet or application code.
-                if (minHeight.getStyleOrigin() == null) {
-                    minHeight.applyStyle(null, height);
-                }
-            }
-        };
-
-    public final ReadOnlyDoubleProperty minSystemHeightProperty() {
-        return minSystemHeight.getReadOnlyProperty();
-    }
-
-    public final double getMinSystemHeight() {
-        return minSystemHeight.get();
     }
 
     /**
@@ -617,6 +573,8 @@ public class HeaderBar extends Region {
         double leftPrefWidth;
         double rightPrefWidth;
         double centerMinWidth;
+        double leftSystemPaddingWidth = 0;
+        double rightSystemPaddingWidth = 0;
 
         if (height != -1
                 && (childHasContentBias(left, Orientation.VERTICAL) ||
@@ -632,8 +590,22 @@ public class HeaderBar extends Region {
             centerMinWidth = getAreaWidth(center, -1, true);
         }
 
-        double leftSystemPaddingWidth = isLeftSystemPadding() ? getLeftSystemInset().getWidth() : 0;
-        double rightSystemPaddingWidth = isRightSystemPadding() ? getRightSystemInset().getWidth() : 0;
+        Scene scene = getScene();
+        Stage stage = scene != null
+            ? scene.getWindow() instanceof Stage s ? s : null
+            : null;
+
+        if (stage != null) {
+            var attachedProperties = AttachedProperties.of(stage);
+
+            if (scene.getEffectiveNodeOrientation() != getEffectiveNodeOrientation()) {
+                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+            } else {
+                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+            }
+        }
 
         return insets.getLeft()
              + leftPrefWidth
@@ -702,8 +674,26 @@ public class HeaderBar extends Region {
         double rightWidth = 0;
         double insideY = insets.getTop();
         double insideHeight = height - insideY - insets.getBottom();
-        double leftSystemPaddingWidth = isLeftSystemPadding() ? getLeftSystemInset().getWidth() : 0;
-        double rightSystemPaddingWidth = isRightSystemPadding() ? getRightSystemInset().getWidth() : 0;
+        double rightSystemPaddingWidth = 0;
+        double leftSystemPaddingWidth = 0;
+
+        Scene scene = getScene();
+        Stage stage = scene != null
+            ? scene.getWindow() instanceof Stage s ? s : null
+            : null;
+
+        if (stage != null) {
+            AttachedProperties attachedProperties = AttachedProperties.of(stage);
+
+            if (scene.getEffectiveNodeOrientation() != getEffectiveNodeOrientation()) {
+                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+            } else {
+                leftSystemPaddingWidth = isLeftSystemPadding() ? attachedProperties.leftSystemInset.get().getWidth() : 0;
+                rightSystemPaddingWidth = isRightSystemPadding() ? attachedProperties.rightSystemInset.get().getWidth() : 0;
+            }
+        }
+
         double insideX = insets.getLeft() + leftSystemPaddingWidth;
         double insideWidth = width - insideX - insets.getRight() - rightSystemPaddingWidth;
 
@@ -822,6 +812,26 @@ public class HeaderBar extends Region {
         return margin != null ? margin : Insets.EMPTY;
     }
 
+    private void onStageChanged(Stage stage) {
+        subscriptions.unsubscribe();
+
+        if (stage != null) {
+            var attachedProperties = AttachedProperties.of(stage);
+
+            subscriptions = Subscription.combine(
+                attachedProperties.minSystemHeight.subscribe(height -> {
+                    var minHeight = (StyleableDoubleProperty)minHeightProperty();
+
+                    // Only change minHeight if it was not set by a stylesheet or application code.
+                    if (minHeight.getStyleOrigin() == null) {
+                        minHeight.applyStyle(null, height);
+                    }
+                }),
+                attachedProperties.subscribeLayoutInvalidated(this::requestLayout)
+            );
+        }
+    }
+
     private final class NodeProperty extends ObjectPropertyBase<Node> {
         private final String name;
         private Node value;
@@ -851,6 +861,87 @@ public class HeaderBar extends Region {
             if (value != null) {
                 getChildren().add(value);
             }
+        }
+    }
+
+    /**
+     * This class holds attached properties that are defined on {@code HeaderBar}, but associated
+     * with and stored per {@code Stage}. {@code HeaderBar} uses these properties for layout purposes,
+     * and also subscribes to invalidation notifications that cause {@code HeaderBar} to request a
+     * new layout pass.
+     */
+    private static final class AttachedProperties {
+
+        private final Stage stage;
+        private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset;
+        private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset;
+        private final ReadOnlyDoubleWrapper minSystemHeight;
+        private final List<Runnable> layoutInvalidatedListeners = new ArrayList<>();
+
+        private boolean currentFullScreen;
+        private HeaderButtonMetrics currentMetrics;
+
+        AttachedProperties(Stage stage) {
+            this.stage = stage;
+            this.leftSystemInset = new ReadOnlyObjectWrapper<>(stage, "HeaderBar.leftSystemInset", EMPTY);
+            this.rightSystemInset = new ReadOnlyObjectWrapper<>(stage, "HeaderBar.rightSystemInset", EMPTY);
+            this.minSystemHeight = new ReadOnlyDoubleWrapper(stage, "HeaderBar.minSystemHeight");
+
+            StageHelper.getHeaderButtonMetrics(stage).subscribe(this::onMetricsChanged);
+            stage.fullScreenProperty().subscribe(this::onFullScreenChanged);
+            stage.sceneProperty().flatMap(Scene::effectiveNodeOrientationProperty).subscribe(this::updateInsets);
+        }
+
+        public static AttachedProperties of(Stage stage) {
+            var instance = (AttachedProperties)Objects.requireNonNull(stage, "Stage cannot be null")
+                .getProperties()
+                .get(AttachedProperties.class);
+
+            if (instance == null) {
+                instance = new AttachedProperties(stage);
+                stage.getProperties().put(AttachedProperties.class, instance);
+            }
+
+            return instance;
+        }
+
+        public Subscription subscribeLayoutInvalidated(Runnable listener) {
+            layoutInvalidatedListeners.add(listener);
+            return () -> layoutInvalidatedListeners.remove(listener);
+        }
+
+        private void onMetricsChanged(HeaderButtonMetrics metrics) {
+            currentMetrics = metrics;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void onFullScreenChanged(boolean fullScreen) {
+            currentFullScreen = fullScreen;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void updateInsets(NodeOrientation orientation) {
+            if (currentFullScreen || currentMetrics == null) {
+                leftSystemInset.set(EMPTY);
+                rightSystemInset.set(EMPTY);
+                minSystemHeight.set(0);
+            } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
+                leftSystemInset.set(currentMetrics.leftInset());
+                rightSystemInset.set(currentMetrics.rightInset());
+                minSystemHeight.set(currentMetrics.minHeight());
+            } else {
+                leftSystemInset.set(currentMetrics.rightInset());
+                rightSystemInset.set(currentMetrics.leftInset());
+                minSystemHeight.set(currentMetrics.minHeight());
+            }
+
+            layoutInvalidatedListeners.forEach(Runnable::run);
         }
     }
 }

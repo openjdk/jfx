@@ -28,6 +28,7 @@ package test.javafx.scene.layout;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.HeaderAreaType;
 import com.sun.javafx.tk.TKSceneListener;
+import java.lang.reflect.Method;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Dimension2D;
@@ -40,6 +41,7 @@ import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -52,11 +54,33 @@ import static org.junit.jupiter.api.Assertions.*;
 @SuppressWarnings("deprecation")
 public class HeaderBarTest {
 
+    Stage stage;
+    Scene scene;
     HeaderBar headerBar;
 
     @BeforeEach
     void setup() {
         headerBar = new HeaderBar();
+        scene = new Scene(headerBar);
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    @AfterEach
+    void teardown() {
+        stage.close();
+    }
+
+    <T> T getAttachedProperty(String name) {
+        try {
+            Class<?> propertiesClass = Class.forName(HeaderBar.class.getName() + "$AttachedProperties");
+            Method method = propertiesClass.getMethod("of", Stage.class);
+            method.setAccessible(true);
+            return ReflectionUtils.getFieldValue(method.invoke(null, stage), name);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Test
@@ -68,7 +92,7 @@ public class HeaderBarTest {
 
     @Test
     void minHeight_correspondsToMinSystemHeight_ifNotSetByUser() {
-        DoubleProperty minSystemHeight = ReflectionUtils.getFieldValue(headerBar, "minSystemHeight");
+        DoubleProperty minSystemHeight = getAttachedProperty("minSystemHeight");
         minSystemHeight.set(100);
         assertEquals(100, headerBar.minHeight(-1));
 
@@ -287,7 +311,7 @@ public class HeaderBarTest {
             "BOTTOM_RIGHT, 160, 10, 680, 80"
         })
         void alignmentOfCenterChild_withLeftSystemInset(Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+            ObjectProperty<Dimension2D> leftSystemInset = getAttachedProperty("leftSystemInset");
             leftSystemInset.set(new Dimension2D(100, 100));
             alignmentOfCenterChildImpl(pos, 1000, 1000, x, y, width, height);
         }
@@ -306,7 +330,7 @@ public class HeaderBarTest {
         })
         void alignmentOfCenterChild_withLeftSystemInset_andMaxWidthConstraint(
                 Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+            ObjectProperty<Dimension2D> leftSystemInset = getAttachedProperty("leftSystemInset");
             leftSystemInset.set(new Dimension2D(100, 100));
             alignmentOfCenterChildImpl(pos, 1000, 100, x, y, width, height);
         }
@@ -324,7 +348,7 @@ public class HeaderBarTest {
             "BOTTOM_RIGHT, 60, 10, 680, 80"
         })
         void alignmentOfCenterChild_withRightSystemInset(Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+            ObjectProperty<Dimension2D> rightSystemInset = getAttachedProperty("rightSystemInset");
             rightSystemInset.set(new Dimension2D(100, 100));
             alignmentOfCenterChildImpl(pos, 1000, 1000, x, y, width, height);
         }
@@ -343,7 +367,7 @@ public class HeaderBarTest {
         })
         void alignmentOfCenterChild_withRightSystemInset_andMaxWidthConstraint(
                 Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+            ObjectProperty<Dimension2D> rightSystemInset = getAttachedProperty("rightSystemInset");
             rightSystemInset.set(new Dimension2D(100, 100));
             alignmentOfCenterChildImpl(pos, 1000, 100, x, y, width, height);
         }
@@ -356,7 +380,7 @@ public class HeaderBarTest {
         })
         void alignmentOfCenterChild_withLeftSystemInset_andOffsetCausedByInsufficientHorizontalSpace(
                 Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+            ObjectProperty<Dimension2D> leftSystemInset = getAttachedProperty("leftSystemInset");
             leftSystemInset.set(new Dimension2D(200, 100));
             alignmentOfCenterChildImpl(pos, 500, 100, x, y, width, height);
         }
@@ -369,7 +393,7 @@ public class HeaderBarTest {
         })
         void alignmentOfCenterChild_withRightSystemInset_andOffsetCausedByInsufficientHorizontalSpace(
                 Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+            ObjectProperty<Dimension2D> rightSystemInset = getAttachedProperty("rightSystemInset");
             rightSystemInset.set(new Dimension2D(200, 100));
             alignmentOfCenterChildImpl(pos, 500, 100, x, y, width, height);
         }
@@ -398,7 +422,7 @@ public class HeaderBarTest {
         })
         void alignmentOfLeftChild_notResizable_withoutReservedArea(
                 Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> leftSystemInset = ReflectionUtils.getFieldValue(headerBar, "leftSystemInset");
+            ObjectProperty<Dimension2D> leftSystemInset = getAttachedProperty("leftSystemInset");
             leftSystemInset.set(new Dimension2D(100, 100));
             var left = new Rectangle(50, 50);
             HeaderBar.setAlignment(left, pos);
@@ -419,7 +443,7 @@ public class HeaderBarTest {
         })
         void alignmentOfRightChild_notResizable_withoutReservedArea(
                 Pos pos, double x, double y, double width, double height) {
-            ObjectProperty<Dimension2D> rightSystemInset = ReflectionUtils.getFieldValue(headerBar, "rightSystemInset");
+            ObjectProperty<Dimension2D> rightSystemInset = getAttachedProperty("rightSystemInset");
             rightSystemInset.set(new Dimension2D(100, 100));
             var right = new Rectangle(50, 50);
             HeaderBar.setAlignment(right, pos);
