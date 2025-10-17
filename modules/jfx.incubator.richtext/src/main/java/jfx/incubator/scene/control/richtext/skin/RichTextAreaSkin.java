@@ -29,14 +29,12 @@ package jfx.incubator.scene.control.richtext.skin;
 
 import java.util.ArrayList;
 import java.util.List;
-import javafx.application.ColorScheme;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
-import javafx.scene.Scene;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
@@ -94,9 +92,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final ScrollBar hscroll;
     private final EventHandler<InputMethodEvent> inputMethodTextChangedHandler = this::handleInputMethodEvent;
     private InputMethodRequests inputMethodRequests;
-    private TextPos imeStart;
-    private int imeLength;
-    private List<Shape> imeShapes;
+    private Ime ime;
 
     static {
         RichTextAreaSkinHelper.setAccessor(new RichTextAreaSkinHelper.Accessor() {
@@ -200,14 +196,9 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 // The offset is relative to the composed text, so offset 0 indicates the beginning of the composed text.
                 @Override
                 public int getLocationOffset(int x, int y) {
-                    var rv = getLocationOffset2(x, y);
-                    System.err.println("getLocationOffset (x=" + x + " y=" + y + ")=" + rv); // FIX
-                    return rv;
-                }
-                public int getLocationOffset2(int x, int y) {
                     // TODO screen location??
                     TextPos pos = vflow.getTextPosLocal(x, y);
-                    return pos.offset() - imeStart.offset();
+                    return pos.offset() - ime.start.offset();
                 }
 
                 @Override
@@ -247,48 +238,46 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             }
 
             // remove previous input method text (if any) or selected text
-            if (imeLength > 0) {
-                if (imeShapes != null) {
-                    vflow.removeImHighlight(imeShapes);
-                    imeShapes = null;
+            if (ime != null) {
+                if (ime.shapes != null) {
+                    vflow.removeImHighlight(ime.shapes);
+                    ime.shapes = null;
                 }
                 // imeStart is valid
-                TextPos end = RichUtils.advancePosition(imeStart, imeLength);
-                rta.select(imeStart, end);
+                TextPos end = RichUtils.advancePosition(ime.start, ime.length);
+                rta.select(ime.start, end);
             } else {
-                imeStart = sel.getMin();
+                ime = new Ime();
+                ime.start = sel.getMin();
             }
 
             String text;
             // I think it's either composed or committed but not both
             if (ev.getComposed().size() > 0) {
-                imeShapes = new ArrayList<>();
+                ime.shapes = new ArrayList<>();
                 StringBuilder composed = new StringBuilder();
-                TextPos pos = imeStart;
+                TextPos pos = ime.start;
                 for (InputMethodTextRun run : ev.getComposed()) {
                     composed.append(run.getText());
                     TextPos endPos = RichUtils.advancePosition(pos, run.getText().length());
-                    appendImeShapes(imeShapes, run.getHighlight(), pos, endPos);
+                    appendImeShapes(ime.shapes, run.getHighlight(), pos, endPos);
                     pos = endPos;
                 }
                 text = composed.toString();
             } else {
-                imeShapes = null;
+                ime.shapes = null;
                 text = ev.getCommitted();
             }
 
             // replace selection or previous ime text with composed or committed text
             sel = rta.getSelection();
             rta.replaceText(sel.getMin(), sel.getMax(), text, false);
-            imeLength = text.length();
-            TextPos pos = RichUtils.advancePosition(imeStart, imeLength);
+            ime.length = text.length();
+            TextPos pos = RichUtils.advancePosition(ime.start, ime.length);
             rta.select(pos);
 
-            if (ev.getCommitted().length() > 0) {
-                imeLength = 0;
-            }
-            if (imeLength == 0) {
-                imeStart = null;
+            if ((ev.getCommitted().length() > 0) || (ime.length == 0)) {
+                ime = null;
             }
             ev.consume();
         }
@@ -332,7 +321,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 case SELECTED_RAW:
                     // blue background
                     sh = new Path(vflow.getRangeShape(start, end));
-                    sh.setFill(Color.BLUE); // FIX
+                    sh.setFill(imeSelectColor());
                     sh.setOpacity(0.3);
                     break;
                 case UNSELECTED_RAW:
@@ -367,13 +356,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     private Color imeColor() {
-        Scene sc = getSkinnable().getScene();
-        if (sc != null) {
-            if (sc.getPreferences().getColorScheme() == ColorScheme.DARK) {
-                return Color.WHITE;
-            }
-        }
-        return Color.BLACK;
+        return RichUtils.isDarkScheme(getSkinnable()) ? Color.WHITE : Color.BLACK;
+    }
+    
+    private Color imeSelectColor() {
+        // TODO might depend on the color scheme
+        return Color.BLUE;
     }
 
     private void handleModelChange(Object src, StyledTextModel old, StyledTextModel m) {
@@ -596,5 +584,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
         }
+    }
+
+    // while IME is active
+    static class Ime {
+        public TextPos start;
+        public int length;
+        public List<Shape> shapes;
     }
 }

@@ -35,6 +35,7 @@ import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Locale;
 import javax.imageio.ImageIO;
+import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.css.CssMetaData;
@@ -47,6 +48,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -713,5 +715,14 @@ public final class RichUtils {
     /** Returns the text positions at a positive offset relative to the 'start' position. */
     public static TextPos advancePosition(TextPos start, int offset) {
         return TextPos.ofLeading(start.index(), start.offset() + offset);
+    }
+
+    /** Returns true if the color scheme is DARK, checking first the node's scene, then platform preferences. */
+    public static boolean isDarkScheme(Node n) {
+        Scene sc = n.getScene();
+        if (sc != null) {
+            return (sc.getPreferences().getColorScheme() == ColorScheme.DARK);
+        }
+        return (Platform.getPreferences().getColorScheme() == ColorScheme.DARK);
     }
 }
