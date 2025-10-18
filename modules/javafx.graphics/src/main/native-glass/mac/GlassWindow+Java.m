@@ -321,6 +321,12 @@ extern NSSize maxScreenDimensions;
         // as it is possible that the windowDidMove event is not triggered.
         [self _sendJavaWindowMoveEventForFrame:flipFrame];
     }
+    if (newW != flipFrame.size.width || newH != flipFrame.size.height) {
+        // The frame may not have changed due min/max limits. In that case we
+        // need to send back the actual size since the windowDidResize
+        // notification was not triggered.
+        [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESIZE forFrame:flipFrame];
+    }
 }
 
 - (NSScreen*)_getScreen
