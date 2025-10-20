@@ -70,7 +70,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * Three methods participate in modification of the content:
  * {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)},
  * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)},
- * {@link #applyStyle(TextPos, TextPos, StyleAttributeMap, boolean)}.
+ * {@link #applyStyle(TextPos, TextPos, StyleAttributeMap, boolean, boolean)}.
  * These methods decompose the main modification into operations with individual paragraphs
  * and delegate these to subclasses.
  * <p>
@@ -248,7 +248,7 @@ public abstract class StyledTextModel {
      * clipboard).
      * <p>
      * The methods that utilize the filtering are:
-     * {@link #applyStyle(TextPos, TextPos, StyleAttributeMap, boolean)},
+     * {@link #applyStyle(TextPos, TextPos, StyleAttributeMap, boolean, boolean)},
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}, and
      * {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)}.
      * <p>

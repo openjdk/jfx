@@ -77,7 +77,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * There are some differences that should be mentioned:
  * <ul>
  * <li>Model behavior: any direct changes to the styling, such as
- * {@link #applyStyle(TextPos, TextPos, jfx.incubator.scene.control.richtext.model.StyleAttributeMap) applyStyle()},
+ * {@link #applyStyle(TextPos, TextPos, jfx.incubator.scene.control.richtext.model.StyleAttributeMap, boolean) applyStyle()},
  * will be ignored
  * <li>Line numbers: the {@code CodeArea} sets the {@link #leftDecoratorProperty()} to support the line numbers,
  * so applications should not set or bind that property.

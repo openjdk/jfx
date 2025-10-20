@@ -280,10 +280,21 @@ public class RichTextAreaTest {
 
     @Test
     public void applyStyle() {
-        TestStyledInput in = TestStyledInput.plainText("a\nb");
+        TestStyledInput in = TestStyledInput.plainText("a\nbbb");
         TextPos p = control.appendText(in);
-        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), BOLD, true);
-        assertEquals(TextPos.ofLeading(1, 1), p);
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, true);
+        assertEquals(TextPos.ofLeading(1, 3), p);
+        control.select(TextPos.ofLeading(1, 0));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // allow undo
+        control.undo();
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
+        // disallow undo
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, false);
+        control.select(TextPos.ofLeading(1, 0));
+        control.undo(); // undo previous BOLD
+        control.undo(); // undo initial appendText
+        assertEquals("", text());
     }
 
     @Test
@@ -607,6 +618,25 @@ public class RichTextAreaTest {
         control.appendText("1234");
         control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in, false);
         assertEquals("1-4", text());
+    }
+
+    @Test
+    public void setStyle() {
+        TestStyledInput in = TestStyledInput.plainText("a\nbbb");
+        TextPos p = control.appendText(in);
+        control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, true);
+        assertEquals(TextPos.ofLeading(1, 3), p);
+        control.select(TextPos.ofLeading(1, 0));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // allow undo
+        control.undo();
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
+        // disallow undo
+        control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, false);
+        control.select(TextPos.ofLeading(1, 0));
+        control.undo(); // undo previous BOLD
+        control.undo(); // undo initial appendText
+        assertEquals("", text());
     }
 
     @Test
