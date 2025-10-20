@@ -65,24 +65,24 @@ public class HTMLExportTest {
             """);
 
         // bold
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.BOLD, Boolean.TRUE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.BOLD, Boolean.TRUE), false, false);
         checkContains("<span style='font-weight: bold;'>1</span>11<p/>");
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.BOLD, Boolean.FALSE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.BOLD, Boolean.FALSE), false, false);
         checkContains("111<p/>");
         // italic
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.ITALIC, Boolean.TRUE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.ITALIC, Boolean.TRUE), false, false);
         checkContains("<span style='font-style: italic;'>1</span>11<p/>");
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.ITALIC, Boolean.FALSE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.ITALIC, Boolean.FALSE), false, false);
         checkContains("111<p/>");
         // strikethrough
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.STRIKE_THROUGH, Boolean.TRUE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.STRIKE_THROUGH, Boolean.TRUE), false, false);
         checkContains("<span style='text-decoration: line-through;'>1</span>11<p/>");
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.STRIKE_THROUGH, Boolean.FALSE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.STRIKE_THROUGH, Boolean.FALSE), false, false);
         checkContains("111<p/>");
         // underline
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.UNDERLINE, Boolean.TRUE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.UNDERLINE, Boolean.TRUE), false, false);
         checkContains("<span style='text-decoration: underline;'>1</span>11<p/>");
-        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.UNDERLINE, Boolean.FALSE), false);
+        model.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), mk(StyleAttributeMap.UNDERLINE, Boolean.FALSE), false, false);
         checkContains("111<p/>");
     }
 

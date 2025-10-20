@@ -728,16 +728,15 @@ public abstract class StyledTextModel {
      * Depending on {@code mergeAttributes} parameter, the attributes will either be merged with (true) or completely
      * replace the existing attributes within the range.  The affected range might be wider than the range specified
      * when applying the paragraph attributes.
-     * <p>
-     * This operation is undoable.
      *
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to set
      * @param mergeAttributes whether to merge or replace the attributes
+     * @param allowUndo when true, creates an undo-redo entry
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
-    public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
+    public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes, boolean allowUndo) {
         checkWritable();
 
         if (start.compareTo(end) > 0) {

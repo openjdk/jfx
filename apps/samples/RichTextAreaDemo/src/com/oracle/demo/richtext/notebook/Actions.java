@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -733,7 +733,7 @@ public class Actions {
             StyleAttributeMap a = c.getActiveStyleAttributeMap();
             boolean on = !a.getBoolean(attr);
             a = StyleAttributeMap.builder().set(attr, on).build();
-            c.applyStyle(start, end, a);
+            c.applyStyle(start, end, a, true);
             updateSourceStyles();
         });
     }
@@ -756,7 +756,7 @@ public class Actions {
             }
 
             StyleAttributeMap a = Styles.getStyleAttributeMap(st);
-            c.applyStyle(start, end, a);
+            c.applyStyle(start, end, a, true);
             updateSourceStyles();
         });
     }

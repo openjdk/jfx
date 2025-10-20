@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -662,7 +662,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
         StyleAttributeMap m = StyleAttributeMap.of(a, val);
-        control.applyStyle(ca, an, m);
+        control.applyStyle(ca, an, m, true);
     }
 
     void dumpAccessibilityAttributes() {

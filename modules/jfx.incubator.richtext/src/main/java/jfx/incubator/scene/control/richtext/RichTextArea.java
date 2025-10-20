@@ -1099,12 +1099,13 @@ public class RichTextArea extends Control {
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to apply
+     * @param allowUndo when true, creates an undo-redo entry
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs) {
+    public void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean allowUndo) {
         StyledTextModel m = getModel();
-        m.applyStyle(start, end, attrs, true);
+        m.applyStyle(start, end, attrs, true, allowUndo);
     }
 
     /**
@@ -2157,12 +2158,13 @@ public class RichTextArea extends Control {
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to set
+     * @param allowUndo when true, creates an undo-redo entry
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final void setStyle(TextPos start, TextPos end, StyleAttributeMap attrs) {
+    public final void setStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean allowUndo) {
         StyledTextModel m = getModel();
-        m.applyStyle(start, end, attrs, false);
+        m.applyStyle(start, end, attrs, false, allowUndo);
     }
 
     /**

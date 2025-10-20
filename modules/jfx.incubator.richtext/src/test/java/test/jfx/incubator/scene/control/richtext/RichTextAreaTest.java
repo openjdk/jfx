@@ -282,7 +282,7 @@ public class RichTextAreaTest {
     public void applyStyle() {
         TestStyledInput in = TestStyledInput.plainText("a\nb");
         TextPos p = control.appendText(in);
-        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), BOLD);
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), BOLD, true);
         assertEquals(TextPos.ofLeading(1, 1), p);
     }
 
@@ -543,7 +543,7 @@ public class RichTextAreaTest {
     @Test
     public void read() throws Exception {
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(out);
         byte[] b = out.toByteArray();
@@ -560,7 +560,7 @@ public class RichTextAreaTest {
     public void readDataFormat() throws Exception {
         DataFormat fmt = DataFormat.PLAIN_TEXT;
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(fmt, out);
         byte[] b = out.toByteArray();
@@ -661,7 +661,7 @@ public class RichTextAreaTest {
     @Test
     public void write() throws Exception {
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(out);
         byte[] b = out.toByteArray();
@@ -672,7 +672,7 @@ public class RichTextAreaTest {
     public void writeDataFormat() throws Exception {
         DataFormat fmt = DataFormat.PLAIN_TEXT;
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(fmt, out);
         byte[] b = out.toByteArray();
