@@ -105,7 +105,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
     }
 
     @Override
-    public boolean setAll(int from, int to, Collection<? extends E> col) {
+    public boolean replaceRange(int from, int to, Collection<? extends E> col) {
         Objects.checkFromToIndex(from, to, size());
 
         // implicit check to ensure col != null
