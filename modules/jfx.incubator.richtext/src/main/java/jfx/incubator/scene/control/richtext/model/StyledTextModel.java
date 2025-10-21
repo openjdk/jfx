@@ -665,7 +665,7 @@ public abstract class StyledTextModel {
         return replace(resolver, start, end, input, true);
     }
 
-    // only UndoableChange is allowed to disable undo/redo records 
+    // only UndoableChange is allowed to disable undo/redo records
     private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo) {
         checkWritable();
 
