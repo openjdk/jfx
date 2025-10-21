@@ -75,7 +75,6 @@ public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
-    private static final String NL = System.getProperty("line.separator");
 
     @BeforeEach
     public void beforeEach() {
@@ -285,10 +284,10 @@ public class RichTextAreaTest {
 
     @Test
     public void appendTextFromStyledInput() {
-        TestStyledInput in = TestStyledInput.plainText("a" + NL + "b");
+        TestStyledInput in = TestStyledInput.plainText("a\nb");
         TextPos p = control.appendText(in, true);
         assertEquals(TextPos.ofLeading(1, 1), p);
-        assertEquals("a" + NL + "b", text());
+        assertEquals("a\nb", text());
         // undo
         control.undo();
         assertEquals("", text());
@@ -529,10 +528,10 @@ public class RichTextAreaTest {
 
     @Test
     public void insertTextFromStyledInput() {
-        TestStyledInput in = TestStyledInput.plainText("a" + NL + "b");
+        TestStyledInput in = TestStyledInput.plainText("a\nb");
         TextPos p = control.appendText(in, true);
         assertEquals(TextPos.ofLeading(1, 1), p);
-        assertEquals("a" + NL + "b", text());
+        assertEquals("a\nb", text());
         // undo
         control.undo();
         assertEquals("", text());
