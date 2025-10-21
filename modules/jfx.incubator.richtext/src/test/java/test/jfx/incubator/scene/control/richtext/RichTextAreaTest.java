@@ -74,6 +74,8 @@ import test.jfx.incubator.scene.util.TUtil;
 public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final String NL = System.getProperty("line.separator");
 
     @BeforeEach
     public void beforeEach() {
@@ -260,22 +262,40 @@ public class RichTextAreaTest {
         TextPos p = control.appendText("a");
         assertEquals(TextPos.ofLeading(0, 1), p);
         assertEquals("a", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
     public void appendTextWithStyles() {
-        TextPos p = control.appendText("a", BOLD, false);
+        TextPos p = control.appendText("a", BOLD, true);
         assertEquals(TextPos.ofLeading(0, 1), p);
         control.select(p);
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
         assertEquals("a", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
+        // no undo
+        control.appendText("b", BOLD, false);
+        control.undo();
+        assertEquals("b", text());
     }
 
     @Test
     public void appendTextFromStyledInput() {
-        TestStyledInput in = TestStyledInput.plainText("a\nb");
-        TextPos p = control.appendText(in, false);
+        TestStyledInput in = TestStyledInput.plainText("a" + NL + "b");
+        TextPos p = control.appendText(in, true);
         assertEquals(TextPos.ofLeading(1, 1), p);
+        assertEquals("a" + NL + "b", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
+        // no undo
+        control.appendText(TestStyledInput.plainText("dd"), false);
+        control.undo();
+        assertEquals("dd", text());
     }
 
     @Test
@@ -485,6 +505,37 @@ public class RichTextAreaTest {
         control.appendText("123");
         control.select(TextPos.ofLeading(0, 1));
         control.insertLineBreak();
+    }
+
+    @Test
+    public void insertTextWithStyles() {
+        TextPos p = control.appendText("a", BOLD, true);
+        assertEquals(TextPos.ofLeading(0, 1), p);
+        p = control.insertText(TextPos.ZERO, "b", ITALIC, true);
+        assertEquals(TextPos.ofLeading(0, 1), p);
+        control.select(p);
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+        assertEquals("ba", text());
+        // undo
+        control.undo();
+        assertEquals("a", text());
+        // no undo
+        control.insertText(TextPos.ZERO, "ccc", BOLD, false);
+        assertEquals("ccca", text());
+        control.undo(); // FIX non-undoable change messed up the state of the previous undo entries
+        // we cannot disable undo.  the application must use clearUndoRedo() instead
+        assertEquals("cca", text()); // FIX
+    }
+
+    @Test
+    public void insertTextFromStyledInput() {
+        TestStyledInput in = TestStyledInput.plainText("a" + NL + "b");
+        TextPos p = control.appendText(in, true);
+        assertEquals(TextPos.ofLeading(1, 1), p);
+        assertEquals("a" + NL + "b", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
