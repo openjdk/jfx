@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -296,7 +296,7 @@ public class CellPane extends GridPane {
     private void insert(RichTextArea src, TextPos start, TextPos end, RichTextArea tgt, TextPos pos) throws IOException {
         SegmentBuffer b = new SegmentBuffer();
         src.getModel().export(start, end, b.getStyledOutput());
-        tgt.insertText(pos, b.getStyledInput());
+        tgt.insertText(pos, b.getStyledInput(), false);
     }
 
     public void setActive(boolean on) {

@@ -264,7 +264,7 @@ public class RichTextAreaTest {
 
     @Test
     public void appendTextWithStyles() {
-        TextPos p = control.appendText("a", BOLD);
+        TextPos p = control.appendText("a", BOLD, false);
         assertEquals(TextPos.ofLeading(0, 1), p);
         control.select(p);
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
@@ -274,14 +274,14 @@ public class RichTextAreaTest {
     @Test
     public void appendTextFromStyledInput() {
         TestStyledInput in = TestStyledInput.plainText("a\nb");
-        TextPos p = control.appendText(in);
+        TextPos p = control.appendText(in, false);
         assertEquals(TextPos.ofLeading(1, 1), p);
     }
 
     @Test
     public void applyStyle() {
         TestStyledInput in = TestStyledInput.plainText("a\nbbb");
-        TextPos p = control.appendText(in);
+        TextPos p = control.appendText(in, true);
         control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, true);
         assertEquals(TextPos.ofLeading(1, 3), p);
         control.select(TextPos.ofLeading(1, 0));
@@ -407,8 +407,8 @@ public class RichTextAreaTest {
 
     @Test
     public void getActiveStyleAttributeMap() {
-        control.appendText("1234", BOLD);
-        control.appendText("5678", StyleAttributeMap.EMPTY);
+        control.appendText("1234", BOLD, false);
+        control.appendText("5678", StyleAttributeMap.EMPTY, false);
 
         control.select(TextPos.ofLeading(0, 2));
         StyleAttributeMap a = control.getActiveStyleAttributeMap();
@@ -504,7 +504,7 @@ public class RichTextAreaTest {
 
     @Test
     public void modelChangeClearsSelection() {
-        control.insertText(TextPos.ZERO, "1234", null);
+        control.insertText(TextPos.ZERO, "1234", null, false);
         control.selectAll();
         SelectionSegment sel = control.getSelection();
         assertFalse(sel.isCollapsed());
@@ -623,7 +623,7 @@ public class RichTextAreaTest {
     @Test
     public void setStyle() {
         TestStyledInput in = TestStyledInput.plainText("a\nbbb");
-        TextPos p = control.appendText(in);
+        TextPos p = control.appendText(in, true);
         control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, true);
         assertEquals(TextPos.ofLeading(1, 3), p);
         control.select(TextPos.ofLeading(1, 0));

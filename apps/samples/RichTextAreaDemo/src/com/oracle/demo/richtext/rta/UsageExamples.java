@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -85,9 +85,9 @@ public class UsageExamples {
 
         RichTextArea textArea = new RichTextArea();
         // build the content
-        textArea.appendText("RichTextArea\n", heading);
-        textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
-        textArea.appendText("monospaced.\n", mono);
+        textArea.appendText("RichTextArea\n", heading, false);
+        textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY, false);
+        textArea.appendText("monospaced.\n", mono, false);
         return textArea;
     }
 
@@ -95,7 +95,7 @@ public class UsageExamples {
         RichTextArea textArea = new RichTextArea();
         // insert two paragraphs "A" and "B"
         StyleAttributeMap bold = StyleAttributeMap.builder().setBold(true).build();
-        textArea.appendText("A\nB", bold);
+        textArea.appendText("A\nB", bold, false);
     }
 
     private static CodeArea codeAreaExample() {
@@ -192,10 +192,10 @@ public class UsageExamples {
                 System.out.println("caret: " + c);
             });
             t.getInputMap().register(KeyBinding.of(KeyCode.F1), () -> {
-                t.insertText(TextPos.ZERO, "F1", StyleAttributeMap.EMPTY);
+                t.insertText(TextPos.ZERO, "F1", StyleAttributeMap.EMPTY, false);
             });
             t.getInputMap().register(KeyBinding.of(KeyCode.F2), () -> {
-                t.insertText(TextPos.ZERO, "\n", StyleAttributeMap.EMPTY);
+                t.insertText(TextPos.ZERO, "\n", StyleAttributeMap.EMPTY, false);
             });
             t.getInputMap().register(KeyBinding.of(KeyCode.F3), () -> {
                 t.clearSelection();
