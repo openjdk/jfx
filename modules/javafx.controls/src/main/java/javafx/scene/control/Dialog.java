@@ -43,6 +43,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.layout.HeaderBar;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -461,10 +462,10 @@ public class Dialog<R> implements EventTarget {
     }
 
     /**
-     * Specifies the style for this dialog. This must be done prior to making
-     * the dialog visible. The style is one of: StageStyle.DECORATED,
-     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, StageStyle.UTILITY,
-     * or StageStyle.UNIFIED.
+     * Specifies the style for this dialog. This must be done prior to making the dialog visible.
+     * <p>
+     * Note that a dialog with the {@link StageStyle#EXTENDED} style must also specify a {@link HeaderBar}
+     * with the {@link #setHeaderBar(HeaderBar)} method, as otherwise the dialog window will not be draggable.
      *
      * @param style the style for this dialog.
      *
@@ -581,6 +582,32 @@ public class Dialog<R> implements EventTarget {
         dialogPane.set(value);
     }
 
+    /**
+     * Specifies the {@link HeaderBar} for the dialog. The {@code HeaderBar} will be placed at the
+     * top of the dialog window, and extend the entire width of the window. This property will only
+     * be used if the dialog window is configured with the {@link StageStyle#EXTENDED} style; it has
+     * no effect for other styles.
+     *
+     * @since 26
+     */
+    private final ObjectProperty<HeaderBar> headerBar = new SimpleObjectProperty<>(this, "headerBar") {
+        @Override
+        protected void invalidated() {
+            dialog.setHeaderBar(get());
+        }
+    };
+
+    public final ObjectProperty<HeaderBar> headerBarProperty() {
+        return headerBar;
+    }
+
+    public final void setHeaderBar(HeaderBar value) {
+        headerBar.set(value);
+    }
+
+    public final HeaderBar getHeaderBar() {
+        return headerBar.get();
+    }
 
     // --- content text (forwarded from DialogPane)
     /**
