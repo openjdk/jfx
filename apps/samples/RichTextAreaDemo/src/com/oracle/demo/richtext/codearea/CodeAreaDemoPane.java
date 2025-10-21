@@ -328,7 +328,7 @@ public class CodeAreaDemoPane extends BorderPane {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
         StyleAttributeMap a = StyleAttributeMap.builder().set(attr, val).build();
-        control.applyStyle(ca, an, a, true);
+        control.applyStyle(ca, an, a);
     }
 
     protected void setLineSpacing(double x) {
@@ -339,7 +339,7 @@ public class CodeAreaDemoPane extends BorderPane {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
         StyleAttributeMap m = StyleAttributeMap.of(a, val);
-        control.applyStyle(ca, an, m, true);
+        control.applyStyle(ca, an, m);
     }
 
     //

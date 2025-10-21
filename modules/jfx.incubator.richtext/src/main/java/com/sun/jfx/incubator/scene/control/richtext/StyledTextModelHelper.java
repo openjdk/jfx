@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,37 +25,34 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
+import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
-import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
-public class SegmentStyledInput implements StyledInput {
-    private final StyledSegment[] segments;
-    private int index;
+/**
+ * Provides access to internal methods in StyledTextModel.
+ */
+public class StyledTextModelHelper {
+    public interface Accessor {
+        public TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo);
+    }
 
-    public SegmentStyledInput(StyledSegment[] segments) {
-        if(segments == null) {
-            segments = new StyledSegment[0];
+    static {
+        Utils.forceInit(StyledTextModel.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
         }
-        this.segments = segments;
+        accessor = a;
     }
 
-    @Override
-    public StyledSegment nextSegment() {
-        if (index < segments.length) {
-            return segments[index++];
-        }
-        return null;
-    }
-
-    public static SegmentStyledInput of(List<StyledSegment> segments) {
-        StyledSegment[] ss = segments.toArray(new StyledSegment[segments.size()]);
-        return new SegmentStyledInput(ss);
-    }
-
-    @Override
-    public void close() throws IOException {
+    public static TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo) {
+        return accessor.replace(m, r, start, end, in, allowUndo);
     }
 }

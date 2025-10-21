@@ -296,7 +296,7 @@ public class CellPane extends GridPane {
     private void insert(RichTextArea src, TextPos start, TextPos end, RichTextArea tgt, TextPos pos) throws IOException {
         SegmentBuffer b = new SegmentBuffer();
         src.getModel().export(start, end, b.getStyledOutput());
-        tgt.insertText(pos, b.getStyledInput(), false);
+        tgt.insertText(pos, b.getStyledInput());
     }
 
     public void setActive(boolean on) {

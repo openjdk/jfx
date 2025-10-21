@@ -75,6 +75,7 @@ public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final String NL = System.getProperty("line.separator");
 
     @BeforeEach
     public void beforeEach() {
@@ -268,7 +269,7 @@ public class RichTextAreaTest {
 
     @Test
     public void appendTextWithStyles() {
-        TextPos p = control.appendText("a", BOLD, true);
+        TextPos p = control.appendText("a", BOLD);
         assertEquals(TextPos.ofLeading(0, 1), p);
         control.select(p);
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
@@ -276,44 +277,30 @@ public class RichTextAreaTest {
         // undo
         control.undo();
         assertEquals("", text());
-        // no undo
-        control.appendText("b", BOLD, false);
-        control.undo();
-        assertEquals("b", text());
     }
 
     @Test
     public void appendTextFromStyledInput() {
         TestStyledInput in = TestStyledInput.plainText("a\nb");
-        TextPos p = control.appendText(in, true);
+        TextPos p = control.appendText(in);
         assertEquals(TextPos.ofLeading(1, 1), p);
-        assertEquals("a\nb", text());
+        assertEquals("a" + NL + "b", text());
         // undo
         control.undo();
         assertEquals("", text());
-        // no undo
-        control.appendText(TestStyledInput.plainText("dd"), false);
-        control.undo();
-        assertEquals("dd", text());
     }
 
     @Test
     public void applyStyle() {
         TestStyledInput in = TestStyledInput.plainText("a\nbbb");
-        TextPos p = control.appendText(in, true);
-        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, true);
+        TextPos p = control.appendText(in);
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD);
         assertEquals(TextPos.ofLeading(1, 3), p);
         control.select(TextPos.ofLeading(1, 0));
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
-        // allow undo
+        // undo
         control.undo();
         assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
-        // disallow undo
-        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, false);
-        control.select(TextPos.ofLeading(1, 0));
-        control.undo(); // undo previous BOLD
-        control.undo(); // undo initial appendText
-        assertEquals("", text());
     }
 
     @Test
@@ -426,8 +413,8 @@ public class RichTextAreaTest {
 
     @Test
     public void getActiveStyleAttributeMap() {
-        control.appendText("1234", BOLD, false);
-        control.appendText("5678", StyleAttributeMap.EMPTY, false);
+        control.appendText("1234", BOLD);
+        control.appendText("5678", StyleAttributeMap.EMPTY);
 
         control.select(TextPos.ofLeading(0, 2));
         StyleAttributeMap a = control.getActiveStyleAttributeMap();
@@ -508,9 +495,9 @@ public class RichTextAreaTest {
 
     @Test
     public void insertTextWithStyles() {
-        TextPos p = control.appendText("a", BOLD, true);
+        TextPos p = control.appendText("a", BOLD);
         assertEquals(TextPos.ofLeading(0, 1), p);
-        p = control.insertText(TextPos.ZERO, "b", ITALIC, true);
+        p = control.insertText(TextPos.ZERO, "b", ITALIC);
         assertEquals(TextPos.ofLeading(0, 1), p);
         control.select(p);
         assertEquals(ITALIC, control.getActiveStyleAttributeMap());
@@ -518,20 +505,14 @@ public class RichTextAreaTest {
         // undo
         control.undo();
         assertEquals("a", text());
-        // no undo
-        control.insertText(TextPos.ZERO, "ccc", BOLD, false);
-        assertEquals("ccca", text());
-        control.undo(); // FIX non-undoable change messed up the state of the previous undo entries
-        // we cannot disable undo.  the application must use clearUndoRedo() instead
-        assertEquals("cca", text()); // FIX
     }
 
     @Test
     public void insertTextFromStyledInput() {
         TestStyledInput in = TestStyledInput.plainText("a\nb");
-        TextPos p = control.appendText(in, true);
+        TextPos p = control.appendText(in);
         assertEquals(TextPos.ofLeading(1, 1), p);
-        assertEquals("a\nb", text());
+        assertEquals("a" + NL + "b", text());
         // undo
         control.undo();
         assertEquals("", text());
@@ -554,7 +535,7 @@ public class RichTextAreaTest {
 
     @Test
     public void modelChangeClearsSelection() {
-        control.insertText(TextPos.ZERO, "1234", null, false);
+        control.insertText(TextPos.ZERO, "1234", null);
         control.selectAll();
         SelectionSegment sel = control.getSelection();
         assertFalse(sel.isCollapsed());
@@ -604,7 +585,7 @@ public class RichTextAreaTest {
     @Test
     public void read() throws Exception {
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(out);
         byte[] b = out.toByteArray();
@@ -621,16 +602,20 @@ public class RichTextAreaTest {
     public void readDataFormat() throws Exception {
         DataFormat fmt = DataFormat.PLAIN_TEXT;
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(fmt, out);
         byte[] b = out.toByteArray();
         String text1 = text();
 
         control = new RichTextArea();
+        control.appendText("should not see me");
         ByteArrayInputStream in = new ByteArrayInputStream(b);
         control.read(fmt, in);
         String text2 = text();
+        assertEquals(text1, text2);
+        // read clears undo buffer
+        control.undo();
         assertEquals(text1, text2);
     }
 
@@ -658,7 +643,7 @@ public class RichTextAreaTest {
     @Test
     public void replaceText() {
         control.appendText("1234");
-        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-", false);
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-");
         assertEquals("1-4", text());
     }
 
@@ -666,27 +651,21 @@ public class RichTextAreaTest {
     public void replaceTextFromStyledInput() {
         TestStyledInput in = TestStyledInput.plainText("-");
         control.appendText("1234");
-        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in, false);
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in);
         assertEquals("1-4", text());
     }
 
     @Test
     public void setStyle() {
         TestStyledInput in = TestStyledInput.plainText("a\nbbb");
-        TextPos p = control.appendText(in, true);
-        control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, true);
+        TextPos p = control.appendText(in);
+        control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD);
         assertEquals(TextPos.ofLeading(1, 3), p);
         control.select(TextPos.ofLeading(1, 0));
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
         // allow undo
         control.undo();
         assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
-        // disallow undo
-        control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD, false);
-        control.select(TextPos.ofLeading(1, 0));
-        control.undo(); // undo previous BOLD
-        control.undo(); // undo initial appendText
-        assertEquals("", text());
     }
 
     @Test
@@ -741,7 +720,7 @@ public class RichTextAreaTest {
     @Test
     public void write() throws Exception {
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(out);
         byte[] b = out.toByteArray();
@@ -752,7 +731,7 @@ public class RichTextAreaTest {
     public void writeDataFormat() throws Exception {
         DataFormat fmt = DataFormat.PLAIN_TEXT;
         control.appendText("1 bold");
-        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD, true);
+        control.applyStyle(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 6), BOLD);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         control.write(fmt, out);
         byte[] b = out.toByteArray();

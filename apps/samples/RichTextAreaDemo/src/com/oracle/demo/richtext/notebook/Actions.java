@@ -733,7 +733,7 @@ public class Actions {
             StyleAttributeMap a = c.getActiveStyleAttributeMap();
             boolean on = !a.getBoolean(attr);
             a = StyleAttributeMap.builder().set(attr, on).build();
-            c.applyStyle(start, end, a, true);
+            c.applyStyle(start, end, a);
             updateSourceStyles();
         });
     }
@@ -756,7 +756,7 @@ public class Actions {
             }
 
             StyleAttributeMap a = Styles.getStyleAttributeMap(st);
-            c.applyStyle(start, end, a, true);
+            c.applyStyle(start, end, a);
             updateSourceStyles();
         });
     }

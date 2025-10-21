@@ -101,6 +101,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  *   textArea.appendText("RichTextArea\n", heading, false);
  *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY, false);
  *   textArea.appendText("monospaced.\n", mono, false);
+ *   textArea.clearUndoRedo();
  * }</pre>
  * Which results in the following visual representation:
  * <p>
@@ -1044,21 +1045,20 @@ public class RichTextArea extends Control {
 
     /**
      * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.
+     * sequences result in a new paragraph being added.  This method creates an undo/redo entry.
      * <p>
      * It is up to the model to decide whether to accept all, some, or none of the
      * {@link jfx.incubator.scene.control.richtext.model.StyleAttribute StyleAttribute}s.
      *
      * @param text the text to append
      * @param attrs the style attributes
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the text position at the end of the appended text, or null if editing is disabled
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos appendText(String text, StyleAttributeMap attrs, boolean allowUndo) {
+    public final TextPos appendText(String text, StyleAttributeMap attrs) {
         TextPos p = getDocumentEnd();
-        return insertText(p, text, attrs, allowUndo);
+        return insertText(p, text, attrs);
     }
 
     /**
@@ -1074,22 +1074,21 @@ public class RichTextArea extends Control {
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos appendText(String text) {
-        return appendText(text, StyleAttributeMap.EMPTY, true);
+        return appendText(text, StyleAttributeMap.EMPTY);
     }
 
     /**
      * Appends the styled content to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.
+     * sequences result in a new paragraph being added.  This method creates an undo/redo entry.
      *
      * @param in the input stream
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the text position at the end of the appended text, or null if editing is disabled
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos appendText(StyledInput in, boolean allowUndo) {
+    public final TextPos appendText(StyledInput in) {
         TextPos p = getDocumentEnd();
-        return insertText(p, in, allowUndo);
+        return insertText(p, in);
     }
 
     /**
@@ -1101,13 +1100,12 @@ public class RichTextArea extends Control {
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to apply
-     * @param allowUndo when true, creates an undo-redo entry
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean allowUndo) {
+    public void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs) {
         StyledTextModel m = getModel();
-        m.applyStyle(start, end, attrs, true, allowUndo);
+        m.applyStyle(start, end, attrs, true);
     }
 
     /**
@@ -1126,14 +1124,14 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Clears the document, creating an undo entry.
+     * Clears the document, creating an undo/redo entry.
      *
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final void clear() {
         TextPos end = getDocumentEnd();
-        replaceText(TextPos.ZERO, end, StyledInput.EMPTY, true);
+        replaceText(TextPos.ZERO, end, StyledInput.EMPTY);
     }
 
     /**
@@ -1474,33 +1472,31 @@ public class RichTextArea extends Control {
 
     /**
      * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.
+     * sequences result in a new paragraph being added.  This method creates an undo/redo entry.
      *
      * @param pos the insert position
      * @param text the text to inser
      * @param attrs the style attributes
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the text position at the end of the appended text, or null if editing is disabled
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos insertText(TextPos pos, String text, StyleAttributeMap attrs, boolean allowUndo) {
+    public final TextPos insertText(TextPos pos, String text, StyleAttributeMap attrs) {
         StyledInput in = StyledInput.of(text, attrs);
-        return replaceText(pos, pos, in, allowUndo);
+        return replaceText(pos, pos, in);
     }
 
     /**
-     * Inserts the styled content at the specified position.
+     * Inserts the styled content at the specified position.  This method creates an undo/redo entry.
      *
      * @param pos the insert position
      * @param in the input stream
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the text position at the end of the appended text, or null if editing is disabled
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos insertText(TextPos pos, StyledInput in, boolean allowUndo) {
-        return replaceText(pos, pos, in, allowUndo);
+    public final TextPos insertText(TextPos pos, StyledInput in) {
+        return replaceText(pos, pos, in);
     }
 
     /**
@@ -1824,35 +1820,33 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Replaces the specified range with the new text.
+     * Replaces the specified range with the new text.  This method creates an undo entry.
      *
      * @param start the start text position
      * @param end the end text position
      * @param text the input text
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, String text) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, text, allowUndo);
+        return m.replace(vflow(), start, end, text);
     }
 
     /**
-     * Replaces the specified range with the new input.
+     * Replaces the specified range with the new input.  This method creates an undo entry.
      *
      * @param start the start text position
      * @param end the end text position
      * @param in the input stream
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean allowUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, in, allowUndo);
+        return m.replace(vflow(), start, end, in);
     }
 
     /**
@@ -2162,13 +2156,12 @@ public class RichTextArea extends Control {
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to set
-     * @param allowUndo when true, creates an undo-redo entry
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final void setStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean allowUndo) {
+    public final void setStyle(TextPos start, TextPos end, StyleAttributeMap attrs) {
         StyledTextModel m = getModel();
-        m.applyStyle(start, end, attrs, false, allowUndo);
+        m.applyStyle(start, end, attrs, false);
     }
 
     /**

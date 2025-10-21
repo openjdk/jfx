@@ -235,8 +235,8 @@ public class RichTextAreaDemoPane extends BorderPane {
         appendButton.setOnAction((ev) -> {
             StyleAttributeMap heading = StyleAttributeMap.builder().setBold(true).setFontSize(24).build();
             StyleAttributeMap plain = StyleAttributeMap.builder().setFontFamily("Monospaced").build();
-            control.appendText("Heading\n", heading, false);
-            control.appendText("Plain monospaced text.\n", plain, false);
+            control.appendText("Heading\n", heading);
+            control.appendText("Plain monospaced text.\n", plain);
         });
 
         Button insertButton = new Button("Insert");
@@ -244,8 +244,8 @@ public class RichTextAreaDemoPane extends BorderPane {
         insertButton.setOnAction((ev) -> {
             StyleAttributeMap heading = StyleAttributeMap.builder().setBold(true).setFontSize(24).build();
             StyleAttributeMap plain = StyleAttributeMap.builder().setFontFamily("Monospaced").build();
-            control.insertText(TextPos.ZERO, "Plain monospaced text.\n", plain, false);
-            control.insertText(TextPos.ZERO, "Heading\n", heading, false);
+            control.insertText(TextPos.ZERO, "Plain monospaced text.\n", plain);
+            control.insertText(TextPos.ZERO, "Heading\n", heading);
         });
 
         Button replaceSkin = new Button("Replace Skin");
@@ -662,7 +662,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
         StyleAttributeMap m = StyleAttributeMap.of(a, val);
-        control.applyStyle(ca, an, m, true);
+        control.applyStyle(ca, an, m);
     }
 
     void dumpAccessibilityAttributes() {

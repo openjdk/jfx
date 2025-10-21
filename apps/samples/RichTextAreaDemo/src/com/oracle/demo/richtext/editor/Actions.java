@@ -223,7 +223,7 @@ public class Actions {
         StyleAttributeMap a = control.getActiveStyleAttributeMap();
         boolean on = !a.getBoolean(attr);
         a = StyleAttributeMap.builder().set(attr, on).build();
-        control.applyStyle(start, end, a, true);
+        control.applyStyle(start, end, a);
     }
 
     private <T> void apply(StyleAttribute<T> attr, T value) {
@@ -240,7 +240,7 @@ public class Actions {
 
         StyleAttributeMap a = control.getActiveStyleAttributeMap();
         a = StyleAttributeMap.builder().set(attr, value).build();
-        control.applyStyle(start, end, a, true);
+        control.applyStyle(start, end, a);
     }
 
     // TODO need to bind selected item in the combo
@@ -414,7 +414,7 @@ public class Actions {
         StyleAttributeMap a = control.getActiveStyleAttributeMap();
         boolean on = !a.getBoolean(attr);
         a = StyleAttributeMap.builder().set(attr, on).build();
-        control.applyStyle(start, end, a, true);
+        control.applyStyle(start, end, a);
         updateSourceStyles();
     }
 
@@ -435,7 +435,7 @@ public class Actions {
         }
 
         StyleAttributeMap a = Styles.getStyleAttributeMap(st);
-        control.applyStyle(start, end, a, true);
+        control.applyStyle(start, end, a);
         updateSourceStyles();
     }
 

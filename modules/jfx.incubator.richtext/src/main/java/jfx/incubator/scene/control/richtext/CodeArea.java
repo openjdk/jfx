@@ -77,7 +77,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * There are some differences that should be mentioned:
  * <ul>
  * <li>Model behavior: any direct changes to the styling, such as
- * {@link #applyStyle(TextPos, TextPos, jfx.incubator.scene.control.richtext.model.StyleAttributeMap, boolean) applyStyle()},
+ * {@link #applyStyle(TextPos, TextPos, jfx.incubator.scene.control.richtext.model.StyleAttributeMap) applyStyle()},
  * will be ignored
  * <li>Line numbers: the {@code CodeArea} sets the {@link #leftDecoratorProperty()} to support the line numbers,
  * so applications should not set or bind that property.
@@ -436,14 +436,14 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * Replaces text in this CodeArea.
+     * Replaces text in this CodeArea.  This method creates an undo/redo entry.
      * <p>
      * The caret gets reset to the start of the document, selection gets cleared, and an undo event gets created.
      * @param text the text string
      */
     public final void setText(String text) {
         TextPos end = getDocumentEnd();
-        getModel().replace(null, TextPos.ZERO, end, text, true);
+        getModel().replace(null, TextPos.ZERO, end, text);
     }
 
     private CodeTextModel codeModel() {
