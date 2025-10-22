@@ -157,6 +157,7 @@ public class CodeAreaTest {
     @Test
     public void getText() {
         control.setText("123");
+        control.setLineEnding(LineEnding.LF);
         String s = control.getText();
         assertEquals("123", s);
 
@@ -221,5 +222,23 @@ public class CodeAreaTest {
         control.select(TextPos.ZERO, control.getDocumentEnd());
         control.copy();
         assertEquals(expected, Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void setText() {
+        String expected = "1\n2\n3\n4";
+        String[] variants = {
+            "1\n2\n3\n4",
+            "1\r2\r3\r4",
+            "1\r\n2\r\n3\r\n4",
+            "1\r2\n3\r\n4"
+        };
+        control.setLineEnding(LineEnding.LF);
+        for (int i = 0; i < variants.length; i++) {
+            String s = variants[i];
+            control.setText(s);
+            String text = control.getText();
+            assertEquals(expected, text, "variant=" + i);
+        }
     }
 }
