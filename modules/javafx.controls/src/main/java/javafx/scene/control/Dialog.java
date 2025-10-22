@@ -590,23 +590,29 @@ public class Dialog<R> implements EventTarget {
      *
      * @since 26
      */
-    private final ObjectProperty<HeaderBar> headerBar = new SimpleObjectProperty<>(this, "headerBar") {
-        @Override
-        protected void invalidated() {
-            dialog.setHeaderBar(get());
-        }
-    };
+    private ObjectProperty<HeaderBar> headerBar;
 
     public final ObjectProperty<HeaderBar> headerBarProperty() {
+        if (headerBar == null) {
+            headerBar = new SimpleObjectProperty<>(this, "headerBar") {
+                @Override
+                protected void invalidated() {
+                    dialog.setHeaderBar(get());
+                }
+            };
+        }
+
         return headerBar;
     }
 
     public final void setHeaderBar(HeaderBar value) {
-        headerBar.set(value);
+        if (headerBar != null || value != null) {
+            headerBarProperty().set(value);
+        }
     }
 
     public final HeaderBar getHeaderBar() {
-        return headerBar.get();
+        return headerBar != null ? headerBar.get() : null;
     }
 
     // --- content text (forwarded from DialogPane)
