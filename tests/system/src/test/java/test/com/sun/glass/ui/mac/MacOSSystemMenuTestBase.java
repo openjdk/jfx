@@ -25,6 +25,7 @@
 package test.com.sun.glass.ui.mac;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Menu;
@@ -53,6 +54,8 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
+import org.junit.jupiter.api.BeforeAll;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -161,6 +164,17 @@ public class MacOSSystemMenuTestBase {
     protected final List<JFrame> swingWindows = new ArrayList<>();
 
     private CountDownLatch latch = null;
+
+    /***************************************************
+     *
+     * Only run on MacOS
+     *
+     **************************************************/
+
+    @BeforeAll
+    private static void ensureMacOS() {
+        assumeTrue(PlatformUtil.isMac());
+    }
 
     /***************************************************
      *
