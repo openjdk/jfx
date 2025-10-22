@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,7 @@ import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
@@ -158,6 +159,17 @@ public final class RichUtils {
 
     public static boolean isTouchSupported() {
         return Platform.isSupported(ConditionalFeature.INPUT_TOUCH);
+    }
+
+    public static String getLineEnding(LineEnding v) {
+        if(v == null) {
+            return System.getProperty("line.separator");
+        }
+        return switch(v) {
+        case CR -> "\r";
+        case CRLF -> "\r\n";
+        case LF -> "\n";
+        };
     }
 
     public static int getTextLength(TextFlow f) {

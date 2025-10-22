@@ -32,6 +32,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
@@ -86,6 +87,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * @since 24
  */
 public class CodeArea extends RichTextArea {
+    private SimpleObjectProperty<LineEnding> lineEnding;
     private BooleanProperty lineNumbers;
     private StyleableIntegerProperty tabSize;
     private StyleableObjectProperty<Font> font;
@@ -114,6 +116,9 @@ public class CodeArea extends RichTextArea {
     protected void validateModel(StyledTextModel m) {
         if ((m != null) && (!(m instanceof CodeTextModel))) {
             throw new IllegalArgumentException("CodeArea accepts models that extend CodeTextModel");
+        }
+        if (m != null) {
+            m.setLineEnding(getLineEnding());
         }
     }
 
@@ -425,8 +430,7 @@ public class CodeArea extends RichTextArea {
             return "";
         }
         TextPos end = m.getDocumentEnd();
-        try (StringBuilderStyledOutput out = new StringBuilderStyledOutput()) {
-            out.setLineSeparator("\n");
+        try (StringBuilderStyledOutput out = new StringBuilderStyledOutput(m.getLineEnding())) {
             m.export(TextPos.ZERO, end, out);
             return out.toString();
         } catch (IOException e) {
@@ -448,5 +452,42 @@ public class CodeArea extends RichTextArea {
 
     private CodeTextModel codeModel() {
         return (CodeTextModel)getModel();
+    }
+
+    /**
+     * Specifies the line ending characters.
+     * A {@code null} value results in the platform line ending as reported by
+     * the {@code line.separator} system property.
+     * <p>
+     * Modifying this property causes corresponding update in the underlying model, if the latter is not {@code null}.
+     *
+     * @return the line ending property
+     * @since 26
+     * @defaultValue null
+     */
+    public final ObjectProperty<LineEnding> lineEndingProperty() {
+        if (lineEnding == null) {
+            lineEnding = new SimpleObjectProperty<>(this, "lineEnding") {
+                @Override
+                protected void invalidated() {
+                    StyledTextModel m = getModel();
+                    if (m != null) {
+                        m.setLineEnding(get());
+                    }
+                }
+            };
+        }
+        return lineEnding;
+    }
+
+    public final LineEnding getLineEnding() {
+        if (lineEnding == null) {
+            return null;
+        }
+        return lineEnding.get();
+    }
+
+    public final void setLineEnding(LineEnding v) {
+        lineEndingProperty().set(v);
     }
 }

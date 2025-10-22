@@ -33,12 +33,15 @@ import java.util.List;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.scene.Scene;
+import javafx.scene.input.Clipboard;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.skin.CodeAreaSkin;
@@ -197,5 +200,26 @@ public class CodeAreaTest {
         CustomCodeTextModel m = new CustomCodeTextModel();
         control.setModel(m);
         assertTrue(control.getModel() == m);
+    }
+
+    @Test
+    public void lineEnding() {
+        String nl = System.getProperty("line.separator");
+        control.setText("1\n2\n3");
+        assertEquals(3, control.getParagraphCount());
+        t(null, "1" + nl + "2" + nl + "3");
+        t(LineEnding.CR, "1\r2\r3");
+        t(LineEnding.CRLF, "1\r\n2\r\n3");
+        t(LineEnding.LF, "1\n2\n3");
+    }
+
+    private void t(LineEnding lineEnding, String expected) {
+        control.setLineEnding(lineEnding);
+        assertEquals(lineEnding, control.getLineEnding());
+        assertEquals(lineEnding, control.lineEndingProperty().get());
+        assertEquals(expected, control.getText());
+        control.select(TextPos.ZERO, control.getDocumentEnd());
+        control.copy();
+        assertEquals(expected, Clipboard.getSystemClipboard().getString());
     }
 }

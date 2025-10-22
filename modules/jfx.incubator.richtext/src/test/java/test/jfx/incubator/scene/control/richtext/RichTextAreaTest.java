@@ -47,6 +47,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.RichTextAreaShim;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
@@ -56,6 +57,7 @@ import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.control.richtext.support.TestStyledInput;
@@ -74,6 +76,7 @@ import test.jfx.incubator.scene.util.TUtil;
 public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final String NL = System.getProperty("line.separator");
 
     @BeforeEach
     public void beforeEach() {
@@ -331,8 +334,27 @@ public class RichTextAreaTest {
         control.appendText("\n4");
         control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
         control.copy();
-        String nl = System.getProperty("line.separator");
-        assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
+        assertEquals(NL + "4", Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void copyLineEnding() {
+        control.appendText("1\n2\n3");
+        assertEquals(3, control.getParagraphCount());
+        t(null, "1" + NL + "2" + NL + "3");
+        t(LineEnding.CR, "1\r2\r3");
+        t(LineEnding.CRLF, "1\r\n2\r\n3");
+        t(LineEnding.LF, "1\n2\n3");
+    }
+
+    private void t(LineEnding lineEnding, String expected) {
+        StyledTextModel m = control.getModel();
+        m.setLineEnding(lineEnding);
+        assertEquals(lineEnding, m.getLineEnding());
+        assertEquals(expected, text());
+        control.select(TextPos.ZERO, control.getDocumentEnd());
+        control.copy();
+        assertEquals(expected, Clipboard.getSystemClipboard().getString());
     }
 
     @Test
