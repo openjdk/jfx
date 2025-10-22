@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,21 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.tk.Toolkit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import javafx.scene.layout.HeaderBar;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import javafx.stage.StageStyle;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -100,6 +105,44 @@ public class DialogTest {
         assertDialogPaneHeightEquals(prefHeight);
 
         assertEquals(prefHeight, dialog.getDialogPane().getPrefHeight(), 0);
+    }
+
+    @Test
+    public void testInitialDialogPaneIsAttachedToScene() {
+        class TestDialog extends Dialog<ButtonType> {
+            TestDialog() {
+                assertNotNull(getDialogPane().getScene());
+            }
+        }
+
+        assertDoesNotThrow(TestDialog::new);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = StageStyle.class, names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY", "UNIFIED"})
+    public void testRootOfNonExtendedStageIsDialogPane(StageStyle style) {
+        dialog.initStyle(style);
+        dialog.setHeaderBar(new HeaderBar()); // header bar is ignored
+        assertSame(dialog.getDialogPane(), dialog.getDialogPane().getScene().getRoot());
+    }
+
+    @Test
+    public void testRootOfExtendedStageWithoutHeaderBarIsDialogPane() {
+        dialog.initStyle(StageStyle.EXTENDED);
+        assertSame(dialog.getDialogPane(), dialog.getDialogPane().getScene().getRoot());
+    }
+
+    @Test
+    public void testRootOfExtendedStageWithHeaderBarIsBorderPane() {
+        dialog.initStyle(StageStyle.EXTENDED);
+        dialog.setHeaderBar(new HeaderBar());
+
+        if (dialog.getDialogPane().getScene().getRoot() instanceof BorderPane root) {
+            assertSame(dialog.getDialogPane(), root.getCenter());
+            assertSame(dialog.getHeaderBar(), root.getTop());
+        } else {
+            fail("Root of extended stage is not a BorderPane");
+        }
     }
 
     @Test

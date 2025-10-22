@@ -588,6 +588,7 @@ public class Dialog<R> implements EventTarget {
      * be used if the dialog window is configured with the {@link StageStyle#EXTENDED} style; it has
      * no effect for other styles.
      *
+     * @defaultValue {@code null}
      * @since 26
      */
     private ObjectProperty<HeaderBar> headerBar;

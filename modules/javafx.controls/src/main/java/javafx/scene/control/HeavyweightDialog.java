@@ -119,6 +119,7 @@ class HeavyweightDialog extends FXDialog {
 
     @Override void initStyle(StageStyle style) {
         stage.initStyle(style);
+        updateRoot();
     }
 
     @Override StageStyle getStyle() {
@@ -144,28 +145,20 @@ class HeavyweightDialog extends FXDialog {
 
     @Override public void setHeaderBar(HeaderBar headerBar) {
         this.headerBar = headerBar;
-
-        if (stage.isShowing()) {
-            updateRoot();
-        }
+        updateRoot();
     }
 
     @Override public void setDialogPane(DialogPane dialogPane) {
         this.dialogPane = dialogPane;
-
-        if (stage.isShowing()) {
-            updateRoot();
-        }
+        updateRoot();
     }
 
     @Override public void show() {
-        updateRoot();
         stage.centerOnScreen();
         stage.show();
     }
 
     @Override public void showAndWait() {
-        updateRoot();
         stage.centerOnScreen();
         stage.showAndWait();
     }
@@ -264,14 +257,18 @@ class HeavyweightDialog extends FXDialog {
      **************************************************************************/
 
     private void updateRoot() {
-        Parent root = getStyle() == StageStyle.EXTENDED && headerBar != null
-            ? new BorderPane(dialogPane, headerBar, null, null, null)
-            : dialogPane != null
-                ? dialogPane
-                : DUMMY_ROOT;
+        if (getStyle() == StageStyle.EXTENDED && headerBar != null) {
+            if (scene.getRoot() instanceof BorderPane borderPane) {
+                borderPane.setTop(headerBar);
+                borderPane.setCenter(dialogPane);
+            } else {
+                scene.setRoot(new BorderPane(dialogPane, headerBar, null, null, null));
+            }
+        } else {
+            scene.setRoot(dialogPane != null ? dialogPane : DUMMY_ROOT);
+        }
 
-        root.autosize();
-        scene.setRoot(root);
+        scene.getRoot().autosize();
         stage.sizeToScene();
     }
 
