@@ -293,6 +293,7 @@ public abstract class StyledTextModel {
     private final ReadOnlyBooleanWrapper undoable = new ReadOnlyBooleanWrapper(this, "undoable", false);
     private final ReadOnlyBooleanWrapper redoable = new ReadOnlyBooleanWrapper(this, "redoable", false);
     private UndoableChange undo = head;
+    private boolean undoRedoEnabled = true;
 
     /**
      * Constructs the instance of the model.
@@ -662,7 +663,7 @@ public abstract class StyledTextModel {
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     public final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input) {
-        return replace(resolver, start, end, input, true);
+        return replace(resolver, start, end, input, isUndoRedoEnabled());
     }
 
     // only UndoableChange is allowed to disable undo/redo records
@@ -778,7 +779,8 @@ public abstract class StyledTextModel {
             changed = true;
         }
 
-        UndoableChange ch = UndoableChange.create(this, evStart, evEnd);
+        boolean allowUndo = isUndoRedoEnabled();
+        UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd) : null;
 
         if (pa != null) {
             // set paragraph attributes
@@ -807,7 +809,9 @@ public abstract class StyledTextModel {
 
         if (changed) {
             fireStyleChangeEvent(evStart, evEnd);
-            add(ch, end);
+            if (allowUndo) {
+                add(ch, end);
+            }
         }
     }
 
@@ -830,6 +834,29 @@ public abstract class StyledTextModel {
             }
         }
         return b.build();
+    }
+
+    /**
+     * Indicates whether undo/redo functionality is enabled.
+     * @return true if undo/redo functionality is enabled
+     * @since 26
+     */
+    public final boolean isUndoRedoEnabled() {
+        return undoRedoEnabled;
+    }
+
+    /**
+     * Controls whether undo/redo functionality is enabled.
+     * Setting the value to {@code false} clears existing undo/redo entries.
+     * @param on true to enable undo/redo
+     * @see #clearUndoRedo()
+     * @since 26
+     */
+    public final void setUndoRedoEnabled(boolean on) {
+        undoRedoEnabled = on;
+        if (!on) {
+            clearUndoRedo();
+        }
     }
 
     /**

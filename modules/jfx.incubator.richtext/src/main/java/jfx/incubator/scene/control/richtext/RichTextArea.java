@@ -98,10 +98,11 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  *
  *   RichTextArea textArea = new RichTextArea();
  *   // build the content
+ *   textArea.setUndoRedoEnabled(false);
  *   textArea.appendText("RichTextArea\n", heading, false);
  *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY, false);
  *   textArea.appendText("monospaced.\n", mono, false);
- *   textArea.clearUndoRedo();
+ *   textArea.setUndoRedoEnabled(true);
  * }</pre>
  * Which results in the following visual representation:
  * <p>
@@ -788,6 +789,32 @@ public class RichTextArea extends Control {
 
     public final boolean isUndoable() {
         return undoableProperty().get();
+    }
+
+    /**
+     * Indicates whether undo/redo functionality is enabled in the model.
+     * Returns {@code false} if the model is {@code null}.
+     * @return true if undo/redo functionality is enabled in the model
+     * @since 26
+     */
+    public final boolean isUndoRedoEnabled() {
+        StyledTextModel m = getModel();
+        return (m == null ? false : m.isUndoRedoEnabled());
+    }
+
+    /**
+     * Controls whether undo/redo functionality is enabled in the model.
+     * Setting the value to {@code false} clears existing undo/redo entries.
+     * This method does nothing if the model is {@code null}.
+     * @param on true to enable undo/redo
+     * @since 26
+     * @see #clearUndoRedo()
+     */
+    public final void setUndoRedoEnabled(boolean on) {
+        StyledTextModel m = getModel();
+        if (m != null) {
+            m.setUndoRedoEnabled(on);
+        }
     }
 
     /**
