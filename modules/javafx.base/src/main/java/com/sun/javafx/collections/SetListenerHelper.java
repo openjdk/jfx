@@ -163,7 +163,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                 } catch (Exception e) {
                     Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                 }
-            } while (change instanceof IterableSetChange<? extends E> c && c.nextChange());
+            } while (change instanceof IterableSetChange<? extends E> c && c.next() != null);
         }
     }
 
@@ -355,7 +355,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                     } catch (Exception e) {
                         Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
-                } while (change.nextChange());
+                } while (change.next() != null);
 
                 change.reset();
             }

@@ -136,7 +136,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
             var entry = m.entrySet().iterator().next();
             put(entry.getKey(), entry.getValue());
         } else if (size > 1) {
-            var change = new BulkChange.AddReplace<>(this, size);
+            var change = new IterableMapChange.Generic<>(this);
 
             for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
                 K key = e.getKey();
@@ -153,7 +153,6 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 }
             }
 
-            change.complete();
             backingMap.putAll(m);
             callObservers(change);
         }
@@ -185,12 +184,11 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                     entry.setValue(newValue);
 
                     if (change instanceof SimpleChange) {
-                        int capacity = backingMap.size() - i + 1;
-                        var bulkChange = new BulkChange.AddReplace<>(ObservableMapWrapper.this, capacity);
+                        var bulkChange = new IterableMapChange.Generic<>(ObservableMapWrapper.this);
                         bulkChange.nextReplaced(change.getKey(), change.getValueRemoved(), change.getValueAdded());
                         bulkChange.nextReplaced(key, oldValue, newValue);
                         change = bulkChange;
-                    } else if (change instanceof BulkChange.AddReplace<K, V> bulkChange) {
+                    } else if (change instanceof IterableMapChange.Generic<K, V> bulkChange) {
                         bulkChange.nextReplaced(key, oldValue, newValue);
                     } else {
                         change = new SimpleChange(key, oldValue, newValue, true, true);
@@ -208,10 +206,6 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
             return;
         }
 
-        if (change instanceof BulkChange<K, V> bulkChange) {
-            bulkChange.complete();
-        }
-
         callObservers(change);
     }
 
@@ -227,13 +221,12 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
             it.remove();
             callObservers(new SimpleChange(key, val, null, false, true));
         } else if (size > 1) {
-            var change = new BulkChange.Remove<>(this, size);
+            var change = new IterableMapChange.Remove<>(this, size);
 
             for (Map.Entry<? extends K, ? extends V> e : backingMap.entrySet()) {
                 change.nextRemoved(e.getKey(), e.getValue());
             }
 
-            change.complete();
             backingMap.clear();
             callObservers(change);
         }
@@ -250,15 +243,11 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 V value = e.getValue();
 
                 if (change instanceof SimpleChange) {
-                    int capacity = remove
-                        ? Math.min(backingMap.size() + 1, c.size())
-                        : backingMap.size() + 1;
-
-                    var bulkChange = new BulkChange.Remove<>(ObservableMapWrapper.this, capacity);
+                    var bulkChange = new IterableMapChange.Remove<>(ObservableMapWrapper.this);
                     bulkChange.nextRemoved(change.getKey(), change.getValueRemoved());
                     bulkChange.nextRemoved(key, value);
                     change = bulkChange;
-                } else if (change instanceof BulkChange.Remove<K, V> bulkChange) {
+                } else if (change instanceof IterableMapChange.Remove<K, V> bulkChange) {
                     bulkChange.nextRemoved(key, value);
                 } else {
                     change = new SimpleChange(key, value, null, false, true);
@@ -270,10 +259,6 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         if (change == null) {
             return false;
-        }
-
-        if (change instanceof BulkChange<K, V> bulkChange) {
-            bulkChange.complete();
         }
 
         callObservers(change);
@@ -838,154 +823,6 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         @Override
         public String toString() {
             return changeToString(this);
-        }
-    }
-
-    private static abstract sealed class BulkChange<K, V> extends IterableMapChange<K, V> {
-
-        final int capacity;
-        final K[] keys;
-        int size;
-        int index;
-
-        @SuppressWarnings("unchecked")
-        BulkChange(ObservableMapWrapper<K, V> map, int capacity) {
-            super(map);
-            this.capacity = capacity;
-            this.keys = (K[])new Object[capacity];
-        }
-
-        final void complete() {
-            size = index;
-            index = 0;
-        }
-
-        @Override
-        public final boolean nextChange() {
-            if (index < size - 1) {
-                ++index;
-                return true;
-            }
-
-            return false;
-        }
-
-        @Override
-        public final MapChangeListener.Change<K, V> next() {
-            if (index < size - 1) {
-                ++index;
-                return this;
-            }
-
-            return null;
-        }
-
-        @Override
-        public final void reset() {
-            index = 0;
-        }
-
-        @Override
-        public final String toString() {
-            return changeToString(this);
-        }
-
-        final static class Remove<K, V> extends BulkChange<K, V> {
-
-            private final V[] values;
-
-            @SuppressWarnings("unchecked")
-            Remove(ObservableMapWrapper<K, V> map, int capacity) {
-                super(map, capacity);
-                this.values = (V[])new Object[capacity];
-            }
-
-            void nextRemoved(K key, V value) {
-                keys[index] = key;
-                values[index] = value;
-                ++index;
-            }
-
-            @Override
-            public boolean wasAdded() {
-                return false;
-            }
-
-            @Override
-            public boolean wasRemoved() {
-                return true;
-            }
-
-            @Override
-            public K getKey() {
-                return keys[index];
-            }
-
-            @Override
-            public V getValueAdded() {
-                return values[index];
-            }
-
-            @Override
-            public V getValueRemoved() {
-                return values[index];
-            }
-        }
-
-        final static class AddReplace<K, V> extends BulkChange<K, V> {
-
-            private static final int ADDED = 1;
-            private static final int REMOVED = 2;
-
-            private final V[] values;
-            private final int[] addedRemoved;
-
-            @SuppressWarnings("unchecked")
-            AddReplace(ObservableMapWrapper<K, V> map, int capacity) {
-                super(map, capacity);
-                this.values = (V[])new Object[capacity * 2];
-                this.addedRemoved = new int[capacity];
-            }
-
-            void nextAdded(K key, V value) {
-                keys[index] = key;
-                values[index * 2 + 1] = value;
-                addedRemoved[index] = ADDED;
-                ++index;
-            }
-
-            void nextReplaced(K key, V oldValue, V newValue) {
-                keys[index] = key;
-                values[index * 2] = oldValue;
-                values[index * 2 + 1] = newValue;
-                addedRemoved[index] = ADDED | REMOVED;
-                ++index;
-            }
-
-            @Override
-            public boolean wasAdded() {
-                return (addedRemoved[index] & ADDED) != 0;
-            }
-
-            @Override
-            public boolean wasRemoved() {
-                return (addedRemoved[index] & REMOVED) != 0;
-            }
-
-            @Override
-            public K getKey() {
-                return keys[index];
-            }
-
-            @Override
-            public V getValueAdded() {
-                return values[index * 2 + 1];
-            }
-
-            @Override
-            public V getValueRemoved() {
-                return values[index * 2];
-            }
         }
     }
 

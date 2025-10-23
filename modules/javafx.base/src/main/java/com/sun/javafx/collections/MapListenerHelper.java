@@ -163,7 +163,7 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
                 } catch (Exception e) {
                     Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                 }
-            } while (change instanceof IterableMapChange<? extends K, ? extends V> c && c.nextChange());
+            } while (change instanceof IterableMapChange<? extends K, ? extends V> c && c.next() != null);
         }
     }
 
@@ -355,7 +355,7 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
                     } catch (Exception e) {
                         Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
-                } while (change.nextChange());
+                } while (change.next() != null);
 
                 change.reset();
             }

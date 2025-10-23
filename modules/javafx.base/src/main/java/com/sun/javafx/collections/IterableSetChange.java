@@ -27,14 +27,136 @@ package com.sun.javafx.collections;
 
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
+import java.util.List;
 
-abstract class IterableSetChange<E> extends SetChangeListener.Change<E> {
+/**
+ * Base class for set changes that support bulk change iteration.
+ *
+ * @param <E> the element type
+ */
+public sealed abstract class IterableSetChange<E> extends SetChangeListener.Change<E> {
 
-    public IterableSetChange(ObservableSet<E> set) {
+    private IterableSetChange(ObservableSet<E> set) {
         super(set);
     }
 
-    public abstract boolean nextChange();
+    /**
+     * Returns {@code this} object instance if there is another change to report, or {@code null} if there
+     * are no more changes. If this method returns another change, the implementation must configure this
+     * object instance to represent the next change.
+     * <p>
+     * Note that this narrows down the {@link SetChangeListener.Change#next()} specification, which does
+     * not mandate that the same object instance is returned on each call.
+     *
+     * @return this instance, representing the next change, or {@code null} if there are no more changes
+     */
+    @Override
+    public abstract SetChangeListener.Change<E> next();
 
+    /**
+     * Resets this {@code IterableSetChange} instance to the first change.
+     */
     public abstract void reset();
+
+    public static final class Add<E> extends IterableSetChange<E> {
+
+        private final List<E> elements;
+        private int index;
+
+        public Add(ObservableSet<E> set, List<E> elements) {
+            super(set);
+            this.elements = elements;
+        }
+
+        @Override
+        public SetChangeListener.Change<E> next() {
+            if (index < elements.size() - 1) {
+                ++index;
+                return this;
+            }
+
+            return null;
+        }
+
+        @Override
+        public void reset() {
+            index = 0;
+        }
+
+        @Override
+        public boolean wasAdded() {
+            return true;
+        }
+
+        @Override
+        public boolean wasRemoved() {
+            return false;
+        }
+
+        @Override
+        public E getElementAdded() {
+            return elements.get(index);
+        }
+
+        @Override
+        public E getElementRemoved() {
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            return "added " + elements.get(index);
+        }
+    }
+
+    public static final class Remove<E> extends IterableSetChange<E> {
+
+        private final List<E> elements;
+        private int index;
+
+        public Remove(ObservableSet<E> set, List<E> elements) {
+            super(set);
+            this.elements = elements;
+        }
+
+        @Override
+        public SetChangeListener.Change<E> next() {
+            if (index < elements.size() - 1) {
+                ++index;
+                return this;
+            }
+
+            return null;
+        }
+
+        @Override
+        public void reset() {
+            index = 0;
+        }
+
+        @Override
+        public boolean wasAdded() {
+            return false;
+        }
+
+        @Override
+        public boolean wasRemoved() {
+            return true;
+        }
+
+        @Override
+        public E getElementAdded() {
+            return null;
+        }
+
+        @Override
+        public E getElementRemoved() {
+            return elements.get(index);
+        }
+
+        @Override
+        public String toString() {
+            return "removed " + elements.get(index);
+        }
+    }
 }

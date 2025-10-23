@@ -124,107 +124,6 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         }
     }
 
-    private abstract static sealed class AbstractIterableSetChange<E> extends IterableSetChange<E>
-            permits IterableAddChange, IterableRemoveChange {
-
-        final List<E> elements;
-        int index;
-
-        public AbstractIterableSetChange(ObservableSet<E> set, List<E> elements) {
-            super(set);
-            this.elements = elements;
-        }
-
-        @Override
-        public final boolean nextChange() {
-            if (index < elements.size() - 1) {
-                ++index;
-                return true;
-            }
-
-            return false;
-        }
-
-        @Override
-        public final SetChangeListener.Change<E> next() {
-            if (index < elements.size() - 1) {
-                ++index;
-                return this;
-            }
-
-            return null;
-        }
-
-        @Override
-        public final void reset() {
-            index = 0;
-        }
-    }
-
-    private static final class IterableAddChange<E> extends AbstractIterableSetChange<E> {
-
-        IterableAddChange(ObservableSet<E> set, List<E> elements) {
-            super(set, elements);
-        }
-
-        @Override
-        public boolean wasAdded() {
-            return true;
-        }
-
-        @Override
-        public boolean wasRemoved() {
-            return false;
-        }
-
-        @Override
-        public E getElementAdded() {
-            return elements.get(index);
-        }
-
-        @Override
-        public E getElementRemoved() {
-            return null;
-        }
-
-        @Override
-        public String toString() {
-            return "added " + elements.get(index);
-        }
-    }
-
-    private static final class IterableRemoveChange<E> extends AbstractIterableSetChange<E> {
-
-        IterableRemoveChange(ObservableSet<E> set, List<E> elements) {
-            super(set, elements);
-        }
-
-        @Override
-        public boolean wasAdded() {
-            return false;
-        }
-
-        @Override
-        public boolean wasRemoved() {
-            return true;
-        }
-
-        @Override
-        public E getElementAdded() {
-            return null;
-        }
-
-        @Override
-        public E getElementRemoved() {
-            return elements.get(index);
-        }
-
-        @Override
-        public String toString() {
-            return "removed " + elements.get(index);
-        }
-    }
-
     private void callObservers(SetChangeListener.Change<E> change) {
         SetListenerHelper.fireValueChangedEvent(listenerHelper, change);
     }
@@ -438,7 +337,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         }
 
         if (addedList != null) {
-            callObservers(new IterableAddChange<>(this, addedList));
+            callObservers(new IterableSetChange.Add<>(this, addedList));
             return true;
         }
 
@@ -515,7 +414,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         }
 
         if (removedList != null) {
-            callObservers(new IterableRemoveChange<>(this, removedList));
+            callObservers(new IterableSetChange.Remove<>(this, removedList));
             return true;
         }
 
@@ -534,7 +433,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
             E[] removed = (E[])new Object[backingSet.size()];
             backingSet.toArray(removed);
             backingSet.clear();
-            callObservers(new IterableRemoveChange<>(this, Arrays.asList(removed)));
+            callObservers(new IterableSetChange.Remove<>(this, Arrays.asList(removed)));
         } else if (backingSet.size() == 1) {
             Iterator<E> it = backingSet.iterator();
             E element = it.next();
