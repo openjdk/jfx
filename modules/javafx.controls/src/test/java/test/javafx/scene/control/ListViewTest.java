@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -2724,6 +2725,65 @@ public class ListViewTest {
         // Note:
         // We don't check for the position of the cell, because it's currently don't work properly.
         // But we wan't to ensure, that the VirtualFlow "Doesn't crash" - which was the case before.
+    }
+
+    @Test
+    void testRefreshShouldNotResetCells() {
+        final AtomicInteger creationCounter = new AtomicInteger();
+
+        ListView<Person> listView = new ListView<>();
+        listView.setItems(FXCollections.observableArrayList(new Person("name")));
+        listView.setCellFactory(_ -> {
+            creationCounter.incrementAndGet();
+            return new ListCell<>();
+        });
+
+        stageLoader = new StageLoader(listView);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(creationCounter.get() > 0);
+        creationCounter.set(0);
+
+        listView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(0, creationCounter.get());
+    }
+
+    @Test
+    void testRefreshShouldReflectChangeInCell() {
+        String initialName = "Initial";
+        Person person = new Person(initialName);
+
+        ListView<Person> listView = new ListView<>();
+        listView.setItems(FXCollections.observableArrayList(person));
+        listView.setCellFactory(_ -> new ListCell<>() {
+            @Override
+            protected void updateItem(Person item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(item.getFirstName());
+                }
+            }
+        });
+
+        stageLoader = new StageLoader(listView);
+        Toolkit.getToolkit().firePulse();
+
+        String newName = "Other Name";
+        person.setFirstName(newName);
+
+        IndexedCell<?> cell = VirtualFlowTestUtils.getCell(listView, 0);
+        assertEquals(initialName, cell.getText());
+
+        listView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(listView, 0);
+        assertEquals(newName, cell.getText());
     }
 
     private static double toViewportLength(double prefHeight) {
