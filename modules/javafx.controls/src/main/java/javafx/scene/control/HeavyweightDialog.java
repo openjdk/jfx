@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.Region;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -62,10 +64,12 @@ class HeavyweightDialog extends FXDialog {
         }
     };
 
-    private Scene scene;
+    private final Scene scene;
 
     private final Parent DUMMY_ROOT = new Region();
     private final Dialog<?> dialog;
+
+    private HeaderBar headerBar;
     private DialogPane dialogPane;
 
     private double prefX = Double.NaN;
@@ -82,6 +86,8 @@ class HeavyweightDialog extends FXDialog {
     HeavyweightDialog(Dialog<?> dialog) {
         this.dialog = dialog;
 
+        scene = new Scene(DUMMY_ROOT);
+        stage.setScene(scene);
         stage.setResizable(false);
 
         stage.setOnCloseRequest(windowEvent -> {
@@ -113,6 +119,7 @@ class HeavyweightDialog extends FXDialog {
 
     @Override void initStyle(StageStyle style) {
         stage.initStyle(style);
+        updateRoot();
     }
 
     @Override StageStyle getStyle() {
@@ -136,28 +143,22 @@ class HeavyweightDialog extends FXDialog {
         return stage.getModality();
     }
 
+    @Override public void setHeaderBar(HeaderBar headerBar) {
+        this.headerBar = headerBar;
+        updateRoot();
+    }
+
     @Override public void setDialogPane(DialogPane dialogPane) {
         this.dialogPane = dialogPane;
-
-        if (scene == null) {
-            scene = new Scene(dialogPane);
-            stage.setScene(scene);
-        } else {
-            scene.setRoot(dialogPane);
-        }
-
-        dialogPane.autosize();
-        stage.sizeToScene();
+        updateRoot();
     }
 
     @Override public void show() {
-        scene.setRoot(dialogPane);
         stage.centerOnScreen();
         stage.show();
     }
 
     @Override public void showAndWait() {
-        scene.setRoot(dialogPane);
         stage.centerOnScreen();
         stage.showAndWait();
     }
@@ -254,6 +255,22 @@ class HeavyweightDialog extends FXDialog {
      * Private implementation
      *
      **************************************************************************/
+
+    private void updateRoot() {
+        if (getStyle() == StageStyle.EXTENDED && headerBar != null) {
+            if (scene.getRoot() instanceof BorderPane borderPane) {
+                borderPane.setTop(headerBar);
+                borderPane.setCenter(dialogPane);
+            } else {
+                scene.setRoot(new BorderPane(dialogPane, headerBar, null, null, null));
+            }
+        } else {
+            scene.setRoot(dialogPane != null ? dialogPane : DUMMY_ROOT);
+        }
+
+        scene.getRoot().autosize();
+        stage.sizeToScene();
+    }
 
     private void positionStage() {
         double x = getX();
