@@ -87,14 +87,14 @@ public class ToolBarSkinTest {
             2.25
         };
 
-        Rectangle rect = new Rectangle(100, 100);
-        ToolBar toolBar = new ToolBar(rect);
-        toolBar.setSkin(new ToolBarSkin(toolBar));
-
         for (var orientation : Orientation.values()) {
-            toolBar.setOrientation(orientation);
-
             for (double scale : renderScales) {
+                Rectangle rect = new Rectangle(100, 100);
+                ToolBar toolBar = new ToolBar(rect);
+                toolBar.setSkin(new ToolBarSkin(toolBar));
+
+                toolBar.setOrientation(orientation);
+
                 Stage stage = new Stage();
                 stage.renderScaleXProperty().bind(DoubleConstant.valueOf(scale));
                 stage.renderScaleYProperty().bind(DoubleConstant.valueOf(scale));
