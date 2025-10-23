@@ -110,6 +110,10 @@ public final class SceneHelper {
         return sceneAccessor.getAccessible(scene);
     }
 
+    public static SceneContext getSceneContext(Scene scene) {
+        return sceneAccessor.getSceneContext(scene);
+    }
+
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
         if (sceneAccessor != null) {
             throw new IllegalStateException();
@@ -155,6 +159,8 @@ public final class SceneHelper {
         void setTransientFocusContainer(Scene scene, Node node);
 
         Accessible getAccessible(Scene scene);
+
+        SceneContext getSceneContext(Scene scene);
     }
 
 }
