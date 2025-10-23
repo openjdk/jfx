@@ -51,7 +51,7 @@ public class TestRichTextModel {
     @Test
     public void insertLineBreak() {
         test(List.of(p()), List.of(p(), p()), (m) -> {
-            m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n", true);
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n");
         });
     }
 
@@ -66,7 +66,7 @@ public class TestRichTextModel {
                 p("", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 0), t(0, 6), "", false);
+                m.replace(null, t(0, 0), t(0, 6), "");
             }
         );
 
@@ -79,7 +79,7 @@ public class TestRichTextModel {
                 p("", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 0), t(0, 2), "", false);
+                m.replace(null, t(0, 0), t(0, 2), "");
             }
         );
 
@@ -93,7 +93,7 @@ public class TestRichTextModel {
                 p("aabb", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 2), t(1, 0), "", false);
+                m.replace(null, t(0, 2), t(1, 0), "");
             }
         );
 
@@ -109,7 +109,7 @@ public class TestRichTextModel {
                 p("bb", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(2, 0), t(1, 0), "", false);
+                m.replace(null, t(2, 0), t(1, 0), "");
             }
         );
     }
@@ -146,7 +146,7 @@ public class TestRichTextModel {
         for (RichParagraph par : initial) {
             if (newline) {
                 TextPos p = m.getDocumentEnd();
-                m.replace(null, p, p, "\n", false);
+                m.replace(null, p, p, "\n");
             } else {
                 newline = true;
             }
@@ -158,7 +158,7 @@ public class TestRichTextModel {
             StyledSegment[] segments = ss.toArray(StyledSegment[]::new);
             StyledInput in = new SegmentStyledInput(segments);
             TextPos p = m.getDocumentEnd();
-            m.replace(null, p, p, in, false);
+            m.replace(null, p, p, in);
         }
 
         // test operation
@@ -256,7 +256,7 @@ public class TestRichTextModel {
 
     private RichTextModel createModel(String text) {
         RichTextModel m = new RichTextModel();
-        m.replace(null, TextPos.ZERO, TextPos.ZERO, text, false);
+        m.replace(null, TextPos.ZERO, TextPos.ZERO, text);
         return m;
     }
 
