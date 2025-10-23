@@ -428,17 +428,19 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      */
     @Override
     public void clear() {
-        if (backingSet.size() > 1) {
-            @SuppressWarnings("unchecked")
-            E[] removed = (E[])new Object[backingSet.size()];
-            backingSet.toArray(removed);
-            backingSet.clear();
-            callObservers(new IterableSetChange.Remove<>(this, Arrays.asList(removed)));
-        } else if (backingSet.size() == 1) {
+        int size = backingSet.size();
+
+        if (size == 1) {
             Iterator<E> it = backingSet.iterator();
             E element = it.next();
             it.remove();
             callObservers(new SimpleRemoveChange(element));
+        } else if (size > 1) {
+            @SuppressWarnings("unchecked")
+            E[] removed = (E[])new Object[size];
+            backingSet.toArray(removed);
+            backingSet.clear();
+            callObservers(new IterableSetChange.Remove<>(this, Arrays.asList(removed)));
         }
     }
 
