@@ -89,7 +89,7 @@ public:
     virtual Type type() const = 0;
 
     WEBCORE_EXPORT GLContext* sharingGLContext();
-    void clearSharingGLContext();
+    void clearGLContexts();
     EGLDisplay eglDisplay() const;
     bool eglCheckVersion(int major, int minor) const;
 
@@ -134,7 +134,7 @@ protected:
 
 private:
 #if USE(SKIA)
-    void invalidateSkiaGLContexts();
+    void clearSkiaGLContext();
 #endif
 
 #if ENABLE(WEBGL) && !PLATFORM(WIN)

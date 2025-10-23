@@ -93,8 +93,11 @@ gst_navigation_default_init (GstNavigationInterface * iface)
 void
 gst_navigation_send_event (GstNavigation * navigation, GstStructure * structure)
 {
-  GstNavigationInterface *iface = GST_NAVIGATION_GET_INTERFACE (navigation);
+  GstNavigationInterface *iface;
 
+  g_return_if_fail (GST_IS_NAVIGATION (navigation));
+
+  iface = GST_NAVIGATION_GET_INTERFACE (navigation);
   if (iface->send_event) {
     iface->send_event (navigation, structure);
   } else if (iface->send_event_simple) {
@@ -116,6 +119,7 @@ void
 gst_navigation_send_key_event (GstNavigation * navigation, const char *event,
     const char *key)
 {
+  g_return_if_fail (GST_IS_NAVIGATION (navigation));
   g_return_if_fail (g_strcmp0 (event, "key-press") == 0 ||
       g_strcmp0 (event, "key-release") == 0);
 
@@ -128,7 +132,7 @@ gst_navigation_send_key_event (GstNavigation * navigation, const char *event,
  * gst_navigation_send_mouse_event:
  * @navigation: The navigation interface instance
  * @event: The type of mouse event, as a text string. Recognised values are
- * "mouse-button-press", "mouse-button-release" and "mouse-move".
+ * "mouse-button-press", "mouse-button-release", "mouse-move" and "mouse-double-click".
  * @button: The button number of the button being pressed or released. Pass 0
  * for mouse-move events.
  * @x: The x coordinate of the mouse event.
@@ -144,9 +148,11 @@ void
 gst_navigation_send_mouse_event (GstNavigation * navigation, const char *event,
     int button, double x, double y)
 {
+  g_return_if_fail (GST_IS_NAVIGATION (navigation));
   g_return_if_fail (g_strcmp0 (event, "mouse-button-press") == 0 ||
       g_strcmp0 (event, "mouse-button-release") == 0 ||
-      g_strcmp0 (event, "mouse-move") == 0);
+      g_strcmp0 (event, "mouse-move") == 0 ||
+      g_strcmp0 (event, "mouse-double-click") == 0);
 
   gst_navigation_send_event (navigation,
       gst_structure_new (GST_NAVIGATION_EVENT_NAME, "event", G_TYPE_STRING,
@@ -173,6 +179,8 @@ void
 gst_navigation_send_mouse_scroll_event (GstNavigation * navigation,
     double x, double y, double delta_x, double delta_y)
 {
+  g_return_if_fail (GST_IS_NAVIGATION (navigation));
+
   gst_navigation_send_event (navigation,
       gst_structure_new (GST_NAVIGATION_EVENT_NAME,
           "event", G_TYPE_STRING, "mouse-scroll",
@@ -193,6 +201,8 @@ void
 gst_navigation_send_command (GstNavigation * navigation,
     GstNavigationCommand command)
 {
+  g_return_if_fail (GST_IS_NAVIGATION (navigation));
+
   gst_navigation_send_event (navigation,
       gst_structure_new (GST_NAVIGATION_EVENT_NAME, "event", G_TYPE_STRING,
           "command", "command-code", G_TYPE_UINT, (guint) command, NULL));
@@ -209,10 +219,12 @@ gst_navigation_send_command (GstNavigation * navigation,
 void
 gst_navigation_send_event_simple (GstNavigation * navigation, GstEvent * event)
 {
-  GstNavigationInterface *iface = GST_NAVIGATION_GET_INTERFACE (navigation);
+  GstNavigationInterface *iface;
 
+  g_return_if_fail (GST_IS_NAVIGATION (navigation));
   g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_NAVIGATION);
 
+  iface = GST_NAVIGATION_GET_INTERFACE (navigation);
   if (iface->send_event_simple) {
     iface->send_event_simple (navigation, event);
   } else if (iface->send_event) {
@@ -796,6 +808,8 @@ gst_navigation_event_get_type (GstEvent * event)
     return GST_NAVIGATION_EVENT_TOUCH_MOTION;
   else if (g_str_equal (e_type, "touch-frame"))
     return GST_NAVIGATION_EVENT_TOUCH_FRAME;
+  else if (g_str_equal (e_type, "mouse-double-click"))
+    return GST_NAVIGATION_EVENT_MOUSE_DOUBLE_CLICK;
 
   return GST_NAVIGATION_EVENT_INVALID;
 }
@@ -862,6 +876,31 @@ gst_navigation_event_new_mouse_button_press (gint button, gdouble x, gdouble y,
 {
   return gst_event_new_navigation (gst_structure_new (GST_NAVIGATION_EVENT_NAME,
           "event", G_TYPE_STRING, "mouse-button-press",
+          "button", G_TYPE_INT, button, "pointer_x", G_TYPE_DOUBLE, x,
+          "pointer_y", G_TYPE_DOUBLE, y,
+          "state", GST_TYPE_NAVIGATION_MODIFIER_TYPE, state, NULL));
+}
+
+/**
+ * gst_navigation_event_new_mouse_double_click:
+ * @button: The number of the pressed mouse button.
+ * @x: The x coordinate of the mouse cursor.
+ * @y: The y coordinate of the mouse cursor.
+ * @state: a bit-mask representing the state of the modifier keys (e.g. Control,
+ * Shift and Alt).
+ *
+ * Create a new navigation event for the given key mouse double click.
+ *
+ * Returns: (transfer full): a new #GstEvent
+ *
+ * Since: 1.26
+ */
+GstEvent *
+gst_navigation_event_new_mouse_double_click (gint button, gdouble x, gdouble y,
+    GstNavigationModifierType state)
+{
+  return gst_event_new_navigation (gst_structure_new (GST_NAVIGATION_EVENT_NAME,
+          "event", G_TYPE_STRING, "mouse-double-click",
           "button", G_TYPE_INT, button, "pointer_x", G_TYPE_DOUBLE, x,
           "pointer_y", G_TYPE_DOUBLE, y,
           "state", GST_TYPE_NAVIGATION_MODIFIER_TYPE, state, NULL));
@@ -1152,7 +1191,8 @@ gst_navigation_event_parse_mouse_button_event (GstEvent * event, gint * button,
 
   e_type = gst_navigation_event_get_type (event);
   g_return_val_if_fail (e_type == GST_NAVIGATION_EVENT_MOUSE_BUTTON_PRESS ||
-      e_type == GST_NAVIGATION_EVENT_MOUSE_BUTTON_RELEASE, FALSE);
+      e_type == GST_NAVIGATION_EVENT_MOUSE_BUTTON_RELEASE ||
+      e_type == GST_NAVIGATION_EVENT_MOUSE_DOUBLE_CLICK, FALSE);
 
   s = gst_event_get_structure (event);
   if (x)

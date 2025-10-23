@@ -50,7 +50,6 @@
 #include "gstmeta.h"
 #include "gstinfo.h"
 #include "gstutils.h"
-#include "gstquark.h"
 
 static GHashTable *metainfo = NULL;
 static GRWLock lock;
@@ -58,6 +57,8 @@ static GRWLock lock;
 GQuark _gst_meta_transform_copy;
 GQuark _gst_meta_tag_memory;
 GQuark _gst_meta_tag_memory_reference;
+static GQuark _gst_meta_tags_quark;
+static GQuark _gst_allocation_meta_params_aggregator_quark;
 
 typedef struct
 {
@@ -84,6 +85,9 @@ _priv_gst_meta_initialize (void)
   _gst_meta_tag_memory = g_quark_from_static_string ("memory");
   _gst_meta_tag_memory_reference =
       g_quark_from_static_string ("memory-reference");
+  _gst_meta_tags_quark = g_quark_from_static_string ("tags");
+  _gst_allocation_meta_params_aggregator_quark =
+      g_quark_from_static_string ("GstAllocationMetaParamsAggregator");
 }
 
 static gboolean
@@ -139,7 +143,7 @@ gst_meta_api_type_register (const gchar * api, const gchar ** tags)
     }
   }
 
-  g_type_set_qdata (type, GST_QUARK (TAGS), g_strdupv ((gchar **) tags));
+  g_type_set_qdata (type, _gst_meta_tags_quark, g_strdupv ((gchar **) tags));
 
   return type;
 }
@@ -272,8 +276,8 @@ gst_custom_meta_has_name (GstCustomMeta * meta, const gchar * name)
  * gst_meta_register_custom:
  * @name: the name of the #GstMeta implementation
  * @tags: (array zero-terminated=1): tags for @api
- * @transform_func: (scope notified) (nullable): a #GstMetaTransformFunction
- * @user_data: (closure): user data passed to @transform_func
+ * @transform_func: (scope notified) (nullable) (closure user_data): a #GstMetaTransformFunction
+ * @user_data: user data passed to @transform_func
  * @destroy_data: #GDestroyNotify for user_data
  *
  * Register a new custom #GstMeta implementation, backed by an opaque
@@ -400,12 +404,68 @@ gst_meta_api_type_get_tags (GType api)
   const gchar **tags;
   g_return_val_if_fail (api != 0, FALSE);
 
-  tags = g_type_get_qdata (api, GST_QUARK (TAGS));
+  tags = g_type_get_qdata (api, _gst_meta_tags_quark);
 
   if (!tags[0])
     return NULL;
 
   return (const gchar * const *) tags;
+}
+
+/**
+ * gst_meta_api_type_aggregate_params:
+ * @api: the GType of the API for which the parameters are being aggregated.
+ * @aggregated_params: This structure will be updated with the
+ *                     combined parameters from both @params0 and @params1.
+ * @params0: a #GstStructure containing the new parameters to be aggregated.
+ * @params1: a #GstStructure containing the new parameters to be aggregated.
+ *
+ * When a element like `tee` decides the allocation, each downstream element may
+ * fill different parameters and pass them to gst_query_add_allocation_meta().
+ * In order to keep these parameters, a merge operation is needed. This
+ * aggregate function can combine the parameters from @params0 and @param1, and
+ * write the result back into @aggregated_params.
+ *
+ * Returns: %TRUE if the parameters were successfully aggregated, %FALSE otherwise.
+ *
+ * Since: 1.26
+ */
+gboolean
+gst_meta_api_type_aggregate_params (GType api,
+    GstStructure ** aggregated_params, const GstStructure * params0,
+    const GstStructure * params1)
+{
+  g_return_val_if_fail (api != 0, FALSE);
+  g_return_val_if_fail (aggregated_params != NULL, FALSE);
+
+  GstAllocationMetaParamsAggregator aggregator_func =
+      g_type_get_qdata (api, _gst_allocation_meta_params_aggregator_quark);
+
+  if (!aggregator_func)
+    return FALSE;
+
+  return aggregator_func (aggregated_params, params0, params1);
+}
+
+/**
+ * gst_meta_api_type_set_params_aggregator:
+ * @api: the #GType of the API for which the aggregator function is being set.
+ * @aggregator: (scope forever): the aggregator function to be associated with the given API
+ *              type.
+ *
+ * This function sets the aggregator function for a specific API type.
+ *
+ * Since: 1.26
+ */
+void
+gst_meta_api_type_set_params_aggregator (GType api,
+    GstAllocationMetaParamsAggregator aggregator)
+{
+  g_return_if_fail (api != 0);
+  g_return_if_fail (aggregator != NULL);
+
+  g_type_set_qdata (api, _gst_allocation_meta_params_aggregator_quark,
+      (GstAllocationMetaParamsAggregator) aggregator);
 }
 
 static const GstMetaInfo *

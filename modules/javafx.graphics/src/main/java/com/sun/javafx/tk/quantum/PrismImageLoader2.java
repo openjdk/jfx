@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 import com.sun.javafx.iio.ImageFrame;
@@ -227,7 +226,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
     }
 
     static final class AsyncImageLoader
-        extends AbstractRemoteResource<PrismImageLoader2>
+        extends AbstractRemoteResource<com.sun.javafx.tk.ImageLoader>
     {
         private static final ExecutorService BG_LOADING_EXECUTOR =
                 createExecutor();
@@ -237,11 +236,11 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         boolean smooth;
 
         public AsyncImageLoader(
-                AsyncOperationListener<PrismImageLoader2> listener,
-                String url,
+                AsyncOperationListener<com.sun.javafx.tk.ImageLoader> listener,
+                SizedStreamSupplier sizedStreamSupplier,
                 double width, double height, boolean preserveRatio, boolean smooth)
         {
-            super(url, listener);
+            super(sizedStreamSupplier, listener);
             this.width = width;
             this.height = height;
             this.preserveRatio = preserveRatio;
@@ -249,13 +248,8 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         }
 
         @Override
-        protected PrismImageLoader2 processStream(InputStream stream) throws IOException {
+        protected PrismImageLoader2 processStream(InputStream stream) {
             return new PrismImageLoader2(stream, width, height, preserveRatio, smooth);
-        }
-
-        @Override
-        public PrismImageLoader2 call() throws IOException {
-            return AsyncImageLoader.super.call();
         }
 
         @Override

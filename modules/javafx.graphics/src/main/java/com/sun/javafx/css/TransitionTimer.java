@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -274,12 +274,9 @@ public final class TransitionTimer extends AnimationTimer {
      */
     private void adjustReversingTimings(TransitionTimer existingTimer) {
         double progress = InterpolatorHelper.curve(existingTimer.interpolator, existingTimer.getProgress());
-
-        if (progress > 0 && progress < 1) {
-            double oldFactor = existingTimer.reversingShorteningFactor;
-            double newFactor = progress * oldFactor + (1 - oldFactor);
-            reversingShorteningFactor = Utils.clamp(0, newFactor, 1);
-        }
+        double oldFactor = existingTimer.reversingShorteningFactor;
+        double newFactor = progress * oldFactor + (1 - oldFactor);
+        reversingShorteningFactor = Utils.clamp(0, newFactor, 1);
 
         if (delay < 0) {
             delay = (long)(delay * reversingShorteningFactor);

@@ -190,6 +190,8 @@ public class MiscellaneousTest extends TestBase {
             // Try various intervals
             for (int i = 0; i < timer.INTERVAL_COUNT; i++) {
                 int timeout = i * (1000 / timer.INTERVAL_COUNT);
+                // Webkit recomends minimum timeout value should be 10
+                if (timeout < 10) timeout = 10;
                 webEngine.executeScript("window.setTimeout("
                                       + "timer.call.bind(timer, Date.now(),"
                                       // pass 'i' to call to test time
