@@ -162,7 +162,6 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
     public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
         Objects.requireNonNull(function);
         MapChangeListener.Change<K, V> change = null;
-        int i = 0;
 
         for (Map.Entry<K, V> entry : backingMap.entrySet()) {
             K key;
@@ -198,8 +197,6 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
                 // This usually means the entry is no longer in the map.
                 throw new ConcurrentModificationException(ex);
             }
-
-            ++i;
         }
 
         if (change == null) {
