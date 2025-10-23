@@ -324,14 +324,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     /** returns true if both control and model are editable */
     protected boolean canEdit() {
-        RichTextArea control = getControl();
-        if (control.isEditable()) {
-            StyledTextModel m = control.getModel();
-            if (m != null) {
-                return m.isWritable();
-            }
-        }
-        return false;
+        return RichUtils.canEdit(getControl());
     }
 
     public boolean insertTab() {
