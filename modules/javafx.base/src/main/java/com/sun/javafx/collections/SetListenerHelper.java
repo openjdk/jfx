@@ -157,13 +157,29 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(SetChangeListener.Change<? extends E> change) {
+            if (change instanceof IterableSetChange<? extends E> iterableChange) {
+                fireSetChangedEvent(iterableChange);
+            } else {
+                fireSetChangedEvent(change);
+            }
+        }
+
+        private void fireSetChangedEvent(SetChangeListener.Change<? extends E> change) {
+            try {
+                listener.onChanged(change);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
+        }
+
+        private void fireSetChangedEvent(IterableSetChange<? extends E> change) {
             do {
                 try {
                     listener.onChanged(change);
                 } catch (Exception e) {
                     Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                 }
-            } while (change instanceof IterableSetChange<? extends E> c && c.next() != null);
+            } while (change.next() != null);
         }
     }
 

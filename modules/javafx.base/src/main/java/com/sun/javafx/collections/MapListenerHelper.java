@@ -157,13 +157,29 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(MapChangeListener.Change<? extends K, ? extends V> change) {
+            if (change instanceof IterableMapChange<? extends K, ? extends V> iterableChange) {
+                fireMapChangeEvent(iterableChange);
+            } else {
+                fireMapChangeEvent(change);
+            }
+        }
+
+        private void fireMapChangeEvent(MapChangeListener.Change<? extends K, ? extends V> change) {
+            try {
+                listener.onChanged(change);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
+        }
+
+        private void fireMapChangeEvent(IterableMapChange<? extends K, ? extends V> change) {
             do {
                 try {
                     listener.onChanged(change);
                 } catch (Exception e) {
                     Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                 }
-            } while (change instanceof IterableMapChange<? extends K, ? extends V> c && c.next() != null);
+            } while (change.next() != null);
         }
     }
 
