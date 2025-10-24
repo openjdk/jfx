@@ -4823,8 +4823,8 @@ public class TreeTableViewTest {
                 treeTableView.getRoot().getChildren().add(new TreeItem<>("new item " + i));
             }
         }
-        assertEquals(1, rt_37853_cancelCount);
-        assertEquals(0, rt_37853_commitCount);
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(1, rt_37853_commitCount);
 
         sl.dispose();
     }

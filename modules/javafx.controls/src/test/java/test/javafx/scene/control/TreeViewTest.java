@@ -2368,8 +2368,8 @@ public class TreeViewTest {
             }
         }
 
-        assertEquals(1, rt_37853_cancelCount);
-        assertEquals(0, rt_37853_commitCount);
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(1, rt_37853_commitCount);
 
         sl.dispose();
     }
