@@ -25,44 +25,18 @@
 
 package javafx.util.converter;
 
-import javafx.util.StringConverter;
+/// A `StringConverter` implementation for `Boolean` (and `boolean`) values. Formatting is done by [Boolean#toString()]
+/// for non-`null` values, and parsing with [Boolean#valueOf(String)] for non-`null` non-empty strings.
+///
+/// @since JavaFX 2.1
+public class BooleanStringConverter extends BaseStringConverter<Boolean> {
 
-/**
- * <p>{@link StringConverter} implementation for {@link Boolean}
- * (and boolean primitive) values.</p>
- * @since JavaFX 2.1
- */
-public class BooleanStringConverter extends StringConverter<Boolean> {
-
-    /**
-     * Creates a default {@code BooleanStringConverter}.
-     */
+    /// Creates a default `BooleanStringConverter`.
     public BooleanStringConverter() {
     }
 
-    /** {@inheritDoc} */
-    @Override public Boolean fromString(String value) {
-        // If the specified value is null or zero-length, return null
-        if (value == null) {
-            return null;
-        }
-
-        value = value.trim();
-
-        if (value.length() < 1) {
-            return null;
-        }
-
-        return Boolean.valueOf(value);
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString(Boolean value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
-
-        return value.toString();
+    @Override
+    Boolean fromNonEmptyString(String string) {
+        return Boolean.valueOf(string);
     }
 }
