@@ -109,6 +109,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_X11GLDrawable_nSwapBuffers
         return JNI_FALSE;
     }
     glXSwapBuffers(dInfo->display, dInfo->win);
+
+    if (dInfo->perDrwawableVSync) {
+        glFinish();
+    }
+
     return JNI_TRUE;
 }
 

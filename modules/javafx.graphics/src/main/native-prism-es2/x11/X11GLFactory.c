@@ -88,6 +88,9 @@ void setGLXAttrs(jint *attrs, int *glxAttrs) {
     glxAttrs[index++] = GLX_DEPTH_SIZE;
     glxAttrs[index++] = attrs[DEPTH_SIZE];
 
+    glxAttrs[index++] = GLX_CONFIG_CAVEAT;
+    glxAttrs[index++] = GLX_NONE;
+
     glxAttrs[index] = None;
 }
 
@@ -215,7 +218,26 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
         return 0;
     }
 
-    visualInfo = glXGetVisualFromFBConfig(display, fbConfigList[0]);
+    GLXFBConfig fbConfig;
+    // X Visual of depth = 32 is required for window transparency
+    for (int i = 0; i < numFBConfigs; i++) {
+        XVisualInfo *vi = glXGetVisualFromFBConfig(display, fbConfigList[i]);
+        if (!vi) continue;
+
+        if (vi->depth == 32) {
+            fbConfig = fbConfigList[i];
+            visualInfo = vi;
+            break;
+        }
+
+        XFree(vi);
+    }
+
+    if (visualInfo == NULL) {
+        fbConfig = fbConfigList[0];
+        visualInfo = glXGetVisualFromFBConfig(display, fbConfig);
+    }
+
     if (visualInfo == NULL) {
         printAndReleaseResources(display, fbConfigList, visualInfo,
                 win, ctx, cmap,
