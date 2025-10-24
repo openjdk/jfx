@@ -1429,7 +1429,7 @@ struct _xsltStackElem {
     xmlNodePtr tree;        /* the sequence constructor if no eval
                     string or the location */
     xmlXPathObjectPtr value;    /* The value if computed */
-    xsltRVTListPtr fragment;	/* The Result Tree Fragments (needed for XSLT 1.0)
+    xsltRVTListPtr fragment;    /* The Result Tree Fragments (needed for XSLT 1.0)
                    which are bound to the variable's lifetime. */
     int level;                  /* the depth in the tree;
                                    -1 if persistent (e.g. a given xsl:with-param) */
@@ -1756,7 +1756,7 @@ struct _xsltTransformContext {
      * handling of temporary Result Value Tree
      * (XSLT 1.0 term: "Result Tree Fragment")
      */
-    xsltRVTListPtr  tmpRVTList;	        /* list of RVT without persistance */
+    xsltRVTListPtr  tmpRVTList;         /* list of RVT without persistance */
     xsltRVTListPtr  persistRVTList;     /* list of persistant RVTs */
     int             ctxtflags;          /* context processing flags */
 
@@ -1939,11 +1939,11 @@ XSLTPUBFUN int XSLTCALL
 XSLTPUBFUN void XSLTCALL
             xsltFreeRVTs        (xsltTransformContextPtr ctxt);
 XSLTPUBFUN void XSLTCALL
-			xsltReleaseRVT          (xsltTransformContextPtr ctxt,
+                        xsltReleaseRVT          (xsltTransformContextPtr ctxt,
                          xmlDocPtr RVT);
 XSLTPUBFUN void XSLTCALL
-			xsltReleaseRVTList	(xsltTransformContextPtr ctxt,
-						 xsltRVTListPtr list);
+                        xsltReleaseRVTList      (xsltTransformContextPtr ctxt,
+                                                 xsltRVTListPtr list);
 /*
  * Extra functions for Attribute Value Templates
  */

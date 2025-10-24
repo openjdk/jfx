@@ -54,9 +54,9 @@ xsltRVTListCreate(void)
 
     ret = (xsltRVTListPtr) xmlMalloc(sizeof(xsltRVTList));
     if (ret == NULL) {
-	xsltTransformError(NULL, NULL, NULL,
-	    "xsltRVTListCreate: malloc failed\n");
-	return(NULL);
+        xsltTransformError(NULL, NULL, NULL,
+            "xsltRVTListCreate: malloc failed\n");
+        return(NULL);
     }
     memset(ret, 0, sizeof(xsltRVTList));
     return(ret);
@@ -94,8 +94,8 @@ xsltCreateRVT(xsltTransformContextPtr ctxt)
     */
     if (ctxt->cache->rvtList) {
         rvtList = ctxt->cache->rvtList;
-	container = ctxt->cache->rvtList->RVT;
-	ctxt->cache->rvtList = rvtList->next;
+        container = ctxt->cache->rvtList->RVT;
+        ctxt->cache->rvtList = rvtList->next;
         xmlFree(rvtList);
     if (ctxt->cache->nbRVT > 0)
         ctxt->cache->nbRVT--;
@@ -151,8 +151,8 @@ xsltRegisterTmpRVT(xsltTransformContextPtr ctxt, xmlDocPtr RVT)
     * var/param itself.
     */
     if (ctxt->contextVariable != NULL) {
-	list->next = XSLT_TCTXT_VARIABLE(ctxt)->fragment;
-	XSLT_TCTXT_VARIABLE(ctxt)->fragment = list;
+        list->next = XSLT_TCTXT_VARIABLE(ctxt)->fragment;
+        XSLT_TCTXT_VARIABLE(ctxt)->fragment = list;
     return(0);
     }
 
@@ -197,8 +197,8 @@ xsltRegisterLocalRVT(xsltTransformContextPtr ctxt,
     if ((ctxt->contextVariable != NULL) &&
     (XSLT_TCTXT_VARIABLE(ctxt)->flags & XSLT_VAR_IN_SELECT))
     {
-	list->next = XSLT_TCTXT_VARIABLE(ctxt)->fragment;
-	XSLT_TCTXT_VARIABLE(ctxt)->fragment = list;
+        list->next = XSLT_TCTXT_VARIABLE(ctxt)->fragment;
+        XSLT_TCTXT_VARIABLE(ctxt)->fragment = list;
     return(0);
     }
     /*
@@ -401,38 +401,38 @@ void
 xsltReleaseRVTList(xsltTransformContextPtr ctxt, xsltRVTListPtr list)
 {
     if (list == NULL)
-	return;
+        return;
 
     if (ctxt && (ctxt->cache->nbRVT < 40)) {
     /*
     * Store the Result Tree Fragment.
     * Free the document info.
     */
-	if (list->RVT->_private != NULL) {
-	    xsltFreeDocumentKeys((xsltDocumentPtr) list->RVT->_private);
-	    xmlFree(list->RVT->_private);
-	    list->RVT->_private = NULL;
+        if (list->RVT->_private != NULL) {
+            xsltFreeDocumentKeys((xsltDocumentPtr) list->RVT->_private);
+            xmlFree(list->RVT->_private);
+            list->RVT->_private = NULL;
     }
     /*
     * Clear the document tree.
     */
-	if (list->RVT->children != NULL) {
-	    xmlFreeNodeList(list->RVT->children);
-	    list->RVT->children = NULL;
-	    list->RVT->last = NULL;
+        if (list->RVT->children != NULL) {
+            xmlFreeNodeList(list->RVT->children);
+            list->RVT->children = NULL;
+            list->RVT->last = NULL;
     }
-	if (list->RVT->ids != NULL) {
-	    xmlFreeIDTable((xmlIDTablePtr) list->RVT->ids);
-	    list->RVT->ids = NULL;
+        if (list->RVT->ids != NULL) {
+            xmlFreeIDTable((xmlIDTablePtr) list->RVT->ids);
+            list->RVT->ids = NULL;
     }
 
     /*
     * Reset the ownership information.
     */
-	list->RVT->compression = 0;
+        list->RVT->compression = 0;
 
-	list->next = ctxt->cache->rvtList;
-	ctxt->cache->rvtList = list;
+        list->next = ctxt->cache->rvtList;
+        ctxt->cache->rvtList = list;
 
     ctxt->cache->nbRVT++;
 
@@ -445,8 +445,8 @@ xsltReleaseRVTList(xsltTransformContextPtr ctxt, xsltRVTListPtr list)
     * Free it.
     */
     if (list->RVT->_private != NULL) {
-	xsltFreeDocumentKeys((xsltDocumentPtr) list->RVT->_private);
-	xmlFree(list->RVT->_private);
+        xsltFreeDocumentKeys((xsltDocumentPtr) list->RVT->_private);
+        xmlFree(list->RVT->_private);
     }
     xmlFreeDoc(list->RVT);
     xmlFree(list);
@@ -502,11 +502,11 @@ xsltFreeRVTs(xsltTransformContextPtr ctxt)
     cur = ctxt->localRVTList;
     while (cur != NULL) {
         next = cur->next;
-	if (cur->RVT->_private != NULL) {
-	    xsltFreeDocumentKeys(cur->RVT->_private);
-	    xmlFree(cur->RVT->_private);
+        if (cur->RVT->_private != NULL) {
+            xsltFreeDocumentKeys(cur->RVT->_private);
+            xmlFree(cur->RVT->_private);
     }
-	xmlFreeDoc(cur->RVT);
+        xmlFreeDoc(cur->RVT);
         xmlFree(cur);
     cur = next;
     }
@@ -517,11 +517,11 @@ xsltFreeRVTs(xsltTransformContextPtr ctxt)
     cur = ctxt->tmpRVTList;
     while (cur != NULL) {
         next = cur->next;
-	if (cur->RVT->_private != NULL) {
-	    xsltFreeDocumentKeys(cur->RVT->_private);
-	    xmlFree(cur->RVT->_private);
+        if (cur->RVT->_private != NULL) {
+            xsltFreeDocumentKeys(cur->RVT->_private);
+            xmlFree(cur->RVT->_private);
     }
-	xmlFreeDoc(cur->RVT);
+        xmlFreeDoc(cur->RVT);
         xmlFree(cur);
     cur = next;
     }
@@ -532,11 +532,11 @@ xsltFreeRVTs(xsltTransformContextPtr ctxt)
     cur = ctxt->persistRVTList;
     while (cur != NULL) {
         next = cur->next;
-	if (cur->RVT->_private != NULL) {
-	    xsltFreeDocumentKeys(cur->RVT->_private);
-	    xmlFree(cur->RVT->_private);
+        if (cur->RVT->_private != NULL) {
+            xsltFreeDocumentKeys(cur->RVT->_private);
+            xmlFree(cur->RVT->_private);
     }
-	xmlFreeDoc(cur->RVT);
+        xmlFreeDoc(cur->RVT);
         xmlFree(cur);
     cur = next;
     }
@@ -628,14 +628,14 @@ xsltFreeStackElem(xsltStackElemPtr elem) {
     * Release the list of temporary Result Tree Fragments.
     */
     if (elem->context) {
-	xsltRVTListPtr cur;
+        xsltRVTListPtr cur;
 
     while (elem->fragment != NULL) {
         cur = elem->fragment;
-	    elem->fragment = cur->next;
+            elem->fragment = cur->next;
 
             if (cur->RVT->compression == XSLT_RVT_LOCAL) {
-		xsltReleaseRVTList(elem->context, cur);
+                xsltReleaseRVTList(elem->context, cur);
             } else if (cur->RVT->compression == XSLT_RVT_FUNC_RESULT) {
                 xsltRegisterLocalRVT(elem->context, cur->RVT);
                 cur->RVT->compression = XSLT_RVT_FUNC_RESULT;
@@ -1031,7 +1031,7 @@ xsltEvalVariable(xsltTransformContextPtr ctxt, xsltStackElemPtr variable,
                 if (rvtList == NULL)
                     goto error;
                 rvtList->RVT = container;
-		variable->fragment = rvtList;
+                variable->fragment = rvtList;
                 container->compression = XSLT_RVT_LOCAL;
 
         oldOutput = ctxt->output;
