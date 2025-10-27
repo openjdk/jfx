@@ -1722,7 +1722,7 @@ public class NodeTest {
     }
 
     @Test
-    public void onLayoutPositionChangeShouldTriggerNeedsLayoutIfInLayoutChildrenOfDirectChild() {
+    public void shouldOnlyDoSingleLayoutPass() {
         Rectangle r = new Rectangle(50, 50);
         AnchorPane pane = new AnchorPane(r);
         HBox root = new HBox(pane);
