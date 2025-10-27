@@ -2601,8 +2601,8 @@ xsltApplySequenceConstructor(xsltTransformContextPtr ctxt,
             /*
             * Cleanup temporary tree fragments.
             */
-                    if (oldLocalFragmentTop != ctxt->localRVTList)
-            xsltReleaseLocalRVTs(ctxt, oldLocalFragmentTop);
+            if (oldLocalFragmentTop != ctxt->localRVTList)
+                xsltReleaseLocalRVTs(ctxt, oldLocalFragmentTop);
 
             ctxt->insert = oldInsert;
         } else if (info->type == XSLT_FUNC_VARIABLE) {
@@ -5326,7 +5326,7 @@ xsltIf(xsltTransformContextPtr ctxt, xmlNodePtr contextNode,
     * Cleanup fragments created during evaluation of the
     * "select" expression.
     */
-        if (oldLocalFragmentTop != ctxt->localRVTList)
+    if (oldLocalFragmentTop != ctxt->localRVTList)
         xsltReleaseLocalRVTs(ctxt, oldLocalFragmentTop);
     }
 
