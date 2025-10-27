@@ -26,7 +26,7 @@ package com.oracle.tools.fx.monkey.pages;
 
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
-import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -46,6 +46,7 @@ import com.oracle.tools.fx.monkey.options.FontOption;
 import com.oracle.tools.fx.monkey.options.IntOption;
 import com.oracle.tools.fx.monkey.options.PaintOption;
 import com.oracle.tools.fx.monkey.sheets.Options;
+import com.oracle.tools.fx.monkey.sheets.PropertiesMonitor;
 import com.oracle.tools.fx.monkey.sheets.ShapePropertySheet;
 import com.oracle.tools.fx.monkey.tools.AccessibilityPropertyViewer;
 import com.oracle.tools.fx.monkey.util.FX;
@@ -53,6 +54,7 @@ import com.oracle.tools.fx.monkey.util.LayoutInfoVisualizer;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.StdoutMouseListener;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.TextShapeLogic;
 
 /**
  * Text Page.
@@ -97,11 +99,11 @@ public class TextPage extends TestPaneBase {
         op.option(new BooleanOption("underline", "underline", text.underlineProperty()));
         op.separator();
         op.option(new BooleanOption("showCaretAndRange", visualizer.caretOptionText(), visualizer.showCaretAndRange));
-//        op.option(new BooleanOption("useLegacyAPI", "(use Text API)", visualizer.legacyAPI));
-//        op.option(new BooleanOption("showLines", "show text lines", visualizer.showLines));
-//        op.option(new BooleanOption("showBounds", "show layout bounds", visualizer.showLayoutBounds));
-//        op.option(new BooleanOption("includeLineSpacing", "include lineSpacing", visualizer.includeLineSpace));
-//        op.separator();
+        op.option("API:", new EnumOption<>("api", TextShapeLogic.class, visualizer.shapeLogic));
+        op.option(new BooleanOption("showLines", "show text lines", visualizer.showLines));
+        op.option(new BooleanOption("showBounds", "show layout bounds", visualizer.showLayoutBounds));
+        op.option(new BooleanOption("includeLineSpacing", "include lineSpacing", visualizer.includeLineSpace));
+        op.separator();
         op.option(wrap);
         op.option("Text.hitTest:", hitInfo);
 
@@ -139,9 +141,13 @@ public class TextPage extends TestPaneBase {
     }
 
     private ContextMenu createPopupMenu(PickResult pick) {
+        Node source = pick.getIntersectedNode();
         ContextMenu m = new ContextMenu();
         FX.item(m, "Accessibility Attributes", () -> {
             AccessibilityPropertyViewer.open(pick);
+        });
+        FX.item(m, "Show Properties Monitor...", () -> {
+            PropertiesMonitor.open(source);
         });
         StdoutMouseListener.attach(m, text);
         if (text != pick.getIntersectedNode()) {

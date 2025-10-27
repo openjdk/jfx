@@ -67,6 +67,8 @@
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 namespace InlineCacheCompilerInternal {
@@ -93,73 +95,73 @@ static TypedArrayType toTypedArrayType(AccessCase::AccessType accessType)
     switch (accessType) {
     case AccessCase::IndexedTypedArrayInt8Load:
     case AccessCase::IndexedTypedArrayInt8Store:
-    case AccessCase::IndexedTypedArrayInt8InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
     case AccessCase::IndexedResizableTypedArrayInt8Load:
     case AccessCase::IndexedResizableTypedArrayInt8Store:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
         return TypeInt8;
     case AccessCase::IndexedTypedArrayUint8Load:
     case AccessCase::IndexedTypedArrayUint8Store:
-    case AccessCase::IndexedTypedArrayUint8InHit:
+    case AccessCase::IndexedTypedArrayUint8In:
     case AccessCase::IndexedResizableTypedArrayUint8Load:
     case AccessCase::IndexedResizableTypedArrayUint8Store:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
         return TypeUint8;
     case AccessCase::IndexedTypedArrayUint8ClampedLoad:
     case AccessCase::IndexedTypedArrayUint8ClampedStore:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
     case AccessCase::IndexedResizableTypedArrayUint8ClampedLoad:
     case AccessCase::IndexedResizableTypedArrayUint8ClampedStore:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
         return TypeUint8Clamped;
     case AccessCase::IndexedTypedArrayInt16Load:
     case AccessCase::IndexedTypedArrayInt16Store:
-    case AccessCase::IndexedTypedArrayInt16InHit:
+    case AccessCase::IndexedTypedArrayInt16In:
     case AccessCase::IndexedResizableTypedArrayInt16Load:
     case AccessCase::IndexedResizableTypedArrayInt16Store:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
         return TypeInt16;
     case AccessCase::IndexedTypedArrayUint16Load:
     case AccessCase::IndexedTypedArrayUint16Store:
-    case AccessCase::IndexedTypedArrayUint16InHit:
+    case AccessCase::IndexedTypedArrayUint16In:
     case AccessCase::IndexedResizableTypedArrayUint16Load:
     case AccessCase::IndexedResizableTypedArrayUint16Store:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
         return TypeUint16;
     case AccessCase::IndexedTypedArrayInt32Load:
     case AccessCase::IndexedTypedArrayInt32Store:
-    case AccessCase::IndexedTypedArrayInt32InHit:
+    case AccessCase::IndexedTypedArrayInt32In:
     case AccessCase::IndexedResizableTypedArrayInt32Load:
     case AccessCase::IndexedResizableTypedArrayInt32Store:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
         return TypeInt32;
     case AccessCase::IndexedTypedArrayUint32Load:
     case AccessCase::IndexedTypedArrayUint32Store:
-    case AccessCase::IndexedTypedArrayUint32InHit:
+    case AccessCase::IndexedTypedArrayUint32In:
     case AccessCase::IndexedResizableTypedArrayUint32Load:
     case AccessCase::IndexedResizableTypedArrayUint32Store:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
         return TypeUint32;
     case AccessCase::IndexedTypedArrayFloat16Load:
     case AccessCase::IndexedTypedArrayFloat16Store:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
+    case AccessCase::IndexedTypedArrayFloat16In:
     case AccessCase::IndexedResizableTypedArrayFloat16Load:
     case AccessCase::IndexedResizableTypedArrayFloat16Store:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
         return TypeFloat16;
     case AccessCase::IndexedTypedArrayFloat32Load:
     case AccessCase::IndexedTypedArrayFloat32Store:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
+    case AccessCase::IndexedTypedArrayFloat32In:
     case AccessCase::IndexedResizableTypedArrayFloat32Load:
     case AccessCase::IndexedResizableTypedArrayFloat32Store:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
         return TypeFloat32;
     case AccessCase::IndexedTypedArrayFloat64Load:
     case AccessCase::IndexedTypedArrayFloat64Store:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
+    case AccessCase::IndexedTypedArrayFloat64In:
     case AccessCase::IndexedResizableTypedArrayFloat64Load:
     case AccessCase::IndexedResizableTypedArrayFloat64Store:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
         return TypeFloat64;
     default:
         RELEASE_ASSERT_NOT_REACHED();
@@ -189,16 +191,16 @@ static bool forResizableTypedArray(AccessCase::AccessType accessType)
     case AccessCase::IndexedResizableTypedArrayFloat16Store:
     case AccessCase::IndexedResizableTypedArrayFloat32Store:
     case AccessCase::IndexedResizableTypedArrayFloat64Store:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
         return true;
     default:
         return false;
@@ -285,29 +287,29 @@ static bool needsScratchFPR(AccessCase::AccessType type)
     case AccessCase::IndexedArrayStorageInHit:
     case AccessCase::IndexedScopedArgumentsInHit:
     case AccessCase::IndexedDirectArgumentsInHit:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
     case AccessCase::IndexedStringInHit:
     case AccessCase::IndexedNoIndexingInMiss:
-    // Indexed TypedArray InHit does not need FPR since it does not load a value.
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    // Indexed TypedArray In does not need FPR since it does not load a value.
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
         return false;
     case AccessCase::IndexedDoubleLoad:
     case AccessCase::IndexedTypedArrayFloat16Load:
@@ -434,26 +436,26 @@ static bool forInBy(AccessCase::AccessType type)
     case AccessCase::IndexedArrayStorageInHit:
     case AccessCase::IndexedScopedArgumentsInHit:
     case AccessCase::IndexedDirectArgumentsInHit:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
     case AccessCase::IndexedStringInHit:
     case AccessCase::IndexedNoIndexingInMiss:
     case AccessCase::IndexedProxyObjectIn:
@@ -563,26 +565,26 @@ static bool isStateless(AccessCase::AccessType type)
     case AccessCase::IndexedArrayStorageInHit:
     case AccessCase::IndexedScopedArgumentsInHit:
     case AccessCase::IndexedDirectArgumentsInHit:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
     case AccessCase::IndexedStringInHit:
     case AccessCase::IndexedProxyObjectIn:
     case AccessCase::IndexedMegamorphicIn:
@@ -696,26 +698,26 @@ static bool doesJSCalls(AccessCase::AccessType type)
     case AccessCase::IndexedArrayStorageInHit:
     case AccessCase::IndexedScopedArgumentsInHit:
     case AccessCase::IndexedDirectArgumentsInHit:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
     case AccessCase::IndexedStringInHit:
     case AccessCase::IndexedMegamorphicIn:
     case AccessCase::InstanceOfMegamorphic:
@@ -829,26 +831,26 @@ static bool isMegamorphic(AccessCase::AccessType type)
     case AccessCase::IndexedArrayStorageInHit:
     case AccessCase::IndexedScopedArgumentsInHit:
     case AccessCase::IndexedDirectArgumentsInHit:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
     case AccessCase::IndexedStringInHit:
         return false;
     }
@@ -956,26 +958,26 @@ bool canBeViaGlobalProxy(AccessCase::AccessType type)
     case AccessCase::IndexedArrayStorageInHit:
     case AccessCase::IndexedScopedArgumentsInHit:
     case AccessCase::IndexedDirectArgumentsInHit:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
     case AccessCase::IndexedStringInHit:
     case AccessCase::IndexedMegamorphicIn:
     case AccessCase::InstanceOfMegamorphic:
@@ -1797,6 +1799,24 @@ Ref<InlineCacheHandler> InlineCacheCompiler::generateSlowPathHandler(VM& vm, Acc
     return handler;
 }
 
+template<typename Visitor>
+void InlineCacheHandler::propagateTransitions(Visitor& visitor) const
+{
+    if (m_accessCase)
+        m_accessCase->propagateTransitions(visitor);
+}
+
+template void InlineCacheHandler::propagateTransitions(AbstractSlotVisitor&) const;
+template void InlineCacheHandler::propagateTransitions(SlotVisitor&) const;
+
+template<typename Visitor>
+void InlineCacheHandler::visitAggregateImpl(Visitor& visitor)
+{
+    if (m_accessCase)
+        m_accessCase->visitAggregate(visitor);
+}
+DEFINE_VISIT_AGGREGATE(InlineCacheHandler);
+
 void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCase, CCallHelpers::JumpList& fallThrough)
 {
     SuperSamplerScope superSamplerScope(false);
@@ -2093,26 +2113,26 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
     case AccessCase::IndexedResizableTypedArrayFloat16Load:
     case AccessCase::IndexedResizableTypedArrayFloat32Load:
     case AccessCase::IndexedResizableTypedArrayFloat64Load:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit: {
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In: {
         ASSERT(!accessCase.viaGlobalProxy());
         // This code is written such that the result could alias with the base or the property.
 
@@ -2122,34 +2142,32 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
         GPRReg propertyGPR = m_stubInfo.propertyGPR();
 
         fallThrough.append(jit.branch8(CCallHelpers::NotEqual, CCallHelpers::Address(baseGPR, JSCell::typeInfoTypeOffset()), CCallHelpers::TrustedImm32(typeForTypedArrayType(type))));
-
-        if (!isResizableOrGrowableShared) {
+        if (!isResizableOrGrowableShared)
             fallThrough.append(jit.branchTest8(CCallHelpers::NonZero, CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfMode()), CCallHelpers::TrustedImm32(isResizableOrGrowableSharedMode)));
-            CCallHelpers::Address addressOfLength = CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength());
-            jit.signExtend32ToPtr(propertyGPR, scratchGPR);
-#if USE(LARGE_TYPED_ARRAYS)
-            // The length is a size_t, so either 32 or 64 bits depending on the platform.
-            m_failAndRepatch.append(jit.branch64(CCallHelpers::AboveOrEqual, scratchGPR, addressOfLength));
-#else
-            m_failAndRepatch.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, addressOfLength));
-#endif
-        }
 
         auto allocator = makeDefaultScratchAllocator(scratchGPR);
         GPRReg scratch2GPR = allocator.allocateScratchGPR();
 
-        ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(
-            jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
+        ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
 
-        CCallHelpers::JumpList failAndRepatchAfterRestore;
+        CCallHelpers::JumpList isOutOfBounds;
         if (isResizableOrGrowableShared) {
             jit.loadTypedArrayLength(baseGPR, scratch2GPR, scratchGPR, scratch2GPR, type);
             jit.signExtend32ToPtr(propertyGPR, scratchGPR);
 #if USE(LARGE_TYPED_ARRAYS)
             // The length is a size_t, so either 32 or 64 bits depending on the platform.
-            failAndRepatchAfterRestore.append(jit.branch64(CCallHelpers::AboveOrEqual, scratchGPR, scratch2GPR));
+            isOutOfBounds.append(jit.branch64(CCallHelpers::AboveOrEqual, scratchGPR, scratch2GPR));
 #else
-            failAndRepatchAfterRestore.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratch2GPR));
+            isOutOfBounds.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, scratch2GPR));
+#endif
+        } else {
+            CCallHelpers::Address addressOfLength = CCallHelpers::Address(baseGPR, JSArrayBufferView::offsetOfLength());
+            jit.signExtend32ToPtr(propertyGPR, scratchGPR);
+#if USE(LARGE_TYPED_ARRAYS)
+            // The length is a size_t, so either 32 or 64 bits depending on the platform.
+            isOutOfBounds.append(jit.branch64(CCallHelpers::AboveOrEqual, scratchGPR, addressOfLength));
+#else
+            isOutOfBounds.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, addressOfLength));
 #endif
         }
 
@@ -2220,7 +2238,7 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
                 CRASH();
             }
 
-            jit.purifyNaN(m_scratchFPR);
+                jit.purifyNaN(m_scratchFPR, m_scratchFPR);
             jit.boxDouble(m_scratchFPR, valueRegs);
         }
         }
@@ -2228,11 +2246,15 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
         allocator.restoreReusedRegistersByPopping(jit, preservedState);
         succeed();
 
-        if (isResizableOrGrowableShared) {
-            failAndRepatchAfterRestore.link(&jit);
+        isOutOfBounds.link(&jit);
+        if (m_stubInfo.m_arrayProfileGPR != InvalidGPRReg)
+            jit.or32(CCallHelpers::TrustedImm32(static_cast<uint32_t>(ArrayProfileFlag::OutOfBounds)), CCallHelpers::Address(m_stubInfo.m_arrayProfileGPR, ArrayProfile::offsetOfArrayProfileFlags()));
+        if (forInBy(accessCase.m_type))
+            jit.moveTrustedValue(jsBoolean(false), valueRegs);
+        else
+            jit.moveTrustedValue(jsUndefined(), valueRegs);
             allocator.restoreReusedRegistersByPopping(jit, preservedState);
-            m_failAndRepatch.append(jit.jump());
-        }
+        succeed();
         return;
     }
 
@@ -2532,11 +2554,8 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
 
         if (accessCase.m_type == AccessCase::IndexedArrayStorageStore) {
             isOutOfBounds.link(&jit);
-            if (m_stubInfo.m_arrayProfileGPR != InvalidGPRReg) {
-                auto skip = jit.branchTestPtr(CCallHelpers::Zero, m_stubInfo.m_arrayProfileGPR);
+            if (m_stubInfo.m_arrayProfileGPR != InvalidGPRReg)
                 jit.or32(CCallHelpers::TrustedImm32(static_cast<uint32_t>(ArrayProfileFlag::MayStoreHole)), CCallHelpers::Address(m_stubInfo.m_arrayProfileGPR, ArrayProfile::offsetOfArrayProfileFlags()));
-                skip.link(&jit);
-            }
             jit.add32(CCallHelpers::TrustedImm32(1), CCallHelpers::Address(scratchGPR, ArrayStorage::numValuesInVectorOffset()));
             jit.branch32(CCallHelpers::Below, scratch2GPR, CCallHelpers::Address(scratchGPR, ArrayStorage::lengthOffset())).linkTo(storeResult, &jit);
 
@@ -2547,11 +2566,8 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
         } else {
             isOutOfBounds.link(&jit);
             failAndIgnore.append(jit.branch32(CCallHelpers::AboveOrEqual, propertyGPR, CCallHelpers::Address(scratchGPR, Butterfly::offsetOfVectorLength())));
-            if (m_stubInfo.m_arrayProfileGPR != InvalidGPRReg) {
-                auto skip = jit.branchTestPtr(CCallHelpers::Zero, m_stubInfo.m_arrayProfileGPR);
+            if (m_stubInfo.m_arrayProfileGPR != InvalidGPRReg)
                 jit.or32(CCallHelpers::TrustedImm32(static_cast<uint32_t>(ArrayProfileFlag::MayStoreHole)), CCallHelpers::Address(m_stubInfo.m_arrayProfileGPR, ArrayProfile::offsetOfArrayProfileFlags()));
-                skip.link(&jit);
-            }
             jit.add32(CCallHelpers::TrustedImm32(1), propertyGPR, scratch2GPR);
             jit.store32(scratch2GPR, CCallHelpers::Address(scratchGPR, Butterfly::offsetOfPublicLength()));
             jit.jump().linkTo(storeResult, &jit);
@@ -2908,6 +2924,11 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
         {
             // Handle the case where we are allocating out-of-line using an operation.
             InlineCacheCompiler::SpillState spillState = preserveLiveRegistersToStackForCall();
+            if (m_stubInfo.useDataIC) {
+                callSiteIndexForExceptionHandlingOrOriginal();
+                jit.transfer32(CCallHelpers::Address(m_stubInfo.m_stubInfoGPR, StructureStubInfo::offsetOfCallSiteIndex()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+            } else
+                jit.store32(CCallHelpers::TrustedImm32(callSiteIndexForExceptionHandlingOrOriginal().bits()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
             jit.makeSpaceOnStackForCCall();
             jit.setupArguments<decltype(operationPutByMegamorphicReallocating)>(CCallHelpers::TrustedImmPtr(&vm), baseGPR, valueRegs.payloadGPR(), scratch3GPR);
             jit.prepareCallOperation(vm);
@@ -3034,6 +3055,11 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
         {
             // Handle the case where we are allocating out-of-line using an operation.
             InlineCacheCompiler::SpillState spillState = preserveLiveRegistersToStackForCall();
+            if (m_stubInfo.useDataIC) {
+                callSiteIndexForExceptionHandlingOrOriginal();
+                jit.transfer32(CCallHelpers::Address(m_stubInfo.m_stubInfoGPR, StructureStubInfo::offsetOfCallSiteIndex()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+            } else
+                jit.store32(CCallHelpers::TrustedImm32(callSiteIndexForExceptionHandlingOrOriginal().bits()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
             jit.makeSpaceOnStackForCCall();
             jit.setupArguments<decltype(operationPutByMegamorphicReallocating)>(CCallHelpers::TrustedImmPtr(&vm), baseGPR, valueRegs.payloadGPR(), scratch3GPR);
             jit.prepareCallOperation(vm);
@@ -3660,7 +3686,7 @@ void InlineCacheCompiler::generateAccessCase(unsigned index, AccessCase& accessC
             jit.nukeStructureAndStoreButterfly(vm, scratchGPR, baseGPR);
         }
 
-        uint32_t structureBits = bitwise_cast<uint32_t>(accessCase.newStructure()->id());
+        uint32_t structureBits = std::bit_cast<uint32_t>(accessCase.newStructure()->id());
         jit.store32(
             CCallHelpers::TrustedImm32(structureBits),
             CCallHelpers::Address(baseGPR, JSCell::structureIDOffset()));
@@ -3693,7 +3719,7 @@ void InlineCacheCompiler::generateAccessCase(unsigned index, AccessCase& accessC
             jit.storeTrustedValue(JSValue(), CCallHelpers::Address(scratchGPR, offsetInButterfly(accessCase.m_offset) * sizeof(JSValue)));
         }
 
-        uint32_t structureBits = bitwise_cast<uint32_t>(accessCase.newStructure()->id());
+        uint32_t structureBits = std::bit_cast<uint32_t>(accessCase.newStructure()->id());
         jit.store32(
             CCallHelpers::TrustedImm32(structureBits),
             CCallHelpers::Address(baseGPR, JSCell::structureIDOffset()));
@@ -3708,7 +3734,7 @@ void InlineCacheCompiler::generateAccessCase(unsigned index, AccessCase& accessC
         ASSERT(accessCase.structure()->transitionWatchpointSetHasBeenInvalidated());
         ASSERT(accessCase.newStructure()->transitionKind() == TransitionKind::SetBrand);
 
-        uint32_t structureBits = bitwise_cast<uint32_t>(accessCase.newStructure()->id());
+        uint32_t structureBits = std::bit_cast<uint32_t>(accessCase.newStructure()->id());
         jit.store32(
             CCallHelpers::TrustedImm32(structureBits),
             CCallHelpers::Address(baseGPR, JSCell::structureIDOffset()));
@@ -3838,26 +3864,26 @@ void InlineCacheCompiler::generateAccessCase(unsigned index, AccessCase& accessC
     case AccessCase::IndexedArrayStorageInHit:
     case AccessCase::IndexedScopedArgumentsInHit:
     case AccessCase::IndexedDirectArgumentsInHit:
-    case AccessCase::IndexedTypedArrayInt8InHit:
-    case AccessCase::IndexedTypedArrayUint8InHit:
-    case AccessCase::IndexedTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedTypedArrayInt16InHit:
-    case AccessCase::IndexedTypedArrayUint16InHit:
-    case AccessCase::IndexedTypedArrayInt32InHit:
-    case AccessCase::IndexedTypedArrayUint32InHit:
-    case AccessCase::IndexedTypedArrayFloat16InHit:
-    case AccessCase::IndexedTypedArrayFloat32InHit:
-    case AccessCase::IndexedTypedArrayFloat64InHit:
-    case AccessCase::IndexedResizableTypedArrayInt8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8InHit:
-    case AccessCase::IndexedResizableTypedArrayUint8ClampedInHit:
-    case AccessCase::IndexedResizableTypedArrayInt16InHit:
-    case AccessCase::IndexedResizableTypedArrayUint16InHit:
-    case AccessCase::IndexedResizableTypedArrayInt32InHit:
-    case AccessCase::IndexedResizableTypedArrayUint32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat16InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat32InHit:
-    case AccessCase::IndexedResizableTypedArrayFloat64InHit:
+    case AccessCase::IndexedTypedArrayInt8In:
+    case AccessCase::IndexedTypedArrayUint8In:
+    case AccessCase::IndexedTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedTypedArrayInt16In:
+    case AccessCase::IndexedTypedArrayUint16In:
+    case AccessCase::IndexedTypedArrayInt32In:
+    case AccessCase::IndexedTypedArrayUint32In:
+    case AccessCase::IndexedTypedArrayFloat16In:
+    case AccessCase::IndexedTypedArrayFloat32In:
+    case AccessCase::IndexedTypedArrayFloat64In:
+    case AccessCase::IndexedResizableTypedArrayInt8In:
+    case AccessCase::IndexedResizableTypedArrayUint8In:
+    case AccessCase::IndexedResizableTypedArrayUint8ClampedIn:
+    case AccessCase::IndexedResizableTypedArrayInt16In:
+    case AccessCase::IndexedResizableTypedArrayUint16In:
+    case AccessCase::IndexedResizableTypedArrayInt32In:
+    case AccessCase::IndexedResizableTypedArrayUint32In:
+    case AccessCase::IndexedResizableTypedArrayFloat16In:
+    case AccessCase::IndexedResizableTypedArrayFloat32In:
+    case AccessCase::IndexedResizableTypedArrayFloat64In:
     case AccessCase::IndexedStringInHit:
         // These need to be handled by generateWithGuard(), since the guard is part of the
         // algorithm. We can be sure that nobody will call generate() directly for these since they
@@ -4013,7 +4039,7 @@ void InlineCacheCompiler::emitModuleNamespaceLoad(ModuleNamespaceAccessCase& acc
     m_failAndIgnore.append(jit.branchIfEmpty(JSValueRegs { scratchGPR }));
     jit.moveValueRegs(JSValueRegs { scratchGPR }, valueRegs);
 #else
-    jit.load32(bitwise_cast<uint8_t*>(&accessCase.moduleEnvironment()->variableAt(accessCase.scopeOffset())) + TagOffset, scratchGPR);
+    jit.load32(std::bit_cast<uint8_t*>(&accessCase.moduleEnvironment()->variableAt(accessCase.scopeOffset())) + TagOffset, scratchGPR);
     m_failAndIgnore.append(jit.branchIfEmpty(scratchGPR));
     jit.loadValue(&accessCase.moduleEnvironment()->variableAt(accessCase.scopeOffset()), valueRegs);
 #endif
@@ -4176,6 +4202,10 @@ void InlineCacheCompiler::emitProxyObjectAccess(unsigned index, AccessCase& acce
 #if USE(JSVALUE32_64)
     // We *always* know that the proxy function, if non-null, is a cell.
     jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), BaselineJITRegisters::Call::calleeJSR.tagGPR());
+#endif
+#if CPU(ARM_THUMB2)
+        // ARMv7 clobbers metadataTable register. Thus we need to restore them back here.
+        JIT::emitMaterializeMetadataAndConstantPoolRegisters(jit);
 #endif
         m_callLinkInfos[index] = makeUnique<OptimizingCallLinkInfo>(m_stubInfo.codeOrigin, nullptr);
         auto* callLinkInfo = m_callLinkInfos[index].get();
@@ -4457,18 +4487,24 @@ static Vector<WatchpointSet*, 3> collectAdditionalWatchpoints(VM& vm, AccessCase
     return result;
 }
 
-static std::variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>& addWatchpoint(PolymorphicAccessJITStubRoutine::Watchpoints& watchpoints, const ObjectPropertyCondition& key, WatchpointSet& watchpointSet)
+static std::variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>& addWatchpoint(PolymorphicAccessJITStubRoutine* owner, const ObjectPropertyCondition& key)
 {
+    auto& watchpoints = owner->watchpoints();
+    auto& watchpointSet = owner->watchpointSet();
+
+    owner->addGCAwareWatchpoint();
+
     if (!key || key.condition().kind() != PropertyCondition::Equivalence)
-        return *watchpoints.add(std::in_place_type<StructureTransitionStructureStubClearingWatchpoint>, key, watchpointSet);
+        return *watchpoints.add(std::in_place_type<StructureTransitionStructureStubClearingWatchpoint>, owner, key, watchpointSet);
     ASSERT(key.condition().kind() == PropertyCondition::Equivalence);
-    return *watchpoints.add(std::in_place_type<AdaptiveValueStructureStubClearingWatchpoint>, key, watchpointSet);
+    return *watchpoints.add(std::in_place_type<AdaptiveValueStructureStubClearingWatchpoint>, owner, key, watchpointSet);
 }
 
-static void ensureReferenceAndInstallWatchpoint(VM& vm, PolymorphicAccessJITStubRoutine::Watchpoints& watchpoints, WatchpointSet& watchpointSet, const ObjectPropertyCondition& key)
+static void ensureReferenceAndInstallWatchpoint(VM& vm, PolymorphicAccessJITStubRoutine* owner, const ObjectPropertyCondition& key)
 {
     ASSERT(!!key);
-    auto& watchpointVariant = addWatchpoint(watchpoints, key, watchpointSet);
+
+    auto& watchpointVariant = addWatchpoint(owner, key);
     if (key.kind() == PropertyCondition::Equivalence) {
         auto& adaptiveWatchpoint = std::get<AdaptiveValueStructureStubClearingWatchpoint>(watchpointVariant);
         adaptiveWatchpoint.install(vm);
@@ -4478,13 +4514,14 @@ static void ensureReferenceAndInstallWatchpoint(VM& vm, PolymorphicAccessJITStub
             }
 }
 
-static void ensureReferenceAndAddWatchpoint(VM&, PolymorphicAccessJITStubRoutine::Watchpoints& watchpoints, WatchpointSet& watchpointSet, WatchpointSet& additionalWatchpointSet)
+static void ensureReferenceAndAddWatchpoint(VM&, WatchpointSet& additionalWatchpointSet, PolymorphicAccessJITStubRoutine* owner)
 {
-    auto* watchpoint = &std::get<StructureTransitionStructureStubClearingWatchpoint>(addWatchpoint(watchpoints, ObjectPropertyCondition(), watchpointSet));
+    auto* watchpoint = &std::get<StructureTransitionStructureStubClearingWatchpoint>(addWatchpoint(owner, ObjectPropertyCondition()));
     additionalWatchpointSet.add(watchpoint);
 }
 
-RefPtr<AccessCase> InlineCacheCompiler::tryFoldToMegamorphic(CodeBlock* codeBlock, std::span<const Ref<AccessCase>> cases)
+template<typename Container>
+RefPtr<AccessCase> InlineCacheCompiler::tryFoldToMegamorphic(CodeBlock* codeBlock, const Container& cases)
 {
     // Accidentally, it already includes megamorphic case. Then we just return it.
     for (auto accessCase : cases) {
@@ -4965,7 +5002,7 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
 
         Vector<int64_t, 16> caseValues(keys.size());
         for (unsigned i = 0; i < keys.size(); ++i)
-            caseValues[i] = bitwise_cast<int32_t>(keys[i]->structure()->id());
+            caseValues[i] = std::bit_cast<int32_t>(keys[i]->structure()->id());
 
         BinarySwitch binarySwitch(m_scratchGPR, caseValues.span(), BinarySwitch::Int32);
         while (binarySwitch.advance(jit))
@@ -5070,9 +5107,8 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
     auto stub = createICJITStubRoutine(code, WTFMove(keys), WTFMove(weakStructures), vm(), owner, doesCalls, cellsToMark, WTFMove(m_callLinkInfos), codeBlockThatOwnsExceptionHandlers, callSiteIndexForExceptionHandling);
 
     {
-        auto& watchpoints = stub->watchpoints();
         for (auto& condition : m_conditions)
-            ensureReferenceAndInstallWatchpoint(vm(), watchpoints, stub->watchpointSet(), condition);
+            ensureReferenceAndInstallWatchpoint(vm(), &stub.get(), condition);
 
         // NOTE: We currently assume that this is relatively rare. It mainly arises for accesses to
         // properties on DOM nodes. For sure we cache many DOM node accesses, but even in
@@ -5080,7 +5116,7 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
         // vanilla objects or exotic objects from within JSC (like Arguments, those are super popular).
         // Those common kinds of JSC object accesses don't hit this case.
         for (WatchpointSet* set : additionalWatchpointSets)
-            ensureReferenceAndAddWatchpoint(vm(), watchpoints, stub->watchpointSet(), *set);
+            ensureReferenceAndAddWatchpoint(vm(), *set, &stub.get());
     }
 
     return finishCodeGeneration(WTFMove(stub));
@@ -5568,6 +5604,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> putByIdTransitionHandlerImpl(VM& vm
     if (!allocationFailure.empty()) {
         ASSERT(allocating);
         allocationFailure.link(&jit);
+        jit.transfer32(CCallHelpers::Address(stubInfoGPR, StructureStubInfo::offsetOfCallSiteIndex()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
         jit.makeSpaceOnStackForCCall();
         jit.setupArguments<decltype(operationReallocateButterflyAndTransition)>(CCallHelpers::TrustedImmPtr(&vm), baseJSR.payloadGPR(), GPRInfo::handlerGPR, valueJSR);
         jit.prepareCallOperation(vm);
@@ -5620,6 +5657,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> putByIdTransitionReallocatingOutOfLineHand
 
     fallThrough.append(InlineCacheCompiler::emitDataICCheckStructure(jit, baseJSR.payloadGPR(), scratch1GPR));
 
+    jit.transfer32(CCallHelpers::Address(stubInfoGPR, StructureStubInfo::offsetOfCallSiteIndex()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
     jit.makeSpaceOnStackForCCall();
     jit.setupArguments<decltype(operationReallocateButterflyAndTransition)>(CCallHelpers::TrustedImmPtr(&vm), baseJSR.payloadGPR(), GPRInfo::handlerGPR, valueJSR);
     jit.prepareCallOperation(vm);
@@ -6238,6 +6276,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> putByValTransitionHandlerImpl(VM& v
     if (!allocationFailure.empty()) {
         ASSERT(allocating);
         allocationFailure.link(&jit);
+        jit.transfer32(CCallHelpers::Address(stubInfoGPR, StructureStubInfo::offsetOfCallSiteIndex()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
         jit.makeSpaceOnStackForCCall();
         jit.setupArguments<decltype(operationReallocateButterflyAndTransition)>(CCallHelpers::TrustedImmPtr(&vm), baseJSR.payloadGPR(), GPRInfo::handlerGPR, valueJSR);
         jit.prepareCallOperation(vm);
@@ -6320,6 +6359,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> putByValTransitionOutOfLineHandlerI
     fallThrough.append(InlineCacheCompiler::emitDataICCheckStructure(jit, baseJSR.payloadGPR(), scratch1GPR));
     fallThrough.append(InlineCacheCompiler::emitDataICCheckUid(jit, isSymbol, propertyJSR, scratch1GPR));
 
+    jit.transfer32(CCallHelpers::Address(stubInfoGPR, StructureStubInfo::offsetOfCallSiteIndex()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
     jit.makeSpaceOnStackForCCall();
     jit.setupArguments<decltype(operationReallocateButterflyAndTransition)>(CCallHelpers::TrustedImmPtr(&vm), baseJSR.payloadGPR(), GPRInfo::handlerGPR, valueJSR);
     jit.prepareCallOperation(vm);
@@ -6679,64 +6719,48 @@ MacroAssemblerCodeRef<JITThunkPtrTag> setPrivateBrandHandler(VM&)
     return FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "SetPrivateBrand handler"_s, "SetPrivateBrand handler");
 }
 
-AccessGenerationResult InlineCacheCompiler::compileHandler(const GCSafeConcurrentJSLocker&, PolymorphicAccess& poly, CodeBlock* codeBlock, Ref<AccessCase>&& accessCase)
+AccessGenerationResult InlineCacheCompiler::compileHandler(const GCSafeConcurrentJSLocker&, Vector<AccessCase*, 16>&& poly, CodeBlock* codeBlock, AccessCase& accessCase)
 {
     SuperSamplerScope superSamplerScope(false);
 
-    dataLogLnIf(InlineCacheCompilerInternal::verbose, "Regenerate with m_list: ", listDump(poly.m_list));
-
-    if (!accessCase->couldStillSucceed())
+    if (!accessCase.couldStillSucceed())
         return AccessGenerationResult::MadeNoChanges;
 
+    // Now add things to the new list. Note that at this point, we will still have old cases that
+    // may be replaced by the new ones. That's fine. We will sort that out when we regenerate.
     auto sets = collectAdditionalWatchpoints(vm(), accessCase);
     for (auto* set : sets) {
         if (!set->isStillValid())
             return AccessGenerationResult::MadeNoChanges;
     }
 
-    for (auto& alreadyListedCase : poly.m_list) {
-        if (alreadyListedCase.ptr() != accessCase.ptr()) {
-            if (alreadyListedCase->canReplace(accessCase.get()))
+    for (auto& alreadyListedCase : poly) {
+        if (alreadyListedCase != &accessCase) {
+            if (alreadyListedCase->canReplace(accessCase))
                 return AccessGenerationResult::MadeNoChanges;
         }
     }
+    poly.append(&accessCase);
+    dataLogLnIf(InlineCacheCompilerInternal::verbose, "Generate with m_list: ", listDump(poly));
 
     Vector<WatchpointSet*, 8> additionalWatchpointSets;
-    if (auto megamorphicCase = tryFoldToMegamorphic(codeBlock, poly.m_list.span()))
-        accessCase = megamorphicCase.releaseNonNull();
-    else
-        additionalWatchpointSets.appendVector(WTFMove(sets));
+    if (auto megamorphicCase = tryFoldToMegamorphic(codeBlock, poly.span()))
+        return compileOneAccessCaseHandler(poly, codeBlock, *megamorphicCase, WTFMove(additionalWatchpointSets));
 
+    additionalWatchpointSets.appendVector(WTFMove(sets));
     ASSERT(m_stubInfo.useDataIC);
-    auto result = compileOneAccessCaseHandler(poly, codeBlock, accessCase.get(), WTFMove(additionalWatchpointSets));
-    if (result.generatedSomeCode()) {
-        if (auto* handler = result.handler()) {
-            Ref resultCase { *handler->accessCase() };
-            if (isMegamorphic(resultCase->m_type)) {
-                poly.m_list.shrink(0);
-                poly.m_list.append(WTFMove(resultCase));
-            } else if (resultCase.ptr() != accessCase.ptr()) {
-                for (auto& alreadyListedCase : poly.m_list) {
-                    if (alreadyListedCase.ptr() == accessCase.ptr()) {
-                        alreadyListedCase = WTFMove(resultCase);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    return result;
+    return compileOneAccessCaseHandler(poly, codeBlock, accessCase, WTFMove(additionalWatchpointSets));
 }
 
-AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(PolymorphicAccess& poly, CodeBlock* codeBlock, AccessCase& accessCase, Vector<WatchpointSet*, 8>&& additionalWatchpointSets)
+AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Vector<AccessCase*, 16>& poly, CodeBlock* codeBlock, AccessCase& accessCase, Vector<WatchpointSet*, 8>&& additionalWatchpointSets)
 {
     ASSERT(useHandlerIC());
 
     VM& vm = this->vm();
 
-    auto connectWatchpointSets = [&](PolymorphicAccessJITStubRoutine::Watchpoints& watchpoints, WatchpointSet& watchpointSet, Vector<ObjectPropertyCondition, 64>&& watchedConditions, Vector<WatchpointSet*, 8>&& additionalWatchpointSets) {
+    auto connectWatchpointSets = [&](PolymorphicAccessJITStubRoutine& stub, Vector<ObjectPropertyCondition, 64>&& watchedConditions, Vector<WatchpointSet*, 8>&& additionalWatchpointSets) {
         for (auto& condition : watchedConditions)
-            ensureReferenceAndInstallWatchpoint(vm, watchpoints, watchpointSet, condition);
+            ensureReferenceAndInstallWatchpoint(vm, &stub, condition);
 
         // NOTE: We currently assume that this is relatively rare. It mainly arises for accesses to
         // properties on DOM nodes. For sure we cache many DOM node accesses, but even in
@@ -6744,7 +6768,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
         // vanilla objects or exotic objects from within JSC (like Arguments, those are super popular).
         // Those common kinds of JSC object accesses don't hit this case.
         for (WatchpointSet* set : additionalWatchpointSets)
-            ensureReferenceAndAddWatchpoint(vm, watchpoints, watchpointSet, *set);
+            ensureReferenceAndAddWatchpoint(vm, *set, &stub);
     };
 
     auto finishPreCompiledCodeGeneration = [&](Ref<PolymorphicAccessJITStubRoutine>&& stub, CacheType cacheType = CacheType::Unset) {
@@ -6761,7 +6785,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
         AccessGenerationResult::Kind resultKind;
         if (isMegamorphic(accessCase.m_type))
             resultKind = AccessGenerationResult::GeneratedMegamorphicCode;
-        else if (poly.m_list.size() >= Options::maxAccessVariantListSize())
+        else if (poly.size() >= Options::maxAccessVariantListSize())
             resultKind = AccessGenerationResult::GeneratedFinalCode;
         else
             resultKind = AccessGenerationResult::GeneratedNewCode;
@@ -6784,7 +6808,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
         AccessGenerationResult::Kind resultKind;
         if (isMegamorphic(accessCase.m_type))
             resultKind = AccessGenerationResult::GeneratedMegamorphicCode;
-        else if (poly.m_list.size() >= Options::maxAccessVariantListSize())
+        else if (poly.size() >= Options::maxAccessVariantListSize())
             resultKind = AccessGenerationResult::GeneratedFinalCode;
         else
             resultKind = AccessGenerationResult::GeneratedNewCode;
@@ -6832,8 +6856,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 cacheType = CacheType::GetByIdPrototype;
                                 code = vm.getCTIStub(CommonJITThunkID::GetByIdLoadPrototypePropertyHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub), cacheType);
                         }
                     }
@@ -6845,8 +6869,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                         collectConditions(accessCase, watchedConditions, checkingConditions);
                         if (checkingConditions.isEmpty()) {
                             auto code = vm.getCTIStub(CommonJITThunkID::GetByIdMissHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -6883,8 +6907,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                     code = vm.getCTIStub(CommonJITThunkID::GetByIdCustomAccessorHandler).retagged<JITStubRoutinePtrTag>();
                             } else
                                 code = vm.getCTIStub(CommonJITThunkID::GetByIdCustomValueHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -6902,8 +6926,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 currStructure->startWatchingPropertyForReplacements(vm, accessCase.offset());
 
                             auto code = vm.getCTIStub(CommonJITThunkID::GetByIdGetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -6913,8 +6937,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                     ASSERT(!accessCase.viaGlobalProxy());
                     ASSERT(accessCase.conditionSet().isEmpty());
                     auto code = vm.getCTIStub(CommonJITThunkID::GetByIdProxyObjectLoadHandler).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                    connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), { }, WTFMove(additionalWatchpointSets));
+                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
                     return finishPreCompiledCodeGeneration(WTFMove(stub));
                 }
                 case AccessCase::IntrinsicGetter:
@@ -6923,8 +6947,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                     ASSERT(!accessCase.viaGlobalProxy());
                     ASSERT(accessCase.conditionSet().isEmpty());
                     auto code = vm.getCTIStub(CommonJITThunkID::GetByIdModuleNamespaceLoadHandler).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                    connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), { }, WTFMove(additionalWatchpointSets));
+                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
                     return finishPreCompiledCodeGeneration(WTFMove(stub));
                 }
                 default:
@@ -6946,8 +6970,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                     ASSERT(accessCase.conditionSet().isEmpty());
                     if (!accessCase.viaGlobalProxy()) {
                         auto code = vm.getCTIStub(CommonJITThunkID::PutByIdReplaceHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), { }, { });
+                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), { }, { });
                         return finishPreCompiledCodeGeneration(WTFMove(stub), CacheType::PutByIdReplace);
                     }
                     break;
@@ -6968,8 +6992,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                             code = vm.getCTIStub(CommonJITThunkID::PutByIdTransitionNewlyAllocatingHandler).retagged<JITStubRoutinePtrTag>();
                         else
                             code = vm.getCTIStub(CommonJITThunkID::PutByIdTransitionReallocatingHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                         return finishPreCompiledCodeGeneration(WTFMove(stub));
                     }
                     break;
@@ -6991,8 +7015,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdCustomAccessorHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdCustomValueHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7014,8 +7038,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdStrictSetterHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdSloppySetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7036,8 +7060,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                     if (checkingConditions.isEmpty()) {
                         bool isHit = accessCase.m_type == AccessCase::InHit;
                         auto code = vm.getCTIStub(isHit ? CommonJITThunkID::InByIdHitHandler : CommonJITThunkID::InByIdMissHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                         return finishPreCompiledCodeGeneration(WTFMove(stub), isHit ? CacheType::InByIdSelf : CacheType::Unset);
                     }
                     break;
@@ -7071,8 +7095,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                         break;
                     }
                     auto code = vm.getCTIStub(thunkID).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                    connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), { }, WTFMove(additionalWatchpointSets));
+                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
                     return finishPreCompiledCodeGeneration(WTFMove(stub));
                 }
                 default:
@@ -7089,8 +7113,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                     collectConditions(accessCase, watchedConditions, checkingConditions);
                     if (checkingConditions.isEmpty()) {
                         auto code = vm.getCTIStub(accessCase.m_type == AccessCase::InstanceOfHit ? CommonJITThunkID::InstanceOfHitHandler : CommonJITThunkID::InstanceOfMissHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                         return finishPreCompiledCodeGeneration(WTFMove(stub));
                     }
                     break;
@@ -7128,8 +7152,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 else
                                     code = vm.getCTIStub(CommonJITThunkID::GetByValWithStringLoadPrototypePropertyHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7145,8 +7169,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 code = vm.getCTIStub(CommonJITThunkID::GetByValWithSymbolMissHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::GetByValWithStringMissHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7191,8 +7215,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 else
                                     code = vm.getCTIStub(CommonJITThunkID::GetByValWithStringCustomValueHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7209,8 +7233,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                             if (isValidOffset(accessCase.m_offset))
                                 currStructure->startWatchingPropertyForReplacements(vm, accessCase.offset());
                             auto code = vm.getCTIStub(accessCase.uid()->isSymbol() ? CommonJITThunkID::GetByValWithSymbolGetterHandler : CommonJITThunkID::GetByValWithStringGetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7239,8 +7263,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                             code = vm.getCTIStub(CommonJITThunkID::PutByValWithSymbolReplaceHandler).retagged<JITStubRoutinePtrTag>();
                         else
                             code = vm.getCTIStub(CommonJITThunkID::PutByValWithStringReplaceHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), { }, WTFMove(additionalWatchpointSets));
+                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
                         return finishPreCompiledCodeGeneration(WTFMove(stub));
                     }
                     break;
@@ -7274,8 +7298,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::PutByValWithStringTransitionReallocatingHandler).retagged<JITStubRoutinePtrTag>();
                         }
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                         return finishPreCompiledCodeGeneration(WTFMove(stub));
                     }
                     break;
@@ -7304,8 +7328,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 else
                                     code = vm.getCTIStub(CommonJITThunkID::PutByValWithStringCustomValueHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7327,8 +7351,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                                 code = vm.getCTIStub(accessCase.uid()->isSymbol() ? CommonJITThunkID::PutByValWithSymbolStrictSetterHandler : CommonJITThunkID::PutByValWithStringStrictSetterHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(accessCase.uid()->isSymbol() ? CommonJITThunkID::PutByValWithSymbolSloppySetterHandler : CommonJITThunkID::PutByValWithStringSloppySetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                            connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                             return finishPreCompiledCodeGeneration(WTFMove(stub));
                         }
                     }
@@ -7354,8 +7378,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                             code = vm.getCTIStub(accessCase.m_type == AccessCase::InHit ? CommonJITThunkID::InByValWithSymbolHitHandler : CommonJITThunkID::InByValWithSymbolMissHandler).retagged<JITStubRoutinePtrTag>();
                         else
                             code = vm.getCTIStub(accessCase.m_type == AccessCase::InHit ? CommonJITThunkID::InByValWithStringHitHandler : CommonJITThunkID::InByValWithStringMissHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
+                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
                         return finishPreCompiledCodeGeneration(WTFMove(stub));
                     }
                     break;
@@ -7389,8 +7413,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                         break;
                     }
                     auto code = vm.getCTIStub(thunkID).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                    connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), { }, WTFMove(additionalWatchpointSets));
+                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
                     return finishPreCompiledCodeGeneration(WTFMove(stub));
                 }
                 default:
@@ -7418,8 +7442,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
                         break;
                     }
                     auto code = vm.getCTIStub(thunkID).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-                    connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), { }, WTFMove(additionalWatchpointSets));
+                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
                     return finishPreCompiledCodeGeneration(WTFMove(stub));
                 }
                 default:
@@ -7547,8 +7571,8 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> code = FINALIZE_CODE_FOR(codeBlock, linkBuffer, JITStubRoutinePtrTag, categoryName(m_stubInfo.accessType), "%s", toCString("Access stub for ", *codeBlock, " ", m_stubInfo.codeOrigin, "with start: ", m_stubInfo.startLocation, ": ", listDump(keys)).data());
 
     if (statelessType) {
-        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm);
-        connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(m_conditions), WTFMove(additionalWatchpointSets));
+        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+        connectWatchpointSets(stub.get(), WTFMove(m_conditions), WTFMove(additionalWatchpointSets));
         dataLogLnIf(InlineCacheCompilerInternal::verbose, "Installing ", m_stubInfo.accessType, " / ", accessCase.m_type);
         vm.m_sharedJITStubs->setStatelessStub(statelessType.value(), Ref { stub });
         return finishPreCompiledCodeGeneration(WTFMove(stub));
@@ -7556,7 +7580,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(Polymorp
 
     FixedVector<StructureID> weakStructures(WTFMove(m_weakStructures));
     auto stub = createICJITStubRoutine(WTFMove(code), WTFMove(keys), WTFMove(weakStructures), vm, nullptr, doesCalls, cellsToMark, { }, nullptr, { });
-    connectWatchpointSets(stub->watchpoints(), stub->watchpointSet(), WTFMove(m_conditions), WTFMove(additionalWatchpointSets));
+    connectWatchpointSets(stub.get(), WTFMove(m_conditions), WTFMove(additionalWatchpointSets));
 
     dataLogLnIf(InlineCacheCompilerInternal::verbose, "Installing ", m_stubInfo.accessType, " / ", listDump(stub->cases()));
     vm.m_sharedJITStubs->add(SharedJITStubSet::Hash::Key(SharedJITStubSet::stubInfoKey(m_stubInfo), stub.ptr()));
@@ -7693,7 +7717,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> deleteByValWithSymbolDeleteNonConfigurable
 MacroAssemblerCodeRef<JITThunkPtrTag> deleteByValWithSymbolDeleteMissHandler(VM&) { return { }; }
 MacroAssemblerCodeRef<JITThunkPtrTag> checkPrivateBrandHandler(VM&) { return { }; }
 MacroAssemblerCodeRef<JITThunkPtrTag> setPrivateBrandHandler(VM&) { return { }; }
-AccessGenerationResult InlineCacheCompiler::compileHandler(const GCSafeConcurrentJSLocker&, PolymorphicAccess&, CodeBlock*, Ref<AccessCase>&&) { return { }; }
+AccessGenerationResult InlineCacheCompiler::compileHandler(const GCSafeConcurrentJSLocker&, Vector<AccessCase*, 16>&&, CodeBlock*, AccessCase&) { return { }; }
 #endif
 
 PolymorphicAccess::PolymorphicAccess() = default;
@@ -7825,6 +7849,10 @@ void InlineCacheHandler::aboutToDie()
 {
     if (m_stubRoutine)
         m_stubRoutine->aboutToDie();
+    // A reference to InlineCacheHandler may keep it alive later than the CodeBlock that "owns" this
+    // watchpoint but the watchpoint must not fire after the CodeBlock has finished destruction,
+    // so clear the watchpoint eagerly.
+    m_watchpoint.reset();
 }
 
 CallLinkInfo* InlineCacheHandler::callLinkInfoAt(const ConcurrentJSLocker& locker, unsigned index)
@@ -7841,14 +7869,18 @@ bool InlineCacheHandler::visitWeak(VM& vm)
     for (auto& callLinkInfo : Base::span())
         callLinkInfo.visitWeak(vm);
 
-    if (!m_stubRoutine)
-        return true;
+    if (m_accessCase) {
+        if (!m_accessCase->visitWeak(vm))
+            return false;
+    }
 
+    if (m_stubRoutine) {
     m_stubRoutine->visitWeak(vm);
     for (StructureID weakReference : m_stubRoutine->weakStructures()) {
         Structure* structure = weakReference.decode();
         if (!vm.heap.isMarked(structure))
             return false;
+    }
     }
 
     return true;
@@ -7925,6 +7957,6 @@ void printInternal(PrintStream& out, AccessType type)
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 #endif // ENABLE(JIT)
-
-

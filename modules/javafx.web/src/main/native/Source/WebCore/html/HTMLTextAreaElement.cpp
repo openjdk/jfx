@@ -29,10 +29,12 @@
 #include "AXObjectCache.h"
 #include "BeforeTextInsertedEvent.h"
 #include "CSSValueKeywords.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "DOMFormData.h"
 #include "Document.h"
 #include "Editor.h"
-#include "ElementChildIteratorInlines.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FormController.h"
@@ -263,7 +265,7 @@ void HTMLTextAreaElement::subtreeHasChanged()
         frame->editor().textDidChangeInTextArea(*this);
     // When typing in a textarea, childrenChanged is not called, so we need to force the directionality check.
     if (selfOrPrecedingNodesAffectDirAuto())
-        updateEffectiveDirectionalityOfDirAuto();
+        updateEffectiveTextDirection();
 }
 
 void HTMLTextAreaElement::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent& event) const
@@ -315,7 +317,7 @@ String HTMLTextAreaElement::sanitizeUserInputValue(const String& proposedValue, 
 RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElement() const
 {
     RefPtr root = userAgentShadowRoot();
-    return root ? childrenOfType<TextControlInnerTextElement>(*root).first() : nullptr;
+    return root ? downcast<TextControlInnerTextElement>(root->firstChild()) : nullptr;
 }
 
 RefPtr<TextControlInnerTextElement> HTMLTextAreaElement::innerTextElementCreatingShadowSubtreeIfNeeded()
@@ -338,6 +340,8 @@ void HTMLTextAreaElement::updateValue() const
 
 String HTMLTextAreaElement::value() const
 {
+    if (protectedDocument()->requiresScriptExecutionTelemetry(ScriptTelemetryCategory::FormControls))
+        return emptyString();
     updateValue();
     return m_value;
 }
@@ -357,7 +361,7 @@ void HTMLTextAreaElement::setNonDirtyValue(const String& value, TextControlSetVa
     updateValidity();
 }
 
-void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventBehavior, TextControlSetValueSelection selection)
+void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventBehavior eventBehavior, TextControlSetValueSelection selection)
 {
     m_wasModifiedByUser = false;
     // Code elsewhere normalizes line endings added by the user via the keyboard or pasting.
@@ -369,6 +373,7 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventB
     if (normalizedValue == value())
         return;
 
+    bool valueWasEmpty = m_value.isEmpty();
     bool shouldClamp = selection == TextControlSetValueSelection::Clamp;
     auto selectionStartValue = shouldClamp ? computeSelectionStart() : 0;
     auto selectionEndValue = shouldClamp ? computeSelectionEnd() : 0;
@@ -379,7 +384,7 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventB
     updatePlaceholderVisibility();
     invalidateStyleForSubtree();
     if (selfOrPrecedingNodesAffectDirAuto())
-        updateEffectiveDirectionalityOfDirAuto();
+        updateEffectiveTextDirection();
     setFormControlValueMatchesRenderer(true);
 
     auto endOfString = m_value.length();
@@ -398,6 +403,11 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue, TextFieldEventB
 
     if (CheckedPtr cache = document().existingAXObjectCache())
         cache->valueChanged(*this);
+
+    if (eventBehavior == DispatchNoEvent && !valueWasEmpty && normalizedValue.isEmpty()) {
+        if (RefPtr page = document().page())
+            page->chrome().client().didProgrammaticallyClearTextFormControl(*this);
+    }
 }
 
 String HTMLTextAreaElement::defaultValue() const

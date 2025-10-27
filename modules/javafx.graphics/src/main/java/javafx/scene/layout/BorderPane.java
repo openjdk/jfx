@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -626,8 +626,8 @@ public class BorderPane extends Pane {
     private double getAreaHeight(Node child, double width, boolean minimum) {
         if (child != null && child.isManaged()) {
             Insets margin = getNodeMargin(child);
-            return minimum ? computeChildMinAreaHeight(child, -1, margin, width, false):
-                                   computeChildPrefAreaHeight(child, -1, margin, width, false);
+            return minimum ? computeChildMinAreaHeight(child, -1, margin, width, true):
+                                   computeChildPrefAreaHeight(child, -1, margin, width, true);
         }
         return 0;
     }

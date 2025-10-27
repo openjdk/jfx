@@ -84,9 +84,9 @@ class CppProtocolTypesHeaderGenerator(CppGenerator):
 
     def _generate_secondary_header_includes(self):
         header_includes = [
-            (["JavaScriptCore", "WebKit"], ("JavaScriptCore", "inspector/InspectorProtocolTypes.h")),
-            (["JavaScriptCore", "WebKit"], ("WTF", "wtf/JSONValues.h")),
-            (["JavaScriptCore", "WebKit"], ("WTF", "wtf/text/WTFString.h")),
+            (["JavaScriptCore", "WebKit", "WebDriverBidi"], ("JavaScriptCore", "inspector/InspectorProtocolTypes.h")),
+            (["JavaScriptCore", "WebKit", "WebDriverBidi"], ("WTF", "wtf/JSONValues.h")),
+            (["JavaScriptCore", "WebKit", "WebDriverBidi"], ("WTF", "wtf/text/WTFString.h")),
         ]
         return '\n'.join(self.generate_includes_from_entries(header_includes))
 

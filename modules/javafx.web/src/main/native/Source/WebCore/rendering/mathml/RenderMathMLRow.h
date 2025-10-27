@@ -43,13 +43,12 @@ public:
     virtual ~RenderMathMLRow();
 
 protected:
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
     std::optional<LayoutUnit> firstLineBaseline() const override;
 
     void stretchVerticalOperatorsAndLayoutChildren();
     void getContentBoundingBox(LayoutUnit& width, LayoutUnit& ascent, LayoutUnit& descent) const;
     void layoutRowItems(LayoutUnit width, LayoutUnit ascent);
-    void shiftRowItems(LayoutUnit left, LayoutUnit top);
     LayoutUnit preferredLogicalWidthOfRowItems();
     void computePreferredLogicalWidths() override;
 

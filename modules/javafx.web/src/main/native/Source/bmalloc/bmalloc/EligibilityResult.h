@@ -25,9 +25,16 @@
 
 #pragma once
 
+#if !BUSE(TZONE)
+
 #include "IsoPage.h"
 
 #if !BUSE(LIBPAS)
+
+/* avoid conflict with symbol from X11 headers */
+#ifdef Success
+#undef Success
+#endif
 
 namespace bmalloc {
 
@@ -51,3 +58,4 @@ struct EligibilityResult {
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)

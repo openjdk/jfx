@@ -24,6 +24,7 @@
 #include "HTMLImageElement.h"
 
 #include "CSSPropertyNames.h"
+#include "CSSSerializationContext.h"
 #include "CSSValueKeywords.h"
 #include "CachedImage.h"
 #include "Chrome.h"
@@ -70,6 +71,10 @@
 #include "ImageControlsMac.h"
 #endif
 
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+#include "SpatialImageControls.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLImageElement);
@@ -80,8 +85,7 @@ HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& docum
     : HTMLElement(tagName, document, { TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument })
     , FormAssociatedElement(form)
     , ActiveDOMObject(document)
-    , m_imageLoader(makeUnique<HTMLImageLoader>(*this))
-    , m_compositeOperator(CompositeOperator::SourceOver)
+    , m_imageLoader(makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this))
     , m_imageDevicePixelRatio(1.0f)
 {
     ASSERT(hasTagName(imgTag));
@@ -107,7 +111,7 @@ HTMLImageElement::~HTMLImageElement()
     document().removeDynamicMediaQueryDependentImage(*this);
     setForm(nullptr);
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
-    if (auto* page = document().page())
+    if (RefPtr page = document().page())
         page->removeIndividuallyPlayingAnimationElement(*this);
 #endif
 }
@@ -393,13 +397,6 @@ void HTMLImageElement::attributeChanged(const QualifiedName& name, const AtomStr
         if (isInTreeScope() && !m_parsedUsemap.isNull())
             treeScope().addImageElementByUsemap(m_parsedUsemap, *this);
         break;
-    case AttributeNames::compositeAttr: {
-        // FIXME: images don't support blend modes in their compositing attribute.
-        BlendMode blendOp = BlendMode::Normal;
-        if (!parseCompositeAndBlendOperator(newValue, m_compositeOperator, blendOp))
-            m_compositeOperator = CompositeOperator::SourceOver;
-        break;
-    }
     case AttributeNames::loadingAttr:
         // No action needed for eager to lazy transition.
         if (!hasLazyLoadableAttributeValue(newValue))
@@ -430,6 +427,11 @@ void HTMLImageElement::attributeChanged(const QualifiedName& name, const AtomStr
             m_hadNameBeforeAttributeChanged = willHaveName;
         break;
         }
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    case AttributeNames::controlsAttr:
+        SpatialImageControls::updateSpatialImageControls(*this);
+        break;
+#endif
     default:
         break;
     }
@@ -463,6 +465,11 @@ RenderPtr<RenderElement> HTMLImageElement::createElementRenderer(RenderStyle&& s
         return RenderElement::createFor(*this, WTFMove(style));
 
     return createRenderer<RenderImage>(RenderObject::Type::Image, *this, WTFMove(style), nullptr, m_imageDevicePixelRatio);
+}
+
+bool HTMLImageElement::isReplaced(const RenderStyle& style) const
+{
+    return !style.hasContent();
 }
 
 bool HTMLImageElement::canStartSelection() const
@@ -558,7 +565,7 @@ void HTMLImageElement::setPictureElement(HTMLPictureElement* pictureElement)
 unsigned HTMLImageElement::width()
 {
     if (inRenderedDocument())
-        document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+        protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
 
     if (!renderer()) {
         // check the attribute first for an explicit pixel value
@@ -581,7 +588,7 @@ unsigned HTMLImageElement::width()
 unsigned HTMLImageElement::height()
 {
     if (inRenderedDocument())
-        document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+        protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
 
     if (!renderer()) {
         // check the attribute first for an explicit pixel value
@@ -685,15 +692,15 @@ String HTMLImageElement::completeURLsInAttributeValue(const URL& base, const Att
     return HTMLElement::completeURLsInAttributeValue(base, attribute, resolveURLs);
 }
 
-Attribute HTMLImageElement::replaceURLsInAttributeValue(const Attribute& attribute, const HashMap<String, String>& replacementURLStrings) const
+Attribute HTMLImageElement::replaceURLsInAttributeValue(const Attribute& attribute, const CSS::SerializationContext& serializationContext) const
 {
     if (attribute.name() != srcsetAttr)
         return attribute;
 
-    if (replacementURLStrings.isEmpty())
+    if (serializationContext.replacementURLStrings.isEmpty())
         return attribute;
 
-    return Attribute { srcsetAttr, AtomString { replaceURLsInSrcsetAttribute(*this, StringView(attribute.value()), replacementURLStrings) } };
+    return Attribute { srcsetAttr, AtomString { replaceURLsInSrcsetAttribute(*this, StringView(attribute.value()), serializationContext) } };
 }
 
 bool HTMLImageElement::matchesUsemap(const AtomString& name) const
@@ -733,7 +740,7 @@ void HTMLImageElement::setWidth(unsigned value)
 
 int HTMLImageElement::x() const
 {
-    document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
     auto renderer = this->renderer();
     if (!renderer)
         return 0;
@@ -744,7 +751,7 @@ int HTMLImageElement::x() const
 
 int HTMLImageElement::y() const
 {
-    document().updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
     auto renderer = this->renderer();
     if (!renderer)
         return 0;
@@ -880,7 +887,7 @@ void HTMLImageElement::setAllowsAnimation(std::optional<bool> allowsAnimation)
         if (auto* renderer = this->renderer())
             renderer->repaint();
 
-        if (auto* page = document().page()) {
+        if (RefPtr page = document().page()) {
             if (allowsAnimation.value_or(false))
                 page->addIndividuallyPlayingAnimationElement(*this);
             else
@@ -1057,11 +1064,11 @@ void HTMLImageElement::invalidateAttributeMapping()
     invalidateStyle();
 }
 
-Ref<Element> HTMLImageElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> HTMLImageElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
 {
-    auto clone = create(targetDocument);
+    auto clone = create(document);
 #if ENABLE(ATTACHMENT_ELEMENT)
-    cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, targetDocument);
+    cloneAttachmentAssociatedElementWithoutAttributesAndChildren(clone, document);
 #endif
     return clone;
 }
@@ -1073,14 +1080,12 @@ void HTMLImageElement::setFetchPriorityForBindings(const AtomString& value)
 
 String HTMLImageElement::fetchPriorityForBindings() const
 {
-    return convertEnumerationToString(fetchPriorityHint());
+    return convertEnumerationToString(fetchPriority());
 }
 
-RequestPriority HTMLImageElement::fetchPriorityHint() const
+RequestPriority HTMLImageElement::fetchPriority() const
 {
-    if (document().settings().fetchPriorityEnabled())
         return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
-    return RequestPriority::Auto;
 }
 
 bool HTMLImageElement::originClean(const SecurityOrigin& origin) const

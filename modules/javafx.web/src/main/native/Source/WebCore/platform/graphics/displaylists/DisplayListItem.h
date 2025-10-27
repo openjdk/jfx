@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@ class TextStream;
 
 namespace WebCore {
 
+class ControlFactory;
 class GraphicsContext;
 
 namespace DisplayList {
@@ -62,7 +63,6 @@ class DrawFocusRingPath;
 class DrawFocusRingRects;
 class DrawGlyphs;
 class DrawDecomposedGlyphs;
-class DrawDisplayListItems;
 class DrawImageBuffer;
 class DrawLine;
 class DrawLinesForText;
@@ -112,13 +112,13 @@ class StrokeClosedArc;
 class StrokeQuadCurve;
 class StrokeBezierCurve;
 #endif
-#if ENABLE(VIDEO)
-class PaintFrameForMedia;
-#endif
 #if USE(CG)
 class ApplyFillPattern;
 class ApplyStrokePattern;
 #endif
+class BeginPage;
+class EndPage;
+class SetURLForRect;
 
 using Item = std::variant
     < ApplyDeviceScaleFactor
@@ -142,7 +142,6 @@ using Item = std::variant
     , DrawFocusRingRects
     , DrawGlyphs
     , DrawDecomposedGlyphs
-    , DrawDisplayListItems
     , DrawImageBuffer
     , DrawLine
     , DrawLinesForText
@@ -192,13 +191,13 @@ using Item = std::variant
     , StrokeQuadCurve
     , StrokeBezierCurve
 #endif
-#if ENABLE(VIDEO)
-    , PaintFrameForMedia
-#endif
 #if USE(CG)
     , ApplyFillPattern
     , ApplyStrokePattern
 #endif
+    , BeginPage
+    , EndPage
+    , SetURLForRect
 >;
 
 enum class StopReplayReason : uint8_t {
@@ -220,13 +219,14 @@ enum class AsTextFlag : uint8_t {
 
 bool isValid(const Item&);
 
-ApplyItemResult applyItem(GraphicsContext&, const ResourceHeap&, const Item&);
+ApplyItemResult applyItem(GraphicsContext&, const ResourceHeap&, ControlFactory&, const Item&);
 
 bool shouldDumpItem(const Item&, OptionSet<AsTextFlag>);
 
 WEBCORE_EXPORT void dumpItem(TextStream&, const Item&, OptionSet<AsTextFlag>);
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Item&);
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, StopReplayReason);
 
 } // namespace DisplayList
 } // namespace WebCore

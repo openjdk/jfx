@@ -27,9 +27,12 @@
 
 #include "Logging.h"
 #include "ScrollingMomentumCalculator.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollAnimationMomentum);
 
 ScrollAnimationMomentum::ScrollAnimationMomentum(ScrollAnimationClient& client)
     : ScrollAnimation(Type::Momentum, client)
@@ -38,7 +41,7 @@ ScrollAnimationMomentum::ScrollAnimationMomentum(ScrollAnimationClient& client)
 
 ScrollAnimationMomentum::~ScrollAnimationMomentum() = default;
 
-bool ScrollAnimationMomentum::startAnimatedScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, const Function<FloatPoint(const FloatPoint&)>& destinationModifier)
+bool ScrollAnimationMomentum::startAnimatedScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, NOESCAPE const Function<FloatPoint(const FloatPoint&)>& destinationModifier)
 {
     auto extents = m_client.scrollExtentsForAnimation(*this);
     m_currentOffset = initialOffset;

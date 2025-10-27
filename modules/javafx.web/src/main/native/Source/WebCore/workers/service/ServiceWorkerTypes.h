@@ -66,21 +66,21 @@ enum class ServiceWorkerIsInspectable : bool { No, Yes };
 enum class ShouldNotifyWhenResolved : bool { No, Yes };
 
 enum class ServiceWorkerRegistrationIdentifierType { };
-using ServiceWorkerRegistrationIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
+using ServiceWorkerRegistrationIdentifier = AtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
 
 enum class ServiceWorkerJobIdentifierType { };
-using ServiceWorkerJobIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
+using ServiceWorkerJobIdentifier = AtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
 
 enum class SWServerToContextConnectionIdentifierType { };
-using SWServerToContextConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerToContextConnectionIdentifierType>;
+using SWServerToContextConnectionIdentifier = ObjectIdentifier<SWServerToContextConnectionIdentifierType>;
 
 using SWServerConnectionIdentifierType = ProcessIdentifierType;
-using SWServerConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerConnectionIdentifierType>;
+using SWServerConnectionIdentifier = ObjectIdentifier<SWServerConnectionIdentifierType>;
 
 using ServiceWorkerOrClientData = std::variant<ServiceWorkerData, ServiceWorkerClientData>;
 
 // FIXME: It should be possible to replace ServiceWorkerOrClientIdentifier with ScriptExecutionContextIdentifier entirely.
-using ServiceWorkerOrClientIdentifier = std::variant<ServiceWorkerIdentifier, ScriptExecutionContextIdentifier>;
+using ServiceWorkerOrClientIdentifier = std::variant<ScriptExecutionContextIdentifier, ServiceWorkerIdentifier>;
 
 struct ServiceWorkerScripts {
     ServiceWorkerScripts isolatedCopy() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -192,6 +192,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     // The current focus owner is a child of some Toolbar's item
                     Parent item = owner.getParent();
                     while (!boxChildren.contains(item)) {
+                        if (item == null) {
+                            return null;
+                        }
                         item = item.getParent();
                     }
                     Node selected = context.selectInSubtree(item, owner, dir);
@@ -670,13 +673,11 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     }
 
     private double getToolbarLength(ToolBar toolbar) {
-        double length;
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            length = snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing();
+            return snapSizeY(snapSizeY(toolbar.getHeight()) - snappedTopInset() - snappedBottomInset() + getSpacing());
         } else {
-            length = snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing();
+            return snapSizeX(snapSizeX(toolbar.getWidth()) - snappedLeftInset() - snappedRightInset() + getSpacing());
         }
-        return length;
     }
 
     /**

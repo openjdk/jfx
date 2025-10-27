@@ -36,21 +36,18 @@ class Document;
 
 struct CSSSelectorParserContext {
     CSSParserMode mode { CSSParserMode::HTMLStandardMode };
-    bool cssNestingEnabled { false };
-    bool customStateSetEnabled { false };
-    bool grammarAndSpellingPseudoElementsEnabled { false };
-    bool highlightAPIEnabled { false };
 #if ENABLE(SERVICE_CONTROLS)
-    bool imageControlsEnabled { false };
+    bool imageControlsEnabled : 1 { false };
 #endif
-    bool popoverAttributeEnabled { false };
-    bool targetTextPseudoElementEnabled { false };
-    bool thumbAndTrackPseudoElementsEnabled { false };
-    bool viewTransitionsEnabled { false };
-    bool viewTransitionClassesEnabled { false };
-    bool viewTransitionTypesEnabled { false };
+    bool popoverAttributeEnabled : 1 { false };
+    bool targetTextPseudoElementEnabled : 1 { false };
+    bool thumbAndTrackPseudoElementsEnabled : 1 { false };
+    bool viewTransitionsEnabled : 1 { false };
+    bool viewTransitionClassesEnabled : 1 { false };
+    bool viewTransitionTypesEnabled : 1 { false };
+    bool webkitMediaTextTrackDisplayQuirkEnabled : 1 { false };
 
-    bool isHashTableDeletedValue { false };
+    bool isHashTableDeletedValue : 1 { false };
 
     CSSSelectorParserContext() = default;
     CSSSelectorParserContext(const CSSParserContext&);

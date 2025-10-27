@@ -113,11 +113,15 @@ final class MacWindow extends Window {
 
     private native void _setIcon(long ptr, Object iconBuffer, int width, int height);
 
+    @Override
+    public void setDarkFrame(boolean value) {
+        _setDarkFrame(getRawHandle(), value);
+    }
+
+    private native void _setDarkFrame(long ptr, boolean value);
+
     @Override native protected void _toFront(long ptr);
     @Override native protected void _toBack(long ptr);
-    @Override native protected void _enterModal(long ptr);
-    @Override native protected void _enterModalWithWindow(long dialog, long window);
-    @Override native protected void _exitModal(long ptr);
 
     @Override native protected boolean _grabFocus(long ptr);
     @Override native protected void _ungrabFocus(long ptr);

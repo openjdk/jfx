@@ -44,7 +44,7 @@ public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
 private:
-    typedef HashMap<uint64_t, SparseArrayEntry, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> Map;
+    typedef UncheckedKeyHashMap<uint64_t, SparseArrayEntry, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> Map;
 
     enum Flags {
         Normal = 0,
@@ -66,7 +66,7 @@ public:
 
     static SparseArrayValueMap* create(VM&);
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess>

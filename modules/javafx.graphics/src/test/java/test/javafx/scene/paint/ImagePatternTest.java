@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -115,21 +115,37 @@ public class ImagePatternTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var image = createImage();
             var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
             var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -0.5));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var image = createImage();
             var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
             var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var image = createImage();
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
+            assertEquals(new ImagePattern(image, 0, 10, 20, 30, false), startValue.interpolate(endValue, -1));
+            assertEquals(new ImagePattern(image, -10, 0, 10, 20, false), startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var image = createImage();
+            var startValue = new ImagePattern(image, 10, 20, 30, 40, false);
+            var endValue = new ImagePattern(image, 20, 30, 40, 50, false);
+            assertEquals(new ImagePattern(image, 30, 40, 50, 60, false), startValue.interpolate(endValue, 2));
+            assertEquals(new ImagePattern(image, 40, 50, 60, 70, false), startValue.interpolate(endValue, 3));
         }
     }
 }

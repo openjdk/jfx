@@ -87,14 +87,23 @@
     -fx-background-color: white;
 }
 
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-iconify-button,
+.-FX-INTERNAL-header-button-container.utility > .-FX-INTERNAL-maximize-button {
+    -fx-managed: false;
+    visibility: hidden;
+}
+
+.-FX-INTERNAL-iconify-button:disabled,
 .-FX-INTERNAL-maximize-button:disabled {
     -fx-background-color: transparent !important;
 }
 
+.-FX-INTERNAL-iconify-button:disabled > .-FX-INTERNAL-glyph,
 .-FX-INTERNAL-maximize-button:disabled > .-FX-INTERNAL-glyph {
     -fx-background-color: #00000020 !important;
 }
 
+.-FX-INTERNAL-iconify-button.dark:disabled > .-FX-INTERNAL-glyph,
 .-FX-INTERNAL-maximize-button.dark:disabled > .-FX-INTERNAL-glyph {
     -fx-background-color: #ffffff20 !important;
 }

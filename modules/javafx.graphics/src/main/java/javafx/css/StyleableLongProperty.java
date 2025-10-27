@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -136,7 +136,7 @@ public abstract class StyleableLongProperty
             // Longs are interpolated in real number space and rounded to the nearest long.
             long diff = endValue - startValue;
             long result = startValue + Math.round(progress * diff);
-            StyleableLongProperty.super.set(progress < 1 ? Utils.clamp(startValue, result, endValue) : endValue);
+            StyleableLongProperty.super.set(progress != 1 ? Utils.clamp(startValue, result, endValue) : endValue);
         }
 
         @Override

@@ -27,6 +27,7 @@
 
 #include "GLDisplay.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
@@ -45,7 +46,9 @@ typedef struct _GstGLDisplay GstGLDisplay;
 #endif // ENABLE(VIDEO) && USE(GSTREAMER_GL)
 
 #if USE(SKIA)
-#include <skia/gpu/GrDirectContext.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/gpu/ganesh/GrDirectContext.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/ThreadSafeWeakHashSet.h>
 #endif
 
@@ -57,7 +60,8 @@ class SkiaGLContext;
 #endif
 
 class PlatformDisplay {
-    WTF_MAKE_NONCOPYABLE(PlatformDisplay); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PlatformDisplay);
+    WTF_MAKE_NONCOPYABLE(PlatformDisplay);
 public:
     WEBCORE_EXPORT static PlatformDisplay& sharedDisplay();
 #if !PLATFORM(WIN)
@@ -85,7 +89,7 @@ public:
     virtual Type type() const = 0;
 
     WEBCORE_EXPORT GLContext* sharingGLContext();
-    void clearSharingGLContext();
+    void clearGLContexts();
     EGLDisplay eglDisplay() const;
     bool eglCheckVersion(int major, int minor) const;
 
@@ -95,6 +99,9 @@ public:
     bool destroyEGLImage(EGLImage) const;
 #if USE(GBM)
     const Vector<GLDisplay::DMABufFormat>& dmabufFormats();
+#if USE(GSTREAMER)
+    const Vector<GLDisplay::DMABufFormat>& dmabufFormatsForVideo();
+#endif
 #endif
 
 #if ENABLE(WEBGL)
@@ -127,7 +134,7 @@ protected:
 
 private:
 #if USE(SKIA)
-    void invalidateSkiaGLContexts();
+    void clearSkiaGLContext();
 #endif
 
 #if ENABLE(WEBGL) && !PLATFORM(WIN)

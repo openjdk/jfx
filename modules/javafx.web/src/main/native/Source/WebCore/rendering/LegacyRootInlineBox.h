@@ -23,7 +23,7 @@
 #include "BidiContext.h"
 #include "LegacyInlineFlowBox.h"
 #include "RenderBox.h"
-#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -79,8 +79,6 @@ public:
     const LegacyInlineBox* firstSelectedBox() const;
     const LegacyInlineBox* lastSelectedBox() const;
 
-    void extractLineBoxFromRenderObject() final;
-    void attachLineBoxToRenderObject() final;
     void removeLineBoxFromRenderObject() final;
 
     FontBaseline baselineType() const { return static_cast<FontBaseline>(m_baselineType); }

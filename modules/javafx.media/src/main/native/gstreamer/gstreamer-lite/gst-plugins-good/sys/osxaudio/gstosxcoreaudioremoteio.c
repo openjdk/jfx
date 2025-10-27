@@ -21,10 +21,19 @@
  */
 
 #import <AudioUnit/AUComponent.h>
+#import "gstiosaudiosession.h"
 
 static gboolean
 gst_core_audio_open_impl (GstCoreAudio * core_audio)
 {
+  /* On iOS, an AVAudioSession needs to be set up to 1) avoid playback being silenced
+   * by silent mode and 2) to allow audio to be captured from the microphone.
+   * However, AVAudioSession has a lot of settings and in more complicated scenarios,
+   * apps/users should handle that themselves. Disable auto-config through the
+   * configure-session property on osxaudiosrc/sink in those cases. */
+  if (core_audio->configure_session)
+    gst_ios_audio_session_setup (core_audio->is_src);
+
   return gst_core_audio_open_device (core_audio, kAudioUnitSubType_RemoteIO,
       "RemoteIO");
 }
@@ -126,6 +135,7 @@ static gboolean
 gst_core_audio_select_device_impl (GstCoreAudio * core_audio)
 {
   /* No device selection in iOS */
+  core_audio->is_default = TRUE;
   return TRUE;
 }
 

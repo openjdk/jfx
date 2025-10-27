@@ -38,6 +38,8 @@
 #include "JSCInlines.h"
 #include "TypeLocation.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 class FixupPhase : public Phase {
@@ -986,13 +988,15 @@ private:
                 node->clearFlags(NodeMustGenerate);
                 break;
             }
+            if (!m_graph.hasExitSite(node->origin.semantic, BadStringType)) {
             if (node->child1()->shouldSpeculateStringIdent() && node->child2()->shouldSpeculateStringIdent()) {
                 fixEdge<StringIdentUse>(node->child1());
                 fixEdge<StringIdentUse>(node->child2());
                 node->clearFlags(NodeMustGenerate);
                 break;
             }
-            if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString() && GPRInfo::numberOfRegisters >= 7) {
+            }
+            if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString()) {
                 fixEdge<StringUse>(node->child1());
                 fixEdge<StringUse>(node->child2());
                 node->clearFlags(NodeMustGenerate);
@@ -1072,10 +1076,14 @@ private:
                 fixEdge<UntypedUse>(node->child1());
             break;
 
+        case StringAt:
         case StringCharAt:
         case StringCharCodeAt:
         case StringCodePointAt: {
             // Currently we have no good way of refining these.
+            if (op == StringAt)
+                ASSERT(node->arrayMode() == ArrayMode(Array::String, Array::Read, Array::OutOfBounds) || node->arrayMode() == ArrayMode(Array::String, Array::Read, Array::InBounds));
+            else
             ASSERT(node->arrayMode() == ArrayMode(Array::String, Array::Read));
             blessArrayOperation(node->child1(), node->child2(), node->child1()); // Rewrite child1 with ResolveRope.
             fixEdge<KnownStringUse>(node->child1());
@@ -1520,10 +1528,14 @@ private:
             break;
         }
 
-        case AtomicsIsLockFree:
-            if (m_graph.child(node, 0)->shouldSpeculateInt32())
-                fixIntOrBooleanEdge(m_graph.child(node, 0));
+        case AtomicsIsLockFree: {
+            Edge child1 = m_graph.child(node, 0);
+            if (child1->shouldSpeculateInt32()) {
+                fixIntOrBooleanEdge(child1);
+                node->clearFlags(NodeMustGenerate);
+            }
             break;
+        }
 
         case ArrayPush: {
             // May need to refine the array mode in case the value prediction contravenes
@@ -1604,15 +1616,16 @@ private:
             break;
         }
 
-        case ArraySpliceExtract: {
-            fixEdge<ArrayUse>(node->child1());
-            fixEdge<Int32Use>(node->child2());
-            fixEdge<Int32Use>(node->child3());
+        case ArraySplice: {
+            fixEdge<ArrayUse>(m_graph.child(node, 0));
+            fixEdge<Int32Use>(m_graph.child(node, 1));
+            fixEdge<Int32Use>(m_graph.child(node, 2));
             break;
         }
 
+        case ArrayIncludes:
         case ArrayIndexOf:
-            fixupArrayIndexOf(node);
+            fixupArrayIndexOfOrArrayIncludes(node);
             break;
 
         case RegExpExec:
@@ -1645,22 +1658,22 @@ private:
                 node->setOp(StringReplaceString);
                 fixEdge<StringUse>(node->child1());
                 fixEdge<StringUse>(node->child2());
-                if (node->child3()->shouldSpeculateString())
+                if (node->child3()->shouldSpeculateString()) {
                     fixEdge<StringUse>(node->child3());
+                    node->clearFlags(NodeMustGenerate);
+                }
                 break;
             }
 
             if (node->child2()->shouldSpeculateString()) {
-                m_insertionSet.insertNode(
-                    m_indexInBlock, SpecNone, Check, node->origin,
-                    Edge(node->child2().node(), StringUse));
                 fixEdge<StringUse>(node->child2());
-            } else if (op == StringReplace) {
+                break;
+            }
+            if (op == StringReplace) {
                 if (node->child2()->shouldSpeculateRegExpObject() && m_graph.isWatchingRegExpPrimordialPropertiesWatchpoint(node))
                     addStringReplacePrimordialChecks(node->child2().node());
                 else
-                    m_insertionSet.insertNode(
-                        m_indexInBlock, SpecNone, ForceOSRExit, node->origin);
+                    m_insertionSet.insertNode(m_indexInBlock, SpecNone, ForceOSRExit, node->origin);
             }
 
             if (node->child1()->shouldSpeculateString()
@@ -1678,8 +1691,10 @@ private:
         case StringReplaceString: {
             fixEdge<StringUse>(node->child1());
             fixEdge<StringUse>(node->child2());
-            if (node->child3()->shouldSpeculateString())
+            if (node->child3()->shouldSpeculateString()) {
                 fixEdge<StringUse>(node->child3());
+                node->clearFlags(NodeMustGenerate);
+            }
             break;
         }
 
@@ -1723,7 +1738,7 @@ private:
                     fixEdge<StringUse>(node->child1());
                 break;
             case SwitchString:
-                if (node->child1()->shouldSpeculateStringIdent())
+                if (!m_graph.hasExitSite(node->origin.semantic, BadStringType) && node->child1()->shouldSpeculateStringIdent())
                     fixEdge<StringIdentUse>(node->child1());
                 else if (node->child1()->shouldSpeculateString())
                     fixEdge<StringUse>(node->child1());
@@ -1915,6 +1930,12 @@ private:
             break;
         }
 
+        case NewArrayWithSizeAndStructure: {
+            watchHavingABadTime(node);
+            fixEdge<Int32Use>(node->child1());
+            break;
+        }
+
         case NewArrayWithConstantSize: {
             watchHavingABadTime(node);
             break;
@@ -1981,9 +2002,13 @@ private:
         case SkipScope:
         case GetScope:
         case GetGetter:
-        case GetSetter:
-        case GetGlobalObject: {
+        case GetSetter: {
             fixEdge<KnownCellUse>(node->child1());
+            break;
+        }
+
+        case GetGlobalObject: {
+            fixEdge<ObjectUse>(node->child1());
             break;
         }
 
@@ -2473,12 +2498,14 @@ private:
         case DoubleAsInt32:
         case ValueToInt32:
         case DoubleRep:
+        case PurifyNaN:
         case ValueRep:
         case Int52Rep:
         case Int52Constant:
         case Identity: // This should have been cleaned up.
         case BooleanToNumber:
         case PhantomNewObject:
+        case PhantomNewArrayWithConstantSize:
         case PhantomNewFunction:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncGeneratorFunction:
@@ -2500,6 +2527,7 @@ private:
         case CheckStructureOrEmpty:
         case CheckArrayOrEmpty:
         case MaterializeNewObject:
+        case MaterializeNewArrayWithConstantSize:
         case MaterializeCreateActivation:
         case MaterializeNewInternalFieldObject:
         case PutStack:
@@ -2787,6 +2815,7 @@ private:
             break;
 
         case MapStorage:
+        case MapStorageOrSentinel:
             if (node->child1().useKind() == MapObjectUse)
                 fixEdge<MapObjectUse>(node->child1());
             else if (node->child1().useKind() == SetObjectUse)
@@ -2927,7 +2956,7 @@ private:
             Edge& propertyEdge = m_graph.varArgChild(node, 1);
             if (propertyEdge->shouldSpeculateSymbol())
                 fixEdge<SymbolUse>(propertyEdge);
-            else if (propertyEdge->shouldSpeculateStringIdent())
+            else if (!m_graph.hasExitSite(node->origin.semantic, BadStringType) && propertyEdge->shouldSpeculateStringIdent())
                 fixEdge<StringIdentUse>(propertyEdge);
             else if (propertyEdge->shouldSpeculateString())
                 fixEdge<StringUse>(propertyEdge);
@@ -2984,7 +3013,7 @@ private:
             Edge& propertyEdge = m_graph.varArgChild(node, 1);
             if (propertyEdge->shouldSpeculateSymbol())
                 fixEdge<SymbolUse>(propertyEdge);
-            else if (propertyEdge->shouldSpeculateStringIdent())
+            else if (!m_graph.hasExitSite(node->origin.semantic, BadStringType) && propertyEdge->shouldSpeculateStringIdent())
                 fixEdge<StringIdentUse>(propertyEdge);
             else if (propertyEdge->shouldSpeculateString())
                 fixEdge<StringUse>(propertyEdge);
@@ -3605,10 +3634,12 @@ private:
                 return;
             }
 
+            if (!m_graph.hasExitSite(node->origin.semantic, BadStringType)) {
             if (node->child1()->shouldSpeculateStringIdent()) {
                 fixEdge<StringIdentUse>(node->child1());
                 node->convertToIdentity();
                 return;
+            }
             }
 
             if (node->child1()->shouldSpeculateString()) {
@@ -4110,8 +4141,20 @@ private:
 
         // Check that searchRegExp.exec is the primordial RegExp.prototype.exec
         emitPrimordialCheckFor(globalObject->regExpProtoExecFunction(), vm().propertyNames->exec.impl());
+        // Check that searchRegExp.flags is the primordial RegExp.prototype.flags
+        emitPrimordialCheckFor(globalObject->regExpProtoFlagsGetter(), vm().propertyNames->flags.impl());
+        // Check that searchRegExp.dotAll is the primordial RegExp.prototype.dotAll
+        emitPrimordialCheckFor(globalObject->regExpProtoDotAllGetter(), vm().propertyNames->dotAll.impl());
         // Check that searchRegExp.global is the primordial RegExp.prototype.global
         emitPrimordialCheckFor(globalObject->regExpProtoGlobalGetter(), vm().propertyNames->global.impl());
+        // Check that searchRegExp.hasIndices is the primordial RegExp.prototype.hasIndices
+        emitPrimordialCheckFor(globalObject->regExpProtoHasIndicesGetter(), vm().propertyNames->hasIndices.impl());
+        // Check that searchRegExp.ignoreCase is the primordial RegExp.prototype.ignoreCase
+        emitPrimordialCheckFor(globalObject->regExpProtoIgnoreCaseGetter(), vm().propertyNames->ignoreCase.impl());
+        // Check that searchRegExp.multiline is the primordial RegExp.prototype.multiline
+        emitPrimordialCheckFor(globalObject->regExpProtoMultilineGetter(), vm().propertyNames->multiline.impl());
+        // Check that searchRegExp.sticky is the primordial RegExp.prototype.sticky
+        emitPrimordialCheckFor(globalObject->regExpProtoStickyGetter(), vm().propertyNames->sticky.impl());
         // Check that searchRegExp.unicode is the primordial RegExp.prototype.unicode
         emitPrimordialCheckFor(globalObject->regExpProtoUnicodeGetter(), vm().propertyNames->unicode.impl());
         // Check that searchRegExp.unicodeSets is the primordial RegExp.prototype.unicodeSets
@@ -4751,11 +4794,18 @@ private:
         fixup(node->child3(), 1);
     }
 
-    void fixupArrayIndexOf(Node* node)
+    void fixupArrayIndexOfOrArrayIncludes(Node* node)
     {
+        ASSERT(node->op() == ArrayIndexOf || node->op() == ArrayIncludes);
+
+        bool isArrayIncludes = node->op() == ArrayIncludes;
+
         Edge& array = m_graph.varArgChild(node, 0);
         Edge& storage = m_graph.varArgChild(node, node->numChildren() == 3 ? 2 : 3);
         blessArrayOperation(array, Edge(), storage);
+        if (isArrayIncludes)
+            ASSERT_WITH_MESSAGE(storage.node(), "blessArrayOperation for ArrayIncludes must set Butterfly for storage edge.");
+        else
         ASSERT_WITH_MESSAGE(storage.node(), "blessArrayOperation for ArrayIndexOf must set Butterfly for storage edge.");
 
         Edge& searchElement = m_graph.varArgChild(node, 1);
@@ -4773,14 +4823,20 @@ private:
             if (searchElement->shouldSpeculateCell()) {
                 fixEdge<CellUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
+                if (isArrayIncludes)
+                    m_graph.convertToConstant(node, jsBoolean(false));
+                else
                 m_graph.convertToConstant(node, jsNumber(-1));
                 observeUseKindOnNode<CellUse>(searchElementNode);
                 return;
             }
 
-            if (searchElement->shouldSpeculateOther()) {
+            if (searchElement->shouldSpeculateOther() && !isArrayIncludes) {
                 fixEdge<OtherUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
+                if (isArrayIncludes)
+                    m_graph.convertToConstant(node, jsBoolean(false));
+                else
                 m_graph.convertToConstant(node, jsNumber(-1));
                 observeUseKindOnNode<OtherUse>(searchElementNode);
                 return;
@@ -4789,6 +4845,9 @@ private:
             if (searchElement->shouldSpeculateBoolean()) {
                 fixEdge<BooleanUse>(searchElement);
                 m_insertionSet.insertCheck(m_graph, m_indexInBlock, node);
+                if (isArrayIncludes)
+                    m_graph.convertToConstant(node, jsBoolean(false));
+                else
                 m_graph.convertToConstant(node, jsNumber(-1));
                 observeUseKindOnNode<BooleanUse>(searchElementNode);
                 return;
@@ -4918,13 +4977,15 @@ private:
             return;
         }
 #endif
+        if (!m_graph.hasExitSite(node->origin.semantic, BadStringType)) {
         if (node->child1()->shouldSpeculateStringIdent() && node->child2()->shouldSpeculateStringIdent()) {
             fixEdge<StringIdentUse>(node->child1());
             fixEdge<StringIdentUse>(node->child2());
             node->setOpAndDefaultFlags(CompareStrictEq);
             return;
         }
-        if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString() && ((GPRInfo::numberOfRegisters >= 7) || m_graph.m_plan.isFTL())) {
+        }
+        if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString()) {
             fixEdge<StringUse>(node->child1());
             fixEdge<StringUse>(node->child2());
             node->setOpAndDefaultFlags(CompareStrictEq);
@@ -5000,13 +5061,14 @@ private:
             return;
         }
 
-        if (node->child1()->shouldSpeculateStringIdent()
-            && node->child2()->shouldSpeculateNotStringVar()) {
+        if (!m_graph.hasExitSite(node->origin.semantic, BadStringType)) {
+            if (node->child1()->shouldSpeculateStringIdent() && node->child2()->shouldSpeculateNotStringVar()) {
             fixEdge<StringIdentUse>(node->child1());
             fixEdge<NotStringVarUse>(node->child2());
             node->setOpAndDefaultFlags(CompareStrictEq);
             return;
         }
+
         if (node->child2()->shouldSpeculateStringIdent()
             && node->child1()->shouldSpeculateNotStringVar()) {
             fixEdge<StringIdentUse>(node->child2());
@@ -5014,12 +5076,14 @@ private:
             node->setOpAndDefaultFlags(CompareStrictEq);
             return;
         }
-        if (node->child1()->shouldSpeculateString() && ((GPRInfo::numberOfRegisters >= 8) || m_graph.m_plan.isFTL())) {
+        }
+
+        if (node->child1()->shouldSpeculateString()) {
             fixEdge<StringUse>(node->child1());
             node->setOpAndDefaultFlags(CompareStrictEq);
             return;
         }
-        if (node->child2()->shouldSpeculateString() && ((GPRInfo::numberOfRegisters >= 8) || m_graph.m_plan.isFTL())) {
+        if (node->child2()->shouldSpeculateString()) {
             fixEdge<StringUse>(node->child2());
             node->setOpAndDefaultFlags(CompareStrictEq);
             return;
@@ -5161,9 +5225,7 @@ private:
                                 Edge(edge.node(), Int52RepUse));
                         } else {
                             UseKind useKind;
-                            if (edge->shouldSpeculateDoubleReal())
-                                useKind = RealNumberUse;
-                            else if (edge->shouldSpeculateNumber())
+                            if (edge->shouldSpeculateNumber())
                                 useKind = NumberUse;
                             else
                                 useKind = NotCellNorBigIntUse;
@@ -5276,5 +5338,6 @@ bool performFixup(Graph& graph)
 
 } } // namespace JSC::DFG
 
-#endif // ENABLE(DFG_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(DFG_JIT)

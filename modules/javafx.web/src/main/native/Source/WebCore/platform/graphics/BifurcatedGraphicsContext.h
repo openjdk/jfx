@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "GraphicsContext.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -35,6 +36,7 @@ namespace WebCore {
 // Any state that is returned by GraphicsContext methods will be retrieved from the primary context.
 
 class WEBCORE_EXPORT BifurcatedGraphicsContext : public GraphicsContext {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(BifurcatedGraphicsContext, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(BifurcatedGraphicsContext);
 public:
     BifurcatedGraphicsContext(GraphicsContext& primaryContext, GraphicsContext& secondaryContext);
@@ -117,7 +119,7 @@ public:
     void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) final;
 
 #if ENABLE(VIDEO)
-    void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
+    void drawVideoFrame(VideoFrame&, const FloatRect& destination, WebCore::ImageOrientation, bool shouldDiscardAlpha) final;
 #endif
 
     using GraphicsContext::scale;
@@ -134,14 +136,17 @@ public:
     void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
 
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
-    void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode) final;
+    void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode) final;
     void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
     void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::CustomFontNotReadyAction::DoNotPaintIfFontNotReady) final;
 
-    void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
+    void drawLinesForText(const FloatPoint&, float thickness, std::span<const FloatSegment>, bool isPrinting, bool doubleLines, StrokeStyle) final;
 
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;
+
+    void beginPage(const IntSize&) final;
+    void endPage() final;
 
     void setURLForRect(const URL&, const FloatRect&) final;
 

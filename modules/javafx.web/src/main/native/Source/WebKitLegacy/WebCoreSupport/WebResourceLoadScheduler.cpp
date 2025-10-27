@@ -3,7 +3,7 @@
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004-2008, 2015 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2024 Apple Inc. All rights reserved.
     Copyright (C) 2010 Google Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 #include "WebResourceLoadScheduler.h"
 
 #include "PingHandle.h"
+#include <WebCore/ArchiveResource.h>
 #include <WebCore/CachedResource.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
@@ -43,7 +44,7 @@
 #include <wtf/text/CString.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <WebCore/RuntimeApplicationChecks.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 // Match the parallel connection count used by the networking layer.
@@ -285,7 +286,7 @@ void WebResourceLoadScheduler::servePendingRequests(CheckedRef<HostInformation>&
             requestsPending.removeFirst();
             host->addLoadInProgress(resourceLoader.get());
 #if PLATFORM(IOS_FAMILY)
-            if (!IOSApplication::isWebProcess()) {
+            if (!WTF::IOSApplication::isWebProcess()) {
                 resourceLoader->startLoading();
                 return;
             }
@@ -324,7 +325,7 @@ void WebResourceLoadScheduler::requestTimerFired()
     servePendingRequests();
 }
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL_NESTED(WebResourceLoadSchedulerHostInformation, WebResourceLoadScheduler::HostInformation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebResourceLoadScheduler::HostInformation);
 
 WebResourceLoadScheduler::HostInformation::HostInformation(const String& name, unsigned maxRequestsInFlight)
     : m_name(name)
@@ -401,7 +402,7 @@ bool WebResourceLoadScheduler::HostInformation::limitRequests(ResourceLoadPriori
 void WebResourceLoadScheduler::startPingLoad(LocalFrame& frame, ResourceRequest& request, const HTTPHeaderMap&, const FetchOptions& options, ContentSecurityPolicyImposition, PingLoadCompletionHandler&& completionHandler)
 {
     // PingHandle manages its own lifetime, deleting itself when its purpose has been fulfilled.
-    new PingHandle(frame.loader().networkingContext(), request, options.credentials != FetchOptions::Credentials::Omit, options.redirect == FetchOptions::Redirect::Follow, WTFMove(completionHandler));
+    PingHandle::start(frame.loader().networkingContext(), request, options.credentials != FetchOptions::Credentials::Omit, options.redirect == FetchOptions::Redirect::Follow, WTFMove(completionHandler));
 }
 
 bool WebResourceLoadScheduler::isOnLine() const
@@ -414,7 +415,82 @@ void WebResourceLoadScheduler::addOnlineStateChangeListener(WTF::Function<void(b
     NetworkStateNotifier::singleton().addListener(WTFMove(listener));
 }
 
-void WebResourceLoadScheduler::preconnectTo(FrameLoader&, const URL&, StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&)
+void WebResourceLoadScheduler::preconnectTo(FrameLoader&, ResourceRequest&&, StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&)
 {
 }
 
+#if PLATFORM(JAVA)
+
+enum {
+    WebKitErrorCannotShowMIMEType =                             100,
+    WebKitErrorCannotShowURL =                                  101,
+    WebKitErrorFrameLoadInterruptedByPolicyChange =             102,
+    WebKitErrorCannotUseRestrictedPort =                        103,
+    WebKitErrorCannotFindPlugIn =                               200,
+    WebKitErrorCannotLoadPlugIn =                               201,
+    WebKitErrorJavaUnavailable =                                202,
+    WebKitErrorPluginWillHandleLoad =                           203
+};
+
+WebCore::ResourceError WebResourceLoadScheduler::cancelledError(const WebCore::ResourceRequest& request) const
+{
+   return ResourceError("Error"_s, -999, request.url(), "Request cancelled"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedError(const WebCore::ResourceRequest& request) const
+{
+   return ResourceError("Error"_s, WebKitErrorCannotUseRestrictedPort, request.url(),
+                         "Request blocked"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentBlockerError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
+                         "Cannot show URL"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowURLError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
+                         "Cannot show URL"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("Error"_s, WebKitErrorFrameLoadInterruptedByPolicyChange,
+                         request.url(), "Frame load interrupted by policy change"_s);
+}
+
+#if ENABLE(CONTENT_FILTERING)
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentFilterError(const WebCore::ResourceRequest& request) const
+{
+}
+#endif
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
+{
+   return ResourceError("Error"_s, WebKitErrorCannotShowMIMEType, response.url(),
+                         "Cannot show mimetype"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
+{
+    return ResourceError("Error"_s, -998 /* ### */, response.url(),
+                         "File does not exist"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const
+{
+    return {};
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest& request) const
+{
+    return {};
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
+{
+    return ResourceError("Error"_s, WebKitErrorPluginWillHandleLoad, response.url(), "Loading is handled by the media engine"_s);
+}
+#endif

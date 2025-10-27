@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -209,10 +209,12 @@ jobjectArray rebuild_screens(JNIEnv* env) {
     JNI_EXCEPTION_TO_CPP(env)
     LOG1("Available monitors: %d\n", n_monitors)
 
-    int i;
-    for (i=0; i < n_monitors; i++) {
-        env->SetObjectArrayElement(jscreens, i, createJavaScreen(env, default_gdk_screen, i));
-        JNI_EXCEPTION_TO_CPP(env)
+    if (jscreens != NULL) {
+        int i;
+        for (i=0; i < n_monitors; i++) {
+            env->SetObjectArrayElement(jscreens, i, createJavaScreen(env, default_gdk_screen, i));
+            JNI_EXCEPTION_TO_CPP(env)
+        }
     }
 
     return jscreens;

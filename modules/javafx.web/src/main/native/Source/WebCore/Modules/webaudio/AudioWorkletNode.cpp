@@ -53,6 +53,7 @@
 #include "SerializedScriptValue.h"
 #include "WorkerRunLoop.h"
 #include <JavaScriptCore/JSLock.h>
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -204,7 +205,7 @@ void AudioWorkletNode::process(size_t framesToProcess)
         return;
     }
     Locker locker { AdoptLock, m_processLock };
-    if (!m_processor || &Thread::current() != m_workletThread) {
+    if (!m_processor || &Thread::current() != m_workletThread.get()) {
         // We're not ready yet or we are getting destroyed. In this case, we output silence.
         zeroOutput();
         return;
@@ -216,12 +217,12 @@ void AudioWorkletNode::process(size_t framesToProcess)
     for (unsigned i = 0; i < numberOfOutputs(); ++i)
         m_outputs[i] = *output(i)->bus();
 
-    if (noiseInjectionPolicy() == NoiseInjectionPolicy::Minimal) {
+    if (noiseInjectionPolicies().contains(NoiseInjectionPolicy::Minimal)) {
         for (unsigned inputIndex = 0; inputIndex < numberOfInputs(); ++inputIndex) {
             if (auto& input = m_inputs[inputIndex]) {
                 for (unsigned channelIndex = 0; channelIndex < input->numberOfChannels(); ++channelIndex) {
                     auto* channel = input->channel(channelIndex);
-                    AudioUtilities::applyNoise(channel->mutableData(), channel->length(), 0.01);
+                    AudioUtilities::applyNoise(channel->mutableSpan(), 0.01);
                 }
             }
         }
@@ -232,9 +233,9 @@ void AudioWorkletNode::process(size_t framesToProcess)
         ASSERT(paramValues);
         RELEASE_ASSERT(paramValues->size() >= framesToProcess);
         if (audioParam->hasSampleAccurateValues() && audioParam->automationRate() == AutomationRate::ARate)
-            audioParam->calculateSampleAccurateValues(paramValues->data(), framesToProcess);
+            audioParam->calculateSampleAccurateValues(paramValues->span().first(framesToProcess));
         else
-            std::fill_n(paramValues->data(), framesToProcess, audioParam->finalValue());
+            std::ranges::fill(paramValues->span().first(framesToProcess), audioParam->finalValue());
     }
 
     bool threwException = false;

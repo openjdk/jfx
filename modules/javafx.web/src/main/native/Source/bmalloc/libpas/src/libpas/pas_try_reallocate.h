@@ -57,7 +57,7 @@ pas_try_allocate_for_reallocate_and_copy(
     pas_try_reallocate_allocate_callback allocate_callback,
     void* allocate_callback_arg)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_OTHER);
 
     pas_allocation_result result;
 
@@ -210,7 +210,7 @@ pas_try_reallocate(void* old_ptr,
 {
     uintptr_t begin;
     begin = (uintptr_t)old_ptr;
-    PAS_PROFILE(TRY_REALLOCATE, begin);
+    PAS_PROFILE(TRY_REALLOCATE, &config, begin);
     old_ptr = (void*)begin;
 
     switch (config.fast_megapage_kind_func(begin)) {
@@ -342,14 +342,15 @@ pas_try_reallocate(void* old_ptr,
         pas_heap_lock_lock();
 
         // Check for PGM case for slow path if object is using PGM large heap
-        if (config.pgm_enabled && pas_probabilistic_guard_malloc_check_exists(begin)) {
+        if (config.pgm_enabled && pas_probabilistic_guard_malloc_check_exists(begin))
                 entry = pas_probabilistic_guard_malloc_return_as_large_map_entry(begin);
-        } else {
+        else {
             entry = pas_large_map_find(begin);
             if (pas_large_map_entry_is_empty(entry))
                 pas_reallocation_did_fail("Source object not allocated", NULL, heap, old_ptr, 0, new_size);
         }
 
+        PAS_PROFILE(LARGE_MAP_FOUND_ENTRY, &config, entry.begin, entry.end);
         PAS_ASSERT(entry.begin == begin);
         PAS_ASSERT(entry.end > begin);
         PAS_ASSERT(entry.heap);
@@ -573,7 +574,7 @@ pas_try_reallocate_primitive_allocate_callback(
     pas_allocation_mode allocation_mode,
     void* arg)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_OTHER);
 
     pas_try_reallocate_primitive_allocate_data* data;
     pas_allocation_result result;

@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/FastMalloc.h>
+#include <wtf/MallocCommon.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Packed.h>
 #include <wtf/RawPtrTraits.h>
@@ -49,7 +50,7 @@ public:
 template<typename T, typename PassedPtrTraits = RawPtrTraits<T>, typename Malloc = FastMalloc>
 class Bag final {
     WTF_MAKE_NONCOPYABLE(Bag);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_CONFIGURABLE_ALLOCATED(Malloc);
     using Node = BagNode<T, PassedPtrTraits>;
     using PtrTraits = typename PassedPtrTraits::template RebindTraits<Node>;
 
@@ -106,7 +107,7 @@ public:
     }
 
     class iterator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_CONFIGURABLE_ALLOCATED(Malloc);
     public:
         iterator()
             : m_node(0)

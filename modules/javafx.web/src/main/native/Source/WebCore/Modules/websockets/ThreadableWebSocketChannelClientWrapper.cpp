@@ -40,12 +40,8 @@ namespace WebCore {
 
 ThreadableWebSocketChannelClientWrapper::ThreadableWebSocketChannelClientWrapper(ScriptExecutionContext& context, WebSocketChannelClient& client)
     : m_context(context)
-    , m_client(&client)
-    , m_peer(nullptr)
+    , m_client(client)
     , m_failedWebSocketChannelCreation(false)
-    , m_syncMethodDone(true)
-    , m_sendRequestResult(ThreadableWebSocketChannel::SendFail)
-    , m_bufferedAmount(0)
     , m_suspended(false)
 {
 }
@@ -55,30 +51,14 @@ Ref<ThreadableWebSocketChannelClientWrapper> ThreadableWebSocketChannelClientWra
     return adoptRef(*new ThreadableWebSocketChannelClientWrapper(context, client));
 }
 
-void ThreadableWebSocketChannelClientWrapper::clearSyncMethodDone()
-{
-    m_syncMethodDone = false;
-}
-
-void ThreadableWebSocketChannelClientWrapper::setSyncMethodDone()
-{
-    m_syncMethodDone = true;
-}
-
-bool ThreadableWebSocketChannelClientWrapper::syncMethodDone() const
-{
-    return m_syncMethodDone;
-}
-
 WorkerThreadableWebSocketChannel::Peer* ThreadableWebSocketChannelClientWrapper::peer() const
 {
-    return m_peer;
+    return m_peer.get();
 }
 
-void ThreadableWebSocketChannelClientWrapper::didCreateWebSocketChannel(WorkerThreadableWebSocketChannel::Peer* peer)
+void ThreadableWebSocketChannelClientWrapper::didCreateWebSocketChannel(Ref<WorkerThreadableWebSocketChannel::Peer>&& peer)
 {
-    m_peer = peer;
-    m_syncMethodDone = true;
+    m_peer = WTFMove(peer);
 }
 
 void ThreadableWebSocketChannelClientWrapper::clearPeer()
@@ -107,7 +87,7 @@ void ThreadableWebSocketChannelClientWrapper::setSubprotocol(const String& subpr
 {
     unsigned length = subprotocol.length();
     m_subprotocol.resize(length);
-    StringView(subprotocol).getCharacters(m_subprotocol.data());
+    StringView(subprotocol).getCharacters(m_subprotocol.mutableSpan());
 }
 
 String ThreadableWebSocketChannelClientWrapper::extensions() const
@@ -121,29 +101,7 @@ void ThreadableWebSocketChannelClientWrapper::setExtensions(const String& extens
 {
     unsigned length = extensions.length();
     m_extensions.resize(length);
-    StringView(extensions).getCharacters(m_extensions.data());
-}
-
-ThreadableWebSocketChannel::SendResult ThreadableWebSocketChannelClientWrapper::sendRequestResult() const
-{
-    return m_sendRequestResult;
-}
-
-void ThreadableWebSocketChannelClientWrapper::setSendRequestResult(ThreadableWebSocketChannel::SendResult sendRequestResult)
-{
-    m_sendRequestResult = sendRequestResult;
-    m_syncMethodDone = true;
-}
-
-unsigned ThreadableWebSocketChannelClientWrapper::bufferedAmount() const
-{
-    return m_bufferedAmount;
-}
-
-void ThreadableWebSocketChannelClientWrapper::setBufferedAmount(unsigned bufferedAmount)
-{
-    m_bufferedAmount = bufferedAmount;
-    m_syncMethodDone = true;
+    StringView(extensions).getCharacters(m_extensions.mutableSpan());
 }
 
 void ThreadableWebSocketChannelClientWrapper::clearClient()
@@ -154,8 +112,8 @@ void ThreadableWebSocketChannelClientWrapper::clearClient()
 void ThreadableWebSocketChannelClientWrapper::didConnect()
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }] (ScriptExecutionContext&) {
-        if (m_client)
-            m_client->didConnect();
+        if (RefPtr client = m_client.get())
+            client->didConnect();
     }));
 
     if (!m_suspended)
@@ -165,8 +123,8 @@ void ThreadableWebSocketChannelClientWrapper::didConnect()
 void ThreadableWebSocketChannelClientWrapper::didReceiveMessage(String&& message)
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }, message = WTFMove(message).isolatedCopy()] (ScriptExecutionContext&) mutable {
-        if (m_client)
-            m_client->didReceiveMessage(WTFMove(message));
+        if (RefPtr client = m_client.get())
+            client->didReceiveMessage(WTFMove(message));
     }));
 
     if (!m_suspended)
@@ -176,8 +134,8 @@ void ThreadableWebSocketChannelClientWrapper::didReceiveMessage(String&& message
 void ThreadableWebSocketChannelClientWrapper::didReceiveBinaryData(Vector<uint8_t>&& binaryData)
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }, binaryData = WTFMove(binaryData)] (ScriptExecutionContext&) mutable {
-        if (m_client)
-            m_client->didReceiveBinaryData(WTFMove(binaryData));
+        if (RefPtr client = m_client.get())
+            client->didReceiveBinaryData(WTFMove(binaryData));
     }));
 
     if (!m_suspended)
@@ -187,8 +145,8 @@ void ThreadableWebSocketChannelClientWrapper::didReceiveBinaryData(Vector<uint8_
 void ThreadableWebSocketChannelClientWrapper::didUpdateBufferedAmount(unsigned bufferedAmount)
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }, bufferedAmount] (ScriptExecutionContext&) {
-        if (m_client)
-            m_client->didUpdateBufferedAmount(bufferedAmount);
+        if (RefPtr client = m_client.get())
+            client->didUpdateBufferedAmount(bufferedAmount);
     }));
 
     if (!m_suspended)
@@ -198,8 +156,8 @@ void ThreadableWebSocketChannelClientWrapper::didUpdateBufferedAmount(unsigned b
 void ThreadableWebSocketChannelClientWrapper::didStartClosingHandshake()
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }] (ScriptExecutionContext&) {
-        if (m_client)
-            m_client->didStartClosingHandshake();
+        if (RefPtr client = m_client.get())
+            client->didStartClosingHandshake();
     }));
 
     if (!m_suspended)
@@ -209,8 +167,8 @@ void ThreadableWebSocketChannelClientWrapper::didStartClosingHandshake()
 void ThreadableWebSocketChannelClientWrapper::didClose(unsigned unhandledBufferedAmount, WebSocketChannelClient::ClosingHandshakeCompletionStatus closingHandshakeCompletion, unsigned short code, const String& reason)
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }, unhandledBufferedAmount, closingHandshakeCompletion, code, reason = reason.isolatedCopy()] (ScriptExecutionContext&) {
-            if (m_client)
-                m_client->didClose(unhandledBufferedAmount, closingHandshakeCompletion, code, reason);
+        if (RefPtr client = m_client.get())
+            client->didClose(unhandledBufferedAmount, closingHandshakeCompletion, code, reason);
         }));
 
     if (!m_suspended)
@@ -220,8 +178,8 @@ void ThreadableWebSocketChannelClientWrapper::didClose(unsigned unhandledBuffere
 void ThreadableWebSocketChannelClientWrapper::didReceiveMessageError(String&& reason)
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }, reason = WTFMove(reason).isolatedCopy()] (ScriptExecutionContext&) mutable {
-        if (m_client)
-            m_client->didReceiveMessageError(WTFMove(reason));
+        if (RefPtr client = m_client.get())
+            client->didReceiveMessageError(WTFMove(reason));
     }));
 
     if (!m_suspended)
@@ -231,8 +189,8 @@ void ThreadableWebSocketChannelClientWrapper::didReceiveMessageError(String&& re
 void ThreadableWebSocketChannelClientWrapper::didUpgradeURL()
 {
     m_pendingTasks.append(makeUnique<ScriptExecutionContext::Task>([this, protectedThis = Ref { *this }] (ScriptExecutionContext&) {
-        if (m_client)
-            m_client->didUpgradeURL();
+        if (RefPtr client = m_client.get())
+            client->didUpgradeURL();
     }));
 
     if (!m_suspended)
@@ -254,16 +212,6 @@ void ThreadableWebSocketChannelClientWrapper::processPendingTasks()
 {
     if (m_suspended)
         return;
-    if (!m_syncMethodDone) {
-        // When a synchronous operation is in progress (i.e. the execution stack contains
-        // WorkerThreadableWebSocketChannel::waitForMethodCompletion()), we cannot invoke callbacks in this run loop.
-        RefPtr protectedContext = m_context.get();
-        protectedContext->postTask([this, protectedThis = Ref { *this }] (ScriptExecutionContext& context) {
-            ASSERT_UNUSED(context, context.isWorkerGlobalScope());
-            processPendingTasks();
-        });
-        return;
-    }
 
     Vector<std::unique_ptr<ScriptExecutionContext::Task>> pendingTasks = WTFMove(m_pendingTasks);
     Ref protectedContext = { *m_context };

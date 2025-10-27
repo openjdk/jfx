@@ -26,6 +26,7 @@
 #pragma once
 
 #include "InspectorNetworkAgent.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -34,7 +35,7 @@ class Page;
 
 class PageNetworkAgent final : public InspectorNetworkAgent {
     WTF_MAKE_NONCOPYABLE(PageNetworkAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PageNetworkAgent);
 public:
     PageNetworkAgent(PageAgentContext&, InspectorClient*);
     ~PageNetworkAgent();
@@ -51,7 +52,7 @@ private:
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&);
     bool shouldForceBufferingNetworkResourceData() const { return false; }
 
-    Page& m_inspectedPage;
+    WeakRef<Page> m_inspectedPage;
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     InspectorClient* m_client { nullptr };
 #endif

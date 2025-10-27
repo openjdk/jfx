@@ -31,7 +31,7 @@ class RenderReplaced : public RenderBox {
 public:
     virtual ~RenderReplaced();
 
-    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ComputeActual) const override;
+    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ShouldComputePreferred::ComputeActual) const override;
     LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const override;
 
     LayoutRect replacedContentRect(const LayoutSize& intrinsicSize) const;
@@ -48,6 +48,8 @@ public:
     double computeIntrinsicAspectRatio() const;
 
     void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const override;
+
+    virtual bool paintsContent() const { return true; }
 
 protected:
     RenderReplaced(Type, Element&, RenderStyle&&, OptionSet<ReplacedFlag> = { });
@@ -73,6 +75,8 @@ protected:
     LayoutRect localSelectionRect(bool checkWhetherSelected = true) const; // This is in local coordinates, but it's a physical rect (so the top left corner is physical top left).
 
     void willBeDestroyed() override;
+
+    virtual void layoutShadowContent(const LayoutSize&);
 
 private:
     LayoutUnit computeConstrainedLogicalWidth() const;
@@ -103,7 +107,6 @@ private:
     bool hasReplacedLogicalHeight() const;
 
     mutable LayoutSize m_intrinsicSize;
-    mutable FloatSize m_intrinsicRatio;
 };
 
 } // namespace WebCore

@@ -45,13 +45,11 @@
 #include "MouseEvent.h"
 #include "OriginAccessPatterns.h"
 #include "PingLoader.h"
-#include "PlatformMouseEvent.h"
 #include "PlatformStrategies.h"
 #include "PrivateClickMeasurement.h"
 #include "RegistrableDomain.h"
 #include "RenderImage.h"
 #include "ResourceRequest.h"
-#include "RuntimeApplicationChecks.h"
 #include "SVGImage.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
@@ -59,6 +57,7 @@
 #include "Settings.h"
 #include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/text/MakeString.h>
@@ -115,29 +114,6 @@ bool HTMLAnchorElement::isInteractiveContent() const
     return isLink();
 }
 
-static bool hasNonEmptyBox(RenderBoxModelObject* renderer)
-{
-    if (!renderer)
-        return false;
-
-    // Before calling absoluteRects, check for the common case where borderBoundingBox
-    // is non-empty, since this is a faster check and almost always returns true.
-    // FIXME: Why do we need to call absoluteRects at all?
-    if (!renderer->borderBoundingBox().isEmpty())
-        return true;
-
-    // FIXME: Since all we are checking is whether the rects are empty, could we just
-    // pass in 0,0 for the layout point instead of calling localToAbsolute?
-    Vector<LayoutRect> rects;
-    renderer->boundingRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
-    for (auto& rect : rects) {
-        if (!rect.isEmpty())
-            return true;
-    }
-
-    return false;
-}
-
 bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent* event) const
 {
     if (!isFocusable())
@@ -147,11 +123,13 @@ bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent* event) const
     if (isFocusable() && Element::supportsFocus())
         return HTMLElement::isKeyboardFocusable(event);
 
-    if (isLink() && !document().frame()->eventHandler().tabsToLinks(event))
+    RefPtr frame = document().frame();
+    if (!frame)
+        return false;
+
+    if (isLink() && !frame->eventHandler().tabsToLinks(event))
         return false;
     return HTMLElement::isKeyboardFocusable(event);
-
-    return hasNonEmptyBox(renderBoxModelObject());
 }
 
 static void appendServerMapMousePosition(StringBuilder& url, Event& event)
@@ -160,7 +138,7 @@ static void appendServerMapMousePosition(StringBuilder& url, Event& event)
     if (!mouseEvent)
         return;
 
-    auto* imageElement = dynamicDowncast<HTMLImageElement>(mouseEvent->target());
+    RefPtr imageElement = dynamicDowncast<HTMLImageElement>(mouseEvent->target());
     if (!imageElement)
         return;
 
@@ -237,16 +215,9 @@ void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomSt
 {
     HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
-    if (name == hrefAttr) {
+    if (name == hrefAttr)
         setIsLink(!newValue.isNull() && !shouldProhibitLinks(this));
-        if (isLink()) {
-            auto parsedURL = newValue.string().trim(isASCIIWhitespace);
-            if (document().isDNSPrefetchEnabled() && document().frame()) {
-                if (protocolIsInHTTPFamily(parsedURL) || parsedURL.startsWith("//"_s))
-                    document().frame()->loader().client().prefetchDNS(document().completeURL(parsedURL).host().toString());
-            }
-        }
-    } else if (name == relAttr) {
+    else if (name == relAttr) {
         // Update HTMLAnchorElement::relList() if more rel attributes values are supported.
         static MainThreadNeverDestroyed<const AtomString> noReferrer("noreferrer"_s);
         static MainThreadNeverDestroyed<const AtomString> noOpener("noopener"_s);
@@ -261,7 +232,7 @@ void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomSt
         if (m_relList)
             m_relList->associatedAttributeValueChanged();
     } else if (name == nameAttr)
-        document().processInternalResourceLinks(*this);
+        document().processInternalResourceLinks(this);
 }
 
 bool HTMLAnchorElement::isURLAttribute(const Attribute& attribute) const
@@ -488,9 +459,8 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     using SourceSite = PCM::SourceSite;
     using AttributionDestinationSite = PCM::AttributionDestinationSite;
 
-    RefPtr frame { document().frame() };
-    auto* page = document().page();
-    if (!frame || !page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
+    RefPtr page = document().protectedPage();
+    if (!page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
         return std::nullopt;
 
     if (auto pcm = parsePrivateClickMeasurementForSKAdNetwork(hrefURL))
@@ -526,18 +496,13 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
         return std::nullopt;
     }
 
-    RegistrableDomain mainDocumentRegistrableDomain;
-    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
-    if (!localFrame)
-        return std::nullopt;
-
-    if (auto mainDocument = localFrame->document())
-        mainDocumentRegistrableDomain = RegistrableDomain { mainDocument->url() };
-    else {
+    auto& mainURL = page->mainFrameURL();
+    if (mainURL.isEmpty()) {
         protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
         return std::nullopt;
     }
 
+    RegistrableDomain mainDocumentRegistrableDomain = RegistrableDomain { mainURL };
     if (mainDocumentRegistrableDomain.matches(destinationURL)) {
         protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributiondestination can not be the same site as the current website."_s);
         return std::nullopt;
@@ -607,7 +572,7 @@ void HTMLAnchorElement::handleClick(Event& event)
     if (systemPreviewInfo.isPreview) {
         systemPreviewInfo.element.elementIdentifier = identifier();
         systemPreviewInfo.element.documentIdentifier = document->identifier();
-        systemPreviewInfo.element.webPageIdentifier = valueOrDefault(document->pageID());
+        systemPreviewInfo.element.webPageIdentifier = document->pageID();
         if (auto* child = firstElementChild())
             systemPreviewInfo.previewRect = child->boundsInRootViewSpace();
 
@@ -629,14 +594,14 @@ void HTMLAnchorElement::handleClick(Event& event)
     // Thus, URLs should be empty for now.
     ASSERT(!privateClickMeasurement || (privateClickMeasurement->attributionReportClickSourceURL().isNull() && privateClickMeasurement->attributionReportClickDestinationURL().isNull()));
 
-    frame->checkedLoader()->changeLocation(completedURL, effectiveTarget, &event, referrerPolicy, document->shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, WTFMove(privateClickMeasurement));
+    frame->protectedLoader()->changeLocation(completedURL, effectiveTarget, &event, referrerPolicy, document->shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, WTFMove(privateClickMeasurement));
 
     sendPings(completedURL);
 
     // Preconnect to the link's target for improved page load time.
     if (completedURL.protocolIsInHTTPFamily() && document->settings().linkPreconnectEnabled() && ((frame->isMainFrame() && isSelfTargetFrameName(effectiveTarget)) || isBlankTargetFrameName(effectiveTarget))) {
         auto storageCredentialsPolicy = frame->page() && frame->page()->canUseCredentialStorage() ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
-        platformStrategies()->loaderStrategy()->preconnectTo(frame->loader(), completedURL, storageCredentialsPolicy, LoaderStrategy::ShouldPreconnectAsFirstParty::Yes, nullptr);
+        platformStrategies()->loaderStrategy()->preconnectTo(frame->loader(), completedURL, storageCredentialsPolicy, LoaderStrategy::ShouldPreconnectAsFirstParty::Yes, [] (ResourceError) { });
     }
 }
 
@@ -750,7 +715,7 @@ ReferrerPolicy HTMLAnchorElement::referrerPolicy() const
 Node::InsertedIntoAncestorResult HTMLAnchorElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     auto result = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-    document().processInternalResourceLinks(*this);
+    document().processInternalResourceLinks(this);
     return result;
 }
 

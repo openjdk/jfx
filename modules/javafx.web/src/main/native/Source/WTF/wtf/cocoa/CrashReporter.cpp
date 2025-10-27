@@ -28,17 +28,23 @@
 
 #include <wtf/spi/cocoa/CrashReporterClientSPI.h>
 
+#ifdef CRASHREPORTER_ANNOTATIONS_INITIALIZER
+CRASHREPORTER_ANNOTATIONS_INITIALIZER()
+#else
 // Avoid having to link with libCrashReporterClient.a
 CRASH_REPORTER_CLIENT_HIDDEN
 struct crashreporter_annotations_t gCRAnnotations
     __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION)))
     = { CRASHREPORTER_ANNOTATIONS_VERSION, 0, 0, 0, 0, 0, 0, 0 };
+#endif // CRASHREPORTER_ANNOTATIONS_INITIALIZER
 
 namespace WTF {
 void setCrashLogMessage(const char* message)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // We have to copy the string because CRSetCrashLogMessage doesn't.
     char* copiedMessage = message ? strdup(message) : nullptr;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     CRSetCrashLogMessage(copiedMessage);
 

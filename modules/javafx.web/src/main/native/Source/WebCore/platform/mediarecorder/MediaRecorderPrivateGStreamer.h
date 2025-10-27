@@ -28,6 +28,7 @@
 #include <wtf/Condition.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -37,7 +38,7 @@ class MediaStreamTrackPrivate;
 struct MediaRecorderPrivateOptions;
 
 class MediaRecorderPrivateBackend : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateBackend, WTF::DestructionThread::Main> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MediaRecorderPrivateBackend);
 public:
     using SelectTracksCallback = Function<void(MediaRecorderPrivate::AudioVideoSelectedTracks)>;
     static RefPtr<MediaRecorderPrivateBackend> create(MediaStreamPrivate& stream, const MediaRecorderPrivateOptions& options)
@@ -96,7 +97,7 @@ private:
 };
 
 class MediaRecorderPrivateGStreamer final : public MediaRecorderPrivate {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MediaRecorderPrivateGStreamer);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaRecorderPrivateGStreamer);
 public:
     static std::unique_ptr<MediaRecorderPrivateGStreamer> create(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
@@ -114,7 +115,7 @@ private:
     void stopRecording(CompletionHandler<void()>&&) final;
     void pauseRecording(CompletionHandler<void()>&&) final;
     void resumeRecording(CompletionHandler<void()>&&) final;
-    const String& mimeType() const final;
+    String mimeType() const final;
 
     Ref<MediaRecorderPrivateBackend> m_recorder;
 };

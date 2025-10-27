@@ -29,7 +29,7 @@
 
 #if ENABLE(MATHML)
 
-#include "CSSHelper.h"
+#include "CSSUnits.h"
 #include "GraphicsContext.h"
 #include "LayoutRepainter.h"
 #include "MathMLElement.h"
@@ -39,10 +39,6 @@
 #include "RenderTableInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
-
-#if ENABLE(DEBUG_MATH_LAYOUT)
-#include "PaintInfo.h"
-#endif
 
 namespace WebCore {
 
@@ -75,7 +71,7 @@ bool RenderMathMLBlock::isChildAllowed(const RenderObject& child, const RenderSt
 static LayoutUnit axisHeight(const RenderStyle& style)
 {
     // If we have a MATH table we just return the AxisHeight constant.
-    const Ref primaryFont = style.fontCascade().primaryFont();
+    Ref primaryFont = style.fontCascade().primaryFont();
     if (RefPtr mathData = primaryFont->mathData())
         return LayoutUnit(mathData->getMathConstant(primaryFont, OpenTypeMathData::AxisHeight));
 
@@ -91,7 +87,7 @@ LayoutUnit RenderMathMLBlock::mathAxisHeight() const
 
 LayoutUnit RenderMathMLBlock::mirrorIfNeeded(LayoutUnit horizontalOffset, LayoutUnit boxWidth) const
 {
-    if (style().direction() == TextDirection::RTL)
+    if (writingMode().isBidiRTL())
         return logicalWidth() - boxWidth - horizontalOffset;
 
     return horizontalOffset;
@@ -105,55 +101,20 @@ LayoutUnit RenderMathMLBlock::baselinePosition(FontBaseline baselineType, bool f
     return firstLineBaseline().value_or(RenderBlock::baselinePosition(baselineType, firstLine, direction, linePositionMode));
 }
 
-#if ENABLE(DEBUG_MATH_LAYOUT)
-void RenderMathMLBlock::paint(PaintInfo& info, const LayoutPoint& paintOffset)
-{
-    RenderBlock::paint(info, paintOffset);
-
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground)
-        return;
-
-    IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location());
-
-    GraphicsContextStateSaver stateSaver(info.context());
-
-    info.context().setStrokeThickness(1.0f);
-    info.context().setStrokeStyle(StrokeStyle::SolidStroke);
-    info.context().setStrokeColor(Color::blue);
-
-    info.context().drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()));
-    info.context().drawLine(IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
-    info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
-    info.context().drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
-
-    int topStart = paddingTop();
-
-    info.context().setStrokeColor(Color::green);
-
-    info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + topStart), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + topStart));
-
-    int baseline = roundToInt(baselinePosition(AlphabeticBaseline, true, HorizontalLine));
-
-    info.context().setStrokeColor(Color::red);
-
-    info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + baseline), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + baseline));
-}
-#endif // ENABLE(DEBUG_MATH_LAYOUT)
-
 LayoutUnit toUserUnits(const MathMLElement::Length& length, const RenderStyle& style, const LayoutUnit& referenceValue)
 {
     switch (length.type) {
     // Zoom for physical units needs to be accounted for.
     case MathMLElement::LengthType::Cm:
-        return LayoutUnit(style.usedZoom() * length.value * cssPixelsPerInch / 2.54f);
+        return LayoutUnit(style.usedZoom() * length.value * static_cast<float>(CSS::pixelsPerCm));
     case MathMLElement::LengthType::In:
-        return LayoutUnit(style.usedZoom() * length.value * cssPixelsPerInch);
+        return LayoutUnit(style.usedZoom() * length.value * static_cast<float>(CSS::pixelsPerInch));
     case MathMLElement::LengthType::Mm:
-        return LayoutUnit(style.usedZoom() * length.value * cssPixelsPerInch / 25.4f);
+        return LayoutUnit(style.usedZoom() * length.value * static_cast<float>(CSS::pixelsPerMm));
     case MathMLElement::LengthType::Pc:
-        return LayoutUnit(style.usedZoom() * length.value * cssPixelsPerInch / 6);
+        return LayoutUnit(style.usedZoom() * length.value * static_cast<float>(CSS::pixelsPerPc));
     case MathMLElement::LengthType::Pt:
-        return LayoutUnit(style.usedZoom() * length.value * cssPixelsPerInch / 72);
+        return LayoutUnit(style.usedZoom() * length.value * static_cast<float>(CSS::pixelsPerPt));
     case MathMLElement::LengthType::Px:
         return LayoutUnit(style.usedZoom() * length.value);
 
@@ -185,13 +146,13 @@ std::optional<LayoutUnit> RenderMathMLTable::firstLineBaseline() const
     return LayoutUnit { (logicalHeight() / 2 + axisHeight(style())).toInt() };
 }
 
-void RenderMathMLBlock::layoutItems(bool relayoutChildren)
+void RenderMathMLBlock::layoutItems(RelayoutChildren relayoutChildren)
 {
-    LayoutUnit verticalOffset = borderBefore() + paddingBefore();
-    LayoutUnit horizontalOffset = borderStart() + paddingStart();
+    LayoutUnit verticalOffset = borderAndPaddingBefore();
+    LayoutUnit horizontalOffset = borderAndPaddingStart();
 
     LayoutUnit preferredHorizontalExtent;
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
+    for (auto* child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox()) {
         LayoutUnit childHorizontalExtent = child->maxPreferredLogicalWidth() - child->horizontalBorderAndPaddingExtent();
         LayoutUnit childHorizontalMarginBoxExtent = child->horizontalBorderAndPaddingExtent() + childHorizontalExtent;
         childHorizontalMarginBoxExtent += child->horizontalMarginExtent();
@@ -199,8 +160,8 @@ void RenderMathMLBlock::layoutItems(bool relayoutChildren)
         preferredHorizontalExtent += childHorizontalMarginBoxExtent;
     }
 
-    LayoutUnit currentHorizontalExtent = contentLogicalWidth();
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
+    LayoutUnit currentHorizontalExtent = contentBoxLogicalWidth();
+    for (auto* child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox()) {
         auto everHadLayout = child->everHadLayout();
         LayoutUnit childSize = child->maxPreferredLogicalWidth() - child->horizontalBorderAndPaddingExtent();
 
@@ -218,12 +179,12 @@ void RenderMathMLBlock::layoutItems(bool relayoutChildren)
         LayoutUnit childVerticalMarginBoxExtent;
         childVerticalMarginBoxExtent = child->height() + child->verticalMarginExtent();
 
-        setLogicalHeight(std::max(logicalHeight(), verticalOffset + borderAfter() + paddingAfter() + childVerticalMarginBoxExtent + horizontalScrollbarHeight()));
+        setLogicalHeight(std::max(logicalHeight(), verticalOffset + borderAndPaddingAfter() + childVerticalMarginBoxExtent + horizontalScrollbarHeight()));
 
         horizontalOffset += child->marginStart();
 
         LayoutUnit childHorizontalExtent = child->width();
-        LayoutPoint childLocation(style().isLeftToRightDirection() ? horizontalOffset : width() - horizontalOffset - childHorizontalExtent,
+        LayoutPoint childLocation(writingMode().isBidiLTR() ? horizontalOffset : width() - horizontalOffset - childHorizontalExtent,
             verticalOffset + child->marginBefore());
 
         child->setLocation(childLocation);
@@ -233,17 +194,21 @@ void RenderMathMLBlock::layoutItems(bool relayoutChildren)
     }
 }
 
-void RenderMathMLBlock::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLBlock::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
-    if (!relayoutChildren && simplifiedLayout())
+    insertPositionedChildrenIntoContainingBlock();
+
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
 
     LayoutRepainter repainter(*this);
 
     if (recomputeLogicalWidth())
-        relayoutChildren = true;
+        relayoutChildren = RelayoutChildren::Yes;
 
     setLogicalHeight(borderAndPaddingLogicalHeight() + scrollbarLogicalHeight());
 
@@ -262,7 +227,7 @@ void RenderMathMLBlock::layoutBlock(bool relayoutChildren, LayoutUnit)
 
 void RenderMathMLBlock::computeAndSetBlockDirectionMarginsOfChildren()
 {
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
+    for (auto* child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox())
         child->computeAndSetBlockDirectionMargins(*this);
 }
 
@@ -273,6 +238,94 @@ void RenderMathMLBlock::styleDidChange(StyleDifference diff, const RenderStyle* 
     // MathML displaystyle changes can affect layout.
     if (oldStyle && style().mathStyle() != oldStyle->mathStyle())
         setNeedsLayoutAndPrefWidthsRecalc();
+}
+
+void RenderMathMLBlock::insertPositionedChildrenIntoContainingBlock()
+{
+    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
+        if (child->isOutOfFlowPositioned())
+            child->containingBlock()->insertPositionedObject(*child);
+    }
+}
+
+void RenderMathMLBlock::layoutFloatingChildren()
+{
+    // According to the spec, https://w3c.github.io/mathml-core/#css-styling:
+    // > The float property does not create floating of elements whose parent's computed display value is block math or inline math,
+    // > and does not take them out-of-flow.
+    // However, WebKit does not currently do this since `display: math` is unimplemented. See webkit.org/b/278533.
+    // Since this leaves floats as neither positioned nor in-flow, perform dummy layout for floating children.
+    // FIXME: Per the spec, there should be no floating children inside MathML renderers.
+    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox()) {
+        if (child->isFloating())
+            child->layoutIfNeeded();
+    }
+}
+
+void RenderMathMLBlock::shiftInFlowChildren(LayoutUnit left, LayoutUnit top)
+{
+    LayoutPoint shift(left, top);
+    for (auto* child = firstInFlowChildBox(); child; child = child->nextInFlowSiblingBox())
+        child->setLocation(child->location() + shift);
+}
+
+void RenderMathMLBlock::adjustPreferredLogicalWidthsForBorderAndPadding()
+{
+    ASSERT(preferredLogicalWidthsDirty());
+    m_minPreferredLogicalWidth += borderAndPaddingLogicalWidth();
+    m_maxPreferredLogicalWidth += borderAndPaddingLogicalWidth();
+}
+
+void RenderMathMLBlock::adjustLayoutForBorderAndPadding()
+{
+    setLogicalWidth(logicalWidth() + borderAndPaddingLogicalWidth());
+    setLogicalHeight(logicalHeight() + borderAndPaddingLogicalHeight());
+    shiftInFlowChildren(style().isLeftToRightDirection() ? borderAndPaddingStart() : borderAndPaddingEnd(), borderAndPaddingBefore());
+}
+
+RenderMathMLBlock::SizeAppliedToMathContent RenderMathMLBlock::sizeAppliedToMathContent(LayoutPhase phase)
+{
+    SizeAppliedToMathContent sizes;
+    // FIXME: Resolve percentages.
+    // https://github.com/w3c/mathml-core/issues/76
+    if (style().logicalWidth().isFixed())
+        sizes.logicalWidth = style().logicalWidth().value();
+
+    // FIXME: Resolve percentages.
+    // https://github.com/w3c/mathml-core/issues/77
+    if (phase == LayoutPhase::Layout && style().logicalHeight().isFixed())
+        sizes.logicalHeight = style().logicalHeight().value();
+
+    return sizes;
+}
+
+LayoutUnit RenderMathMLBlock::applySizeToMathContent(LayoutPhase phase, const SizeAppliedToMathContent& sizes)
+{
+    if (phase == LayoutPhase::CalculatePreferredLogicalWidth) {
+        ASSERT(preferredLogicalWidthsDirty());
+        if (sizes.logicalWidth) {
+            m_minPreferredLogicalWidth = *sizes.logicalWidth;
+            m_maxPreferredLogicalWidth = *sizes.logicalWidth;
+        }
+        return LayoutUnit();
+    }
+
+    ASSERT(phase == LayoutPhase::Layout);
+
+    LayoutUnit inlineShift;
+    if (sizes.logicalWidth) {
+        auto oldWidth = logicalWidth();
+        if (isMathContentCentered()) {
+            inlineShift = (*sizes.logicalWidth - oldWidth) / 2;
+        } else if (!style().isLeftToRightDirection())
+            inlineShift = *sizes.logicalWidth - oldWidth;
+        setLogicalWidth(*sizes.logicalWidth);
+    }
+
+    if (sizes.logicalHeight)
+        setLogicalHeight(*sizes.logicalHeight);
+
+    return inlineShift;
 }
 
 }

@@ -42,6 +42,7 @@ import com.sun.glass.ui.Window.Level;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
+import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
@@ -65,6 +66,7 @@ public class WindowStage extends GlassStage {
     private OverlayWarning warning = null;
     private boolean rtl = false;
     private boolean transparent = false;
+    private boolean darkFrame = false;
     private boolean isPrimaryStage = false;
     private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
@@ -84,11 +86,12 @@ public class WindowStage extends GlassStage {
         ResourceBundle.getBundle(WindowStage.class.getPackage().getName() +
                                  ".QuantumMessagesBundle", LOCALE);
 
-
-    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality,
+                       TKStage owner, boolean darkFrame) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
+        this.darkFrame = darkFrame;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -176,6 +179,10 @@ public class WindowStage extends GlassStage {
                 windowMask |= Window.MODAL;
             }
 
+            if (darkFrame) {
+                windowMask |= Window.DARK_FRAME;
+            }
+
             platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
             platformWindow.setResizable(resizable);
             platformWindow.setFocusable(focusable);
@@ -227,7 +234,9 @@ public class WindowStage extends GlassStage {
 
     private void notifyHeaderButtonMetricsChanged() {
         if (stageListener instanceof StagePeerListener listener && platformWindow != null) {
-            listener.changedHeaderButtonMetrics(platformWindow.headerButtonMetricsProperty().get());
+            var metrics = platformWindow.headerButtonMetricsProperty().get();
+            listener.changedHeaderButtonMetrics(
+                new HeaderButtonMetrics(metrics.leftInset(), metrics.rightInset(), metrics.minHeight()));
         }
     }
 
@@ -899,6 +908,15 @@ public class WindowStage extends GlassStage {
     public void setPrefHeaderButtonHeight(double height) {
         if (platformWindow != null) {
             platformWindow.setPrefHeaderButtonHeight(height);
+        }
+    }
+
+    @Override
+    public void setDarkFrame(boolean value) {
+        darkFrame = value;
+
+        if (platformWindow != null) {
+            platformWindow.setDarkFrame(value);
         }
     }
 }

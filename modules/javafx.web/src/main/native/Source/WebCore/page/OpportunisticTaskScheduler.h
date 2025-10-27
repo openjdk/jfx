@@ -31,7 +31,7 @@
 #include <JavaScriptCore/MarkedSpace.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -54,7 +54,7 @@ private:
     WeakPtr<OpportunisticTaskScheduler> m_scheduler;
 };
 
-class OpportunisticTaskScheduler final : public RefCounted<OpportunisticTaskScheduler>, public CanMakeWeakPtr<OpportunisticTaskScheduler> {
+class OpportunisticTaskScheduler final : public RefCountedAndCanMakeWeakPtr<OpportunisticTaskScheduler> {
 public:
     static Ref<OpportunisticTaskScheduler> create(Page& page)
     {
@@ -62,8 +62,6 @@ public:
     }
 
     ~OpportunisticTaskScheduler();
-
-    void willQueueIdleCallback() { m_mayHavePendingIdleCallbacks = true; }
 
     bool isScheduled() const { return m_runLoopObserver->isScheduled(); }
     void rescheduleIfNeeded(MonotonicTime deadline);
@@ -126,7 +124,6 @@ private:
     uint64_t m_runloopCountAfterBeingScheduled { 0 };
     MonotonicTime m_currentDeadline;
     std::unique_ptr<RunLoopObserver> m_runLoopObserver;
-    bool m_mayHavePendingIdleCallbacks { false };
 };
 
 } // namespace WebCore

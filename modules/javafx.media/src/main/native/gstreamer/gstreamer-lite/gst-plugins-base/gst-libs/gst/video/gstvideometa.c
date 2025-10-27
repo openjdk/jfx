@@ -124,6 +124,68 @@ gst_video_meta_transform (GstBuffer * dest, GstMeta * meta,
   return TRUE;
 }
 
+static gboolean
+gst_video_meta_api_params_aggregator (GstStructure ** aggregated_params,
+    const GstStructure * params0, const GstStructure * params1)
+{
+  GstVideoAlignment align0;
+  GstVideoAlignment align1;
+  GstVideoAlignment aggregated_align;
+
+  gst_video_alignment_reset (&align0);
+  gst_video_alignment_reset (&align1);
+  gst_video_alignment_reset (&aggregated_align);
+
+  if (params0 && (!gst_structure_has_name (params0, "video-meta") ||
+          !gst_buffer_pool_config_get_video_alignment (params0, &align0))) {
+    GST_WARNING ("Invalid params");
+    params0 = NULL;
+  }
+
+  if (params1 && (!gst_structure_has_name (params1, "video-meta") ||
+          !gst_buffer_pool_config_get_video_alignment (params1, &align1))) {
+    GST_WARNING ("Invalid params");
+    params1 = NULL;
+  }
+
+  if (!params0 && !params1) {
+    *aggregated_params = NULL;
+    return TRUE;
+  }
+
+  if (params0 && !params1) {
+    *aggregated_params = gst_structure_copy (params0);
+    return TRUE;
+  }
+
+  if (!params0 && params1) {
+    *aggregated_params = gst_structure_copy (params1);
+    return TRUE;
+  }
+
+  aggregated_align.padding_top = MAX (align0.padding_top, align1.padding_top);
+
+  aggregated_align.padding_bottom =
+      MAX (align0.padding_bottom, align1.padding_bottom);
+
+  aggregated_align.padding_left =
+      MAX (align0.padding_left, align1.padding_left);
+
+  aggregated_align.padding_right =
+      MAX (align0.padding_right, align1.padding_right);
+
+  for (int n = 0; n < GST_VIDEO_MAX_PLANES; ++n)
+    aggregated_align.stride_align[n] =
+        align0.stride_align[n] | align1.stride_align[n];
+
+  *aggregated_params = gst_structure_new_empty ("video-meta");
+
+  gst_buffer_pool_config_set_video_alignment (*aggregated_params,
+      &aggregated_align);
+
+  return TRUE;
+}
+
 GType
 gst_video_meta_api_get_type (void)
 {
@@ -136,6 +198,9 @@ gst_video_meta_api_get_type (void)
 
   if (g_once_init_enter (&type)) {
     GType _type = gst_meta_api_type_register ("GstVideoMetaAPI", tags);
+
+    gst_meta_api_type_set_params_aggregator (_type,
+        gst_video_meta_api_params_aggregator);
     g_once_init_leave (&type, _type);
   }
   return type;
