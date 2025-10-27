@@ -74,6 +74,7 @@ import test.jfx.incubator.scene.util.TUtil;
 public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
 
     @BeforeEach
     public void beforeEach() {
@@ -467,6 +468,18 @@ public class RichTextAreaTest {
         assertFalse(control.hasNonEmptySelection());
         control.selectAll();
         assertTrue(control.hasNonEmptySelection());
+    }
+
+    @Test
+    public void insertBetweenSegments() {
+        TextPos p = control.appendText("a", BOLD);
+        control.appendText("b", ITALIC);
+        control.select(p);
+        control.insertTab();
+        control.insertTab();
+        assertEquals("a\t\tb", text());
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
     }
 
     @Test
