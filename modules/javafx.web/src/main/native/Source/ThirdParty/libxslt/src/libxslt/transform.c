@@ -2696,8 +2696,8 @@ xsltApplySequenceConstructor(xsltTransformContextPtr ctxt,
             /*
             * Cleanup temporary tree fragments.
             */
-                    if (oldLocalFragmentTop != ctxt->localRVTList)
-            xsltReleaseLocalRVTs(ctxt, oldLocalFragmentTop);
+            if (oldLocalFragmentTop != ctxt->localRVTList)
+                xsltReleaseLocalRVTs(ctxt, oldLocalFragmentTop);
 
             ctxt->insert = oldInsert;
         }
@@ -2762,7 +2762,7 @@ xsltApplySequenceConstructor(xsltTransformContextPtr ctxt,
         /*
         * Cleanup temporary tree fragments.
         */
-                if (oldLocalFragmentTop != ctxt->localRVTList)
+        if (oldLocalFragmentTop != ctxt->localRVTList)
             xsltReleaseLocalRVTs(ctxt, oldLocalFragmentTop);
 
                 ctxt->insert = oldInsert;
@@ -2892,7 +2892,7 @@ xsltApplySequenceConstructor(xsltTransformContextPtr ctxt,
         /*
         * Cleanup temporary tree fragments.
         */
-                if (oldLocalFragmentTop != ctxt->localRVTList)
+        if (oldLocalFragmentTop != ctxt->localRVTList)
             xsltReleaseLocalRVTs(ctxt, oldLocalFragmentTop);
 
                 ctxt->insert = oldInsert;
