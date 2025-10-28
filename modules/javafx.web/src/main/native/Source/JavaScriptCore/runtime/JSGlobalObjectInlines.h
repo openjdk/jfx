@@ -332,6 +332,9 @@ ALWAYS_INLINE JSArray* tryCreateContiguousArrayWithPattern(JSGlobalObject* globa
     if (initialLength >= MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH)
         return nullptr;
 
+    if (globalObject->isHavingABadTime()) [[unlikely]]
+        return nullptr;
+
     VM& vm = globalObject->vm();
     Structure* structure = globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous);
     if (UNLIKELY(!hasContiguous(structure->indexingType())))

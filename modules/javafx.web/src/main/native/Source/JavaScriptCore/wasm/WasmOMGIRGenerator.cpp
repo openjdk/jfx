@@ -4102,7 +4102,7 @@ void OMGIRGenerator::connectControlAtEntrypoint(unsigned& indexInBuffer, Value* 
         else
             m_currentBlock->appendNew<VariableValue>(m_proc, Set, origin(), value.value(), load);
     }
-    if (ControlType::isAnyCatch(data) && &data != &currentData) {
+    if (!Options::useWasmIPInt() && ControlType::isAnyCatch(data) && &data != &currentData) {
         auto* load = loadFromScratchBuffer(indexInBuffer, pointer, pointerType());
         m_currentBlock->appendNew<VariableValue>(m_proc, Set, origin(), data.exception(), load);
     }
@@ -4138,6 +4138,17 @@ auto OMGIRGenerator::addLoop(BlockSignature signature, Stack& enclosingStack, Co
 
         for (auto& local : m_locals)
             m_currentBlock->appendNew<VariableValue>(m_proc, Set, Origin(), local, loadFromScratchBuffer(indexInBuffer, pointer, local->type()));
+
+        if (Options::useWasmIPInt()) {
+            for (unsigned controlIndex = 0; controlIndex < m_parser->controlStack().size(); ++controlIndex) {
+                auto& data = m_parser->controlStack()[controlIndex].controlData;
+                if (ControlType::isAnyCatch(data)) {
+                    auto* load = loadFromScratchBuffer(indexInBuffer, pointer, pointerType());
+                    m_currentBlock->appendNew<VariableValue>(m_proc, Set, origin(), data.exception(), load);
+                } else if (ControlType::isTry(data))
+                    ++indexInBuffer;
+            }
+        }
 
         for (unsigned controlIndex = 0; controlIndex < m_parser->controlStack().size(); ++controlIndex) {
             auto& data = m_parser->controlStack()[controlIndex].controlData;
