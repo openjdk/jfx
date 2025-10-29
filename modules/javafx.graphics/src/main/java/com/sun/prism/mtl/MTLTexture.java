@@ -202,6 +202,10 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                         int srcw, int srch,
                         int srcscan, boolean skipFlush) {
 
+        if (!resource.isValid()) {
+            return;
+        }
+
         switch (format.getDataType()) {
             case PixelFormat.DataType.INT -> updateTextureInt(buffer, format,
                 dstx, dsty, srcx, srcy, srcw, srch, srcscan);

@@ -29,12 +29,21 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
+
+import javax.inject.Inject
 
 class ExportedSymbolsTask extends DefaultTask {
     @OutputFile File outputFile;
     @InputDirectory File libDir;
     @Optional @Input List<String> excludes;
 
+    private final ExecOperations execOperations;
+
+    @Inject
+    ExportedSymbolsTask(ExecOperations execOperations) {
+        this.execOperations = execOperations;
+    }
 
     @TaskAction void generateExportedSymbols() {
         // Get symbols only from .a libraries
@@ -49,11 +58,11 @@ class ExportedSymbolsTask extends DefaultTask {
         def baos = new ByteArrayOutputStream();
 
         // Execute nm on .a libraries
-        project.exec({
-            commandLine("nm", "-jg");
-            args(libNames);
-            setStandardOutput(baos);
-        });
+        execOperations.exec { spec ->
+            spec.commandLine("nm", "-jg");
+            spec.args(libNames);
+            spec.setStandardOutput(baos);
+        };
 
         def bais = new ByteArrayInputStream(baos.toByteArray());
 

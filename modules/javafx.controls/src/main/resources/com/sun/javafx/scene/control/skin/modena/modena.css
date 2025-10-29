@@ -1977,10 +1977,6 @@ is being used to size a border should also be in pixels.
     -fx-padding: 1em; /* 12 */
     -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
 }
-.color-palette > .color-picker-grid {
-    -fx-padding: 0.5px;
-    -fx-snap-to-pixel: false;
-}
 .color-palette > .color-picker-grid > .color-square {
     -fx-background-color: transparent;
     -fx-padding: 0.5px;

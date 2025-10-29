@@ -68,9 +68,9 @@ public class StdoutMouseListener {
         StringBuilder sb = new StringBuilder();
         sb.append(ev.getEventType());
         sb.append(" (");
-        sb.append(Utils.fmt(ev.getX())).append(", ").append(Utils.fmt(ev.getY()));
+        sb.append(Utils.f2(ev.getX())).append(", ").append(Utils.f2(ev.getY()));
         sb.append(") screen=(");
-        sb.append(Utils.fmt(ev.getScreenX())).append(", ").append(Utils.fmt(ev.getScreenY()));
+        sb.append(Utils.f2(ev.getScreenX())).append(", ").append(Utils.f2(ev.getScreenY()));
         sb.append(")");
         System.out.println(sb);
     }

@@ -266,27 +266,26 @@ void TZoneHeapManager::init()
         TZONE_LOG_DEBUG("\n");
     }
 #endif
-    alignas(8) unsigned char seed[CC_SHA1_DIGEST_LENGTH];
-    (void)CC_SHA256(&rawSeed, rawSeedLength, seed);
+    alignas(8) std::array<unsigned char, CC_SHA256_DIGEST_LENGTH> defaultSeed;
+    (void)CC_SHA256(&rawSeed, rawSeedLength, defaultSeed.data());
 #else // OS(DARWIN) => !OS(DARWIN)
 #if 0
     if constexpr (verbose)
         TZONE_LOG_DEBUG("using static seed\n");
 #endif
-    const unsigned char defaultSeed[CC_SHA1_DIGEST_LENGTH] = { "DefaultSeed\x12\x34\x56\x78\x9a\xbc\xde\xf0" };
-    memcpy(m_tzoneKey.seed, defaultSeed, CC_SHA1_DIGEST_LENGTH);
+    const std::array<unsigned char, CC_SHA1_DIGEST_LENGTH> defaultSeed = { "DefaultSeed\x12\x34\x56\x78\x9a\xbc\xde\xf0" };
 #endif // OS(DARWIN) => !OS(DARWIN)
 
-    uint64_t* seedPtr = reinterpret_cast<uint64_t*>(seed);
+    const uint64_t* seedPtr = reinterpret_cast<const uint64_t*>(defaultSeed.data());
     m_tzoneKeySeed = 0;
-    unsigned remainingBytes = CC_SHA1_DIGEST_LENGTH;
+    unsigned remainingBytes = defaultSeed.size();
     while (remainingBytes > sizeof(m_tzoneKeySeed)) {
         m_tzoneKeySeed = m_tzoneKeySeed ^ *seedPtr++;
         remainingBytes -= sizeof(m_tzoneKeySeed);
     }
     uint64_t remainingSeed = 0;
-    unsigned char* seedBytes = reinterpret_cast<unsigned char*>(seedPtr);
-    while (remainingBytes > sizeof(m_tzoneKeySeed)) {
+    const unsigned char* seedBytes = reinterpret_cast<const unsigned char*>(seedPtr);
+    while (remainingBytes) {
         remainingSeed = (remainingSeed << 8) | *seedBytes++;
         remainingBytes--;
     }
@@ -294,8 +293,8 @@ void TZoneHeapManager::init()
 #if 0
     if constexpr (verbose) {
         TZONE_LOG_DEBUG("    Computed key {");
-        for (unsigned i = 0; i < CC_SHA1_DIGEST_LENGTH; ++i)
-            TZONE_LOG_DEBUG(" %02x", seed[i]);
+        for (unsigned char byte : defaultSeed)
+            TZONE_LOG_DEBUG(" %02x", byte);
         TZONE_LOG_DEBUG(" }\n");
     }
 #endif

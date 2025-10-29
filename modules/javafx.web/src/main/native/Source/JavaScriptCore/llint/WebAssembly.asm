@@ -736,7 +736,7 @@ if JSVALUE64
     storep memoryBase, Callee[cfr]
 else
     loadp [sp], ws0
-    addq 2 * SlotSize, sp
+    addp 2 * SlotSize, sp
     storep ws0, Callee[cfr]
 end
 
