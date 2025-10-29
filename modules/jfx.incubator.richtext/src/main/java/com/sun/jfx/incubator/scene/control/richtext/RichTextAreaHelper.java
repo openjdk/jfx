@@ -37,7 +37,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 public class RichTextAreaHelper {
 
     public interface Accessor {
-        public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator);
+        public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit);
     }
 
     static {
@@ -55,7 +55,7 @@ public class RichTextAreaHelper {
         accessor = a;
     }
 
-    public static boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
-        return accessor.getText(t, start, end, sb, limit, lineSeparator);
+    public static boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
+        return accessor.getText(t, start, end, sb, limit);
     }
 }

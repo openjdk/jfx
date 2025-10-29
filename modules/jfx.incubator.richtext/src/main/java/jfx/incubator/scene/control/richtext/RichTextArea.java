@@ -315,8 +315,8 @@ public class RichTextArea extends Control {
     static {
         RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
             @Override
-            public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
-                return t.getText(start, end, sb, limit, lineSeparator);
+            public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
+                return t.getText(start, end, sb, limit);
             }
         });
     }
@@ -1423,6 +1423,7 @@ public class RichTextArea extends Control {
         return styleHandlerRegistry;
     }
 
+    // TODO could be made a public API
     /**
      * Copies the plain text between `start` and `end` positions to the provided buffer.
      * <p>
@@ -1435,12 +1436,10 @@ public class RichTextArea extends Control {
      * @param end the end position
      * @param sb the buffer to copy to
      * @param limit the maximum number of characters to copy, must be >= 0
-     * @param lineSeparator the newline separator sequence, or null to use the platform default
      * @return {@code true} if all the text fit in the buffer
-     * @since 26
+     * @since TODO
      */
-    // TODO depends on JDK-8370140 (line separator property), private for now
-    private final boolean getText(TextPos start, TextPos end, StringBuilder sb, int limit, String lineSeparator) {
+    private final boolean getText(TextPos start, TextPos end, StringBuilder sb, int limit) {
         StyledTextModel m = getModel();
         if (m == null) {
             return true;
@@ -1452,9 +1451,8 @@ public class RichTextArea extends Control {
             end = tmp;
         }
 
-        if (lineSeparator == null) {
-            lineSeparator = System.getProperty("line.separator");
-        }
+        // TODO JDK-8370140 (line separator property)
+        String lineSeparator = System.getProperty("line.separator");
 
         int toCopy = limit;
         int index = start.index();

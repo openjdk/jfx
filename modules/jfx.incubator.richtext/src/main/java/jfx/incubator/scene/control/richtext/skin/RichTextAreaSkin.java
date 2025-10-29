@@ -185,7 +185,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                         if (!sel.isCollapsed()) {
                             int limit = Params.IME_MAX_TEXT_LENGTH;
                             StringBuilder sb = new StringBuilder(limit);
-                            RichTextAreaHelper.getText(rta, sel.getMin(), sel.getMax(), sb, limit, null);
+                            RichTextAreaHelper.getText(rta, sel.getMin(), sel.getMax(), sb, limit);
                             return sb.toString();
                         }
                     }
@@ -594,7 +594,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     // while IME is active
-    static class Ime {
+    private static class Ime {
         public TextPos start;
         public int length;
         public List<Shape> shapes;
