@@ -2079,11 +2079,9 @@ public class TreeTableView<S> extends Control {
     }
 
     /**
-     * Calling {@code refresh()} forces the TreeTableView control to rebuild the
-     * cells necessary to populate the visual bounds of the control.
-     * In other words, this forces the TreeTableView to update what it is showing to
-     * the user. This is useful in cases where the underlying data source has
-     * changed in a way that is not observed by the TreeTableView itself.
+     * Forces the TreeTableView to update what it is showing to the user.
+     * This is useful in cases where the underlying data source has changed in a way
+     * that is not observed by the TreeTableView itself.
      *
      * @since JavaFX 8u60
      */

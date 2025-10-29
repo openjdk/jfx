@@ -1763,11 +1763,9 @@ public class TableView<S> extends Control {
     }
 
     /**
-     * Calling {@code refresh()} forces the TableView control to rebuild the
-     * cells necessary to populate the visual bounds of the control.
-     * In other words, this forces the TableView to update what it is showing to
-     * the user. This is useful in cases where the underlying data source has
-     * changed in a way that is not observed by the TableView itself.
+     * Forces the TableView to update what it is showing to the user.
+     * This is useful in cases where the underlying data source has changed in a way
+     * that is not observed by the TableView itself.
      *
      * @since JavaFX 8u60
      */
