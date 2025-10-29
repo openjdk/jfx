@@ -493,6 +493,9 @@ void DocumentThreadableLoader::notifyFinished(CachedResource& resource, const Ne
 void DocumentThreadableLoader::didFinishLoading(std::optional<ResourceLoaderIdentifier> identifier, const NetworkLoadMetrics& metrics)
 {
     ASSERT(m_client);
+    RefPtr document = m_document.get();
+    if (!document)
+        return;
 
     if (m_delayCallbacksForIntegrityCheck) {
         CachedResourceHandle resource = m_resource;
@@ -507,19 +510,19 @@ void DocumentThreadableLoader::didFinishLoading(std::optional<ResourceLoaderIden
         if (resource->resourceBuffer())
             buffer = resource->resourceBuffer()->makeContiguous();
         if (options().filteringPolicy == ResponseFilteringPolicy::Disable) {
-            m_client->didReceiveResponse(m_document->identifier(), identifier, response);
+            m_client->didReceiveResponse(document->identifier(), identifier, response);
             if (buffer)
                 m_client->didReceiveData(*buffer);
         } else {
             ASSERT(response.type() == ResourceResponse::Type::Default);
 
-            m_client->didReceiveResponse(m_document->identifier(), identifier, ResourceResponse::filter(response, m_options.credentials == FetchOptions::Credentials::Include ? ResourceResponse::PerformExposeAllHeadersCheck::No : ResourceResponse::PerformExposeAllHeadersCheck::Yes));
+            m_client->didReceiveResponse(document->identifier(), identifier, ResourceResponse::filter(response, m_options.credentials == FetchOptions::Credentials::Include ? ResourceResponse::PerformExposeAllHeadersCheck::No : ResourceResponse::PerformExposeAllHeadersCheck::Yes));
             if (buffer)
                 m_client->didReceiveData(*buffer);
         }
     }
 
-    m_client->didFinishLoading(m_document->identifier(), identifier, metrics);
+    m_client->didFinishLoading(document->identifier(), identifier, metrics);
 }
 
 void DocumentThreadableLoader::didFail(std::optional<ResourceLoaderIdentifier>, const ResourceError& error)
@@ -538,8 +541,11 @@ void DocumentThreadableLoader::didFail(std::optional<ResourceLoaderIdentifier>, 
     if (m_shouldLogError == ShouldLogError::Yes)
         logError(protectedDocument(), error, m_options.initiatorType);
 
+    RefPtr document = m_document.get();
+    if (!document)
+        return;
     if (m_client)
-        m_client->didFail(m_document->identifier(), error); // May cause the client to get destroyed.
+        m_client->didFail(document->identifier(), error); // May cause the client to get destroyed.
 }
 
 Ref<Document> DocumentThreadableLoader::protectedDocument()

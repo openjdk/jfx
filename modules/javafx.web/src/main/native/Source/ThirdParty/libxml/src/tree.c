@@ -1892,8 +1892,8 @@ xmlFreeProp(xmlAttrPtr cur) {
         xmlDeregisterNodeDefaultValue((xmlNodePtr)cur);
 
     /* Check for ID removal -> leading to invalid references ! */
-    if ((cur->doc != NULL) && (cur->atype == XML_ATTRIBUTE_ID)) {
-            xmlRemoveID(cur->doc, cur);
+    if (cur->doc != NULL && cur->id != NULL) {
+        xmlRemoveID(cur->doc, cur);
     }
     if (cur->children != NULL) xmlFreeNodeList(cur->children);
     DICT_FREE(cur->name)
@@ -2736,7 +2736,7 @@ xmlNodeSetDoc(xmlNodePtr node, xmlDocPtr doc) {
              * TODO: ID attributes should also be added to the new
              * document, but it's not clear how to handle clashes.
              */
-            if (attr->atype == XML_ATTRIBUTE_ID)
+            if (attr->id != NULL)
                 xmlRemoveID(oldDoc, attr);
 
             break;
@@ -6919,7 +6919,7 @@ xmlSetNsProp(xmlNodePtr node, xmlNsPtr ns, const xmlChar *name,
                 return(NULL);
         }
 
-        if (prop->atype == XML_ATTRIBUTE_ID) {
+        if (prop->id != NULL) {
             xmlRemoveID(node->doc, prop);
             prop->atype = XML_ATTRIBUTE_ID;
         }

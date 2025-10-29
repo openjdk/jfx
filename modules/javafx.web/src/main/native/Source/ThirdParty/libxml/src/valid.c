@@ -1139,8 +1139,6 @@ xmlFreeElement(xmlElementPtr elem) {
  * @type:  the element type
  * @content:  the element content tree or NULL
  *
- * DEPRECATED: Internal function, don't use.
- *
  * Register a new element declaration
  *
  * Returns NULL if not, otherwise the entity
@@ -1651,8 +1649,6 @@ xmlFreeAttribute(xmlAttributePtr attr) {
  * @defaultValue:  the attribute default value
  * @tree:  if it's an enumeration, the associated list
  *
- * DEPRECATED: Internal function, don't use.
- *
  * Register a new attribute declaration
  * Note that @tree becomes the ownership of the DTD
  *
@@ -2063,8 +2059,6 @@ xmlFreeNotation(xmlNotationPtr nota) {
  * @name:  the entity name
  * @PublicID:  the public identifier or NULL
  * @SystemID:  the system identifier or NULL
- *
- * DEPRECATED: Internal function, don't use.
  *
  * Register a new notation declaration
  *
@@ -4296,7 +4290,7 @@ xmlValidateOneAttribute(xmlValidCtxtPtr ctxt, xmlDocPtr doc,
                attr->name, elem->name, NULL);
         return(0);
     }
-    if (attr->atype == XML_ATTRIBUTE_ID)
+    if (attr->id != NULL)
         xmlRemoveID(doc, attr);
     attr->atype = attrDecl->atype;
 
@@ -4319,7 +4313,8 @@ xmlValidateOneAttribute(xmlValidCtxtPtr ctxt, xmlDocPtr doc,
     }
 
     /* Validity Constraint: ID uniqueness */
-    if (attrDecl->atype == XML_ATTRIBUTE_ID) {
+    if (attrDecl->atype == XML_ATTRIBUTE_ID &&
+        (ctxt == NULL || (ctxt->flags & XML_VCTXT_IN_ENTITY) == 0)) {
         if (xmlAddID(ctxt, doc, value, attr) == NULL)
             ret = 0;
     }
