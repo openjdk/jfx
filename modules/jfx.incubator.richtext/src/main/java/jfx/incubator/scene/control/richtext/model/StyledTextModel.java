@@ -630,6 +630,8 @@ public abstract class StyledTextModel {
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}
      * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos)} at the
      * {@code start} position.
+     * It creates an undo/redo entry if the model's
+     * {@link StyledTextModel#isUndoRedoEnabled() isUndoRedoEnabled()} returns {@code true}.
      *
      * @param resolver the StyleResolver to use
      * @param start start text position
@@ -653,7 +655,7 @@ public abstract class StyledTextModel {
      * inserted in the beginning of the document, the style is taken from the following text segment.
      * <p>
      * After the model applies the requested changes, an event is sent to all the registered listeners.
-     * This method creates an undo/redo entry.
+     * It creates an undo/redo entry if {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param resolver the StyleResolver to use, can be null
      * @param start the start text position

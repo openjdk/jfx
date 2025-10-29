@@ -436,7 +436,9 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * Replaces text in this CodeArea.  This method creates an undo/redo entry.
+     * Replaces text in this CodeArea.
+     * It creates an undo/redo entry if the model's
+     * {@link StyledTextModel#isUndoRedoEnabled() isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * The caret gets reset to the start of the document, selection gets cleared, and an undo event gets created.
      * @param text the text string

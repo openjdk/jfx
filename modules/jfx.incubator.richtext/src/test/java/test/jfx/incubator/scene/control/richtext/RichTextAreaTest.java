@@ -764,4 +764,35 @@ public class RichTextAreaTest {
         RichTextArea t = new RichTextArea();
         VFlow f = RichTextAreaShim.vflow(t);
     }
+
+    @Test
+    public void undoRedoEnabled() {
+        // api
+        assertTrue(control.isUndoRedoEnabled());
+        control.setUndoRedoEnabled(false);
+        assertFalse(control.isUndoRedoEnabled());
+        control.setModel(null);
+        control.setUndoRedoEnabled(true);
+        assertFalse(control.isUndoRedoEnabled());
+        control.setModel(new RichTextModel());
+        assertTrue(control.isUndoRedoEnabled());
+        // undo-redo enabled
+        control.appendText("1");
+        assertEquals("1", text());
+        control.undo();
+        assertEquals("", text());
+        // undo-redo disabled
+        control.setUndoRedoEnabled(false);
+        control.appendText("2");
+        assertEquals("2", text());
+        control.undo();
+        assertEquals("2", text());
+        // disabling undo-redo clears undo stack
+        control.setUndoRedoEnabled(true);
+        control.appendText("3");
+        assertEquals("23", text());
+        assertTrue(control.isUndoable());
+        control.setUndoRedoEnabled(false);
+        assertFalse(control.isUndoable());
+    }
 }

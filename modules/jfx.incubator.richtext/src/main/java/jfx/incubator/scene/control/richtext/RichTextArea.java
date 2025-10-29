@@ -1072,7 +1072,9 @@ public class RichTextArea extends Control {
 
     /**
      * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.  This method creates an undo/redo entry.
+     * sequences result in a new paragraph being added.
+     * It creates an undo/redo entry if the model's
+     * {@link StyledTextModel#isUndoRedoEnabled() isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * It is up to the model to decide whether to accept all, some, or none of the
      * {@link jfx.incubator.scene.control.richtext.model.StyleAttribute StyleAttribute}s.
