@@ -312,13 +312,7 @@ public class RichTextModel extends StyledTextModel {
                 RSegment seg = get(i);
                 int len = seg.getTextLength();
                 pos += len;
-                if ((offset < len) || (i + 1 == ct)) {
-                    return seg.getStyleAttributeMap();
-                } else if (offset == len) {
-                    // on the boundary, pick the previous segment
-                    if (i > 0) {
-                        seg = get(i - 1);
-                    }
+                if ((offset <= pos) || (i + 1 == ct)) {
                     return seg.getStyleAttributeMap();
                 }
             }

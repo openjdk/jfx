@@ -474,12 +474,25 @@ public class RichTextAreaTest {
     public void insertBetweenSegments() {
         TextPos p = control.appendText("a", BOLD);
         control.appendText("b", ITALIC);
+        control.appendText("c", BOLD);
         control.select(p);
         control.insertTab();
         control.insertTab();
-        assertEquals("a\t\tb", text());
+        assertEquals("a\t\tbc", text());
         control.select(TextPos.ofLeading(0, 2));
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ZERO);
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 1));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 4));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 5));
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
     }
 
     @Test
