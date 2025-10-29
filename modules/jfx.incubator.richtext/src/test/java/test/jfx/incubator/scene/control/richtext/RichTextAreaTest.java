@@ -702,6 +702,23 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void selectParagraph() {
+        control.appendText("123\n456\n789");
+        // first line
+        control.select(TextPos.ZERO);
+        control.selectParagraph();
+        SelectionSegment sel = control.getSelection();
+        assertEquals(TextPos.ZERO, sel.getMin());
+        assertEquals(TextPos.ofLeading(1, 0), sel.getMax());
+        // last line, no trailing line separator
+        control.select(TextPos.ofLeading(2, 0));
+        control.selectParagraph();
+        sel = control.getSelection();
+        assertEquals(TextPos.ofLeading(2, 0), sel.getMin());
+        assertEquals(new TextPos(2, 3, 2, false), sel.getMax());
+    }
+
+    @Test
     public void undo() {
         control.appendText("1");
         control.undo();
