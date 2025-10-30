@@ -1092,7 +1092,9 @@ public class RichTextArea extends Control {
 
     /**
      * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.  This method creates an undo/redo entry.
+     * sequences result in a new paragraph being added.
+     * It creates an undo/redo entry if
+     * {@link #isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * This convenience method is equivalent to calling
      * {@code appendText(text, StyleAttributeMap.EMPTY, true);}
@@ -1108,7 +1110,9 @@ public class RichTextArea extends Control {
 
     /**
      * Appends the styled content to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.  This method creates an undo/redo entry.
+     * sequences result in a new paragraph being added.
+     * It creates an undo/redo entry if
+     * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param in the input stream
      * @return the text position at the end of the appended text, or null if editing is disabled
@@ -1501,7 +1505,9 @@ public class RichTextArea extends Control {
 
     /**
      * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
-     * sequences result in a new paragraph being added.  This method creates an undo/redo entry.
+     * sequences result in a new paragraph being added.
+     * It creates an undo/redo entry if
+     * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param pos the insert position
      * @param text the text to inser
@@ -1516,7 +1522,9 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Inserts the styled content at the specified position.  This method creates an undo/redo entry.
+     * Inserts the styled content at the specified position.
+     * It creates an undo/redo entry if
+     * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param pos the insert position
      * @param in the input stream
