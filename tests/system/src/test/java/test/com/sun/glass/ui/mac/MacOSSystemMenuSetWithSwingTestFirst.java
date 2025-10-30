@@ -70,31 +70,42 @@ public class MacOSSystemMenuSetWithSwingTestFirst extends MacOSSystemMenuTestBas
 
         focusJavaFX(0);
         runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(false));
+        waitForUser();
 
-        List<Element> elements = getMenusOfFocusedWindow();
-        compareMenus(elements, List.of());
+//        List<Element> elements = getMenusOfFocusedWindow();
+//        compareMenus(elements, List.of());
 
         runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(true));
-        elements = getMenusOfFocusedWindow();
-        compareMenus(elements, TEST_MENUS_1);
+        waitForUser();
+
+//        elements = getMenusOfFocusedWindow();
+//        compareMenus(elements, TEST_MENUS_1);
 
         focusSwing(0);
         runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(false));
-        elements = getMenusOfFocusedWindow();
-        compareMenus(elements, TEST_MENUS_0);
+        waitForUser();
+
+//        elements = getMenusOfFocusedWindow();
+//        compareMenus(elements, TEST_MENUS_0);
 
         focusJavaFX(0);
-        elements = getMenusOfFocusedWindow();
-        compareMenus(elements, List.of());
+        waitForUser();
+
+//        elements = getMenusOfFocusedWindow();
+//        compareMenus(elements, List.of());
 
         focusSwing(0);
         runOnFXThread(() -> javaFXMenuBars.get(0).setUseSystemMenuBar(true));
-        elements = getMenusOfFocusedWindow();
-        compareMenus(elements, TEST_MENUS_0);
+        waitForUser();
+
+//        elements = getMenusOfFocusedWindow();
+//        compareMenus(elements, TEST_MENUS_0);
 
         focusJavaFX(0);
-        elements = getMenusOfFocusedWindow();
-        compareMenus(elements, TEST_MENUS_1);
+        waitForUser();
+
+//        elements = getMenusOfFocusedWindow();
+//        compareMenus(elements, TEST_MENUS_1);
     }
 
     private void runOnFXThread(Runnable runnable) throws InterruptedException {

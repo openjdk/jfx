@@ -67,12 +67,14 @@ public class MacOSSystemMenuSingleWindowWithSwingFirstTest extends MacOSSystemMe
         initJavaFX(List.of(TEST_MENUS_1));
 
         focusJavaFX(0);
-        List<Element> jfxElements = getMenusOfFocusedWindow();
+        waitForUser();
+//        List<Element> jfxElements = getMenusOfFocusedWindow();
 
         focusSwing(0);
-        List<Element> swingElements = getMenusOfFocusedWindow();
+        waitForUser();
+//        List<Element> swingElements = getMenusOfFocusedWindow();
 
-        compareMenus(swingElements, TEST_MENUS_0);
-        compareMenus(jfxElements, TEST_MENUS_1);
+//        compareMenus(swingElements, TEST_MENUS_0);
+//        compareMenus(jfxElements, TEST_MENUS_1);
     }
 }

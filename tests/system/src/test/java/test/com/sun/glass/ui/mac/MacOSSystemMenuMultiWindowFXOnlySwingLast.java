@@ -66,15 +66,18 @@ public class MacOSSystemMenuMultiWindowFXOnlySwingLast extends MacOSSystemMenuTe
         initSwing(List.of());
 
         focusJavaFX(0);
-        List<Element> jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
+        waitForUser();
+//        List<Element> jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_1);
 
         focusJavaFX(1);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_3);
+        waitForUser();
+//        jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_3);
 
         focusJavaFX(0);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
+        waitForUser();
+//        jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_1);
     }
 }

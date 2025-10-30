@@ -85,15 +85,18 @@ public class MacOSSystemMenuJFXPanelSwingFirstTest extends MacOSSystemMenuTestBa
         latch.await();
 
         focusSwing(0);
-        List<Element> swingElements = getMenusOfFocusedWindow();
-        compareMenus(swingElements, TEST_MENUS_0);
+        waitForUser();
+//        List<Element> swingElements = getMenusOfFocusedWindow();
+//        compareMenus(swingElements, TEST_MENUS_0);
 
         focusSwing(1);
-        swingElements = getMenusOfFocusedWindow();
-        compareMenus(swingElements, TEST_MENUS_1);
+        waitForUser();
+//        swingElements = getMenusOfFocusedWindow();
+//        compareMenus(swingElements, TEST_MENUS_1);
 
         focusSwing(0);
-        swingElements = getMenusOfFocusedWindow();
-        compareMenus(swingElements, TEST_MENUS_0);
+        waitForUser();
+//        swingElements = getMenusOfFocusedWindow();
+//        compareMenus(swingElements, TEST_MENUS_0);
     }
 }

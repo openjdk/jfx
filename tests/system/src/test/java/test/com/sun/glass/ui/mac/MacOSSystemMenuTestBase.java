@@ -31,11 +31,14 @@ import javafx.scene.Scene;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.BorderLayout;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,11 +50,14 @@ import java.util.Objects;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JTextArea;
+import javax.swing.JButton;
 import javax.swing.SwingUtilities;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -163,6 +169,8 @@ public class MacOSSystemMenuTestBase {
 
     protected final List<JFrame> swingWindows = new ArrayList<>();
 
+    private boolean nextStep = false;
+
     private CountDownLatch latch = null;
 
     /***************************************************
@@ -251,8 +259,16 @@ public class MacOSSystemMenuTestBase {
             menuBar.getMenus().add(createJavaFXMenu(menu));
         }
 
+        TextArea menuTextArea = new TextArea();
+        Button nextStepButton = new Button("Next");
+
+        addMenuAsText(menus, menuTextArea::appendText, 0);
+        nextStepButton.setOnAction(event -> nextStep = true);
+
         menuBar.setUseSystemMenuBar(true);
         root.setTop(menuBar);
+        root.setCenter(menuTextArea);
+        root.setBottom(nextStepButton);
         window.setScene(scene);
         window.setTitle("JavaFX Window [" + id + "]");
         window.setFullScreen(fullscreen);
@@ -284,6 +300,12 @@ public class MacOSSystemMenuTestBase {
             menuBar.add(createSwingMenu(menu));
         }
 
+        JTextArea menuTextArea = new JTextArea();
+        JButton nextStepButton = new JButton("Next");
+
+        addMenuAsText(menus, menuTextArea::append, 0);
+        nextStepButton.addActionListener(event -> nextStep = true);
+
         if (fullscreen) {
             GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
             GraphicsDevice gd = ge.getDefaultScreenDevice();
@@ -293,9 +315,12 @@ public class MacOSSystemMenuTestBase {
             gd.setFullScreenWindow(window);
         }
 
+        window.setLayout(new BorderLayout());
+        window.add(menuTextArea, BorderLayout.CENTER);
+        window.add(nextStepButton, BorderLayout.SOUTH);
         window.setJMenuBar(menuBar);
         window.setTitle("Swing Window [" + id + "]");
-        window.setSize(400, 200);
+        window.setSize(800, 400);
         window.setVisible(true);
 
         swingWindows.add(window);
@@ -313,6 +338,13 @@ public class MacOSSystemMenuTestBase {
         }
 
         return menu;
+    }
+
+    private void addMenuAsText(List<Element> menus, Consumer<String> append, int tabs) {
+        for (Element menu : menus) {
+            append.accept("\t".repeat(tabs) + menu.name + "\n");
+            addMenuAsText(menu.items, append, tabs + 1);
+        }
     }
 
     /***************************************************
@@ -441,6 +473,18 @@ public class MacOSSystemMenuTestBase {
      * Helpers for synchronization
      *
      **************************************************/
+
+    protected void waitForUser() {
+        while (!nextStep) {
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                // empty
+            }
+        }
+
+        nextStep = false;
+    }
 
     private void initLock() {
         latch = new CountDownLatch(1);

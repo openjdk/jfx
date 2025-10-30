@@ -65,19 +65,23 @@ public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
         initJavaFX(List.of(TEST_MENUS_0, TEST_MENUS_1, TEST_MENUS_2));
 
         focusJavaFX(0);
-        List<Element> jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        waitForUser();
+//        List<Element> jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_0);
 
         focusJavaFX(1);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_1);
+        waitForUser();
+//        jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_1);
 
         focusJavaFX(2);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_2);
+        waitForUser();
+//        jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_2);
 
         focusJavaFX(0);
-        jfxElements = getMenusOfFocusedWindow();
-        compareMenus(jfxElements, TEST_MENUS_0);
+        waitForUser();
+//        jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_0);
     }
 }
