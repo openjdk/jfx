@@ -630,8 +630,8 @@ public abstract class StyledTextModel {
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}
      * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos)} at the
      * {@code start} position.
-     * It creates an undo/redo entry if the model's
-     * {@link StyledTextModel#isUndoRedoEnabled() isUndoRedoEnabled()} returns {@code true}.
+     * It creates an undo/redo entry if
+     * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param resolver the StyleResolver to use
      * @param start start text position
@@ -841,6 +841,7 @@ public abstract class StyledTextModel {
     /**
      * Indicates whether undo/redo functionality is enabled.
      * @return true if undo/redo functionality is enabled
+     * @defaultValue {@code true}
      * @since 26
      */
     public final boolean isUndoRedoEnabled() {

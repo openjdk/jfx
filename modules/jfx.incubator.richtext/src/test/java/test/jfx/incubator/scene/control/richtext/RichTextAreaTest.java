@@ -794,5 +794,12 @@ public class RichTextAreaTest {
         assertTrue(control.isUndoable());
         control.setUndoRedoEnabled(false);
         assertFalse(control.isUndoable());
+        control.setUndoRedoEnabled(true);
+        control.appendText("4");
+        assertEquals("234", text());
+        control.undo();
+        assertEquals("23", text());
+        control.undo();
+        assertEquals("23", text());
     }
 }
