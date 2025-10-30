@@ -1017,6 +1017,7 @@ public abstract class StyledTextModel {
      *
      * @return the line ending value
      * @defaultValue null
+     * @since 26
      */
     public final LineEnding getLineEnding() {
         return lineEnding;
@@ -1025,6 +1026,7 @@ public abstract class StyledTextModel {
     /**
      * Sets the line ending characters.
      * @param value the line ending value, can be null
+     * @since 26
      */
     public final void setLineEnding(LineEnding value) {
         lineEnding = value;
