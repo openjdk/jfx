@@ -744,7 +744,10 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Applies the style attributes to the specified range in the document.<p>
+     * Applies the style attributes to the specified range in the document.
+     * It creates an undo/redo entry if
+     * {@link #isUndoRedoEnabled()} returns {@code true}.
+     * <p>
      * Depending on {@code mergeAttributes} parameter, the attributes will either be merged with (true) or completely
      * replace the existing attributes within the range.  The affected range might be wider than the range specified
      * when applying the paragraph attributes.

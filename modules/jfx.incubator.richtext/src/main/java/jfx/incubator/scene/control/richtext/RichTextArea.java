@@ -1073,8 +1073,6 @@ public class RichTextArea extends Control {
     /**
      * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
-     * It creates an undo/redo entry if
-     * {@link #isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * It is up to the model to decide whether to accept all, some, or none of the
      * {@link jfx.incubator.scene.control.richtext.model.StyleAttribute StyleAttribute}s.
@@ -1093,8 +1091,6 @@ public class RichTextArea extends Control {
     /**
      * Appends the styled text to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
-     * It creates an undo/redo entry if
-     * {@link #isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * This convenience method is equivalent to calling
      * {@code appendText(text, StyleAttributeMap.EMPTY, true);}
@@ -1111,8 +1107,6 @@ public class RichTextArea extends Control {
     /**
      * Appends the styled content to the end of the document.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
-     * It creates an undo/redo entry if
-     * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param in the input stream
      * @return the text position at the end of the appended text, or null if editing is disabled
@@ -1157,7 +1151,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Clears the document, creating an undo/redo entry.
+     * Clears the document.
      *
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
@@ -1506,8 +1500,6 @@ public class RichTextArea extends Control {
     /**
      * Inserts the styled text at the specified position.  Any embedded {@code "\n"} or {@code "\r\n"}
      * sequences result in a new paragraph being added.
-     * It creates an undo/redo entry if
-     * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param pos the insert position
      * @param text the text to inser
@@ -1523,8 +1515,6 @@ public class RichTextArea extends Control {
 
     /**
      * Inserts the styled content at the specified position.
-     * It creates an undo/redo entry if
-     * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
      * @param pos the insert position
      * @param in the input stream
@@ -1857,7 +1847,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Replaces the specified range with the new text.  This method creates an undo entry.
+     * Replaces the specified range with the new text.
      *
      * @param start the start text position
      * @param end the end text position
@@ -1872,7 +1862,7 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Replaces the specified range with the new input.  This method creates an undo entry.
+     * Replaces the specified range with the new input.
      *
      * @param start the start text position
      * @param end the end text position
