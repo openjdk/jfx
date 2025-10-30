@@ -437,7 +437,7 @@ public class CodeArea extends RichTextArea {
 
     /**
      * Replaces text in this CodeArea.
-     * It creates an undo/redo entry if the
+     * It creates an undo/redo entry if
      * {@link #isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * The caret gets reset to the start of the document, selection gets cleared, and an undo event gets created.
