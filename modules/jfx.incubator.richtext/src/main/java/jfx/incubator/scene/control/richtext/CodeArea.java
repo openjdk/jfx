@@ -438,7 +438,8 @@ public class CodeArea extends RichTextArea {
     /**
      * Replaces text in this CodeArea.
      * <p>
-     * The caret gets reset to the start of the document, selection gets cleared, and an undo event gets created.
+     * The caret gets reset to the start of the document, selection gets cleared,
+     * and an undo event is created if {@link #isUndoRedoEnabled()} returns {@code true}.
      * @param text the text string
      */
     public final void setText(String text) {
