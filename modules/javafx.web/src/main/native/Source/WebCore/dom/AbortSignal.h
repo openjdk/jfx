@@ -78,6 +78,7 @@ public:
     AbortSignalSet& sourceSignals() { return m_sourceSignals; }
 
     bool isDependent() const { return m_isDependent; }
+
 private:
     enum class Aborted : bool { No, Yes };
     explicit AbortSignal(ScriptExecutionContext*, Aborted = Aborted::No, JSC::JSValue reason = JSC::jsUndefined());

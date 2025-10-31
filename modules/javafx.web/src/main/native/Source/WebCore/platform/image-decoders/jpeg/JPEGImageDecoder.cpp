@@ -40,6 +40,10 @@
 #include "config.h"
 #include "JPEGImageDecoder.h"
 
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
+
 #if USE(LCMS)
 #include "LCMSUniquePtr.h"
 #endif
@@ -113,14 +117,14 @@ struct decoder_source_mgr {
     JPEGImageReader* decoder;
 };
 
-static unsigned readUint16(JOCTET* data, bool isBigEndian)
+static unsigned readUint16(std::span<JOCTET> data, bool isBigEndian)
 {
     if (isBigEndian)
         return (GETJOCTET(data[0]) << 8) | GETJOCTET(data[1]);
     return (GETJOCTET(data[1]) << 8) | GETJOCTET(data[0]);
 }
 
-static unsigned readUint32(JOCTET* data, bool isBigEndian)
+static unsigned readUint32(std::span<JOCTET> data, bool isBigEndian)
 {
     if (isBigEndian)
         return (GETJOCTET(data[0]) << 24) | (GETJOCTET(data[1]) << 16) | (GETJOCTET(data[2]) << 8) | GETJOCTET(data[3]);
@@ -135,24 +139,25 @@ static bool checkExifHeader(jpeg_saved_marker_ptr marker, bool& isBigEndian, uns
     // 'M', 'M' (motorola / big endian byte order), followed by (uint16_t)42,
     // followed by an uint32_t with the offset to the tag block, relative to the
     // tiff file start.
-    const unsigned exifHeaderSize = 14;
+    constexpr unsigned exifHeaderSize = 14;
+    auto markerData = unsafeMakeSpan(marker->data, marker->data_length);
     if (!(marker->marker == exifMarker
-        && marker->data_length >= exifHeaderSize
-        && marker->data[0] == 'E'
-        && marker->data[1] == 'x'
-        && marker->data[2] == 'i'
-        && marker->data[3] == 'f'
-        && marker->data[4] == '\0'
+        && markerData.size() >= exifHeaderSize
+        && markerData[0] == 'E'
+        && markerData[1] == 'x'
+        && markerData[2] == 'i'
+        && markerData[3] == 'f'
+        && markerData[4] == '\0'
         // data[5] is a fill byte
-        && ((marker->data[6] == 'I' && marker->data[7] == 'I')
-            || (marker->data[6] == 'M' && marker->data[7] == 'M'))))
+        && ((markerData[6] == 'I' && markerData[7] == 'I')
+            || (markerData[6] == 'M' && markerData[7] == 'M'))))
         return false;
 
-    isBigEndian = marker->data[6] == 'M';
-    if (readUint16(marker->data + 8, isBigEndian) != 42)
+    isBigEndian = markerData[6] == 'M';
+    if (readUint16(markerData.subspan(8), isBigEndian) != 42)
         return false;
 
-    ifdOffset = readUint32(marker->data + 10, isBigEndian);
+    ifdOffset = readUint32(markerData.subspan(10), isBigEndian);
     return true;
 }
 
@@ -177,23 +182,22 @@ static ImageOrientation readImageOrientation(jpeg_decompress_struct* info)
         // the number of ifd entries, followed by that many entries.
         // When touching this code, it's useful to look at the tiff spec:
         // http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf
-        JOCTET* ifd = marker->data + ifdOffset;
-        JOCTET* end = marker->data + marker->data_length;
-        if (end - ifd < 2)
+        auto markerData = unsafeMakeSpan(marker->data, marker->data_length).subspan(ifdOffset);
+        if (markerData.size() < 2)
             continue;
-        unsigned tagCount = readUint16(ifd, isBigEndian);
-        ifd += 2; // Skip over the uint16 that was just read.
+        unsigned tagCount = readUint16(markerData, isBigEndian);
+        skip(markerData, 2); // Skip over the uint16 that was just read.
 
         // Every ifd entry is 2 bytes of tag, 2 bytes of contents datatype,
         // 4 bytes of number-of-elements, and 4 bytes of either offset to the
         // tag data, or if the data is small enough, the inlined data itself.
-        const int ifdEntrySize = 12;
-        for (unsigned i = 0; i < tagCount && end - ifd >= ifdEntrySize; ++i, ifd += ifdEntrySize) {
-            unsigned tag = readUint16(ifd, isBigEndian);
-            unsigned type = readUint16(ifd + 2, isBigEndian);
-            unsigned count = readUint32(ifd + 4, isBigEndian);
+        constexpr int ifdEntrySize = 12;
+        for (unsigned i = 0; i < tagCount && markerData.size() >= ifdEntrySize; ++i, skip(markerData, ifdEntrySize)) {
+            unsigned tag = readUint16(markerData, isBigEndian);
+            unsigned type = readUint16(markerData.subspan(2), isBigEndian);
+            unsigned count = readUint32(markerData.subspan(4), isBigEndian);
             if (tag == orientationTag && type == shortType && count == 1)
-                return ImageOrientation::fromEXIFValue(readUint16(ifd + 8, isBigEndian));
+                return ImageOrientation::fromEXIFValue(readUint16(markerData.subspan(8), isBigEndian));
         }
     }
 
@@ -203,6 +207,7 @@ static ImageOrientation readImageOrientation(jpeg_decompress_struct* info)
 #if USE(LCMS)
 static bool isICCMarker(jpeg_saved_marker_ptr marker)
 {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
     return marker->marker == iccMarker
         && marker->data_length >= iccHeaderSize
         && marker->data[0] == 'I'
@@ -217,6 +222,7 @@ static bool isICCMarker(jpeg_saved_marker_ptr marker)
         && marker->data[9] == 'L'
         && marker->data[10] == 'E'
         && marker->data[11] == '\0';
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
@@ -226,16 +232,22 @@ static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
         if (!isICCMarker(marker))
             continue;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
         unsigned sequenceNumber = marker->data[12];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         if (!sequenceNumber)
             return nullptr;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
         unsigned markerCount = marker->data[13];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         if (sequenceNumber > markerCount)
             return nullptr;
 
         unsigned markerSize = marker->data_length - iccHeaderSize;
-        buffer.append(std::span { reinterpret_cast<const uint8_t*>(marker->data + iccHeaderSize), markerSize });
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
+        buffer.append(unsafeMakeSpan(reinterpret_cast<const uint8_t*>(marker->data + iccHeaderSize), markerSize));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     if (buffer.isEmpty())
@@ -246,7 +258,7 @@ static RefPtr<SharedBuffer> readICCProfile(jpeg_decompress_struct* info)
 #endif
 
 class JPEGImageReader {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(JPEGImageReader);
 public:
     JPEGImageReader(JPEGImageDecoder* decoder)
         : m_decoder(decoder)
@@ -255,7 +267,7 @@ public:
         , m_state(JPEG_HEADER)
         , m_samples(0)
     {
-        memset(&m_info, 0, sizeof(jpeg_decompress_struct));
+        zeroBytes(m_info);
 
         // We set up the normal JPEG error routines, then override error_exit.
         m_info.err = jpeg_std_error(&m_err.pub);
@@ -311,10 +323,12 @@ public:
 
     void skipBytes(long numBytes)
     {
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         decoder_source_mgr* src = (decoder_source_mgr*)m_info.src;
         long bytesToSkip = std::min(numBytes, (long)src->pub.bytes_in_buffer);
         src->pub.bytes_in_buffer -= (size_t)bytesToSkip;
         src->pub.next_input_byte += bytesToSkip;
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         m_bytesToSkip = std::max(numBytes - bytesToSkip, static_cast<long>(0));
     }
@@ -581,13 +595,15 @@ bool JPEGImageDecoder::setFailed()
 }
 
 template <J_COLOR_SPACE colorSpace>
-void setPixel(ScalableImageDecoderFrame& buffer, uint32_t* currentAddress, JSAMPARRAY samples, int column)
+void setPixel(ScalableImageDecoderFrame& buffer, std::span<uint32_t> currentAddress, JSAMPARRAY samples, int column)
 {
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     JSAMPLE* jsample = *samples + column * (colorSpace == JCS_RGB ? 3 : 4);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     switch (colorSpace) {
     case JCS_RGB:
-        buffer.backingStore()->setPixel(currentAddress, jsample[0], jsample[1], jsample[2], 0xFF);
+        buffer.backingStore()->setPixel(currentAddress[0], jsample[0], jsample[1], jsample[2], 0xFF);
         break;
     case JCS_CMYK:
         // Source is 'Inverted CMYK', output is RGB.
@@ -600,7 +616,7 @@ void setPixel(ScalableImageDecoderFrame& buffer, uint32_t* currentAddress, JSAMP
         // From CMY (0..1) to RGB (0..1):
         // R = 1 - C => 1 - (1 - iC*iK) => iC*iK  [G and B similar]
         unsigned k = jsample[3];
-        buffer.backingStore()->setPixel(currentAddress, jsample[0] * k / 255, jsample[1] * k / 255, jsample[2] * k / 255, 0xFF);
+        buffer.backingStore()->setPixel(currentAddress[0], jsample[0] * k / 255, jsample[1] * k / 255, jsample[2] * k / 255, 0xFF);
         break;
     }
 }
@@ -620,16 +636,16 @@ bool JPEGImageDecoder::outputScanlines(ScalableImageDecoderFrame& buffer)
         if (jpeg_read_scanlines(info, samples, 1) != 1)
             return false;
 
-        auto* row = buffer.backingStore()->pixelAt(0, sourceY);
-        auto* currentAddress = row;
+        auto row = buffer.backingStore()->pixelsStartingAt(0, sourceY);
+        auto currentAddress = row;
         for (int x = 0; x < width; ++x) {
             setPixel<colorSpace>(buffer, currentAddress, samples, x);
-            ++currentAddress;
+            skip(currentAddress, 1);
         }
 
 #if USE(LCMS)
         if (m_iccTransform)
-            cmsDoTransform(m_iccTransform.get(), row, row, info->output_width);
+            cmsDoTransform(m_iccTransform.get(), row.data(), row.data(), info->output_width);
 #endif
     }
     return true;
@@ -656,7 +672,7 @@ bool JPEGImageDecoder::outputScanlines()
 #if defined(TURBO_JPEG_RGB_SWIZZLE)
     if (turboSwizzled(info->out_color_space)) {
         while (info->output_scanline < info->output_height) {
-            unsigned char* row = reinterpret_cast<unsigned char*>(buffer.backingStore()->pixelAt(0, info->output_scanline));
+            auto* row = reinterpret_cast<unsigned char*>(buffer.backingStore()->pixelsStartingAt(0, info->output_scanline).data());
             if (jpeg_read_scanlines(info, &row, 1) != 1)
                 return false;
 

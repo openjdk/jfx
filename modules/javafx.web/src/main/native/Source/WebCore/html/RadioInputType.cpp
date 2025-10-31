@@ -34,8 +34,11 @@
 #include "NodeTraversal.h"
 #include "SpatialNavigation.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RadioInputType);
 
 using namespace HTMLNames;
 
@@ -72,7 +75,7 @@ bool RadioInputType::valueMissing(const String&) const
     return isRequired && !foundCheckedRadio;
 }
 
-void RadioInputType::forEachButtonInDetachedGroup(ContainerNode& rootNode, const String& groupName, const Function<bool(HTMLInputElement&)>& apply)
+void RadioInputType::forEachButtonInDetachedGroup(ContainerNode& rootNode, const String& groupName, NOESCAPE const Function<bool(HTMLInputElement&)>& apply)
 {
     ASSERT(!groupName.isEmpty());
 

@@ -19,16 +19,15 @@
 
 #pragma once
 
+#include "ImageBuffer.h"
 #include "LegacyRenderSVGResourceContainer.h"
 #include "SVGUnitTypes.h"
-
 #include <wtf/EnumeratedArray.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
 
 class GraphicsContext;
-class ImageBuffer;
 class SVGClipPathElement;
 
 struct ClipperData {
@@ -87,7 +86,7 @@ public:
     inline SVGUnitTypes::SVGUnitType clipPathUnits() const;
 
 private:
-    bool selfNeedsClientInvalidation() const override { return (everHadLayout() || m_clipperMap.size()) && selfNeedsLayout(); }
+    bool selfNeedsClientInvalidation() const override { return (everHadLayout() || !m_clipperMap.isEmptyIgnoringNullReferences()) && selfNeedsLayout(); }
 
     void element() const = delete;
 
@@ -99,7 +98,7 @@ private:
     void calculateClipContentRepaintRect(RepaintRectCalculation);
 
     EnumeratedArray<RepaintRectCalculation, FloatRect, RepaintRectCalculation::Accurate> m_clipBoundaries;
-    HashMap<SingleThreadWeakRef<const RenderObject>, std::unique_ptr<ClipperData>> m_clipperMap;
+    WeakHashMap<const RenderObject, std::unique_ptr<ClipperData>, SingleThreadWeakPtrImpl> m_clipperMap;
 };
 
 }

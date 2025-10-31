@@ -117,7 +117,7 @@ void PopupMenuJava::populate()
                             bool_to_jbool(client()->itemIsEnabled(i)),
                             (jint)(a1 << 24 | r1 << 16 | g1 << 8 | b1),
                             (jint)(a2 << 24 | r2 << 16 | g2 << 8 | b2),
-                            (jobject)*style.font().primaryFont().platformData().nativeFontData());
+                            (jobject)*style.font().primaryFont().get().platformData().nativeFontData());
         WTF::CheckAndClearException(env);
     }
 }

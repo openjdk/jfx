@@ -69,7 +69,7 @@ final class MacView extends View {
         return multiClickMaxY;
     }
 
-    @Override native protected int _getNativeFrameBuffer(long ptr);
+    @Override native protected long _getNativeFrameBuffer(long ptr);
     @Override native protected long _create(Map caps);
     @Override native protected int _getX(long ptr);
     @Override native protected int _getY(long ptr);
@@ -134,11 +134,6 @@ final class MacView extends View {
 
     @Override protected long _getNativeView(long ptr) {
         return ptr;
-    }
-
-    native protected long _getNativeLayer(long ptr);
-    public long getNativeLayer() {
-        return _getNativeLayer(getNativeView());
     }
 
     protected void notifyInputMethodMac(String str, int attrib, int length,

@@ -52,7 +52,7 @@ public:
     WEBCORE_EXPORT explicit CSSTokenizer(const String&);
     CSSTokenizer(const String&, CSSParserObserverWrapper&); // For the inspector
 
-    WEBCORE_EXPORT CSSParserTokenRange tokenRange() const;
+    WEBCORE_EXPORT CSSParserTokenRange tokenRange() const LIFETIME_BOUND;
     unsigned tokenCount();
 
     static bool isWhitespace(CSSParserTokenType);
@@ -126,7 +126,7 @@ private:
     StringView registerString(const String&);
 
     using CodePoint = CSSParserToken (CSSTokenizer::*)(UChar);
-    static const CodePoint codePoints[];
+    static const std::array<CodePoint, 128> codePoints;
 
     Vector<CSSParserTokenType, 8> m_blockStack;
     Vector<CSSParserToken, 32> m_tokens;

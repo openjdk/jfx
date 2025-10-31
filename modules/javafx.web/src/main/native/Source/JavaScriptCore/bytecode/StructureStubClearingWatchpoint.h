@@ -52,6 +52,8 @@ public:
     {
     }
 
+    ~StructureStubInfoClearingWatchpoint();
+
     void fireInternal(VM&, const FireDetail&);
 
 private:
@@ -63,8 +65,9 @@ class StructureTransitionStructureStubClearingWatchpoint final : public Watchpoi
     WTF_MAKE_NONCOPYABLE(StructureTransitionStructureStubClearingWatchpoint);
     WTF_MAKE_TZONE_ALLOCATED(StructureTransitionStructureStubClearingWatchpoint);
 public:
-    StructureTransitionStructureStubClearingWatchpoint(const ObjectPropertyCondition& key, WatchpointSet& watchpointSet)
+    StructureTransitionStructureStubClearingWatchpoint(PolymorphicAccessJITStubRoutine* owner, const ObjectPropertyCondition& key, WatchpointSet& watchpointSet)
         : Watchpoint(Watchpoint::Type::StructureTransitionStructureStubClearing)
+        , m_owner(owner)
         , m_watchpointSet(watchpointSet)
         , m_key(key)
     {
@@ -73,6 +76,7 @@ public:
     void fireInternal(VM&, const FireDetail&);
 
 private:
+    PolymorphicAccessJITStubRoutine* m_owner;
     Ref<WatchpointSet> m_watchpointSet;
     ObjectPropertyCondition m_key;
 };
@@ -85,8 +89,9 @@ class AdaptiveValueStructureStubClearingWatchpoint final : public AdaptiveInferr
     void handleFire(VM&, const FireDetail&) final;
 
 public:
-    AdaptiveValueStructureStubClearingWatchpoint(const ObjectPropertyCondition& key, WatchpointSet& watchpointSet)
+    AdaptiveValueStructureStubClearingWatchpoint(PolymorphicAccessJITStubRoutine* owner, const ObjectPropertyCondition& key, WatchpointSet& watchpointSet)
         : Base(key)
+        , m_owner(owner)
         , m_watchpointSet(watchpointSet)
     {
         RELEASE_ASSERT(key.condition().kind() == PropertyCondition::Equivalence);
@@ -94,6 +99,7 @@ public:
 
 
 private:
+    PolymorphicAccessJITStubRoutine* m_owner;
     Ref<WatchpointSet> m_watchpointSet;
 };
 

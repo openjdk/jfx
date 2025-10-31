@@ -33,7 +33,7 @@ class Document;
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 class HTMLNameCollection : public CachedHTMLCollection<HTMLCollectionClass, traversalType> {
-    WTF_MAKE_TZONE_OR_ISO_NONALLOCATABLE(HTMLNameCollection);
+    WTF_MAKE_TZONE_OR_ISO_NON_HEAP_ALLOCATABLE(HTMLNameCollection);
 public:
     virtual ~HTMLNameCollection();
 

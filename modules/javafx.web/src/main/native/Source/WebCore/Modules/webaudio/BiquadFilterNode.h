@@ -52,7 +52,7 @@ public:
 private:
     explicit BiquadFilterNode(BaseAudioContext&);
 
-    BiquadProcessor* biquadProcessor() { return static_cast<BiquadProcessor*>(processor()); }
+    BiquadProcessor* biquadProcessor() { return downcast<BiquadProcessor>(processor()); }
 };
 
 } // namespace WebCore

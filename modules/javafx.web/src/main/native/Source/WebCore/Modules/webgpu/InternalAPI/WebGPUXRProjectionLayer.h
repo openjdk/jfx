@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "PlatformXR.h"
 #include "WebGPUTextureFormat.h"
 #include "WebGPUTextureUsage.h"
 #include "WebGPUXREye.h"
@@ -32,13 +33,20 @@
 #include "WebGPUXRSubImage.h"
 
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
+
+namespace WTF {
+class MachSendRight;
+}
+
+namespace WebCore {
+class WebXRRigidTransform;
+}
 
 namespace WebCore::WebGPU {
 
 class Device;
-class WebXRRigidTransform;
 class XRGPUSubImage;
 class XRProjectionLayer;
 class XRFrame;
@@ -51,7 +59,7 @@ struct XRProjectionLayerInit {
     double scaleFactor { 1.0 };
 };
 
-class XRProjectionLayer : public RefCounted<XRProjectionLayer>, public CanMakeWeakPtr<XRProjectionLayer> {
+class XRProjectionLayer : public RefCountedAndCanMakeWeakPtr<XRProjectionLayer> {
 public:
     virtual ~XRProjectionLayer() = default;
 
@@ -66,8 +74,12 @@ public:
     virtual void setDeltaPose(WebXRRigidTransform*) = 0;
 
     // WebXRLayer
-    virtual void startFrame() = 0;
+#if PLATFORM(COCOA)
+    virtual void startFrame(size_t frameIndex, MachSendRight&& colorBuffer, MachSendRight&& depthBuffer, MachSendRight&& completionSyncEvent, size_t reusableTextureIndex) = 0;
+#endif
     virtual void endFrame() = 0;
+
+    virtual bool isRemoteXRProjectionLayerProxy() const { return false; }
 
 protected:
     XRProjectionLayer() = default;

@@ -31,11 +31,14 @@
 #include "ScrollingStateFixedNode.h"
 #include "ScrollingStateScrollingNode.h"
 #include "ScrollingStateTree.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingStateNode);
 
 ScrollingStateNode::ScrollingStateNode(ScrollingNodeType nodeType, ScrollingStateTree& scrollingStateTree, ScrollingNodeID nodeID)
     : m_nodeType(nodeType)
@@ -63,7 +66,7 @@ ScrollingStateNode::ScrollingStateNode(ScrollingNodeType nodeType, ScrollingNode
     , m_nodeID(nodeID)
     , m_changedProperties(changedProperties)
     , m_children(WTFMove(children))
-    , m_layer(layerID.value_or(PlatformLayerIdentifier { }))
+    , m_layer(layerID)
 {
     for (auto& child : m_children) {
         ASSERT(!child->parent());
@@ -98,7 +101,7 @@ void ScrollingStateNode::setChildren(Vector<Ref<ScrollingStateNode>>&& children)
     ASSERT(parentPointersAreCorrect());
 }
 
-void ScrollingStateNode::traverse(const Function<void(ScrollingStateNode&)>& function)
+void ScrollingStateNode::traverse(NOESCAPE const Function<void(ScrollingStateNode&)>& function)
 {
     function(*this);
     for (auto& child : m_children)

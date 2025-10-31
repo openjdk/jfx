@@ -80,9 +80,9 @@ void GainNode::process(size_t framesToProcess)
             // Apply sample-accurate gain scaling for precise envelopes, grain windows, etc.
             ASSERT(framesToProcess <= m_sampleAccurateGainValues.size());
             if (framesToProcess <= m_sampleAccurateGainValues.size()) {
-                float* gainValues = m_sampleAccurateGainValues.data();
-                gain().calculateSampleAccurateValues(gainValues, framesToProcess);
-                outputBus->copyWithSampleAccurateGainValuesFrom(*inputBus, gainValues, framesToProcess);
+                auto gainValues = m_sampleAccurateGainValues.span().first(framesToProcess);
+                gain().calculateSampleAccurateValues(gainValues);
+                outputBus->copyWithSampleAccurateGainValuesFrom(*inputBus, gainValues);
             }
         } else {
             // Apply the gain with de-zippering into the output bus.
@@ -98,10 +98,10 @@ void GainNode::process(size_t framesToProcess)
 
 void GainNode::processOnlyAudioParams(size_t framesToProcess)
 {
-    float values[AudioUtilities::renderQuantumSize];
+    std::array<float, AudioUtilities::renderQuantumSize> values;
     ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
 
-    m_gain->calculateSampleAccurateValues(values, framesToProcess);
+    m_gain->calculateSampleAccurateValues(std::span { values }.first(framesToProcess));
 }
 
 // FIXME: this can go away when we do mixing with gain directly in summing junction of AudioNodeInput

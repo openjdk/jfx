@@ -36,6 +36,7 @@ public:
     virtual ~RenderTextControl();
 
     WEBCORE_EXPORT HTMLTextFormControlElement& textFormControlElement() const;
+    WEBCORE_EXPORT Ref<HTMLTextFormControlElement> protectedTextFormControlElement() const;
 
 #if PLATFORM(IOS_FAMILY)
     bool canScroll() const;
@@ -63,7 +64,7 @@ protected:
     virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const = 0;
 
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
-    void layoutExcludedChildren(bool relayoutChildren) override;
+    void layoutExcludedChildren(RelayoutChildren) override;
 
 private:
     void element() const = delete;
@@ -71,7 +72,6 @@ private:
     ASCIILiteral renderName() const override { return "RenderTextControl"_s; }
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
-    bool avoidsFloats() const override { return true; }
     bool canHaveGeneratedChildren() const override { return false; }
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;
@@ -104,3 +104,4 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControl, isRenderTextControl())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTextControlInnerContainer, isRenderTextControlInnerContainer())

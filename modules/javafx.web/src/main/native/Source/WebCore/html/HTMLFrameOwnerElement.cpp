@@ -78,6 +78,8 @@ void HTMLFrameOwnerElement::clearContentFrame()
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
     if (RefPtr frame = m_contentFrame.get()) {
+        if (RefPtr innerDocument = contentDocument())
+            innerDocument->willBeDisconnectedFromFrame(protectedDocument());
         frame->frameDetached();
         if (frame == m_contentFrame.get())
         frame->disconnectOwnerElement();
@@ -111,6 +113,8 @@ WindowProxy* HTMLFrameOwnerElement::contentWindow() const
 void HTMLFrameOwnerElement::setSandboxFlags(SandboxFlags flags)
 {
     m_sandboxFlags = flags;
+    if (m_contentFrame)
+        m_contentFrame->updateSandboxFlags(flags, Frame::NotifyUIProcess::Yes);
 }
 
 bool HTMLFrameOwnerElement::isKeyboardFocusable(KeyboardEvent* event) const

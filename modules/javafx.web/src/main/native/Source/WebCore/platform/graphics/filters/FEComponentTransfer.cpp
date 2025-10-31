@@ -238,7 +238,7 @@ FEComponentTransfer::LookupTable FEComponentTransfer::computeLookupTable(const C
         values[i] = i;
 
     using TransferType = Function<void(const ComponentTransferFunction&)>;
-    TransferType callEffect[] = {
+    std::array<TransferType, 6> callEffect {
         // FECOMPONENTTRANSFER_TYPE_UNKNOWN
         [&](const ComponentTransferFunction&)
         {

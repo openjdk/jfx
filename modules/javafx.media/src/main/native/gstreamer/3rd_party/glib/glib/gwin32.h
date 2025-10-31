@@ -135,7 +135,57 @@ gboolean g_win32_check_windows_version (const gint major,
                                         const gint spver,
                                         const GWin32OSType os_type);
 
+/**
+ * g_win32_clear_com:
+ * @com_obj: (not optional) (nullable): Pointer to COM object pointer to release and clear
+ *
+ * Releases the referenced COM object, and clears its pointer to `NULL`.
+ *
+ * The @com_obj pointer must not be `NULL`.
+ *
+ * If @com_obj references a `NULL` COM  object, this function is a no-op.
+ *
+ * This is equivalent to `g_clear_object()` for dealing with
+ * Windows COM objects.
+ *
+ * Since: 2.84
+ */
+
+#ifndef __cplusplus
+
+#define g_win32_clear_com(com_obj) \
+G_STMT_START {\
+  IUnknown **unknown_com_obj = (IUnknown **)(com_obj); \
+  \
+  if (*unknown_com_obj) \
+    { \
+      (*unknown_com_obj)->lpVtbl->Release (*unknown_com_obj); \
+      *unknown_com_obj = NULL; \
+    } \
+} G_STMT_END \
+GLIB_AVAILABLE_MACRO_IN_2_84
+
+#endif
+
 G_END_DECLS
+
+#ifdef __cplusplus
+/*
+ * There are COM objects that only have C++-style definitions, such as DirectWrite
+ * from the Windows SDK (albeit a C interface is provided for the mingw-w64 toolchain),
+ * so we need to have a C++ version for this
+ */
+template <typename com_interface>
+static inline void
+g_win32_clear_com (com_interface **com_obj)
+{
+  if (*com_obj != NULL)
+    {
+      (*com_obj)->Release ();
+      *com_obj = NULL;
+    }
+}
+#endif
 
 #endif   /* G_PLATFORM_WIN32 */
 

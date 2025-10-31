@@ -40,8 +40,9 @@ static HashMap<IDBResourceIdentifier, MemoryCursor*>& cursorMap() WTF_REQUIRES_L
     return map;
 }
 
-MemoryCursor::MemoryCursor(const IDBCursorInfo& info)
+MemoryCursor::MemoryCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
     : m_info(info)
+    , m_transaction(transaction)
 {
     ASSERT(!isMainThread());
 

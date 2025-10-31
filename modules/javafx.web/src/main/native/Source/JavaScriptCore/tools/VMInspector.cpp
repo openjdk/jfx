@@ -39,6 +39,8 @@
 #include <wtf/Expected.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VMInspector);
@@ -403,7 +405,7 @@ SUPPRESS_ASAN void VMInspector::dumpRegisters(CallFrame* callFrame)
     auto valueAsString = [&] (JSValue v) -> CString {
         if (!v.isCell() || VMInspector::isValidCell(&vm.heap, reinterpret_cast<JSCell*>(JSValue::encode(v))))
             return toCString(v);
-        return "";
+        return ""_s;
     };
 
     CallFrame* topCallFrame = vm.topCallFrame;
@@ -413,7 +415,7 @@ SUPPRESS_ASAN void VMInspector::dumpRegisters(CallFrame* callFrame)
     // Check if frame is an entryFrame.
     entryFrame = vm.topEntryFrame;
     while (entryFrame) {
-        if (entryFrame == bitwise_cast<EntryFrame*>(callFrame)) {
+        if (entryFrame == std::bit_cast<EntryFrame*>(callFrame)) {
             dataLogLn("CallFrame ", RawPointer(callFrame), " is an EntryFrame.");
             auto* entryRecord = vmEntryRecord(entryFrame);
             dataLogLn("    previous entryFrame: ", RawPointer(entryRecord->prevTopEntryFrame()));
@@ -500,7 +502,7 @@ SUPPRESS_ASAN void VMInspector::dumpRegisters(CallFrame* callFrame)
 
     dataLogF("% 4d  CallerFrame      : %10p  %p \n", registerNumber++, it++, callFrame->callerFrame());
     if constexpr (isARM64E())
-        dataLogF("% 4d  ReturnPC         : %10p  %p (pac signed %p) \n", registerNumber++, it++, callFrame->returnPCForInspection(), callFrame->rawReturnPCForInspection());
+        dataLogF("% 4d  ReturnPC         : %10p  %p (pac signed %p) \n", registerNumber++, it++, callFrame->returnPCForInspection(), callFrame->rawReturnPC());
     else
         dataLogF("% 4d  ReturnPC         : %10p  %p \n", registerNumber++, it++, callFrame->returnPCForInspection());
     dataLogF("% 4d  CodeBlock        : %10p  0x%llx ", registerNumber++, it++, (long long)codeBlock);
@@ -581,7 +583,7 @@ void VMInspector::dumpCellMemoryToStream(JSCell* cell, PrintStream& out)
     size_t cellSize = cell->cellSize();
     size_t slotCount = cellSize / sizeof(EncodedJSValue);
 
-    EncodedJSValue* slots = bitwise_cast<EncodedJSValue*>(cell);
+    EncodedJSValue* slots = std::bit_cast<EncodedJSValue*>(cell);
     unsigned indentation = 0;
 
     auto indent = [&] {
@@ -710,5 +712,7 @@ void VMInspector::dumpSubspaceHashes(VM* vm)
     });
     dataLogLn();
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace JSC

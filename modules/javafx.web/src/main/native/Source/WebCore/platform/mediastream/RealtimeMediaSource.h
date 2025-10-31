@@ -47,6 +47,7 @@
 #include "RealtimeMediaSourceFactory.h"
 #include "RealtimeMediaSourceIdentifier.h"
 #include "VideoFrameTimeMetadata.h"
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
@@ -112,9 +113,9 @@ public:
         virtual void hasStartedProducingData() { }
 };
 
-class WEBCORE_EXPORT RealtimeMediaSource
+class WEBCORE_EXPORT RealtimeMediaSource : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr
 #if !RELEASE_LOG_DISABLED
-    : public LoggerHelper
+    , public LoggerHelper
 #endif
 {
 public:
@@ -123,10 +124,10 @@ public:
         virtual ~AudioSampleObserver() = default;
 
         // CheckedPtr interface
-        virtual uint32_t ptrCount() const = 0;
-        virtual uint32_t ptrCountWithoutThreadCheck() const = 0;
-        virtual void incrementPtrCount() const = 0;
-        virtual void decrementPtrCount() const = 0;
+        virtual uint32_t checkedPtrCount() const = 0;
+        virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
+        virtual void incrementCheckedPtrCount() const = 0;
+        virtual void decrementCheckedPtrCount() const = 0;
 
         // May be called on a background thread.
         virtual void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t /*numberOfFrames*/) = 0;
@@ -149,6 +150,7 @@ public:
     virtual Ref<RealtimeMediaSource> clone() { return *this; }
 
     const String& hashedId() const;
+    const String& hashedGroupId() const;
     const MediaDeviceHashSalts& deviceIDHashSalts() const;
 
     const String& persistentID() const { return m_device.persistentId(); }
@@ -225,9 +227,6 @@ public:
 
     virtual const RealtimeMediaSourceCapabilities& capabilities() = 0;
     virtual const RealtimeMediaSourceSettings& settings() = 0;
-    virtual void ref() const = 0;
-    virtual void deref() const = 0;
-    virtual ThreadSafeWeakPtrControlBlock& controlBlock() const = 0;
 
     using TakePhotoNativePromise = NativePromise<std::pair<Vector<uint8_t>, String>, String>;
     virtual Ref<TakePhotoNativePromise> takePhoto(PhotoSettings&&);
@@ -276,10 +275,10 @@ public:
     virtual bool isIncomingVideoSource() const { return false; }
 
 #if !RELEASE_LOG_DISABLED
-    virtual void setLogger(const Logger&, const void*);
+    virtual void setLogger(const Logger&, uint64_t);
     const Logger* loggerPtr() const { return m_logger.get(); }
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const override { return "RealtimeMediaSource"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -291,7 +290,7 @@ public:
     virtual bool setShouldApplyRotation(bool) { return false; }
     virtual void setIsInBackground(bool);
 
-    PageIdentifier pageIdentifier() const { return m_pageIdentifier; }
+    std::optional<PageIdentifier> pageIdentifier() const { return m_pageIdentifier.asOptional(); }
 
     const CaptureDevice& captureDevice() const { return m_device; }
     bool isEphemeral() const { return m_device.isEphemeral(); }
@@ -306,8 +305,9 @@ public:
 #if USE(GSTREAMER)
     virtual std::pair<GstClockTime, GstClockTime> queryCaptureLatency() const;
 #endif
+
 protected:
-    RealtimeMediaSource(const CaptureDevice&, MediaDeviceHashSalts&& hashSalts = { }, PageIdentifier = { });
+    RealtimeMediaSource(const CaptureDevice&, MediaDeviceHashSalts&& hashSalts = { }, std::optional<PageIdentifier> = std::nullopt);
 
     void scheduleDeferredTask(Function<void()>&&);
 
@@ -341,8 +341,8 @@ protected:
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata);
     void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t);
 
-    void forEachObserver(const Function<void(RealtimeMediaSourceObserver&)>&);
-    void forEachVideoFrameObserver(const Function<void(VideoFrameObserver&)>&);
+    void forEachObserver(NOESCAPE const Function<void(RealtimeMediaSourceObserver&)>&);
+    void forEachVideoFrameObserver(NOESCAPE const Function<void(VideoFrameObserver&)>&);
 
     void end(RealtimeMediaSourceObserver* = nullptr);
 
@@ -367,25 +367,26 @@ private:
     virtual double observedFrameRate() const { return 0.0; }
 
     void updateHasStartedProducingData();
-    void initializePersistentId();
+    void initializeIds();
 
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    uint64_t m_logIdentifier { 0 };
     MonotonicTime m_lastFrameLogTime;
     unsigned m_frameCount { 0 };
 #endif
 
-    PageIdentifier m_pageIdentifier;
+    Markable<PageIdentifier> m_pageIdentifier;
     MediaDeviceHashSalts m_idHashSalts;
     String m_hashedID;
     String m_ephemeralHashedID;
+    String m_hashedGroupId;
     Type m_type;
     String m_name;
     WeakHashSet<RealtimeMediaSourceObserver> m_observers;
 
     mutable Lock m_audioSampleObserversLock;
-    HashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
+    UncheckedKeyHashSet<CheckedPtr<AudioSampleObserver>> m_audioSampleObservers WTF_GUARDED_BY_LOCK(m_audioSampleObserversLock);
 
     mutable Lock m_videoFrameObserversLock;
     HashMap<VideoFrameObserver*, std::unique_ptr<VideoFrameAdaptor>> m_videoFrameObservers WTF_GUARDED_BY_LOCK(m_videoFrameObserversLock);
@@ -470,6 +471,11 @@ inline bool RealtimeMediaSource::isProducingData() const
 
 inline void RealtimeMediaSource::setIsInBackground(bool)
 {
+}
+
+inline const String& RealtimeMediaSource::hashedGroupId() const
+{
+    return m_hashedGroupId;
 }
 
 } // namespace WebCore

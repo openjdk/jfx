@@ -44,6 +44,7 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyColor:
     case CSSPropertyContent:
     case CSSPropertyCustom:
+    case CSSPropertyCursor:
     case CSSPropertyDirection:
     case CSSPropertyFont:
     case CSSPropertyFontFamily:
@@ -51,7 +52,7 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyFontKerning:
     case CSSPropertyFontSize:
     case CSSPropertyFontSizeAdjust:
-    case CSSPropertyFontStretch:
+    case CSSPropertyFontWidth:
     case CSSPropertyFontStyle:
     case CSSPropertyFontSynthesis:
     case CSSPropertyFontSynthesisWeight:

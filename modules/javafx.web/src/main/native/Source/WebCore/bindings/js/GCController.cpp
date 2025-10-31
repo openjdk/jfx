@@ -35,10 +35,10 @@
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/VM.h>
 #include <pal/Logging.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/FileSystem.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -48,6 +48,8 @@ static void collect()
     JSLockHolder lock(commonVM());
     commonVM().heap.collectNow(Async, CollectionScope::Full);
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GCController);
 
 GCController& GCController::singleton()
 {
@@ -162,9 +164,9 @@ void GCController::dumpHeapForVM(VM& vm)
 
     CString utf8String = jsonData.utf8();
 
-    FileSystem::writeToFile(fileHandle, utf8String.span());
+    FileSystem::writeToFile(fileHandle, byteCast<uint8_t>(utf8String.span()));
     FileSystem::closeFile(fileHandle);
-    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? ""_s : " for Worker");
+    WTFLogAlways("Dumped GC heap to %s%s", tempFilePath.utf8().data(), isMainThread() ? "" : " for Worker");
 }
 
 void GCController::dumpHeap()

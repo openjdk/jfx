@@ -25,12 +25,21 @@
 
 #pragma once
 
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(WEB_CRYPTO)
 namespace WebCore {
 
 struct RsaOtherPrimesInfo {
+    RsaOtherPrimesInfo isolatedCopy() && {
+        return {
+            crossThreadCopy(WTFMove(r)),
+            crossThreadCopy(WTFMove(d)),
+            crossThreadCopy(WTFMove(t))
+        };
+    }
+
     String r;
     String d;
     String t;

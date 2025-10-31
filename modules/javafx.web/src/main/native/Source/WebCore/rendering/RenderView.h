@@ -107,7 +107,7 @@ public:
 
     LayoutRect viewRect() const;
 
-    void updateHitTestResult(HitTestResult&, const LayoutPoint&) override;
+    void updateHitTestResult(HitTestResult&, const LayoutPoint&) const override;
 
     void setPageLogicalSize(LayoutSize);
     LayoutUnit pageOrViewLogicalHeight() const;
@@ -200,9 +200,6 @@ public:
         bool m_wasAccumulatingRepaintRegion { false };
     };
 
-    void layerChildrenChangedDuringStyleChange(RenderLayer&);
-    RenderLayer* takeStyleChangeLayerTreeMutationRoot();
-
     void registerBoxWithScrollSnapPositions(const RenderBox&);
     void unregisterBoxWithScrollSnapPositions(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& boxesWithScrollSnapPositions() { return m_boxesWithScrollSnapPositions; }
@@ -211,8 +208,20 @@ public:
     void unregisterContainerQueryBox(const RenderBox&);
     const SingleThreadWeakHashSet<const RenderBox>& containerQueryBoxes() const { return m_containerQueryBoxes; }
 
+    void registerAnchor(const RenderBoxModelObject&);
+    void unregisterAnchor(const RenderBoxModelObject&);
+    const SingleThreadWeakHashSet<const RenderBoxModelObject>& anchors() const { return m_anchors; }
+
+    void registerPositionTryBox(const RenderBox&);
+    void unregisterPositionTryBox(const RenderBox&);
+    const SingleThreadWeakHashSet<const RenderBox>& positionTryBoxes() const { return m_positionTryBoxes; }
+
     SingleThreadWeakPtr<RenderElement> viewTransitionRoot() const;
     void setViewTransitionRoot(RenderElement& renderer);
+
+    void addViewTransitionGroup(const AtomString&, RenderElement&);
+    void removeViewTransitionGroup(const AtomString&);
+    RenderElement* viewTransitionGroupForName(const AtomString&);
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -246,8 +255,6 @@ private:
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
     RenderSelection m_selection;
-
-    SingleThreadWeakPtr<RenderLayer> m_styleChangeLayerMutationRoot;
 
     // FIXME: Only used by embedded WebViews inside AppKit NSViews.  Find a way to remove.
     struct LegacyPrinting {
@@ -283,8 +290,11 @@ private:
 
     SingleThreadWeakHashSet<const RenderBox> m_boxesWithScrollSnapPositions;
     SingleThreadWeakHashSet<const RenderBox> m_containerQueryBoxes;
+    SingleThreadWeakHashSet<const RenderBoxModelObject> m_anchors;
+    SingleThreadWeakHashSet<const RenderBox> m_positionTryBoxes;
 
     SingleThreadWeakPtr<RenderElement> m_viewTransitionRoot;
+    HashMap<AtomString, SingleThreadWeakPtr<RenderElement>> m_viewTransitionGroups;
 };
 
 } // namespace WebCore

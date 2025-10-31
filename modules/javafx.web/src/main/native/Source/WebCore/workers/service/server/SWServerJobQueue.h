@@ -31,6 +31,7 @@
 #include "WorkerFetchResult.h"
 #include <wtf/CheckedPtr.h>
 #include <wtf/Deque.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -39,7 +40,7 @@ class ServiceWorkerJob;
 struct WorkerFetchResult;
 
 class SWServerJobQueue final : public CanMakeCheckedPtr<SWServerJobQueue> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SWServerJobQueue);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SWServerJobQueue);
 public:
     explicit SWServerJobQueue(SWServer&, const ServiceWorkerRegistrationKey&);
@@ -76,7 +77,7 @@ private:
 
     void install(SWServerRegistration&, ServiceWorkerIdentifier);
 
-    void removeAllJobsMatching(const Function<bool(ServiceWorkerJobData&)>&);
+    void removeAllJobsMatching(NOESCAPE const Function<bool(ServiceWorkerJobData&)>&);
     void scriptAndImportedScriptsFetchFinished(const ServiceWorkerJobData&, SWServerRegistration&);
 
     Ref<SWServer> protectedServer() const { return m_server.get(); }

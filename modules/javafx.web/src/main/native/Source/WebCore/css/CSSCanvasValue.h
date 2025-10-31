@@ -41,10 +41,10 @@ public:
     static Ref<CSSCanvasValue> create(String name) { return adoptRef(*new CSSCanvasValue(WTFMove(name))); }
     ~CSSCanvasValue();
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSCanvasValue&) const;
 
-    RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
+    RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 
 private:
     explicit CSSCanvasValue(String&&);

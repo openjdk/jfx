@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ReportingObserverCallback);
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ReportingObserver);
 
 static bool isVisibleToReportingObservers(const String& type)
@@ -62,10 +63,10 @@ Ref<ReportingObserver> ReportingObserver::create(ScriptExecutionContext& scriptE
 
 static WeakPtr<ReportingScope> reportingScopeForContext(ScriptExecutionContext& scriptExecutionContext)
 {
-    if (RefPtr document = dynamicDowncast<Document>(&scriptExecutionContext))
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext))
         return document->reportingScope();
 
-    if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(&scriptExecutionContext))
+    if (RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
         return workerGlobalScope->reportingScope();
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -75,7 +76,8 @@ ReportingObserver::ReportingObserver(ScriptExecutionContext& scriptExecutionCont
     : ActiveDOMObject(&scriptExecutionContext)
     , m_reportingScope(reportingScopeForContext(scriptExecutionContext))
     , m_callback(WTFMove(callback))
-    , m_options(WTFMove(options))
+    , m_types(options.types.value_or(Vector<AtomString>()))
+    , m_buffered(options.buffered)
 {
 }
 
@@ -97,10 +99,10 @@ void ReportingObserver::observe()
     // https://www.w3.org/TR/reporting-1/#dom-reportingobserver-observe
     m_reportingScope->registerReportingObserver(*this);
 
-    if (!m_options.buffered)
+    if (!m_buffered)
         return;
 
-    m_options.buffered = false;
+    m_buffered = false;
 
     // For each report in global’s report buffer, queue a task to execute § 4.3 Add report to observer with report and the context object.
     m_reportingScope->appendQueuedReportsForRelevantType(*this);
@@ -120,7 +122,7 @@ void ReportingObserver::appendQueuedReportIfCorrectType(const Ref<Report>& repor
         return;
 
     // Step 4.3.2
-    if (m_options.types && !m_options.types->contains(report->type()))
+    if (m_types.size() && !m_types.contains(report->type()))
         return;
 
     // Step 4.3.3:
@@ -131,14 +133,14 @@ void ReportingObserver::appendQueuedReportIfCorrectType(const Ref<Report>& repor
         return;
 
     ASSERT(m_reportingScope && scriptExecutionContext() == m_reportingScope->scriptExecutionContext());
+
+    // Step 4.3.4: Queue a task to § 4.4
     queueTaskKeepingObjectAlive(*this, TaskSource::Reporting, [protectedThis = Ref { *this }, protectedCallback = Ref { m_callback }] {
         RefPtr context = protectedThis->scriptExecutionContext();
         ASSERT(context);
     if (!context)
         return;
 
-
-    // Step 4.3.4: Queue a task to § 4.4
         // Step 4.4: Invoke reporting observers with notify list with a copy of global’s registered reporting observer list.
         auto reports = protectedThis->takeRecords();
 

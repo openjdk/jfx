@@ -29,6 +29,7 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AuthenticatorResponseData.h"
+#include <wtf/text/Base64.h>
 
 namespace WebCore {
 
@@ -82,6 +83,20 @@ AuthenticatorResponseData AuthenticatorAssertionResponse::data() const
     data.signature = m_signature.copyRef();
     data.userHandle = m_userHandle;
     return data;
+}
+
+AuthenticationResponseJSON::AuthenticatorAssertionResponseJSON AuthenticatorAssertionResponse::toJSON()
+{
+    AuthenticationResponseJSON::AuthenticatorAssertionResponseJSON value;
+    if (auto authData = authenticatorData())
+        value.authenticatorData = base64URLEncodeToString(authData->span());
+    if (auto sig = signature())
+        value.signature = base64URLEncodeToString(sig->span());
+    if (auto handle = userHandle())
+        value.userHandle = base64URLEncodeToString(handle->span());
+    if (auto clientData = clientDataJSON())
+        value.clientDataJSON = base64URLEncodeToString(clientData->span());
+    return value;
 }
 
 } // namespace WebCore

@@ -30,6 +30,7 @@
 #include "EditCommand.h"
 #include "CSSPropertyNames.h"
 #include "UndoStep.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -43,7 +44,7 @@ class StyledElement;
 class Text;
 
 class AccessibilityUndoReplacedText {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AccessibilityUndoReplacedText);
 public:
     AccessibilityUndoReplacedText() { }
     void configureRangeDeletedByReapplyWithStartingSelection(const VisibleSelection&);
@@ -65,6 +66,8 @@ private:
     VisiblePositionIndexRange m_rangeDeletedByUnapply;
     VisiblePositionIndexRange m_rangeDeletedByReapply;
 };
+
+enum class ApplyStylePropertyLevel : bool { Default, ForceBlock };
 
 class EditCommandComposition : public UndoStep {
 public:
@@ -90,7 +93,7 @@ public:
     void setRangeDeletedByUnapply(const VisiblePositionIndexRange&);
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Ref<Node>>&);
+    virtual void getNodesInCommand(NodeSet&);
 #endif
 
 private:
@@ -151,7 +154,7 @@ protected:
     void applyCommandToComposite(Ref<EditCommand>&&);
     void applyCommandToComposite(Ref<CompositeEditCommand>&&, const VisibleSelection&);
     void applyStyle(const EditingStyle*, EditAction = EditAction::ChangeAttributes);
-    void applyStyle(const EditingStyle*, const Position& start, const Position& end, EditAction = EditAction::ChangeAttributes);
+    void applyStyle(const EditingStyle*, const Position& start, const Position& end, EditAction = EditAction::ChangeAttributes, ApplyStylePropertyLevel = ApplyStylePropertyLevel::Default);
     void applyStyledElement(Ref<Element>&&);
     void removeStyledElement(Ref<Element>&&);
     void deleteSelection(bool smartDelete = false, bool mergeBlocksAfterDelete = true, bool replace = false, bool expandForSpecialElements = true, bool sanitizeMarkup = true);
@@ -232,3 +235,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CompositeEditCommand)
+    static bool isType(const WebCore::EditCommand& command) { return command.isCompositeEditCommand(); }
+SPECIALIZE_TYPE_TRAITS_END()

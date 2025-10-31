@@ -248,6 +248,11 @@ public:
         fail(URLFilterParser::Group);
     }
 
+    void atomParentheticalModifierBegin(OptionSet<JSC::Yarr::Flags>, OptionSet<JSC::Yarr::Flags>)
+    {
+        fail(URLFilterParser::Group);
+    }
+
     void atomParenthesesEnd()
     {
         if (hasError())
@@ -268,6 +273,9 @@ public:
     {
         RELEASE_ASSERT_NOT_REACHED();
     }
+
+    constexpr static bool abortedDueToError() { return false; }
+    constexpr static JSC::Yarr::ErrorCode abortErrorCode() { return JSC::Yarr::ErrorCode::NoError; }
 
 private:
     bool hasError() const

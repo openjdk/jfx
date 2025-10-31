@@ -152,6 +152,7 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-event.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-format.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-frame.c" />
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-hdr.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-info.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-multiview.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-orc-dist.c" />
@@ -284,6 +285,9 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstindexfactory.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstidstr.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstinfo.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -381,6 +385,9 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstvalue.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gstvecdeque.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;LIBGSTREAMER_EXPORTS;HAVE_CONFIG_H;HAVE_WIN32;LIBDSHOW_EXPORTS;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;_USE_MATH_DEFINES;_USRDLL;_WINDLL;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\libs\gst\base\gstadapter.c">

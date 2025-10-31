@@ -304,6 +304,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CheckVarargs:
     case ValueRep:
     case DoubleRep:
+    case PurifyNaN:
     case Int52Rep:
     case BooleanToNumber:
     case FiatInt52:
@@ -321,6 +322,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case MapGet:
     case LoadMapValue:
     case MapStorage:
+    case MapStorageOrSentinel:
     case MapIterationNext:
     case MapIterationEntry:
     case MapIterationEntryKey:
@@ -348,6 +350,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         return state.forNode(node->child1()).isType(SpecObject);
 
     case ArraySlice:
+    case ArrayIncludes:
     case ArrayIndexOf: {
         // You could plausibly move this code around as long as you proved the
         // incoming array base structure is an original array at the hoisted location.
@@ -402,6 +405,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case ArrayPop:
+    case StringAt:
     case StringCharAt:
     case StringCharCodeAt:
     case StringCodePointAt:
@@ -633,6 +637,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NewArrayWithSize:
     case NewArrayWithConstantSize:
     case NewArrayWithSpecies:
+    case NewArrayWithSizeAndStructure:
     case NewArrayBuffer:
     case NewArrayWithSpread:
     case NewInternalFieldObject:
@@ -709,6 +714,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case MultiDeleteByOffset:
     case GetPropertyEnumerator:
     case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
@@ -718,6 +724,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case PhantomNewRegexp:
     case PutHint:
     case MaterializeNewObject:
+    case MaterializeNewArrayWithConstantSize:
     case MaterializeCreateActivation:
     case MaterializeNewInternalFieldObject:
     case PhantomDirectArguments:
@@ -762,7 +769,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringLocaleCompare:
     case FunctionBind:
     case DateSetTime:
-    case ArraySpliceExtract:
+    case ArraySplice:
         return false;
 
     case StringReplaceString:

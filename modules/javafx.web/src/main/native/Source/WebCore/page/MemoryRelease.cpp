@@ -64,7 +64,6 @@
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/VM.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/ResourceUsage.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/text/MakeString.h>
@@ -85,7 +84,13 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     GlyphDisplayListCache::singleton().clear();
     SelectorQueryCache::singleton().clear();
 
-    for (auto& document : Document::allDocuments()) {
+    auto allDocuments = Document::allDocuments();
+    auto protectedDocuments = WTF::map(allDocuments, [](auto& document) -> Ref<Document> {
+        return document.get();
+    });
+
+    for (auto& document : protectedDocuments) {
+        document->asyncNodeDeletionQueue().deleteNodesNow();
         if (CheckedPtr renderView = document->renderView()) {
             LayoutIntegration::LineLayout::releaseCaches(*renderView);
             Layout::TextBreakingPositionCache::singleton().clear();
@@ -258,7 +263,7 @@ void logMemoryStatistics(LogMemoryStatisticsReason reason)
     RELEASE_LOG(MemoryPressure, "Live JavaScript objects at time of %" PUBLIC_LOG_STRING ":", description.characters());
     auto typeCounts = vm.heap.objectTypeCounts();
     for (auto& it : *typeCounts)
-        RELEASE_LOG(MemoryPressure, "  %" PUBLIC_LOG_STRING ": %d", it.key, it.value);
+        RELEASE_LOG(MemoryPressure, "  %" PUBLIC_LOG_STRING ": %d", it.key.characters(), it.value);
 }
 #endif
 

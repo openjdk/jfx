@@ -121,7 +121,6 @@ gst_osx_audio_ring_buffer_class_init (GstOsxAudioRingBufferClass * klass)
 static void
 gst_osx_audio_ring_buffer_init (GstOsxAudioRingBuffer * ringbuffer)
 {
-  ringbuffer->core_audio = gst_core_audio_new (GST_OBJECT (ringbuffer));
 }
 
 static void

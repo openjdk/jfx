@@ -191,8 +191,8 @@ extern NSSize maxScreenDimensions;
 
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
-    for (NSWindow * window = self->nsWindow; window; window = [window parentWindow]) {
-        if (window == s_grabWindow) {
+    for (GlassWindow * window = self; window; window = window->owner) {
+        if (window->nsWindow == s_grabWindow) {
             return;
         }
     }
@@ -282,9 +282,10 @@ extern NSSize maxScreenDimensions;
         [self->nsWindow orderFront:nil];
     }
 
-    if ((self->owner != nil) && ([self->nsWindow parentWindow] == nil))
+    // Fix up window stacking order
+    if (self->owner != nil)
     {
-        [self->owner addChildWindow:self->nsWindow ordered:NSWindowAbove];
+        [self->owner reorderChildWindows];
     }
     // Make sure we synchronize scale factors which could have changed while
     // we were not visible without invoking the overrides we watch.
@@ -296,23 +297,7 @@ extern NSSize maxScreenDimensions;
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate
 {
     NSRect frame = [self _constrainFrame:rect];
-    NSString *const constantRestorePreZoomRect = @"_restorePreZoomedRect";
-    NSArray *syms = [NSThread  callStackSymbols];
-    NSString *callerMethod;
-
-    bool callFlipFrame = true;
-    if ([syms count] > 1) {
-        callerMethod = [syms objectAtIndex:1];
-        if([callerMethod rangeOfString:constantRestorePreZoomRect].location != NSNotFound){
-            callFlipFrame = false;
-        }
-    }
-    if (callFlipFrame) {
-        [self _setFlipFrame:frame display:(BOOL)display animate:(BOOL)animate];
-    }
-    else {
-        [self->nsWindow setFrame:frame display:(BOOL)display animate:(BOOL)animate];
-    }
+    [self _setFlipFrame:frame display:(BOOL)display animate:(BOOL)animate];
 }
 
 - (void)_setBounds:(jint)x y:(jint)y xSet:(jboolean)xSet ySet:(jboolean)ySet w:(jint)w h:(jint)h cw:(jint)cw ch:(jint)ch
@@ -342,13 +327,6 @@ extern NSSize maxScreenDimensions;
         // notification was not triggered.
         [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESIZE forFrame:flipFrame];
     }
-}
-
-- (void)_restorePreZoomedRect
-{
-    [self _setWindowFrameWithRect:NSMakeRect(self->preZoomedRect.origin.x, self->preZoomedRect.origin.y, self->preZoomedRect.size.width, self->preZoomedRect.size.height) withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
-    [self _sendJavaWindowMoveEventForFrame:[self _flipFrame]];
-    [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESTORE forFrame:[self _flipFrame]];
 }
 
 - (NSScreen*)_getScreen

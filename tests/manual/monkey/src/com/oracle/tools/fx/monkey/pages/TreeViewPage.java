@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,9 +138,9 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
         return s;
     }
 
-    private Supplier<TreeItem<Object>> mk(int count) {
+    private Supplier<TreeItem<Object>> mk(boolean nullValue, int count) {
         return () -> {
-            TreeItem<Object> root = new TreeItem<>("ROOT");
+            TreeItem<Object> root = new TreeItem<>(nullValue ? null : "ROOT");
             for (int i = 0; i < count; i++) {
                 root.getChildren().add(new TreeItem<>(String.valueOf("Item_" + (seq++))));
             }
@@ -150,9 +150,11 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
 
     private Node createRootOptions(String name, ObjectProperty<TreeItem<Object>> p) {
         ObjectOption<TreeItem<Object>> s = new ObjectOption(name, p);
-        s.addChoiceSupplier("1 Row", mk(1));
-        s.addChoiceSupplier("10 Rows", mk(10));
-        s.addChoiceSupplier("1,000 Rows", mk(1_000));
+        s.addChoiceSupplier("1 Row", mk(false, 1));
+        s.addChoiceSupplier("10 Rows", mk(false, 10));
+        s.addChoiceSupplier("1,000 Rows", mk(false, 1_000));
+        s.addChoiceSupplier("null value + 5 Rows", mk(true, 5));
+        s.addChoiceSupplier("null value + 15 Rows", mk(true, 15));
         s.addChoice("<null>", null);
         return s;
     }
