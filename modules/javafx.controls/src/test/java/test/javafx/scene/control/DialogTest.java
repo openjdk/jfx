@@ -25,21 +25,16 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.layout.HeaderBar;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-import javafx.stage.StageStyle;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -116,33 +111,6 @@ public class DialogTest {
         }
 
         assertDoesNotThrow(TestDialog::new);
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = StageStyle.class, names = {"DECORATED", "UNDECORATED", "TRANSPARENT", "UTILITY", "UNIFIED"})
-    public void testRootOfNonExtendedStageIsDialogPane(StageStyle style) {
-        dialog.initStyle(style);
-        dialog.setHeaderBar(new HeaderBar()); // header bar is ignored
-        assertSame(dialog.getDialogPane(), dialog.getDialogPane().getScene().getRoot());
-    }
-
-    @Test
-    public void testRootOfExtendedStageWithoutHeaderBarIsDialogPane() {
-        dialog.initStyle(StageStyle.EXTENDED);
-        assertSame(dialog.getDialogPane(), dialog.getDialogPane().getScene().getRoot());
-    }
-
-    @Test
-    public void testRootOfExtendedStageWithHeaderBarIsBorderPane() {
-        dialog.initStyle(StageStyle.EXTENDED);
-        dialog.setHeaderBar(new HeaderBar());
-
-        if (dialog.getDialogPane().getScene().getRoot() instanceof BorderPane root) {
-            assertSame(dialog.getDialogPane(), root.getCenter());
-            assertSame(dialog.getHeaderBar(), root.getTop());
-        } else {
-            fail("Root of extended stage is not a BorderPane");
-        }
     }
 
     @Test

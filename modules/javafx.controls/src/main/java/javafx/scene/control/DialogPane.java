@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import com.sun.javafx.PreviewFeature;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.DefaultProperty;
@@ -51,8 +53,11 @@ import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
+import javafx.css.converter.StringConverter;
 import javafx.event.ActionEvent;
+import javafx.geometry.HPos;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
@@ -60,13 +65,12 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-
-import com.sun.javafx.css.StyleManager;
-import javafx.css.converter.StringConverter;
+import javafx.stage.StageStyle;
 
 /**
  * DialogPane should be considered to be the root node displayed within a
@@ -213,11 +217,15 @@ public class DialogPane extends Pane {
         setAccessibleRole(AccessibleRole.DIALOG);
 
         headerTextPanel = new GridPane();
+        headerTextPanel.setVisible(false);
+        headerTextPanel.setManaged(false);
         getChildren().add(headerTextPanel);
 
         graphicContainer = new StackPane();
 
         contentLabel = createContentLabel("");
+        contentLabel.setVisible(false);
+        contentLabel.setManaged(false);
         getChildren().add(contentLabel);
 
         // Add this listener before calling #createButtonBar, so that the listener added in #createButtonBar will run
@@ -430,6 +438,74 @@ public class DialogPane extends Pane {
         return imageUrl;
     }
 
+    // --- header bar
+    private ObjectProperty<HeaderBar> headerBar;
+
+    /**
+     * Specifies the {@link HeaderBar} for the dialog. The {@code HeaderBar} will be placed at the
+     * top of the dialog window, and extend the entire width of the window. This property will only
+     * be used if the dialog window is configured with the {@link StageStyle#EXTENDED} style; it has
+     * no effect for other styles.
+     *
+     * @return the {@code headerBar} property
+     * @defaultValue {@code null}
+     * @since 26
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     */
+    @Deprecated(since = "26")
+    public final ObjectProperty<HeaderBar> headerBarProperty() {
+        if (headerBar == null) {
+            PreviewFeature.HEADER_BAR.checkEnabled();
+            headerBar = new SimpleObjectProperty<>(this, "headerBar") {
+                WeakReference<HeaderBar> wref = new WeakReference<>(null);
+
+                @Override
+                protected void invalidated() {
+                    HeaderBar oldValue = wref.get();
+                    if (oldValue != null) {
+                        getChildren().remove(oldValue);
+                    }
+
+                    HeaderBar newValue = get();
+                    if (newValue != null) {
+                        getChildren().add(newValue);
+                    }
+
+                    wref = new WeakReference<>(newValue);
+                }
+            };
+        }
+
+        return headerBar;
+    }
+
+    /**
+     * Gets the value of the {@link #headerBarProperty() headerBar} property.
+     *
+     * @return the {@code HeaderBar}
+     * @since 26
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     */
+    @Deprecated(since = "26")
+    public final HeaderBar getHeaderBar() {
+        PreviewFeature.HEADER_BAR.checkEnabled();
+        return headerBar != null ? headerBar.get() : null;
+    }
+
+    /**
+     * Sets the value of the {@link #headerBarProperty() headerBar} property.
+     *
+     * @param value the new value
+     * @since 26
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     */
+    @Deprecated(since = "26")
+    public final void setHeaderBar(HeaderBar value) {
+        PreviewFeature.HEADER_BAR.checkEnabled();
+        if (headerBar != null || value != null) {
+            headerBarProperty().set(value);
+        }
+    }
 
     // --- header
     private final ObjectProperty<Node> header = new SimpleObjectProperty<>(null) {
@@ -878,11 +954,15 @@ public class DialogPane extends Pane {
         final Node content = getActualContent();
         final Node graphic = getActualGraphic();
         final Node expandableContent = getExpandableContent();
+        final HeaderBar headerBar = getHeaderBar();
 
         final double graphicPrefWidth = hasHeader || graphic == null ? 0 : graphic.prefWidth(-1);
         final double headerPrefHeight = hasHeader ? header.prefHeight(w) : 0;
         final double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(w);
         final double graphicPrefHeight = hasHeader || graphic == null ? 0 : graphic.prefHeight(-1);
+        final double headerBarPrefHeight = headerBar != null
+            ? Utils.boundedSize(headerBar.prefHeight(w), headerBar.minHeight(w), headerBar.maxHeight(w))
+            : 0;
 
         final double expandableContentPrefHeight;
         final double contentAreaHeight;
@@ -894,16 +974,20 @@ public class DialogPane extends Pane {
             // precedence goes to content and then expandable content
             contentAreaHeight = isExpanded() ? content.prefHeight(availableContentWidth) : 0;
             contentAndGraphicHeight = hasHeader ? contentAreaHeight : Math.max(graphicPrefHeight, contentAreaHeight);
-            expandableContentPrefHeight = h - (headerPrefHeight + contentAndGraphicHeight + buttonBarPrefHeight);
+            expandableContentPrefHeight = h - (headerBarPrefHeight + headerPrefHeight + contentAndGraphicHeight + buttonBarPrefHeight);
         } else {
             // content gets the lowest precedence
             expandableContentPrefHeight = isExpanded() ? expandableContent.prefHeight(w) : 0;
-            contentAreaHeight = h - (headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
+            contentAreaHeight = h - (headerBarPrefHeight + headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
             contentAndGraphicHeight = hasHeader ? contentAreaHeight : Math.max(graphicPrefHeight, contentAreaHeight);
         }
 
+        if (headerBar != null) {
+            layoutInArea(headerBar, 0, 0, w, headerBarPrefHeight, 0, HPos.LEFT, VPos.TOP);
+        }
+
         double x = leftPadding;
-        double y = topPadding;
+        double y = topPadding + headerBarPrefHeight;
 
         if (! hasHeader) {
             if (graphic != null) {
@@ -933,6 +1017,7 @@ public class DialogPane extends Pane {
 
     /** {@inheritDoc} */
     @Override protected double computeMinWidth(double height) {
+        double headerBarMinWidth = getHeaderBar() instanceof HeaderBar hb ? hb.minWidth(height) : 0;
         double headerMinWidth = hasHeader() ? getActualHeader().minWidth(height) + 10 : 0;
         double contentMinWidth = getActualContent().minWidth(height);
         double buttonBarMinWidth = buttonBar == null ? 0 : buttonBar.minWidth(height);
@@ -949,13 +1034,14 @@ public class DialogPane extends Pane {
                 Math.max(Math.max(headerMinWidth, expandableContentMinWidth), Math.max(contentMinWidth, buttonBarMinWidth)) +
                 snappedRightInset();
 
-        return snapSizeX(minWidth);
+        return snapSizeX(Math.max(minWidth, headerBarMinWidth));
     }
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width) {
         final boolean hasHeader = hasHeader();
 
+        double headerBarMinHeight = getHeaderBar() instanceof HeaderBar hb ? hb.minHeight(width) : 0;
         double headerMinHeight = hasHeader ? getActualHeader().minHeight(width) : 0;
         double buttonBarMinHeight = buttonBar == null ? 0 : buttonBar.minHeight(width);
 
@@ -976,6 +1062,7 @@ public class DialogPane extends Pane {
         }
 
         double minHeight = snappedTopInset() +
+                headerBarMinHeight +
                 headerMinHeight +
                 Math.max(graphicMinHeight, contentMinHeight) +
                 expandableContentMinHeight +
@@ -991,6 +1078,8 @@ public class DialogPane extends Pane {
         double contentPrefWidth = getActualContent().prefWidth(height);
         double buttonBarPrefWidth = buttonBar == null ? 0 : buttonBar.prefWidth(height);
         double graphicPrefWidth = getActualGraphic().prefWidth(height);
+        double headerBarPrefWidth = getHeaderBar() instanceof HeaderBar hb
+            ? Utils.boundedSize(hb.prefWidth(height), hb.minWidth(height), hb.maxWidth(height)) : 0;
 
         double expandableContentPrefWidth = 0;
         final Node expandableContent = getExpandableContent();
@@ -1003,7 +1092,7 @@ public class DialogPane extends Pane {
                Math.max(Math.max(headerPrefWidth, expandableContentPrefWidth), Math.max(contentPrefWidth, buttonBarPrefWidth)) +
                snappedRightInset();
 
-        return snapSizeX(prefWidth);
+        return snapSizeX(Math.max(prefWidth, headerBarPrefWidth));
     }
 
     /** {@inheritDoc} */
@@ -1012,6 +1101,8 @@ public class DialogPane extends Pane {
 
         double headerPrefHeight = hasHeader ? getActualHeader().prefHeight(width) : 0;
         double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(width);
+        double headerBarPrefHeight = getHeaderBar() instanceof HeaderBar hb
+            ? Utils.boundedSize(hb.prefHeight(width), hb.minHeight(width), hb.maxHeight(width)) : 0;
 
         Node graphic = getActualGraphic();
         double graphicPrefWidth = hasHeader ? 0 : graphic.prefWidth(-1);
@@ -1029,6 +1120,7 @@ public class DialogPane extends Pane {
         }
 
         double prefHeight = snappedTopInset() +
+               headerBarPrefHeight +
                headerPrefHeight +
                Math.max(graphicPrefHeight, contentPrefHeight) +
                expandableContentPrefHeight +

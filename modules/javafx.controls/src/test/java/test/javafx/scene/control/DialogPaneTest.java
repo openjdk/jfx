@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,11 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -37,6 +39,7 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -150,5 +153,28 @@ public class DialogPaneTest {
                 assertEquals(id, button.getId());
             }
         }
+    }
+
+    @Test
+    public void headerBarIsLocatedAtTopOfDialogPane() {
+        var headerBar = new HeaderBar();
+        headerBar.setMinHeight(20);
+        headerBar.setPrefHeight(20);
+        dialogPane.setHeaderBar(headerBar);
+        dialogPane.resize(1000, 1000);
+        dialogPane.applyCss();
+        dialogPane.layout();
+
+        assertEquals(
+            new BoundingBox(0, 0, 1000, 20),
+            dialogPane.lookup("HeaderBar").getLayoutBounds());
+
+        dialogPane.getChildren().stream()
+            .filter(Node::isVisible)
+            .filter(c -> c != headerBar)
+            .forEach(child ->
+                assertTrue(child.getLayoutY() >= headerBar.getHeight(), () ->
+                    child.getClass().getSimpleName() + " must be located below HeaderBar, layoutY = " + child.getLayoutBounds())
+            );
     }
 }

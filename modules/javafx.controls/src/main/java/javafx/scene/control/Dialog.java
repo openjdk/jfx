@@ -50,7 +50,6 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import javafx.util.Callback;
 
-import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.tk.Toolkit;
 
@@ -465,8 +464,8 @@ public class Dialog<R> implements EventTarget {
     /**
      * Specifies the style for this dialog. This must be done prior to making the dialog visible.
      * <p>
-     * Note that a dialog with the {@link StageStyle#EXTENDED} style must also specify a {@link HeaderBar}
-     * with the {@link #setHeaderBar(HeaderBar)} method, as otherwise the dialog window will not be draggable.
+     * Note that a dialog with the {@link StageStyle#EXTENDED} style must also specify a {@link HeaderBar} with
+     * the {@link DialogPane#setHeaderBar(HeaderBar)} method, as otherwise the dialog window will not be draggable.
      *
      * @param style the style for this dialog.
      *
@@ -583,62 +582,6 @@ public class Dialog<R> implements EventTarget {
         dialogPane.set(value);
     }
 
-    // --- header bar
-    private ObjectProperty<HeaderBar> headerBar;
-
-    /**
-     * Specifies the {@link HeaderBar} for the dialog. The {@code HeaderBar} will be placed at the
-     * top of the dialog window, and extend the entire width of the window. This property will only
-     * be used if the dialog window is configured with the {@link StageStyle#EXTENDED} style; it has
-     * no effect for other styles.
-     *
-     * @return the {@code headerBar} property
-     * @defaultValue {@code null}
-     * @since 26
-     * @deprecated This is a preview feature which may be changed or removed in a future release.
-     */
-    @Deprecated(since = "26")
-    public final ObjectProperty<HeaderBar> headerBarProperty() {
-        if (headerBar == null) {
-            PreviewFeature.HEADER_BAR.checkEnabled();
-            headerBar = new SimpleObjectProperty<>(this, "headerBar") {
-                @Override
-                protected void invalidated() {
-                    dialog.setHeaderBar(get());
-                }
-            };
-        }
-
-        return headerBar;
-    }
-
-    /**
-     * Gets the value of the {@link #headerBarProperty() headerBar} property.
-     *
-     * @return the {@code HeaderBar}
-     * @since 26
-     * @deprecated This is a preview feature which may be changed or removed in a future release.
-     */
-    @Deprecated(since = "26")
-    public final HeaderBar getHeaderBar() {
-        PreviewFeature.HEADER_BAR.checkEnabled();
-        return headerBar != null ? headerBar.get() : null;
-    }
-
-    /**
-     * Sets the value of the {@link #headerBarProperty() headerBar} property.
-     *
-     * @param value the new value
-     * @since 26
-     * @deprecated This is a preview feature which may be changed or removed in a future release.
-     */
-    @Deprecated(since = "26")
-    public final void setHeaderBar(HeaderBar value) {
-        PreviewFeature.HEADER_BAR.checkEnabled();
-        if (headerBar != null || value != null) {
-            headerBarProperty().set(value);
-        }
-    }
 
     // --- content text (forwarded from DialogPane)
     /**
