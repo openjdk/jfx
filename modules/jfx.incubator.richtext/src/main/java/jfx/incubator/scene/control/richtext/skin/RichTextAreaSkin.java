@@ -261,7 +261,8 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             ime.length = text.length();
 
             // replace selection or previous ime text with composed or committed text
-            rta.replaceText(ime.start, rEnd, text, false);
+            // TODO JDK-8370447 may need to coalesce undo events for composed events but not for commit ones
+            rta.replaceText(ime.start, rEnd, text);
 
             // add ime shapes
             TextPos end = ime.start;
