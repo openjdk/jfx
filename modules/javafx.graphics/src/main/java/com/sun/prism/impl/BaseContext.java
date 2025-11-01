@@ -108,6 +108,8 @@ public abstract class BaseContext {
     }
 
     protected final void flushMask() {
+        if (maskTex != null && maskTex.isSurfaceLost()) return;
+
         if (curMaskRow > 0 || curMaskCol > 0) {
             maskTex.lock();
             // assert !maskTex.isSurfaceLost();

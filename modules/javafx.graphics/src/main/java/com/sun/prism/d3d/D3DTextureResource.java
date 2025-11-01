@@ -38,6 +38,7 @@ class D3DTextureResource
     public void free() {
         if (resource != null) {
             resource.dispose();
+            resource = null;
         }
     }
 
