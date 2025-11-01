@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,11 @@ package com.sun.javafx.collections;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -85,7 +87,6 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         public String toString() {
             return "added " + added;
         }
-
     }
 
     private class SimpleRemoveChange extends SetChangeListener.Change<E> {
@@ -121,7 +122,6 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         public String toString() {
             return "removed " + removed;
         }
-
     }
 
     private void callObservers(SetChangeListener.Change<E> change) {
@@ -312,12 +312,36 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      * @return true if this set changed as a result of the call
      */
     @Override
-    public boolean addAll(Collection<?extends E> c) {
-        boolean ret = false;
+    public boolean addAll(Collection<? extends E> c) {
+        E addedElement = null;
+        List<E> addedList = null;
+
         for (E element : c) {
-            ret |= add(element);
+            if (backingSet.add(element)) {
+                if (addedList != null) {
+                    addedList.add(element);
+                } else if (addedElement != null) {
+                    addedList = new ArrayList<>(c.size());
+                    addedList.add(addedElement);
+                    addedList.add(element);
+                    addedElement = null;
+                } else {
+                    addedElement = element;
+                }
+            }
         }
-        return ret;
+
+        if (addedElement != null) {
+            callObservers(new SimpleAddChange(addedElement));
+            return true;
+        }
+
+        if (addedList != null) {
+            callObservers(new IterableSetChange.Add<>(this, addedList));
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -363,16 +387,38 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
     }
 
     private boolean removeRetain(Collection<?> c, boolean remove) {
-        boolean removed = false;
+        E removedElement = null;
+        List<E> removedList = null;
+
         for (Iterator<E> i = backingSet.iterator(); i.hasNext();) {
             E element = i.next();
             if (remove == c.contains(element)) {
-                removed = true;
+                if (removedList != null) {
+                    removedList.add(element);
+                } else if (removedElement != null) {
+                    removedList = new ArrayList<>(c.size());
+                    removedList.add(removedElement);
+                    removedList.add(element);
+                    removedElement = null;
+                } else {
+                    removedElement = element;
+                }
+
                 i.remove();
-                callObservers(new SimpleRemoveChange(element));
             }
         }
-        return removed;
+
+        if (removedElement != null) {
+            callObservers(new SimpleRemoveChange(removedElement));
+            return true;
+        }
+
+        if (removedList != null) {
+            callObservers(new IterableSetChange.Remove<>(this, removedList));
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -382,10 +428,19 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
      */
     @Override
     public void clear() {
-        for (Iterator<E> i = backingSet.iterator(); i.hasNext(); ) {
-            E element = i.next();
-            i.remove();
+        int size = backingSet.size();
+
+        if (size == 1) {
+            Iterator<E> it = backingSet.iterator();
+            E element = it.next();
+            it.remove();
             callObservers(new SimpleRemoveChange(element));
+        } else if (size > 1) {
+            @SuppressWarnings("unchecked")
+            E[] removed = (E[])new Object[size];
+            backingSet.toArray(removed);
+            backingSet.clear();
+            callObservers(new IterableSetChange.Remove<>(this, Arrays.asList(removed)));
         }
     }
 
