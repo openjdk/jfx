@@ -25,44 +25,18 @@
 
 package javafx.util.converter;
 
-import javafx.util.StringConverter;
+/// A `StringConverter` implementation for `Byte` (and `byte`) values. Formatting is done by [Byte#toString()] for
+/// non-`null` values, and parsing with [Byte#valueOf(String)] for non-`null` non-empty strings.
+///
+/// @since JavaFX 2.1
+public class ByteStringConverter extends BaseStringConverter<Byte> {
 
-/**
- * <p>{@link StringConverter} implementation for {@link Byte}
- * (and byte primitive) values.</p>
- * @since JavaFX 2.1
- */
-public class ByteStringConverter extends StringConverter<Byte> {
-
-    /**
-     * Creates a default {@code ByteStringConverter}.
-     */
+    /// Creates a default {@code ByteStringConverter}.
     public ByteStringConverter() {
     }
 
-    /** {@inheritDoc} */
-    @Override public Byte fromString(String value) {
-        // If the specified value is null or zero-length, return null
-        if (value == null) {
-            return null;
-        }
-
-        value = value.trim();
-
-        if (value.length() < 1) {
-            return null;
-        }
-
-        return Byte.valueOf(value);
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString(Byte value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
-
-        return Byte.toString(value.byteValue());
+    @Override
+    Byte fromNonEmptyString(String string) {
+        return Byte.valueOf(string);
     }
 }

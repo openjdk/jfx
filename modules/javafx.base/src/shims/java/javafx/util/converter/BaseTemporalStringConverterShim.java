@@ -26,29 +26,15 @@
 package javafx.util.converter;
 
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-import java.util.Locale;
+import java.time.temporal.Temporal;
 
-public class LocalDateTimeStringConverterShim {
+public class BaseTemporalStringConverterShim {
 
-    public static DateTimeFormatter getldtConverterParser(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.parser;
+    public static DateTimeFormatter getParser(BaseTemporalStringConverter<? extends Temporal> converter) {
+        return converter.getParser();
     }
 
-    public static DateTimeFormatter getldtConverterFormatter(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.formatter;
+    public static DateTimeFormatter getFormatter(BaseTemporalStringConverter<? extends Temporal> converter) {
+        return converter.getFormatter();
     }
-
-    public static Locale getldtConverterLocale(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.locale;
-    }
-
-    public static FormatStyle getldtConverterTimeStyle(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.timeStyle;
-    }
-
-    public static FormatStyle getldtConverterDateStyle(LocalDateTimeStringConverter c) {
-        return c.ldtConverter.dateStyle;
-    }
-
 }
