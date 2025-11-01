@@ -1451,9 +1451,7 @@ public class RichTextArea extends Control {
             end = tmp;
         }
 
-        // TODO JDK-8370140 (line separator property)
-        String lineSeparator = System.getProperty("line.separator");
-
+        String lineSeparator = RichUtils.getLineEnding(m.getLineEnding());
         int toCopy = limit;
         int index = start.index();
         boolean first = true;

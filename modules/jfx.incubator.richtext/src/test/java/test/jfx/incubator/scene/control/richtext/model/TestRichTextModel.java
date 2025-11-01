@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.RichParagraph;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
@@ -40,6 +41,7 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 
 /**
  * Tests RichTextModel.
@@ -271,5 +273,20 @@ public class TestRichTextModel {
         assertEquals(new TextPos(1, 4, 3, false), m.clamp(TextPos.ofLeading(1, 100)));
 
         assertEquals(TextPos.ofLeading(2, 0), m.clamp(TextPos.ofLeading(2, 100)));
+    }
+
+    @Test
+    public void lineEnding() {
+        String nl = System.getProperty("line.separator");
+        RichTextModel m = createModel("1\n2\n3");
+        assertEquals(3, m.size());
+        m.setLineEnding(null);
+        assertEquals("1" + nl + "2" + nl + "3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.CR);
+        assertEquals("1\r2\r3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.CRLF);
+        assertEquals("1\r\n2\r\n3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.LF);
+        assertEquals("1\n2\n3", RTUtil.getText(m));
     }
 }
