@@ -63,6 +63,7 @@ public class UndoableChange {
      * @param model source model
      * @param start start text position
      * @param end end text position
+     * @param isEdit determines whether it's a content change (true) or a style change (false)
      * @throws IOException if the save point cannot be created
      */
     public static UndoableChange create(StyledTextModel model, TextPos start, TextPos end, boolean isEdit) {
