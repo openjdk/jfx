@@ -743,18 +743,36 @@ public class RichTextAreaTest {
     @Test
     public void undoStyleChange() {
         ArrayList<ContentChange> changes = new ArrayList<>();
-        TextPos p = control.appendText("BOLD");
+        String text = "BOLD";
+        TextPos p = control.appendText(text);
         control.getModel().addListener((ch) -> {
             changes.add(ch);
         });
+        TextPos p2 = TextPos.ofLeading(0, 2);
+        assertEquals(text, text());
         control.applyStyle(TextPos.ZERO, p, BOLD);
+        control.select(p2);
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
         control.undo();
+        assertEquals(text, text());
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
         assertEquals(2, changes.size());
-        ContentChange ch1 = changes.get(0);
+        control.redo();
+        assertEquals(text, text());
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // changes
+        assertEquals(3, changes.size());
+        ContentChange ch0 = changes.get(0);
+        assertEquals(TextPos.ZERO, ch0.getStart());
+        assertEquals(p, ch0.getEnd());
+        assertFalse(ch0.isEdit());
+        //
+        ContentChange ch1 = changes.get(1);
+        assertFalse(ch1.isEdit());
         assertEquals(TextPos.ZERO, ch1.getStart());
         assertEquals(p, ch1.getEnd());
-        assertFalse(ch1.isEdit());
-        ContentChange ch2 = changes.get(1);
+        //
+        ContentChange ch2 = changes.get(2);
         assertFalse(ch2.isEdit());
         assertEquals(TextPos.ZERO, ch2.getStart());
         assertEquals(p, ch2.getEnd());
