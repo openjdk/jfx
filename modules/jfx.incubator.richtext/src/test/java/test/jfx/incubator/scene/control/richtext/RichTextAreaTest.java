@@ -58,6 +58,7 @@ import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.StyleHandlerRegistry;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
@@ -678,6 +679,26 @@ public class RichTextAreaTest {
         control.undo();
         control.undo();
         assertEquals("", text());
+    }
+
+    @Test
+    public void undoStyleChange() {
+        ArrayList<ContentChange> changes = new ArrayList<>();
+        TextPos p = control.appendText("BOLD");
+        control.getModel().addListener((ch) -> {
+            changes.add(ch);
+        });
+        control.applyStyle(TextPos.ZERO, p, BOLD);
+        control.undo();
+        assertEquals(2, changes.size());
+        ContentChange ch1 = changes.get(0);
+        assertEquals(TextPos.ZERO, ch1.getStart());
+        assertEquals(p, ch1.getEnd());
+        assertFalse(ch1.isEdit());
+        ContentChange ch2 = changes.get(1);
+        assertFalse(ch2.isEdit());
+        assertEquals(TextPos.ZERO, ch2.getStart());
+        assertEquals(p, ch2.getEnd());
     }
 
     @Test
