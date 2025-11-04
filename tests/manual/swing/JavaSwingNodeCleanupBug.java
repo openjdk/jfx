@@ -55,6 +55,7 @@ public class JavaSwingNodeCleanupBug extends Application {
         passButton.setOnAction(e -> this.quit());
         failButton.setOnAction(e -> {
             this.quit();
+            System.out.println("Test failed as cleaning up SwingNode caused NPE");
         });
 
         BorderPane pane = new BorderPane();
