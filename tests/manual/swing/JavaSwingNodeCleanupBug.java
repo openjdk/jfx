@@ -44,7 +44,6 @@ import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 
 public class JavaSwingNodeCleanupBug extends Application {
-    static Stage testStage;
     public static void main(String[] args) {
         launch(args);
     }
@@ -76,7 +75,6 @@ public class JavaSwingNodeCleanupBug extends Application {
         Scene scene = new Scene(rootNode, 300, 200);
         stage.setScene(scene);
         stage.show();
-        testStage = stage;
         testNPE();
     }
 
