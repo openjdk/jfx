@@ -470,7 +470,7 @@ public abstract class StyledTextModel {
      * @param end end of the range
      * @param out {@link StyledOutput} to receive the stream
      * @throws IOException when an I/O error occurs
-     * @see #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)
+     * @see #replace(StyleResolver, TextPos, TextPos, StyledInput)
      */
     public final void export(TextPos start, TextPos end, StyledOutput out) throws IOException {
         int cmp = start.compareTo(end);
@@ -627,7 +627,7 @@ public abstract class StyledTextModel {
      * Replaces the given range with the provided plain text.
      * <p>
      * This is a convenience method which eventually calls
-     * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput, boolean)}
+     * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput)}
      * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos)} at the
      * {@code start} position.
      * It creates an undo/redo entry if
