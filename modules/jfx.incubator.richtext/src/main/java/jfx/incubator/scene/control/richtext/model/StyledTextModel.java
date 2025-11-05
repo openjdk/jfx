@@ -1012,23 +1012,26 @@ public abstract class StyledTextModel {
 
     /**
      * Specifies the line ending characters.
-     * A {@code null} value results in the platform line ending as reported by
-     * the {@code line.separator} system property.
      *
      * @return the line ending value
-     * @defaultValue null
+     * @defaultValue {@link LineEnding#SYSTEM_DEFAULT}
      * @since 26
      */
     public final LineEnding getLineEnding() {
+        if (lineEnding == null) {
+            lineEnding = LineEnding.SYSTEM_DEFAULT;
+        }
         return lineEnding;
     }
 
     /**
      * Sets the line ending characters.
-     * @param value the line ending value, can be null
+     * @param value the line ending value, cannot be null
+     * @throws NullPointerException if the value is null
      * @since 26
      */
     public final void setLineEnding(LineEnding value) {
+        Objects.requireNonNull(value, "line ending must not be null");
         lineEnding = value;
     }
 }

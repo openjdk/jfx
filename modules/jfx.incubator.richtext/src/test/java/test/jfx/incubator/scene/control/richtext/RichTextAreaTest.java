@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -346,10 +347,17 @@ public class RichTextAreaTest {
     public void copyLineEnding() {
         control.appendText("1\n2\n3");
         assertEquals(3, control.getParagraphCount());
-        t(null, "1" + NL + "2" + NL + "3");
         t(LineEnding.CR, "1\r2\r3");
         t(LineEnding.CRLF, "1\r\n2\r\n3");
         t(LineEnding.LF, "1\n2\n3");
+        t(LineEnding.SYSTEM_DEFAULT, "1" + NL + "2" + NL + "3");
+    }
+
+    @Test
+    public void lineEndingNull() {
+        assertThrows(NullPointerException.class, () -> {
+            control.getModel().setLineEnding(null);
+        });
     }
 
     private void t(LineEnding lineEnding, String expected) {

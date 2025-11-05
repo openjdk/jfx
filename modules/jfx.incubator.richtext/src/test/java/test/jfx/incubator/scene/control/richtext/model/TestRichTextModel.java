@@ -26,6 +26,7 @@
 package test.jfx.incubator.scene.control.richtext.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -279,14 +280,28 @@ public class TestRichTextModel {
     public void lineEnding() {
         String nl = System.getProperty("line.separator");
         RichTextModel m = createModel("1\n2\n3");
+        assertEquals(LineEnding.SYSTEM_DEFAULT, m.getLineEnding());
         assertEquals(3, m.size());
-        m.setLineEnding(null);
-        assertEquals("1" + nl + "2" + nl + "3", RTUtil.getText(m));
         m.setLineEnding(LineEnding.CR);
+        assertEquals(LineEnding.CR, m.getLineEnding());
         assertEquals("1\r2\r3", RTUtil.getText(m));
         m.setLineEnding(LineEnding.CRLF);
+        assertEquals(LineEnding.CRLF, m.getLineEnding());
         assertEquals("1\r\n2\r\n3", RTUtil.getText(m));
         m.setLineEnding(LineEnding.LF);
+        assertEquals(LineEnding.LF, m.getLineEnding());
         assertEquals("1\n2\n3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.SYSTEM_DEFAULT);
+        assertEquals(LineEnding.SYSTEM_DEFAULT, m.getLineEnding());
+        assertEquals("1" + nl + "2" + nl + "3", RTUtil.getText(m));
+    }
+
+    @Test
+    public void lineEndingNull() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertThrows(NullPointerException.class, () -> {
+            m.setLineEnding(null);
+        });
+        assertEquals(LineEnding.SYSTEM_DEFAULT, m.getLineEnding());
     }
 }
