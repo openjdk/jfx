@@ -71,6 +71,7 @@
 # define cfi_personality(enc, exp)
 # define cfi_lsda(enc, exp)
 # define cfi_escape(...)
+# define cfi_window_save
 
 #endif /* HAVE_AS_CFI_PSEUDO_OP */
 #endif /* FFI_CFI_H */
