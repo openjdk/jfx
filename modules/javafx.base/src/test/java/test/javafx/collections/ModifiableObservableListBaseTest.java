@@ -90,10 +90,38 @@ public class ModifiableObservableListBaseTest {
         }
 
         @Test
-        void shouldReplaceElementsAtGivenRange() {
+        void shouldReplaceElementsWithRangeAtEnd() {
             assertTrue(list.replaceRange(1, 3, List.of("B", "C", "D")));
             assertEquals(List.of("a", "B", "C", "D"), list);
             assertEquals(List.of("{ [b, c] replaced by [B, C, D] at 1 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceElementsWithRangeAtBeginning() {
+            assertTrue(list.replaceRange(0, 2, List.of("A", "B", "C")));
+            assertEquals(List.of("A", "B", "C", "c"), list);
+            assertEquals(List.of("{ [a, b] replaced by [A, B, C] at 0 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceElementsWithRangeInMiddle() {
+            assertTrue(list.replaceRange(1, 2, List.of("A", "B", "C")));
+            assertEquals(List.of("a", "A", "B", "C", "c"), list);
+            assertEquals(List.of("{ [b] replaced by [A, B, C] at 1 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceRangeWithFewerElementsThanAreRemovedAtEnd() {
+            assertTrue(list.replaceRange(1, 3, List.of("B")));
+            assertEquals(List.of("a", "B"), list);
+            assertEquals(List.of("{ [b, c] replaced by [B] at 1 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceRangeWithFewerElementsThanAreRemovedAtBeginning() {
+            assertTrue(list.replaceRange(0, 2, List.of("B")));
+            assertEquals(List.of("B", "c"), list);
+            assertEquals(List.of("{ [a, b] replaced by [B] at 0 }"), recordedChanges);
         }
 
         @Test
