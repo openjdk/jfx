@@ -287,7 +287,6 @@ public class CodeAreaTest {
     private void t(LineEnding lineEnding, String expected) {
         control.setLineEnding(lineEnding);
         assertEquals(lineEnding, control.getLineEnding());
-        assertEquals(lineEnding, control.lineEndingProperty().get());
         assertEquals(expected, control.getText());
         control.select(TextPos.ZERO, control.getDocumentEnd());
         control.copy();

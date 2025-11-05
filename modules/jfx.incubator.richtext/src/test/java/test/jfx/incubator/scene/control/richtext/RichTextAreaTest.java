@@ -344,7 +344,7 @@ public class RichTextAreaTest {
     }
 
     @Test
-    public void copyLineEnding() {
+    public void lineEndingCopy() {
         control.appendText("1\n2\n3");
         assertEquals(3, control.getParagraphCount());
         t(LineEnding.CR, "1\r2\r3");
@@ -357,6 +357,17 @@ public class RichTextAreaTest {
     public void lineEndingNull() {
         assertThrows(NullPointerException.class, () -> {
             control.getModel().setLineEnding(null);
+        });
+    }
+
+    @Test
+    public void lineEndingNullModel() {
+        control.setModel(null);
+        assertEquals(LineEnding.SYSTEM, control.getLineEnding());
+        control.setLineEnding(LineEnding.CR);
+        assertEquals(LineEnding.SYSTEM, control.getLineEnding());
+        assertThrows(NullPointerException.class, () -> {
+            control.setLineEnding(null);
         });
     }
 

@@ -117,9 +117,6 @@ public class CodeArea extends RichTextArea {
         if ((m != null) && (!(m instanceof CodeTextModel))) {
             throw new IllegalArgumentException("CodeArea accepts models that extend CodeTextModel");
         }
-        if (m != null) {
-            m.setLineEnding(getLineEnding());
-        }
     }
 
     @Override
@@ -452,49 +449,5 @@ public class CodeArea extends RichTextArea {
 
     private CodeTextModel codeModel() {
         return (CodeTextModel)getModel();
-    }
-
-    /**
-     * Specifies the line ending characters.  This property is not nullable.
-     *
-     * @return the line ending property
-     * @since 26
-     * @defaultValue {@link LineEnding#SYSTEM}
-     */
-    public final ObjectProperty<LineEnding> lineEndingProperty() {
-        if (lineEnding == null) {
-            lineEnding = new SimpleObjectProperty<>(this, "lineEnding", LineEnding.SYSTEM) {
-                private LineEnding old;
-
-                @Override
-                protected void invalidated() {
-                    LineEnding v = get();
-                    if (v == null) {
-                        // rollback
-                        if (isBound()) {
-                            unbind();
-                        }
-                        set(old);
-                        throw new NullPointerException("lineEnding cannot be null");
-                    }
-                    StyledTextModel m = getModel();
-                    if (m != null) {
-                        m.setLineEnding(get());
-                    }
-                }
-            };
-        }
-        return lineEnding;
-    }
-
-    public final LineEnding getLineEnding() {
-        if (lineEnding == null) {
-            return LineEnding.SYSTEM;
-        }
-        return lineEnding.get();
-    }
-
-    public final void setLineEnding(LineEnding v) {
-        lineEndingProperty().set(v);
     }
 }
