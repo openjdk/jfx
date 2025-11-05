@@ -459,17 +459,21 @@ public class CodeArea extends RichTextArea {
      *
      * @return the line ending property
      * @since 26
-     * @defaultValue {@link LineEnding#SYSTEM_DEFAULT}
+     * @defaultValue {@link LineEnding#SYSTEM}
      */
     public final ObjectProperty<LineEnding> lineEndingProperty() {
         if (lineEnding == null) {
-            lineEnding = new SimpleObjectProperty<>(this, "lineEnding", LineEnding.SYSTEM_DEFAULT) {
+            lineEnding = new SimpleObjectProperty<>(this, "lineEnding", LineEnding.SYSTEM) {
                 private LineEnding old;
 
                 @Override
                 protected void invalidated() {
                     LineEnding v = get();
-                    if(v == null) {
+                    if (v == null) {
+                        // rollback
+                        if (isBound()) {
+                            unbind();
+                        }
                         set(old);
                         throw new NullPointerException("lineEnding cannot be null");
                     }
@@ -485,7 +489,7 @@ public class CodeArea extends RichTextArea {
 
     public final LineEnding getLineEnding() {
         if (lineEnding == null) {
-            return LineEnding.SYSTEM_DEFAULT;
+            return LineEnding.SYSTEM;
         }
         return lineEnding.get();
     }

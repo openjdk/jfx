@@ -1014,12 +1014,12 @@ public abstract class StyledTextModel {
      * Specifies the line ending characters.
      *
      * @return the line ending value
-     * @defaultValue {@link LineEnding#SYSTEM_DEFAULT}
+     * @defaultValue {@link LineEnding#SYSTEM}
      * @since 26
      */
     public final LineEnding getLineEnding() {
         if (lineEnding == null) {
-            lineEnding = LineEnding.SYSTEM_DEFAULT;
+            lineEnding = LineEnding.SYSTEM;
         }
         return lineEnding;
     }

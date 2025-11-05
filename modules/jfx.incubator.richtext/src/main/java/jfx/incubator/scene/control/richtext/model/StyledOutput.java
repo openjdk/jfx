@@ -52,11 +52,11 @@ public interface StyledOutput extends Closeable {
     public void flush() throws IOException;
 
     /**
-     * Creates an instance of a plain text StyledOutput.
+     * Creates an instance of a plain text StyledOutput with the platform line ending.
      * @return the instance of a plain text StyledOutput
      */
     public static StyledOutput forPlainText() {
-        return new StringBuilderStyledOutput(null);
+        return new StringBuilderStyledOutput(LineEnding.SYSTEM);
     }
 
     /**

@@ -31,14 +31,14 @@ package jfx.incubator.scene.control.richtext;
  * @since 26
  */
 public enum LineEnding {
-    /** Classic Mac OS line ending, ASCII CR (0x0d) */
+    /** Legacy Mac OS line ending, ASCII CR (0x0d). */
     CR,
-    /** Windows line ending, ASCII LF (0x0a) */
+    /** Windows line ending, ASCII LF (0x0a). */
     CRLF,
-    /** macOS/Unix line ending, sequence of CR/LF (0x0d 0x0a)*/
+    /** macOS/Unix line ending, sequence of CR/LF (0x0d 0x0a). */
     LF,
-    /** Platform default line ending, using the value of {@code System.getProperty("line.separator")} */
-    SYSTEM_DEFAULT;
+    /** Platform line ending, using the value returned by {@code System.getProperty("line.separator")} call. */
+    SYSTEM;
 
     /**
      * Returns the line ending as a {@code String}.
@@ -49,7 +49,7 @@ public enum LineEnding {
             case CR -> "\r";
             case CRLF -> "\r\n";
             case LF -> "\n";
-            case SYSTEM_DEFAULT -> System.getProperty("line.separator");
+            case SYSTEM -> System.getProperty("line.separator");
         };
     }
 }

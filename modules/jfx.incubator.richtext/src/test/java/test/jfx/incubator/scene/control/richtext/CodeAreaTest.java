@@ -274,7 +274,7 @@ public class CodeAreaTest {
         t(LineEnding.CR, "1\r2\r3");
         t(LineEnding.CRLF, "1\r\n2\r\n3");
         t(LineEnding.LF, "1\n2\n3");
-        t(LineEnding.SYSTEM_DEFAULT, "1" + nl + "2" + nl + "3");
+        t(LineEnding.SYSTEM, "1" + nl + "2" + nl + "3");
     }
 
     @Test
