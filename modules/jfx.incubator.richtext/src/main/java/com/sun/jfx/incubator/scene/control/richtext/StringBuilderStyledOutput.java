@@ -37,7 +37,7 @@ public class StringBuilderStyledOutput implements StyledOutput {
 
     public StringBuilderStyledOutput(LineEnding lineEnding) {
         sb = new StringBuilder(1024);
-        newline = RichUtils.getLineEnding(lineEnding);
+        newline = lineEnding.getText();
     }
 
     @Override

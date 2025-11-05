@@ -455,21 +455,24 @@ public class CodeArea extends RichTextArea {
     }
 
     /**
-     * Specifies the line ending characters.
-     * A {@code null} value results in the platform line ending as reported by
-     * the {@code line.separator} system property.
-     * <p>
-     * Modifying this property causes corresponding update in the underlying model, if the latter is not {@code null}.
+     * Specifies the line ending characters.  This property is not nullable.
      *
      * @return the line ending property
      * @since 26
-     * @defaultValue null
+     * @defaultValue {@link LineEnding#SYSTEM_DEFAULT}
      */
     public final ObjectProperty<LineEnding> lineEndingProperty() {
         if (lineEnding == null) {
-            lineEnding = new SimpleObjectProperty<>(this, "lineEnding") {
+            lineEnding = new SimpleObjectProperty<>(this, "lineEnding", LineEnding.SYSTEM_DEFAULT) {
+                private LineEnding old;
+
                 @Override
                 protected void invalidated() {
+                    LineEnding v = get();
+                    if(v == null) {
+                        set(old);
+                        throw new NullPointerException("lineEnding cannot be null");
+                    }
                     StyledTextModel m = getModel();
                     if (m != null) {
                         m.setLineEnding(get());
@@ -482,7 +485,7 @@ public class CodeArea extends RichTextArea {
 
     public final LineEnding getLineEnding() {
         if (lineEnding == null) {
-            return null;
+            return LineEnding.SYSTEM_DEFAULT;
         }
         return lineEnding.get();
     }

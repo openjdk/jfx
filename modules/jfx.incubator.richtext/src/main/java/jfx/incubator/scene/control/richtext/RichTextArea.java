@@ -1451,7 +1451,7 @@ public class RichTextArea extends Control {
             end = tmp;
         }
 
-        String lineSeparator = RichUtils.getLineEnding(m.getLineEnding());
+        String lineSeparator = m.getLineEnding().getText();
         int toCopy = limit;
         int index = start.index();
         boolean first = true;

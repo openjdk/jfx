@@ -30,7 +30,6 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import javafx.scene.input.DataFormat;
 import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
-import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 
@@ -69,7 +68,7 @@ public class PlainTextFormatHandler extends DataFormatHandler {
 
     @Override
     public void save(StyledTextModel m, StyleResolver resolver, TextPos start, TextPos end, OutputStream out) throws IOException {
-        byte[] newline = RichUtils.getLineEnding(m.getLineEnding()).getBytes(StandardCharsets.UTF_8);
+        byte[] newline = m.getLineEnding().getText().getBytes(StandardCharsets.UTF_8);
 
         StyledOutput so = new StyledOutput() {
             @Override
