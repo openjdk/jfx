@@ -101,6 +101,7 @@ public interface ObservableList<E> extends List<E>, Observable {
      *         specified collection prevents it from being added to this list
      * @throws IndexOutOfBoundsException if {@code from < 0}, {@code to > size()},
      *         or {@code from > to}
+     * @since 26
      */
     public default boolean replaceRange(int from, int to, Collection<? extends E> col) {
         Objects.checkFromToIndex(from, to, size());
