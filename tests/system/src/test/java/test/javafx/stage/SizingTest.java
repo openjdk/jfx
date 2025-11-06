@@ -41,7 +41,6 @@ import test.util.Util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 
 class SizingTest extends StageTestBase {
@@ -155,9 +154,6 @@ class SizingTest extends StageTestBase {
     @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
     @EnumSource(names = {"DECORATED", "UNDECORATED", "EXTENDED", "TRANSPARENT", "UTILITY"})
     void minSize(StageStyle stageStyle) {
-        // JDK-8364547
-        assumeTrue(!PlatformUtil.isWindows());
-
         setupStageWithStyle(stageStyle, s -> {
             s.setMinWidth(MIN_WIDTH);
             s.setMinHeight(MIN_HEIGHT);
