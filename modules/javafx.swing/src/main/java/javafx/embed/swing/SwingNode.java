@@ -303,7 +303,8 @@ public class SwingNode extends AbstractNode {
             hWindow = window;
         }
 
-        if (lwFrame != null) {
+        var hFrame = lwFrame;
+        if (hFrame != null) {
             long rawHandle = 0L;
             if (window != null) {
                 TKStage tkStage = WindowHelper.getPeer(window);
@@ -311,7 +312,7 @@ public class SwingNode extends AbstractNode {
                     rawHandle = tkStage.getRawHandle();
                 }
             }
-            swNodeIOP.overrideNativeWindowHandle(lwFrame, rawHandle, null);
+            swNodeIOP.overrideNativeWindowHandle(hFrame, rawHandle, null);
         }
     }
 
@@ -553,9 +554,10 @@ public class SwingNode extends AbstractNode {
     };
 
     private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
+        var hFrame = lwFrame;
         if (!skipBackwardUnrgabNotification) {
-            if (lwFrame != null) {
-                postAWTEvent(swNodeIOP.createUngrabEvent(lwFrame));
+            if (hFrame != null) {
+                postAWTEvent(swNodeIOP.createUngrabEvent(hFrame));
             }
         }
     };
