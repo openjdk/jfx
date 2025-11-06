@@ -33,9 +33,9 @@ package jfx.incubator.scene.control.richtext;
 public enum LineEnding {
     /** Legacy Mac OS line ending, ASCII CR (0x0d). */
     CR,
-    /** Windows line ending, ASCII LF (0x0a). */
+    /** Windows line ending, sequence of CR/LF (0x0d 0x0a). */
     CRLF,
-    /** macOS/Unix line ending, sequence of CR/LF (0x0d 0x0a). */
+    /** macOS/Unix line ending, ASCII LF (0x0a). */
     LF,
     /** Platform line ending, using the value returned by {@code System.getProperty("line.separator")} call. */
     SYSTEM;
