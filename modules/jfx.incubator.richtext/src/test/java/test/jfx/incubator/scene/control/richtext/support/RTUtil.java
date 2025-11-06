@@ -62,15 +62,10 @@ public class RTUtil {
      * @return the plain text
      */
     public static String getText(RichTextArea control) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            try {
-                control.write(DataFormat.PLAIN_TEXT, out);
-                byte[] b = out.toByteArray();
-                return new String(b, StandardCharsets.UTF_8);
-            } finally {
-                out.close();
-            }
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            control.write(DataFormat.PLAIN_TEXT, out);
+            byte[] b = out.toByteArray();
+            return new String(b, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new AssertionError(e);
         }
