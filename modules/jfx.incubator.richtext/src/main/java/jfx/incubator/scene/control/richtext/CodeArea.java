@@ -32,7 +32,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
@@ -87,7 +86,6 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  * @since 24
  */
 public class CodeArea extends RichTextArea {
-    private SimpleObjectProperty<LineEnding> lineEnding;
     private BooleanProperty lineNumbers;
     private StyleableIntegerProperty tabSize;
     private StyleableObjectProperty<Font> font;
