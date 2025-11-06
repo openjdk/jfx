@@ -82,12 +82,12 @@ public class Properties {
 
     /***************************************************************************
      *
-     * ListView, TableView
+     * Virtualized controls
      *
      **************************************************************************/
 
-    public static final String REFRESH = "refreshKey";
     public static final String RECREATE = "recreateKey";
+    public static final String REBUILD = "rebuildKey";
 
 
 
