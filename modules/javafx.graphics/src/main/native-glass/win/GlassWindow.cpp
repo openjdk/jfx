@@ -821,7 +821,7 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
 void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam)
 {
     JNIEnv* env = GetEnv();
-    float scale = (float) LOWORD(wParam) / (float) USER_DEFAULT_SCREEN_DPI;
+    float scale = (float) LOWORD(wParam) / USER_DEFAULT_SCREEN_DPI;
 
     env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, scale, scale, scale, scale);
     CheckAndClearException(env);
