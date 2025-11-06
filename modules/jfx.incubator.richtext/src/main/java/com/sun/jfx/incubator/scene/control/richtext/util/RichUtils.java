@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Locale;
 import javax.imageio.ImageIO;
+import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.css.CssMetaData;
@@ -47,7 +48,10 @@ import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -61,7 +65,10 @@ import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
+import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * RichTextArea specific utility methods.
@@ -694,5 +701,44 @@ public final class RichUtils {
         }
 
         return b.build();
+    }
+
+    /** returns true if both control and model are editable */
+    public static boolean canEdit(RichTextArea rta) {
+        if (rta.isEditable()) {
+            StyledTextModel m = rta.getModel();
+            if (m != null) {
+                return m.isWritable();
+            }
+        }
+        return false;
+    }
+
+    /** Returns the text positions at a positive offset relative to the 'start' position. */
+    public static TextPos advancePosition(TextPos start, int offset) {
+        return TextPos.ofLeading(start.index(), start.offset() + offset);
+    }
+
+    /** Returns true if the color scheme is DARK, checking first the node's scene, then platform preferences. */
+    public static boolean isDarkScheme(Node n) {
+        Scene sc = n.getScene();
+        if (sc != null) {
+            return (sc.getPreferences().getColorScheme() == ColorScheme.DARK);
+        }
+        return (Platform.getPreferences().getColorScheme() == ColorScheme.DARK);
+    }
+
+    /** Returns composed or committed text. */
+    public static String getImeText(InputMethodEvent ev) {
+        // it's either composed or committed but not both
+        if (ev.getComposed().size() > 0) {
+            StringBuilder sb = new StringBuilder();
+            for (InputMethodTextRun run : ev.getComposed()) {
+                sb.append(run.getText());
+            }
+            return sb.toString();
+        } else {
+            return ev.getCommitted();
+        }
     }
 }

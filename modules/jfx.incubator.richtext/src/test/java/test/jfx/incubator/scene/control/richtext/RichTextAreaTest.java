@@ -33,15 +33,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
+import javafx.event.Event;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodHighlight;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -643,6 +648,23 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void selectParagraph() {
+        control.appendText("123\n456\n789");
+        // first line
+        control.select(TextPos.ZERO);
+        control.selectParagraph();
+        SelectionSegment sel = control.getSelection();
+        assertEquals(TextPos.ZERO, sel.getMin());
+        assertEquals(TextPos.ofLeading(1, 0), sel.getMax());
+        // last line, no trailing line separator
+        control.select(TextPos.ofLeading(2, 0));
+        control.selectParagraph();
+        sel = control.getSelection();
+        assertEquals(TextPos.ofLeading(2, 0), sel.getMin());
+        assertEquals(new TextPos(2, 3, 2, false), sel.getMax());
+    }
+
+    @Test
     public void undo() {
         control.appendText("1");
         control.undo();
@@ -687,5 +709,42 @@ public class RichTextAreaTest {
     public void testShim() {
         RichTextArea t = new RichTextArea();
         VFlow f = RichTextAreaShim.vflow(t);
+    }
+
+    private void fireIME(int caret, String committed, Object... runs) {
+        ArrayList<InputMethodTextRun> composed = new ArrayList<>();
+        for (int i = 0; i < runs.length;) {
+            String s = (String)runs[i++];
+            InputMethodHighlight h = (InputMethodHighlight)runs[i++];
+            composed.add(new InputMethodTextRun(s, h));
+        }
+        InputMethodEvent ev = new InputMethodEvent(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, composed, committed, caret);
+        Event.fireEvent(control, ev);
+    }
+
+    private static TextPos tp(int caret) {
+        return new TextPos(0, caret, caret - 1, false);
+    }
+
+    @Test
+    public void testIME() {
+        TextPos p = new TextPos(0, 0, 0, false);
+        control.select(p);
+        // compose "a" "b"
+        fireIME(0, "", "a", InputMethodHighlight.UNSELECTED_RAW, "b", InputMethodHighlight.UNSELECTED_RAW);
+        assertEquals(tp(2), control.getCaretPosition());
+        assertEquals("ab", text());
+        // escape, cancel composition
+        fireIME(0, "");
+        assertEquals(TextPos.ofLeading(0, 0), control.getCaretPosition());
+        assertEquals("", text());
+        // compose, "c" "d"
+        fireIME(0, "", "c", InputMethodHighlight.UNSELECTED_RAW, "d", InputMethodHighlight.UNSELECTED_RAW);
+        assertEquals(tp(2), control.getCaretPosition());
+        assertEquals("cd", text());
+        // commit "yoyo"
+        fireIME(0, "yoyo");
+        assertEquals(tp(4), control.getCaretPosition());
+        assertEquals("yoyo", text());
     }
 }

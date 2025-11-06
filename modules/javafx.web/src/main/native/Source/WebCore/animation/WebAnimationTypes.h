@@ -50,18 +50,6 @@ class CSSTransition;
 class StyleOriginatedAnimation;
 class WebAnimation;
 
-struct WebAnimationsMarkableDoubleTraits {
-    static bool isEmptyValue(double value)
-    {
-        return std::isnan(value);
-    }
-
-    static constexpr double emptyValue()
-    {
-        return std::numeric_limits<double>::quiet_NaN();
-    }
-};
-
 enum class AnimationImpact : uint8_t {
     RequiresRecomposite     = 1 << 0,
     ForcesStackingContext   = 1 << 1
@@ -71,7 +59,7 @@ enum class UseAcceleratedAction : bool { No, Yes };
 
 enum class WebAnimationType : uint8_t { CSSAnimation, CSSTransition, WebAnimation };
 
-using MarkableDouble = Markable<double, WebAnimationsMarkableDoubleTraits>;
+using MarkableDouble = Markable<double, WTF::DoubleMarkableTraits>;
 
 using WeakStyleOriginatedAnimations = Vector<WeakPtr<StyleOriginatedAnimation, WeakPtrImplWithEventTargetData>>;
 using AnimationCollection = ListHashSet<Ref<WebAnimation>>;

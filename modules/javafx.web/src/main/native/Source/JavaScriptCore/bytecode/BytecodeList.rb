@@ -1481,6 +1481,7 @@ op :op_put_by_val_return_location
 op :op_put_by_val_direct_return_location
 op :op_in_by_id_return_location
 op :op_in_by_val_return_location
+op :op_instanceof_return_location
 op :op_enumerator_get_by_val_return_location
 op :op_enumerator_put_by_val_return_location
 op :op_enumerator_in_by_val_return_location
