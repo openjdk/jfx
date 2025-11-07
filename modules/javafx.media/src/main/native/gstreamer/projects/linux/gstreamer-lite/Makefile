@@ -113,6 +113,7 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/gst/gstevent.c \
           gstreamer/gst/gstformat.c \
           gstreamer/gst/gstghostpad.c \
+          gstreamer/gst/gstidstr.c \
           gstreamer/gst/gstinfo.c \
           gstreamer/gst/gstiterator.c \
           gstreamer/gst/gstmemory.c \
@@ -155,6 +156,7 @@ SOURCES = gstreamer/gst/gst.c \
           gstreamer/gst/gsturi.c \
           gstreamer/gst/gstutils.c \
           gstreamer/gst/gstvalue.c \
+          gstreamer/gst/gstvecdeque.c \
           gstreamer/libs/gst/base/gstadapter.c \
           gstreamer/libs/gst/base/gstbaseparse.c \
           gstreamer/libs/gst/base/gstbasesink.c \
@@ -216,11 +218,16 @@ SOURCES = gstreamer/gst/gst.c \
           gst-plugins-base/gst-libs/gst/tag/lang.c \
           gst-plugins-base/gst-libs/gst/tag/tags.c \
           gst-plugins-base/gst-libs/gst/tag/tag-enumtypes.c \
+          gst-plugins-base/gst-libs/gst/video/gstvideometa.c \
+          gst-plugins-base/gst-libs/gst/video/gstvideopool.c \
+          gst-plugins-base/gst-libs/gst/video/gstvideotimecode.c \
           gst-plugins-base/gst-libs/gst/video/video.c \
           gst-plugins-base/gst-libs/gst/video/video-chroma.c \
           gst-plugins-base/gst-libs/gst/video/video-color.c \
           gst-plugins-base/gst-libs/gst/video/video-converter.c \
           gst-plugins-base/gst-libs/gst/video/video-format.c \
+          gst-plugins-base/gst-libs/gst/video/video-frame.c \
+          gst-plugins-base/gst-libs/gst/video/video-hdr.c \
           gst-plugins-base/gst-libs/gst/video/video-enumtypes.c \
           gst-plugins-base/gst-libs/gst/video/video-info.c \
           gst-plugins-base/gst-libs/gst/video/video-multiview.c \

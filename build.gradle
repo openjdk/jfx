@@ -75,6 +75,10 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import java.lang.Runtime.Version
 
+import org.gradle.process.ExecOperations
+
+def execOps = project.services.get(ExecOperations)
+
 /******************************************************************************
  *                              Utility methods                               *
  *****************************************************************************/
@@ -502,6 +506,11 @@ ext.IS_AWT_TEST = Boolean.parseBoolean(AWT_TEST);
 defineProperty("UNSTABLE_TEST", "false")
 ext.IS_UNSTABLE_TEST = Boolean.parseBoolean(UNSTABLE_TEST);
 
+// Specifies whether to enable a screenshot on failing system tests that
+// use the ScreenCaptureTestWatcher annotation
+defineProperty("TEST_SCREENSHOT", "false")
+ext.IS_TEST_SCREENSHOT = Boolean.parseBoolean(TEST_SCREENSHOT);
+
 // Default timeout values to use in JUnit for tests and lifecycle methods
 // that don't specify one
 defineProperty("JUNIT_TEST_TIMEOUT", "120s")
@@ -874,7 +883,8 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                     if (IS_LINUX || IS_MAC) {
                         // use native tar to support symlinks
                         pkgdir.mkdirs()
-                        exec {
+                        def execOps = project.services.get(ExecOperations)
+                        execOps.exec { spec ->
                             workingDir pkgdir
                             commandLine "tar", "zxf", "${srcball}"
                          }
@@ -956,7 +966,8 @@ void ant(String conf,   // platform configuration
 
     cmdArgs += target
 
-    exec {
+    def execOps = project.services.get(ExecOperations)
+    execOps.exec { spec ->
         workingDir = dir
         environment("JDK_HOME", JDK_HOME)
         environment("JAVA_HOME", JDK_HOME)
@@ -2014,7 +2025,7 @@ void addJCov(p, test) {
     test.doLast {
         def reportFile = p.file("build/reports/jcov/report.xml")
         if (reportFile.exists()) {
-            p.javaexec {
+            execOps.javaexec { spec ->
                 workingDir = p.file("build/reports/jcov")
                 classpath = p.files(p.configurations.testClasspath.files.find { it.name.startsWith('jcov') })
                 mainClass = "com.sun.tdk.jcov.Helper"
@@ -2182,6 +2193,7 @@ allprojects {
         }
 
         systemProperty 'unstable.test', IS_UNSTABLE_TEST
+        systemProperty 'test.screenshot', IS_TEST_SCREENSHOT
         systemProperty 'junit.jupiter.execution.timeout.test.method.default', JUNIT_TEST_TIMEOUT
         systemProperty 'junit.jupiter.execution.timeout.lifecycle.method.default', JUNIT_LIFECYCLE_TIMEOUT
         systemProperty 'javafx.enablePreview', 'true'
@@ -2537,7 +2549,7 @@ project(":graphics") {
                     futures.add(executor.submit(new Runnable() {
                         @Override public void run() {
                             try {
-                                exec {
+                                execOps.exec { spec ->
                                     commandLine cmd
                                 }
                             } finally {
@@ -2578,7 +2590,7 @@ project(":graphics") {
     // The GenAllDecoraShader.java class generates all the Decora shaders
     addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw", decoraAddExports) { sourceDir, destinationDir ->
         [[fileName: "GenAllDecoraShaders", generator: "GenAllDecoraShaders", outputs: "-all"]].each { settings ->
-            javaexec {
+            execOps.javaexec { spec ->
                 executable = JAVA
                 workingDir = project.projectDir
                 mainClass = settings.generator
@@ -2673,7 +2685,7 @@ project(":graphics") {
         def inputFiles = fileTree(dir: sourceDir)
         inputFiles.include "**/*.jsl"
         inputFiles.each { file ->
-            javaexec {
+            execOps.javaexec { spec ->
                 executable = JAVA
                 workingDir = project.projectDir
                 mainClass = "CompileJSL"
@@ -2692,7 +2704,7 @@ project(":graphics") {
             def PASSTHROUGH_VS_SRC = file("src/main/native-prism-mtl/msl/PassThroughVS.metal")
             doLast {
                 mkdir "$buildDir/msl"
-                exec {
+                execOps.exec { spec ->
                     commandLine("${metalCompiler}")
                     args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
@@ -2708,7 +2720,7 @@ project(":graphics") {
             def CLEAR_RTT_VFS_SRC = file("src/main/native-prism-mtl/msl/ClearRttShaders.metal")
             doLast {
                 mkdir "$buildDir/msl"
-                exec {
+                execOps.exec { spec ->
                     commandLine("${metalCompiler}")
                     args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
@@ -2724,7 +2736,7 @@ project(":graphics") {
             def COMPUTE_KERNELS_SRC = file("src/main/native-prism-mtl/msl/ComputeKernels.metal")
             doLast {
                 mkdir "$buildDir/msl"
-                exec {
+                execOps.exec { spec ->
                     commandLine("${metalCompiler}")
                     args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
@@ -2740,7 +2752,7 @@ project(":graphics") {
             def PHONG_VS_SRC = file("src/main/native-prism-mtl/msl/PhongVS.metal")
             doLast {
                 mkdir "$buildDir/msl"
-                exec {
+                execOps.exec { spec ->
                     commandLine("${metalCompiler}")
                     args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
@@ -2756,7 +2768,7 @@ project(":graphics") {
             def PHONG_PS_SRC = file("src/main/native-prism-mtl/msl/PhongPS.metal")
             doLast {
                 mkdir "$buildDir/msl"
-                exec {
+                execOps.exec { spec ->
                     commandLine("${metalCompiler}")
                     args += [ "-std=${mslVersion}" ]
                     args += [ "-c" ]
@@ -2779,7 +2791,7 @@ project(":graphics") {
             doLast {
                 mkdir "$buildDir/msl/com/sun/prism/mtl/msl"
                 def shaderFiles = fileTree(dir: "$buildDir/msl", include: "**/*.air")
-                exec {
+                execOps.exec { spec ->
                     commandLine("${metalLinker}")
                     shaderFiles.each { shaderFile ->
                         args += shaderFile
@@ -2936,7 +2948,7 @@ project(":controls") {
         cssFiles.each { css ->
             logger.info("converting CSS to BSS ${css}");
 
-            javaexec {
+            execOps.javaexec { spec ->
                 executable = JAVA
                 workingDir = project.projectDir
                 jvmArgs += patchModuleArgs
@@ -3291,7 +3303,7 @@ project(":media") {
             modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
             modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-            exec {
+            execOps.exec { spec ->
                 commandLine("$JAVA");
                 args += patchModuleArgs
                 args += [ "--module-path=$modulePath" ]
@@ -3323,7 +3335,7 @@ project(":media") {
             }
 
             doLast {
-                exec {
+                execOps.exec { spec ->
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
                     args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
                          "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia",
@@ -3352,7 +3364,7 @@ project(":media") {
             def buildGStreamer = task("build${t.capital}GStreamer") {
                 enabled = IS_COMPILE_MEDIA
                 doLast {
-                    exec {
+                    execOps.exec { spec ->
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/gstreamer-lite")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=gstreamer-lite",
                              "ARCH=${ARCH_NAME}", "CC=${mediaProperties.compiler}",
@@ -3370,7 +3382,7 @@ project(":media") {
                 enabled = IS_COMPILE_MEDIA
 
                 doLast {
-                    exec {
+                    execOps.exec { spec ->
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/fxplugins")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=fxplugins",
                              "ARCH=${ARCH_NAME}",
@@ -3478,11 +3490,11 @@ project(":media") {
                                 File cfgFile = file(configFile)
                                 if (!cfgFile.exists()) {
                                     // Add execute permissions to version.sh, otherwise build fails
-                                    exec {
+                                    execOps.exec { spec ->
                                         workingDir("$libavDir")
                                         commandLine("chmod", "+x", "version.sh")
                                     }
-                                    exec {
+                                    execOps.exec { spec ->
                                         workingDir("$libavDir")
                                         if (IS_BUILD_WORKING_LIBAV) {
                                             commandLine(cfgCMDArgs + commonCfgArgs + codecsCfgArgs)
@@ -3491,7 +3503,7 @@ project(":media") {
                                         }
                                     }
                                 }
-                                exec {
+                                execOps.exec { spec ->
                                     workingDir("$libavDir")
                                     commandLine("make")
                                 }
@@ -3546,11 +3558,11 @@ project(":media") {
                                         file.write(data, "UTF-8")
                                     }
                                     // Add execute permissions to version.sh, otherwise build fails
-                                    exec {
+                                    execOps.exec { spec ->
                                         workingDir("$libavDir")
                                         commandLine("chmod", "+x", "version.sh")
                                     }
-                                    exec {
+                                    execOps.exec { spec ->
                                         workingDir("$libavDir")
                                         if (IS_BUILD_WORKING_LIBAV) {
                                             commandLine(cfgCMDArgs + commonCfgArgs + codecsCfgArgs + extraCfgArgs)
@@ -3559,7 +3571,7 @@ project(":media") {
                                         }
                                     }
                                 }
-                                exec {
+                                execOps.exec { spec ->
                                     workingDir("$libavDir")
                                     commandLine("make")
                                 }
@@ -3620,7 +3632,7 @@ project(":media") {
                                     def versionFile = "${libavDir}/version.sh"
                                     File verFile = file(versionFile)
                                     if (verFile.exists()) {
-                                        exec {
+                                        execOps.exec { spec ->
                                             workingDir("$libavDir")
                                             commandLine("chmod", "+x", "version.sh")
                                         }
@@ -3628,7 +3640,7 @@ project(":media") {
                                         versionFile = "${libavDir}/ffbuild/version.sh"
                                         verFile = file(versionFile)
                                         if (verFile.exists()) {
-                                            exec {
+                                            execOps.exec { spec ->
                                                 workingDir("${libavDir}/ffbuild")
                                                 commandLine("chmod")
                                                 args += "+x"
@@ -3636,7 +3648,7 @@ project(":media") {
                                             }
                                         }
                                     }
-                                    exec {
+                                    execOps.exec { spec ->
                                         workingDir("$libavDir")
                                         if (IS_BUILD_WORKING_LIBAV) {
                                             commandLine(cfgCMDArgs + commonCfgArgs + codecsCfgArgs)
@@ -3645,7 +3657,7 @@ project(":media") {
                                         }
                                     }
                                 }
-                                exec {
+                                execOps.exec { spec ->
                                     workingDir("$libavDir")
                                     commandLine("make")
                                 }
@@ -3680,7 +3692,7 @@ project(":media") {
                                 def libavDir = "${project.ext.libav.basedir}-${version}"
                                 File dir = file(libavDir)
                                 if (dir.exists()) {
-                                    exec {
+                                    execOps.exec { spec ->
                                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
@@ -3695,7 +3707,7 @@ project(":media") {
                                 def libavDir = "${project.ext.libav.libavffmpeg.basedir}-${version}"
                                 File dir = file(libavDir)
                                 if (dir.exists()) {
-                                    exec {
+                                    execOps.exec { spec ->
                                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
@@ -3710,7 +3722,7 @@ project(":media") {
                                 def libavDir = "${project.ext.libav.ffmpeg.basedir}-${version}"
                                 File dir = file(libavDir)
                                 if (dir.exists()) {
-                                    exec {
+                                    execOps.exec { spec ->
                                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
@@ -3722,7 +3734,7 @@ project(":media") {
                             }
                         } else {
                             // Building fxavcodec plugin (libav plugin)
-                            exec {
+                            execOps.exec { spec ->
                                 commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                 args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                      "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
@@ -3739,28 +3751,28 @@ project(":media") {
                     doLast {
                         def rcOutputDir = "${nativeOutputDir}/${buildType}"
                         mkdir rcOutputDir
-                        exec {
+                        execOps.exec { spec ->
                             environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             commandLine (WIN.media.rcCompiler)
                             args(WIN.media.glibRcFlags)
                             args("/Fo${rcOutputDir}/${WIN.media.glibRcFile}", WIN.media.rcSource)
                         }
 
-                        exec {
+                        execOps.exec { spec ->
                             environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             commandLine (WIN.media.rcCompiler)
                             args(WIN.media.gstreamerRcFlags)
                             args("/Fo${rcOutputDir}/${WIN.media.gstreamerRcFile}", WIN.media.rcSource)
                         }
 
-                        exec {
+                        execOps.exec { spec ->
                             environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             commandLine (WIN.media.rcCompiler)
                             args(WIN.media.fxpluginsRcFlags)
                             args("/Fo${rcOutputDir}/${WIN.media.fxpluginsRcFile}", WIN.media.rcSource)
                         }
 
-                        exec {
+                        execOps.exec { spec ->
                             environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             commandLine (WIN.media.rcCompiler)
                             args(WIN.media.jfxmediaRcFlags)
@@ -3772,7 +3784,7 @@ project(":media") {
                 def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
                     enabled = IS_COMPILE_MEDIA
                     doLast {
-                        exec {
+                        execOps.exec { spec ->
                             environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
                             args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite",
@@ -3787,13 +3799,13 @@ project(":media") {
                 def buildGlib = task("build${t.capital}Glib") {
                     enabled = IS_COMPILE_MEDIA
                     doLast {
-                        exec {
+                        execOps.exec { spec ->
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/libffi")
                             args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=ffi", "ARCH=$TARGET_ARCH")
                             args ("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}", "AR=${mediaProperties.ar}")
                         }
 
-                        exec {
+                        execOps.exec { spec ->
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
                             args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite", "ARCH=$TARGET_ARCH")
                             args ("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}")
@@ -3977,13 +3989,13 @@ project(":web") {
             enabled =  (IS_COMPILE_WEBKIT)
 
             doLast {
-                exec {
+                execOps.exec { spec ->
                     workingDir("$webkitOutputDir")
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/set-webkit-configuration", "--$webkitConfig")
                     environment(["WEBKIT_OUTPUTDIR" : webkitOutputDir])
                 }
 
-                exec {
+                execOps.exec { spec ->
                     workingDir("$webkitOutputDir")
                     def cmakeArgs = "-DENABLE_TOOLS=1"
                     def makeArgs = "-j $NUM_COMPILE_THREADS"
@@ -4447,7 +4459,7 @@ allprojects {
 
         compile.options.forkOptions.executable = JAVAC
 
-        compile.options.compilerArgs += ["-XDignore.symbol.file", "-encoding", "UTF-8"]
+        compile.options.compilerArgs += ["-encoding", "UTF-8"]
         compile.options.compilerArgs += [ "-Xmaxerrs", "1000" ]
 
         // we use a custom javadoc command
@@ -4753,7 +4765,6 @@ task javadoc(type: Javadoc, dependsOn: [createMSPfile, createOverviewFile]) {
     } else {
         options.links(JDK_DOCS);
     }
-    options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:${DOC_LINT}").setValue(IS_DOC_LINT);
     options.addBooleanOption("Werror").setValue(IS_DOC_WERROR);
     options.addBooleanOption("html5").setValue(true);
@@ -5045,7 +5056,7 @@ compileTargets { t ->
             if (IS_WINDOWS && IS_USE_CYGWIN) {
                 doLast {
                     if (IS_CHMOD_ARTIFACTS) {
-                        exec {
+                        execOps.exec { spec ->
                             workingDir(sdkArtifactsDir)
                             commandLine("chmod", "-R", "755", ".")
                         }
@@ -5747,7 +5758,7 @@ compileTargets { t ->
                     // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
-                        exec {
+                        execOps.exec { spec ->
                             def cmd = [ strip, stripArgs, file ].flatten()
                             commandLine(cmd)
                         }
@@ -5764,7 +5775,7 @@ compileTargets { t ->
                     // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
-                        exec {
+                        execOps.exec { spec ->
                             def cmd = [ signCmd, signArgs, file ].flatten()
                             commandLine(cmd)
                         }
@@ -5822,7 +5833,7 @@ compileTargets { t ->
                     inputFiles.include("*.so")
 
                     inputFiles.each { file ->
-                        exec {
+                        execOps.exec { spec ->
                             def cmd = [ strip, stripArgs, file ].flatten()
                             commandLine(cmd)
                         }
@@ -5839,7 +5850,7 @@ compileTargets { t ->
                     // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
-                        exec {
+                        execOps.exec { spec ->
                             def cmd = [ signCmd, signArgs, file ].flatten()
                             commandLine(cmd)
                         }
@@ -5875,7 +5886,7 @@ compileTargets { t ->
                     inputFiles.include("*.so")
 
                     inputFiles.each { file ->
-                        exec {
+                        execOps.exec { spec ->
                             def cmd = [ strip, stripArgs, file ].flatten()
                             commandLine(cmd)
                         }
@@ -5892,7 +5903,7 @@ compileTargets { t ->
                     // exclude the Microsoft DLLs (VSDLLNames and WinSDKDLLNames)
 
                     inputFiles.each { file ->
-                        exec {
+                        execOps.exec { spec ->
                             def cmd = [ signCmd, signArgs, file ].flatten()
                             commandLine(cmd)
                         }
@@ -6119,7 +6130,7 @@ compileTargets { t ->
                 doLast {
                     mkdir jmodsDir
                     delete(jmodFile);
-                    exec {
+                    execOps.exec { spec ->
                         commandLine(JMOD)
                         args("create")
                         args("--class-path")

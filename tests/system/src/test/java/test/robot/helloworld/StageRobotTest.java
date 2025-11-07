@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,6 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import com.sun.javafx.PlatformUtil;
@@ -63,10 +62,6 @@ public class StageRobotTest extends VisualTestBase {
     private static final int HEIGHT = 300;
 
     Rectangle2D screenBounds;
-
-    @AfterEach
-    public void cleanup() {
-    }
 
     private void doTestOnTopCommon(boolean expectedOnTop) {
         // Skip on Linux due to 8145152

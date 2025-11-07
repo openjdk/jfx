@@ -42,7 +42,6 @@
 module javafx.graphics {
     requires java.desktop;
     requires java.xml;
-    requires jdk.unsupported;
 
     requires transitive javafx.base;
 
