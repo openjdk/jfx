@@ -57,6 +57,9 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -92,6 +95,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
+import com.sun.javafx.runtime.async.AbstractRemoteResource.SizedStream;
+import com.sun.javafx.runtime.async.AbstractRemoteResource.SizedStreamSupplier;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.CompletionListener;
@@ -608,9 +613,10 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -693,7 +699,7 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false);
         stage.setIsPopup();
         stage.init(systemMenu);
         return stage;
@@ -813,10 +819,42 @@ public final class QuantumToolkit extends Toolkit {
         return new PrismImageLoader2(stream, width, height, preserveRatio, smooth);
     }
 
-    @Override public AbstractRemoteResource<? extends ImageLoader> loadImageAsync(
-            AsyncOperationListener listener, String url,
+    @Override public AbstractRemoteResource<ImageLoader> loadImageAsync(
+            AsyncOperationListener<ImageLoader> listener, String url,
             double width, double height, boolean preserveRatio, boolean smooth) {
-        return new PrismImageLoader2.AsyncImageLoader(listener, url, width, height, preserveRatio, smooth);
+
+        SizedStreamSupplier sizedStreamSupplier = () -> {
+            URL u = new URL(url);
+            String protocol = u.getProtocol();
+
+            if ("http".equals(protocol) || "https".equals(protocol)) {
+                HttpURLConnection conn = (HttpURLConnection) u.openConnection();
+
+                conn.setRequestMethod("GET");
+                conn.connect();
+
+                long size = conn.getContentLengthLong();
+
+                return new SizedStream(conn.getInputStream(), size);
+            }
+
+            // protocol is something other than http...
+            URLConnection conn = u.openConnection();
+            long size = conn.getContentLengthLong();
+
+            return new SizedStream(conn.getInputStream(), size);
+        };
+
+        return new PrismImageLoader2.AsyncImageLoader(listener, sizedStreamSupplier, width, height, preserveRatio, smooth);
+    }
+
+    @Override public AbstractRemoteResource<ImageLoader> loadImageAsync(
+            AsyncOperationListener<ImageLoader> listener, InputStream stream,
+            double width, double height, boolean preserveRatio, boolean smooth) {
+
+        SizedStreamSupplier sizedStreamSupplier = () -> new SizedStream(stream, -1);
+
+        return new PrismImageLoader2.AsyncImageLoader(listener, sizedStreamSupplier, width, height, preserveRatio, smooth);
     }
 
     // Note that this method should only be called by PlatformImpl.runLater

@@ -91,6 +91,8 @@ struct _GstCoreAudio
   gboolean is_src;
   gboolean is_passthrough;
   AudioDeviceID device_id;
+  char *unique_id;
+  gboolean is_default;
   gboolean cached_caps_valid; /* thread-safe flag */
   GstCaps *cached_caps;
   gint stream_idx;
@@ -117,6 +119,11 @@ struct _GstCoreAudio
   uint64_t anchor_hosttime_ns;
   uint32_t anchor_pend_samples;
   float rate_scalar;
+
+#ifdef HAVE_IOS
+  gdouble first_sample_time;
+  gboolean configure_session;
+#endif
 };
 
 struct _GstCoreAudioClass
@@ -127,8 +134,6 @@ struct _GstCoreAudioClass
 GType gst_core_audio_get_type                                (void);
 
 void gst_core_audio_init_debug (void);
-
-GstCoreAudio * gst_core_audio_new                            (GstObject *osxbuf);
 
 gboolean gst_core_audio_open                                 (GstCoreAudio *core_audio);
 

@@ -212,20 +212,67 @@ gst_video_overlay_composition_meta_transform (GstBuffer * dest, GstMeta * meta,
   smeta = (GstVideoOverlayCompositionMeta *) meta;
 
   if (GST_META_TRANSFORM_IS_COPY (type)) {
-    GstMetaTransformCopy *copy = data;
+    GST_DEBUG ("copy video overlay composition metadata");
 
-    if (!copy->region) {
-      GST_DEBUG ("copy video overlay composition metadata");
+    dmeta =
+        (GstVideoOverlayCompositionMeta *) gst_buffer_add_meta (dest,
+        GST_VIDEO_OVERLAY_COMPOSITION_META_INFO, NULL);
+    if (!dmeta)
+      return FALSE;
 
-      /* only copy if the complete data is copied as well */
-      dmeta =
-          (GstVideoOverlayCompositionMeta *) gst_buffer_add_meta (dest,
-          GST_VIDEO_OVERLAY_COMPOSITION_META_INFO, NULL);
-      if (!dmeta)
-        return FALSE;
+    dmeta->overlay = gst_video_overlay_composition_ref (smeta->overlay);
+  } else if (GST_VIDEO_META_TRANSFORM_IS_SCALE (type)) {
+    GstVideoMetaTransform *trans = data;
+    GstVideoOverlayComposition *new_comp;
+    gint ow, oh, nw, nh;
+    guint n_rectangles;
 
-      dmeta->overlay = gst_video_overlay_composition_ref (smeta->overlay);
+    ow = GST_VIDEO_INFO_WIDTH (trans->in_info);
+    nw = GST_VIDEO_INFO_WIDTH (trans->out_info);
+    oh = GST_VIDEO_INFO_HEIGHT (trans->in_info);
+    nh = GST_VIDEO_INFO_HEIGHT (trans->out_info);
+
+    GST_DEBUG ("scaling video overlay composition metadata %dx%d -> %dx%d", ow,
+        oh, nw, nh);
+
+    smeta = (GstVideoOverlayCompositionMeta *) meta;
+
+    new_comp = gst_video_overlay_composition_new (NULL);
+    n_rectangles = gst_video_overlay_composition_n_rectangles (smeta->overlay);
+    for (guint i = 0; i < n_rectangles; i++) {
+      GstVideoOverlayRectangle *rect =
+          gst_video_overlay_composition_get_rectangle (smeta->overlay, i);
+      GstVideoOverlayRectangle *new_rect =
+          gst_video_overlay_rectangle_copy (rect);
+      gint render_x = 0, render_y = 0;
+      gint new_render_x, new_render_y;
+      guint render_width = 0, render_height = 0;
+      guint new_render_width, new_render_height;
+
+      gst_video_overlay_rectangle_get_render_rectangle (rect, &render_x,
+          &render_y, &render_width, &render_height);
+
+      new_render_x = (render_x * nw) / ow;
+      new_render_y = (render_y * nh) / oh;
+      new_render_width = (render_width * nw) / ow;
+      new_render_height = (render_height * nh) / oh;
+
+      GST_DEBUG
+          ("overlay rectangle %u (seqnum: %d) (%dx%d)x(%ux%u) -> (%dx%d)->(%ux%u)",
+          i, gst_video_overlay_rectangle_get_seqnum (rect), render_x, render_y,
+          render_width, render_height, new_render_x, new_render_y,
+          new_render_width, new_render_height);
+
+      gst_video_overlay_rectangle_set_render_rectangle (new_rect,
+          new_render_x, new_render_y, new_render_width, new_render_height);
+      gst_video_overlay_composition_add_rectangle (new_comp, new_rect);
+      gst_video_overlay_rectangle_unref (new_rect);
     }
+
+    dmeta = gst_buffer_add_video_overlay_composition_meta (dest, new_comp);
+    gst_video_overlay_composition_unref (new_comp);
+    if (!dmeta)
+      return FALSE;
   } else {
     /* return FALSE, if transform type is not supported */
     return FALSE;
@@ -237,7 +284,10 @@ GType
 gst_video_overlay_composition_meta_api_get_type (void)
 {
   static GType type = 0;
-  static const gchar *tags[] = { NULL };
+  static const gchar *tags[] =
+      { GST_META_TAG_VIDEO_STR, GST_META_TAG_VIDEO_ORIENTATION_STR,
+    GST_META_TAG_VIDEO_SIZE_STR, NULL
+  };
 
   if (g_once_init_enter (&type)) {
     GType _type =

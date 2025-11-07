@@ -216,6 +216,38 @@ public final class TextCell extends BorderPane {
     }
 
     /**
+     * Returns the {@code PathElement} array for the underline shape,
+     * translated to the {@code target} frame of reference.
+     *
+     * @param target the Region that provides the target frame of reference
+     * @param start the start offset
+     * @param end the end offset
+     * @return the array of path elements translated to the target coordinates
+     */
+    public PathElement[] getUnderlineShape(Region target, int start, int end) {
+        PathElement[] p;
+        double dx;
+        double dy;
+        if (content instanceof TextFlow f) {
+            dx = f.snappedLeftInset(); // TODO RTL?
+            dy = f.snappedTopInset();
+
+            p = f.getUnderlineShape(start, end);
+        } else {
+            dx = 0.0;
+            dy = 0.0;
+            double w = getWidth();
+            double h = getHeight();
+
+            p = new PathElement[] {
+                new MoveTo(0.0, h),
+                new LineTo(w, h)
+            };
+        }
+        return RichUtils.translatePath(target, content, p, dx, dy);
+    }
+
+    /**
      * Returns the {@code PathElement} array for the range shape,
      * translated to the {@code target} frame of reference.
      *
@@ -232,7 +264,7 @@ public final class TextCell extends BorderPane {
             dx = f.snappedLeftInset(); // TODO RTL?
             dy = f.snappedTopInset();
 
-            p = f.rangeShape(start, end);
+            p = f.rangeShape(start, end); // TODO new api, no null
 
             if ((p == null) || (p.length == 0)) {
                 p = new PathElement[] {
@@ -368,7 +400,7 @@ public final class TextCell extends BorderPane {
     private RangeInfo getTextRange() {
         if (content instanceof TextFlow f) {
             int len = getTextLength();
-            PathElement[] pe = f.rangeShape(0, len);
+            PathElement[] pe = f.rangeShape(0, len); // TODO new api
             if (pe.length > 0) {
                 double sp = f.getLineSpacing();
                 return RangeInfo.of(pe, sp);
