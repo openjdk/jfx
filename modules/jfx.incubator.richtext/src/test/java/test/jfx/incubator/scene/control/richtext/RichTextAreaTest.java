@@ -354,8 +354,7 @@ public class RichTextAreaTest {
         control.appendText("\n4");
         control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
         control.copy();
-        String nl = System.getProperty("line.separator");
-        assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
+        assertEquals(NL + "4", Clipboard.getSystemClipboard().getString());
     }
 
     @Test
@@ -490,6 +489,31 @@ public class RichTextAreaTest {
         assertFalse(control.hasNonEmptySelection());
         control.selectAll();
         assertTrue(control.hasNonEmptySelection());
+    }
+
+    @Test
+    public void insertBetweenSegments() {
+        TextPos p = control.appendText("a", BOLD);
+        control.appendText("b", ITALIC);
+        control.appendText("c", BOLD);
+        control.select(p);
+        control.insertTab();
+        control.insertTab();
+        assertEquals("a\t\tbc", text());
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ZERO);
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 1));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 4));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 5));
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
     }
 
     @Test
