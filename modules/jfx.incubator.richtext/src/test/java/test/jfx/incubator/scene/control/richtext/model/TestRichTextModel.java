@@ -151,10 +151,7 @@ public class TestRichTextModel {
                 newline = true;
             }
 
-            List<StyledSegment> ss = RichTextModelShim.getSegments(par);
-            if (ss == null) {
-                ss = List.of();
-            }
+            List<StyledSegment> ss = getSegments(par);
             StyledSegment[] segments = ss.toArray(StyledSegment[]::new);
             StyledInput in = new SegmentStyledInput(segments);
             TextPos p = m.getDocumentEnd();
@@ -196,15 +193,11 @@ public class TestRichTextModel {
     private static void dump(StringBuilder sb, RichParagraph p) {
         sb.append("  {pa=").append(p.getParagraphAttributes());
         sb.append(", segments=");
-        List<StyledSegment> ss = RichTextModelShim.getSegments(p);
-        if(ss == null) {
-            sb.append("null");
-        } else {
-            sb.append("\n");
-            for(StyledSegment s: ss) {
-                sb.append("    {text=\"").append(s.getText());
-                sb.append("\", a=").append(s.getStyleAttributeMap(null)).append("\n");
-            }
+        List<StyledSegment> ss = getSegments(p);
+        sb.append("\n");
+        for (StyledSegment s : ss) {
+            sb.append("    {text=\"").append(s.getText());
+            sb.append("\", a=").append(s.getStyleAttributeMap(null)).append("\n");
         }
     }
 
@@ -229,24 +222,16 @@ public class TestRichTextModel {
                 return "paragraph attributes at ix=" + i;
             }
 
-            List<StyledSegment> lsa = RichTextModelShim.getSegments(pa);
-            List<StyledSegment> lsb = RichTextModelShim.getSegments(pb);
-            if (!((lsa != null) && (lsb != null))) {
-                if ((lsa == null) && (lsb == null)) {
-                    return null;
+            List<StyledSegment> lsa = getSegments(pa);
+            List<StyledSegment> lsb = getSegments(pb);
+            for (int j = 0; j < lsa.size(); j++) {
+                StyledSegment a = lsa.get(j);
+                StyledSegment b = lsb.get(j);
+                if (!eq(a.getText(), b.getText())) {
+                    return "segment text[" + j + "] at ix=" + i;
                 }
-                return "segment array mismatch at ix=" + i;
-            }
-            if (lsa != null) {
-                for (int j = 0; j < lsa.size(); j++) {
-                    StyledSegment a = lsa.get(j);
-                    StyledSegment b = lsb.get(j);
-                    if (!eq(a.getText(), b.getText())) {
-                        return "segment text[" + j + "] at ix=" + i;
-                    }
-                    if (!eq(a.getStyleAttributeMap(null), b.getStyleAttributeMap(null))) {
-                        return "segment attrs[" + j + "] at ix=" + i;
-                    }
+                if (!eq(a.getStyleAttributeMap(null), b.getStyleAttributeMap(null))) {
+                    return "segment attrs[" + j + "] at ix=" + i;
                 }
             }
         }
@@ -271,5 +256,14 @@ public class TestRichTextModel {
         assertEquals(new TextPos(1, 4, 3, false), m.clamp(TextPos.ofLeading(1, 100)));
 
         assertEquals(TextPos.ofLeading(2, 0), m.clamp(TextPos.ofLeading(2, 100)));
+    }
+
+    private static List<StyledSegment> getSegments(RichParagraph p) {
+        int sz = p.getSegmentCount();
+        ArrayList<StyledSegment> ss = new ArrayList<>(sz);
+        for (int i = 0; i < sz; i++) {
+            ss.add(p.getSegment(i));
+        }
+        return ss;
     }
 }
