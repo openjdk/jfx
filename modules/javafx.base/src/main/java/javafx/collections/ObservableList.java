@@ -87,6 +87,9 @@ public interface ObservableList<E> extends List<E>, Observable {
      * Replaces the elements in the range {@code [from, to)} with the elements
      * from the given collection. The existing elements in the specified range
      * are removed, and the new elements are inserted at position {@code from}.
+     * <p>
+     * If {@code from == to}, the range is empty and the elements from the given
+     * collection are inserted at position {@code from}.
      *
      * @param from start of the range (inclusive), must be in {@code 0..size()}
      * @param to end of the range (exclusive), must be in {@code from..size()}

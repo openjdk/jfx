@@ -90,6 +90,13 @@ public class ModifiableObservableListBaseTest {
         }
 
         @Test
+        void shouldInsertWhenRangeIsEmpty() {
+            assertTrue(list.replaceRange(1, 1, List.of("A", "B", "C")));
+            assertEquals(List.of("a", "A", "B", "C", "b", "c"), list);
+            assertEquals(List.of("{ [A, B, C] added at 1 }"), recordedChanges);
+        }
+
+        @Test
         void shouldReplaceElementsWithRangeAtEnd() {
             assertTrue(list.replaceRange(1, 3, List.of("B", "C", "D")));
             assertEquals(List.of("a", "B", "C", "D"), list);
