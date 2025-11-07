@@ -423,10 +423,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
 
         if (sp.getPrefViewportWidth() > 0) {
-            return (sp.getPrefViewportWidth() + minWidth);
+            return snapSpaceX(sp.getPrefViewportWidth() + minWidth);
         }
         else if (sp.getContent() != null) {
-            return (sp.getContent().prefWidth(height) + minWidth);
+            return snapSpaceX(sp.getContent().prefWidth(height) + minWidth);
         }
         else {
             return Math.max(minWidth, DEFAULT_PREF_SIZE);
@@ -441,10 +441,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
 
         if (sp.getPrefViewportHeight() > 0) {
-            return (sp.getPrefViewportHeight() + minHeight);
+            return snapSpaceY(sp.getPrefViewportHeight() + minHeight);
         }
         else if (sp.getContent() != null) {
-            return (sp.getContent().prefHeight(width) + minHeight);
+            return snapSpaceY(sp.getContent().prefHeight(width) + minHeight);
         }
         else {
             return Math.max(minHeight, DEFAULT_PREF_SIZE);
@@ -459,7 +459,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
 
         if (sp.getMinViewportWidth() > 0) {
-            return (sp.getMinViewportWidth() + minWidth);
+            return snapSpaceX(sp.getMinViewportWidth() + minWidth);
         } else {
             double w = corner.minWidth(-1);
             return (w > 0) ? (3 * w) : (DEFAULT_MIN_SIZE);
@@ -475,7 +475,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
 
         if (sp.getMinViewportHeight() > 0) {
-            return (sp.getMinViewportHeight() + minHeight);
+            return snapSpaceY(sp.getMinViewportHeight() + minHeight);
         } else {
             double h = corner.minHeight(-1);
             return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);

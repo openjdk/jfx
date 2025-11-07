@@ -4519,7 +4519,7 @@ allprojects {
 
         compile.options.forkOptions.executable = JAVAC
 
-        compile.options.compilerArgs += ["-XDignore.symbol.file", "-encoding", "UTF-8"]
+        compile.options.compilerArgs += ["-encoding", "UTF-8"]
         compile.options.compilerArgs += [ "-Xmaxerrs", "1000" ]
 
         // we use a custom javadoc command
@@ -4826,7 +4826,6 @@ task javadoc(type: Javadoc, dependsOn: [createMSPfile, createOverviewFile]) {
     } else {
         options.links(JDK_DOCS);
     }
-    options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:${DOC_LINT}").setValue(IS_DOC_LINT);
     options.addBooleanOption("Werror").setValue(IS_DOC_WERROR);
     options.addBooleanOption("html5").setValue(true);
