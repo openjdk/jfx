@@ -83,13 +83,13 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
   #if defined(HAVE_ARM64E_PTRAUTH)
   /* ARM64E ABI For Darwin */
-#define SIGN_LR pacibsp
-#define SIGN_LR_WITH_REG(x) pacib lr, x
-#define AUTH_LR_AND_RET retab
-#define AUTH_LR_WITH_REG(x) autib lr, x
-#define BRANCH_AND_LINK_TO_REG blraaz
+  #define SIGN_LR pacibsp
+  #define SIGN_LR_WITH_REG(x) pacib lr, x
+  #define AUTH_LR_AND_RET retab
+  #define AUTH_LR_WITH_REG(x) autib lr, x
+  #define BRANCH_AND_LINK_TO_REG blraaz
   #define SIGN_LR_LINUX_ONLY
-#define BRANCH_TO_REG braaz
+  #define BRANCH_TO_REG braaz
   #define PAC_CFI_WINDOW_SAVE
   #define GNU_PROPERTY_AARCH64_POINTER_AUTH 0
   /* Linux PAC Support */
@@ -99,7 +99,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
     #define TMP_REG x9
     #define BRANCH_TO_REG br
     #define BRANCH_AND_LINK_TO_REG blr
-    #define SIGN_LR_LINUX_ONLY SIGN_LR
+  #define SIGN_LR_LINUX_ONLY SIGN_LR
     /* Which key to sign with? */
     #if (__ARM_FEATURE_PAC_DEFAULT & 1) == 1
       /* Signed with A-key */
@@ -132,14 +132,14 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
   #undef TMP_REG
 
   /* No Pointer Auth */
-#else
-#define SIGN_LR
-#define SIGN_LR_WITH_REG(x)
-#define AUTH_LR_AND_RET ret
-#define AUTH_LR_WITH_REG(x)
-#define BRANCH_AND_LINK_TO_REG blr
+  #else
+    #define SIGN_LR
+    #define SIGN_LR_WITH_REG(x)
+    #define AUTH_LR_AND_RET ret
+    #define AUTH_LR_WITH_REG(x)
+    #define BRANCH_AND_LINK_TO_REG blr
     #define SIGN_LR_LINUX_ONLY
-#define BRANCH_TO_REG br
+    #define BRANCH_TO_REG br
     #define PAC_CFI_WINDOW_SAVE
     #define GNU_PROPERTY_AARCH64_POINTER_AUTH 0
   #endif /* HAVE_ARM64E_PTRAUTH */
