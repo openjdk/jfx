@@ -301,20 +301,20 @@ public class RichTextModel extends StyledTextModel {
         }
 
         /**
-         * Retrieves the style attributes from the previous character (or next, if at the beginning).
+         * Retrieves the style attributes at the specified offset.
          * @param offset the offset
          * @return the style info
          */
         public StyleAttributeMap getStyleAttributeMap(int offset) {
-            int off = 0;
+            int pos = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
                 RSegment seg = get(i);
                 int len = seg.getTextLength();
-                if (offset < (off + len) || (i == ct - 1)) {
+                pos += len;
+                if ((offset <= pos) || (i + 1 == ct)) {
                     return seg.getStyleAttributeMap();
                 }
-                off += len;
             }
             return StyleAttributeMap.EMPTY;
         }
