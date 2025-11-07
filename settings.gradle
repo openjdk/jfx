@@ -31,7 +31,6 @@ include "base",
         // BEGIN: incubator placeholder
         //"incubator.mymod",
         // END: incubator placeholder
-        "incubator.input",
         "incubator.richtext",
         "swing",
         "swt",

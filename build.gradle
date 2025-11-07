@@ -3040,7 +3040,7 @@ project(":incubator.richtext") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    addMavenPublication(project, [ 'controls', 'incubator.input' ])
+    addMavenPublication(project, [ 'controls' ])
 
     addValidateSourceSets(project, sourceSets)
 }
