@@ -591,6 +591,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         }
 
         window->isDecorated = isTitled || isExtended;
+        window->isExtended = isExtended;
         window->isTransparent = isTransparent;
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
@@ -1233,7 +1234,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setMinSize:NSMakeSize(jW, jH)];
+        NSSize minSize = NSMakeSize(jW, jH);
+
+        if (window->isExtended) {
+            window->nsWindow.contentMinSize = minSize;
+        } else {
+            [window->nsWindow setMinSize:minSize];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1256,8 +1263,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setMaxSize:NSMakeSize(jW == -1 ? FLT_MAX : (CGFloat)jW,
-                                                jH == -1 ? FLT_MAX : (CGFloat)jH)];
+        NSSize maxSize = NSMakeSize(
+            jW == -1 ? FLT_MAX : (CGFloat)jW,
+            jH == -1 ? FLT_MAX : (CGFloat)jH);
+
+        if (window->isExtended) {
+            window->nsWindow.contentMaxSize = maxSize;
+        } else {
+            [window->nsWindow setMaxSize:maxSize];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
