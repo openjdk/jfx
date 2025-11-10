@@ -1102,7 +1102,7 @@ public class RichTextArea extends Control {
      * sequences result in a new paragraph being added.
      * <p>
      * This convenience method is equivalent to calling
-     * {@code appendText(text, StyleAttributeMap.EMPTY, true);}
+     * {@code appendText(text, StyleAttributeMap.EMPTY);}
      *
      * @param text the text to append
      * @return the text position at the end of the appended text, or null if editing is disabled
