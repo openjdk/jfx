@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -123,7 +123,7 @@ public class BasicTextModel extends StyledTextModel {
 
     /**
      * Inserts text at the specified position.
-     * This is a convenience shortcut for {@link #replace(StyleResolver, TextPos, TextPos, String, boolean)}.
+     * This is a convenience shortcut for {@link #replace(StyleResolver, TextPos, TextPos, String)}.
      *
      * @param p the insertion position
      * @param text the text to insert
@@ -131,7 +131,7 @@ public class BasicTextModel extends StyledTextModel {
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public void insertText(TextPos p, String text) {
-        replace(null, p, p, text, false);
+        replace(null, p, p, text);
     }
 
     @Override

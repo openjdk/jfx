@@ -64,7 +64,7 @@ public class TextCellTextModel extends RichTextModel {
     }
 
     public void setText(String text) {
-        replace(null, TextPos.ZERO, TextPos.ZERO, text, false);
+        replace(null, TextPos.ZERO, TextPos.ZERO, text);
         setModified(false);
     }
 

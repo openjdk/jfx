@@ -99,9 +99,11 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  *
  *   RichTextArea textArea = new RichTextArea();
  *   // build the content
+ *   textArea.setUndoRedoEnabled(false);
  *   textArea.appendText("RichTextArea\n", heading);
  *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
  *   textArea.appendText("monospaced.\n", mono);
+ *   textArea.setUndoRedoEnabled(true);
  * }</pre>
  * Which results in the following visual representation:
  * <p>
@@ -828,6 +830,32 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Indicates whether undo/redo functionality is enabled in the model.
+     * Returns {@code false} if the model is {@code null}.
+     * @return true if undo/redo functionality is enabled in the model
+     * @since 26
+     */
+    public final boolean isUndoRedoEnabled() {
+        StyledTextModel m = getModel();
+        return (m == null ? false : m.isUndoRedoEnabled());
+    }
+
+    /**
+     * Controls whether undo/redo functionality is enabled in the model.
+     * Setting the value to {@code false} clears existing undo/redo entries.
+     * This method does nothing if the model is {@code null}.
+     * @param on true to enable undo/redo
+     * @since 26
+     * @see #clearUndoRedo()
+     */
+    public final void setUndoRedoEnabled(boolean on) {
+        StyledTextModel m = getModel();
+        if (m != null) {
+            m.setUndoRedoEnabled(on);
+        }
+    }
+
+    /**
      * Determines whether the preferred height is the same as the content height.
      * When set to true, the vertical scroll bar is disabled.
      * <p>
@@ -1161,14 +1189,14 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Clears the document, creating an undo entry.
+     * Clears the document.
      *
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final void clear() {
         TextPos end = getDocumentEnd();
-        replaceText(TextPos.ZERO, end, StyledInput.EMPTY, true);
+        replaceText(TextPos.ZERO, end, StyledInput.EMPTY);
     }
 
     /**
@@ -1582,7 +1610,7 @@ public class RichTextArea extends Control {
      */
     public final TextPos insertText(TextPos pos, String text, StyleAttributeMap attrs) {
         StyledInput in = StyledInput.of(text, attrs);
-        return replaceText(pos, pos, in, true);
+        return replaceText(pos, pos, in);
     }
 
     /**
@@ -1595,7 +1623,7 @@ public class RichTextArea extends Control {
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos insertText(TextPos pos, StyledInput in) {
-        return replaceText(pos, pos, in, true);
+        return replaceText(pos, pos, in);
     }
 
     /**
@@ -1924,14 +1952,13 @@ public class RichTextArea extends Control {
      * @param start the start text position
      * @param end the end text position
      * @param text the input text
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, String text) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, text, allowUndo);
+        return m.replace(vflow(), start, end, text);
     }
 
     /**
@@ -1940,14 +1967,13 @@ public class RichTextArea extends Control {
      * @param start the start text position
      * @param end the end text position
      * @param in the input stream
-     * @param createUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, in, createUndo);
+        return m.replace(vflow(), start, end, in);
     }
 
     /**
