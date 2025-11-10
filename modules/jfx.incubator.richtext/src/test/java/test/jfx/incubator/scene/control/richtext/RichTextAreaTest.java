@@ -80,6 +80,7 @@ public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final String NL = System.getProperty("line.separator");
 
     @BeforeEach
     public void beforeEach() {
@@ -266,6 +267,9 @@ public class RichTextAreaTest {
         TextPos p = control.appendText("a");
         assertEquals(TextPos.ofLeading(0, 1), p);
         assertEquals("a", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
@@ -275,6 +279,9 @@ public class RichTextAreaTest {
         control.select(p);
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
         assertEquals("a", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
@@ -282,14 +289,23 @@ public class RichTextAreaTest {
         TestStyledInput in = TestStyledInput.plainText("a\nb");
         TextPos p = control.appendText(in);
         assertEquals(TextPos.ofLeading(1, 1), p);
+        assertEquals("a" + NL + "b", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
     public void applyStyle() {
-        TestStyledInput in = TestStyledInput.plainText("a\nb");
+        TestStyledInput in = TestStyledInput.plainText("a\nbbb");
         TextPos p = control.appendText(in);
-        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), BOLD);
-        assertEquals(TextPos.ofLeading(1, 1), p);
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD);
+        assertEquals(TextPos.ofLeading(1, 3), p);
+        control.select(TextPos.ofLeading(1, 0));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // undo
+        control.undo();
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
     }
 
     @Test
@@ -337,8 +353,7 @@ public class RichTextAreaTest {
         control.appendText("\n4");
         control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
         control.copy();
-        String nl = System.getProperty("line.separator");
-        assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
+        assertEquals(NL + "4", Clipboard.getSystemClipboard().getString());
     }
 
     @Test
@@ -508,6 +523,31 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void insertTextWithStyles() {
+        TextPos p = control.appendText("a", BOLD);
+        assertEquals(TextPos.ofLeading(0, 1), p);
+        p = control.insertText(TextPos.ZERO, "b", ITALIC);
+        assertEquals(TextPos.ofLeading(0, 1), p);
+        control.select(p);
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+        assertEquals("ba", text());
+        // undo
+        control.undo();
+        assertEquals("a", text());
+    }
+
+    @Test
+    public void insertTextFromStyledInput() {
+        TestStyledInput in = TestStyledInput.plainText("a\nb");
+        TextPos p = control.appendText(in);
+        assertEquals(TextPos.ofLeading(1, 1), p);
+        assertEquals("a" + NL + "b", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
+    }
+
+    @Test
     public void isRedoable() {
         assertFalse(control.isRedoable());
         control.appendText("123");
@@ -598,9 +638,13 @@ public class RichTextAreaTest {
         String text1 = text();
 
         control = new RichTextArea();
+        control.appendText("should not see me");
         ByteArrayInputStream in = new ByteArrayInputStream(b);
         control.read(fmt, in);
         String text2 = text();
+        assertEquals(text1, text2);
+        // read clears undo buffer
+        control.undo();
         assertEquals(text1, text2);
     }
 
@@ -628,7 +672,7 @@ public class RichTextAreaTest {
     @Test
     public void replaceText() {
         control.appendText("1234");
-        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-", false);
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-");
         assertEquals("1-4", text());
     }
 
@@ -636,8 +680,21 @@ public class RichTextAreaTest {
     public void replaceTextFromStyledInput() {
         TestStyledInput in = TestStyledInput.plainText("-");
         control.appendText("1234");
-        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in, false);
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in);
         assertEquals("1-4", text());
+    }
+
+    @Test
+    public void setStyle() {
+        TestStyledInput in = TestStyledInput.plainText("a\nbbb");
+        TextPos p = control.appendText(in);
+        control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD);
+        assertEquals(TextPos.ofLeading(1, 3), p);
+        control.select(TextPos.ofLeading(1, 0));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // allow undo
+        control.undo();
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
     }
 
     @Test
@@ -735,6 +792,44 @@ public class RichTextAreaTest {
     public void testShim() {
         RichTextArea t = new RichTextArea();
         VFlow f = RichTextAreaShim.vflow(t);
+    }
+
+    @Test
+    public void undoRedoEnabled() {
+        // api
+        assertTrue(control.isUndoRedoEnabled());
+        control.setUndoRedoEnabled(false);
+        assertFalse(control.isUndoRedoEnabled());
+        control.setModel(null);
+        control.setUndoRedoEnabled(true);
+        assertFalse(control.isUndoRedoEnabled());
+        control.setModel(new RichTextModel());
+        assertTrue(control.isUndoRedoEnabled());
+        // undo-redo enabled
+        control.appendText("1");
+        assertEquals("1", text());
+        control.undo();
+        assertEquals("", text());
+        // undo-redo disabled
+        control.setUndoRedoEnabled(false);
+        control.appendText("2");
+        assertEquals("2", text());
+        control.undo();
+        assertEquals("2", text());
+        // disabling undo-redo clears undo stack
+        control.setUndoRedoEnabled(true);
+        control.appendText("3");
+        assertEquals("23", text());
+        assertTrue(control.isUndoable());
+        control.setUndoRedoEnabled(false);
+        assertFalse(control.isUndoable());
+        control.setUndoRedoEnabled(true);
+        control.appendText("4");
+        assertEquals("234", text());
+        control.undo();
+        assertEquals("23", text());
+        control.undo();
+        assertEquals("23", text());
     }
 
     private void fireIME(int caret, String committed, Object... runs) {
