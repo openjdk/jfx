@@ -100,9 +100,9 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  *   RichTextArea textArea = new RichTextArea();
  *   // build the content
  *   textArea.setUndoRedoEnabled(false);
- *   textArea.appendText("RichTextArea\n", heading, false);
- *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY, false);
- *   textArea.appendText("monospaced.\n", mono, false);
+ *   textArea.appendText("RichTextArea\n", heading);
+ *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
+ *   textArea.appendText("monospaced.\n", mono);
  *   textArea.setUndoRedoEnabled(true);
  * }</pre>
  * Which results in the following visual representation:
