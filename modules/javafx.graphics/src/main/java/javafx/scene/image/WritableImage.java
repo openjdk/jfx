@@ -29,14 +29,17 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.NamedArg;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.scene.paint.Color;
+import com.sun.prism.sw.SWDrawingContext;
 
+import java.lang.ref.WeakReference;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
+
+import javafx.beans.NamedArg;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.scene.paint.Color;
 
 /**
  * The {@code WritableImage} class represents a custom graphical image
@@ -155,6 +158,28 @@ public class WritableImage extends Image {
     {
         super(width, height);
         getPixelWriter().setPixels(0, 0, width, height, reader, x, y);
+    }
+
+    private WeakReference<SWDrawingContext> drawingContextRef;
+
+    /**
+     * Returns the {@link DrawingContext} associated with this image.
+     *
+     * @return the {@link DrawingContext} associated with this image, never {@code null}
+     */
+    public DrawingContext getDrawingContext() {
+        SWDrawingContext context = drawingContextRef == null ? null : drawingContextRef.get();
+
+        if (context == null) {
+            if (!(getWritablePlatformImage() instanceof com.sun.prism.Image img)) {
+                throw new IllegalStateException("platformImage must be a prism image");
+            }
+
+            context = new SWDrawingContext(img, rect -> bufferDirty(rect));
+            drawingContextRef = new WeakReference<>(context);
+        }
+
+        return context;
     }
 
     @Override

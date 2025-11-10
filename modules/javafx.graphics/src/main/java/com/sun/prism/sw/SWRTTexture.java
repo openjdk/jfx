@@ -46,7 +46,12 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
     private boolean isOpaque;
 
     SWRTTexture(SWResourceFactory factory, int w, int h) {
-        super(factory, WrapMode.CLAMP_TO_ZERO, w, h);
+        this(factory, w, h, null);
+    }
+
+    SWRTTexture(SWResourceFactory factory, int w, int h, int[] data) {
+        super(factory, WrapMode.CLAMP_TO_ZERO, w, h, data);
+
         this.allocate();
         this.surface = new JavaSurface(getDataNoClone(), RendererBase.TYPE_INT_ARGB_PRE, w, h);
         this.dimensions.setBounds(0, 0, w, h);

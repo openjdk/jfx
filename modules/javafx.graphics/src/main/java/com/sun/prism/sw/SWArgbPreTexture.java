@@ -45,8 +45,14 @@ class SWArgbPreTexture extends SWTexture {
     private boolean hasAlpha = true;
 
     SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h) {
+        this(factory, wrapMode, w, h, null);
+    }
+
+    SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h, int[] data) {
         super(factory, wrapMode, w, h);
-        offset = 0;
+
+        this.allocated = data != null;
+        this.data = data;
     }
 
     SWArgbPreTexture(SWArgbPreTexture sharedTex, WrapMode altMode) {
