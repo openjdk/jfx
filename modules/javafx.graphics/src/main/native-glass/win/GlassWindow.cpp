@@ -248,6 +248,8 @@ char *StringForMsg(UINT msg) {
         case WM_MOVE: return "WM_MOVE";
         case WM_WINDOWPOSCHANGING: return "WM_WINDOWPOSCHANGING";
         case WM_WINDOWPOSCHANGED: return "WM_WINDOWPOSCHANGED";
+        case WM_DISPLAYCHANGE: return "WM_DISPLAYCHANGE";
+        case WM_SETTINGCHANGE: return "WM_SETTINGCHANGE";
         case WM_CLOSE: return "WM_CLOSE";
         case WM_DESTROY: return "WM_DESTROY";
         case WM_ACTIVATE: return "WM_ACTIVATE";
@@ -368,6 +370,11 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_MOVING:
             m_winChangingReason = WasMoved;
             break;
+        case WM_DISPLAYCHANGE:
+        case WM_SETTINGCHANGE:
+          // Trigger a move event to notify the stage about possible changes in the window location
+          // (for instance, if this is a secondary screen and the primary screen changed its resolution,
+          // or if the screens relative position was rearranged)
         case WM_MOVE:
             if (!::IsIconic(GetHWND())) {
                 HandleMoveEvent(NULL);
