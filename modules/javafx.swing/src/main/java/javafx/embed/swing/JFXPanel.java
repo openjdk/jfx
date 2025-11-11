@@ -205,17 +205,11 @@ public class JFXPanel extends JComponent {
     @SuppressWarnings("doclint:missing")
     private JFXPanelInteropN jfxPanelIOP;
 
-    private static final boolean debugPrint;
+    private static final boolean DEBUG = Boolean.getBoolean("jfxpanel.debug");
     private static final String debugPrefix = "JFXPanel:>> ";
-    private static final String JFXPANEL_DEBUG = "jfxpanel.debug";
-    static {
-        String debugStr = System.getProperty(JFXPANEL_DEBUG);
 
-        debugPrint = "true".equalsIgnoreCase(debugStr);
-    }
-
-    protected static void debug_println(String str) {
-        if (debugPrint) {
+    private static void debug_println(String str) {
+        if (DEBUG) {
             System.out.println(debugPrefix + " " + str);
         }
     }
