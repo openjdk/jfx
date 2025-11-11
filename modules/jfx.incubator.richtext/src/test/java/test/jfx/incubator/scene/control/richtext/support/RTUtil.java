@@ -51,7 +51,7 @@ public class RTUtil {
      */
     public static void setText(RichTextArea control, String text) {
         TextPos end = control.getDocumentEnd();
-        control.replaceText(TextPos.ZERO, end, text, false);
+        control.replaceText(TextPos.ZERO, end, text);
     }
 
     /**

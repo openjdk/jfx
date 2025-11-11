@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,12 +102,12 @@ public class UndoableChange {
 
         // undo
         SegmentStyledInput in = new SegmentStyledInput(undo);
-        model.replace(resolver, start, endAfter, in, false);
+        StyledTextModelHelper.replace(model, resolver, start, endAfter, in, false);
     }
 
     public void redo(StyleResolver resolver) throws IOException {
         SegmentStyledInput in = new SegmentStyledInput(redo);
-        model.replace(resolver, start, endBefore, in, false);
+        StyledTextModelHelper.replace(model, resolver, start, endBefore, in, false);
     }
 
     public UndoableChange getPrev() {
