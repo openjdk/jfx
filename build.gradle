@@ -526,10 +526,6 @@ ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
 
-// Specifies whether to enable the Maven publishing tasks
-defineProperty("MAVEN_PUBLISH", "false")
-ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
-
 // Define the compiler lint warnings to enable.
 //
 // We define a separate set of options for normal classes, test classes
@@ -697,7 +693,6 @@ if (HUDSON_JOB_NAME == "not_hudson") {
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
 defineProperty("RELEASE_VERSION_LONG", "${RELEASE_VERSION_SHORT}+${PROMOTED_BUILD_NUMBER}${relOpt}")
-defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}") : "")
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -816,6 +811,8 @@ try {
 // build / test a standalone sdk for running with a JDK that does not include
 // the javafx modules.
 
+// Load Maven Publishing logic.
+apply from: 'maven-publish.gradle'
 
 /**
  * Fetch/Check that external tools are present for the build. This method
@@ -1549,8 +1546,6 @@ logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
 logger.quiet("RELEASE_VERSION_LONG: $RELEASE_VERSION_LONG")
 logger.quiet("RELEASE_VERSION_PADDED: $RELEASE_VERSION_PADDED")
-logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
-logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
 logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
 
 /******************************************************************************
@@ -1767,113 +1762,6 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
 
     project.processShimsShaders.dependsOn(processShimsShaders)
 
-}
-
-void addMavenPublication(Project project, List<String> projectDependencies) {
-    if (!IS_MAVEN_PUBLISH) {
-        return
-    }
-
-    if (!project.hasProperty("moduleName")) {
-        fail("Project ${project} has no module name")
-    }
-    projectDependencies.each { projName ->
-        def dep = project.project(":$projName")
-        if (!dep.hasProperty("moduleName")) {
-            fail("${project} dependency ${dep} has no module name")
-        }
-    }
-
-    project.apply plugin: 'maven-publish'
-
-    project.group = MAVEN_GROUP_ID
-    project.version = MAVEN_VERSION
-
-    if (project.name == 'base') {
-        project.publishing {
-            publications {
-                javafx(MavenPublication) {
-                    artifactId = 'javafx'
-                    artifacts = []
-                }
-            }
-        }
-    }
-
-    gradle.taskGraph.whenReady { g ->
-        project.tasks.findAll { it.name == 'generatePomFileForJavafxPublication'}.each { it ->
-            it.doLast {
-                copy {
-                    into project.file("${project.buildDir}/publications/javafx")
-                    from file("${rootProject.projectDir}/javafx.pom")
-                    rename "javafx.pom", "pom-default.xml"
-                    filter { line ->
-                        line.replaceAll("@VERSION@", MAVEN_VERSION)
-                    }
-                }
-            }
-        }
-    }
-
-    project.publishing {
-        repositories {
-            maven {
-                def repositoryUrl = project.hasProperty('repositoryUrl') ? project.getProperty('repositoryUrl') : ""
-                def repositoryUsername = project.hasProperty('repositoryUsername') ? project.getProperty('repositoryUsername') : ""
-                def repositoryPassword = project.hasProperty('repositoryPassword') ? project.getProperty('repositoryPassword') : ""
-                url repositoryUrl
-                credentials {
-                   username repositoryUsername
-                   password repositoryPassword
-                }
-            }
-        }
-    }
-
-    compileTargets { t ->
-        project.publishing {
-            publications {
-                maven(MavenPublication) {
-                    def artifactName = project.moduleName.replace('.', '-')
-                    artifactId = artifactName
-
-                    afterEvaluate {
-                        artifact project.tasks."moduleEmptyPublicationJar$t.capital"
-                        artifact project.tasks."modularPublicationJar$t.capital" {
-                            archiveClassifier.set("$t.name")
-                        }
-                    }
-
-                    pom.withXml {
-                        Node parent = asNode().appendNode("parent")
-                        parent.appendNode("groupId", MAVEN_GROUP_ID)
-                        parent.appendNode("artifactId", "javafx")
-                        parent.appendNode("version", MAVEN_VERSION)
-
-                        Node dependencies = asNode().appendNode("dependencies")
-
-                        Node projectDependencyPlatform = dependencies.appendNode("dependency")
-                        projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        projectDependencyPlatform.appendNode("artifactId", artifactName)
-                        projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
-                        projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
-
-                        if (!projectDependencies.empty) {
-                            projectDependencies.each { projName ->
-                                def dep = project.project(":$projName")
-                                def depName = dep.moduleName.replace('.', '-')
-                                Node projectDependency = dependencies.appendNode("dependency")
-                                projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                projectDependency.appendNode("artifactId", depName)
-                                projectDependency.appendNode("version", MAVEN_VERSION)
-                           }
-                        }
-                    }
-                }
-            }
-
-        }
-    }
 }
 
 /**
