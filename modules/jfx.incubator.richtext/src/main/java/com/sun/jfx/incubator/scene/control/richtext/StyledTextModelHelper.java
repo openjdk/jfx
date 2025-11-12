@@ -36,7 +36,7 @@ import jfx.incubator.scene.control.richtext.model.StyledTextModel;
  */
 public class StyledTextModelHelper {
     public interface Accessor {
-        public TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo);
+        public TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo, boolean isEdit);
     }
 
     static {
@@ -52,7 +52,7 @@ public class StyledTextModelHelper {
         accessor = a;
     }
 
-    public static TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo) {
-        return accessor.replace(m, r, start, end, in, allowUndo);
+    public static TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo, boolean isEdit) {
+        return accessor.replace(m, r, start, end, in, allowUndo, isEdit);
     }
 }
