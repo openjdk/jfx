@@ -311,8 +311,8 @@ public abstract class StyledTextModel {
     private static void initAccessor() {
         StyledTextModelHelper.setAccessor(new StyledTextModelHelper.Accessor() {
             @Override
-            public TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo) {
-                return m.replace(r, start, end, in, allowUndo);
+            public TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo, boolean isEdit) {
+                return m.replace(r, start, end, in, allowUndo, isEdit);
             }
         });
     }
@@ -667,11 +667,11 @@ public abstract class StyledTextModel {
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     public final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input) {
-        return replace(resolver, start, end, input, isUndoRedoEnabled());
+        return replace(resolver, start, end, input, isUndoRedoEnabled(), true);
     }
 
     // only UndoableChange is allowed to disable undo/redo records
-    private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo) {
+    private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo, boolean isEdit) {
         checkWritable();
 
         // TODO clamp to document boundaries
@@ -682,7 +682,7 @@ public abstract class StyledTextModel {
             end = p;
         }
 
-        UndoableChange ch = allowUndo ? UndoableChange.create(this, start, end) : null;
+        UndoableChange ch = allowUndo ? UndoableChange.create(this, start, end, isEdit) : null;
 
         if (cmp != 0) {
             removeRange(start, end);
@@ -736,7 +736,11 @@ public abstract class StyledTextModel {
             btm = 0;
         }
 
-        fireChangeEvent(start, end, top, lines, btm);
+        if (isEdit) {
+            fireChangeEvent(start, end, top, lines, btm);
+        } else {
+            fireStyleChangeEvent(start, end);
+        }
 
         TextPos newEnd = TextPos.ofLeading(index, offset);
         if (allowUndo) {
@@ -787,7 +791,7 @@ public abstract class StyledTextModel {
         }
 
         boolean allowUndo = isUndoRedoEnabled();
-        UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd) : null;
+        UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd, false) : null;
 
         if (pa != null) {
             // set paragraph attributes

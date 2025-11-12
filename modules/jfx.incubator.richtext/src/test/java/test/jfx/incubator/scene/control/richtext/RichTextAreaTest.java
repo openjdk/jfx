@@ -60,6 +60,7 @@ import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.StyleHandlerRegistry;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
@@ -802,6 +803,44 @@ public class RichTextAreaTest {
         control.undo();
         control.undo();
         assertEquals("", text());
+    }
+
+    @Test
+    public void undoStyleChange() {
+        ArrayList<ContentChange> changes = new ArrayList<>();
+        String text = "BOLD";
+        TextPos p = control.appendText(text);
+        control.getModel().addListener((ch) -> {
+            changes.add(ch);
+        });
+        TextPos p2 = TextPos.ofLeading(0, 2);
+        assertEquals(text, text());
+        control.applyStyle(TextPos.ZERO, p, BOLD);
+        control.select(p2);
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.undo();
+        assertEquals(text, text());
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
+        assertEquals(2, changes.size());
+        control.redo();
+        assertEquals(text, text());
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // changes
+        assertEquals(3, changes.size());
+        ContentChange ch0 = changes.get(0);
+        assertEquals(TextPos.ZERO, ch0.getStart());
+        assertEquals(p, ch0.getEnd());
+        assertFalse(ch0.isEdit());
+        //
+        ContentChange ch1 = changes.get(1);
+        assertFalse(ch1.isEdit());
+        assertEquals(TextPos.ZERO, ch1.getStart());
+        assertEquals(p, ch1.getEnd());
+        //
+        ContentChange ch2 = changes.get(2);
+        assertFalse(ch2.isEdit());
+        assertEquals(TextPos.ZERO, ch2.getStart());
+        assertEquals(p, ch2.getEnd());
     }
 
     @Test
