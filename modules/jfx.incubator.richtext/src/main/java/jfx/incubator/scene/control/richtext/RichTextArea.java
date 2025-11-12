@@ -621,14 +621,14 @@ public class RichTextArea extends Control {
 
     /**
      * Convenience method which delegates to {@link StyledTextModel#getLineEnding()}.
-     * Returns {@link LineEnding#SYSTEM} if the model is {@code null}.
+     * Returns {@link LineEnding#system()} value if the model is {@code null}.
      *
      * @return the model's line ending value
      * @since 26
      */
     public final LineEnding getLineEnding() {
         StyledTextModel m = getModel();
-        return (m == null ? LineEnding.SYSTEM : m.getLineEnding());
+        return (m == null ? LineEnding.system() : m.getLineEnding());
     }
 
     /**

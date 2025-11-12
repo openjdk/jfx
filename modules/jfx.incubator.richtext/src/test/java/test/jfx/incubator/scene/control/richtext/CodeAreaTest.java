@@ -268,13 +268,11 @@ public class CodeAreaTest {
 
     @Test
     public void lineEnding() {
-        String nl = System.getProperty("line.separator");
         control.setText("1\n2\n3");
         assertEquals(3, control.getParagraphCount());
         t(LineEnding.CR, "1\r2\r3");
         t(LineEnding.CRLF, "1\r\n2\r\n3");
         t(LineEnding.LF, "1\n2\n3");
-        t(LineEnding.SYSTEM, "1" + nl + "2" + nl + "3");
     }
 
     @Test

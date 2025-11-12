@@ -278,9 +278,8 @@ public class TestRichTextModel {
 
     @Test
     public void lineEnding() {
-        String nl = System.getProperty("line.separator");
         RichTextModel m = createModel("1\n2\n3");
-        assertEquals(LineEnding.SYSTEM, m.getLineEnding());
+        assertEquals(LineEnding.system(), m.getLineEnding());
         assertEquals(3, m.size());
         m.setLineEnding(LineEnding.CR);
         assertEquals(LineEnding.CR, m.getLineEnding());
@@ -291,9 +290,6 @@ public class TestRichTextModel {
         m.setLineEnding(LineEnding.LF);
         assertEquals(LineEnding.LF, m.getLineEnding());
         assertEquals("1\n2\n3", RTUtil.getText(m));
-        m.setLineEnding(LineEnding.SYSTEM);
-        assertEquals(LineEnding.SYSTEM, m.getLineEnding());
-        assertEquals("1" + nl + "2" + nl + "3", RTUtil.getText(m));
     }
 
     @Test
@@ -302,6 +298,6 @@ public class TestRichTextModel {
         assertThrows(NullPointerException.class, () -> {
             m.setLineEnding(null);
         });
-        assertEquals(LineEnding.SYSTEM, m.getLineEnding());
+        assertEquals(LineEnding.system(), m.getLineEnding());
     }
 }

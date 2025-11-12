@@ -36,9 +36,9 @@ public enum LineEnding {
     /** Windows line ending, sequence of CR/LF (0x0d 0x0a). */
     CRLF,
     /** macOS/Unix line ending, ASCII LF (0x0a). */
-    LF,
-    /** Platform line ending, using the value returned by {@code System.getProperty("line.separator")} call. */
-    SYSTEM;
+    LF;
+
+    private static final LineEnding system = init();
 
     /**
      * Returns the line ending as a {@code String}.
@@ -49,7 +49,28 @@ public enum LineEnding {
             case CR -> "\r";
             case CRLF -> "\r\n";
             case LF -> "\n";
-            case SYSTEM -> System.getProperty("line.separator");
         };
+    }
+
+    /**
+     * Returns the system default {@code LineEnding} based on the value of system property
+     * {@code System.getProperty("line.separator")}.
+     * @return the system default line ending
+     */
+    public static LineEnding system() {
+        return system;
+    }
+
+    private static LineEnding init() {
+        String s = System.getProperty("line.separator");
+        if (s != null) {
+            return switch (s) {
+                case "\r" -> CR;
+                case "\r\n" -> CRLF;
+                case "\n" -> LF;
+                default -> LF;
+            };
+        }
+        return LineEnding.LF;
     }
 }

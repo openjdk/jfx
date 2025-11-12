@@ -289,7 +289,7 @@ public abstract class StyledTextModel {
     // TODO should it hold WeakReferences?
     private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList();
     private final HashMap<FHKey,FHPriority> handlers = new HashMap<>(2);
-    private LineEnding lineEnding = LineEnding.SYSTEM;
+    private LineEnding lineEnding = LineEnding.system();
     private final Markers markers = new Markers();
     private final UndoableChange head = UndoableChange.createHead();
     private final ReadOnlyBooleanWrapper undoable = new ReadOnlyBooleanWrapper(this, "undoable", false);
@@ -1067,7 +1067,7 @@ public abstract class StyledTextModel {
      * Specifies the line ending characters.
      *
      * @return the line ending value
-     * @defaultValue {@link LineEnding#SYSTEM}
+     * @defaultValue {@link LineEnding#system()}
      * @since 26
      */
     public final LineEnding getLineEnding() {

@@ -367,7 +367,6 @@ public class RichTextAreaTest {
         t(LineEnding.CR, "1\r2\r3");
         t(LineEnding.CRLF, "1\r\n2\r\n3");
         t(LineEnding.LF, "1\n2\n3");
-        t(LineEnding.SYSTEM, "1" + NL + "2" + NL + "3");
     }
 
     @Test
@@ -380,9 +379,9 @@ public class RichTextAreaTest {
     @Test
     public void lineEndingNullModel() {
         control.setModel(null);
-        assertEquals(LineEnding.SYSTEM, control.getLineEnding());
+        assertEquals(LineEnding.system(), control.getLineEnding());
         control.setLineEnding(LineEnding.CR);
-        assertEquals(LineEnding.SYSTEM, control.getLineEnding());
+        assertEquals(LineEnding.system(), control.getLineEnding());
         assertThrows(NullPointerException.class, () -> {
             control.setLineEnding(null);
         });

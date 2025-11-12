@@ -56,7 +56,7 @@ public interface StyledOutput extends Closeable {
      * @return the instance of a plain text StyledOutput
      */
     public static StyledOutput forPlainText() {
-        return new StringBuilderStyledOutput(LineEnding.SYSTEM);
+        return new StringBuilderStyledOutput(LineEnding.system());
     }
 
     /**
