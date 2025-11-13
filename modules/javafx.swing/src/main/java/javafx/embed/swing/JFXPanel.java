@@ -680,7 +680,6 @@ public class JFXPanel extends JComponent {
 
     // called on EDT only
     private void updateComponentSize() {
-        debug_println("updateComponentSize Thread " + Thread.currentThread().getName() + " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
         int oldWidth = pWidth;
         int oldHeight = pHeight;
         if (getBorder() != null) {
