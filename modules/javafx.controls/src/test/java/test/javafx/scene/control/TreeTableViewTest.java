@@ -6439,6 +6439,70 @@ public class TreeTableViewTest {
         sl.dispose();
     }
 
+    @Test
+    void test_jdk_8356770_reparentingItem() {
+        TreeItem<String> itemA1 = new TreeItem<>("item A1");
+        TreeItem<String> itemA2 = new TreeItem<>("item A2");
+        TreeItem<String> itemA  = new TreeItem<>("item A");
+        itemA.getChildren().addAll(itemA1, itemA2);
+        itemA.setExpanded(true);
+
+        TreeItem<String> itemB1 = new TreeItem<>("item B1");
+        TreeItem<String> itemB2 = new TreeItem<>("item B2");
+        TreeItem<String> itemB  = new TreeItem<>("item B");
+        itemB.getChildren().addAll(itemB1, itemB2);
+        itemB.setExpanded(true);
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().addAll(itemA, itemB);
+        root.setExpanded(true);
+
+        TreeTableView<String> table = new TreeTableView<>();
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Name");
+        col.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getValue()));
+        table.getColumns().add(col);
+        table.setRoot(root);
+        table.setShowRoot(true);
+
+        stageLoader = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        // Find "item B" row and record its disclosure node indent
+        TreeTableRow<String> rowBefore = findRow(table, "item B");
+        assertNotNull(rowBefore, "item B row should not be null");
+        double xBefore = disclosureX(rowBefore);
+
+        // Reparenting "item B" under "item A"
+        root.getChildren().remove(itemB);
+        itemA.getChildren().add(itemB);
+        Toolkit.getToolkit().firePulse();
+
+        TreeTableRow<String> rowAfter = findRow(table, "item B");
+        assertNotNull(rowAfter, "item B row should not be null");
+        double xAfter = disclosureX(rowAfter);
+
+        assertTrue(xAfter > xBefore,
+                "Indentation of item B must increase after reparenting");
+    }
+
+    private static TreeTableRow<String> findRow(TreeTableView<String> table, String value) {
+        for (Node n : table.lookupAll(".tree-table-row-cell")) {
+            if (n instanceof TreeTableRow<?>) {
+                TreeTableRow<String> row = (TreeTableRow<String>) n;
+                TreeItem<String> ti = row.getTreeItem();
+                if (ti != null && value.equals(ti.getValue())) {
+                    return row;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static double disclosureX(TreeTableRow<String> row) {
+        Node disclosureNode = row.lookup(".tree-disclosure-node");
+        return disclosureNode == null ? 0.0 : (disclosureNode.getLayoutX() + disclosureNode.getTranslateX());
+    }
+
     @Test public void test_jdk_8144681_removeColumn() {
         TreeTableView<Book> table = new TreeTableView<>();
 
