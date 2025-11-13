@@ -50,6 +50,7 @@ import javafx.scene.input.InputMethodTextRun;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.RichTextArea;
@@ -765,6 +766,7 @@ public class RichTextAreaTest {
     }
 
     @Test
+    @RepeatedTest(50)
     public void undoStyleChange() {
         ArrayList<ContentChange> changes = new ArrayList<>();
         String text = "BOLD";
