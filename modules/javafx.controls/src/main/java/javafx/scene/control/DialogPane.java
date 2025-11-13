@@ -217,15 +217,11 @@ public class DialogPane extends Pane {
         setAccessibleRole(AccessibleRole.DIALOG);
 
         headerTextPanel = new GridPane();
-        headerTextPanel.setVisible(false);
-        headerTextPanel.setManaged(false);
         getChildren().add(headerTextPanel);
 
         graphicContainer = new StackPane();
 
         contentLabel = createContentLabel("");
-        contentLabel.setVisible(false);
-        contentLabel.setManaged(false);
         getChildren().add(contentLabel);
 
         // Add this listener before calling #createButtonBar, so that the listener added in #createButtonBar will run
