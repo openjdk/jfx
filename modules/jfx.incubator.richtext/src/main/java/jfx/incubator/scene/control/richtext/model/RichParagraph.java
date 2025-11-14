@@ -155,24 +155,6 @@ public abstract class RichParagraph {
         }
     }
 
-    // for use by SimpleReadOnlyStyledModel
-    StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, int offset) {
-        int off = 0;
-        List<StyledSegment> segments = getSegments();
-        if (segments != null) {
-            int sz = segments.size();
-            for (int i = 0; i < sz; i++) {
-                StyledSegment seg = segments.get(i);
-                int len = seg.getTextLength();
-                if (offset < (off + len) || (i == sz - 1)) {
-                    return seg.getStyleAttributeMap(resolver);
-                }
-                off += len;
-            }
-        }
-        return StyleAttributeMap.EMPTY;
-    }
-
     private static void initAccessor() {
         RichParagraphHelper.setAccessor(new RichParagraphHelper.Accessor() {
             @Override

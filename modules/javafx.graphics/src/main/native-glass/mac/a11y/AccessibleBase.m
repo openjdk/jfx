@@ -40,7 +40,7 @@ static NSMutableDictionary * rolesMap;
      * All JavaFX roles and corresponding available properties are defined in
      * enum javafx.scene.AccessibleRole
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:21];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:22];
 
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
     [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
@@ -63,6 +63,7 @@ static NSMutableDictionary * rolesMap;
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"MENU_ITEM"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"RADIO_MENU_ITEM"];
     [rolesMap setObject:@"JFXMenuItemAccessibility" forKey:@"CHECK_MENU_ITEM"];
+    [rolesMap setObject:@"JFXMenuBarAccessibility" forKey:@"MENU_BAR"];
 
 }
 

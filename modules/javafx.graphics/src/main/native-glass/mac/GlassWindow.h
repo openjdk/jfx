@@ -39,7 +39,11 @@
     // A reference to an NSWindow or NSPanel descendant - the native window
     NSWindow            *nsWindow;
 
-    NSWindow            *owner;
+    // Owner glass window and list of owned "child" glass windows
+    // (we don't create NSWindow children)
+    GlassWindow         *owner;
+    NSMutableArray<GlassWindow*> *childWindows;
+
     GlassView3D<GlassView>   *view;
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
@@ -50,6 +54,7 @@
     NSUInteger          enabledStyleMask; // valid while the window is disabled
     BOOL                isTransparent;
     BOOL                isDecorated;
+    BOOL                isExtended;
     BOOL                isResizable;
     BOOL                isStandardButtonsVisible;
     BOOL                suppressWindowMoveEvent;
@@ -58,6 +63,8 @@
     NSPoint             lastReportedLocation; // which was sent to Java
 
     BOOL                isClosed;
+
+    NSWindowLevel       prefLevel; // Preferred level for this window
 
     // We track whether an explicit size/location have been assigned to the window
     // in order to differentiate between an explicitly assigned zero bounds, and the
@@ -68,6 +75,13 @@
 @private
     BOOL                isWindowResizable;
 }
+
+// Helper methods for owned windows
+- (void) addChildWindow:(GlassWindow*)childWindow;
+- (void) removeChildWindow:(GlassWindow*)childWindow;
+- (void) reorderChildWindows;
+- (void) minimizeChildWindows:(BOOL)minimize;
+- (void) setMoveToActiveSpaceChildWindows:(BOOL)moveToActiveSpace;
 
 // NSWindow overrides delegate methods
 - (void)close;

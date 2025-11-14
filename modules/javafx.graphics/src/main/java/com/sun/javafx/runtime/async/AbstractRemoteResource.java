@@ -29,14 +29,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 
 /**
  * Abstract base class for representing remote resources identified by a URL.  Subclasses may plug in arbitrary
@@ -46,71 +39,38 @@ import java.util.Map;
  */
 public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T> {
 
-    protected final String url;
-    protected final String method;
-    protected final String outboundContent;
-    protected int fileSize;
-    private Map<String, String> headers = new HashMap<>();
-    private Map<String, List<String>> responseHeaders = new HashMap<>();
+    /**
+     * @param stream an {@link InputStream}, cannot be {@code null}
+     * @param size the size of the stream, or -1 if unknown
+     */
+    public record SizedStream(InputStream stream, long size) {}
 
-    protected AbstractRemoteResource(String url, AsyncOperationListener<T> listener) {
-        this(url, "GET", listener);
+    /**
+     * An interface to provide a stream with a known (or unknown) size that
+     * allows {@link IOException} to be thrown.
+     */
+    public interface SizedStreamSupplier {
+        SizedStream get() throws IOException;
     }
 
-    protected AbstractRemoteResource(String url, String method, AsyncOperationListener<T> listener) {
-        this(url, method, null, listener);
-    }
+    private final SizedStreamSupplier sizedStreamSupplier;
 
-    protected AbstractRemoteResource(String url, String method, String outboundContent, AsyncOperationListener<T> listener) {
+    protected AbstractRemoteResource(SizedStreamSupplier sizedStreamSupplier, AsyncOperationListener<T> listener) {
         super(listener);
-        this.url = url;
-        this.method = method;
-        this.outboundContent = outboundContent;
+
+        this.sizedStreamSupplier = Objects.requireNonNull(sizedStreamSupplier, "sizedStreamSupplier");
     }
 
-    protected abstract T processStream(InputStream stream) throws IOException;
+    protected abstract T processStream(InputStream stream);
 
     @Override
     public T call() throws IOException {
-        URL u = new URL(url);
-        InputStream stream = null;
-        final String protocol = u.getProtocol();
-        if(protocol.equals("http") || protocol.equals("https")) {
-            HttpURLConnection conn = (HttpURLConnection) u.openConnection();
-            conn.setRequestMethod(method);
-            conn.setDoInput(true);
+        SizedStream sizedStream = sizedStreamSupplier.get();
 
-            for (Map.Entry<String,String> entry : headers.entrySet()) {
-                String key = entry.getKey();
-                String value = entry.getValue();
-                if (value != null && !value.equals(""))
-                    conn.setRequestProperty(key, value);
-            }
-            if(outboundContent != null && method.equals("POST")) {
-                conn.setDoOutput(true);
-                byte[] outBytes = outboundContent.getBytes("utf-8");
-                conn.setRequestProperty("Content-Length", String.valueOf(outBytes.length));
-                OutputStream out = conn.getOutputStream();
-                out.write(outBytes);
-                out.close();
-            }
-            conn.connect();
-            fileSize = conn.getContentLength();
-            setProgressMax(fileSize);
-            responseHeaders = conn.getHeaderFields();
+        setProgressMax(sizedStream.size);
 
-            stream = new ProgressInputStream(conn.getInputStream());
-        } else { // protocol is something other than http...
-            URLConnection con = u.openConnection();
-            setProgressMax(con.getContentLength());
-            stream = new ProgressInputStream(con.getInputStream());
-        }
-
-        try {
+        try (ProgressInputStream stream = new ProgressInputStream(sizedStream.stream)) {
             return processStream(stream);
-        }
-        finally {
-            stream.close();
         }
     }
 
@@ -145,27 +105,5 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
             addProgress(bytes);
             return bytes;
         }
-    }
-
-    public void setHeader(String header, String value) {
-        headers.put(header, value);
-    }
-
-    public String getResponseHeader(String header) {
-        String value = null;
-        List<String> list = responseHeaders.get(header);
-        // return a csv of the strings.
-        if(list != null) {
-            StringBuilder sb = new StringBuilder();
-            Iterator iter = list.iterator();
-            while(iter.hasNext()) {
-                sb.append(iter.next());
-                if(iter.hasNext()) {
-                    sb.append(',');
-                }
-            }
-            value = sb.toString();
-        }
-        return value;
     }
 }

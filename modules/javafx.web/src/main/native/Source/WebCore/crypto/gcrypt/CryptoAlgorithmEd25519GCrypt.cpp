@@ -23,6 +23,7 @@
 #if ENABLE(WEB_CRYPTO)
 
 #include "CryptoKeyOKP.h"
+#include "ExceptionOr.h"
 #include "GCryptUtilities.h"
 
 namespace WebCore {

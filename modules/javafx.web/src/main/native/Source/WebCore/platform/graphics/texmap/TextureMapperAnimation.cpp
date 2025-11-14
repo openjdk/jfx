@@ -177,7 +177,7 @@ TextureMapperAnimation::TextureMapperAnimation(const String& name, const Keyfram
     : m_name(name.isSafeToSendToAnotherThread() ? name : name.isolatedCopy())
     , m_keyframes(createThreadsafeKeyFrames(keyframes, boxSize))
     , m_boxSize(boxSize)
-    , m_timingFunction(animation.timingFunction()->clone())
+    , m_timingFunction(animation.defaultTimingFunctionForKeyframes() ? animation.defaultTimingFunctionForKeyframes()->clone() : animation.timingFunction()->clone())
     , m_iterationCount(animation.iterationCount())
     , m_duration(animation.duration().value_or(0))
     , m_direction(animation.direction())

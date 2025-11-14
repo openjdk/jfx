@@ -112,8 +112,8 @@ public final class StubImageLoaderFactory {
     }
 
     public AsyncOperation createAsyncImageLoader(
-            final AsyncOperationListener listener,
-            final String url, final double loadWidth, final double loadHeight,
+            final AsyncOperationListener<ImageLoader> listener,
+            final Object url, final double loadWidth, final double loadHeight,
             final boolean preserveRatio, final boolean smooth) {
         final ImageLoader imageLoader =
                 createImageLoader(url, loadWidth, loadHeight,
