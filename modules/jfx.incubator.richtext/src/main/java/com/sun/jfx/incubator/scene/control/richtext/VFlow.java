@@ -787,7 +787,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         if (gen != null) {
             // it's a paragraph node
             Region content = gen.get();
-            cell = new TextCell(index, content);
+            cell = new TextCell(index, content, true);
         } else {
             // it's a regular text cell
             cell = new TextCell(index);
@@ -1717,6 +1717,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     public Point2D getImeLocationOnScreen(TextPos pos) {
         CaretInfo ci = getCaretInfo(pos);
+        if (ci == null) {
+            System.out.println("** null CaretInfo");
+            return new Point2D(0, 0);
+        }
         return content.localToScreen(ci.getMinX(), ci.getMaxY());
     }
 }

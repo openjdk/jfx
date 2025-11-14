@@ -57,16 +57,19 @@ public final class TextCell extends BorderPane {
     private double width;
     private double height;
     private double y;
+    private boolean embedsNode;
 
     /**
      * Creates a text cell with the specified {@code Region} as its content.
      * @param index paragraph index
      * @param content non-null content
+     * @param embedsNode whether the content is a paragraph
      */
-    public TextCell(int index, Region content) {
+    public TextCell(int index, Region content, boolean embedsNode) {
         Objects.nonNull(content);
         this.index = index;
         this.content = content;
+        this.embedsNode = embedsNode;
         setManaged(false);
         setCenter(content);
     }
@@ -76,7 +79,7 @@ public final class TextCell extends BorderPane {
      * @param index paragraph index
      */
     public TextCell(int index) {
-        this(index, textFlow());
+        this(index, textFlow(), false);
     }
 
     private static TextFlow textFlow() {
@@ -99,6 +102,7 @@ public final class TextCell extends BorderPane {
      */
     public void add(Node node) {
         flow().getChildren().add(node);
+        embedsNode = true;
     }
 
     /**
@@ -457,5 +461,17 @@ public final class TextCell extends BorderPane {
             }
         }
         return null;
+    }
+
+    @Override
+    public void requestLayout() {
+        super.requestLayout();
+
+        if (embedsNode) {
+            VFlow vf = RichUtils.getAncestorOfClass(VFlow.class, this);
+            if (vf != null) {
+                vf.requestLayout();
+            }
+        }
     }
 }
