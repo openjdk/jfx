@@ -6427,4 +6427,68 @@ public class TableViewTest {
 
         assertEquals(-snappedNewValue, rootHeader.getLayoutX(), 0);
     }
+
+    @Test
+    void testRefreshShouldNotResetCells() {
+        final AtomicInteger cellCreationCounter = new AtomicInteger();
+        final AtomicInteger rowCreationCounter = new AtomicInteger();
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        firstNameCol.setCellFactory(_ -> {
+            cellCreationCounter.incrementAndGet();
+            return new TableCell<>();
+        });
+
+        TableView<Person> table = new TableView<>();
+        table.setRowFactory(_ -> {
+            rowCreationCounter.incrementAndGet();
+            return new TableRow<>();
+        });
+        table.setItems(FXCollections.observableArrayList(new Person("name")));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(cellCreationCounter.get() > 0);
+        assertTrue(rowCreationCounter.get() > 0);
+        rowCreationCounter.set(0);
+        cellCreationCounter.set(0);
+
+        table.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(0, rowCreationCounter.get());
+        assertEquals(0, cellCreationCounter.get());
+    }
+
+    @Test
+    void testRefreshShouldReflectChangeInCell() {
+        String initialName = "Initial";
+        Person person = new Person(initialName);
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(e -> new SimpleStringProperty(e.getValue().getFirstName()));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList(person));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        String newName = "Other Name";
+        person.setFirstName(newName);
+
+        IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertEquals(initialName, cell.getText());
+
+        table.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertEquals(newName, cell.getText());
+    }
 }
