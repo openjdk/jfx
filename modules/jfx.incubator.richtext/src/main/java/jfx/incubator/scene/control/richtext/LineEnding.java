@@ -53,8 +53,8 @@ public enum LineEnding {
     }
 
     /**
-     * Returns the system default {@code LineEnding} based on the value of system property
-     * {@code System.getProperty("line.separator")}.
+     * Returns the {@code LineEnding} based on the value of system line separator string
+     * {@link System#lineSeparator()}.
      * @return the system default line ending
      */
     public static LineEnding system() {
@@ -62,7 +62,7 @@ public enum LineEnding {
     }
 
     private static LineEnding init() {
-        String s = System.getProperty("line.separator");
+        String s = System.lineSeparator();
         if (s != null) {
             return switch (s) {
                 case "\r" -> CR;
