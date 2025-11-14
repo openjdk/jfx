@@ -146,8 +146,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                         markItemCountDirty();
                         control.requestLayout();
                         break;
-                    }
-                    else if (eventType.equals(TreeItem.<T>childrenModificationEvent())) {
+                    } else if (eventType.equals(TreeItem.<T>childrenModificationEvent())) {
                         markItemCountDirty();
                         treeStructureDirty = true;
                         control.requestLayout();

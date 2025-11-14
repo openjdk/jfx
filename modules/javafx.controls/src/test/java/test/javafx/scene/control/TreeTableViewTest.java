@@ -6439,8 +6439,12 @@ public class TreeTableViewTest {
         sl.dispose();
     }
 
+    /**
+     * Reparenting a TreeItem must update its indentation in the TreeTableView.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8356770">JDK-8356770</a>
+     */
     @Test
-    void test_jdk_8356770_reparentingItem() {
+    void testIndentationUpdateAfterReparenting() {
         TreeItem<String> itemA1 = new TreeItem<>("item A1");
         TreeItem<String> itemA2 = new TreeItem<>("item A2");
         TreeItem<String> itemA  = new TreeItem<>("item A");
@@ -6465,41 +6469,24 @@ public class TreeTableViewTest {
         table.setShowRoot(true);
 
         stageLoader = new StageLoader(table);
-        Toolkit.getToolkit().firePulse();
 
         // Find "item B" row and record its disclosure node indent
-        TreeTableRow<String> rowBefore = findRow(table, "item B");
-        assertNotNull(rowBefore, "item B row should not be null");
-        double xBefore = disclosureX(rowBefore);
+        double xBefore = disclosureIndent(table,4);
 
         // Reparenting "item B" under "item A"
         root.getChildren().remove(itemB);
         itemA.getChildren().add(itemB);
         Toolkit.getToolkit().firePulse();
 
-        TreeTableRow<String> rowAfter = findRow(table, "item B");
-        assertNotNull(rowAfter, "item B row should not be null");
-        double xAfter = disclosureX(rowAfter);
+        double xAfter = disclosureIndent(table,4);
 
         assertTrue(xAfter > xBefore,
                 "Indentation of item B must increase after reparenting");
     }
 
-    private static TreeTableRow<String> findRow(TreeTableView<String> table, String value) {
-        for (Node n : table.lookupAll(".tree-table-row-cell")) {
-            if (n instanceof TreeTableRow<?>) {
-                TreeTableRow<String> row = (TreeTableRow<String>) n;
-                TreeItem<String> ti = row.getTreeItem();
-                if (ti != null && value.equals(ti.getValue())) {
-                    return row;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static double disclosureX(TreeTableRow<String> row) {
-        Node disclosureNode = row.lookup(".tree-disclosure-node");
+    private double disclosureIndent(TreeTableView<String> table, int index) {
+        TreeTableRow<String> row = (TreeTableRow<String>) VirtualFlowTestUtils.getVirtualFlow(table).getVisibleCell(index);
+        Node disclosureNode = row.getDisclosureNode();
         return disclosureNode == null ? 0.0 : (disclosureNode.getLayoutX() + disclosureNode.getTranslateX());
     }
 
