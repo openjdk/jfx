@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -195,5 +195,19 @@
  * that button.  If an application wishes to have the effect, clip, or transform
  * factored into the layout of a node, it should wrap that node in a Group.
  * </p>
+ *
+ *
+ * <h2>Layout Orientation</h2>
+ * The layout orientation of the scene graph is determined by the {@link javafx.scene.Scene#nodeOrientationProperty() Scene.nodeOrientation}
+ * and {@link javafx.scene.Node#nodeOrientationProperty() Node.nodeOrientation} properties.
+ * It is effectively left-to-right by default, but can be right-to-left depending on the locale of the operating system.
+ * If a layout orientation is set on the scene or on any node of the scene graph, descendants of the scene or node will
+ * inherit the specified orientation.
+ * <p>
+ * For layout containers, the layout orientation determines the visual order of their children. If a layout container
+ * has named areas, the names always retain their default meaning. For example, the {@code left} and {@code right}
+ * areas of {@link javafx.scene.layout.BorderPane BorderPane} or {@link javafx.scene.layout.HeaderBar HeaderBar}
+ * are always left and right in regard to the default layout orientation (left-to-right). If the layout orientation
+ * is right-to-left, the left area will appear to the right, and the right area will appear to the left.
  */
 package javafx.scene.layout;
