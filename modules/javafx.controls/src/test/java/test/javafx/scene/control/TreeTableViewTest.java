@@ -6471,14 +6471,14 @@ public class TreeTableViewTest {
         stageLoader = new StageLoader(table);
 
         // Find "item B" row and record its disclosure node indent
-        double xBefore = disclosureIndent(table,4);
+        double xBefore = disclosureIndent(table, 4);
 
         // Reparenting "item B" under "item A"
         root.getChildren().remove(itemB);
         itemA.getChildren().add(itemB);
         Toolkit.getToolkit().firePulse();
 
-        double xAfter = disclosureIndent(table,4);
+        double xAfter = disclosureIndent(table, 4);
 
         assertTrue(xAfter > xBefore,
                 "Indentation of item B must increase after reparenting");
