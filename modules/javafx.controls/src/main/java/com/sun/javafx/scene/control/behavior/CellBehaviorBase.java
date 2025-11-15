@@ -288,9 +288,15 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
             }
         }
 
-        // Consume the event if we handled the click.
+        doHandleClick(e, button, clickCount, isAlreadySelected);
+    }
+
+    protected void doHandleClick(MouseEvent e, MouseButton button, int clickCount, boolean isAlreadySelected) {
+        // Consume the event if we handled the click and we are already focused.
         if (handleClicks(button, clickCount, isAlreadySelected)) {
-            e.consume();
+            if (getCellContainer().isFocused()) {
+                e.consume();
+            }
         }
     }
 

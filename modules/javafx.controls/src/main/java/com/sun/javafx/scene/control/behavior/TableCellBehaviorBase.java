@@ -224,10 +224,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
             }
         }
 
-        // Consume the event if we handled the click.
-        if (handleClicks(button, clickCount, isAlreadySelected)) {
-            e.consume();
-        }
+        doHandleClick(e, button, clickCount, isAlreadySelected);
     }
 
     private int getColumn() {
