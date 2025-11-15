@@ -156,6 +156,16 @@ public class DialogPaneTest {
     }
 
     @Test
+    public void layoutIsRequestedWhenButtonTypesChange() {
+        dialogPane.getButtonTypes().clear();
+        dialogPane.layout();
+        assertFalse(dialogPane.isNeedsLayout());
+
+        dialogPane.getButtonTypes().add(ButtonType.OK);
+        assertTrue(dialogPane.isNeedsLayout());
+    }
+
+    @Test
     public void headerBarIsLocatedAtTopOfDialogPane() {
         var headerBar = new HeaderBar();
         headerBar.setMinHeight(20);
