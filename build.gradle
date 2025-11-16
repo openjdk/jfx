@@ -2106,8 +2106,6 @@ project.ext.defaultModuleSourcePathShim =
 // The "base" project is our first module and the most basic one required for
 // all other modules. It is useful even for non-GUI applications.
 project(":base") {
-    println "build: base"
-
     project.ext.buildModule = true
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
