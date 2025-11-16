@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+import com.sun.javafx.gradle.CompileTarget
 
 /**
  * If the given named property is not defined, then this method will define
@@ -51,11 +52,77 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
 logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
 
-ext.addMavenPublication = { Project project, List<String> projectDependencies ->
+registerModules()
+
+void registerModules() {
     if (!IS_MAVEN_PUBLISH) {
         return
     }
 
+    addMavenPublication(project(":base"), [])
+    addMavenPublication(project(":graphics"), [ 'base' ])
+    addMavenPublication(project(":controls"), [ 'graphics' ])
+    addMavenPublication(project(":fxml"), [ 'controls' ])
+    addMavenPublication(project(":media"), [ 'graphics' ])
+
+    if (ext.COMPILE_SWING) {
+        addMavenPublication(project(":swing"), [ 'graphics' ])
+    }
+
+    addMavenPublication(project(":jsobject"), [])
+    addMavenPublication(project(":web"), [ 'controls', 'media', 'jsobject' ])
+
+    // Incubator modules
+    addMavenPublication(project(":incubator.input"), [ 'controls' ])
+    addMavenPublication(project(":incubator.richtext"), [ 'controls', 'incubator.input' ])
+}
+
+ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task dependingTask ->
+    if (!IS_MAVEN_PUBLISH) {
+        return
+    }
+
+    def targetProperties = project.ext[t.upper]
+    def platformPrefix = targetProperties.platformPrefix
+
+    // Maven Publications
+    def publicationDirName = "${platformPrefix}publications"
+    def publicationDir = "${rootProject.layout.buildDirectory.get()}/${publicationDirName}"
+
+    projects.each { Project project ->
+        def moduleName = project.ext.moduleName
+        def buildDir = project.layout.buildDirectory.get()
+
+        def dstModularJarDir="${publicationDir}"
+        def srcClassesDir = "${buildDir}/${platformPrefix}module-classes"
+        def srcLibsDir = "${buildDir}/${platformPrefix}module-lib"
+
+        def modularEmptyPublicationJarName = "${moduleName}.jar"
+        def modularEmptyPublicationJarTask = project.tasks.register("moduleEmptyPublicationJar${t.capital}", Jar) {
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularEmptyPublicationJarName
+            manifest {
+                attributes(
+                        'Automatic-Module-Name':"${moduleName}Empty"
+                )
+            }
+        }
+
+        def modularPublicationJarName = "${moduleName}-${t.name}.jar"
+        def modularPublicationJarTask = project.tasks.register("modularPublicationJar${t.capital}", Jar) {
+            dependsOn modularEmptyPublicationJarTask
+
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularPublicationJarName
+            from srcLibsDir
+            from srcClassesDir
+        }
+
+        dependingTask.dependsOn(modularPublicationJarTask)
+    }
+}
+
+void addMavenPublication(Project project, List<String> projectDependencies) {
     if (!project.hasProperty("moduleName")) {
         fail("Project ${project} has no module name")
     }
@@ -89,7 +156,8 @@ ext.addMavenPublication = { Project project, List<String> projectDependencies ->
                     into project.file("${project.layout.buildDirectory.get()}/publications/javafx")
                     from file("${rootProject.projectDir}/javafx.pom")
                     rename "javafx.pom", "pom-default.xml"
-                    filter { line -> line.replaceAll("@VERSION@", MAVEN_VERSION)
+                    filter {
+                        line -> line.replaceAll("@VERSION@", MAVEN_VERSION)
                     }
                 }
             }
