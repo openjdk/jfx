@@ -38,10 +38,15 @@ void defineProperty(String name, String defaultValue) {
     }
 }
 
+static void fail(String msg) {
+    throw new GradleException("FAIL: " + msg)
+}
+
 // Specifies whether to enable the Maven publishing tasks
 defineProperty("MAVEN_PUBLISH", "false")
 ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
 defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (ext.IS_MILESTONE_FCS ? project.ext.RELEASE_VERSION_SHORT : project.ext.RELEASE_VERSION_LONG) : "")
+ext.MAVEN_GROUP_ID = "org.openjfx"
 
 logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
 logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
