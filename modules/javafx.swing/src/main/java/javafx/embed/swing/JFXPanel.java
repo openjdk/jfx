@@ -205,13 +205,6 @@ public class JFXPanel extends JComponent {
     @SuppressWarnings("doclint:missing")
     private JFXPanelInteropN jfxPanelIOP;
 
-    private static final boolean DEBUG = Boolean.getBoolean("jfxpanel.debug");
-    private static final String debugPrefix = "JFXPanel:>> ";
-
-    private static void debug_println(String str) {
-        System.out.println(debugPrefix + " " + str);
-    }
-
     private synchronized void registerFinishListener() {
         if (instanceCount.getAndIncrement() > 0) {
             // Already registered
@@ -281,10 +274,6 @@ public class JFXPanel extends JComponent {
     public JFXPanel() {
         super();
 
-        if (DEBUG) {
-            debug_println("JFXPanel Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         jfxPanelIOP = new JFXPanelInteropN();
         initFx();
 
@@ -310,10 +299,6 @@ public class JFXPanel extends JComponent {
      * @return the {@code Scene} attached to this {@code JFXPanel}
      */
     public Scene getScene() {
-        if (DEBUG) {
-            debug_println("getScene Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         return scene;
     }
 
@@ -328,10 +313,6 @@ public class JFXPanel extends JComponent {
      * @see javafx.application.Platform#isFxApplicationThread()
      */
     public void setScene(final Scene newScene) {
-        if (DEBUG) {
-            debug_println("setScene Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         if (Toolkit.getToolkit().isFxUserThread()) {
             setSceneImpl(newScene);
         } else {
@@ -379,10 +360,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     public final void setOpaque(boolean opaque) {
-        if (DEBUG) {
-            debug_println("setOpaque Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         // Don't let user control opacity
         if (!opaque) {
             super.setOpaque(opaque);
@@ -399,10 +376,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     public final boolean isOpaque() {
-        if (DEBUG) {
-            debug_println("isOpaque Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         return false;
     }
 
@@ -533,10 +506,7 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processMouseEvent(MouseEvent e) {
-        if (DEBUG) {
-            debug_println("processMouseEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
+        var hStagePeer = stagePeer;
         if ((e.getID() == MouseEvent.MOUSE_PRESSED) &&
             (e.getButton() == MouseEvent.BUTTON1)) {
             if (isFocusable() && !hasFocus()) {
@@ -544,9 +514,9 @@ public class JFXPanel extends JComponent {
                 // The extra simulated mouse pressed event is removed by making the JavaFX scene focused.
                 // It is safe, because in JavaFX only the method "setFocused(true)" is called,
                 // which doesn't have any side-effects when called multiple times.
-                if (stagePeer != null) {
+                if (hStagePeer != null) {
                     int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
-                    stagePeer.setFocused(true, focusCause);
+                    hStagePeer.setFocused(true, focusCause);
                 }
             }
         }
@@ -564,10 +534,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processMouseMotionEvent(MouseEvent e) {
-        if (DEBUG) {
-            debug_println("processMouseMotionEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         sendMouseEventToFX(e);
         super.processMouseMotionEvent(e);
     }
@@ -582,10 +548,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processMouseWheelEvent(MouseWheelEvent e) {
-        if (DEBUG) {
-            debug_println("processMouseWheelEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         sendMouseEventToFX(e);
         super.processMouseWheelEvent(e);
     }
@@ -615,24 +577,18 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processKeyEvent(KeyEvent e) {
-        if (DEBUG) {
-            debug_println("processKeyEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         sendKeyEventToFX(e);
         super.processKeyEvent(e);
     }
 
     private void sendResizeEventToFX() {
-        if (DEBUG) {
-            debug_println("sendResizeEventToFX Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
+        var hStagePeer = stagePeer;
+        var hScenePeer = scenePeer;
+        if (hStagePeer != null) {
+            hStagePeer.setSize(pWidth, pHeight);
         }
-        if (stagePeer != null) {
-            stagePeer.setSize(pWidth, pHeight);
-        }
-        if (scenePeer != null) {
-            scenePeer.setSize(pWidth, pHeight);
+        if (hScenePeer != null) {
+            hScenePeer.setSize(pWidth, pHeight);
         }
     }
 
@@ -647,10 +603,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processComponentEvent(ComponentEvent e) {
-        if (DEBUG) {
-            debug_println("processComponentEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         switch (e.getID()) {
             case ComponentEvent.COMPONENT_RESIZED: {
                 updateComponentSize();
@@ -728,11 +680,9 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendMoveEventToFX() {
-        if (stagePeer == null) {
-            return;
+        if (stagePeer != null) {
+            stagePeer.setLocation(screenX, screenY);
         }
-
-        stagePeer.setLocation(screenX, screenY);
     }
 
     /**
@@ -746,10 +696,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processHierarchyBoundsEvent(HierarchyEvent e) {
-        if (DEBUG) {
-            debug_println("processHierarchyBoundsEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         if (e.getID() == HierarchyEvent.ANCESTOR_MOVED) {
             if (updateScreenLocation()) {
                 sendMoveEventToFX();
@@ -760,10 +706,6 @@ public class JFXPanel extends JComponent {
 
     @Override
     protected void processHierarchyEvent(HierarchyEvent e) {
-        if (DEBUG) {
-            debug_println("processHierarchyEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0) {
             if (updateScreenLocation()) {
                 sendMoveEventToFX();
@@ -773,7 +715,8 @@ public class JFXPanel extends JComponent {
     }
 
     private void sendFocusEventToFX(final FocusEvent e) {
-        if ((stage == null) || (stagePeer == null) || !isFxEnabled()) {
+        var hStagePeer = stagePeer;
+        if ((stage == null) || (hStagePeer == null) || !isFxEnabled()) {
             return;
         }
 
@@ -788,7 +731,7 @@ public class JFXPanel extends JComponent {
                 focusCause = AbstractEvents.FOCUSEVENT_TRAVERSED_BACKWARD;
             }
         }
-        stagePeer.setFocused(focused, focusCause);
+        hStagePeer.setFocused(focused, focusCause);
     }
 
     /**
@@ -801,10 +744,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processFocusEvent(FocusEvent e) {
-        if (DEBUG) {
-            debug_println("processFocusEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         sendFocusEventToFX(e);
         super.processFocusEvent(e);
     }
@@ -840,10 +779,6 @@ public class JFXPanel extends JComponent {
 
     @Override
     protected void processInputMethodEvent(InputMethodEvent e) {
-        if (DEBUG) {
-            debug_println("processInputMethodEvent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         if (e.getID() == InputMethodEvent.INPUT_METHOD_TEXT_CHANGED) {
             sendInputMethodEventToFX(e);
         }
@@ -857,11 +792,13 @@ public class JFXPanel extends JComponent {
         if (e.getCaret() != null) {
             insertionIndex = e.getCaret().getInsertionIndex();
         }
-        scenePeer.inputMethodEvent(
-                javafx.scene.input.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
-                InputMethodSupport.inputMethodEventComposed(t, e.getCommittedCharacterCount()),
-                t.substring(0, e.getCommittedCharacterCount()),
-                insertionIndex);
+        if (scenePeer != null) {
+            scenePeer.inputMethodEvent(
+                    javafx.scene.input.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
+                    InputMethodSupport.inputMethodEventComposed(t, e.getCommittedCharacterCount()),
+                    t.substring(0, e.getCommittedCharacterCount()),
+                    insertionIndex);
+        }
     }
 
     /**
@@ -874,14 +811,9 @@ public class JFXPanel extends JComponent {
      * @see #isOpaque()
      */
     @Override
-    protected synchronized void paintComponent(Graphics g) {
-        if (DEBUG) {
-            debug_println("paintComponent Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
+    protected void paintComponent(Graphics g) {
         var hScenePeer = scenePeer;
-        var hStage = stage;
-        if (hScenePeer == null || hStage == null) {
+        if (hScenePeer == null || stage == null) {
             return;
         }
         if (pixelsIm == null) {
@@ -901,7 +833,7 @@ public class JFXPanel extends JComponent {
         try {
             ComponentOrientation cor = this.getComponentOrientation();
             boolean rtl = ComponentOrientation.RIGHT_TO_LEFT.equals(cor);
-            hStage.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT :
+            stage.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT :
                                            NodeOrientation.LEFT_TO_RIGHT);
 
             gg = g.create();
@@ -946,10 +878,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     public Dimension getPreferredSize() {
-        if (DEBUG) {
-            debug_println("getPreferredSize Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         if (isPreferredSizeSet() || scenePeer == null) {
             return super.getPreferredSize();
         }
@@ -1024,10 +952,6 @@ public class JFXPanel extends JComponent {
      */
     @Override
     public void addNotify() {
-        if (DEBUG) {
-            debug_println("addNotify Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         super.addNotify();
 
         registerFinishListener();
@@ -1038,17 +962,13 @@ public class JFXPanel extends JComponent {
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && !stage.isShowing()) {
                 stage.show();
-                sendMoveEventToFX();
             }
         });
+        sendMoveEventToFX();
     }
 
     @Override
     public InputMethodRequests getInputMethodRequests() {
-        if (DEBUG) {
-            debug_println("getInputMethodRequests Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         EmbeddedSceneInterface scene = scenePeer;
         if (scene == null) {
             return new InputMethodSupport.InputMethodRequestsAdapter(null);
@@ -1062,10 +982,6 @@ public class JFXPanel extends JComponent {
      * chain of parent components are removed.
      */
     @Override public void removeNotify() {
-        if (DEBUG) {
-            debug_println("removeNotify Thread " + Thread.currentThread().getName() +
-                          " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-        }
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && stage.isShowing()) {
                 stage.hide();
@@ -1099,10 +1015,6 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedStage(EmbeddedStageInterface embeddedStage) {
-            if (DEBUG) {
-                debug_println("HostContainer.setEmbeddedStage Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             stagePeer = embeddedStage;
             var hStagePeer = stagePeer;
             if (hStagePeer == null) {
@@ -1115,16 +1027,12 @@ public class JFXPanel extends JComponent {
                 if (hStagePeer != null && JFXPanel.this.isFocusOwner()) {
                     hStagePeer.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
                 }
+                sendMoveEventToFX();
             });
-            sendMoveEventToFX();
         }
 
         @Override
         public void setEmbeddedScene(EmbeddedSceneInterface embeddedScene) {
-            if (DEBUG) {
-                debug_println("HostContainer.setEmbeddedScene Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             if (scenePeer == embeddedScene) {
                 return;
             }
@@ -1155,19 +1063,11 @@ public class JFXPanel extends JComponent {
 
         @Override
         public boolean requestFocus() {
-            if (DEBUG) {
-                debug_println("HostContainer.requestFocus Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             return requestFocusInWindow();
         }
 
         @Override
         public boolean traverseFocusOut(boolean forward) {
-            if (DEBUG) {
-                debug_println("HostContainer.traverseFocusOut Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
             if (forward) {
                 kfm.focusNextComponent(JFXPanel.this);
@@ -1179,10 +1079,6 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setPreferredSize(final int width, final int height) {
-            if (DEBUG) {
-                debug_println("HostContainer.setPreferredSize Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             invokeOnClientEDT(() -> {
                 JFXPanel.this.pPreferredWidth = width;
                 JFXPanel.this.pPreferredHeight = height;
@@ -1192,10 +1088,6 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void repaint() {
-            if (DEBUG) {
-                debug_println("HostContainer.repaint Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             invokeOnClientEDT(() -> {
                 JFXPanel.this.repaint();
             });
@@ -1203,19 +1095,11 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEnabled(final boolean enabled) {
-            if (DEBUG) {
-                debug_println("HostContainer.setEnabled Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             JFXPanel.this.setFxEnabled(enabled);
         }
 
         @Override
         public void setCursor(CursorFrame cursorFrame) {
-            if (DEBUG) {
-                debug_println("HostContainer.setCursor Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             final Cursor cursor = getPlatformCursor(cursorFrame);
             invokeOnClientEDT(() -> {
                 JFXPanel.this.setCursor(cursor);
@@ -1240,10 +1124,6 @@ public class JFXPanel extends JComponent {
 
         @Override
         public boolean grabFocus() {
-            if (DEBUG) {
-                debug_println("HostContainer.grabFocus Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             // On X11 grab is limited to a single XDisplay connection,
             // so we can't delegate it to another GUI toolkit.
             if (PlatformUtil.isLinux()) return true;
@@ -1260,10 +1140,6 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void ungrabFocus() {
-            if (DEBUG) {
-                debug_println("HostContainer.ungrabFocus Thread " + Thread.currentThread().getName() +
-                              " isFXUserThread " + Toolkit.getToolkit().isFxUserThread());
-            }
             // On X11 grab is limited to a single XDisplay connection,
             // so we can't delegate it to another GUI toolkit.
             if (PlatformUtil.isLinux()) return;
