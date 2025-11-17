@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,23 +26,18 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.io.IOException;
+import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.model.StyledOutput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 public class StringBuilderStyledOutput implements StyledOutput {
     private final StringBuilder sb;
-    private String newline = System.getProperty("line.separator");
+    private final String newline;
 
-    public StringBuilderStyledOutput(int initialCapacity) {
-        sb = new StringBuilder(initialCapacity);
-    }
-
-    public StringBuilderStyledOutput() {
-        this(1024);
-    }
-
-    public void setLineSeparator(String s) {
-        newline = s;
+    public StringBuilderStyledOutput(LineEnding lineEnding) {
+        sb = new StringBuilder(1024);
+        newline = lineEnding.getText();
     }
 
     @Override

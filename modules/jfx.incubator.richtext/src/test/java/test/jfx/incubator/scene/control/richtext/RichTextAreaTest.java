@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -52,6 +53,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.RichTextAreaShim;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
@@ -62,6 +64,7 @@ import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.control.richtext.support.TestStyledInput;
@@ -355,6 +358,43 @@ public class RichTextAreaTest {
         control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
         control.copy();
         assertEquals(NL + "4", Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void lineEndingCopy() {
+        control.appendText("1\n2\n3");
+        assertEquals(3, control.getParagraphCount());
+        t(LineEnding.CR, "1\r2\r3");
+        t(LineEnding.CRLF, "1\r\n2\r\n3");
+        t(LineEnding.LF, "1\n2\n3");
+    }
+
+    @Test
+    public void lineEndingNull() {
+        assertThrows(NullPointerException.class, () -> {
+            control.getModel().setLineEnding(null);
+        });
+    }
+
+    @Test
+    public void lineEndingNullModel() {
+        control.setModel(null);
+        assertEquals(LineEnding.system(), control.getLineEnding());
+        control.setLineEnding(LineEnding.CR);
+        assertEquals(LineEnding.system(), control.getLineEnding());
+        assertThrows(NullPointerException.class, () -> {
+            control.setLineEnding(null);
+        });
+    }
+
+    private void t(LineEnding lineEnding, String expected) {
+        StyledTextModel m = control.getModel();
+        m.setLineEnding(lineEnding);
+        assertEquals(lineEnding, m.getLineEnding());
+        assertEquals(expected, text());
+        control.select(TextPos.ZERO, control.getDocumentEnd());
+        control.copy();
+        assertEquals(expected, Clipboard.getSystemClipboard().getString());
     }
 
     @Test
