@@ -35,6 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
@@ -47,6 +48,7 @@ import javafx.scene.input.DataFormat;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +63,7 @@ import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 import test.jfx.incubator.scene.control.richtext.support.RTUtil;
@@ -906,5 +909,32 @@ public class RichTextAreaTest {
         fireIME(0, "yoyo");
         assertEquals(tp(4), control.getCaretPosition());
         assertEquals("yoyo", text());
+    }
+
+    @Test
+    public void withEmbeddedNode() {
+        SimpleDoubleProperty height = new SimpleDoubleProperty(10.0);
+        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
+        m.addSegment("Trailing node: ");
+        m.addNodeSegment(() -> {
+            Region r = new Region();
+            r.setPrefWidth(10);
+            r.minHeightProperty().bind(height);
+            r.maxHeightProperty().bind(height);
+            return r;
+        });
+        control.setModel(m);
+        control.setWrapText(false);
+        control.setUseContentHeight(true);
+        control.layout();
+
+        double h1 = control.prefHeight(-1);
+        control.getHeight();
+        height.set(100.0);
+        control.layout();
+
+        double h2 = control.prefHeight(-1);
+        control.getHeight();
+        assertTrue(h1 != h2);
     }
 }
