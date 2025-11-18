@@ -620,6 +620,35 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Convenience method which delegates to {@link StyledTextModel#getLineEnding()}.
+     * Returns {@link LineEnding#system()} value if the model is {@code null}.
+     *
+     * @return the model's line ending value
+     * @since 26
+     */
+    public final LineEnding getLineEnding() {
+        StyledTextModel m = getModel();
+        return (m == null ? LineEnding.system() : m.getLineEnding());
+    }
+
+    /**
+     * Sets the model's line ending characters.
+     * Delegates to {@link StyledTextModel#setLineEnding(LineEnding)}.
+     * This method does nothing if the model is {@code null}.
+     *
+     * @param value the line ending value, cannot be null
+     * @throws NullPointerException if the value is null
+     * @since 26
+     */
+    public final void setLineEnding(LineEnding value) {
+        Objects.requireNonNull(value, "line ending must not be null");
+        StyledTextModel m = getModel();
+        if (m != null) {
+            m.setLineEnding(value);
+        }
+    }
+
+    /**
      * Determines the {@link StyledTextModel} to use with this RichTextArea.
      * The model can be null, which results in an empty, uneditable control.
      * <p>
@@ -1479,9 +1508,7 @@ public class RichTextArea extends Control {
             end = tmp;
         }
 
-        // TODO JDK-8370140 (line separator property)
-        String lineSeparator = System.getProperty("line.separator");
-
+        String lineSeparator = m.getLineEnding().getText();
         int toCopy = limit;
         int index = start.index();
         boolean first = true;
