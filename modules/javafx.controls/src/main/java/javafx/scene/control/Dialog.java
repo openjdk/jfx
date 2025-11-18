@@ -34,7 +34,6 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
-import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
@@ -549,11 +548,6 @@ public class Dialog<R> implements EventTarget {
 
             if (newDialogPane != null) {
                 newDialogPane.setDialog(Dialog.this);
-
-                // if the buttons change, we dynamically update the dialog
-                newDialogPane.getButtonTypes().addListener((ListChangeListener<ButtonType>) c -> {
-                    newDialogPane.requestLayout();
-                });
                 newDialogPane.expandedProperty().addListener(expandedListener);
                 newDialogPane.headerProperty().addListener(headerListener);
                 newDialogPane.headerTextProperty().addListener(headerListener);
