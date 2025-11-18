@@ -42,6 +42,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.layout.HeaderBar;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -460,10 +461,10 @@ public class Dialog<R> implements EventTarget {
     }
 
     /**
-     * Specifies the style for this dialog. This must be done prior to making
-     * the dialog visible. The style is one of: StageStyle.DECORATED,
-     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, StageStyle.UTILITY,
-     * or StageStyle.UNIFIED.
+     * Specifies the style for this dialog. This must be done prior to making the dialog visible.
+     * <p>
+     * Note that a dialog with the {@link StageStyle#EXTENDED} style should also specify a {@link HeaderBar} with
+     * the {@link DialogPane#setHeaderBar(HeaderBar)} method, as otherwise the dialog window will not be draggable.
      *
      * @param style the style for this dialog.
      *
