@@ -503,6 +503,11 @@ public class DialogPane extends Pane {
         }
     }
 
+    // This method skips the preview feature check for internal use and can be removed when HeaderBar is finalized.
+    private HeaderBar getHeaderBarInternal() {
+        return headerBar != null ? headerBar.get() : null;
+    }
+
     // --- header
     private final ObjectProperty<Node> header = new SimpleObjectProperty<>(null) {
         WeakReference<Node> headerRef = new WeakReference<>(null);
@@ -950,7 +955,7 @@ public class DialogPane extends Pane {
         final Node content = getActualContent();
         final Node graphic = getActualGraphic();
         final Node expandableContent = getExpandableContent();
-        final HeaderBar headerBar = getHeaderBar();
+        final HeaderBar headerBar = getHeaderBarInternal();
 
         final double graphicPrefWidth = hasHeader || graphic == null ? 0 : graphic.prefWidth(-1);
         final double headerPrefHeight = hasHeader ? header.prefHeight(w) : 0;
@@ -1013,7 +1018,7 @@ public class DialogPane extends Pane {
 
     /** {@inheritDoc} */
     @Override protected double computeMinWidth(double height) {
-        double headerBarMinWidth = getHeaderBar() instanceof HeaderBar hb ? hb.minWidth(height) : 0;
+        double headerBarMinWidth = getHeaderBarInternal() instanceof HeaderBar hb ? hb.minWidth(height) : 0;
         double headerMinWidth = hasHeader() ? getActualHeader().minWidth(height) + 10 : 0;
         double contentMinWidth = getActualContent().minWidth(height);
         double buttonBarMinWidth = buttonBar == null ? 0 : buttonBar.minWidth(height);
@@ -1037,7 +1042,7 @@ public class DialogPane extends Pane {
     @Override protected double computeMinHeight(double width) {
         final boolean hasHeader = hasHeader();
 
-        double headerBarMinHeight = getHeaderBar() instanceof HeaderBar hb ? hb.minHeight(width) : 0;
+        double headerBarMinHeight = getHeaderBarInternal() instanceof HeaderBar hb ? hb.minHeight(width) : 0;
         double headerMinHeight = hasHeader ? getActualHeader().minHeight(width) : 0;
         double buttonBarMinHeight = buttonBar == null ? 0 : buttonBar.minHeight(width);
 
@@ -1074,7 +1079,7 @@ public class DialogPane extends Pane {
         double contentPrefWidth = getActualContent().prefWidth(height);
         double buttonBarPrefWidth = buttonBar == null ? 0 : buttonBar.prefWidth(height);
         double graphicPrefWidth = getActualGraphic().prefWidth(height);
-        double headerBarPrefWidth = getHeaderBar() instanceof HeaderBar hb
+        double headerBarPrefWidth = getHeaderBarInternal() instanceof HeaderBar hb
             ? Utils.boundedSize(hb.prefWidth(height), hb.minWidth(height), hb.maxWidth(height)) : 0;
 
         double expandableContentPrefWidth = 0;
@@ -1097,7 +1102,7 @@ public class DialogPane extends Pane {
 
         double headerPrefHeight = hasHeader ? getActualHeader().prefHeight(width) : 0;
         double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(width);
-        double headerBarPrefHeight = getHeaderBar() instanceof HeaderBar hb
+        double headerBarPrefHeight = getHeaderBarInternal() instanceof HeaderBar hb
             ? Utils.boundedSize(hb.prefHeight(width), hb.minHeight(width), hb.maxHeight(width)) : 0;
 
         Node graphic = getActualGraphic();
