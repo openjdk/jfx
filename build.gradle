@@ -4330,7 +4330,8 @@ project(":systemTests") {
     addValidateSourceSets(project, nonModSrcSets, modSrcSets)
 }
 
-// Apply Maven Publishing (if enabled) right after all projects are defined.
+// Apply Maven Publishing to all projects (if enabled).
+// Need to be done after all projects were defined that should be published.
 apply from: 'maven-publish.gradle'
 
 void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
@@ -5184,6 +5185,10 @@ compileTargets { t ->
     }
     buildModules.dependsOn(buildModulesTask)
 
+    // Configures the maven publication (if enabled) for all projects of this compile target.
+    // Will run after the buildModulesTask.
+    configureMavenPublication(moduleProjList, t, buildModulesTask)
+
     // BUNDLED SDK
     moduleProjList.each { project ->
         // Copy classes, bin, and lib directories
@@ -5371,12 +5376,6 @@ compileTargets { t ->
         include "**/*.java"
     }
     buildModules.dependsOn(zipSourceFilesTask)
-
-    // ============================================================
-
-    configureMavenPublication(moduleProjList, t, buildModulesTask)
-
-    // ============================================================
 
     def buildRunArgsTask = task("buildRunArgs$t.capital",
             group: "Build", dependsOn: buildModulesTask) {

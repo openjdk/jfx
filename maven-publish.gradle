@@ -86,7 +86,7 @@ void registerModules() {
     addMavenPublication(project(":incubator.richtext"), [ controls, incubatorInput ])
 }
 
-ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task dependingTask ->
+ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task previousTask ->
     if (!IS_MAVEN_PUBLISH) {
         return
     }
@@ -108,6 +108,8 @@ ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task 
 
         def modularEmptyPublicationJarName = "${moduleName}.jar"
         def modularEmptyPublicationJarTask = project.tasks.register("moduleEmptyPublicationJar${t.capital}", Jar) {
+            dependsOn previousTask
+
             destinationDirectory = file("${dstModularJarDir}")
             archiveFileName = modularEmptyPublicationJarName
             manifest {
@@ -118,7 +120,7 @@ ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task 
         }
 
         def modularPublicationJarName = "${moduleName}-${t.name}.jar"
-        def modularPublicationJarTask = project.tasks.register("modularPublicationJar${t.capital}", Jar) {
+        project.tasks.register("modularPublicationJar${t.capital}", Jar) {
             dependsOn modularEmptyPublicationJarTask
 
             destinationDirectory = file("${dstModularJarDir}")
@@ -126,8 +128,6 @@ ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task 
             from srcLibsDir
             from srcClassesDir
         }
-
-        dependingTask.dependsOn(modularPublicationJarTask)
     }
 }
 
