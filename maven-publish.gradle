@@ -24,25 +24,6 @@
  */
 import com.sun.javafx.gradle.CompileTarget
 
-/**
- * If the given named property is not defined, then this method will define
- * it with the given defaultValue. Any properties defined by this method can
- * be substituted on the command line by using -P, or by specifying a
- * gradle.properties file in the user home dir
- *
- * @param name The name of the property to define
- * @param defaultValue The default value to assign the property
- */
-void defineProperty(String name, String defaultValue) {
-    if (!project.hasProperty(name)) {
-        project.ext.set(name, defaultValue)
-    }
-}
-
-static void fail(String msg) {
-    throw new GradleException("FAIL: " + msg)
-}
-
 defineProperty("MAVEN_PUBLISH", "false")
 ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
 defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (ext.IS_MILESTONE_FCS ? project.ext.RELEASE_VERSION_SHORT : project.ext.RELEASE_VERSION_LONG) : "")
@@ -187,7 +168,7 @@ void addMavenPublication(Project project, List<Project> projectDependencies) {
         }
     }
 
-    compileTargets { t ->
+    compileTargets { CompileTarget t ->
         project.publishing {
             publications {
                 maven(MavenPublication) {
@@ -227,7 +208,6 @@ void addMavenPublication(Project project, List<Project> projectDependencies) {
                     }
                 }
             }
-
         }
     }
 }
