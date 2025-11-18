@@ -407,8 +407,8 @@ public class PrismTextLayout implements TextLayout {
                         // split caret
                         return new TextLayout.CaretGeometry.Split(
                             lineX,
-                            lineY,
                             lineX2,
+                            lineY,
                             lineHeight
                         );
                     }
