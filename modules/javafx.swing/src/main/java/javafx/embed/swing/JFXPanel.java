@@ -153,6 +153,7 @@ public class JFXPanel extends JComponent {
     // Set in FX thread and accessed in EDT/FX threads
     private transient volatile EmbeddedWindow stage;
 
+    // Set and accessed in FX thread only
     private transient volatile Scene scene;
 
     // Accessed on EDT only
@@ -963,15 +964,14 @@ public class JFXPanel extends JComponent {
     }
 
     private transient  AWTEventListener ungrabListener = event -> {
-        var hStagePeer = JFXPanel.this.stagePeer;
 
         if (jfxPanelIOP.isUngrabEvent(event)) {
             SwingNodeHelper.runOnFxThread(() -> {
-                if (hStagePeer != null &&
+                if (JFXPanel.this.stagePeer != null &&
                         getScene() != null &&
                         getScene().getFocusOwner() != null &&
                         getScene().getFocusOwner().isFocused()) {
-                    hStagePeer.focusUngrab();
+                    JFXPanel.this.stagePeer.focusUngrab();
                 }
             });
         }
@@ -985,7 +985,7 @@ public class JFXPanel extends JComponent {
 
                 if (jfxPanelWindow == eventWindow) {
                     SwingNodeHelper.runOnFxThread(() -> {
-                        if (hStagePeer != null) {
+                        if (JFXPanel.this.stagePeer != null) {
                             // No need to check if grab is active or not.
                             // NoAutoHide popups don't request the grab and
                             // ignore the Ungrab event anyway.
@@ -993,7 +993,7 @@ public class JFXPanel extends JComponent {
                             // user clicks some non-FX content, even if for
                             // some reason they didn't install the grab when
                             // they were shown.
-                            hStagePeer.focusUngrab();
+                            JFXPanel.this.stagePeer.focusUngrab();
                         }
                     });
                 }
@@ -1019,8 +1019,8 @@ public class JFXPanel extends JComponent {
             if ((stage != null) && !stage.isShowing()) {
                 stage.show();
             }
+            SwingNodeHelper.runOnEDT(() -> sendMoveEventToFX());
         });
-        sendMoveEventToFX();
     }
 
     @Override

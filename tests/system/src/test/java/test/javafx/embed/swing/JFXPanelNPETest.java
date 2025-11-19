@@ -102,7 +102,6 @@ public class JFXPanelNPETest {
             Platform.runLater(() -> contentPane.setScene(webView.getScene()));
             Thread.sleep(100);
         }
-        System.out.println("failure = " + failure.get());
         Assertions.assertFalse(failure.get());
     }
 
