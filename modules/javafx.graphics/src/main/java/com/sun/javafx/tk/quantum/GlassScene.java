@@ -250,7 +250,7 @@ abstract class GlassScene implements TKScene {
 
     final void updateSceneState() {
         // should only be called on the event thread
-        if (getSceneState() != null) {
+        if (sceneState != null) {
             sceneState.update();
         }
     }

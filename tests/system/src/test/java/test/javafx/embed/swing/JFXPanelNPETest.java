@@ -43,6 +43,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import test.javafx.util.OutputRedirect;
 import test.util.Util;
 
 public class JFXPanelNPETest {
@@ -86,23 +87,19 @@ public class JFXPanelNPETest {
 
     @Test
     public void testSceneNPE() throws Exception {
-        failure = new AtomicBoolean(false);
-        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                e.printStackTrace();
-                failure.set(true);
+        OutputRedirect.suppressStderr();
+        try {
+            SwingUtilities.invokeAndWait(JFXPanelNPETest::createUI);
+            for (int i = 0; i < 300; i++) {
+                SwingUtilities.invokeLater(contentPane::repaint);
+                Platform.runLater(() -> contentPane.setScene(null));
+                Thread.sleep(1);
+                Platform.runLater(() -> contentPane.setScene(webView.getScene()));
+                Thread.sleep(1);
             }
-        });
-        SwingUtilities.invokeAndWait(JFXPanelNPETest::createUI);
-        for (int i = 0; i < 300; i++) {
-            SwingUtilities.invokeLater(contentPane::repaint);
-            Platform.runLater(() -> contentPane.setScene(null));
-            Thread.sleep(1);
-            Platform.runLater(() -> contentPane.setScene(webView.getScene()));
-            Thread.sleep(1);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr();
         }
-        Assertions.assertFalse(failure.get());
     }
 
     protected static void createUI() {
@@ -122,4 +119,3 @@ public class JFXPanelNPETest {
         contentPane.setScene(new Scene(webView));
     }
 }
-
