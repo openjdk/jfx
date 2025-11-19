@@ -1018,8 +1018,8 @@ public class JFXPanel extends JComponent {
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && !stage.isShowing()) {
                 stage.show();
+                SwingNodeHelper.runOnEDT(() -> sendMoveEventToFX());
             }
-            SwingNodeHelper.runOnEDT(() -> sendMoveEventToFX());
         });
     }
 
