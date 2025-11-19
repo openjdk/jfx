@@ -6439,6 +6439,57 @@ public class TreeTableViewTest {
         sl.dispose();
     }
 
+    /**
+     * Reparenting a TreeItem must update its indentation in the TreeTableView.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8356770">JDK-8356770</a>
+     */
+    @Test
+    void testIndentationUpdateAfterReparenting() {
+        TreeItem<String> itemA1 = new TreeItem<>("item A1");
+        TreeItem<String> itemA2 = new TreeItem<>("item A2");
+        TreeItem<String> itemA  = new TreeItem<>("item A");
+        itemA.getChildren().addAll(itemA1, itemA2);
+        itemA.setExpanded(true);
+
+        TreeItem<String> itemB1 = new TreeItem<>("item B1");
+        TreeItem<String> itemB2 = new TreeItem<>("item B2");
+        TreeItem<String> itemB  = new TreeItem<>("item B");
+        itemB.getChildren().addAll(itemB1, itemB2);
+        itemB.setExpanded(true);
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().addAll(itemA, itemB);
+        root.setExpanded(true);
+
+        TreeTableView<String> table = new TreeTableView<>();
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Name");
+        col.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getValue()));
+        table.getColumns().add(col);
+        table.setRoot(root);
+        table.setShowRoot(true);
+
+        stageLoader = new StageLoader(table);
+
+        // Find "item B" row and record its disclosure node indent
+        double xBefore = disclosureIndent(table, 4);
+
+        // Reparenting "item B" under "item A"
+        root.getChildren().remove(itemB);
+        itemA.getChildren().add(itemB);
+        Toolkit.getToolkit().firePulse();
+
+        double xAfter = disclosureIndent(table, 4);
+
+        assertTrue(xAfter > xBefore,
+                "Indentation of item B must increase after reparenting");
+    }
+
+    private double disclosureIndent(TreeTableView<String> table, int index) {
+        TreeTableRow<String> row = (TreeTableRow<String>) VirtualFlowTestUtils.getVirtualFlow(table).getVisibleCell(index);
+        Node disclosureNode = row.getDisclosureNode();
+        return disclosureNode == null ? 0.0 : (disclosureNode.getLayoutX() + disclosureNode.getTranslateX());
+    }
+
     @Test public void test_jdk_8144681_removeColumn() {
         TreeTableView<Book> table = new TreeTableView<>();
 
@@ -7649,5 +7700,69 @@ public class TreeTableViewTest {
         scrollBar.setValue(newValue);
 
         assertEquals(-snappedNewValue, rootHeader.getLayoutX(), 0);
+    }
+
+    @Test
+    void testRefreshShouldNotResetCells() {
+        final AtomicInteger cellCreationCounter = new AtomicInteger();
+        final AtomicInteger rowCreationCounter = new AtomicInteger();
+
+        TreeTableColumn<Person, String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+
+        firstNameCol.setCellFactory(_ -> {
+            cellCreationCounter.incrementAndGet();
+            return new TreeTableCell<>();
+        });
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setRowFactory(_ -> {
+            rowCreationCounter.incrementAndGet();
+            return new TreeTableRow<>();
+        });
+        table.setRoot(new TreeItem<>(new Person("name")));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(cellCreationCounter.get() > 0);
+        assertTrue(rowCreationCounter.get() > 0);
+        rowCreationCounter.set(0);
+        cellCreationCounter.set(0);
+
+        table.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(0, rowCreationCounter.get());
+        assertEquals(0, cellCreationCounter.get());
+    }
+
+    @Test
+    void testRefreshShouldReflectChangeInCell() {
+        String initialName = "Initial";
+        Person person = new Person(initialName);
+
+        TreeTableColumn<Person, String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(e -> new SimpleStringProperty(e.getValue().getValue().getFirstName()));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setRoot(new TreeItem<>(person));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        String newName = "Other Name";
+        person.setFirstName(newName);
+
+        IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertEquals(initialName, cell.getText());
+
+        table.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(table, 0, 0);
+        assertEquals(newName, cell.getText());
     }
 }

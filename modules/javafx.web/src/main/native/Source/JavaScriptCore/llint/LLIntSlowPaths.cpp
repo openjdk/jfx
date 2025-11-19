@@ -2728,37 +2728,21 @@ extern "C" UGPRPair SYSV_ABI llint_slow_path_checkpoint_osr_exit_from_inlined_ca
     }
 
     case op_instanceof: {
-        auto& dst = callFrame->uncheckedR(destinationFor(pc->as<OpInstanceof>(), bytecodeIndex.checkpoint()).virtualRegister());
         const auto& bytecode = pc->as<OpInstanceof>();
-        auto value = getOperand(callFrame, bytecode.m_value);
-        auto hasInstanceOrPrototype = JSValue::decode(result);
-
         switch (bytecodeIndex.checkpoint()) {
-        case OpInstanceof::getHasInstance: {
+        case OpInstanceof::getHasInstance: // First one is not handled by checkpoint.
+        case OpInstanceof::instanceof: // No inlined calls exist at the last checkpoint.
             RELEASE_ASSERT_NOT_REACHED();
             break;
-        }
         case OpInstanceof::getPrototype: {
-            auto constructor = getOperand(callFrame, bytecode.m_constructor);
-            ASSERT(constructor.isObject());
-            if (hasInstanceOrPrototype != globalObject->functionProtoHasInstanceSymbolFunction() || !constructor.getObject()->structure()->typeInfo().implementsDefaultHasInstance()) {
-                dst = jsBoolean(constructor.getObject()->hasInstance(globalObject, value, hasInstanceOrPrototype));
-                RETURN_IF_EXCEPTION(throwScope, { });
-                break;
-            }
-            if (!value.isObject()) {
-                dst = jsBoolean(false);
-                break;
-            }
-            hasInstanceOrPrototype = constructor.get(globalObject, vm.propertyNames->prototype);
-            RETURN_IF_EXCEPTION(throwScope, { });
-            FALLTHROUGH;
-        }
-        case OpInstanceof::instanceof:
-            bool result = JSObject::defaultHasInstance(globalObject, value, hasInstanceOrPrototype);
+            auto& dst = callFrame->uncheckedR(bytecode.m_dst);
+            auto value = getOperand(callFrame, bytecode.m_value);
+            auto prototype = JSValue::decode(result);
+            bool result = JSObject::defaultHasInstance(globalObject, value, prototype);
             RETURN_IF_EXCEPTION(throwScope, { });
             dst = jsBoolean(result);
             break;
+        }
         }
         break;
     }

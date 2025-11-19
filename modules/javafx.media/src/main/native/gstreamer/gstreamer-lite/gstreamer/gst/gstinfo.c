@@ -101,9 +101,9 @@
 
 #include "gst_private.h"
 #include "gstutils.h"
-#include "gstquark.h"
 #include "gstsegment.h"
 #include "gstvalue.h"
+#include "gstvecdeque.h"
 #include "gstcapsfeatures.h"
 
 #endif /* GST_DISABLE_GST_DEBUG */
@@ -360,7 +360,7 @@ typedef struct
   GDestroyNotify notify;
 }
 LogFuncEntry;
-static GMutex __log_func_mutex;
+static GRWLock __log_func_mutex;
 static GSList *__log_functions = NULL;
 
 /* whether to add the default log function in gst_init() */
@@ -631,6 +631,7 @@ gst_debug_log_full_valist (GstDebugCategory * category, GstDebugLevel level,
 
   G_VA_COPY (message.arguments, args);
 
+  g_rw_lock_reader_lock (&__log_func_mutex);
   handler = __log_functions;
   while (handler) {
     entry = handler->data;
@@ -638,6 +639,8 @@ gst_debug_log_full_valist (GstDebugCategory * category, GstDebugLevel level,
     entry->func (category, level, file, function, line, object, &message,
         entry->user_data);
   }
+  g_rw_lock_reader_unlock (&__log_func_mutex);
+
   g_free (message.message);
   if (message.free_object_id)
     g_free (message.object_id);
@@ -723,6 +726,7 @@ gst_debug_log_literal_full (GstDebugCategory * category, GstDebugLevel level,
   message.object_id = (gchar *) id;
   message.free_object_id = FALSE;
 
+  g_rw_lock_reader_lock (&__log_func_mutex);
   handler = __log_functions;
   while (handler) {
     entry = handler->data;
@@ -730,6 +734,7 @@ gst_debug_log_literal_full (GstDebugCategory * category, GstDebugLevel level,
     entry->func (category, level, file, function, line, object, &message,
         entry->user_data);
   }
+  g_rw_lock_reader_unlock (&__log_func_mutex);
 
   if (message.free_object_id)
     g_free (message.object_id);
@@ -919,7 +924,7 @@ gst_info_structure_to_string (const GstStructure * s)
 {
   if (G_LIKELY (s)) {
     gchar *str = gst_structure_to_string (s);
-    if (G_UNLIKELY (pretty_tags && s->name == GST_QUARK (TAGLIST)))
+    if (G_UNLIKELY (pretty_tags && gst_structure_has_name (s, "taglist")))
       return prettify_structure_string (str);
     else
       return str;
@@ -1078,8 +1083,27 @@ gst_info_describe_stream_collection (GstStreamCollection * collection)
   return ret;
 }
 
-static gchar *
-gst_debug_print_object (gpointer ptr)
+/**
+ * gst_debug_print_object:
+ * @ptr: (nullable): the object
+ *
+ * Returns a string that represents @ptr. This is safe to call with
+ * %GstStructure, %GstCapsFeatures, %GstMiniObject s (e.g. %GstCaps,
+ * %GstBuffer or %GstMessage), and %GObjects (e.g. %GstElement or %GstPad).
+ *
+ * The string representation is meant to be used for debugging purposes and
+ * might change between GStreamer versions.
+ *
+ * Passing other kind of pointers might or might not work and is generally
+ * unsafe to do.
+ *
+ * Returns: (transfer full) (type gchar*): a string containing a string
+ *     representation of the object
+ *
+ * Since: 1.26
+ */
+gchar *
+gst_debug_print_object (gconstpointer ptr)
 {
   GObject *object = (GObject *) ptr;
 
@@ -1175,11 +1199,23 @@ gst_debug_print_object (gpointer ptr)
   return g_strdup_printf ("%p", ptr);
 }
 
-static gchar *
-gst_debug_print_segment (gpointer ptr)
+/**
+ * gst_debug_print_segment:
+ * @segment: (nullable): the %GstSegment
+ *
+ * Returns a string that represents @segments.
+ *
+ * The string representation is meant to be used for debugging purposes and
+ * might change between GStreamer versions.
+ *
+ * Returns: (transfer full) (type gchar*): a string containing a string
+ *     representation of the segment
+ *
+ * Since: 1.26
+ */
+gchar *
+gst_debug_print_segment (const GstSegment * segment)
 {
-  GstSegment *segment = (GstSegment *) ptr;
-
   /* nicely printed segment */
   if (segment == NULL) {
     return g_strdup ("(NULL)");
@@ -1731,7 +1767,6 @@ gst_debug_add_log_function (GstLogFunction func, gpointer user_data,
     GDestroyNotify notify)
 {
   LogFuncEntry *entry;
-  GSList *list;
 
   if (func == NULL)
     func = gst_debug_log_default;
@@ -1740,16 +1775,9 @@ gst_debug_add_log_function (GstLogFunction func, gpointer user_data,
   entry->func = func;
   entry->user_data = user_data;
   entry->notify = notify;
-  /* FIXME: we leak the old list here - other threads might access it right now
-   * in gst_debug_logv. Another solution is to lock the mutex in gst_debug_logv,
-   * but that is waaay costly.
-   * It'd probably be clever to use some kind of RCU here, but I don't know
-   * anything about that.
-   */
-  g_mutex_lock (&__log_func_mutex);
-  list = g_slist_copy (__log_functions);
-  __log_functions = g_slist_prepend (list, entry);
-  g_mutex_unlock (&__log_func_mutex);
+  g_rw_lock_writer_lock (&__log_func_mutex);
+  __log_functions = g_slist_prepend (__log_functions, entry);
+  g_rw_lock_writer_unlock (&__log_func_mutex);
 
   if (gst_is_initialized ())
     GST_DEBUG ("prepended log function %p (user data %p) to log functions",
@@ -1776,26 +1804,16 @@ static guint
 gst_debug_remove_with_compare_func (GCompareFunc func, gpointer data)
 {
   GSList *found;
-  GSList *new, *cleanup = NULL;
+  GSList *cleanup = NULL;
   guint removals = 0;
 
-  g_mutex_lock (&__log_func_mutex);
-  new = __log_functions;
-  cleanup = NULL;
-  while ((found = g_slist_find_custom (new, data, func))) {
-    if (new == __log_functions) {
-      /* make a copy when we have the first hit, so that we modify the copy and
-       * make that the new list later */
-      new = g_slist_copy (new);
-      continue;
-    }
+  g_rw_lock_writer_lock (&__log_func_mutex);
+  while ((found = g_slist_find_custom (__log_functions, data, func))) {
     cleanup = g_slist_prepend (cleanup, found->data);
-    new = g_slist_delete_link (new, found);
+    __log_functions = g_slist_delete_link (__log_functions, found);
     removals++;
   }
-  /* FIXME: We leak the old list here. See _add_log_function for why. */
-  __log_functions = new;
-  g_mutex_unlock (&__log_func_mutex);
+  g_rw_lock_writer_unlock (&__log_func_mutex);
 
   while (cleanup) {
     LogFuncEntry *entry = cleanup->data;
@@ -2555,7 +2573,7 @@ _priv_gst_debug_cleanup (void)
 
   clear_level_names ();
 
-  g_mutex_lock (&__log_func_mutex);
+  g_rw_lock_writer_lock (&__log_func_mutex);
   while (__log_functions) {
     LogFuncEntry *log_func_entry = __log_functions->data;
     if (log_func_entry->notify)
@@ -2563,7 +2581,16 @@ _priv_gst_debug_cleanup (void)
     g_free (log_func_entry);
     __log_functions = g_slist_delete_link (__log_functions, __log_functions);
   }
-  g_mutex_unlock (&__log_func_mutex);
+  g_rw_lock_writer_unlock (&__log_func_mutex);
+
+#ifdef HAVE_UNWIND
+# ifdef HAVE_DW
+  if (_global_dwfl) {
+    dwfl_end (_global_dwfl);
+    _global_dwfl = NULL;
+  }
+# endif
+#endif
 }
 
 static void
@@ -3538,7 +3565,7 @@ typedef struct
   gint64 last_use;
   GThread *thread;
 
-  GQueue log;
+  GstVecDeque *log;
   gsize log_size;
 } GstRingBufferLog;
 
@@ -3609,8 +3636,9 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
         break;
 
       g_hash_table_remove (logger->thread_index, log->thread);
-      while ((buf = g_queue_pop_head (&log->log)))
+      while ((buf = gst_vec_deque_pop_head (log->log)))
         g_free (buf);
+      gst_vec_deque_free (log->log);
       g_free (log);
       g_queue_pop_tail (&logger->threads);
     }
@@ -3621,7 +3649,7 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
   log = g_hash_table_lookup (logger->thread_index, thread);
   if (!log) {
     log = g_new0 (GstRingBufferLog, 1);
-    g_queue_init (&log->log);
+    log->log = gst_vec_deque_new (2048);
     log->log_size = 0;
     g_queue_push_head (&logger->threads, log);
     log->link = logger->threads.head;
@@ -3636,20 +3664,12 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
   if (output_len < logger->max_size_per_thread) {
     gchar *buf;
 
-    /* While using a GQueue here is not the most efficient thing to do, we
-     * have to allocate a string for every output anyway and could just store
-     * that instead of copying it to an actual ringbuffer.
-     * Better than GQueue would be GstQueueArray, but that one is in
-     * libgstbase and we can't use it here. That one allocation will not make
-     * much of a difference anymore, considering the number of allocations
-     * needed to get to this point...
-     */
     while (log->log_size + output_len > logger->max_size_per_thread) {
-      buf = g_queue_pop_head (&log->log);
+      buf = gst_vec_deque_pop_head (log->log);
       log->log_size -= strlen (buf);
       g_free (buf);
     }
-    g_queue_push_tail (&log->log, output);
+    gst_vec_deque_push_tail (log->log, output);
     log->log_size += output_len;
   } else {
     gchar *buf;
@@ -3657,7 +3677,7 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
     /* Can't really write anything as the line is bigger than the maximum
      * allowed log size already, so just remove everything */
 
-    while ((buf = g_queue_pop_head (&log->log)))
+    while ((buf = gst_vec_deque_pop_head (log->log)))
       g_free (buf);
     g_free (output);
     log->log_size = 0;
@@ -3690,16 +3710,17 @@ gst_debug_ring_buffer_logger_get_logs (void)
   tmp = logs = g_new0 (gchar *, ring_buffer_logger->threads.length + 1);
   for (l = ring_buffer_logger->threads.head; l; l = l->next) {
     GstRingBufferLog *log = l->data;
-    GList *l;
     gchar *p;
-    gsize len;
+    gsize n_lines, line_len;
 
     *tmp = p = g_new0 (gchar, log->log_size + 1);
 
-    for (l = log->log.head; l; l = l->next) {
-      len = strlen (l->data);
-      memcpy (p, l->data, len);
-      p += len;
+    n_lines = gst_vec_deque_get_length (log->log);
+    for (gsize i = 0; i < n_lines; i++) {
+      const gchar *line = gst_vec_deque_peek_nth (log->log, i);
+      line_len = strlen (line);
+      memcpy (p, line, line_len);
+      p += line_len;
     }
 
     tmp++;
@@ -3719,7 +3740,7 @@ gst_ring_buffer_logger_free (GstRingBufferLogger * logger)
 
     while ((log = g_queue_pop_head (&logger->threads))) {
       gchar *buf;
-      while ((buf = g_queue_pop_head (&log->log)))
+      while ((buf = gst_vec_deque_pop_head (log->log)))
         g_free (buf);
       g_free (log);
     }

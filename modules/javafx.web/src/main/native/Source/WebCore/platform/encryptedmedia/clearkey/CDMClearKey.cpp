@@ -450,7 +450,7 @@ void CDMInstanceSessionClearKey::requestLicense(LicenseType, KeyGroupingStrategy
 {
     RefPtr parentInstance = protectedParentInstance();
     if (!parentInstance) {
-        LOG(EME, "EME - ClearKey - session %s is in an invalid state", sessionId.utf8().data());
+        LOG(EME, "EME - ClearKey - session %s is in an invalid state", m_sessionID.utf8().data());
         callOnMainThread(
             [weakThis = WeakPtr { *this }, callback = WTFMove(callback), initData = WTFMove(initData)]() mutable {
                 if (!weakThis)

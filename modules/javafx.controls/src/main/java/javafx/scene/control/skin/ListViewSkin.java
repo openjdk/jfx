@@ -101,7 +101,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
     private ObservableList<T> listViewItems;
 
-    private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
 
     private int itemCount = -1;
@@ -117,10 +116,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
     private MapChangeListener<Object, Object> propertiesMapListener = c -> {
         if (! c.wasAdded()) return;
-        if (Properties.RECREATE.equals(c.getKey())) {
-            needCellsRebuilt = true;
-            getSkinnable().requestLayout();
-            getSkinnable().getProperties().remove(Properties.RECREATE);
+        if (Properties.REBUILD.equals(c.getKey())) {
+            requestRebuildCells();
+            getSkinnable().getProperties().remove(Properties.REBUILD);
         }
     };
 
@@ -230,7 +228,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         control.itemsProperty().addListener(weakItemsChangeListener);
 
         final ObservableMap<Object, Object> properties = control.getProperties();
-        properties.remove(Properties.RECREATE);
+        properties.remove(Properties.REBUILD);
         properties.addListener(weakPropertiesMapListener);
 
         // Register listeners
@@ -281,13 +279,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
                                             final double w, final double h) {
         super.layoutChildren(x, y, w, h);
 
-        if (needCellsRebuilt) {
-            flow.rebuildCells();
-        } else if (needCellsReconfigured) {
+        if (needCellsReconfigured) {
             flow.reconfigureCells();
         }
 
-        needCellsRebuilt = false;
         needCellsReconfigured = false;
 
         if (getItemCount() == 0) {

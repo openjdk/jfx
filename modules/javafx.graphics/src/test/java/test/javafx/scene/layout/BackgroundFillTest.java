@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -217,19 +217,35 @@ public class BackgroundFillTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             BackgroundFill startValue = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
             BackgroundFill endValue = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             BackgroundFill startValue = new BackgroundFill(Color.ORANGE, new CornerRadii(2), new Insets(2));
             BackgroundFill endValue = new BackgroundFill(Color.RED, new CornerRadii(4), new Insets(6));
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            BackgroundFill startValue = new BackgroundFill(new Color(0.5, 0.5, 0.5, 1), new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(new Color(1, 1, 1, 1), new CornerRadii(4), new Insets(6));
+            assertEquals(new BackgroundFill(new Color(0, 0, 0, 1), new CornerRadii(0), new Insets(-2)),
+                         startValue.interpolate(endValue, -1));
+            assertEquals(new BackgroundFill(new Color(0, 0, 0, 1), new CornerRadii(0), new Insets(-6)),
+                         startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            BackgroundFill startValue = new BackgroundFill(new Color(0.5, 0.5, 0.5, 1), new CornerRadii(2), new Insets(2));
+            BackgroundFill endValue = new BackgroundFill(new Color(1, 1, 1, 1), new CornerRadii(4), new Insets(6));
+            assertEquals(new BackgroundFill(new Color(1, 1, 1, 1), new CornerRadii(6), new Insets(10)),
+                         startValue.interpolate(endValue, 2));
         }
     }
 }

@@ -76,8 +76,12 @@ enum
 enum
 {
   ARG_0,
-  ARG_DEVICE
+  ARG_DEVICE,
+  ARG_UNIQUE_ID,
+  ARG_CONFIGURE_SESSION,
 };
+
+#define DEFAULT_CONFIGURE_SESSION TRUE
 
 static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
@@ -151,6 +155,39 @@ gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
       g_param_spec_int ("device", "Device ID", "Device ID of input device",
           0, G_MAXINT, 0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * osxaudiosrc:unique-id
+   *
+   * Unique persistent ID for the input device
+   *
+   * Since: 1.26
+   */
+  g_object_class_install_property (gobject_class, ARG_UNIQUE_ID,
+      g_param_spec_string ("unique-id", "Unique ID",
+          "Unique persistent ID for the input device",
+          NULL, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+
+#ifdef HAVE_IOS
+  /**
+   * GstOsxAudioSrc:configure-session:
+   *
+   * Whether the app-wide AVAudioSession should be automatically set up for audio capture.
+   * This will set the category to AVAudioSessionCategoryPlayAndRecord and activate
+   * the session when the element goes to READY. No other settings will be changed.
+   *
+   * If your application needs to configure anything more than the category, set this to FALSE
+   * for all osxaudiosink/src instances and handle the AVAudioSession setup yourself.
+   *
+   * Since: 1.26
+   */
+  g_object_class_install_property (gobject_class, ARG_CONFIGURE_SESSION,
+      g_param_spec_boolean ("configure-session",
+          "Enable automatic AVAudioSession setup",
+          "Whether the app-wide AVAudioSession should be automatically configured for audio capture",
+          DEFAULT_CONFIGURE_SESSION,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+#endif
+
   gstaudiobasesrc_class->create_ringbuffer =
       GST_DEBUG_FUNCPTR (gst_osx_audio_src_create_ringbuffer);
 
@@ -168,6 +205,11 @@ gst_osx_audio_src_init (GstOsxAudioSrc * src)
   gst_base_src_set_live (GST_BASE_SRC (src), TRUE);
 
   src->device_id = kAudioDeviceUnknown;
+  src->unique_id = NULL;
+
+#ifdef HAVE_IOS
+  src->configure_session = DEFAULT_CONFIGURE_SESSION;
+#endif
 }
 
 static void
@@ -180,6 +222,11 @@ gst_osx_audio_src_set_property (GObject * object, guint prop_id,
     case ARG_DEVICE:
       src->device_id = g_value_get_int (value);
       break;
+#ifdef HAVE_IOS
+    case ARG_CONFIGURE_SESSION:
+      src->configure_session = g_value_get_boolean (value);
+      break;
+#endif
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -196,6 +243,16 @@ gst_osx_audio_src_get_property (GObject * object, guint prop_id,
     case ARG_DEVICE:
       g_value_set_int (value, src->device_id);
       break;
+    case ARG_UNIQUE_ID:
+      GST_OBJECT_LOCK (src);
+      g_value_set_string (value, src->unique_id);
+      GST_OBJECT_UNLOCK (src);
+      break;
+#ifdef HAVE_IOS
+    case ARG_CONFIGURE_SESSION:
+      g_value_set_boolean (value, src->configure_session);
+      break;
+#endif
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -213,9 +270,17 @@ gst_osx_audio_src_change_state (GstElement * element, GstStateChange transition)
     case GST_STATE_CHANGE_READY_TO_NULL:{
       GST_OBJECT_LOCK (osxsrc);
       osxsrc->device_id = kAudioDeviceUnknown;
+      osxsrc->unique_id = NULL;
       GST_OBJECT_UNLOCK (osxsrc);
       break;
     }
+#ifdef HAVE_IOS
+    case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
+      ringbuffer =
+          GST_OSX_AUDIO_RING_BUFFER (GST_AUDIO_BASE_SRC (osxsrc)->ringbuffer);
+      ringbuffer->core_audio->first_sample_time = -1;
+      break;
+#endif
     default:
       break;
   }
@@ -232,6 +297,7 @@ gst_osx_audio_src_change_state (GstElement * element, GstStateChange transition)
       if (ringbuffer->core_audio->device_id != osxsrc->device_id) {
         GST_OBJECT_LOCK (osxsrc);
         osxsrc->device_id = ringbuffer->core_audio->device_id;
+        osxsrc->unique_id = ringbuffer->core_audio->unique_id;
         GST_OBJECT_UNLOCK (osxsrc);
 
         g_object_notify (G_OBJECT (osxsrc), "device");
@@ -323,16 +389,15 @@ gst_osx_audio_src_create_ringbuffer (GstAudioBaseSrc * src)
       GST_OSX_AUDIO_ELEMENT_GET_INTERFACE (osxsrc),
       (void *) gst_osx_audio_src_io_proc);
 
+  ringbuffer->core_audio = g_object_new (GST_TYPE_CORE_AUDIO,
+      "is-src", TRUE, "device", osxsrc->device_id,
+#ifdef HAVE_IOS
+      "configure-session", osxsrc->configure_session,
+#endif
+      NULL);
+  ringbuffer->core_audio->osxbuf = GST_OBJECT (ringbuffer);
   ringbuffer->core_audio->element =
       GST_OSX_AUDIO_ELEMENT_GET_INTERFACE (osxsrc);
-  ringbuffer->core_audio->is_src = TRUE;
-
-  /* By default the coreaudio instance created by the ringbuffer
-   * has device_id==kAudioDeviceUnknown. The user might have
-   * selected a different one here
-   */
-  if (ringbuffer->core_audio->device_id != osxsrc->device_id)
-    ringbuffer->core_audio->device_id = osxsrc->device_id;
 
   return GST_AUDIO_RING_BUFFER (ringbuffer);
 }
@@ -377,6 +442,17 @@ gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
 
   remaining = buf->core_audio->recBufferList->mBuffers[0].mDataByteSize;
   sample_position = inTimeStamp->mSampleTime;
+
+#ifdef HAVE_IOS
+  /* Timestamps don't always start from 0 on iOS, have to offset */
+  if (buf->core_audio->first_sample_time == -1) {
+    GST_ERROR ("Setting first CoreAudio timestamp to %f",
+        inTimeStamp->mSampleTime);
+    buf->core_audio->first_sample_time = inTimeStamp->mSampleTime;
+  }
+
+  sample_position -= buf->core_audio->first_sample_time;
+#endif
 
   while (remaining) {
     if (!gst_audio_ring_buffer_prepare_read (GST_AUDIO_RING_BUFFER (buf),

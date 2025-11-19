@@ -36,6 +36,7 @@ import javafx.css.CssParser;
 import javafx.css.Stylesheet;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -92,6 +93,60 @@ public class CssParser_mediaQuery_Test {
         assertEquals(
             new FunctionExpression<>("prefers-reduced-motion", "reduce", _ -> null, true),
             outerMediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void parseMediaQueryWithMultipleRules() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: light) {
+                .foo1 { bar: baz; }
+                .foo2 { bar: baz; }
+            }
+            """);
+
+        assertEquals(2, stylesheet.getRules().size());
+        var rule1 = stylesheet.getRules().getFirst();
+        var rule2 = stylesheet.getRules().getLast();
+        assertEquals(Set.of("foo1"), rule1.getSelectors().getFirst().getStyleClassNames());
+        assertEquals(Set.of("foo2"), rule2.getSelectors().getFirst().getStyleClassNames());
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
+        assertEquals(1, mediaRule.getQueries().size());
+        assertEquals(
+            new FunctionExpression<>("prefers-color-scheme", "light", _ -> null, ColorScheme.LIGHT),
+            mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void parseNestedMediaQueryWithMultipleRules() {
+        Stylesheet stylesheet = new CssParser().parse("""
+            @media (prefers-reduced-motion: reduce) {
+                .foo1 { bar: baz; }
+                .foo2 { bar: baz; }
+                @media (prefers-color-scheme: light) {
+                    .foo3 { bar: baz; }
+                    .foo4 { bar: baz; }
+                }
+            }
+            """);
+
+        assertEquals(4, stylesheet.getRules().size());
+
+        var rule1 = stylesheet.getRules().get(0);
+        assertEquals(Set.of("foo1"), rule1.getSelectors().getFirst().getStyleClassNames());
+        assertNull(RuleHelper.getMediaRule(rule1).getParent());
+
+        var rule2 = stylesheet.getRules().get(1);
+        assertEquals(Set.of("foo2"), rule2.getSelectors().getFirst().getStyleClassNames());
+        assertNull(RuleHelper.getMediaRule(rule2).getParent());
+
+        var rule3 = stylesheet.getRules().get(2);
+        assertEquals(Set.of("foo3"), rule3.getSelectors().getFirst().getStyleClassNames());
+        assertNull(RuleHelper.getMediaRule(rule3).getParent().getParent());
+
+        var rule4 = stylesheet.getRules().get(3);
+        assertEquals(Set.of("foo4"), rule4.getSelectors().getFirst().getStyleClassNames());
+        assertNull(RuleHelper.getMediaRule(rule4).getParent().getParent());
     }
 
     @Test
@@ -369,5 +424,22 @@ public class CssParser_mediaQuery_Test {
         assertEquals(2, stylesheet.getRules().size());
         assertEquals(List.of(), stylesheet.getRules().get(0).getDeclarations());
         assertEquals("qux", stylesheet.getRules().get(1).getDeclarations().getFirst().getProperty());
+    }
+
+    @Test
+    void missingClosingCurlyBraceEmitsParserError() {
+        CssParser.errorsProperty().clear();
+
+        var stylesheet = new CssParser().parse("""
+            @media (prefers-color-scheme: dark) {
+                .foo { bar: baz; }
+            """);
+
+        assertTrue(CssParser.errorsProperty().getFirst().getMessage().startsWith("Expected RBRACE"));
+        assertEquals(1, stylesheet.getRules().size());
+        assertEquals(Set.of("foo"), stylesheet.getRules().getFirst().getSelectors().getFirst().getStyleClassNames());
+        assertEquals(
+            List.of(new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)),
+            RuleHelper.getMediaRule(stylesheet.getRules().getFirst()).getQueries());
     }
 }

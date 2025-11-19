@@ -193,7 +193,7 @@ ExceptionOr<Vector<Token>> Tokenizer::tokenize()
                 }
 
                 if (m_codepoint == '\\') {
-                    if (m_index == m_input.length() - 1) {
+                    if (regexPosition == m_input.length() - 1) {
                         maybeException = processTokenizingError(regexStart, m_index, "No character is provided after escape."_s);
                         hasError = true;
                         break;
