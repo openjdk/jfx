@@ -96,7 +96,7 @@ public class TimeStringConverter extends DateTimeStringConverter {
     }
 
     @Override
-    DateFormat getSpecialziedDateFormat(int dateStyle, int timeStyle, Locale locale) {
+    DateFormat getSpecializedDateFormat(int dateStyle, int timeStyle, Locale locale) {
         return DateFormat.getTimeInstance(timeStyle, locale);
     }
 }

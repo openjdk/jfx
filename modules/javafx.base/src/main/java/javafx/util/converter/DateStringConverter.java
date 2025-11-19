@@ -94,7 +94,7 @@ public class DateStringConverter extends DateTimeStringConverter {
     }
 
     @Override
-    DateFormat getSpecialziedDateFormat(int dateStyle, int timeStyle, Locale locale) {
+    DateFormat getSpecializedDateFormat(int dateStyle, int timeStyle, Locale locale) {
         return DateFormat.getDateInstance(dateStyle, locale);
     }
 }

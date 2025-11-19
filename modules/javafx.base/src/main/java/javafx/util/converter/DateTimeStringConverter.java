@@ -110,14 +110,14 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
     private DateFormat create(Locale locale, int dateStyle, int timeStyle, String pattern) {
         locale = locale != null ? locale : DEFAULT_LOCALE;
         DateFormat dateFormat = pattern == null ?
-                getSpecialziedDateFormat(dateStyle, timeStyle, locale) :
+                getSpecializedDateFormat(dateStyle, timeStyle, locale) :
                 new SimpleDateFormat(pattern, locale);
         dateFormat.setLenient(false);
         return dateFormat;
     }
 
     /// Returns the `DateFormat` to be used without a pattern. Subclasses should override to return their own formatter.
-    DateFormat getSpecialziedDateFormat(int dateStyle, int timeStyle, Locale locale) {
+    DateFormat getSpecializedDateFormat(int dateStyle, int timeStyle, Locale locale) {
         return DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale);
     }
 
