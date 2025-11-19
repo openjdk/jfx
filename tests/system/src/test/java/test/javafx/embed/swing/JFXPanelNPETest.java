@@ -98,9 +98,9 @@ public class JFXPanelNPETest {
         for (int i = 0; i < 300; i++) {
             SwingUtilities.invokeLater(contentPane::repaint);
             Platform.runLater(() -> contentPane.setScene(null));
-            Thread.sleep(100);
+            Thread.sleep(1);
             Platform.runLater(() -> contentPane.setScene(webView.getScene()));
-            Thread.sleep(100);
+            Thread.sleep(1);
         }
         Assertions.assertFalse(failure.get());
     }

@@ -155,9 +155,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         entireSceneNeedsRepaint();
         Platform.runLater(() -> {
             QuantumToolkit.runWithRenderLock(() -> {
-                if (getSceneState() != null) {
-                    updateSceneState();
-                }
+                updateSceneState();
                 return null;
             });
         });
