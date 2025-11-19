@@ -34,9 +34,7 @@ import java.util.Locale;
 public class CurrencyStringConverter extends NumberStringConverter {
 
     /// Creates a `CurrencyStringConverter` that uses a formatter/parser based on the user's [Locale].
-    public CurrencyStringConverter() {
-        super();
-    }
+    public CurrencyStringConverter() {}
 
     /// Creates a `CurrencyStringConverter` that uses a formatter/parser based on the given locale.
     ///

@@ -34,9 +34,7 @@ import java.util.Locale;
 public class PercentageStringConverter extends NumberStringConverter {
 
     /// Creates a `PercentageStringConverter` that uses a formatter/parser based on the user's [Locale].
-    public PercentageStringConverter() {
-        super();
-    }
+    public PercentageStringConverter() {}
 
     /// Creates a `PercentageStringConverter` that uses a formatter/parser based on the given locale.
     ///

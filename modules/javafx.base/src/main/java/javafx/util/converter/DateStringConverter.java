@@ -39,9 +39,7 @@ public class DateStringConverter extends DateTimeStringConverter {
 
     /// Creates a `DateStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for the date style,
     /// and the user's [Locale].
-    public DateStringConverter() {
-        super();
-    }
+    public DateStringConverter() {}
 
     /// Creates a `DateStringConverter` that uses a formatter/parser based on the given date style, and the user's
     /// [Locale].

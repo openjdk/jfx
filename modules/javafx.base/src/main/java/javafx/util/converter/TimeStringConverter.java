@@ -39,9 +39,7 @@ public class TimeStringConverter extends DateTimeStringConverter {
 
     /// Creates a `TimeStringConverter` that uses a formatter/parser based on {@link DateFormat#DEFAULT} for the
     /// time style, and the user's {@link Locale}.
-    public TimeStringConverter() {
-        super();
-    }
+    public TimeStringConverter() {}
 
     /// Creates a `TimeStringConverter` that uses a formatter/parser based on the given time style, and the user's
     /// {@link Locale}.
