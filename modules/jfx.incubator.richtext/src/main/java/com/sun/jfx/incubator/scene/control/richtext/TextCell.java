@@ -37,6 +37,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 
@@ -97,12 +98,20 @@ public final class TextCell extends BorderPane {
     }
 
     /**
-     * Adds a node to the text flow.
+     * Adds a non-text node to the text flow.
      * @param node the node to add
      */
     public void add(Node node) {
         flow().getChildren().add(node);
         embedsNode = true;
+    }
+
+    /**
+     * Adds a text segment to the text flow.
+     * @param t the text segment
+     */
+    public void addTextSegment(Text t) {
+        flow().getChildren().add(t);
     }
 
     /**

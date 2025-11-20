@@ -813,7 +813,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             if ((segments == null) || segments.isEmpty()) {
                 // a bit of a hack: avoid TextCells with an empty TextFlow,
                 // otherwise it makes the caret collapse to a single point
-                cell.add(createTextNode("", StyleAttributeMap.EMPTY));
+                cell.addTextSegment(createTextNode("", StyleAttributeMap.EMPTY));
             } else {
                 for (StyledSegment seg : segments) {
                     switch (seg.getType()) {
@@ -825,7 +825,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                         String text = seg.getText();
                         StyleAttributeMap a = seg.getStyleAttributeMap(this);
                         Text t = createTextNode(text, a);
-                        cell.add(t);
+                        cell.addTextSegment(t);
                         break;
                     }
                 }
