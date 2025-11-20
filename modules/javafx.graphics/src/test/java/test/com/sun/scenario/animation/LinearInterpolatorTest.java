@@ -47,7 +47,7 @@ public class LinearInterpolatorTest {
 
     @Test
     void constructor_nullArray_throws() {
-        assertThrows(IllegalArgumentException.class, () -> new LinearInterpolator(null));
+        assertThrows(NullPointerException.class, () -> new LinearInterpolator(null));
     }
 
     @Test
