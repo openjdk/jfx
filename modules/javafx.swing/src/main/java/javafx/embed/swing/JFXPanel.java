@@ -151,7 +151,7 @@ public class JFXPanel extends JComponent {
     private transient HostContainer hostContainer;
 
     // Set in FX thread and accessed in EDT/FX threads
-    private transient volatile EmbeddedWindow stage;
+    private transient volatile EmbeddedWindow fx_stage;
 
     // Set and accessed in FX thread only
     private transient volatile Scene scene;
@@ -160,8 +160,8 @@ public class JFXPanel extends JComponent {
     private transient SwingDnD dnd;
 
     // Set in FX thread and accessed in EDT/FX threads
-    private transient EmbeddedStageInterface stagePeer;
-    private transient EmbeddedSceneInterface scenePeer;
+    private transient EmbeddedStageInterface fx_stagePeer;
+    private transient EmbeddedSceneInterface fx_scenePeer;
 
     // The logical size of the FX content
     @SuppressWarnings("doclint:missing")
@@ -337,18 +337,18 @@ public class JFXPanel extends JComponent {
      * Called on JavaFX app thread.
      */
     private void setSceneImpl(Scene newScene) {
-        if ((stage != null) && (newScene == null)) {
-            stage.hide();
-            stage = null;
+        if ((fx_stage != null) && (newScene == null)) {
+            fx_stage.hide();
+            fx_stage = null;
         }
         scene = newScene;
-        if ((stage == null) && (newScene != null)) {
-            stage = new EmbeddedWindow(hostContainer);
+        if ((fx_stage == null) && (newScene != null)) {
+            fx_stage = new EmbeddedWindow(hostContainer);
         }
-        if (stage != null) {
-            stage.setScene(newScene);
-            if (!stage.isShowing()) {
-                stage.show();
+        if (fx_stage != null) {
+            fx_stage.setScene(newScene);
+            if (!fx_stage.isShowing()) {
+                fx_stage.show();
             }
         }
     }
@@ -423,7 +423,7 @@ public class JFXPanel extends JComponent {
 
     // Called on EDT thread
     private void sendMouseEventToFX(MouseEvent e) {
-        var hScenePeer = scenePeer;
+        var hScenePeer = fx_scenePeer;
         if (hScenePeer == null || !isFxEnabled()) {
             return;
         }
@@ -514,7 +514,7 @@ public class JFXPanel extends JComponent {
 
         // Called on EDT thread.
 
-        var hStagePeer = stagePeer;
+        var hStagePeer = fx_stagePeer;
         if ((e.getID() == MouseEvent.MOUSE_PRESSED) &&
             (e.getButton() == MouseEvent.BUTTON1)) {
             if (isFocusable() && !hasFocus()) {
@@ -570,7 +570,7 @@ public class JFXPanel extends JComponent {
 
         // Called on EDT thread.
 
-        var hScenePeer = scenePeer;
+        var hScenePeer = fx_scenePeer;
         if (hScenePeer == null || !isFxEnabled()) {
             return;
         }
@@ -605,8 +605,8 @@ public class JFXPanel extends JComponent {
 
         // Called on EDT thread.
 
-        var hStagePeer = stagePeer;
-        var hScenePeer = scenePeer;
+        var hStagePeer = fx_stagePeer;
+        var hScenePeer = fx_scenePeer;
         if (hStagePeer != null) {
             hStagePeer.setSize(pWidth, pHeight);
         }
@@ -680,7 +680,7 @@ public class JFXPanel extends JComponent {
             newScaleFactorX != scaleFactorX || newScaleFactorY != scaleFactorY)
         {
             createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
-            var hScenePeer = scenePeer;
+            var hScenePeer = fx_scenePeer;
             if (hScenePeer != null) {
                 hScenePeer.setPixelScaleFactors((float) newScaleFactorX,
                                                 (float) newScaleFactorY);
@@ -709,7 +709,7 @@ public class JFXPanel extends JComponent {
 
         // Called on EDT thread.
 
-        var hStagePeer = stagePeer;
+        var hStagePeer = fx_stagePeer;
         if (hStagePeer != null) {
             hStagePeer.setLocation(screenX, screenY);
         }
@@ -754,8 +754,8 @@ public class JFXPanel extends JComponent {
 
         // Called on EDT thread.
 
-        var hStagePeer = stagePeer;
-        if ((stage == null) || (hStagePeer == null) || !isFxEnabled()) {
+        var hStagePeer = fx_stagePeer;
+        if ((fx_stage == null) || (hStagePeer == null) || !isFxEnabled()) {
             return;
         }
 
@@ -792,7 +792,7 @@ public class JFXPanel extends JComponent {
 
     // called on EDT only
     private void createResizePixelBuffer(double newScaleFactorX, double newScaleFactorY) {
-        var hScenePeer = scenePeer;
+        var hScenePeer = fx_scenePeer;
         if (hScenePeer == null || pWidth <= 0 || pHeight <= 0) {
             pixelsIm = null;
         } else {
@@ -840,7 +840,7 @@ public class JFXPanel extends JComponent {
         if (e.getCaret() != null) {
             insertionIndex = e.getCaret().getInsertionIndex();
         }
-        var hScenePeer = scenePeer;
+        var hScenePeer = fx_scenePeer;
         if (hScenePeer != null) {
             hScenePeer.inputMethodEvent(
                     javafx.scene.input.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
@@ -865,8 +865,8 @@ public class JFXPanel extends JComponent {
         // Called on EDT thread.
 
         // scenePeer, stage set in FX thread and being accessed in EDT
-        var hScenePeer = scenePeer;
-        var hStage = stage;
+        var hScenePeer = fx_scenePeer;
+        var hStage = fx_stage;
 
         if (hScenePeer == null || hStage == null) {
             return;
@@ -933,7 +933,7 @@ public class JFXPanel extends JComponent {
      */
     @Override
     public Dimension getPreferredSize() {
-        if (isPreferredSizeSet() || scenePeer == null) {
+        if (isPreferredSizeSet() || fx_scenePeer == null) {
             return super.getPreferredSize();
         }
         return new Dimension(pPreferredWidth, pPreferredHeight);
@@ -967,11 +967,11 @@ public class JFXPanel extends JComponent {
 
         if (jfxPanelIOP.isUngrabEvent(event)) {
             SwingNodeHelper.runOnFxThread(() -> {
-                if (JFXPanel.this.stagePeer != null &&
+                if (JFXPanel.this.fx_stagePeer != null &&
                         getScene() != null &&
                         getScene().getFocusOwner() != null &&
                         getScene().getFocusOwner().isFocused()) {
-                    JFXPanel.this.stagePeer.focusUngrab();
+                    JFXPanel.this.fx_stagePeer.focusUngrab();
                 }
             });
         }
@@ -985,7 +985,7 @@ public class JFXPanel extends JComponent {
 
                 if (jfxPanelWindow == eventWindow) {
                     SwingNodeHelper.runOnFxThread(() -> {
-                        if (JFXPanel.this.stagePeer != null) {
+                        if (JFXPanel.this.fx_stagePeer != null) {
                             // No need to check if grab is active or not.
                             // NoAutoHide popups don't request the grab and
                             // ignore the Ungrab event anyway.
@@ -993,7 +993,7 @@ public class JFXPanel extends JComponent {
                             // user clicks some non-FX content, even if for
                             // some reason they didn't install the grab when
                             // they were shown.
-                            JFXPanel.this.stagePeer.focusUngrab();
+                            JFXPanel.this.fx_stagePeer.focusUngrab();
                         }
                     });
                 }
@@ -1016,8 +1016,8 @@ public class JFXPanel extends JComponent {
 
         updateComponentSize(); // see JDK-8117363
         SwingNodeHelper.runOnFxThread(() -> {
-            if ((stage != null) && !stage.isShowing()) {
-                stage.show();
+            if ((fx_stage != null) && !fx_stage.isShowing()) {
+                fx_stage.show();
                 SwingNodeHelper.runOnEDT(() -> sendMoveEventToFX());
             }
         });
@@ -1025,7 +1025,7 @@ public class JFXPanel extends JComponent {
 
     @Override
     public InputMethodRequests getInputMethodRequests() {
-        EmbeddedSceneInterface scene = scenePeer;
+        EmbeddedSceneInterface scene = fx_scenePeer;
         if (scene == null) {
             return new InputMethodSupport.InputMethodRequestsAdapter(null);
         }
@@ -1039,8 +1039,8 @@ public class JFXPanel extends JComponent {
      */
     @Override public void removeNotify() {
         SwingNodeHelper.runOnFxThread(() -> {
-            if ((stage != null) && stage.isShowing()) {
-                stage.hide();
+            if ((fx_stage != null) && fx_stage.isShowing()) {
+                fx_stage.hide();
             }
         });
 
@@ -1073,8 +1073,8 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedStage(EmbeddedStageInterface embeddedStage) {
-            stagePeer = embeddedStage;
-            var hStagePeer = stagePeer;
+            fx_stagePeer = embeddedStage;
+            var hStagePeer = fx_stagePeer;
             if (hStagePeer == null) {
                 return;
             }
@@ -1091,11 +1091,11 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setEmbeddedScene(EmbeddedSceneInterface embeddedScene) {
-            if (scenePeer == embeddedScene) {
+            if (fx_scenePeer == embeddedScene) {
                 return;
             }
-            scenePeer = embeddedScene;
-            var hScenePeer = scenePeer;
+            fx_scenePeer = embeddedScene;
+            var hScenePeer = fx_scenePeer;
             if (hScenePeer == null) {
                 invokeOnClientEDT(() -> {
                     if (dnd != null) {
