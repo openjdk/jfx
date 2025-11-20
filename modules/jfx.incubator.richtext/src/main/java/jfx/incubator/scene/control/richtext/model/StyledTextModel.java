@@ -209,6 +209,15 @@ public abstract class StyledTextModel {
     protected abstract void insertParagraph(int index, Supplier<Region> generator);
 
     /**
+     * Applies paragraph styles in the specified paragraph.
+     *
+     * @param index the paragraph index
+     * @param paragraphAttrs the paragraph attributes
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
+     */
+    protected abstract void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs);
+
+    /**
      * Replaces the paragraph styles in the specified paragraph.
      *
      * @param index the paragraph index
@@ -794,9 +803,9 @@ public abstract class StyledTextModel {
         UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd, false) : null;
 
         if (pa != null) {
-            // set paragraph attributes
+            // apply paragraph attributes
             for (int ix = start.index(); ix <= end.index(); ix++) {
-                setParagraphStyle(ix, pa);
+                applyParagraphStyle(ix, pa);
             }
         }
 
