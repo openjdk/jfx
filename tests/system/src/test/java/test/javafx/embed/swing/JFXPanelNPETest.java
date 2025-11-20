@@ -36,16 +36,19 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import test.javafx.util.OutputRedirect;
 import test.util.Util;
 
+@Timeout(value=30000, unit=TimeUnit.MILLISECONDS)
 public class JFXPanelNPETest {
     private static WebView webView;
     private static JFrame jFrame;
@@ -97,6 +100,9 @@ public class JFXPanelNPETest {
                 Platform.runLater(() -> contentPane.setScene(webView.getScene()));
                 Thread.sleep(1);
             }
+            // Wait for both threads to process the earlier runnables
+            SwingUtilities.invokeAndWait(() -> {});
+            Util.runAndWait(() -> {});
         } finally {
             OutputRedirect.checkAndRestoreStderr();
         }

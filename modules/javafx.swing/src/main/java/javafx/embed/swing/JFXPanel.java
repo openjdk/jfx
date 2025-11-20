@@ -1113,9 +1113,7 @@ public class JFXPanel extends JComponent {
             invokeOnClientEDT(() -> {
                 dnd = new SwingDnD(JFXPanel.this, hScenePeer);
                 dnd.addNotify();
-                if (hScenePeer != null) {
-                    hScenePeer.setDragStartListener(dnd.getDragStartListener());
-                }
+                hScenePeer.setDragStartListener(dnd.getDragStartListener());
             });
         }
 
