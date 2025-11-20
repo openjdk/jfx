@@ -249,7 +249,7 @@ abstract class GlassScene implements TKScene {
     }
 
     final void updateSceneState() {
-        // should only be called on the event thread
+        // should only be called on the FX application thread
         if (sceneState != null) {
             sceneState.update();
         }
