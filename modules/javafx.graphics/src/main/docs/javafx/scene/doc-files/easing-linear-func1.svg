@@ -27,6 +27,12 @@
      rx="20"
      ry="20"
      id="ellipse2" />
+  <circle
+     style="fill:#0066cc;stroke:#000000;stroke-width:0px;paint-order:stroke"
+     cx="257.19159"
+     cy="387.2236"
+     id="ellipse2-2"
+     r="20" />
   <path
      style="display:inline;stroke:#0066cc;stroke-width:12px;fill:none"
      d="M 0,512 256,387.5528 512,0"
