@@ -214,6 +214,7 @@ public abstract class StyledTextModel {
      * @param index the paragraph index
      * @param paragraphAttrs the paragraph attributes
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
+     * @since 26
      */
     protected abstract void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs);
 
