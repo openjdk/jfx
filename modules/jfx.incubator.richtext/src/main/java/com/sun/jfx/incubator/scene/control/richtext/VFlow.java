@@ -809,13 +809,14 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
 
             // segments
-            List<StyledSegment> segments = RichParagraphHelper.getSegments(par);
-            if ((segments == null) || segments.isEmpty()) {
+            int count = par.getSegmentCount();
+            if (count == 0) {
                 // a bit of a hack: avoid TextCells with an empty TextFlow,
                 // otherwise it makes the caret collapse to a single point
                 cell.add(createTextNode("", StyleAttributeMap.EMPTY));
             } else {
-                for (StyledSegment seg : segments) {
+                for (int i=0; i<count; i++) {
+                    StyledSegment seg = par.getSegment(i);
                     switch (seg.getType()) {
                     case INLINE_NODE:
                         Node n = seg.getInlineNodeGenerator().get();

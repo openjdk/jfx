@@ -568,11 +568,6 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 }
 
                 @Override
-                final List<StyledSegment> getSegments() {
-                    return Paragraph.this.getSegments();
-                }
-
-                @Override
                 public final Supplier<Region> getParagraphRegion() {
                     return Paragraph.this.getParagraphRegion();
                 }
@@ -580,6 +575,16 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 @Override
                 final List<Consumer<TextCell>> getHighlights() {
                     return highlights;
+                }
+
+                @Override
+                public int getSegmentCount() {
+                    return Paragraph.this.getSegments().size();
+                }
+
+                @Override
+                public StyledSegment getSegment(int index) {
+                    return Paragraph.this.getSegments().get(index);
                 }
             };
         }
