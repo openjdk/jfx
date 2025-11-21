@@ -39,8 +39,10 @@
     if (self->_texture != nil)
     {
         LOG("GlassMTLFrameBufferObject releasing FBO :%lu", self->_texture);
+        [lock lock];
         [self->_texture release];
         self->_texture = nil;
+        [lock unlock];
     }
 }
 
@@ -54,20 +56,20 @@
     }
 
     if (self->_texture == nil) {
-        @autoreleasepool {
-            // Create a texture
-            id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+        // Create a texture
+        id<MTLDevice> device = MTLCreateSystemDefaultDevice();
 
-            MTLTextureDescriptor *texDescriptor =
-                    [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
-                                                                       width:width
-                                                                      height:height
-                                                                   mipmapped:false];
-            texDescriptor.storageMode = MTLStorageModeManaged;
-            texDescriptor.usage = MTLTextureUsageRenderTarget;
+        MTLTextureDescriptor *texDescriptor =
+                [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
+                                                                   width:width
+                                                                  height:height
+                                                               mipmapped:false];
+        texDescriptor.storageMode = MTLStorageModeManaged;
+        texDescriptor.usage = MTLTextureUsageRenderTarget;
 
-            self->_texture = [device newTextureWithDescriptor:texDescriptor];
-        }
+        [lock lock];
+        self->_texture = [device newTextureWithDescriptor:texDescriptor];
+        [lock unlock];
     }
 
     self->_width = width;
@@ -79,6 +81,7 @@
     self = [super init];
     if (self != nil)
     {
+        lock = [NSLock new];
         self->_width = 0;
         self->_height = 0;
         self->_texture = nil;
@@ -126,6 +129,14 @@
            andHeight:(unsigned int)height
 {
     // TODO: MTL: check if implementation required
+}
+
+- (bool)tryLockTexture {
+    return [lock tryLock];
+}
+
+- (void)unlockTexture {
+    return [lock unlock];
 }
 
 - (void)blitFromFBO:(GlassMTLFrameBufferObject*)other_fbo

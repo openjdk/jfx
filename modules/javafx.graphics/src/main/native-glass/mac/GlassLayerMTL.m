@@ -31,6 +31,7 @@
 @implementation GlassLayerMTL
 
 - (id) init:(long)mtlCommandQueuePtr
+     isVsyncEnabled:(BOOL)isVsyncEnabled
        withIsSwPipe:(BOOL)isSwPipe
 {
     self = [super init];
@@ -47,7 +48,7 @@
 
     self.pixelFormat = MTLPixelFormatBGRA8Unorm;
     self.framebufferOnly = NO;
-    self.displaySyncEnabled = NO; // to support FPS faster than 60fps (-Djavafx.animation.fullspeed=true)
+    self.displaySyncEnabled = isVsyncEnabled;
     self.opaque = NO; //to support shaped window
 
     if (!isSwPipe) {
@@ -85,67 +86,74 @@
     [super display];
 }
 
-static int nextDrawableCount = 0;
+volatile static int nextDrawableCount = 0;
 
 - (void) blitToScreen
 {
-    id<MTLTexture> backBufferTex = [(GlassMTLOffscreen*)self->_painterOffscreen getMTLTexture];
+    if ([((GlassMTLOffscreen*)self->_painterOffscreen) tryLockTexture])
+    {
+        @try {
+            id<MTLTexture> backBufferTex = [(GlassMTLOffscreen*)self->_painterOffscreen getMTLTexture];
 
-    if (backBufferTex == nil) {
-        return;
-    }
+            if (backBufferTex == nil) {
+                return;
+            }
 
-    int width = [self->_painterOffscreen width];
-    int height = [self->_painterOffscreen height];
+            int width = [self->_painterOffscreen width];
+            int height = [self->_painterOffscreen height];
 
-    if (width <= 0 || height <= 0) {
-        // NSLog(@"Layer --------- backing texture not ready yet--- skipping blit.");
-        return;
-    }
+            if (width <= 0 || height <= 0) {
+                // NSLog(@"Layer --------- backing texture not ready yet--- skipping blit.");
+                return;
+            }
 
-    if (nextDrawableCount > 2) {
-        // NSLog(@"Layer --------- previous drawing in progress.. skipping blit to screen.");
-        return;
-    }
+            if (nextDrawableCount > 2) {
+                // NSLog(@"Layer --------- previous drawing in progress.. skipping blit to screen.");
+                return;
+            }
 
-    @autoreleasepool {
-        id<MTLCommandBuffer> commandBuf = [self->_blitCommandQueue commandBuffer];
-        if (commandBuf == nil) {
-            return;
+            @autoreleasepool {
+                id<CAMetalDrawable> mtlDrawable = [self nextDrawable];
+                if (mtlDrawable == nil) {
+                    return;
+                }
+
+                id<MTLTexture> dstTexture = mtlDrawable.texture;
+                if (dstTexture.width != width || dstTexture.height != height) {
+                    return;
+                }
+
+                id<MTLCommandBuffer> commandBuf = [self->_blitCommandQueue commandBuffer];
+                if (commandBuf == nil) {
+                    return;
+                }
+
+                nextDrawableCount++;
+
+                id <MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
+
+                [blitEncoder copyFromTexture:backBufferTex
+                                   toTexture:dstTexture];
+
+                [blitEncoder endEncoding];
+                [commandBuf presentDrawable:mtlDrawable];
+                [commandBuf addCompletedHandler:^(id <MTLCommandBuffer> commandBuf) {
+                    nextDrawableCount--;
+                }];
+
+                [commandBuf commit];
+                // [commandBuf waitUntilCompleted];
+            }
         }
-        id<CAMetalDrawable> mtlDrawable = [self nextDrawable];
-        if (mtlDrawable == nil) {
-            return;
+        @finally {
+            [((GlassMTLOffscreen*)self->_painterOffscreen) unlockTexture];
         }
-
-        nextDrawableCount++;
-
-        id <MTLBlitCommandEncoder> blitEncoder = [commandBuf blitCommandEncoder];
-
-        MTLRegion region = {{0, 0, 0}, {width, height, 1}};
-
-        if (backBufferTex.usage == MTLTextureUsageRenderTarget) {
-            [blitEncoder synchronizeTexture:backBufferTex slice:0 level:0];
-        }
-        [blitEncoder copyFromTexture:backBufferTex
-                         sourceSlice:0
-                         sourceLevel:0
-                        sourceOrigin:MTLOriginMake(0, 0, 0)
-                          sourceSize:MTLSizeMake(width, height, 1)
-                           toTexture:mtlDrawable.texture
-                    destinationSlice:0
-                    destinationLevel:0
-                   destinationOrigin:MTLOriginMake(0, 0, 0)];
-
-        [blitEncoder endEncoding];
-        [commandBuf presentDrawable:mtlDrawable];
-        [commandBuf addCompletedHandler:^(id <MTLCommandBuffer> commandBuf) {
-            nextDrawableCount--;
-        }];
-
-        [commandBuf commit];
-        // [commandBuf waitUntilCompleted];
     }
+    // else
+    // {
+    //     The texture is locked, either being created/destroyed or being encoded into BlitEncoder
+    //     hence the frame could be dropped.
+    // }
 }
 
 @end
