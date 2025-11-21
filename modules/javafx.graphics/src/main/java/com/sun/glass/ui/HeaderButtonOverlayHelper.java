@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,46 +23,38 @@
  * questions.
  */
 
-package com.sun.jfx.incubator.scene.control.richtext;
+package com.sun.glass.ui;
 
-import java.io.IOException;
-import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
-import jfx.incubator.scene.control.richtext.LineEnding;
-import jfx.incubator.scene.control.richtext.model.StyledOutput;
-import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import com.sun.javafx.scene.layout.RegionHelper;
+import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 
-public class StringBuilderStyledOutput implements StyledOutput {
-    private final StringBuilder sb;
-    private final String newline;
+final class HeaderButtonOverlayHelper extends RegionHelper {
 
-    public StringBuilderStyledOutput(LineEnding lineEnding) {
-        sb = new StringBuilder(1024);
-        newline = lineEnding.getText();
+    private static final HeaderButtonOverlayHelper theInstance = new HeaderButtonOverlayHelper();
+    private static Accessor theAccessor;
+
+    private HeaderButtonOverlayHelper() {}
+
+    static {
+        Utils.forceInit(HeaderButtonOverlay.class);
+    }
+
+    public static void setAccessor(Accessor accessor) {
+        theAccessor = accessor;
+    }
+
+    public static void initHelper(HeaderButtonOverlay overlay) {
+        setHelper(overlay, theInstance);
     }
 
     @Override
-    public void consume(StyledSegment seg) {
-        switch (seg.getType()) {
-        case LINE_BREAK:
-            sb.append(newline);
-            break;
-        case TEXT:
-            String text = seg.getText();
-            sb.append(text);
-            break;
-        }
+    protected void processCSSImpl(Node node) {
+        super.processCSSImpl(node);
+        theAccessor.afterProcessCSS((HeaderButtonOverlay)node);
     }
 
-    @Override
-    public String toString() {
-        return sb.toString();
-    }
-
-    @Override
-    public void flush() throws IOException {
-    }
-
-    @Override
-    public void close() throws IOException {
+    public interface Accessor {
+        void afterProcessCSS(HeaderButtonOverlay overlay);
     }
 }
