@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -146,6 +146,11 @@ public class RichTextModel extends StyledTextModel {
     }
 
     @Override
+    protected void applyParagraphStyle(int index, StyleAttributeMap attrs) {
+        paragraphs.get(index).applyParagraphAttributes(attrs);
+    }
+
+    @Override
     protected void setParagraphStyle(int index, StyleAttributeMap attrs) {
         paragraphs.get(index).setParagraphAttributes(attrs);
     }
@@ -278,6 +283,14 @@ public class RichTextModel extends StyledTextModel {
 
         public StyleAttributeMap getParagraphAttributes() {
             return paragraphAttrs;
+        }
+
+        public void applyParagraphAttributes(StyleAttributeMap a) {
+            if (paragraphAttrs == null) {
+                paragraphAttrs = a;
+            } else {
+                paragraphAttrs = paragraphAttrs.combine(a);
+            }
         }
 
         public void setParagraphAttributes(StyleAttributeMap a) {

@@ -190,6 +190,11 @@ public class BasicTextModel extends StyledTextModel {
     }
 
     @Override
+    protected void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs) {
+        // no-op
+    }
+
+    @Override
     protected final void setParagraphStyle(int index, StyleAttributeMap a) {
         // no-op
     }

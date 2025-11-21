@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
@@ -49,7 +50,9 @@ import test.jfx.incubator.scene.control.richtext.support.RTUtil;
  */
 public class TestRichTextModel {
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final StyleAttributeMap BULLET = StyleAttributeMap.builder().setBullet("x").build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final StyleAttributeMap RED = StyleAttributeMap.builder().setBackground(Color.RED).build();
 
     @Test
     public void insertLineBreak() {
@@ -261,6 +264,40 @@ public class TestRichTextModel {
         RichTextModel m = new RichTextModel();
         m.replace(null, TextPos.ZERO, TextPos.ZERO, text);
         return m;
+    }
+
+    @Test
+    public void applyParagraphStyle() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertEquals(3, m.size());
+        TextPos end = m.getDocumentEnd();
+
+        // 3 paragraphs red
+        m.applyStyle(TextPos.ZERO, end, RED, false);
+        assertEquals(RED, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(RED, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(RED, m.getParagraph(2).getParagraphAttributes());
+
+        // add bullets to the second and third
+        m.applyStyle(TextPos.ofLeading(1, 0), end, BULLET, true);
+        StyleAttributeMap combined = BULLET.combine(RED);
+        assertEquals(RED, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(combined, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(combined, m.getParagraph(2).getParagraphAttributes());
+
+        // remove bullet from the second paragraph
+        StyleAttributeMap redOff = StyleAttributeMap.of(StyleAttributeMap.BULLET, null);
+        StyleAttributeMap result = StyleAttributeMap.builder().setBackground(Color.RED).setBullet(null).build();
+        m.applyStyle(TextPos.ofLeading(1, 0), TextPos.ofLeading(1, 1), redOff, true);
+        assertEquals(RED, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(result, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(combined, m.getParagraph(2).getParagraphAttributes());
+
+        // remove all styles
+        m.applyStyle(TextPos.ZERO, end, StyleAttributeMap.EMPTY, false);
+        assertEquals(StyleAttributeMap.EMPTY, m.getParagraph(0).getParagraphAttributes());
+        assertEquals(StyleAttributeMap.EMPTY, m.getParagraph(1).getParagraphAttributes());
+        assertEquals(StyleAttributeMap.EMPTY, m.getParagraph(2).getParagraphAttributes());
     }
 
     @Test
