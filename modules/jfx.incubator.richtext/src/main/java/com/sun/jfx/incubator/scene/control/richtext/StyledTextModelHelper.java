@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,44 +25,34 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import java.io.IOException;
-import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
-import jfx.incubator.scene.control.richtext.LineEnding;
-import jfx.incubator.scene.control.richtext.model.StyledOutput;
-import jfx.incubator.scene.control.richtext.model.StyledSegment;
+import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.richtext.StyleResolver;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
-public class StringBuilderStyledOutput implements StyledOutput {
-    private final StringBuilder sb;
-    private final String newline;
-
-    public StringBuilderStyledOutput(LineEnding lineEnding) {
-        sb = new StringBuilder(1024);
-        newline = lineEnding.getText();
+/**
+ * Provides access to internal methods in StyledTextModel.
+ */
+public class StyledTextModelHelper {
+    public interface Accessor {
+        public TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo, boolean isEdit);
     }
 
-    @Override
-    public void consume(StyledSegment seg) {
-        switch (seg.getType()) {
-        case LINE_BREAK:
-            sb.append(newline);
-            break;
-        case TEXT:
-            String text = seg.getText();
-            sb.append(text);
-            break;
+    static {
+        Utils.forceInit(StyledTextModel.class);
+    }
+
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
         }
+        accessor = a;
     }
 
-    @Override
-    public String toString() {
-        return sb.toString();
-    }
-
-    @Override
-    public void flush() throws IOException {
-    }
-
-    @Override
-    public void close() throws IOException {
+    public static TextPos replace(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, StyledInput in, boolean allowUndo, boolean isEdit) {
+        return accessor.replace(m, r, start, end, in, allowUndo, isEdit);
     }
 }
