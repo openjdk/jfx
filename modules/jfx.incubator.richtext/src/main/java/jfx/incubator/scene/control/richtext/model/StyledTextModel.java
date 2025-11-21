@@ -802,10 +802,20 @@ public abstract class StyledTextModel {
         boolean allowUndo = isUndoRedoEnabled();
         UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd, false) : null;
 
-        if (pa != null) {
-            // apply paragraph attributes
+        // paragraph attributes
+        if (pa == null) {
+            if (!mergeAttributes) {
+                for (int ix = start.index(); ix <= end.index(); ix++) {
+                    setParagraphStyle(ix, pa);
+                }
+            }
+        } else {
             for (int ix = start.index(); ix <= end.index(); ix++) {
-                applyParagraphStyle(ix, pa);
+                if (mergeAttributes) {
+                    applyParagraphStyle(ix, pa);
+                } else {
+                    setParagraphStyle(ix, pa);
+                }
             }
         }
 
