@@ -146,10 +146,6 @@ public final class LinearInterpolator extends Interpolator {
             ay = yFirst;
             bx = controlPoints[2];
             by = controlPoints[3];
-
-            if (ax == bx) {
-                return ay;
-            }
         }
         // If t is larger than any x, use the last segment.
         else if (t > xLast) {
@@ -157,10 +153,6 @@ public final class LinearInterpolator extends Interpolator {
             ay = controlPoints[2 * (n - 2) + 1];
             bx = xLast;
             by = yLast;
-
-            if (ax == bx) {
-                return by;
-            }
         }
         // t is between first.x and last.x (and not equal to any x).
         else {
@@ -194,14 +186,32 @@ public final class LinearInterpolator extends Interpolator {
             }
         }
 
-        // Linearly interpolate (or extrapolate) along the segment (ax, ay) -> (bx, by).
-        if (ax == bx) {
-            // Degenerate segment; just treat as a step.
+        double dx = bx - ax;
+        double dy = by - ay;
+
+        // Degenerate vertical segment -> step
+        if (dx == 0) {
             return ay;
         }
 
-        double proportion = (t - ax) / (bx - ax);
-        return ay + (by - ay) * proportion;
+        // Horizontal segment -> constant, avoids 0 * inf NaN
+        if (dy == 0) {
+            return ay;
+        }
+
+        // Linearly interpolate (or extrapolate) along the segment (ax, ay) -> (bx, by).
+        double proportion = (t - ax) / dx;
+        if (Double.isFinite(proportion)) {
+            return ay + dy * proportion;
+        }
+
+        // In case we overflow/underflow to infinity, we return the signed infinity consistent with the line.
+        double sign =
+            Math.signum(dy)       // tells us whether we are extrapolating left or right of A
+            * Math.signum(t - ax) // tells us the direction from A to B
+            * Math.signum(dx);    // tells us whether the line goes up or down
+
+        return sign >= 0 ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
     }
 
     @Override

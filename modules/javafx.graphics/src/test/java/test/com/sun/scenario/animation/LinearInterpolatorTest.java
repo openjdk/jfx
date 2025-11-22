@@ -242,5 +242,17 @@ public class LinearInterpolatorTest {
             // For t between 0.5 and 1.0, we use segment (0.5,1)-(1,1)
             assertEquals(1.0, interpolator.curve(0.75), 1e-9);
         }
+
+        @Test
+        void curveHandlesNumericOverflowToInfinity() {
+            var interpolator = new LinearInterpolator(new Point2D[] {
+                new Point2D(0, 0.5),
+                new Point2D(9e-310, 1)
+            });
+
+            assertEquals(0.5, interpolator.curve(0));
+            assertEquals(Double.POSITIVE_INFINITY, interpolator.curve(0.5));
+            assertEquals(Double.NEGATIVE_INFINITY, interpolator.curve(-0.5));
+        }
     }
 }
