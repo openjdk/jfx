@@ -10103,7 +10103,18 @@ public abstract sealed class Node
      * @since JavaFX 8.0
      */
     public final void applyCss() {
-
+        if (this instanceof Parent nodeParent && nodeParent.inLayoutChildren()) {
+            PlatformLogger logger = Logging.getLayoutLogger();
+            if (logger.isLoggable(Level.WARNING)) {
+                logger.warning("Calling applyCss() while in layouting children is not recommended");
+            }
+        }
+        if (this instanceof Parent nodeParent && nodeParent.isPerformingLayout()) {
+            PlatformLogger logger = Logging.getLayoutLogger();
+            if (logger.isLoggable(Level.WARNING)) {
+                logger.warning("Calling applyCss() while performing the layout is not recommended");
+            }
+        }
         if (getScene() == null) {
             return;
         }

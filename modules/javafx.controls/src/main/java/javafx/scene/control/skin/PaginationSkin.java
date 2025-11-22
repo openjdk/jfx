@@ -1255,7 +1255,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
             }
             // Reapply CSS so the left and right arrow button's disable state is updated
             // immediately.
-            applyCss();
+            // FIX: MARIUS - This seems very wrong
+//            applyCss();
 
             leftArrowButton.setVisible(isArrowsVisible());
             rightArrowButton.setVisible(isArrowsVisible());
