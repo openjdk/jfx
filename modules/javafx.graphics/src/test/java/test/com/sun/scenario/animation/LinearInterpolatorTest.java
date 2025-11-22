@@ -27,23 +27,13 @@ package test.com.sun.scenario.animation;
 
 import com.sun.scenario.animation.LinearInterpolator;
 import javafx.geometry.Point2D;
-import java.lang.reflect.Field;
+import test.javafx.util.ReflectionUtils;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LinearInterpolatorTest {
-
-    private static double[] getControlPoints(LinearInterpolator li) {
-        try {
-            Field f = LinearInterpolator.class.getDeclaredField("controlPoints");
-            f.setAccessible(true);
-            return (double[]) f.get(li);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
-    }
 
     @Test
     void constructor_nullArray_throws() {
@@ -64,19 +54,19 @@ public class LinearInterpolatorTest {
                 new Point2D(Double.NaN, 0.8),
             });
 
-            double[] cp = getControlPoints(interpolator);
-
-            // [x0, y0, x1, y1]
-            assertEquals(0.0, cp[0]); // first x -> 0
-            assertEquals(0.2, cp[1], 1e-9);
-            assertEquals(1.0, cp[2]); // last x -> 1
-            assertEquals(0.8, cp[3], 1e-9);
+            assertArrayEquals(
+                new double[] {
+                    0.0, 0.2, // first x: 0
+                    1.0, 0.8 // last x: 1
+                },
+                ReflectionUtils.getFieldValue(interpolator, "controlPoints"),
+                1e-9);
         }
 
         @Test
         void outOfOrderInputProgress_isCanonicalizedToMonotonicallyNonDecreasing() {
             // Intentionally out of order: 0.5, 0.25, 0.75
-            LinearInterpolator li = new LinearInterpolator(new Point2D[] {
+            LinearInterpolator interpolator = new LinearInterpolator(new Point2D[] {
                 new Point2D(0.5, 0.0),
                 new Point2D(0.25, 1.0),
                 new Point2D(0.75, 0.5)
@@ -88,7 +78,8 @@ public class LinearInterpolatorTest {
             // x2 = 0.75
             assertArrayEquals(
                 new double[] { 0.5, 0.0, 0.5, 1.0, 0.75, 0.5 },
-                getControlPoints(li), 1e-9);
+                ReflectionUtils.getFieldValue(interpolator, "controlPoints"),
+                1e-9);
         }
 
         @Test
@@ -102,7 +93,8 @@ public class LinearInterpolatorTest {
             // Middle x should be halfway between 0.0 and 1.0 => 0.5
             assertArrayEquals(
                 new double[] { 0.0, 0.0, 0.5, 0.5, 1.0, 1.0 },
-                getControlPoints(interpolator), 1e-9);
+                ReflectionUtils.getFieldValue(interpolator, "controlPoints"),
+                1e-9);
         }
 
         @Test
@@ -125,7 +117,9 @@ public class LinearInterpolatorTest {
                     0.5,  0.4,
                     0.75, 0.6,
                     1.0,  1.0
-                }, getControlPoints(interpolator), 1e-9);
+                },
+                ReflectionUtils.getFieldValue(interpolator, "controlPoints"),
+                1e-9);
         }
 
         @Test
@@ -156,7 +150,9 @@ public class LinearInterpolatorTest {
                     4.0 / 6.0,  0.8,
                     5.0 / 6.0,  1.0,
                     1.0,        1.2
-                }, getControlPoints(interpolator), 1e-9);
+                },
+                ReflectionUtils.getFieldValue(interpolator, "controlPoints"),
+                1e-9);
         }
     }
 
