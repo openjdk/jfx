@@ -30,186 +30,113 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import javafx.util.StringConverter;
 
-/**
- * <p>{@link StringConverter} implementation for {@link Date} values that
- * represent a date and time.</p>
- *
- * @see DateStringConverter
- * @see TimeStringConverter
- * @since JavaFX 2.1
- */
-public class DateTimeStringConverter extends StringConverter<Date> {
+/// A `StringConverter` implementation for [Date] values that represent dates and times.
+///
+/// Note that using `Date` is not recommended in JDK versions where [java.time.LocalDateTime] is available, in which
+/// case [LocalDateTimeStringConverter] should be used.
+///
+/// @since JavaFX 2.1
+public class DateTimeStringConverter extends BaseStringConverter<Date> {
 
-    // ------------------------------------------------------ Private properties
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault(Locale.Category.FORMAT);
 
-    final Locale locale;
+    private final DateFormat dateFormat;
 
-    final String pattern;
-
-    final DateFormat dateFormat;
-
-    final int dateStyle;
-
-    final int timeStyle;
-
-
-    // ------------------------------------------------------------ Constructors
-
-    /**
-     * Create a {@link StringConverter} for {@link Date} values, using
-     * {@link DateFormat#DEFAULT} styles for date and time.
-     */
+    /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for both date and
+    /// time styles, and the user's [Locale].
     public DateTimeStringConverter() {
-        this(null, null, null, DateFormat.DEFAULT, DateFormat.DEFAULT);
+        this(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT);
     }
 
-    /**
-     * Create a {@link StringConverter} for {@link Date} values, using specified
-     * {@link DateFormat} styles for date and time.
-     *
-     * @param dateStyle the given formatting style. For example,
-     * {@link DateFormat#SHORT} for "M/d/yy" in the US locale.
-     * @param timeStyle the given formatting style. For example,
-     * {@link DateFormat#SHORT} for "h:mm a" in the US locale.
-     *
-     * @since JavaFX 8u40
-     */
+    /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on the given date and time styles, and
+    /// the user's [Locale].
+    ///
+    /// @param dateStyle the formatting style for dates. For example, [DateFormat#SHORT] for "M/d/yy" in the US locale.
+    /// @param timeStyle the formatting style for times. For example, `DateFormat.SHORT` for "h:mm a" in the US locale.
+    ///
+    /// @since JavaFX 8u40
     public DateTimeStringConverter(int dateStyle, int timeStyle) {
-        this(null, null, null, dateStyle, timeStyle);
+        this(DEFAULT_LOCALE, dateStyle, timeStyle);
     }
 
-    /**
-     * Create a {@link StringConverter} for {@link Date} values, using the
-     * specified locale and {@link DateFormat#DEFAULT} styles for date and time.
-     *
-     * @param locale the given locale.
-     */
+    /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for both date and
+    /// time styles, and the given `Locale`.
+    ///
+    /// @param locale the `Locale` that will be used by the formatter/parser. If `null`, the user's locale will be used.
     public DateTimeStringConverter(Locale locale) {
-        this(locale, null, null, DateFormat.DEFAULT, DateFormat.DEFAULT);
+        this(locale, DateFormat.DEFAULT, DateFormat.DEFAULT);
     }
 
-    /**
-     * Create a {@link StringConverter} for {@link Date} values, using specified
-     * locale and {@link DateFormat} styles for date and time.
-     *
-     * @param locale the given locale.
-     * @param dateStyle the given formatting style. For example,
-     * {@link DateFormat#SHORT} for "M/d/yy" in the US locale.
-     * @param timeStyle the given formatting style. For example,
-     * {@link DateFormat#SHORT} for "h:mm a" in the US locale.
-     *
-     * @since JavaFX 8u40
-     */
+    /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on the given date and time styles, and
+    /// `Locale`.
+    ///
+    /// @param locale the `Locale` that will be used by the formatter/parser. If `null`, the user's locale will be used.
+    /// @param dateStyle the formatting style for dates. For example, [DateFormat#SHORT] for "M/d/yy" in the US locale.
+    /// @param timeStyle the formatting style for times. For example, `DateFormat.SHORT` for "h:mm a" in the US locale.
+    ///
+    /// @since JavaFX 8u40
     public DateTimeStringConverter(Locale locale, int dateStyle, int timeStyle) {
-        this(locale, null, null, dateStyle, timeStyle);
+        dateFormat = create(locale, dateStyle, timeStyle, null);
     }
 
-    /**
-     * Create a {@link StringConverter} for {@link Date} values, using the
-     * specified pattern.
-     *
-     * @param pattern the pattern describing the date and time format.
-     */
+    /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on the given pattern, and the user's
+    /// [Locale].
+    ///
+    /// @param pattern the pattern describing the date and time format. If `null`, [DateFormat#DEFAULT] will be used for
+    ///        both date and time.
     public DateTimeStringConverter(String pattern) {
-        this(null, pattern, null, DateFormat.DEFAULT, DateFormat.DEFAULT);
+        this(DEFAULT_LOCALE, pattern);
     }
 
-    /**
-     * Create a {@link StringConverter} for {@link Date} values, using the
-     * specified locale and pattern.
-     *
-     * @param locale the given locale.
-     * @param pattern the pattern describing the date and time format.
-     */
+    /// Creates a `DateTimeStringConverter` that uses a formatter/parser based on the given pattern and `Locale`.
+    ///
+    /// @param locale the `Locale` that will be used by the formatter/parser. If `null`, the user's locale will be used.
+    /// @param pattern the pattern describing the date and time format. If `null`, [DateFormat#DEFAULT] will be used for
+    ///        both date and time styles.
     public DateTimeStringConverter(Locale locale, String pattern) {
-        this(locale, pattern, null, DateFormat.DEFAULT, DateFormat.DEFAULT);
+        dateFormat = create(locale, DateFormat.DEFAULT, DateFormat.DEFAULT, pattern);
     }
 
-    /**
-     * Create a {@link StringConverter} for {@link Date} values, using the
-     * specified {@link DateFormat} formatter.
-     *
-     * @param dateFormat the {@link DateFormat} to be used for formatting and
-     * parsing.
-     */
+    /// Creates a `DateTimeStringConverter` that uses the given formatter/parser.
+    ///
+    /// @param dateFormat the formatter/parser that will be used by the `toString()` and `fromString()` methods. If
+    ///        `null`, a default formatter/parser will be used.
     public DateTimeStringConverter(DateFormat dateFormat) {
-        this(null, null, dateFormat, DateFormat.DEFAULT, DateFormat.DEFAULT);
+        this.dateFormat = dateFormat != null ? dateFormat :
+                create(DEFAULT_LOCALE, DateFormat.DEFAULT, DateFormat.DEFAULT, null);
     }
 
-    DateTimeStringConverter(Locale locale, String pattern, DateFormat dateFormat,
-                            int dateStyle, int timeStyle) {
-        this.locale = (locale != null) ? locale : Locale.getDefault(Locale.Category.FORMAT);
-        this.pattern = pattern;
-        this.dateFormat = dateFormat;
-        this.dateStyle = dateStyle;
-        this.timeStyle = timeStyle;
+    private DateFormat create(Locale locale, int dateStyle, int timeStyle, String pattern) {
+        locale = locale != null ? locale : DEFAULT_LOCALE;
+        DateFormat dateFormat = pattern == null ?
+                getSpecializedDateFormat(dateStyle, timeStyle, locale) :
+                new SimpleDateFormat(pattern, locale);
+        dateFormat.setLenient(false);
+        return dateFormat;
     }
 
+    /// Returns the `DateFormat` to be used without a pattern. Subclasses should override to return their own formatter.
+    DateFormat getSpecializedDateFormat(int dateStyle, int timeStyle, Locale locale) {
+        return DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale);
+    }
 
-    // ------------------------------------------------------- Converter Methods
-
-    /** {@inheritDoc} */
-    @Override public Date fromString(String value) {
+    @Override
+    Date fromNonEmptyString(String string) {
         try {
-            // If the specified value is null or zero-length, return null
-            if (value == null) {
-                return (null);
-            }
-
-            value = value.trim();
-
-            if (value.length() < 1) {
-                return (null);
-            }
-
-            // Create and configure the parser to be used
-            DateFormat parser = getDateFormat();
-
-            // Perform the requested parsing
-            return parser.parse(value);
-        } catch (ParseException ex) {
-            throw new RuntimeException(ex);
+            return dateFormat.parse(string);
+        } catch (ParseException e) {
+            throw new IllegalArgumentException(e);
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString(Date value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
-
-        // Create and configure the formatter to be used
-        DateFormat formatter = getDateFormat();
-
-        // Perform the requested formatting
-        return formatter.format(value);
+    @Override
+    String toStringFromNonNull(Date data) {
+        return dateFormat.format(data);
     }
 
-    // --------------------------------------------------------- Private Methods
-
-    /**
-     * <p>Returns a <code>DateFormat</code> instance to use for formatting
-     * and parsing in this {@link StringConverter}.</p>
-     *
-     * @return a {@code DateFormat} instance for formatting and parsing in this
-     * {@link StringConverter}
-     */
+    /// Used in tests only.
     DateFormat getDateFormat() {
-        DateFormat df = null;
-
-        if (dateFormat != null) {
-            return dateFormat;
-        } else if (pattern != null) {
-            df = new SimpleDateFormat(pattern, locale);
-        } else {
-            df = DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale);
-        }
-
-        df.setLenient(false);
-
-        return df;
+        return dateFormat;
     }
 }
