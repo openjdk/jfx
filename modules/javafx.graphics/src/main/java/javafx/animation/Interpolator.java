@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,10 @@
 
 package javafx.animation;
 
+import javafx.geometry.Point2D;
 import javafx.util.Duration;
 import com.sun.javafx.animation.InterpolatorHelper;
+import com.sun.scenario.animation.LinearInterpolator;
 import com.sun.scenario.animation.NumberTangentInterpolator;
 import com.sun.scenario.animation.SplineInterpolator;
 import com.sun.scenario.animation.StepInterpolator;
@@ -78,9 +80,7 @@ public abstract class Interpolator {
     };
 
     /**
-     * Built-in interpolator that provides linear time interpolation. The return
-     * value of {@code interpolate()} is {@code startValue} + ({@code endValue}
-     * - {@code startValue}) * {@code fraction}.
+     * Built-in interpolator instance that is equivalent to {@code LINEAR([0, 0], [1, 1])}.
      */
     public static final Interpolator LINEAR = new Interpolator() {
         @Override
@@ -93,6 +93,24 @@ public abstract class Interpolator {
             return "Interpolator.LINEAR";
         }
     };
+
+    /**
+     * Creates a piecewise-linear interpolator with the specified control points.
+     * <p>
+     * Each control point associates an input progress value (X) with an output progress value (Y).
+     * If the input progress value of a control point is unspecified ({@link Double#NaN}), it is
+     * distributed evenly between its neighboring control points. If the input progress value of
+     * the first or last control point is unspecified, it is set to 0 or 1, respectively.
+     *
+     * @param controlPoints the control points
+     * @throws NullPointerException if {@code controlPoints} is {@code null}
+     * @throws IllegalArgumentException if {@code controlPoints} is empty
+     * @return a new piecewise-linear interpolator
+     * @since 26
+     */
+    public static Interpolator LINEAR(Point2D... controlPoints) {
+        return new LinearInterpolator(controlPoints);
+    }
 
     /*
      * Easing is calculated with the following algorithm (taken from SMIL 3.0

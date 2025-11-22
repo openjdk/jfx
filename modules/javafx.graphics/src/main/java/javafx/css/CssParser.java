@@ -74,6 +74,7 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.effect.BlurType;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundRepeat;
@@ -4104,6 +4105,43 @@ final public class CssParser {
                     }, InterpolatorConverter.getInstance());
             }
 
+            case "linear(" -> {
+                List<Point2D> args = new ArrayList<>();
+
+                for (Term arg = term.firstArg; arg != null; arg = arg.nextArg) {
+                    double inputValue = Double.NaN;
+                    double outputValue = Double.NaN;
+
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                        error(arg, "Expected \'<number>\'");
+                    } else {
+                        outputValue = Double.parseDouble(arg.token.getText());
+                    }
+
+                    // 0, 1, or 2 <percentage>s
+                    for (int i = 0; i < 2; ++i) {
+                        Term next = arg.nextInSeries;
+                        if (next != null) {
+                            if (next.token == null || next.token.getType() != CssLexer.PERCENTAGE) {
+                                error(next, "Expected \'<percentage>\'");
+                            } else {
+                                inputValue = size(next.token).getValue() / 100.0;
+                            }
+
+                            arg = next;
+                            args.add(new Point2D(inputValue, outputValue));
+                        } else if (i == 0) {
+                            args.add(new Point2D(inputValue, outputValue));
+                        }
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(args, null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
             default -> {
                 yield new ParsedValueImpl<>(
                     new ParsedValueImpl(term.token.getText(), null),
@@ -4112,11 +4150,11 @@ final public class CssParser {
         };
     }
 
-    // https://www.w3.org/TR/css-easing-1/#easing-functions
-    // <easing-function> = linear | <cubic-bezier-easing-function> | <step-easing-function>
+    // https://www.w3.org/TR/css-easing-2/#easing-functions
+    // <easing-function> = linear | <linear-easing-function> | <cubic-bezier-easing-function> | <step-easing-function>
     private boolean isEasingFunction(Token token) throws ParseException {
         return token != null && switch (token.getText()) {
-            case "linear" -> true;
+            case "linear", "linear(" -> true;
             case "ease", "ease-in", "ease-out", "ease-in-out", "cubic-bezier(" -> true;
             case "step-start", "step-end", "steps(" -> true;
             case "-fx-ease-in", "-fx-ease-out", "-fx-ease-both" -> true;
