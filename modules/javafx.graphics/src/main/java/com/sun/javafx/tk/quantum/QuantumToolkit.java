@@ -1506,8 +1506,8 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override
     public PlatformImage createPlatformImage(int w, int h) {
-        ByteBuffer bytebuf = ByteBuffer.allocate(w * h * 4);
-        return com.sun.prism.Image.fromByteBgraPreData(bytebuf, w, h);
+        IntBuffer buf = IntBuffer.allocate(w * h);
+        return com.sun.prism.Image.fromIntArgbPreData(buf, w, h);
     }
 
     @Override
