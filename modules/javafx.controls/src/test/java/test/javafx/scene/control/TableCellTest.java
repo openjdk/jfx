@@ -978,6 +978,75 @@ public class TableCellTest {
         assertTrue(isItemChangedCalled.get());
     }
 
+    @Test
+    void testEditStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        TableColumn<String, Object> tableColumn = new TableColumn<>("column");
+        table.setEditable(true);
+        table.getColumns().add(tableColumn);
+
+        tableColumn.setCellFactory(_ -> new TableCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+
+        table.edit(0, tableColumn);
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        table.edit(-1, null);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
+
+    @Test
+    void testUpdateItemStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        TableColumn<String, Object> tableColumn = new TableColumn<>("column");
+        table.setEditable(true);
+        table.getColumns().add(tableColumn);
+
+        tableColumn.setCellFactory(_ -> new TableCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(table);
+
+        table.edit(0, tableColumn);
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(table, 0);
+        cell.updateIndex(-1);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
+
     public static class MisbehavingOnCancelTableCell<S, T> extends TableCell<S, T> {
 
         @Override
