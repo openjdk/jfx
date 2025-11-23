@@ -65,6 +65,7 @@ abstract class GlassScene implements TKScene {
     private volatile boolean entireSceneDirty = true;
 
     private boolean doPresent = true;
+    private boolean doVSync = false;
     private final AtomicBoolean painting = new AtomicBoolean(false);
 
     private final boolean depthBuffer;
@@ -305,6 +306,14 @@ abstract class GlassScene implements TKScene {
 
     public final synchronized boolean getDoPresent() {
         return doPresent;
+    }
+
+    public final synchronized void setDoVSync(boolean value) {
+        doVSync = value;
+    }
+
+    public final synchronized boolean getDoVsync() {
+        return doVSync;
     }
 
     protected Color getClearColor() {

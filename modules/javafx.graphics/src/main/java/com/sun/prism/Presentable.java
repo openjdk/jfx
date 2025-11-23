@@ -57,6 +57,10 @@ public interface Presentable extends RenderTarget {
      */
     public boolean present();
 
+    public default boolean present(boolean vsync) {
+        return present();
+    }
+
     public float getPixelScaleFactorX();
     public float getPixelScaleFactorY();
 }
