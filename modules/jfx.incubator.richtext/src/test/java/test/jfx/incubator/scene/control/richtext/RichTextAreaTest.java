@@ -952,17 +952,20 @@ public class RichTextAreaTest {
     }
 
     @Test
-    public void withEmbeddedNode() {
+    public void withEmbeddedNodes() {
+        class ARegion extends Region {
+            public ARegion(SimpleDoubleProperty height) {
+                setPrefWidth(10);
+                minHeightProperty().bind(height);
+                maxHeightProperty().bind(height);
+            }
+        }
+
         SimpleDoubleProperty height = new SimpleDoubleProperty(10.0);
         SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
         m.addSegment("Trailing node: ");
-        m.addNodeSegment(() -> {
-            Region r = new Region();
-            r.setPrefWidth(10);
-            r.minHeightProperty().bind(height);
-            r.maxHeightProperty().bind(height);
-            return r;
-        });
+        m.addNodeSegment(() -> new ARegion(height));
+        m.addParagraph(() -> new ARegion(height));
         control.setModel(m);
         control.setWrapText(false);
         control.setUseContentHeight(true);
@@ -970,11 +973,12 @@ public class RichTextAreaTest {
 
         double h1 = control.prefHeight(-1);
         control.getHeight();
+
         height.set(100.0);
         control.layout();
 
         double h2 = control.prefHeight(-1);
         control.getHeight();
-        assertTrue(h1 != h2);
+        assertTrue(h1 != h2, "heights should differ: h1=" + h1 + " h2=" + h2);
     }
 }
