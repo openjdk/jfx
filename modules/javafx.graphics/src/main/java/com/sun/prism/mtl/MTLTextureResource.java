@@ -40,6 +40,8 @@ class MTLTextureResource<T extends MTLTextureData> extends DisposerManagedResour
     public void free() {
         if (resource != null && canDispose) {
             resource.dispose();
+            // resource.dispose() will free the native-side
+            // resource = null is not set here, ManagedResource will handle that when appropriate
         }
     }
 }
