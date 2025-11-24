@@ -180,11 +180,9 @@ private:
     bool IsInFullScreenMode() { return m_isInFullScreen; }
 
     void HandleDestroyEvent();
-    // if pRect == NULL => get position/size by GetWindowRect
     void HandleWindowPosChangingEvent(WINDOWPOS *pWinPos);
-    void HandleMoveEvent(RECT *pRect);
-    // if pRect == NULL => get position/size by GetWindowRect
-    void HandleSizeEvent(int type, RECT *pRect);
+    void HandleMoveEvent();
+    void HandleSizeEvent(int type);
     void HandleDPIEvent(WPARAM wParam, LPARAM lParam);
     bool HandleCommand(WORD cmdID);
     void HandleFocusDisabledEvent();
