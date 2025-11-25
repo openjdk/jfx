@@ -369,15 +369,16 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 - (void) reorderChildWindows
 {
     LOG("reorderChildWindows: %p", self);
-    if (self->childWindows != nil) {
+    if ((self->childWindows != nil) && (!nsWindow.isMiniaturized)) {
         for (GlassWindow *child in self->childWindows)
         {
             // Owned windows must set their level to at least the level of their owner
             NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
             [child->nsWindow setLevel:level];
             // Order child above the owner window
-            [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
-
+            if (child->nsWindow.isVisible) {
+                [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
+            }
             [child reorderChildWindows];
         }
     }
