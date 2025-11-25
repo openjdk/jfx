@@ -27,6 +27,7 @@ package javafx.stage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -37,6 +38,7 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
@@ -52,6 +54,7 @@ import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -297,6 +300,33 @@ public class Stage extends Window {
         super.show();
     }
 
+    /**
+     * Shows this stage at the specified location and adjusts the position as needed to keep the stage
+     * visible on screen. If the stage is already showing, it is moved to the computed position instead.
+     * <p>
+     * Positioning is done using an {@code anchor} point on the stage. The specified location is interpreted
+     * as the desired screen coordinates of that anchor, and the stage location is derived from that.
+     * For example, if the anchor is {@code (0.5, 0.5)}, the stage is positioned so its center lies at
+     * {@code (anchorX, anchorY)}; if the anchor is {@code (0, 0)}, the stage's top-left corner is placed
+     * at {@code (anchorX, anchorY)}. The final stage location is clamped to the screen bounds.
+     * <p>
+     * After the stage is shown, its {@link #xProperty() X} and {@link #yProperty() Y} properties will
+     * reflect the adjusted position.
+     *
+     * @param anchorX the requested horizontal location of the anchor point on the screen
+     * @param anchorY the requested vertical location of the anchor point on the screen
+     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
+     * @since 26
+     */
+    public final void show(double anchorX, double anchorY, Anchor anchor) {
+        if (isShowing()) {
+            new PositionRequest(anchorX, anchorY, anchor).apply(this);
+        } else {
+            positionRequest = new PositionRequest(anchorX, anchorY, anchor);
+            super.show();
+        }
+    }
+
     private boolean primary = false;
 
     //------------------------------------------------------------------
@@ -431,7 +461,46 @@ public class Stage extends Window {
      * @since JavaFX 2.2
      */
     public void showAndWait() {
+        verifyCanShowAndWait();
+        super.show();
+        inNestedEventLoop = true;
+        Toolkit.getToolkit().enterNestedEventLoop(this);
+    }
 
+    /**
+     * Shows this stage at the specified location and adjusts the position as needed to keep the stage
+     * visible on screen. This method blocks until the stage is hidden before returning to the caller.
+     * This method temporarily blocks processing of the current event and starts a nested event loop
+     * to handle other events. This method must be called on the JavaFX application thread.
+     * <p>
+     * Positioning is done using an {@code anchor} point on the stage. The specified location is interpreted
+     * as the desired screen coordinates of that anchor, and the stage location is derived from that.
+     * For example, if the anchor is {@code (0.5, 0.5)}, the stage is positioned so its center lies at
+     * {@code (anchorX, anchorY)}; if the anchor is {@code (0, 0)}, the stage's top-left corner is placed
+     * at {@code (anchorX, anchorY)}. The final stage location is clamped to the screen bounds.
+     * <p>
+     * After the stage is shown, its {@link #xProperty() X} and {@link #yProperty() Y} properties will
+     * reflect the adjusted position.
+     *
+     * @param anchorX the requested horizontal location of the anchor point on the screen
+     * @param anchorY the requested vertical location of the anchor point on the screen
+     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
+     * @throws IllegalStateException if this method is called on a thread other than the JavaFX application thread
+     * @throws IllegalStateException if this method is called during animation or layout processing
+     * @throws IllegalStateException if this call would exceed the maximum number of nested event loops
+     * @throws IllegalStateException if this method is called on the primary stage
+     * @throws IllegalStateException if this stage is already showing
+     * @since 26
+     */
+    public final void showAndWait(double anchorX, double anchorY, Anchor anchor) {
+        verifyCanShowAndWait();
+        positionRequest = new PositionRequest(anchorX, anchorY, anchor);
+        super.show();
+        inNestedEventLoop = true;
+        Toolkit.getToolkit().enterNestedEventLoop(this);
+    }
+
+    private void verifyCanShowAndWait() {
         Toolkit.getToolkit().checkFxUserThread();
 
         if (isPrimary()) {
@@ -450,10 +519,6 @@ public class Stage extends Window {
         // method is called from an event handler that is listening to a
         // WindowEvent.WINDOW_HIDING event.
         assert !inNestedEventLoop;
-
-        show();
-        inNestedEventLoop = true;
-        Toolkit.getToolkit().enterNestedEventLoop(this);
     }
 
     private StageStyle style; // default is set in constructor
@@ -1313,6 +1378,162 @@ public class Stage extends Window {
         TKStage peer = getPeer();
         if (peer != null) {
             peer.setPrefHeaderButtonHeight(height);
+        }
+    }
+
+    @Override
+    final void fixBounds() {
+        if (positionRequest != null) {
+            positionRequest.apply(this);
+            positionRequest = null;
+        }
+    }
+
+    private PositionRequest positionRequest;
+
+    private record PositionRequest(double screenX, double screenY, Anchor anchor) {
+
+        void apply(Stage stage) {
+            Screen currentScreen = Utils.getScreenForPoint(screenX, screenY);
+            Rectangle2D screenBounds = Utils.hasFullScreenStage(currentScreen)
+                ? currentScreen.getBounds()
+                : currentScreen.getVisualBounds();
+
+            double width = stage.getWidth();
+            double height = stage.getHeight();
+            double anchorX, anchorY;
+            double anchorRelX, anchorRelY;
+
+            if (anchor.relative) {
+                anchorX = width * anchor.x;
+                anchorY = height * anchor.y;
+                anchorRelX = anchor.x;
+                anchorRelY = anchor.y;
+            } else {
+                anchorX = anchor.x;
+                anchorY = anchor.y;
+                anchorRelX = anchor.x / width;
+                anchorRelY = anchor.y / height;
+            }
+
+            double minX = screenBounds.getMinX();
+            double minY = screenBounds.getMinY();
+            double maxX = screenBounds.getMaxX() - width;
+            double maxY = screenBounds.getMaxY() - height;
+            double x, y;
+
+            if (maxX >= minX) {
+                x = Utils.clamp(minX, screenX - anchorX, maxX);
+            } else {
+                x = anchorRelX > 0.5 ? maxX : minX;
+            }
+
+            if (maxY >= minY) {
+                y = Utils.clamp(minY, screenY - anchorY, maxY);
+            } else {
+                y = anchorRelY > 0.5 ? maxY : minY;
+            }
+
+            stage.setX(x);
+            stage.setY(y);
+        }
+    }
+
+    /**
+     * Defines an anchor point that is used to position a stage with {@link #show(double, double, Anchor)}
+     * or {@link #showAndWait(double, double, Anchor)}. The anchor is the point on the stage that should
+     * coincide with a given screen location.
+     * <p>
+     * Anchors can be specified in one of two coordinate systems:
+     * <ul>
+     *   <li><b>Relative</b>: {@code x} and {@code y} are fractions of the window size, where
+     *       {@code (0,0)} is the top-left corner and {@code (1,1)} is the bottom-right corner.
+     *       Example: {@code (0.5, 0.5)} anchors the center of the window.
+     *   <li><b>Absolute</b>: {@code x} and {@code y} are pixel offsets from the window's top-left corner.
+     *       Example: {@code (0, 0)} anchors the top-left corner; {@code (10, 10)} anchors a point 10px
+     *       right and 10px down from the top-left.
+     * </ul>
+     *
+     * @since 26
+     */
+    public static final class Anchor {
+
+        private final double x;
+        private final double y;
+        private final boolean relative;
+
+        private Anchor(double x, double y, boolean relative) {
+            this.x = x;
+            this.y = y;
+            this.relative = relative;
+        }
+
+        /**
+         * Creates a relative anchor expressed as a fraction of the stage size.
+         * The values can be less than 0 or greater than 1; in this case the anchor is located outside the stage.
+         * <p>
+         * {@code (0,0)} is the top-left; {@code (1,1)} is the bottom-right; {@code (0.5,0.5)} is the center.
+         *
+         * @param x x fraction of the stage width
+         * @param y y fraction of the stage height
+         * @return a relative {@code Anchor}
+         */
+        public static Anchor ofRelative(double x, double y) {
+            return new Anchor(x, y, true);
+        }
+
+        /**
+         * Creates an absolute anchor expressed as pixel offsets from the stage's top-left corner.
+         * The values can be less than 0 or greater than the stage's size; in this case the anchor
+         * is located outside the stage.
+         *
+         * @param x x offset in pixels from the stage's left edge
+         * @param y y offset in pixels from the stage's top edge
+         * @return an absolute {@code Anchor}
+         */
+        public static Anchor ofAbsolute(double x, double y) {
+            return new Anchor(x, y, false);
+        }
+
+        /**
+         * Gets the horizontal location of the anchor.
+         *
+         * @return the horizontal location of the anchor
+         */
+        public double getX() {
+            return x;
+        }
+
+        /**
+         * Gets the vertical location of the anchor.
+         *
+         * @return the vertical location of the anchor
+         */
+        public double getY() {
+            return y;
+        }
+
+        /**
+         * Returns whether the anchor is expressed as a fraction of the stage size.
+         *
+         * @return {@code true} if the anchor is expressed as a fraction of the stage size,
+         *         {@code false} otherwise
+         */
+        public boolean isRelative() {
+            return relative;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof Anchor other
+                && other.x == x
+                && other.y == y
+                && other.relative == relative;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(x, y, relative);
         }
     }
 }

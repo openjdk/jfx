@@ -1117,6 +1117,9 @@ public class Window implements EventTarget {
                                                            0, 0);
                     }
 
+                    // Give subclasses a chance to adjust the window bounds
+                    fixBounds();
+
                     // set peer bounds before the window is shown
                     applyBounds();
 
@@ -1362,6 +1365,8 @@ public class Window implements EventTarget {
             peer.grabFocus();
         }
     }
+
+    void fixBounds() {}
 
     final void applyBounds() {
         peerBoundsConfigurator.apply();
