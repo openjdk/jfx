@@ -56,7 +56,7 @@ public class InterpolatorConverterTest {
             new ParsedValueImpl<>(List.of(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), null) },
             null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(LINEAR(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), result);
+        assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), result);
     }
 
     @Test

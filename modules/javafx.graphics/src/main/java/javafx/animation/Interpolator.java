@@ -95,7 +95,7 @@ public abstract class Interpolator {
     };
 
     /**
-     * Creates a piecewise-linear interpolator with the specified control points.
+     * Returns a piecewise-linear interpolator with the specified control points.
      * <p>
      * Each control point associates an input progress value (X) with an output progress value (Y).
      * If the input progress value of a control point is unspecified ({@link Double#NaN}), it is
@@ -105,10 +105,10 @@ public abstract class Interpolator {
      * @param controlPoints the control points
      * @throws NullPointerException if {@code controlPoints} is {@code null}
      * @throws IllegalArgumentException if {@code controlPoints} is empty
-     * @return a new piecewise-linear interpolator
+     * @return a piecewise-linear interpolator
      * @since 26
      */
-    public static Interpolator LINEAR(Point2D... controlPoints) {
+    public static Interpolator ofLinear(Point2D... controlPoints) {
         return new LinearInterpolator(controlPoints);
     }
 

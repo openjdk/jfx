@@ -117,7 +117,7 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
 
                 case "linear(" -> CACHE.computeIfAbsent(value, key -> {
                     List<Point2D> args = arguments(key);
-                    return Interpolator.LINEAR(args.toArray(Point2D[]::new));
+                    return Interpolator.ofLinear(args.toArray(Point2D[]::new));
                 });
 
                 default -> throw new AssertionError();

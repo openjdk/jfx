@@ -206,11 +206,14 @@ public class CssParser_transition_Test {
         assertInterpolatorEquals(STEPS(3, StepPosition.END), values[0]);
 
         values = values("transition-timing-function", stylesheet.getRules().get(4));
-        assertInterpolatorEquals(LINEAR(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), values[0]);
-        assertInterpolatorEquals(LINEAR(new Point2D(0, 0), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[1]);
-        assertInterpolatorEquals(LINEAR(new Point2D(0, 0), new Point2D(0.25, 0.25), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[2]);
-        assertInterpolatorEquals(LINEAR(new Point2D(0, 0), new Point2D(0.25, 0.25), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[3]);
-        assertInterpolatorEquals(LINEAR(new Point2D(0, 0), new Point2D(0.25, 0.1), new Point2D(0.5, 0.75), new Point2D(1, 1)), values[4]);
+        assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), values[0]);
+        assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[1]);
+        assertInterpolatorEquals(
+                ofLinear(new Point2D(0, 0), new Point2D(0.25, 0.25), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[2]);
+        assertInterpolatorEquals(
+                ofLinear(new Point2D(0, 0), new Point2D(0.25, 0.25), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[3]);
+        assertInterpolatorEquals(
+                ofLinear(new Point2D(0, 0), new Point2D(0.25, 0.1), new Point2D(0.5, 0.75), new Point2D(1, 1)), values[4]);
 
         assertStartsWith("Expected '<number [0,1]>'", CssParser.errorsProperty().get(0).getMessage());
         assertStartsWith("Expected '<step-position>'", CssParser.errorsProperty().get(2).getMessage());
