@@ -108,110 +108,47 @@ public final class LinearInterpolator extends Interpolator {
         }
     }
 
+    /*
+     * Algorithm implemented based on the following specification:
+     * https://www.w3.org/TR/css-easing-2/#linear-easing-function-output
+     */
     @Override
     public double curve(double t) {
         int n = controlPoints.length / 2;
-
-        // Only a single control point: always return its output value.
         if (n == 1) {
             return controlPoints[1];
         }
 
-        // If t matches the x of one or more control points, return the y of the last such point.
-        double lastMatchY = Double.NaN;
+        int pointAIndex = 0;
+
         for (int i = 0; i < n; ++i) {
-            double x = controlPoints[2 * i];
-            if (t < x) { // Xs are monotonically non-decreasing; no more matches possible
+            if (controlPoints[2 * i] <= t) {
+                pointAIndex = i;
+            } else {
                 break;
             }
-
-            if (t == x) {
-                lastMatchY = controlPoints[2 * i + 1];
-            }
         }
 
-        if (!Double.isNaN(lastMatchY)) {
-            return lastMatchY;
+        if (pointAIndex == n - 1) {
+            --pointAIndex;
         }
 
-        double xFirst = controlPoints[0];
-        double yFirst = controlPoints[1];
-        double xLast  = controlPoints[2 * (n - 1)];
-        double yLast  = controlPoints[2 * (n - 1) + 1];
-        double ax, ay, bx, by;
+        int idx = pointAIndex * 2;
+        double pointAInput = controlPoints[idx];
+        double pointAOutput = controlPoints[idx + 1];
+        double pointBInput = controlPoints[idx + 2];
+        double pointBOutput = controlPoints[idx + 3];
 
-        // If t is smaller than any x, use the first segment.
-        if (t < xFirst) {
-            ax = xFirst;
-            ay = yFirst;
-            bx = controlPoints[2];
-            by = controlPoints[3];
-        }
-        // If t is larger than any x, use the last segment.
-        else if (t > xLast) {
-            ax = controlPoints[2 * (n - 2)];
-            ay = controlPoints[2 * (n - 2) + 1];
-            bx = xLast;
-            by = yLast;
-        }
-        // t is between first.x and last.x (and not equal to any x).
-        else {
-            int indexA = -1; // last point with x < t
-            int indexB = -1; // first point with x > t
-
-            for (int i = 0; i < n; i++) {
-                double x = controlPoints[2 * i];
-                if (x < t) {
-                    indexA = i;
-                } else if (x > t) {
-                    indexB = i;
-                    break;
-                }
-            }
-
-            if (indexA < 0) {
-                ax = xFirst;
-                ay = yFirst;
-            } else {
-                ax = controlPoints[2 * indexA];
-                ay = controlPoints[2 * indexA + 1];
-            }
-
-            if (indexB < 0) {
-                bx = xLast;
-                by = yLast;
-            } else {
-                bx = controlPoints[2 * indexB];
-                by = controlPoints[2 * indexB + 1];
-            }
+        if (pointAInput == pointBInput) {
+            return pointBOutput;
         }
 
-        double dx = bx - ax;
-        double dy = by - ay;
-
-        // Degenerate vertical segment -> step
-        if (dx == 0) {
-            return ay;
-        }
-
-        // Horizontal segment -> constant, avoids 0 * inf NaN
-        if (dy == 0) {
-            return ay;
-        }
-
-        // Linearly interpolate (or extrapolate) along the segment (ax, ay) -> (bx, by).
-        double proportion = (t - ax) / dx;
-        if (Double.isFinite(proportion)) {
-            return ay + dy * proportion;
-        }
-
-        // In case we overflow/underflow to infinity, we return the signed infinity consistent with the line.
-        double sign =
-            Math.signum(dy)       // tells us whether we are extrapolating left or right of A
-            * Math.signum(t - ax) // tells us the direction from A to B
-            * Math.signum(dx);    // tells us whether the line goes up or down
-
-        return sign >= 0 ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
+        double progressFromPointA = t - pointAInput;
+        double pointInputRange = pointBInput - pointAInput;
+        double progressBetweenPoints = progressFromPointA / pointInputRange;
+        double pointOutputRange = pointBOutput - pointAOutput;
+        double outputFromLastPoint = progressBetweenPoints * pointOutputRange;
+        return pointAOutput + outputFromLastPoint;
     }
 
     @Override
