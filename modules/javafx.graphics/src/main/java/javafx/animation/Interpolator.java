@@ -80,7 +80,7 @@ public abstract class Interpolator {
     };
 
     /**
-     * Built-in interpolator instance that is equivalent to {@code LINEAR([0, 0], [1, 1])}.
+     * Built-in interpolator instance that is equivalent to {@code ofLinear([0, 0], [1, 1])}.
      */
     public static final Interpolator LINEAR = new Interpolator() {
         @Override
