@@ -43,8 +43,8 @@ public final class LinearInterpolator extends Interpolator {
             throw new NullPointerException("controlPoints cannot be null");
         }
 
-        if (controlPoints.length == 0) {
-            throw new IllegalArgumentException("controlPoints cannot be empty");
+        if (controlPoints.length < 2) {
+            throw new IllegalArgumentException("controlPoints must have at least two items");
         }
 
         int n = controlPoints.length;

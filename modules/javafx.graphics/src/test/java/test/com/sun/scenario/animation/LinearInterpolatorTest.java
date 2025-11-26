@@ -45,6 +45,11 @@ public class LinearInterpolatorTest {
         assertThrows(IllegalArgumentException.class, () -> new LinearInterpolator(new Point2D[0]));
     }
 
+    @Test
+    void constructor_singleElement_throws() {
+        assertThrows(IllegalArgumentException.class, () -> new LinearInterpolator(new Point2D[] { new Point2D(0, 1) }));
+    }
+
     @Nested
     class CanonicalizationTest {
         @Test
@@ -158,19 +163,6 @@ public class LinearInterpolatorTest {
 
     @Nested
     class CurveTest {
-        @Test
-        void singleControlPoint_returnsConstantY() {
-            var interpolator = new LinearInterpolator(new Point2D[] {
-                new Point2D(Double.NaN, 0.42)
-            });
-
-            assertEquals(0.42, interpolator.curve(0.0), 1e-9);
-            assertEquals(0.42, interpolator.curve(0.5), 1e-9);
-            assertEquals(0.42, interpolator.curve(1.0), 1e-9);
-            assertEquals(0.42, interpolator.curve(-1.0), 1e-9);
-            assertEquals(0.42, interpolator.curve(2.0), 1e-9);
-        }
-
         @Test
         void twoPointsNaN_givesSimpleLinearInterpolation() {
             var interpolator = new LinearInterpolator(new Point2D[] {

@@ -101,10 +101,14 @@ public abstract class Interpolator {
      * If the input progress value of a control point is unspecified ({@link Double#NaN}), it is
      * distributed evenly between its neighboring control points. If the input progress value of
      * the first or last control point is unspecified, it is set to 0 or 1, respectively.
+     * <p>
+     * The control point list is canonicalized so that input progress values (X) are non-decreasing in
+     * the order provided. In particular, if a control point specifies an X value that is lower than
+     * any preceding control point's X value, it is adjusted to match the greatest preceding X value.
      *
      * @param controlPoints the control points
      * @throws NullPointerException if {@code controlPoints} is {@code null}
-     * @throws IllegalArgumentException if {@code controlPoints} is empty
+     * @throws IllegalArgumentException if {@code controlPoints} contains less than two items
      * @return a piecewise-linear interpolator
      * @since 26
      */
