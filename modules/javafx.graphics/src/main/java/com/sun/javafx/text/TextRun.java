@@ -343,12 +343,10 @@ public class TextRun implements GlyphList {
                 }
                 return x;
             }
-
-            return positions[glyphIndex << 1];
+            return positions[glyphIndex<<1];
         }
         return glyphIndex == 0 ? 0 : getWidth();
     }
-
 
     @Override public float getPosY(int glyphIndex) {
         if ((flags & FLAGS_COMPACT) != 0) return 0;
