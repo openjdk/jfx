@@ -579,12 +579,14 @@ ScrollPropagationInfo ScrollingTreeScrollingNode::computeScrollPropagation(const
 
 void ScrollingTreeScrollingNode::scrollbarVisibilityDidChange(ScrollbarOrientation orientation, bool isVisible)
 {
-    scrollingTree()->scrollingTreeNodeScrollbarVisibilityDidChange(scrollingNodeID(), orientation, isVisible);
+    if (RefPtr tree = scrollingTree())
+        tree->scrollingTreeNodeScrollbarVisibilityDidChange(scrollingNodeID(), orientation, isVisible);
 }
 
 void ScrollingTreeScrollingNode::scrollbarMinimumThumbLengthDidChange(ScrollbarOrientation orientation, int minimumThumbLength)
 {
-    scrollingTree()->scrollingTreeNodeScrollbarMinimumThumbLengthDidChange(scrollingNodeID(), orientation, minimumThumbLength);
+    if (RefPtr tree = scrollingTree())
+        tree->scrollingTreeNodeScrollbarMinimumThumbLengthDidChange(scrollingNodeID(), orientation, minimumThumbLength);
 }
 
 } // namespace WebCore

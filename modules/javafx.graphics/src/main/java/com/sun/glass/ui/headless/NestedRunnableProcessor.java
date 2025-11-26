@@ -27,6 +27,7 @@ package com.sun.glass.ui.headless;
 import com.sun.glass.ui.Application;
 import java.util.LinkedList;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class NestedRunnableProcessor implements Runnable {
@@ -42,6 +43,28 @@ public class NestedRunnableProcessor implements Runnable {
 
     void invokeLater(final Runnable r) {
         runnableQueue.add(r);
+    }
+
+    void invokeAndWait(final Runnable r) {
+        final CountDownLatch latch = new CountDownLatch(1);
+        runnableQueue.add(() -> {
+            try {
+                r.run();
+            } finally {
+                latch.countDown();
+            }
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Application.reportException(e);
+        }
+    }
+
+    void stopProcessing() {
+        for (RunLoopEntry entry : activeRunLoops) {
+            runnableQueue.add(() -> entry.active = false);
+        }
     }
 
     public Object newRunLoop() {
@@ -68,7 +91,9 @@ public class NestedRunnableProcessor implements Runnable {
 
     private static class RunLoopEntry {
 
+        // This is only accessed on the event thread
         boolean active;
+
         Object returnValue;
     }
 

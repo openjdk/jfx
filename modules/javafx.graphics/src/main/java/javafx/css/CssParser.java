@@ -4063,8 +4063,13 @@ final public class CssParser {
                 Term arg = term.firstArg;
 
                 for (int j = 0; j < 4; ++j, arg = arg.nextArg) {
-                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER
-                            || (args[j] = Double.parseDouble(arg.token.getText())) < 0 || args[j] > 1) {
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                        error(arg != null ? arg : term,  "Expected \'<number>\'");
+                    } else {
+                        args[j] = Double.parseDouble(arg.token.getText());
+                    }
+
+                    if (j % 2 == 0 && (args[j] < 0 || args[j] > 1)) {
                         error(arg != null ? arg : term,  "Expected \'<number [0,1]>\'");
                     }
                 }
@@ -4324,19 +4329,26 @@ final public class CssParser {
 
             stylesheet.getRules().add(new Rule(mediaRule, selectors, declarations));
 
+            Token lastToken = currentToken;
             currentToken = nextToken(lexer);
 
-            while (expectedRBraces > 0) {
-                if (!consumeRBrace(lexer)) {
-                    return;
-                }
-
-                if (mediaRule != null) {
-                    mediaRule = mediaRule.getParent();
-                }
-
+            while (expectedRBraces > 0 && currentToken != null && currentToken.getType() == CssLexer.RBRACE) {
+                mediaRule = mediaRule.getParent();
+                lastToken = currentToken;
                 currentToken = nextToken(lexer);
                 expectedRBraces--;
+            }
+
+            if (expectedRBraces > 0 && currentToken != null && currentToken.getType() == Token.EOF) {
+                String msg = String.format("Expected RBRACE at [%d,%d]", lastToken.getLine(), lastToken.getOffset() + 1);
+                ParseError error = createError(msg);
+                if (LOGGER.isLoggable(Level.WARNING)) {
+                    LOGGER.warning(error.toString());
+                }
+
+                reportError(error);
+                currentToken = null;
+                return;
             }
         }
 
@@ -4360,25 +4372,6 @@ final public class CssParser {
                 && currentToken.getType() != CssLexer.RBRACE) {
             // Skip forward to the next SEMI or RBRACE.
         }
-    }
-
-    private boolean consumeRBrace(CssLexer lexer) {
-        if (currentToken == null || currentToken.getType() != CssLexer.RBRACE) {
-            int line = currentToken != null ? currentToken.getLine() : -1;
-            int pos = currentToken != null ? currentToken.getOffset() : -1;
-            String msg = String.format("Expected RBRACE at [%d,%d]", line, pos);
-            ParseError error = createError(msg);
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.warning(error.toString());
-            }
-
-            reportError(error);
-            currentToken = null;
-            return false;
-        }
-
-        currentToken = lexer.nextToken();
-        return true;
     }
 
     private MediaRule mediaRule(CssLexer lexer, MediaRule mediaRule) {

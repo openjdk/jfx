@@ -297,6 +297,24 @@ typedef GstMeta *(*GstMetaDeserializeFunction) (const GstMetaInfo *info,
 typedef void (*GstMetaClearFunction) (GstBuffer *buffer, GstMeta *meta);
 
 /**
+ * GstAllocationMetaParamsAggregator:
+ * @aggregated_params: This structure will be updated with the
+ *                     combined parameters from both @params0 and @params1.
+ * @params0: a #GstStructure containing the new parameters to be aggregated.
+ * @params1: a #GstStructure containing the new parameters to be aggregated.
+ *
+ * The aggregator function will combine the parameters from @params0 and @param1
+ * and write the result back into @aggregated_params.
+ *
+ * Returns: %TRUE if the parameters were successfully aggregated, %FALSE otherwise.
+ *
+ * Since: 1.26
+ */
+typedef gboolean (*GstAllocationMetaParamsAggregator) (GstStructure ** aggregated_params,
+                                                       const GstStructure * params0,
+                                                       const GstStructure * params1);
+
+/**
  * GstMetaInfo.serialize_func:
  *
  * Function for serializing the metadata, or %NULL if not supported by this
@@ -362,6 +380,16 @@ GType                gst_meta_api_type_register (const gchar *api,
                                                  const gchar **tags);
 GST_API
 gboolean             gst_meta_api_type_has_tag  (GType api, GQuark tag);
+
+GST_API
+gboolean             gst_meta_api_type_aggregate_params (GType api,
+                                                         GstStructure ** aggregated_params,
+                                                         const GstStructure * params0,
+                                                         const GstStructure * params1);
+
+GST_API
+void                 gst_meta_api_type_set_params_aggregator (GType api,
+                                                              GstAllocationMetaParamsAggregator aggregator);
 
 GST_API
 const GstMetaInfo *  gst_meta_register          (GType api, const gchar *impl,

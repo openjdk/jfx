@@ -28,9 +28,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.TimeUnit;
 import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
+import test.util.ScreenCaptureTestWatcher;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**************************************************************************
  *                                                                        *
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.Timeout;
  *                                                                        *
  *************************************************************************/
 @Timeout(value=20000, unit=TimeUnit.MILLISECONDS)
+@ExtendWith(ScreenCaptureTestWatcher.class)
 public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test

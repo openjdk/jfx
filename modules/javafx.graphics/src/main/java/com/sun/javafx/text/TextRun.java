@@ -405,7 +405,7 @@ public class TextRun implements GlyphList {
                 return getPosX(glyphIndex + (leading ? 1 : 0));
             }
         }
-        if (isTab()) {
+        if (isTab() || isEmbedded()) {
             if (ltr) {
                 return leading ? 0 : getWidth();
             } else {
