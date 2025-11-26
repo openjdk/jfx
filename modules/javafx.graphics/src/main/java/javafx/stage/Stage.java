@@ -1489,6 +1489,13 @@ public class Stage extends Window {
             Objects.requireNonNull(anchor, "anchor cannot be null");
             Objects.requireNonNull(clampPolicy, "clampPolicy cannot be null");
             Objects.requireNonNull(screenPadding, "screenPadding cannot be null");
+
+            if (screenPadding.getTop() < 0
+                    || screenPadding.getRight() < 0
+                    || screenPadding.getBottom() < 0
+                    || screenPadding.getLeft() < 0) {
+                throw new IllegalArgumentException("screenPadding cannot be negative");
+            }
         }
 
         void apply(Stage stage) {
