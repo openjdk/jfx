@@ -27,15 +27,16 @@ package test.javafx.stage;
 
 import java.util.ArrayList;
 import java.util.stream.Stream;
+import javafx.geometry.AnchorPoint;
 import javafx.scene.image.Image;
-import com.sun.javafx.stage.WindowHelper;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.stage.Stage;
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.Toolkit;
-import javafx.stage.Stage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -557,7 +558,7 @@ public class StageTest {
     public void showWithAnchorClampsWindowToScreenEdges(
             @SuppressWarnings("unused") String edge,
             @SuppressWarnings("unused") String anchorName,
-            Stage.Anchor anchor,
+            AnchorPoint anchor,
             double screenW, double screenH,
             double stageW, double stageH,
             double requestX, double requestY) {
@@ -587,13 +588,13 @@ public class StageTest {
         final double overshoot = 10; // push past the edge to force clamping
 
         Stream.Builder<Arguments> b = Stream.builder();
-        b.add(Arguments.of("bottom and right", "top left", Stage.Anchor.ofRelative(0, 0), screenW, screenH,
+        b.add(Arguments.of("bottom and right", "top left", AnchorPoint.TOP_LEFT, screenW, screenH,
                            stageW, stageH, screenW - stageW - overshoot, screenH - stageH - overshoot));
-        b.add(Arguments.of("bottom and left", "top right", Stage.Anchor.ofRelative(0, 1), screenW, screenH,
+        b.add(Arguments.of("bottom and left", "top right", AnchorPoint.TOP_RIGHT, screenW, screenH,
                            stageW, stageH, screenW - stageW - overshoot, stageH - overshoot));
-        b.add(Arguments.of("top and right", "bottom left", Stage.Anchor.ofRelative(1, 0), screenW, screenH,
+        b.add(Arguments.of("top and right", "bottom left", AnchorPoint.BOTTOM_LEFT, screenW, screenH,
                            stageW, stageH, stageW - overshoot, screenH - stageH - overshoot));
-        b.add(Arguments.of("top and left", "bottom right", Stage.Anchor.ofRelative(1, 1), screenW, screenH,
+        b.add(Arguments.of("top and left", "bottom right", AnchorPoint.BOTTOM_RIGHT, screenW, screenH,
                            stageW, stageH, stageW - overshoot, stageH - overshoot));
         return b.build();
     }
@@ -605,7 +606,7 @@ public class StageTest {
         try {
             s.setWidth(200);
             s.setHeight(100);
-            s.show(50, 70, Stage.Anchor.ofAbsolute(0, 0));
+            s.show(50, 70, AnchorPoint.absolute(0, 0));
             pulse();
 
             assertTrue(s.isShowing());
@@ -624,7 +625,7 @@ public class StageTest {
         try {
             s.setWidth(200);
             s.setHeight(100);
-            s.show(400, 300, Stage.Anchor.ofRelative(0.5, 0.5));
+            s.show(400, 300, AnchorPoint.proportional(0.5, 0.5));
             pulse();
 
             assertEquals(300, peer.x, 0.0001);
@@ -644,7 +645,7 @@ public class StageTest {
             s.setHeight(100);
 
             // Center at x=790 would imply top-left x=690, which would extend past the right edge (800)
-            s.show(790, 100, Stage.Anchor.ofRelative(0.5, 0.5));
+            s.show(790, 100, AnchorPoint.proportional(0.5, 0.5));
             pulse();
 
             // Clamped to x=800-200=600, y stays as computed (100-50=50) since it's in range
@@ -664,14 +665,14 @@ public class StageTest {
             s.setWidth(200);
             s.setHeight(100);
 
-            s.show(10, 10, Stage.Anchor.ofAbsolute(0, 0));
+            s.show(10, 10, AnchorPoint.absolute(0, 0));
             pulse();
             assertTrue(s.isShowing());
             assertEquals(10, peer.x, 0.0001);
             assertEquals(10, peer.y, 0.0001);
 
             // Calling show again should reposition
-            s.show(120, 140, Stage.Anchor.ofAbsolute(0, 0));
+            s.show(120, 140, AnchorPoint.absolute(0, 0));
             pulse();
 
             assertTrue(s.isShowing());
@@ -697,7 +698,7 @@ public class StageTest {
             double requestX = 1920 + 1440 - 10;
             double requestY = 160 + 900 - 10;
 
-            s.show(requestX, requestY, Stage.Anchor.ofAbsolute(0, 0));
+            s.show(requestX, requestY, AnchorPoint.absolute(0, 0));
             pulse();
 
             // Expected clamp against *second* screen bounds:
