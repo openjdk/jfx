@@ -332,10 +332,23 @@ public class TextRun implements GlyphList {
                 cacheWidth = x;
                 return x;
             }
-            return positions[glyphIndex<<1];
+
+            if (isComplex()) {
+                if (glyphIndex == glyphCount) {
+                    return getWidth();
+                }
+                float x = 0;
+                for (int i = 0; i < glyphIndex; i++) {
+                    x += getAdvance(i);
+                }
+                return x;
+            }
+
+            return positions[glyphIndex << 1];
         }
         return glyphIndex == 0 ? 0 : getWidth();
     }
+
 
     @Override public float getPosY(int glyphIndex) {
         if ((flags & FLAGS_COMPACT) != 0) return 0;
