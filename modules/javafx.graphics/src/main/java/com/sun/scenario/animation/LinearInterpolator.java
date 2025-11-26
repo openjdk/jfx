@@ -115,10 +115,6 @@ public final class LinearInterpolator extends Interpolator {
     @Override
     public double curve(double t) {
         int n = controlPoints.length / 2;
-        if (n == 1) {
-            return controlPoints[1];
-        }
-
         int pointAIndex = 0;
 
         for (int i = 0; i < n; ++i) {
