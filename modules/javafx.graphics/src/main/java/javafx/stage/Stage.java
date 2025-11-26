@@ -27,7 +27,6 @@ package javafx.stage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -37,6 +36,7 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.AnchorPoint;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -318,7 +318,7 @@ public class Stage extends Window {
      * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
      * @since 26
      */
-    public final void show(double anchorX, double anchorY, Anchor anchor) {
+    public final void show(double anchorX, double anchorY, AnchorPoint anchor) {
         if (isShowing()) {
             new PositionRequest(anchorX, anchorY, anchor).apply(this);
         } else {
@@ -492,7 +492,7 @@ public class Stage extends Window {
      * @throws IllegalStateException if this stage is already showing
      * @since 26
      */
-    public final void showAndWait(double anchorX, double anchorY, Anchor anchor) {
+    public final void showAndWait(double anchorX, double anchorY, AnchorPoint anchor) {
         verifyCanShowAndWait();
         positionRequest = new PositionRequest(anchorX, anchorY, anchor);
         super.show();
@@ -1391,7 +1391,13 @@ public class Stage extends Window {
 
     private PositionRequest positionRequest;
 
-    private record PositionRequest(double screenX, double screenY, Anchor anchor) {
+    private record PositionRequest(double screenX, double screenY, AnchorPoint anchor) {
+
+        PositionRequest {
+            if (anchor == null) {
+                throw new NullPointerException("anchor cannot be null");
+            }
+        }
 
         void apply(Stage stage) {
             Screen currentScreen = Utils.getScreenForPoint(screenX, screenY);
@@ -1404,16 +1410,16 @@ public class Stage extends Window {
             double anchorX, anchorY;
             double anchorRelX, anchorRelY;
 
-            if (anchor.relative) {
-                anchorX = width * anchor.x;
-                anchorY = height * anchor.y;
-                anchorRelX = anchor.x;
-                anchorRelY = anchor.y;
+            if (anchor.isProportional()) {
+                anchorX = width * anchor.getX();
+                anchorY = height * anchor.getY();
+                anchorRelX = anchor.getX();
+                anchorRelY = anchor.getY();
             } else {
-                anchorX = anchor.x;
-                anchorY = anchor.y;
-                anchorRelX = anchor.x / width;
-                anchorRelY = anchor.y / height;
+                anchorX = anchor.getX();
+                anchorY = anchor.getY();
+                anchorRelX = anchor.getX() / width;
+                anchorRelY = anchor.getY() / height;
             }
 
             double minX = screenBounds.getMinX();
@@ -1436,104 +1442,6 @@ public class Stage extends Window {
 
             stage.setX(x);
             stage.setY(y);
-        }
-    }
-
-    /**
-     * Defines an anchor point that is used to position a stage with {@link #show(double, double, Anchor)}
-     * or {@link #showAndWait(double, double, Anchor)}. The anchor is the point on the stage that should
-     * coincide with a given screen location.
-     * <p>
-     * Anchors can be specified in one of two coordinate systems:
-     * <ul>
-     *   <li><b>Relative</b>: {@code x} and {@code y} are fractions of the window size, where
-     *       {@code (0,0)} is the top-left corner and {@code (1,1)} is the bottom-right corner.
-     *       Example: {@code (0.5, 0.5)} anchors the center of the window.
-     *   <li><b>Absolute</b>: {@code x} and {@code y} are pixel offsets from the window's top-left corner.
-     *       Example: {@code (0, 0)} anchors the top-left corner; {@code (10, 10)} anchors a point 10px
-     *       right and 10px down from the top-left.
-     * </ul>
-     *
-     * @since 26
-     */
-    public static final class Anchor {
-
-        private final double x;
-        private final double y;
-        private final boolean relative;
-
-        private Anchor(double x, double y, boolean relative) {
-            this.x = x;
-            this.y = y;
-            this.relative = relative;
-        }
-
-        /**
-         * Creates a relative anchor expressed as a fraction of the stage size.
-         * The values can be less than 0 or greater than 1; in this case the anchor is located outside the stage.
-         * <p>
-         * {@code (0,0)} is the top-left; {@code (1,1)} is the bottom-right; {@code (0.5,0.5)} is the center.
-         *
-         * @param x x fraction of the stage width
-         * @param y y fraction of the stage height
-         * @return a relative {@code Anchor}
-         */
-        public static Anchor ofRelative(double x, double y) {
-            return new Anchor(x, y, true);
-        }
-
-        /**
-         * Creates an absolute anchor expressed as pixel offsets from the stage's top-left corner.
-         * The values can be less than 0 or greater than the stage's size; in this case the anchor
-         * is located outside the stage.
-         *
-         * @param x x offset in pixels from the stage's left edge
-         * @param y y offset in pixels from the stage's top edge
-         * @return an absolute {@code Anchor}
-         */
-        public static Anchor ofAbsolute(double x, double y) {
-            return new Anchor(x, y, false);
-        }
-
-        /**
-         * Gets the horizontal location of the anchor.
-         *
-         * @return the horizontal location of the anchor
-         */
-        public double getX() {
-            return x;
-        }
-
-        /**
-         * Gets the vertical location of the anchor.
-         *
-         * @return the vertical location of the anchor
-         */
-        public double getY() {
-            return y;
-        }
-
-        /**
-         * Returns whether the anchor is expressed as a fraction of the stage size.
-         *
-         * @return {@code true} if the anchor is expressed as a fraction of the stage size,
-         *         {@code false} otherwise
-         */
-        public boolean isRelative() {
-            return relative;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj instanceof Anchor other
-                && other.x == x
-                && other.y == y
-                && other.relative == relative;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(x, y, relative);
         }
     }
 }
