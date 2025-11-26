@@ -357,6 +357,7 @@ public class Stage extends Window {
      * @param screenPadding the minimum padding to maintain between the stage edges and the screen edges
      *                      when clamping is performed
      * @throws NullPointerException if {@code anchor}, {@code clampPolicy}, or {@code screenPadding} is {@code null}
+     * @throws IllegalArgumentException if {@code screenPadding} is negative
      * @since 26
      */
     public final void show(double anchorX, double anchorY, AnchorPoint anchor,
@@ -575,6 +576,7 @@ public class Stage extends Window {
      * @param screenPadding the minimum padding to maintain between the stage edges and the screen edges
      *                      when clamping is performed
      * @throws NullPointerException if {@code anchor}, {@code clampPolicy}, or {@code screenPadding} is {@code null}
+     * @throws IllegalArgumentException if {@code screenPadding} is negative
      * @throws IllegalStateException if this method is called on a thread other than the JavaFX application thread
      * @throws IllegalStateException if this method is called during animation or layout processing
      * @throws IllegalStateException if this call would exceed the maximum number of nested event loops
