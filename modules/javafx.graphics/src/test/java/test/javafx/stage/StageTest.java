@@ -28,9 +28,11 @@ package test.javafx.stage;
 import java.util.ArrayList;
 import java.util.stream.Stream;
 import javafx.geometry.AnchorPoint;
+import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.stage.ClampPolicy;
 import javafx.stage.Stage;
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -43,6 +45,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -551,14 +554,17 @@ public class StageTest {
 
     /**
      * Tests that a stage that is shown with an anchor and placed such that it extends slightly beyond
-     * the edges of the screen is repositioned so that it fits within the screen.
+     * the edges of the screen is repositioned so that it fits within the screen, taking into account
+     * padding around the screen.
      */
     @ParameterizedTest(name = "Clamps to {0} edges with {1} anchor")
     @MethodSource("showWithAnchorClampsWindowToScreenEdges_arguments")
-    public void showWithAnchorClampsWindowToScreenEdges(
+    public void showAndClampToScreenEdgesWithPadding(
             @SuppressWarnings("unused") String edge,
             @SuppressWarnings("unused") String anchorName,
             AnchorPoint anchor,
+            ClampPolicy clampPolicy,
+            Insets screenPadding,
             double screenW, double screenH,
             double stageW, double stageH,
             double requestX, double requestY) {
@@ -571,10 +577,10 @@ public class StageTest {
         try {
             s.setWidth(stageW);
             s.setHeight(stageH);
-            s.show(requestX, requestY, anchor);
+            s.show(requestX, requestY, anchor, clampPolicy, screenPadding);
             pulse();
 
-            assertWithinScreenBounds(peer, toolkit.getScreens().getFirst());
+            assertWithinScreenBounds(peer, toolkit.getScreens().getFirst(), screenPadding);
         } finally {
             toolkit.resetScreens();
         }
@@ -588,70 +594,65 @@ public class StageTest {
         final double overshoot = 10; // push past the edge to force clamping
 
         Stream.Builder<Arguments> b = Stream.builder();
-        b.add(Arguments.of("bottom and right", "top left", AnchorPoint.TOP_LEFT, screenW, screenH,
-                           stageW, stageH, screenW - stageW - overshoot, screenH - stageH - overshoot));
-        b.add(Arguments.of("bottom and left", "top right", AnchorPoint.TOP_RIGHT, screenW, screenH,
-                           stageW, stageH, screenW - stageW - overshoot, stageH - overshoot));
-        b.add(Arguments.of("top and right", "bottom left", AnchorPoint.BOTTOM_LEFT, screenW, screenH,
-                           stageW, stageH, stageW - overshoot, screenH - stageH - overshoot));
-        b.add(Arguments.of("top and left", "bottom right", AnchorPoint.BOTTOM_RIGHT, screenW, screenH,
-                           stageW, stageH, stageW - overshoot, stageH - overshoot));
+
+        // no screen padding
+        b.add(Arguments.of("bottom and right", "TOP_LEFT", AnchorPoint.TOP_LEFT,
+                ClampPolicy.BOTH, Insets.EMPTY, screenW, screenH,
+                stageW, stageH, screenW - stageW + overshoot, screenH - stageH + overshoot));
+        b.add(Arguments.of("bottom and left", "TOP_RIGHT", AnchorPoint.TOP_RIGHT,
+                ClampPolicy.BOTH, Insets.EMPTY, screenW, screenH,
+                stageW, stageH, stageW - overshoot, screenH - stageH + overshoot));
+        b.add(Arguments.of("top and right", "BOTTOM_LEFT", AnchorPoint.BOTTOM_LEFT,
+                ClampPolicy.BOTH, Insets.EMPTY, screenW, screenH,
+                stageW, stageH, screenW - stageW + overshoot, stageH - overshoot));
+        b.add(Arguments.of("top and left", "BOTTOM_RIGHT", AnchorPoint.BOTTOM_RIGHT,
+                ClampPolicy.BOTH, Insets.EMPTY, screenW, screenH,
+                stageW, stageH, stageW - overshoot, stageH - overshoot));
+
+        // with screen padding
+        b.add(Arguments.of("bottom and right", "TOP_LEFT", AnchorPoint.TOP_LEFT,
+                ClampPolicy.BOTH, new Insets(10, 20, 30, 40), screenW, screenH,
+                stageW, stageH, screenW - stageW + overshoot, screenH - stageH + overshoot));
+        b.add(Arguments.of("bottom and left", "TOP_RIGHT", AnchorPoint.TOP_RIGHT,
+                ClampPolicy.BOTH, new Insets(10, 20, 30, 40), screenW, screenH,
+                stageW, stageH, stageW - overshoot, screenH - stageH + overshoot));
+        b.add(Arguments.of("top and right", "BOTTOM_LEFT", AnchorPoint.BOTTOM_LEFT,
+                ClampPolicy.BOTH, new Insets(10, 20, 30, 40), screenW, screenH,
+                stageW, stageH, screenW - stageW + overshoot, stageH - overshoot));
+        b.add(Arguments.of("top and left", "BOTTOM_RIGHT", AnchorPoint.BOTTOM_RIGHT,
+                ClampPolicy.BOTH, new Insets(10, 20, 30, 40), screenW, screenH,
+                stageW, stageH, stageW - overshoot, stageH - overshoot));
         return b.build();
     }
 
-    @Test
-    public void showWithAbsoluteAnchorNoClamping() {
+    /**
+     * Tests that the {@link ClampPolicy} is taken into account when clamping to screen edges.
+     */
+    @ParameterizedTest
+    @CsvSource({
+        "NONE, 790, 590",
+        "HORIZONTAL, 600, 590",
+        "VERTICAL, 790, 500",
+        "BOTH, 600, 500",
+    })
+    public void showWithClampPolicy(ClampPolicy clampPolicy, double expectX, double expectY) {
         toolkit.setScreens(new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96));
 
         try {
             s.setWidth(200);
             s.setHeight(100);
-            s.show(50, 70, AnchorPoint.absolute(0, 0));
+            s.show(790, 590, AnchorPoint.absolute(0, 0), clampPolicy, Insets.EMPTY);
             pulse();
 
             assertTrue(s.isShowing());
-            assertEquals(50, peer.x, 0.0001);
-            assertEquals(70, peer.y, 0.0001);
-            assertWithinScreenBounds(peer, toolkit.getScreens().getFirst());
-        } finally {
-            toolkit.resetScreens();
-        }
-    }
+            assertEquals(expectX, peer.x, 0.0001);
+            assertEquals(expectY, peer.y, 0.0001);
 
-    @Test
-    public void showWithRelativeCenterAnchor() {
-        toolkit.setScreens(new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96));
-
-        try {
-            s.setWidth(200);
-            s.setHeight(100);
-            s.show(400, 300, AnchorPoint.proportional(0.5, 0.5));
-            pulse();
-
-            assertEquals(300, peer.x, 0.0001);
-            assertEquals(250, peer.y, 0.0001);
-            assertWithinScreenBounds(peer, toolkit.getScreens().getFirst());
-        } finally {
-            toolkit.resetScreens();
-        }
-    }
-
-    @Test
-    public void showWithRelativeCenterAnchorClampsToEdges() {
-        toolkit.setScreens(new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96));
-
-        try {
-            s.setWidth(200);
-            s.setHeight(100);
-
-            // Center at x=790 would imply top-left x=690, which would extend past the right edge (800)
-            s.show(790, 100, AnchorPoint.proportional(0.5, 0.5));
-            pulse();
-
-            // Clamped to x=800-200=600, y stays as computed (100-50=50) since it's in range
-            assertEquals(600, peer.x, 0.0001);
-            assertEquals(50, peer.y, 0.0001);
-            assertWithinScreenBounds(peer, toolkit.getScreens().getFirst());
+            if (clampPolicy != ClampPolicy.BOTH) {
+                assertNotWithinScreenBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+            } else {
+                assertWithinScreenBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+            }
         } finally {
             toolkit.resetScreens();
         }
@@ -678,14 +679,14 @@ public class StageTest {
             assertTrue(s.isShowing());
             assertEquals(120, peer.x, 0.0001);
             assertEquals(140, peer.y, 0.0001);
-            assertWithinScreenBounds(peer, toolkit.getScreens().getFirst());
+            assertWithinScreenBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
         } finally {
             toolkit.resetScreens();
         }
     }
 
     @Test
-    public void showWithAnchorOnSecondScreenUsesSecondScreenBoundsForClamping() {
+    public void showOnSecondScreenUsesSecondScreenBoundsForClamping() {
         toolkit.setScreens(
             new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
             new ScreenConfiguration(1920, 160, 1440, 900, 1920, 160, 1440, 900, 96));
@@ -704,16 +705,24 @@ public class StageTest {
             // Expected clamp against *second* screen bounds:
             assertEquals(2960, peer.x, 0.0001);
             assertEquals(760, peer.y, 0.0001);
-            assertWithinScreenBounds(peer, toolkit.getScreens().get(1));
+            assertWithinScreenBounds(peer, toolkit.getScreens().get(1), Insets.EMPTY);
         } finally {
             toolkit.resetScreens();
         }
     }
 
-    private static void assertWithinScreenBounds(StubStage peer, ScreenConfiguration screen) {
-        assertTrue(screen.getMinX() <= peer.x);
-        assertTrue(screen.getMinY() <= peer.y);
-        assertTrue(screen.getMinX() + screen.getWidth() >= peer.x + peer.width);
-        assertTrue(screen.getMinY() + screen.getHeight() >= peer.y + peer.height);
+    private static void assertWithinScreenBounds(StubStage peer, ScreenConfiguration screen, Insets padding) {
+        assertTrue(isWithinScreenBounds(peer, screen, padding), "Stage is not within screen bounds");
+    }
+
+    private static void assertNotWithinScreenBounds(StubStage peer, ScreenConfiguration screen, Insets padding) {
+        assertFalse(isWithinScreenBounds(peer, screen, padding), "Stage is within screen bounds");
+    }
+
+    private static boolean isWithinScreenBounds(StubStage peer, ScreenConfiguration screen, Insets padding) {
+        return screen.getMinX() + padding.getLeft() <= peer.x
+            && screen.getMinY() + padding.getTop() <= peer.y
+            && screen.getMinX() + screen.getWidth() - padding.getRight() >= peer.x + peer.width
+            && screen.getMinY() + screen.getHeight() - padding.getBottom() >= peer.y + peer.height;
     }
 }
