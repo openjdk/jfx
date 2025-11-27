@@ -26,6 +26,7 @@
 package javafx.stage;
 
 import java.util.HashMap;
+import java.util.function.Consumer;
 
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -1060,7 +1061,10 @@ public class Window implements EventTarget {
             } else {
                 windows.remove(Window.this);
             }
+
             Toolkit tk = Toolkit.getToolkit();
+            Consumer<Window> boundsConfigurator = getBoundsConfigurator();
+
             if (peer != null) {
                 if (newVisible) {
                     if (peerListener == null) {
@@ -1117,8 +1121,10 @@ public class Window implements EventTarget {
                                                            0, 0);
                     }
 
-                    // Give subclasses a chance to adjust the window bounds
-                    fixBounds();
+                    // If a derived class has provided us a bounds configurator, now is the time to apply it.
+                    if (boundsConfigurator != null) {
+                        boundsConfigurator.accept(Window.this);
+                    }
 
                     // set peer bounds before the window is shown
                     applyBounds();
@@ -1159,6 +1165,11 @@ public class Window implements EventTarget {
                     // might have changed (e.g. due to setResizable(false)). Reapply the
                     // sizeToScene() request if needed to account for the new insets.
                     sizeToScene();
+
+                    // If the window size has changed, we need to run the bounds configurator again.
+                    if (boundsConfigurator != null) {
+                        boundsConfigurator.accept(Window.this);
+                    }
                 }
 
                 // Reset the flag unconditionally upon visibility changes
@@ -1366,10 +1377,16 @@ public class Window implements EventTarget {
         }
     }
 
-    void fixBounds() {}
-
     final void applyBounds() {
         peerBoundsConfigurator.apply();
+    }
+
+    /**
+     * Allows subclasses to specify an algorithm that adjusts the window bounds
+     * just before the window is shown.
+     */
+    Consumer<Window> getBoundsConfigurator() {
+        return null;
     }
 
     Window getWindowOwner() {

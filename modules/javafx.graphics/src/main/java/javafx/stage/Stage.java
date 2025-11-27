@@ -27,7 +27,7 @@ package javafx.stage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.function.Consumer;
 
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -40,7 +40,6 @@ import javafx.collections.ObservableList;
 import javafx.geometry.AnchorPoint;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
@@ -54,9 +53,9 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
+import com.sun.javafx.stage.WindowBoundsUtil;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.util.Utils;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -302,76 +301,6 @@ public class Stage extends Window {
         super.show();
     }
 
-    /**
-     * Shows this stage at the specified location and adjusts the position as needed to keep the stage
-     * visible on screen. If the stage is already showing, it is moved to the computed position instead.
-     * <p>
-     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
-     * coordinates {@code (anchorX, anchorY)}. The stage location is computed from the anchor and the
-     * stage size, and is then adjusted to keep the stage within the screen bounds.
-     * <p>
-     * After the stage is shown, its {@link #xProperty() X} and {@link #yProperty() Y} properties will
-     * reflect the adjusted position.
-     * <p>
-     * Calling this method is equivalent to calling
-     * {@code show(anchorX, anchorY, anchor, ClampPolicy.BOTH, Insets.EMPTY)}.
-     *
-     * @param anchorX the requested horizontal location of the anchor point on the screen
-     * @param anchorY the requested vertical location of the anchor point on the screen
-     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
-     * @throws NullPointerException if {@code anchor} is {@code null}
-     * @since 26
-     */
-    public final void show(double anchorX, double anchorY, AnchorPoint anchor) {
-        show(anchorX, anchorY, anchor, ClampPolicy.BOTH, Insets.EMPTY);
-    }
-
-    /**
-     * Shows this stage at the specified location using the given anchor and clamping options.
-     * If the stage is already showing, it is moved to the computed position instead.
-     * <p>
-     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
-     * coordinates {@code (anchorX, anchorY)}. The stage location is computed from the anchor and the
-     * stage size, and is then adjusted according to {@code clampPolicy}.
-     * <p>
-     * The {@code clampPolicy} controls which axes are clamped to the screen bounds:
-     * <ul>
-     *   <li>{@code NONE}: no clamping is performed, the stage may extend beyond the screen
-     *   <li>{@code HORIZONTAL}: only the {@code x} coordinate is clamped, the stage fits horizontally on the screen
-     *   <li>{@code VERTICAL}: only the {@code y} coordinate is clamped, the stage fits vertically on the screen
-     *   <li>{@code BOTH}: both {@code x} and {@code y} coordinates are clamped
-     * </ul>
-     * If clamping is performed, {@code screenPadding} specifies additional space to maintain between the
-     * stage edges and the screen edges. The padding is applied per edge (top/right/bottom/left) and
-     * effectively shrinks the usable screen area for clamping by the given insets. For example, a left
-     * padding of {@code 10} ensures that, after clamping, the stage will not be placed closer than
-     * 10 pixels to the left screen edge (and similarly for the other edges).
-     * <p>
-     * After the stage is shown, its {@link #xProperty() X} and {@link #yProperty() Y} properties will
-     * reflect the adjusted position.
-     *
-     * @param anchorX the requested horizontal location of the anchor point on the screen
-     * @param anchorY the requested vertical location of the anchor point on the screen
-     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
-     * @param clampPolicy controls whether clamping is performed horizontally, vertically, both, or not at all
-     * @param screenPadding the minimum padding to maintain between the stage edges and the screen edges
-     *                      when clamping is performed
-     * @throws NullPointerException if {@code anchor}, {@code clampPolicy}, or {@code screenPadding} is {@code null}
-     * @throws IllegalArgumentException if {@code screenPadding} is negative
-     * @since 26
-     */
-    public final void show(double anchorX, double anchorY, AnchorPoint anchor,
-                           ClampPolicy clampPolicy, Insets screenPadding) {
-        var positionRequest = new PositionRequest(anchorX, anchorY, anchor, clampPolicy, screenPadding);
-
-        if (isShowing()) {
-            positionRequest.apply(this);
-        } else {
-            this.positionRequest = positionRequest;
-            super.show();
-        }
-    }
-
     private boolean primary = false;
 
     //------------------------------------------------------------------
@@ -506,94 +435,7 @@ public class Stage extends Window {
      * @since JavaFX 2.2
      */
     public void showAndWait() {
-        verifyCanShowAndWait();
-        super.show();
-        inNestedEventLoop = true;
-        Toolkit.getToolkit().enterNestedEventLoop(this);
-    }
 
-    /**
-     * Shows this stage at the specified location and adjusts the position as needed to keep the stage
-     * visible on screen. This method blocks until the stage is hidden before returning to the caller.
-     * It also temporarily blocks processing of the current event and starts a nested event loop to
-     * handle other events. This method must be called on the JavaFX application thread.
-     * <p>
-     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
-     * coordinates {@code (anchorX, anchorY)}. The stage location is computed from the anchor and the
-     * stage size, and is then adjusted to keep the stage within the screen bounds.
-     * <p>
-     * After the stage is shown, its {@link #xProperty() X} and {@link #yProperty() Y} properties will
-     * reflect the adjusted position.
-     * <p>
-     * Calling this method is equivalent to calling
-     * {@code showAndWait(anchorX, anchorY, anchor, ClampPolicy.BOTH, Insets.EMPTY)}.
-     *
-     * @param anchorX the requested horizontal location of the anchor point on the screen
-     * @param anchorY the requested vertical location of the anchor point on the screen
-     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
-     * @throws NullPointerException if {@code anchor} is {@code null}
-     * @throws IllegalStateException if this method is called on a thread other than the JavaFX application thread
-     * @throws IllegalStateException if this method is called during animation or layout processing
-     * @throws IllegalStateException if this call would exceed the maximum number of nested event loops
-     * @throws IllegalStateException if this method is called on the primary stage
-     * @throws IllegalStateException if this stage is already showing
-     * @since 26
-     */
-    public final void showAndWait(double anchorX, double anchorY, AnchorPoint anchor) {
-        showAndWait(anchorX, anchorY, anchor, ClampPolicy.BOTH, Insets.EMPTY);
-    }
-
-    /**
-     * Shows this stage at the specified location using the given anchor and clamping options.
-     * This method blocks until the stage is hidden before returning to the caller.
-     * It also temporarily blocks processing of the current event and starts a nested event loop to
-     * handle other events. This method must be called on the JavaFX application thread.
-     * <p>
-     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
-     * coordinates {@code (anchorX, anchorY)}. The stage location is computed from the anchor and the
-     * stage size, and is then adjusted according to {@code clampPolicy}.
-     * <p>
-     * The {@code clampPolicy} controls which axes are clamped to the screen bounds:
-     * <ul>
-     *   <li>{@code NONE}: no clamping is performed, the stage may extend beyond the screen
-     *   <li>{@code HORIZONTAL}: only the {@code x} coordinate is clamped, the stage fits horizontally on the screen
-     *   <li>{@code VERTICAL}: only the {@code y} coordinate is clamped, the stage fits vertically on the screen
-     *   <li>{@code BOTH}: both {@code x} and {@code y} coordinates are clamped
-     * </ul>
-     * If clamping is performed, {@code screenPadding} specifies additional space to maintain between the
-     * stage edges and the screen edges. The padding is applied per edge (top/right/bottom/left) and
-     * effectively shrinks the usable screen area for clamping by the given insets. For example, a left
-     * padding of {@code 10} ensures that, after clamping, the stage will not be placed closer than
-     * 10 pixels to the left screen edge (and similarly for the other edges).
-     * <p>
-     * After the stage is shown, its {@link #xProperty() X} and {@link #yProperty() Y} properties will
-     * reflect the adjusted position.
-     *
-     * @param anchorX the requested horizontal location of the anchor point on the screen
-     * @param anchorY the requested vertical location of the anchor point on the screen
-     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
-     * @param clampPolicy controls whether clamping is performed horizontally, vertically, both, or not at all
-     * @param screenPadding the minimum padding to maintain between the stage edges and the screen edges
-     *                      when clamping is performed
-     * @throws NullPointerException if {@code anchor}, {@code clampPolicy}, or {@code screenPadding} is {@code null}
-     * @throws IllegalArgumentException if {@code screenPadding} is negative
-     * @throws IllegalStateException if this method is called on a thread other than the JavaFX application thread
-     * @throws IllegalStateException if this method is called during animation or layout processing
-     * @throws IllegalStateException if this call would exceed the maximum number of nested event loops
-     * @throws IllegalStateException if this method is called on the primary stage
-     * @throws IllegalStateException if this stage is already showing
-     * @since 26
-     */
-    public final void showAndWait(double anchorX, double anchorY, AnchorPoint anchor,
-                                  ClampPolicy clampPolicy, Insets screenPadding) {
-        verifyCanShowAndWait();
-        positionRequest = new PositionRequest(anchorX, anchorY, anchor, clampPolicy, screenPadding);
-        super.show();
-        inNestedEventLoop = true;
-        Toolkit.getToolkit().enterNestedEventLoop(this);
-    }
-
-    private void verifyCanShowAndWait() {
         Toolkit.getToolkit().checkFxUserThread();
 
         if (isPrimary()) {
@@ -612,6 +454,10 @@ public class Stage extends Window {
         // method is called from an event handler that is listening to a
         // WindowEvent.WINDOW_HIDING event.
         assert !inNestedEventLoop;
+
+        show();
+        inNestedEventLoop = true;
+        Toolkit.getToolkit().enterNestedEventLoop(this);
     }
 
     private StageStyle style; // default is set in constructor
@@ -1372,6 +1218,88 @@ public class Stage extends Window {
     }
 
     /**
+     * Moves this stage to the specified screen location using the given anchor.
+     * <p>
+     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
+     * coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is then
+     * adjusted to keep the stage within the screen bounds.
+     * <p>
+     * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
+     * If called <em>before</em> the stage is shown, then
+     * <ol>
+     *     <li>any previous call to {@link #centerOnScreen()} is canceled,
+     *     <li>the {@link #xProperty() X} and {@link #yProperty() Y} properties are not updated
+     *         immediately; instead, they are updated after the stage is shown.
+     * </ol>
+     * Calling this method is equivalent to calling
+     * {@code relocate(anchorX, anchorY, anchor, AnchorPolicy.FIXED, Insets.EMPTY)}.
+     *
+     * @param anchorX the requested horizontal location of the anchor point on the screen
+     * @param anchorY the requested vertical location of the anchor point on the screen
+     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
+     * @throws NullPointerException if {@code anchor} is {@code null}
+     * @since 26
+     */
+    public final void relocate(double anchorX, double anchorY, AnchorPoint anchor) {
+        relocate(anchorX, anchorY, anchor, AnchorPolicy.FIXED, Insets.EMPTY);
+    }
+
+    /**
+     * Moves this stage to the specified screen location using the given anchor, anchor-selection policy,
+     * and screen edge constraints.
+     * <p>
+     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
+     * coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is then
+     * optionally adjusted to keep the stage within screen edge constraints.
+     * <p>
+     * The {@code anchorPolicy} controls whether an alternative anchor may be used when the preferred anchor
+     * would violate screen edge constraints. Depending on the policy, the preferred anchor location may be
+     * mirrored to the other side of the window horizontally or vertically, or an anchor might be selected
+     * automatically. If no alternative anchor yields a better placement, the specified {@code anchor} is used.
+     * <p>
+     * The {@code screenPadding} parameter defines per-edge constraints against the current screen bounds.
+     * Each inset value specifies the minimum distance to maintain between the stage edge and the corresponding
+     * screen edge. A value {@code >= 0} enables the corresponding edge constraint; a negative value disables
+     * the constraint for that edge. Enabled constraints effectively shrink the usable screen area by the
+     * given insets. For example, a left inset of {@code 10} ensures the stage will not be placed closer than
+     * 10 pixels to the left screen edge.
+     * <p>
+     * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
+     * If called <em>before</em> the stage is shown, then
+     * <ol>
+     *     <li>any previous call to {@link #centerOnScreen()} is canceled,
+     *     <li>the {@link #xProperty() X} and {@link #yProperty() Y} properties are not updated
+     *         immediately; instead, they are updated after the stage is shown.
+     * </ol>
+     *
+     * @param anchorX the requested horizontal location of the anchor point on the screen
+     * @param anchorY the requested vertical location of the anchor point on the screen
+     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
+     * @param anchorPolicy controls alternative anchor selection if the preferred placement violates
+     *                     enabled screen constraints
+     * @param screenPadding per-edge minimum distance constraints relative to the screen edges;
+     *                      values {@code < 0} disable the constraint for the respective edge
+     * @throws NullPointerException if {@code anchor}, {@code anchorPolicy}, or {@code screenPadding} is {@code null}
+     * @since 26
+     */
+    public final void relocate(double anchorX, double anchorY, AnchorPoint anchor,
+                               AnchorPolicy anchorPolicy, Insets screenPadding) {
+        var request = WindowBoundsUtil.newDeferredRelocation(anchorX, anchorY, anchor, anchorPolicy, screenPadding);
+
+        if (isShowing()) {
+            request.accept(this);
+        } else {
+            this.relocationRequest = request;
+        }
+    }
+
+    @Override
+    public void centerOnScreen() {
+        relocationRequest = null; // cancel previous relocation request
+        super.centerOnScreen();
+    }
+
+    /**
      * Closes this {@code Stage}.
      * This call is equivalent to {@code hide()}.
      *
@@ -1475,92 +1403,9 @@ public class Stage extends Window {
     }
 
     @Override
-    final void fixBounds() {
-        if (positionRequest != null) {
-            positionRequest.apply(this);
-            positionRequest = null;
-        }
+    final Consumer<Window> getBoundsConfigurator() {
+        return relocationRequest;
     }
 
-    private PositionRequest positionRequest;
-
-    private record PositionRequest(double screenX, double screenY, AnchorPoint anchor,
-                                   ClampPolicy clampPolicy, Insets screenPadding) {
-
-        PositionRequest {
-            Objects.requireNonNull(anchor, "anchor cannot be null");
-            Objects.requireNonNull(clampPolicy, "clampPolicy cannot be null");
-            Objects.requireNonNull(screenPadding, "screenPadding cannot be null");
-
-            if (screenPadding.getTop() < 0
-                    || screenPadding.getRight() < 0
-                    || screenPadding.getBottom() < 0
-                    || screenPadding.getLeft() < 0) {
-                throw new IllegalArgumentException("screenPadding cannot be negative");
-            }
-        }
-
-        void apply(Stage stage) {
-            Screen currentScreen = Utils.getScreenForPoint(screenX, screenY);
-            Rectangle2D screenBounds = Utils.hasFullScreenStage(currentScreen)
-                ? currentScreen.getBounds()
-                : currentScreen.getVisualBounds();
-
-            double width = stage.getWidth();
-            double height = stage.getHeight();
-            double anchorX, anchorY;
-            double anchorRelX, anchorRelY;
-
-            if (anchor.isProportional()) {
-                anchorX = width * anchor.getX();
-                anchorY = height * anchor.getY();
-                anchorRelX = anchor.getX();
-                anchorRelY = anchor.getY();
-            } else {
-                anchorX = anchor.getX();
-                anchorY = anchor.getY();
-                anchorRelX = width != 0 ? anchor.getX() / width : 0;
-                anchorRelY = height != 0 ? anchor.getY() / height : 0;
-            }
-
-            // Raw (unclamped) top-left position derived from the requested screen point + anchor
-            double rawX = screenX - anchorX;
-            double rawY = screenY - anchorY;
-
-            // Start with raw coordinates; clamp per policy below
-            double x = rawX;
-            double y = rawY;
-
-            // Only compute clamp ranges for axes that are being clamped
-            boolean clampH = clampPolicy == ClampPolicy.BOTH || clampPolicy == ClampPolicy.HORIZONTAL;
-            boolean clampV = clampPolicy == ClampPolicy.BOTH || clampPolicy == ClampPolicy.VERTICAL;
-
-            if (clampH) {
-                double minX = screenBounds.getMinX() + screenPadding.getLeft();
-                double maxX = screenBounds.getMaxX() - screenPadding.getRight() - width;
-
-                if (maxX >= minX) {
-                    x = Utils.clamp(minX, rawX, maxX);
-                } else {
-                    // Window (plus padding) doesn't fit horizontally: pick a side based on anchor
-                    x = anchorRelX > 0.5 ? maxX : minX;
-                }
-            }
-
-            if (clampV) {
-                double minY = screenBounds.getMinY() + screenPadding.getTop();
-                double maxY = screenBounds.getMaxY() - screenPadding.getBottom() - height;
-
-                if (maxY >= minY) {
-                    y = Utils.clamp(minY, rawY, maxY);
-                } else {
-                    // Window (plus padding) doesn't fit vertically: pick a side based on anchor
-                    y = anchorRelY > 0.5 ? maxY : minY;
-                }
-            }
-
-            stage.setX(x);
-            stage.setY(y);
-        }
-    }
+    private Consumer<Window> relocationRequest;
 }
