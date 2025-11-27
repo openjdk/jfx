@@ -123,6 +123,11 @@ public final class AnchorPoint {
         return hash;
     }
 
+    @Override
+    public String toString() {
+        return "AnchorPoint [x = " + x + ", y = " + y + ", proportional = " + proportional + "]";
+    }
+
     /**
      * Anchor at the top-left corner of the target area.
      * <p>

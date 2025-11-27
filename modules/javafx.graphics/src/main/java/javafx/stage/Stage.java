@@ -1267,7 +1267,7 @@ public class Stage extends Window {
      * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
      * If called <em>before</em> the stage is shown, then
      * <ol>
-     *     <li>any previous call to {@link #centerOnScreen()} is canceled,
+     *     <li>any previous call to {@link #centerOnScreen()} is disregarded,
      *     <li>the {@link #xProperty() X} and {@link #yProperty() Y} properties are not updated
      *         immediately; instead, they are updated after the stage is shown.
      * </ol>
