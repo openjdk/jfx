@@ -1312,7 +1312,6 @@ public class ComboBoxTest {
         assertFalse(customCell.getPseudoClassStates().contains(empty));
     }
 
-
     @Test
     public void testPromptTextRestoredAfterSetValueNull() {
         comboBox.setPromptText("Select Value");
