@@ -28,6 +28,7 @@ package com.sun.scenario.animation;
 import javafx.animation.Interpolator;
 import javafx.geometry.Point2D;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Implementation of a piecewise linear interpolator as described by
@@ -39,9 +40,7 @@ public final class LinearInterpolator extends Interpolator {
     private final double[] controlPoints;
 
     public LinearInterpolator(Point2D[] controlPoints) {
-        if (controlPoints == null) {
-            throw new NullPointerException("controlPoints cannot be null");
-        }
+        Objects.requireNonNull(controlPoints, "controlPoints cannot be null");
 
         if (controlPoints.length < 2) {
             throw new IllegalArgumentException("controlPoints must have at least two items");

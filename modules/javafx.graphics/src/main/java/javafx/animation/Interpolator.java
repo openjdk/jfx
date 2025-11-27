@@ -95,10 +95,15 @@ public abstract class Interpolator {
     };
 
     /**
-     * Returns a piecewise-linear interpolator with the specified control points.
+     * Returns an interpolator that interpolates linearly between its specified control points.
      * <p>
      * Each control point associates an input progress value (X) with an output progress value (Y).
-     * If the input progress value of a control point is unspecified ({@link Double#NaN}), it is
+     * The input progress value is the normalized progress of the animation, while the output progress
+     * value is the normalized progress of the value change. This means that when the time has reached
+     * X of the animation, the animation should be at Y of its value change. Both values are specified
+     * in normalized coordinates, but are not required to fall within the {@code [0..1]} interval.
+     * <p>
+     * If the input progress value (X) of a control point is unspecified ({@link Double#NaN}), it is
      * distributed evenly between its neighboring control points. If the input progress value of
      * the first or last control point is unspecified, it is set to 0 or 1, respectively.
      * <p>
@@ -109,7 +114,7 @@ public abstract class Interpolator {
      * @param controlPoints the control points
      * @throws NullPointerException if {@code controlPoints} is {@code null}
      * @throws IllegalArgumentException if {@code controlPoints} contains less than two items
-     * @return a piecewise-linear interpolator
+     * @return a linear interpolator
      * @since 26
      */
     public static Interpolator ofLinear(Point2D... controlPoints) {
