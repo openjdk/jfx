@@ -454,7 +454,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (empty) {
             if (cell == null) return true;
 
-            // JDK-8296653
             if (cell == buttonCell) {
                 final String promptText = comboBox.getPromptText();
                 if (comboBox.getValue() == null

@@ -1312,6 +1312,31 @@ public class ComboBoxTest {
         assertFalse(customCell.getPseudoClassStates().contains(empty));
     }
 
+
+    @Test
+    public void testPromptTextRestoredAfterSetValueNull() {
+        comboBox.setPromptText("Select Value");
+        comboBox.getItems().addAll("0", "1", "2", "3");
+
+        SingleSelectionModel<String> sm = comboBox.getSelectionModel();
+        sl = new StageLoader(comboBox);
+        comboBox.applyCss();
+        comboBox.show();
+        ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
+
+        assertEquals("Select Value", buttonCell.getText(), "Initial button cell text should be the promptText");
+
+        // Select an item
+        sm.select(2);
+        Toolkit.getToolkit().firePulse();
+
+        // Clear the value
+        comboBox.setValue(null);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("Select Value", buttonCell.getText(), "Button cell should show promptText after clearing value");
+    }
+
     private int test_rt34603_count = 0;
     @Test public void test_rt34603() {
         assertEquals(0, test_rt34603_count);
