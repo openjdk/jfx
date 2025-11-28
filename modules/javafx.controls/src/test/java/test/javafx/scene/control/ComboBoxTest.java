@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -1314,26 +1315,26 @@ public class ComboBoxTest {
 
     @Test
     public void testPromptTextRestoredAfterSetValueNull() {
-        comboBox.setPromptText("Select Value");
+        String promptText = "Select Value";
+        comboBox.setPromptText(promptText);
         comboBox.getItems().addAll("0", "1", "2", "3");
 
         SingleSelectionModel<String> sm = comboBox.getSelectionModel();
         sl = new StageLoader(comboBox);
-        comboBox.applyCss();
-        comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
 
-        assertEquals("Select Value", buttonCell.getText(), "Initial button cell text should be the promptText");
+        assertEquals(promptText, buttonCell.getText(), "Initial button cell text should be the promptText");
 
         // Select an item
         sm.select(2);
         Toolkit.getToolkit().firePulse();
+        assertNotEquals(promptText, buttonCell.getText(), "After selecting an item the button must not show the promptText");
 
         // Clear the value
         comboBox.setValue(null);
         Toolkit.getToolkit().firePulse();
 
-        assertEquals("Select Value", buttonCell.getText(), "Button cell should show promptText after clearing value");
+        assertEquals(promptText, buttonCell.getText(), "Button cell should show promptText after clearing value");
     }
 
     private int test_rt34603_count = 0;
