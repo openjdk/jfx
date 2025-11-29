@@ -2400,7 +2400,7 @@ public class GridPane extends Pane {
         boolean[] gapBefore = new boolean[rowCount];
 
         for (Node child : getManagedChildren()) {
-            gapBefore[getRowIndex(child)] = true;
+            gapBefore[getNodeRowIndex(child)] = true;
         }
 
         return new CompositeSize(rowCount, rowPercentHeight, rowPercentTotal,
@@ -2412,7 +2412,7 @@ public class GridPane extends Pane {
         boolean[] gapBefore = new boolean[columnCount];
 
         for (Node child : getManagedChildren()) {
-            gapBefore[getColumnIndex(child)] = true;
+            gapBefore[getNodeColumnIndex(child)] = true;
         }
 
         return new CompositeSize(columnCount, columnPercentWidth, columnPercentTotal,
@@ -2677,6 +2677,10 @@ public class GridPane extends Pane {
         }
 
         private double computeTotal(final int from, final int to) {
+            if (from >= singleSizes.length) {
+                return 0;
+            }
+
             double total = singleSizes[from];
 
             for (int i = from + 1; i < to; ++i) {
