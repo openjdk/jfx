@@ -1770,19 +1770,23 @@ public class GridPane extends Pane {
                 }
                 double areaX = x;
                 for (int j = 0; j < columnIndex; j++) {
-                    areaX += widths.getSize(j) + snaphgap;
+                    areaX += widths.hasGapBefore(j + 1) ? snaphgap : 0;
+                    areaX += widths.getSize(j);
                 }
                 double areaY = y;
                 for (int j = 0; j < rowIndex; j++) {
-                    areaY += heights.getSize(j) + snapvgap;
+                    areaY += heights.hasGapBefore(j + 1) ? snapvgap : 0;
+                    areaY += heights.getSize(j);
                 }
                 double areaW = widths.getSize(columnIndex);
-                for (int j = 2; j <= colspan; j++) {
-                    areaW += widths.getSize(columnIndex + j - 1) + snaphgap;
+                for (int j = columnIndex + 1; j < colspan + columnIndex; j++) {
+                    areaW += widths.hasGapBefore(j) ? snaphgap : 0;
+                    areaW += widths.getSize(j);
                 }
                 double areaH = heights.getSize(rowIndex);
-                for (int j = 2; j <= rowspan; j++) {
-                    areaH += heights.getSize(rowIndex + j - 1) + snapvgap;
+                for (int j = rowIndex + 1; j < rowspan + rowIndex; j++) {
+                    areaH += heights.hasGapBefore(j) ? snapvgap : 0;
+                    areaH += heights.getSize(j);
                 }
 
                 HPos halign = getHalignment(child);
@@ -2349,7 +2353,7 @@ public class GridPane extends Pane {
         double liney = y;
         for (int i = 0; i <= columnWidths.getLength(); i++) {
              gridLines.getChildren().add(createGridLine(linex, liney, linex, liney + columnHeight));
-             if (i > 0 && i < columnWidths.getLength() && hGap != 0) {
+             if (i > 0 && i < columnWidths.getLength() && hGap != 0 && columnWidths.hasGapBefore(i)) {
                  linex += hGap;
                  gridLines.getChildren().add(createGridLine(linex, liney, linex, liney + columnHeight));
              }
@@ -2361,7 +2365,7 @@ public class GridPane extends Pane {
         linex = x;
         for (int i = 0; i <= rowHeights.getLength(); i++) {
             gridLines.getChildren().add(createGridLine(linex, liney, linex + rowWidth, liney));
-            if (i > 0 && i < rowHeights.getLength() && vGap != 0) {
+            if (i > 0 && i < rowHeights.getLength() && vGap != 0 && rowHeights.hasGapBefore(i)) {
                 liney += vGap;
                 gridLines.getChildren().add(createGridLine(linex, liney, linex + rowWidth, liney));
             }
@@ -2392,13 +2396,27 @@ public class GridPane extends Pane {
     }
 
     private CompositeSize createCompositeRows(double initSize) {
-        return new CompositeSize(getNumberOfRows(), rowPercentHeight, rowPercentTotal,
-                snapSpaceY(getVgap()), initSize);
+        int rowCount = getNumberOfRows();
+        boolean[] gapBefore = new boolean[rowCount];
+
+        for (Node child : getManagedChildren()) {
+            gapBefore[getRowIndex(child)] = true;
+        }
+
+        return new CompositeSize(rowCount, rowPercentHeight, rowPercentTotal,
+              snapSpaceY(getVgap()), gapBefore, initSize);
     }
 
     private CompositeSize createCompositeColumns(double initSize) {
-        return new CompositeSize(getNumberOfColumns(), columnPercentWidth, columnPercentTotal,
-                snapSpaceX(getHgap()), initSize);
+        int columnCount = getNumberOfColumns();
+        boolean[] gapBefore = new boolean[columnCount];
+
+        for (Node child : getManagedChildren()) {
+            gapBefore[getColumnIndex(child)] = true;
+        }
+
+        return new CompositeSize(columnCount, columnPercentWidth, columnPercentTotal,
+                snapSpaceX(getHgap()), gapBefore, initSize);
     }
 
     private int getNodeRowEndConvertRemaining(Node child) {
@@ -2570,14 +2588,16 @@ public class GridPane extends Pane {
         private final double fixedPercent[];
         private final double totalFixedPercent;
         private final double gap;
+        private final boolean[] gapBefore;
 
-        public CompositeSize(int capacity, double fixedPercent[], double totalFixedPercent, double gap, double initSize) {
+        public CompositeSize(int capacity, double fixedPercent[], double totalFixedPercent, double gap, boolean[] gapBefore, double initSize) {
             singleSizes = new double[capacity];
             Arrays.fill(singleSizes, initSize);
 
             this.fixedPercent = fixedPercent;
             this.totalFixedPercent = totalFixedPercent;
             this.gap = gap;
+            this.gapBefore = gapBefore;
         }
 
         private void setSize(int position, double size) {
@@ -2607,21 +2627,17 @@ public class GridPane extends Pane {
             return singleSizes[position];
         }
 
+        private boolean hasGapBefore(int position) {
+            return gapBefore[position];
+        }
+
         private void setMaxSize(int position, double size) {
             singleSizes[position] = Math.max(singleSizes[position], size);
         }
 
-        private void setMultiSize(int startPosition, int endPosition, double size) {
-            if (multiSizes == null) {
-                multiSizes = new TreeMap<>();
-            }
-            Interval i = new Interval(startPosition, endPosition);
-            multiSizes.put(i, size);
-        }
-
         private Iterable<Entry<Interval, Double>> multiSizes() {
             if (multiSizes == null) {
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
             }
             return multiSizes.entrySet();
         }
@@ -2661,10 +2677,13 @@ public class GridPane extends Pane {
         }
 
         private double computeTotal(final int from, final int to) {
-            double total = gap * (to - from - 1);
-            for (int i = from; i < to; ++i) {
+            double total = singleSizes[from];
+
+            for (int i = from + 1; i < to; ++i) {
+                total += gapBefore[i] ? gap : 0;
                 total += singleSizes[i];
             }
+
             return total;
         }
 
