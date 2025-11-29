@@ -26,12 +26,14 @@
 package test.jfx.incubator.scene.control.richtext.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.RichParagraph;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
@@ -40,6 +42,7 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 
 /**
  * Tests RichTextModel.
@@ -51,7 +54,7 @@ public class TestRichTextModel {
     @Test
     public void insertLineBreak() {
         test(List.of(p()), List.of(p(), p()), (m) -> {
-            m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n", true);
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n");
         });
     }
 
@@ -66,7 +69,7 @@ public class TestRichTextModel {
                 p("", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 0), t(0, 6), "", false);
+                m.replace(null, t(0, 0), t(0, 6), "");
             }
         );
 
@@ -79,7 +82,7 @@ public class TestRichTextModel {
                 p("", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 0), t(0, 2), "", false);
+                m.replace(null, t(0, 0), t(0, 2), "");
             }
         );
 
@@ -93,7 +96,7 @@ public class TestRichTextModel {
                 p("aabb", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(0, 2), t(1, 0), "", false);
+                m.replace(null, t(0, 2), t(1, 0), "");
             }
         );
 
@@ -109,7 +112,7 @@ public class TestRichTextModel {
                 p("bb", BOLD)
             ),
             (m) -> {
-                m.replace(null, t(2, 0), t(1, 0), "", false);
+                m.replace(null, t(2, 0), t(1, 0), "");
             }
         );
     }
@@ -146,7 +149,7 @@ public class TestRichTextModel {
         for (RichParagraph par : initial) {
             if (newline) {
                 TextPos p = m.getDocumentEnd();
-                m.replace(null, p, p, "\n", false);
+                m.replace(null, p, p, "\n");
             } else {
                 newline = true;
             }
@@ -158,7 +161,7 @@ public class TestRichTextModel {
             StyledSegment[] segments = ss.toArray(StyledSegment[]::new);
             StyledInput in = new SegmentStyledInput(segments);
             TextPos p = m.getDocumentEnd();
-            m.replace(null, p, p, in, false);
+            m.replace(null, p, p, in);
         }
 
         // test operation
@@ -256,7 +259,7 @@ public class TestRichTextModel {
 
     private RichTextModel createModel(String text) {
         RichTextModel m = new RichTextModel();
-        m.replace(null, TextPos.ZERO, TextPos.ZERO, text, false);
+        m.replace(null, TextPos.ZERO, TextPos.ZERO, text);
         return m;
     }
 
@@ -271,5 +274,30 @@ public class TestRichTextModel {
         assertEquals(new TextPos(1, 4, 3, false), m.clamp(TextPos.ofLeading(1, 100)));
 
         assertEquals(TextPos.ofLeading(2, 0), m.clamp(TextPos.ofLeading(2, 100)));
+    }
+
+    @Test
+    public void lineEnding() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertEquals(LineEnding.system(), m.getLineEnding());
+        assertEquals(3, m.size());
+        m.setLineEnding(LineEnding.CR);
+        assertEquals(LineEnding.CR, m.getLineEnding());
+        assertEquals("1\r2\r3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.CRLF);
+        assertEquals(LineEnding.CRLF, m.getLineEnding());
+        assertEquals("1\r\n2\r\n3", RTUtil.getText(m));
+        m.setLineEnding(LineEnding.LF);
+        assertEquals(LineEnding.LF, m.getLineEnding());
+        assertEquals("1\n2\n3", RTUtil.getText(m));
+    }
+
+    @Test
+    public void lineEndingNull() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertThrows(NullPointerException.class, () -> {
+            m.setLineEnding(null);
+        });
+        assertEquals(LineEnding.system(), m.getLineEnding());
     }
 }

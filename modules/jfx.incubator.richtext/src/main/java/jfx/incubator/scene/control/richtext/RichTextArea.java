@@ -60,6 +60,7 @@ import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RTAccessibilityHelper;
+import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
@@ -98,9 +99,11 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  *
  *   RichTextArea textArea = new RichTextArea();
  *   // build the content
+ *   textArea.setUndoRedoEnabled(false);
  *   textArea.appendText("RichTextArea\n", heading);
  *   textArea.appendText("Example:\nText is ", StyleAttributeMap.EMPTY);
  *   textArea.appendText("monospaced.\n", mono);
+ *   textArea.setUndoRedoEnabled(true);
  * }</pre>
  * Which results in the following visual representation:
  * <p>
@@ -311,6 +314,14 @@ public class RichTextArea extends Control {
 
     /** The style handler registry instance, made available for use by subclasses to add support for new style attributes. */
     protected static final StyleHandlerRegistry styleHandlerRegistry = initStyleHandlerRegistry();
+    static {
+        RichTextAreaHelper.setAccessor(new RichTextAreaHelper.Accessor() {
+            @Override
+            public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
+                return t.getText(start, end, sb, limit);
+            }
+        });
+    }
 
     /**
      * Creates the instance with the in-memory model {@link RichTextModel}.
@@ -609,6 +620,35 @@ public class RichTextArea extends Control {
     }
 
     /**
+     * Convenience method which delegates to {@link StyledTextModel#getLineEnding()}.
+     * Returns {@link LineEnding#system()} value if the model is {@code null}.
+     *
+     * @return the model's line ending value
+     * @since 26
+     */
+    public final LineEnding getLineEnding() {
+        StyledTextModel m = getModel();
+        return (m == null ? LineEnding.system() : m.getLineEnding());
+    }
+
+    /**
+     * Sets the model's line ending characters.
+     * Delegates to {@link StyledTextModel#setLineEnding(LineEnding)}.
+     * This method does nothing if the model is {@code null}.
+     *
+     * @param value the line ending value, cannot be null
+     * @throws NullPointerException if the value is null
+     * @since 26
+     */
+    public final void setLineEnding(LineEnding value) {
+        Objects.requireNonNull(value, "line ending must not be null");
+        StyledTextModel m = getModel();
+        if (m != null) {
+            m.setLineEnding(value);
+        }
+    }
+
+    /**
      * Determines the {@link StyledTextModel} to use with this RichTextArea.
      * The model can be null, which results in an empty, uneditable control.
      * <p>
@@ -787,6 +827,32 @@ public class RichTextArea extends Control {
 
     public final boolean isUndoable() {
         return undoableProperty().get();
+    }
+
+    /**
+     * Indicates whether undo/redo functionality is enabled in the model.
+     * Returns {@code false} if the model is {@code null}.
+     * @return true if undo/redo functionality is enabled in the model
+     * @since 26
+     */
+    public final boolean isUndoRedoEnabled() {
+        StyledTextModel m = getModel();
+        return (m == null ? false : m.isUndoRedoEnabled());
+    }
+
+    /**
+     * Controls whether undo/redo functionality is enabled in the model.
+     * Setting the value to {@code false} clears existing undo/redo entries.
+     * This method does nothing if the model is {@code null}.
+     * @param on true to enable undo/redo
+     * @since 26
+     * @see #clearUndoRedo()
+     */
+    public final void setUndoRedoEnabled(boolean on) {
+        StyledTextModel m = getModel();
+        if (m != null) {
+            m.setUndoRedoEnabled(on);
+        }
     }
 
     /**
@@ -1123,14 +1189,14 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Clears the document, creating an undo entry.
+     * Clears the document.
      *
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final void clear() {
         TextPos end = getDocumentEnd();
-        replaceText(TextPos.ZERO, end, StyledInput.EMPTY, true);
+        replaceText(TextPos.ZERO, end, StyledInput.EMPTY);
     }
 
     /**
@@ -1414,6 +1480,68 @@ public class RichTextArea extends Control {
         return styleHandlerRegistry;
     }
 
+    // TODO could be made a public API
+    /**
+     * Copies the plain text between `start` and `end` positions to the provided buffer.
+     * <p>
+     * This method copies plain text into the provided StringBuilder, up to the specified number of characters.
+     * When the amount of text between the two positions exceeds the specified limit,
+     * the method returns {@code false}.
+     * The method does nothing and returns {@code true} if the model is {@code null}.
+     *
+     * @param start the start position
+     * @param end the end position
+     * @param sb the buffer to copy to
+     * @param limit the maximum number of characters to copy, must be >= 0
+     * @return {@code true} if all the text fit in the buffer
+     * @since TODO
+     */
+    private final boolean getText(TextPos start, TextPos end, StringBuilder sb, int limit) {
+        StyledTextModel m = getModel();
+        if (m == null) {
+            return true;
+        }
+
+        if (start.compareTo(end) > 0) {
+            TextPos tmp = start;
+            start = end;
+            end = tmp;
+        }
+
+        String lineSeparator = m.getLineEnding().getText();
+        int toCopy = limit;
+        int index = start.index();
+        boolean first = true;
+        boolean all = true;
+        while (toCopy > 0) {
+            int beg;
+            if (first) {
+                first = false;
+                beg = start.offset();
+            } else {
+                sb.append(lineSeparator);
+                beg = 0;
+            }
+            String text = getPlainText(index);
+            int len = Math.min(toCopy, text.length() - beg);
+            sb.append(text, beg, beg + len);
+            toCopy -= len;
+            index++;
+
+            // did we copy all?
+            if (toCopy == 0) {
+                if (index < end.index()) {
+                    all = false;
+                } else if (index == end.index()) {
+                    if (beg + len < end.offset()) {
+                        all = false;
+                    }
+                }
+            }
+        }
+        return all;
+    }
+
     /**
      * Finds a text position corresponding to the specified screen coordinates.
      * This method returns {@code null} if the specified coordinates are outside of the content area.
@@ -1482,7 +1610,7 @@ public class RichTextArea extends Control {
      */
     public final TextPos insertText(TextPos pos, String text, StyleAttributeMap attrs) {
         StyledInput in = StyledInput.of(text, attrs);
-        return replaceText(pos, pos, in, true);
+        return replaceText(pos, pos, in);
     }
 
     /**
@@ -1495,7 +1623,7 @@ public class RichTextArea extends Control {
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
     public final TextPos insertText(TextPos pos, StyledInput in) {
-        return replaceText(pos, pos, in, true);
+        return replaceText(pos, pos, in);
     }
 
     /**
@@ -1824,14 +1952,13 @@ public class RichTextArea extends Control {
      * @param start the start text position
      * @param end the end text position
      * @param text the input text
-     * @param allowUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, String text, boolean allowUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, String text) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, text, allowUndo);
+        return m.replace(vflow(), start, end, text);
     }
 
     /**
@@ -1840,14 +1967,13 @@ public class RichTextArea extends Control {
      * @param start the start text position
      * @param end the end text position
      * @param in the input stream
-     * @param createUndo when true, creates an undo-redo entry
      * @return the new caret position at the end of inserted text, or null if the change cannot be made
      * @throws NullPointerException if the model is {@code null}
      * @throws UnsupportedOperationException if the model is not {@link StyledTextModel#isWritable() writable}
      */
-    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in, boolean createUndo) {
+    public final TextPos replaceText(TextPos start, TextPos end, StyledInput in) {
         StyledTextModel m = getModel();
-        return m.replace(vflow(), start, end, in, createUndo);
+        return m.replace(vflow(), start, end, in);
     }
 
     /**

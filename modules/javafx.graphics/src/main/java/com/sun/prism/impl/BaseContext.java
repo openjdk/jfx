@@ -108,6 +108,11 @@ public abstract class BaseContext {
     }
 
     protected final void flushMask() {
+        // TODO: This solution might be only temporary
+        // maskTex gets occasionally disposed before we enter this area, entering update() throws NPE
+        // We should hold the maskTex lock long enough to push the update through and unlock it after renderQuads completes.
+        if (maskTex == null || maskTex.isSurfaceLost()) return;
+
         if (curMaskRow > 0 || curMaskCol > 0) {
             maskTex.lock();
             // assert !maskTex.isSurfaceLost();
