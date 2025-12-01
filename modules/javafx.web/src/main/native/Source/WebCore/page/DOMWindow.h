@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "DocumentEnums.h"
 #include "EventTarget.h"
 #include "GlobalWindowIdentifier.h"
 #include "ImageBitmap.h"
@@ -63,6 +64,7 @@ class NodeList;
 class Page;
 class PageConsoleClient;
 class Performance;
+class PushManager;
 class RequestAnimationFrameCallback;
 class RequestIdleCallback;
 class ScheduledAction;
@@ -111,7 +113,7 @@ public:
     using RefCounted::deref;
 
     WEBCORE_EXPORT Location& location();
-    virtual void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking = SetLocationLocking::LockHistoryBasedOnGestureState) = 0;
+    virtual void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking = SetLocationLocking::LockHistoryBasedOnGestureState, CanNavigateState = CanNavigateState::Unchecked) = 0;
 
     bool closed() const;
     WEBCORE_EXPORT void close();
@@ -215,6 +217,10 @@ public:
     ExceptionOr<JSC::JSValue> structuredClone(JSDOMGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& relevantGlobalObject, JSC::JSValue, StructuredSerializeOptions&&);
     ExceptionOr<String> btoa(const String&);
     ExceptionOr<String> atob(const String&);
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    ExceptionOr<PushManager&> pushManager();
+#endif
 
 protected:
     explicit DOMWindow(GlobalWindowIdentifier&&, DOMWindowType);

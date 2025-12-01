@@ -31,9 +31,12 @@
 #include "FileSystemHandleCloseScope.h"
 #include "FileSystemStorageConnection.h"
 #include "FileSystemSyncAccessHandle.h"
+#include "FileSystemWritableFileStream.h"
+#include "FileSystemWritableFileStreamSink.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFile.h"
 #include "JSFileSystemSyncAccessHandle.h"
+#include "JSFileSystemWritableFileStream.h"
 #include "WorkerFileSystemStorageConnection.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -123,6 +126,66 @@ void FileSystemFileHandle::unregisterSyncAccessHandle(FileSystemSyncAccessHandle
         return;
 
     connection().unregisterSyncAccessHandle(identifier);
+}
+
+// https://fs.spec.whatwg.org/#api-filesystemfilehandle-createwritable
+void FileSystemFileHandle::createWritable(const CreateWritableOptions& options, DOMPromiseDeferred<IDLInterface<FileSystemWritableFileStream>>&& promise)
+{
+    if (isClosed())
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
+
+    connection().createWritable(scriptExecutionContext()->identifier(), identifier(), options.keepExistingData, [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](auto result) mutable {
+        if (result.hasException())
+            return promise.reject(result.releaseException());
+
+        auto streamIdentifier = result.returnValue();
+        RefPtr context = protectedThis->scriptExecutionContext();
+        if (!context) {
+            closeWritable(streamIdentifier, FileSystemWriteCloseReason::Aborted);
+            return promise.reject(Exception { ExceptionCode::InvalidStateError, "Context has stopped"_s });
+        }
+
+        auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(context->globalObject());
+        if (!globalObject) {
+            closeWritable(streamIdentifier, FileSystemWriteCloseReason::Aborted);
+            return promise.reject(Exception { ExceptionCode::InvalidStateError, "Global object is invalid"_s });
+        }
+
+        auto sink = FileSystemWritableFileStreamSink::create(streamIdentifier, *this);
+        if (sink.hasException()) {
+            closeWritable(streamIdentifier, FileSystemWriteCloseReason::Aborted);
+            return promise.reject(sink.releaseException());
+        }
+
+        ExceptionOr<Ref<FileSystemWritableFileStream>> stream { Exception { ExceptionCode::UnknownError } };
+        {
+            // FIXME: Make WritableStream function acquire lock as needed and remove this.
+            Locker<JSC::JSLock> locker(globalObject->vm().apiLock());
+            stream = FileSystemWritableFileStream::create(*globalObject, sink.releaseReturnValue());
+        }
+        if (!stream.hasException())
+            connection().registerFileSystemWritable(streamIdentifier, stream.returnValue());
+
+        promise.settle(WTFMove(stream));
+    });
+}
+
+void FileSystemFileHandle::closeWritable(FileSystemWritableFileStreamIdentifier streamIdentifier, FileSystemWriteCloseReason reason)
+{
+    connection().unregisterFileSystemWritable(streamIdentifier);
+    if (!isClosed())
+        connection().closeWritable(identifier(), streamIdentifier, reason, [](auto) { });
+}
+
+void FileSystemFileHandle::executeCommandForWritable(FileSystemWritableFileStreamIdentifier streamIdentifier, FileSystemWriteCommandType type, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, DOMPromiseDeferred<void>&& promise)
+{
+    if (isClosed())
+        return promise.reject(Exception { ExceptionCode::InvalidStateError, "Handle is closed"_s });
+
+    connection().executeCommandForWritable(identifier(), streamIdentifier, type, position, size, dataBytes, hasDataError, [promise = WTFMove(promise)](auto result) mutable {
+        // Writable should be closed when stream is closed or errored, and stream will be errored after a failed write.
+        promise.settle(WTFMove(result));
+    });
 }
 
 } // namespace WebCore

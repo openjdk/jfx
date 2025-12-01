@@ -22,7 +22,8 @@
 #pragma once
 
 #include "LayoutRect.h"
-#include <wtf/RefCounted.h>
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore
 {
@@ -38,8 +39,10 @@ namespace WebCore
 // Examples of visual overflow are shadows, text stroke, outline (and eventually border-image).
 
 // This object is allocated only when some of these fields have non-default values in the owning box.
-class RenderOverflow : public RefCounted<RenderOverflow> {
-    WTF_MAKE_NONCOPYABLE(RenderOverflow); WTF_MAKE_FAST_ALLOCATED;
+class RenderOverflow : public CanMakeCheckedPtr<RenderOverflow> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(RenderOverflow);
+    WTF_MAKE_NONCOPYABLE(RenderOverflow);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderOverflow);
 public:
     RenderOverflow(const LayoutRect& layoutRect, const LayoutRect& visualRect)
         : m_layoutOverflow(layoutRect)
@@ -55,8 +58,8 @@ public:
     void addLayoutOverflow(const LayoutRect&);
     void addVisualOverflow(const LayoutRect&);
 
-    void setLayoutOverflow(const LayoutRect&);
-    void setVisualOverflow(const LayoutRect&);
+    void setLayoutOverflow(const LayoutRect& rect) { m_layoutOverflow = rect; }
+    void setVisualOverflow(const LayoutRect& rect) { m_visualOverflow = rect; }
 
     LayoutUnit layoutClientAfterEdge() const { return m_layoutClientAfterEdge; }
     void setLayoutClientAfterEdge(LayoutUnit clientAfterEdge) { m_layoutClientAfterEdge = clientAfterEdge; }
@@ -95,16 +98,6 @@ inline void RenderOverflow::addVisualOverflow(const LayoutRect& rect)
     m_visualOverflow.setY(std::min(rect.y(), m_visualOverflow.y()));
     m_visualOverflow.setWidth(maxX - m_visualOverflow.x());
     m_visualOverflow.setHeight(maxY - m_visualOverflow.y());
-}
-
-inline void RenderOverflow::setLayoutOverflow(const LayoutRect& rect)
-{
-    m_layoutOverflow = rect;
-}
-
-inline void RenderOverflow::setVisualOverflow(const LayoutRect& rect)
-{
-    m_visualOverflow = rect;
 }
 
 } // namespace WebCore

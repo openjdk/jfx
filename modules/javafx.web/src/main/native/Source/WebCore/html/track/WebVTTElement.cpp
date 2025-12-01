@@ -84,9 +84,9 @@ Ref<Element> WebVTTElement::create(WebVTTNodeType nodeType, AtomString language,
         return adoptRef(*new WebVTTElement(nodeType, language, document));
 }
 
-Ref<Element> WebVTTElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> WebVTTElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*)
 {
-    return create(m_webVTTNodeType, m_language, targetDocument);
+    return create(m_webVTTNodeType, m_language, document);
 }
 
 Ref<HTMLElement> WebVTTElement::createEquivalentHTMLElement(Document& document)

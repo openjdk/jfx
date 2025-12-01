@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ public:
     PlatformPathPtr platformPath() const;
 
     void addPath(const PathJava&, const AffineTransform&);
+    bool definitelyEqual(const PathImpl&) const final;
 
     bool applyElements(const PathElementApplier&) const final;
 
@@ -72,6 +73,7 @@ private:
     void add(PathEllipseInRect) final;
     void add(PathRect) final;
     void add(PathRoundedRect) final;
+    void add(PathContinuousRoundedRect) final;
     void add(PathCloseSubpath) final;
 
     void applySegments(const PathSegmentApplier&) const final;

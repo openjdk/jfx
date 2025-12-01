@@ -118,7 +118,7 @@ public:
         }
 
     private:
-        typedef HashMap<RefPtr<UniquedStringImpl>, WriteBarrier<Unknown>, IdentifierRepHash> PrivatePropertyMap;
+        typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, WriteBarrier<Unknown>, IdentifierRepHash> PrivatePropertyMap;
         PrivatePropertyMap m_propertyMap;
         Lock m_lock;
     };
@@ -145,7 +145,7 @@ public:
     }
     static JSCallbackObject<Parent>* create(VM&, JSClassRef, Structure*);
 
-    static const bool needsDestruction;
+    static const DestructionMode needsDestruction;
     static void destroy(JSCell* cell)
     {
         static_cast<JSCallbackObject*>(cell)->JSCallbackObject::~JSCallbackObject();

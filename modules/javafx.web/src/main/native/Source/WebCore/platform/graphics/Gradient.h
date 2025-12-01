@@ -130,10 +130,6 @@ private:
     std::optional<GradientRendererCG> m_platformRenderer;
 #endif
 
-#if USE(SKIA)
-    sk_sp<SkShader> m_shader;
-#endif
-
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Gradient&);

@@ -28,6 +28,9 @@
 #include "CSSPropertyNames.h"
 #include "CSSValue.h"
 #include "EventTarget.h"
+#include "Length.h"
+#include "TimelineRangeOffset.h"
+#include "WebAnimationTime.h"
 #include <wtf/BitSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
@@ -42,21 +45,10 @@ namespace WebCore {
 class AnimationEventBase;
 class AnimationList;
 class CSSAnimation;
+class CSSKeywordValue;
 class CSSTransition;
 class StyleOriginatedAnimation;
 class WebAnimation;
-
-struct WebAnimationsMarkableDoubleTraits {
-    static bool isEmptyValue(double value)
-    {
-        return std::isnan(value);
-    }
-
-    static constexpr double emptyValue()
-    {
-        return std::numeric_limits<double>::quiet_NaN();
-    }
-};
 
 enum class AnimationImpact : uint8_t {
     RequiresRecomposite     = 1 << 0,
@@ -67,7 +59,7 @@ enum class UseAcceleratedAction : bool { No, Yes };
 
 enum class WebAnimationType : uint8_t { CSSAnimation, CSSTransition, WebAnimation };
 
-using MarkableDouble = Markable<double, WebAnimationsMarkableDoubleTraits>;
+using MarkableDouble = Markable<double, WTF::DoubleMarkableTraits>;
 
 using WeakStyleOriginatedAnimations = Vector<WeakPtr<StyleOriginatedAnimation, WeakPtrImplWithEventTargetData>>;
 using AnimationCollection = ListHashSet<Ref<WebAnimation>>;
@@ -75,7 +67,7 @@ using AnimationEvents = Vector<Ref<AnimationEventBase>>;
 using CSSAnimationCollection = ListHashSet<Ref<CSSAnimation>>;
 
 using AnimatableCSSProperty = std::variant<CSSPropertyID, AtomString>;
-using AnimatableCSSPropertyToTransitionMap = HashMap<AnimatableCSSProperty, Ref<CSSTransition>>;
+using AnimatableCSSPropertyToTransitionMap = UncheckedKeyHashMap<AnimatableCSSProperty, Ref<CSSTransition>>;
 
 enum class AcceleratedEffectProperty : uint16_t {
     Invalid = 1 << 0,
@@ -106,7 +98,17 @@ constexpr OptionSet<AcceleratedEffectProperty> transformRelatedAcceleratedProper
 };
 
 struct CSSPropertiesBitSet {
-    WTF::BitSet<numCSSProperties> m_properties { };
+    WTF::BitSet<cssPropertyIDEnumValueCount> m_properties { };
+};
+
+using TimelineRangeValue = std::variant<TimelineRangeOffset, RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>, String>;
+
+enum class Scroller : uint8_t { Nearest, Root, Self };
+
+struct ViewTimelineInsets {
+    std::optional<Length> start;
+    std::optional<Length> end;
+    bool operator==(const ViewTimelineInsets&) const = default;
 };
 
 } // namespace WebCore

@@ -28,9 +28,13 @@
 #include "FileHandle.h"
 #include "FileSystemHandleIdentifier.h"
 #include "FileSystemSyncAccessHandleIdentifier.h"
+#include "FileSystemWritableFileStreamIdentifier.h"
+#include "FileSystemWriteCloseReason.h"
+#include "FileSystemWriteCommandType.h"
 #include "ProcessQualified.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/HashMap.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -40,6 +44,7 @@ class FileSystemFileHandle;
 class FileHandle;
 class FileSystemHandleCloseScope;
 class FileSystemSyncAccessHandle;
+class FileSystemWritableFileStream;
 template<typename> class ExceptionOr;
 
 class FileSystemStorageConnection : public ThreadSafeRefCounted<FileSystemStorageConnection> {
@@ -60,6 +65,7 @@ public:
     using EmptyCallback = CompletionHandler<void()>;
     using GetHandleNamesCallback = CompletionHandler<void(ExceptionOr<Vector<String>>&&)>;
     using StringCallback = CompletionHandler<void(ExceptionOr<String>&&)>;
+    using StreamCallback = CompletionHandler<void(ExceptionOr<FileSystemWritableFileStreamIdentifier>&&)>;
     using RequestCapacityCallback = CompletionHandler<void(std::optional<uint64_t>&&)>;
 
     virtual bool isWorker() const { return false; }
@@ -77,8 +83,18 @@ public:
     virtual void registerSyncAccessHandle(FileSystemSyncAccessHandleIdentifier, ScriptExecutionContextIdentifier) = 0;
     virtual void unregisterSyncAccessHandle(FileSystemSyncAccessHandleIdentifier) = 0;
     virtual void invalidateAccessHandle(WebCore::FileSystemSyncAccessHandleIdentifier) = 0;
+    virtual void createWritable(ScriptExecutionContextIdentifier, FileSystemHandleIdentifier, bool keepExistingData, StreamCallback&&) = 0;
+    virtual void closeWritable(FileSystemHandleIdentifier, FileSystemWritableFileStreamIdentifier, FileSystemWriteCloseReason, VoidCallback&&) = 0;
+    virtual void executeCommandForWritable(FileSystemHandleIdentifier, FileSystemWritableFileStreamIdentifier, FileSystemWriteCommandType, std::optional<uint64_t> position, std::optional<uint64_t> size, std::span<const uint8_t> dataBytes, bool hasDataError, VoidCallback&&) = 0;
     virtual void getHandleNames(FileSystemHandleIdentifier, GetHandleNamesCallback&&) = 0;
     virtual void getHandle(FileSystemHandleIdentifier, const String& name, GetHandleCallback&&) = 0;
+
+    WEBCORE_EXPORT bool errorFileSystemWritable(FileSystemWritableFileStreamIdentifier);
+    void registerFileSystemWritable(FileSystemWritableFileStreamIdentifier, FileSystemWritableFileStream&);
+    void unregisterFileSystemWritable(FileSystemWritableFileStreamIdentifier);
+
+private:
+    HashMap<FileSystemWritableFileStreamIdentifier, WeakPtr<FileSystemWritableFileStream>> m_writables;
 };
 
 } // namespace WebCore

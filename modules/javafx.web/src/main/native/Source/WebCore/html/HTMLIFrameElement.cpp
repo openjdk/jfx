@@ -55,6 +55,11 @@ inline HTMLIFrameElement::HTMLIFrameElement(const QualifiedName& tagName, Docume
     : HTMLFrameElementBase(tagName, document)
 {
     ASSERT(hasTagName(iframeTag));
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (document.settings().iFrameResourceMonitoringEnabled())
+        setInitiatorSourceURL(document.currentSourceURL());
+#endif
 }
 
 HTMLIFrameElement::~HTMLIFrameElement() = default;
@@ -126,7 +131,7 @@ void HTMLIFrameElement::attributeChanged(const QualifiedName& name, const AtomSt
             m_sandbox->associatedAttributeValueChanged();
 
         String invalidTokens;
-        setSandboxFlags(newValue.isNull() ? SandboxNone : SecurityContext::parseSandboxPolicy(newValue, invalidTokens));
+        setSandboxFlags(newValue.isNull() ? SandboxFlags { } : SecurityContext::parseSandboxPolicy(newValue, invalidTokens));
         if (!invalidTokens.isNull())
             document().addConsoleMessage(MessageSource::Other, MessageLevel::Error, makeString("Error while parsing the 'sandbox' attribute: "_s, invalidTokens));
         break;
@@ -179,12 +184,12 @@ ReferrerPolicy HTMLIFrameElement::referrerPolicy() const
         return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
 }
 
-const AtomString& HTMLIFrameElement::loadingForBindings() const
+const AtomString& HTMLIFrameElement::loading() const
 {
     return equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::loadingAttr), "lazy"_s) ? lazyAtom() : eagerAtom();
 }
 
-void HTMLIFrameElement::setLoadingForBindings(const AtomString& value)
+void HTMLIFrameElement::setLoading(const AtomString& value)
 {
     setAttributeWithoutSynchronization(loadingAttr, value);
 }

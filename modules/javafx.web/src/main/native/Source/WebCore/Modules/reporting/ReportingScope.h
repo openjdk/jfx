@@ -29,7 +29,7 @@
 #include "ViolationReportType.h"
 #include <wtf/Deque.h>
 #include <wtf/HashCountedSet.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -44,8 +44,8 @@ class Report;
 class ReportingObserver;
 class ScriptExecutionContext;
 
-class WEBCORE_EXPORT ReportingScope final : public RefCounted<ReportingScope>, public ContextDestructionObserver, public CanMakeWeakPtr<ReportingScope> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ReportingScope);
+class WEBCORE_EXPORT ReportingScope final : public RefCountedAndCanMakeWeakPtr<ReportingScope>, public ContextDestructionObserver {
+    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(ReportingScope, WEBCORE_EXPORT);
 public:
     static Ref<ReportingScope> create(ScriptExecutionContext&);
     virtual ~ReportingScope();

@@ -70,6 +70,8 @@
 #include <strings.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 namespace JSGenericTypedArrayViewPrototypeFunctionsInternal {
@@ -303,28 +305,28 @@ static ALWAYS_INLINE size_t typedArrayIndexOfImpl(typename ViewClass::ElementTyp
 
     if constexpr (ViewClass::Adaptor::isInteger) {
         if constexpr (ViewClass::elementSize == 1) {
-            auto* result = bitwise_cast<typename ViewClass::ElementType*>(WTF::find8(bitwise_cast<const uint8_t*>(array + index), target, length - index));
+            auto* result = std::bit_cast<typename ViewClass::ElementType*>(WTF::find8(std::bit_cast<const uint8_t*>(array + index), target, length - index));
             if (result)
                 return result - array;
             return WTF::notFound;
         }
 
         if constexpr (ViewClass::elementSize == 2) {
-            auto* result = bitwise_cast<typename ViewClass::ElementType*>(WTF::find16(bitwise_cast<const uint16_t*>(array + index), target, length - index));
+            auto* result = std::bit_cast<typename ViewClass::ElementType*>(WTF::find16(std::bit_cast<const uint16_t*>(array + index), target, length - index));
             if (result)
                 return result - array;
             return WTF::notFound;
         }
 
         if constexpr (ViewClass::elementSize == 4) {
-            auto* result = bitwise_cast<typename ViewClass::ElementType*>(WTF::find32(bitwise_cast<const uint32_t*>(array + index), target, length - index));
+            auto* result = std::bit_cast<typename ViewClass::ElementType*>(WTF::find32(std::bit_cast<const uint32_t*>(array + index), target, length - index));
             if (result)
                 return result - array;
             return WTF::notFound;
         }
 
         if constexpr (ViewClass::elementSize == 8) {
-            auto* result = bitwise_cast<typename ViewClass::ElementType*>(WTF::find64(bitwise_cast<const uint64_t*>(array + index), target, length - index));
+            auto* result = std::bit_cast<typename ViewClass::ElementType*>(WTF::find64(std::bit_cast<const uint64_t*>(array + index), target, length - index));
             if (result)
                 return result - array;
             return WTF::notFound;
@@ -333,21 +335,21 @@ static ALWAYS_INLINE size_t typedArrayIndexOfImpl(typename ViewClass::ElementTyp
 
     if constexpr (ViewClass::Adaptor::isFloat) {
         if constexpr (ViewClass::elementSize == 2) {
-            auto* result = bitwise_cast<typename ViewClass::ElementType*>(WTF::findFloat16(bitwise_cast<const Float16*>(array + index), target, length - index));
+            auto* result = std::bit_cast<typename ViewClass::ElementType*>(WTF::findFloat16(std::bit_cast<const Float16*>(array + index), target, length - index));
             if (result)
                 return result - array;
             return WTF::notFound;
         }
 
         if constexpr (ViewClass::elementSize == 4) {
-            auto* result = bitwise_cast<typename ViewClass::ElementType*>(WTF::findFloat(bitwise_cast<const float*>(array + index), target, length - index));
+            auto* result = std::bit_cast<typename ViewClass::ElementType*>(WTF::findFloat(std::bit_cast<const float*>(array + index), target, length - index));
             if (result)
                 return result - array;
             return WTF::notFound;
         }
 
         if constexpr (ViewClass::elementSize == 8) {
-            auto* result = bitwise_cast<typename ViewClass::ElementType*>(WTF::findDouble(bitwise_cast<const double*>(array + index), target, length - index));
+            auto* result = std::bit_cast<typename ViewClass::ElementType*>(WTF::findDouble(std::bit_cast<const double*>(array + index), target, length - index));
             if (result)
                 return result - array;
             return WTF::notFound;
@@ -722,11 +724,13 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncToReversed(VM& vm, JS
     ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
     RETURN_IF_EXCEPTION(scope, { });
 
-    const typename ViewClass::ElementType* from = thisObject->typedVector();
-    typename ViewClass::ElementType* to = result->typedVector();
+    auto from = const_cast<const ViewClass*>(thisObject)->typedSpan();
+    ASSERT(from.size() == length);
+    auto to = result->typedSpan();
+    ASSERT(to.size() == length);
 
-    WTF::copyElements(to, from, length);
-    std::reverse(to, to + length);
+    WTF::copyElements(to, from);
+    std::ranges::reverse(to);
 
     return JSValue::encode(result);
 }
@@ -756,7 +760,7 @@ static ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSortImpl(VM& v
     if (length < 2)
         return JSValue::encode(thisObject);
 
-    auto* originalArray = thisObject->typedVector();
+    auto originalSpan = thisObject->typedSpan();
 
     Vector<typename ViewClass::ElementType, 256> vector;
     auto totalSize = CheckedSize { length } * 2U;
@@ -765,9 +769,11 @@ static ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSortImpl(VM& v
         return { };
     }
 
-    std::span src { vector.data(), length };
-    std::span dst { vector.data() + length, length };
-    WTF::copyElements(src.data(), originalArray, length);
+    auto src = vector.mutableSpan().first(length);
+    auto dst = vector.mutableSpan().subspan(length);
+    ASSERT(dst.size() == length);
+    ASSERT(originalSpan.size() == length);
+    WTF::copyElements(src, spanConstCast<const typename ViewClass::ElementType>(originalSpan));
 
     auto result = src;
 
@@ -818,7 +824,7 @@ static ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncSortImpl(VM& v
         return JSValue::encode(thisObject);
 
     size_t copyLength = std::min<size_t>(thisObject->length(), result.size());
-    WTF::copyElements(originalArray, result.data(), copyLength);
+    WTF::copyElements(originalSpan, spanConstCast<const typename ViewClass::ElementType>(result.first(copyLength)));
 
     return JSValue::encode(thisObject);
 }
@@ -862,10 +868,11 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncToSorted(VM& vm, JSGl
     ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
     RETURN_IF_EXCEPTION(scope, { });
 
-    const typename ViewClass::ElementType* from = thisObject->typedVector();
-    typename ViewClass::ElementType* to = result->typedVector();
+    auto from = const_cast<const ViewClass*>(thisObject)->typedSpan();
+    ASSERT(from.size() == length);
+    auto to = result->typedSpan();
 
-    WTF::copyElements(to, from, length);
+    WTF::copyElements(to, from);
 
     RELEASE_AND_RETURN(scope, genericTypedArrayViewProtoFuncSortImpl(vm, globalObject, result, comparatorValue));
 }
@@ -1199,9 +1206,10 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncWith(VM& vm, JSGlobal
             result->setIndexQuicklyToNativeValue(index, fromValue);
         }
     } else {
-        typename ViewClass::ElementType* from = thisObject->typedVector();
-        typename ViewClass::ElementType* to = result->typedVector();
-        WTF::copyElements(to, from, thisLength);
+        auto from = const_cast<const ViewClass*>(thisObject)->typedSpan();
+        ASSERT(from.size() == thisLength);
+        auto to = result->typedSpan();
+        WTF::copyElements(to, from);
         to[replaceIndex] = nativeValue;
     }
 
@@ -1209,3 +1217,5 @@ ALWAYS_INLINE EncodedJSValue genericTypedArrayViewProtoFuncWith(VM& vm, JSGlobal
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

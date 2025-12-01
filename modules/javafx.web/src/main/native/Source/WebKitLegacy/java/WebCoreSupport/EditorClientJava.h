@@ -133,7 +133,6 @@ public:
     void updateSpellingUIWithMisspelledWord(const String&) override;
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
-    void willSetInputMethodState() override;
     void setInputMethodState(Element*) override;
 
     // TextCheckerClient member functions

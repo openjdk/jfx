@@ -78,6 +78,10 @@ public class CustomStage extends Stage {
         FX.item(m, "To Back", this::toBack);
         FX.item(m, "To Front", this::toFront);
         FX.separator(m);
+        FX.checkItem(m, "Full Screen", isFullScreen(), this::setFullScreen);
+        FX.checkItem(m, "Iconified", isIconified(), this::setIconified);
+        FX.checkItem(m, "Maximize", isMaximized(), this::setMaximized);
+        FX.separator(m);
         FX.item(m, "Close", this::hide);
         m.show(this, ev.getScreenX(), ev.getScreenY());
     }

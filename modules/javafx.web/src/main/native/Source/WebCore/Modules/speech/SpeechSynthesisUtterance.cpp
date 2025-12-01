@@ -37,6 +37,17 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SpeechSynthesisUtterance);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechSynthesisUtteranceActivity);
+
+void SpeechSynthesisUtterance::ref() const
+{
+    RefCounted::ref();
+}
+
+void SpeechSynthesisUtterance::deref() const
+{
+    RefCounted::deref();
+}
 
 Ref<SpeechSynthesisUtterance> SpeechSynthesisUtterance::create(ScriptExecutionContext& context, const String& text)
 {

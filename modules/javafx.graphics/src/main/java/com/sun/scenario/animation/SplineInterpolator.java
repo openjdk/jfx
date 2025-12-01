@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,23 +34,19 @@ import javafx.animation.Interpolator;
  * <p>
  * Basically, a cubic Bezier curve is created with start point (0,0) and
  * endpoint (1,1). The other two control points (px1, py1) and (px2, py2) are
- * given by the user, where px1, py1, px1, and px2 are all in the range [0,1]. A
- * property of this specially constrained Bezier curve is that it is strictly
- * monotonically increasing in both X and Y with t in range [0,1].
+ * given by the user, where px1 and px2 are in the range [0,1].
  * <p>
  * The interpolator works by giving it a value for X. It then finds what
  * parameter t would generate this X value for the curve. Then this t parameter
  * is applied to the curve to solve for Y. As X increases from 0 to 1, t also
- * increases from 0 to 1, and correspondingly Y increases from 0 to 1. The
- * X-to-Y mapping is not a function of path/curve length.
- *
+ * increases from 0 to 1. The X-to-Y mapping is not a function of path/curve length.
  */
 public class SplineInterpolator extends Interpolator {
 
     /**
      * The coordinates of the 2 2D control points for a cubic Bezier curve, with
-     * implicit start point (0,0) and end point (1,1) -- each individual
-     * coordinate value must be in range [0,1].
+     * implicit start point (0,0) and end point (1,1) -- the x1 and x2
+     * coordinate values must be in range [0,1].
      */
     private final double x1, y1, x2, y2;
 
@@ -80,23 +76,25 @@ public class SplineInterpolator extends Interpolator {
 
     /**
      * Creates a new instance with control points (0,0) (px1,py1) (px2,py2)
-     * (1,1) -- px1, py1, px2, py2 all in range [0,1].
+     * (1,1) -- px1, px2 are in range [0,1].
      *
      * @param px1
      *            X coordinate of first control point, in range [0,1]
      * @param py1
-     *            Y coordinate of first control point, in range [0,1]
+     *            Y coordinate of first control point
      * @param px2
      *            X coordinate of second control point, in range [0,1]
      * @param py2
-     *            Y coordinate of second control point, in range [0,1]
+     *            Y coordinate of second control point
      */
     public SplineInterpolator(double px1, double py1, double px2, double py2) {
         // check user input for precondition
-        if (px1 < 0 || px1 > 1 || py1 < 0 || py1 > 1 || px2 < 0 || px2 > 1
-                || py2 < 0 || py2 > 1) {
-            throw new IllegalArgumentException(
-                    "Control point coordinates must " + "all be in range [0,1]");
+        if (px1 < 0 || px1 > 1) {
+            throw new IllegalArgumentException("x1 must be in range [0,1]");
+        }
+
+        if (px2 < 0 || px2 > 1) {
+            throw new IllegalArgumentException("x2 must be in range [0,1]");
         }
 
         // save control point data
@@ -172,7 +170,7 @@ public class SplineInterpolator extends Interpolator {
      *
      * @param x
      *            is x-value of cubic bezier curve, in range [0,1]
-     * @return corresponding y-value of cubic bezier curve -- in range [0,1]
+     * @return corresponding y-value of cubic bezier curve
      */
     @Override
     public double curve(double x) {
@@ -194,15 +192,15 @@ public class SplineInterpolator extends Interpolator {
     /**
      * Use Bernstein basis to evaluate 1D cubic Bezier curve (quicker and more
      * numerically stable than power basis) -- 1D control coordinates are (0,
-     * p1, p2, 1), where p1 and p2 are in range [0,1], and there is no ordering
+     * p1, p2, 1), where p1 and p2 can be any value, and there is no ordering
      * constraint on p1 and p2, i.e., p1 &lt;= p2 does not have to be true.
      *
      * @param t
      *            is the paramaterized value in range [0,1]
      * @param p1
-     *            is 1st control point coordinate in range [0,1]
+     *            is 1st control point coordinate
      * @param p2
-     *            is 2nd control point coordinate in range [0,1]
+     *            is 2nd control point coordinate
      * @return the value of the Bezier curve at parameter t
      */
     private double eval(double t, double p1, double p2) {
@@ -223,9 +221,9 @@ public class SplineInterpolator extends Interpolator {
      * @param t
      *            is the paramaterized value in range [0,1]
      * @param p1
-     *            is 1st control point coordinate in range [0,1]
+     *            is 1st control point coordinate
      * @param p2
-     *            is 2nd control point coordinate in range [0,1]
+     *            is 2nd control point coordinate
      * @return the value of the Bezier curve at parameter t
      */
     private double evalDerivative(double t, double p1, double p2) {

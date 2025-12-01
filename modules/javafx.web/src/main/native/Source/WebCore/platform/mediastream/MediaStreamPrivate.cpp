@@ -101,7 +101,7 @@ void MediaStreamPrivate::removeObserver(MediaStreamPrivateObserver& observer)
     m_observers.remove(observer);
 }
 
-void MediaStreamPrivate::forEachObserver(const Function<void(MediaStreamPrivateObserver&)>& apply)
+void MediaStreamPrivate::forEachObserver(NOESCAPE const Function<void(MediaStreamPrivateObserver&)>& apply)
 {
     ASSERT(isMainThread());
     Ref protectedThis { *this };
@@ -113,13 +113,13 @@ MediaStreamTrackPrivateVector MediaStreamPrivate::tracks() const
     return copyToVector(m_trackSet.values());
 }
 
-void MediaStreamPrivate::forEachTrack(const Function<void(const MediaStreamTrackPrivate&)>& callback) const
+void MediaStreamPrivate::forEachTrack(NOESCAPE const Function<void(const MediaStreamTrackPrivate&)>& callback) const
 {
     for (auto& track : m_trackSet.values())
         callback(track.get());
 }
 
-void MediaStreamPrivate::forEachTrack(const Function<void(MediaStreamTrackPrivate&)>& callback)
+void MediaStreamPrivate::forEachTrack(NOESCAPE const Function<void(MediaStreamTrackPrivate&)>& callback)
 {
     for (auto& track : m_trackSet.values())
         callback(track.get());
@@ -232,9 +232,9 @@ bool MediaStreamPrivate::muted() const
     return true;
 }
 
-FloatSize MediaStreamPrivate::intrinsicSize() const
+IntSize MediaStreamPrivate::intrinsicSize() const
 {
-    FloatSize size;
+    IntSize size;
     if (m_activeVideoTrack) {
         const RealtimeMediaSourceSettings& setting = m_activeVideoTrack->settings();
         size.setWidth(setting.width());

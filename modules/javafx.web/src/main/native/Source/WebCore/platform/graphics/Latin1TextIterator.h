@@ -30,7 +30,7 @@ public:
     // The passed in LChar pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
     // 'endCharacter' denotes the maximum length of the UChar array, which might exceed 'lastIndex'.
     Latin1TextIterator(std::span<const LChar> characters, unsigned currentIndex, unsigned lastIndex)
-        : m_characters(characters.data())
+        : m_characters(characters)
         , m_currentIndex(currentIndex)
         , m_originalIndex(currentIndex)
         , m_lastIndex(lastIndex)
@@ -60,17 +60,17 @@ public:
         m_currentIndex = index;
     }
 
-    const LChar* remainingCharacters() const
+    std::span<const LChar> remainingCharacters() const
     {
         auto relativeIndex = m_currentIndex - m_originalIndex;
-        return m_characters + relativeIndex;
+        return m_characters.subspan(relativeIndex);
     }
 
     unsigned currentIndex() const { return m_currentIndex; }
-    const LChar* characters() const { return m_characters; }
+    std::span<const LChar> characters() const { return m_characters; }
 
 private:
-    const LChar* const m_characters;
+    std::span<const LChar> m_characters;
     unsigned m_currentIndex;
     const unsigned m_originalIndex;
     const unsigned m_lastIndex;

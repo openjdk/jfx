@@ -88,6 +88,18 @@ struct FloatMarkableTraits {
     }
 };
 
+struct DoubleMarkableTraits {
+    constexpr static bool isEmptyValue(double value)
+    {
+        return std::isnan(value);
+    }
+
+    constexpr static double emptyValue()
+    {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+};
+
 // The goal of Markable is offering Optional without sacrificing storage efficiency.
 // Markable takes Traits, which should have isEmptyValue and emptyValue functions. By using
 // one value of T as an empty value, we can remove bool flag in Optional. This strategy is

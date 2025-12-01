@@ -31,8 +31,10 @@
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
 
 namespace WebCore {
@@ -49,9 +51,10 @@ class WeakPtrImplWithEventTargetData;
 
 struct Styleable;
 
-class InspectorAnimationAgent final : public InspectorAgentBase, public Inspector::AnimationBackendDispatcherHandler {
+class InspectorAnimationAgent final : public InspectorAgentBase, public Inspector::AnimationBackendDispatcherHandler, public CanMakeCheckedPtr<InspectorAnimationAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorAnimationAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorAnimationAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorAnimationAgent);
 public:
     InspectorAnimationAgent(PageAgentContext&);
     ~InspectorAnimationAgent();
@@ -63,6 +66,7 @@ public:
     // AnimationBackendDispatcherHandler
     Inspector::Protocol::ErrorStringOr<void> enable();
     Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<RefPtr<Inspector::Protocol::Animation::Effect>> requestEffect(const Inspector::Protocol::Animation::AnimationId&);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Styleable>> requestEffectTarget(const Inspector::Protocol::Animation::AnimationId&);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObject>> resolveAnimation(const Inspector::Protocol::Animation::AnimationId&, const String& objectGroup);
     Inspector::Protocol::ErrorStringOr<void> startTracking();
@@ -93,22 +97,25 @@ private:
     RefPtr<Inspector::AnimationBackendDispatcher> m_backendDispatcher;
 
     Inspector::InjectedScriptManager& m_injectedScriptManager;
-    Page& m_inspectedPage;
+    WeakRef<Page> m_inspectedPage;
 
-    MemoryCompactRobinHoodHashMap<String, WebAnimation*> m_animationIdMap;
+    MemoryCompactRobinHoodHashMap<Inspector::Protocol::Animation::AnimationId, WebAnimation*> m_animationIdMap;
 
     WeakHashMap<WebAnimation, Ref<Inspector::Protocol::Console::StackTrace>, WeakPtrImplWithEventTargetData> m_animationsPendingBinding;
     Timer m_animationBindingTimer;
 
-    Vector<String> m_removedAnimationIds;
+    Vector<Inspector::Protocol::Animation::AnimationId> m_removedAnimationIds;
     Timer m_animationDestroyedTimer;
 
     struct TrackedStyleOriginatedAnimationData {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
-        String trackingAnimationId;
+        Inspector::Protocol::Animation::AnimationId trackingAnimationId;
         ComputedEffectTiming lastComputedTiming;
     };
     HashMap<StyleOriginatedAnimation*, UniqueRef<TrackedStyleOriginatedAnimationData>> m_trackedStyleOriginatedAnimationData;
+
+    WeakHashSet<WebAnimation, WeakPtrImplWithEventTargetData> m_animationsIgnoringEffectChanges;
+    WeakHashSet<WebAnimation, WeakPtrImplWithEventTargetData> m_animationsIgnoringTargetChanges;
 };
 
 } // namespace WebCore

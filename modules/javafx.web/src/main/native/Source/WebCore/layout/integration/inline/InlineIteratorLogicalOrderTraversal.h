@@ -68,7 +68,7 @@ Vector<LeafBoxIterator> leafBoxesInLogicalOrder(const LineBoxIterator& lineBox, 
     unsigned char minLevel = 128;
     unsigned char maxLevel = 0;
 
-    for (auto box = lineBox->firstLeafBox(); box; box = box.traverseNextOnLine()) {
+    for (auto box = lineBox->lineLeftmostLeafBox(); box; box = box.traverseLineRightwardOnLine()) {
         minLevel = std::min(minLevel, box->bidiLevel());
         maxLevel = std::max(maxLevel, box->bidiLevel());
         boxes.append(box);
@@ -85,19 +85,18 @@ Vector<LeafBoxIterator> leafBoxesInLogicalOrder(const LineBoxIterator& lineBox, 
     if (!(minLevel % 2))
         ++minLevel;
 
-    auto end = boxes.end();
+    auto boxCount = boxes.size();
     for (; minLevel <= maxLevel; ++minLevel) {
-        auto box = boxes.begin();
-        while (box < end) {
-            while (box < end && (*box)->bidiLevel() < minLevel)
-                ++box;
+        size_t boxIndex = 0;
+        while (boxIndex < boxCount) {
+            while (boxIndex < boxCount && boxes[boxIndex]->bidiLevel() < minLevel)
+                ++boxIndex;
 
-            auto first = box;
-            while (box < end && (*box)->bidiLevel() >= minLevel)
-                ++box;
+            auto first = boxIndex;
+            while (boxIndex < boxCount && boxes[boxIndex]->bidiLevel() >= minLevel)
+                ++boxIndex;
 
-            auto last = box;
-            reverseFunction(first, last);
+            reverseFunction(boxes.mutableSpan().subspan(first, boxIndex - first));
         }
     }
 

@@ -24,36 +24,39 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import javafx.beans.property.BooleanProperty;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.options.DoubleOption;
 import com.oracle.tools.fx.monkey.options.EnumOption;
-import com.oracle.tools.fx.monkey.options.TextChoiceOption;
+import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.tools.CustomStage;
-import com.oracle.tools.fx.monkey.util.BooleanConsumer;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.Formats;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextTemplates;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
  * Stage Page.
  */
 public class StagePage extends TestPaneBase {
     private final ToggleButton button;
+    private final Label status;
     private Stage stage;
     private final SimpleBooleanProperty alwaysOnTop = new SimpleBooleanProperty();
     private final SimpleBooleanProperty focused = new SimpleBooleanProperty();
@@ -83,12 +86,17 @@ public class StagePage extends TestPaneBase {
             toggleStage();
         });
 
+        status = new Label();
+        status.setFont(Font.font("Monospace"));
+
         OptionPane op = createOptionPane();
 
-        HBox p = new HBox(4, button);
-        p.setPadding(new Insets(4));
+        HBox hb = new HBox(4, button);
 
-        setContent(p);
+        VBox vb = new VBox(10, hb, status);
+        vb.setPadding(new Insets(10));
+
+        setContent(vb);
         setOptions(op);
     }
 
@@ -133,11 +141,11 @@ public class StagePage extends TestPaneBase {
         s.initOwner(owner.get() ? FX.getParentWindow(this) : null);
 
         // properties
-        link(fullScreen, s.fullScreenProperty(), s::setFullScreen);
+        Utils.link(fullScreen, s.fullScreenProperty(), s::setFullScreen);
         // TODO fullScreenExitCombination
         s.fullScreenExitHintProperty().bindBidirectional(fullScreenExitHint);
-        link(iconified, s.iconifiedProperty(), s::setIconified);
-        link(maximized, s.maximizedProperty(), s::setMaximized);
+        Utils.link(iconified, s.iconifiedProperty(), s::setIconified);
+        Utils.link(maximized, s.maximizedProperty(), s::setMaximized);
         s.maxHeightProperty().bindBidirectional(maxHeight);
         s.maxWidthProperty().bindBidirectional(maxWidth);
         s.minHeightProperty().bindBidirectional(minHeight);
@@ -147,7 +155,7 @@ public class StagePage extends TestPaneBase {
         s.titleProperty().bindBidirectional(title);
 
         // window
-        link(focused, s.focusedProperty(), null);
+        Utils.link(focused, s.focusedProperty(), null);
         // TODO forceIntegerRenderScale
         // TODO height, ro
         // TODO setOnXXX
@@ -156,7 +164,7 @@ public class StagePage extends TestPaneBase {
         s.renderScaleYProperty().bindBidirectional(renderScaleY);
         // TODO width, ro
         // TODO x,y
-        link(showing, s.showingProperty(), null);
+        Utils.link(showing, s.showingProperty(), null);
         return s;
     }
 
@@ -209,12 +217,7 @@ public class StagePage extends TestPaneBase {
     }
 
     private Node textChoices(String name, SimpleStringProperty p) {
-        TextChoiceOption op = new TextChoiceOption(name, true, p);
-        op.addChoice("<null>", null);
-        op.addChoice("Short", "We are now full screen");
-        op.addChoice("Multi-line", "One.\nTwo.\nThree.");
-        op.addChoice("Lorem Impsum", TextTemplates.loremIpsum());
-        return op;
+        return Options.textOption(name, true, true, p);
     }
 
     private void toggleStage() {
@@ -225,13 +228,39 @@ public class StagePage extends TestPaneBase {
                 if (!on) {
                     button.setSelected(false);
                     stage = null;
+                    clearStatus();
                 }
             });
+            status.textProperty().bind(Bindings.createStringBinding(
+                () -> {
+                    String s = getStatusText(stage);
+                    System.out.println(s.replace('\n', ' '));
+                    return s;
+                },
+                stage.xProperty(),
+                stage.yProperty(),
+                stage.widthProperty(),
+                stage.heightProperty(),
+                stage.iconifiedProperty(),
+                stage.maximizedProperty(),
+                stage.fullScreenProperty()
+            ));
         } else {
             stage.hide();
             stage = null;
             button.setSelected(false);
+            clearStatus();
         }
+    }
+
+    private void clearStatus() {
+        status.textProperty().unbind();
+        status.setText(null);
+    }
+
+    @Override
+    public void deactivate() {
+        close();
     }
 
     private void close() {
@@ -242,18 +271,16 @@ public class StagePage extends TestPaneBase {
         }
     }
 
-    private static void link(BooleanProperty ui, ReadOnlyBooleanProperty main, BooleanConsumer c) {
-        main.addListener((s, p, v) -> {
-            ui.set(v);
-        });
-        if (c != null) {
-            ui.addListener((s, p, v) -> {
-                if (main.get() != v) {
-                    c.consume(v);
-                }
-            });
-            boolean val = ui.get();
-            c.consume(val);
-        }
+    private static String getStatusText(Stage s) {
+        return
+            "P: " + f(s.getX()) + ", " + f(s.getY()) + "\n" +
+            "S: " + f(s.getWidth()) + ", " + f(s.getHeight()) + "\n" +
+            "   " + (s.isFullScreen() ? "FullScreen " : "") +
+                    (s.isIconified() ? "Iconified " : "") +
+                    (s.isMaximized() ? "Maximized " : "");
+    }
+
+    private static String f(double v) {
+        return Formats.formatDouble(v);
     }
 }

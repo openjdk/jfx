@@ -27,6 +27,7 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -42,6 +43,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.ScrollBar;
@@ -53,6 +55,7 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Shape;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
@@ -534,7 +537,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     /** in vflow.content coordinates */
-    protected CaretInfo getCaretInfo(TextPos p) {
+    public CaretInfo getCaretInfo(TextPos p) {
         return arrangement().getCaretInfo(content, p);
     }
 
@@ -1667,5 +1670,53 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 }
             }
         }
+    }
+
+    interface ShapeGenerator {
+        public PathElement[] generate(TextCell cell,  int beginOffset, int endOffset);
+    }
+
+    private List<PathElement> getShapes(TextPos start, TextPos end, ShapeGenerator gen) {
+        ArrayList<PathElement> ss = new ArrayList<>(16);
+        int ix1 = start.index();
+        int ix2 = end.index();
+        for (int ix = ix1; ix <= ix2; ix++) {
+            TextCell cell = arrangement().getVisibleCell(ix);
+            if (cell == null) {
+                break;
+            }
+            int beginOffset = (ix == ix1) ? start.offset() : 0;
+            int endOffset = (ix == ix2) ? end.offset() : cell.getTextLength();
+            PathElement[] es = gen.generate(cell, beginOffset, endOffset);
+            for (PathElement em : es) {
+                ss.add(em);
+            }
+        }
+        return ss;
+    }
+
+    public List<PathElement> getRangeShape(TextPos start, TextPos end) {
+        return getShapes(start, end, (cell, beginOffset, endOffset) -> {
+            return cell.getRangeShape(content, beginOffset, endOffset);
+        });
+    }
+
+    public List<PathElement> getUnderlineShape(TextPos start, TextPos end) {
+        return getShapes(start, end, (cell, beginOffset, endOffset) -> {
+            return cell.getUnderlineShape(content, beginOffset, endOffset);
+        });
+    }
+
+    public void addImeHighlights(List<Shape> shapes, TextPos start) {
+        content.getChildren().addAll(shapes);
+    }
+
+    public void removeImHighlight(List<Shape> shapes) {
+        content.getChildren().removeAll(shapes);
+    }
+
+    public Point2D getImeLocationOnScreen(TextPos pos) {
+        CaretInfo ci = getCaretInfo(pos);
+        return content.localToScreen(ci.getMinX(), ci.getMaxY());
     }
 }

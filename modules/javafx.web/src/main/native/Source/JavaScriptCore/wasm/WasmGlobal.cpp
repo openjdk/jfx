@@ -47,21 +47,27 @@ JSValue Global::get(JSGlobalObject* globalObject) const
 
     switch (m_type.kind) {
     case TypeKind::I32:
-        return jsNumber(bitwise_cast<int32_t>(static_cast<uint32_t>(m_value.m_primitive)));
+        return jsNumber(std::bit_cast<int32_t>(static_cast<uint32_t>(m_value.m_primitive)));
     case TypeKind::I64:
         RELEASE_AND_RETURN(throwScope, JSBigInt::makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(m_value.m_primitive)));
     case TypeKind::F32:
-        return jsNumber(purifyNaN(static_cast<double>(bitwise_cast<float>(static_cast<uint32_t>(m_value.m_primitive)))));
+        return jsNumber(purifyNaN(static_cast<double>(std::bit_cast<float>(static_cast<uint32_t>(m_value.m_primitive)))));
     case TypeKind::F64:
-        return jsNumber(purifyNaN(bitwise_cast<double>(m_value.m_primitive)));
+        return jsNumber(purifyNaN(std::bit_cast<double>(m_value.m_primitive)));
     case TypeKind::V128:
         throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Cannot get value of v128 global"_s));
         return { };
+    case TypeKind::Exn:
     case TypeKind::Externref:
     case TypeKind::Funcref:
     case TypeKind::Ref:
-    case TypeKind::RefNull:
+    case TypeKind::RefNull: {
+        if (UNLIKELY(isExnref(m_type))) {
+            throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Cannot get value of exnref global"_s));
+            return { };
+        }
         return m_value.m_externref.get();
+    }
     default:
         return jsUndefined();
     }
@@ -88,13 +94,13 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
     case TypeKind::F32: {
         float value = argument.toFloat(globalObject);
         RETURN_IF_EXCEPTION(throwScope, void());
-        m_value.m_primitive = static_cast<uint64_t>(bitwise_cast<uint32_t>(value));
+        m_value.m_primitive = static_cast<uint64_t>(std::bit_cast<uint32_t>(value));
         break;
     }
     case TypeKind::F64: {
         double value = argument.toNumber(globalObject);
         RETURN_IF_EXCEPTION(throwScope, void());
-        m_value.m_primitive = bitwise_cast<uint64_t>(value);
+        m_value.m_primitive = std::bit_cast<uint64_t>(value);
         break;
     }
     case TypeKind::V128: {
@@ -130,6 +136,9 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
                 }
             }
             m_value.m_externref.set(m_owner->vm(), m_owner, argument);
+        } else if (isExnref(m_type)) {
+            throwTypeError(globalObject, throwScope, "Cannot set value of exnref global"_s);
+            return;
         } else {
             JSValue internref = Wasm::internalizeExternref(argument);
             if (!Wasm::TypeInformation::castReference(internref, m_type.isNullable(), m_type.index)) {

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -38,7 +38,7 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SVGPathByteS
 namespace WebCore {
 
 class SVGPathByteStream final : public CanMakeSingleThreadWeakPtr<SVGPathByteStream> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGPathByteStream);
 public:
     class Data final : public RefCounted<Data> {
     public:

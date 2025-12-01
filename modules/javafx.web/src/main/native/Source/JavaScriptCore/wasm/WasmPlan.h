@@ -75,8 +75,7 @@ public:
 
     bool WARN_UNUSED_RETURN failed() const { return !m_errorMessage.isNull(); }
     virtual bool hasWork() const = 0;
-    enum CompilationEffort { All, Partial };
-    virtual void work(CompilationEffort = All) = 0;
+    virtual void work() = 0;
     virtual bool multiThreaded() const = 0;
 
     void waitForCompletion();
@@ -89,6 +88,12 @@ protected:
 
     virtual bool isComplete() const = 0;
     virtual void complete() WTF_REQUIRES_LOCK(m_lock) = 0;
+
+    CString signpostMessage(CompilationMode, uint32_t functionIndexSpace) const;
+    void beginCompilerSignpost(CompilationMode, uint32_t functionIndexSpace) const;
+    void beginCompilerSignpost(const Callee&) const;
+    void endCompilerSignpost(CompilationMode, uint32_t functionIndexSpace) const;
+    void endCompilerSignpost(const Callee&) const;
 
     MemoryMode m_mode { MemoryMode::BoundsChecking };
     Lock m_lock;

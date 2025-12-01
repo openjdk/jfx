@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(WEB_RTC)
 
 #include <wtf/Function.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -52,7 +53,7 @@ static inline bool isIDRNALU(uint8_t data)
     return (data & 0x1F) == 5;
 }
 
-static inline void findNalus(std::span<const uint8_t> frameData, size_t offset, const Function<bool(size_t)>& callback)
+static inline void findNalus(std::span<const uint8_t> frameData, size_t offset, NOESCAPE const Function<bool(size_t)>& callback)
 {
     for (size_t i = 4 + offset; i < frameData.size(); ++i) {
         if (frameData[i - 4] == 0 && frameData[i - 3] == 0 && frameData[i - 2] == 0 && frameData[i - 1] == 1) {
@@ -137,17 +138,17 @@ SFrameCompatibilityPrefixBuffer computeH264PrefixBuffer(std::span<const uint8_t>
     Vector<uint8_t> buffer(spsPpsLength + 2);
 IGNORE_GCC_WARNINGS_BEGIN("restrict")
     // https://bugs.webkit.org/show_bug.cgi?id=246862
-    std::memcpy(buffer.data(), frameData.data(), spsPpsLength);
+    memcpySpan(buffer.mutableSpan(), frameData.first(spsPpsLength));
 IGNORE_GCC_WARNINGS_END
     buffer[spsPpsLength] = 0x25;
     buffer[spsPpsLength + 1] = 0xb8;
     return buffer;
 }
 
-static inline void findEscapeRbspPatterns(const Vector<uint8_t>& frame, size_t offset, const Function<void(size_t, bool)>& callback)
+static inline void findEscapeRbspPatterns(const Vector<uint8_t>& frame, size_t offset, NOESCAPE const Function<void(size_t, bool)>& callback)
 {
     size_t numConsecutiveZeros = 0;
-    auto* data = frame.data();
+    auto data = frame.span();
     for (size_t i = offset; i < frame.size(); ++i) {
         bool shouldEscape = data[i] <= 3 && numConsecutiveZeros >= 2;
         if (shouldEscape)
@@ -176,7 +177,7 @@ void toRbsp(Vector<uint8_t>& frame, size_t offset)
     newFrame.reserveInitialCapacity(frame.size() + count);
     newFrame.append(frame.subspan(0, offset));
 
-    findEscapeRbspPatterns(frame, offset, [data = frame.data(), &newFrame](size_t position, bool shouldBeEscaped) {
+    findEscapeRbspPatterns(frame, offset, [data = frame.span(), &newFrame](size_t position, bool shouldBeEscaped) {
         if (shouldBeEscaped)
             newFrame.append(3);
         newFrame.append(data[position]);
@@ -198,7 +199,8 @@ size_t computeVP8PrefixOffset(std::span<const uint8_t> frame)
 
 SFrameCompatibilityPrefixBuffer computeVP8PrefixBuffer(std::span<const uint8_t> frame)
 {
-    return Vector<uint8_t>(frame.first(isVP8KeyFrame(frame) ? 10 : 3));
+    Vector<uint8_t> prefix(frame.first(isVP8KeyFrame(frame) ? 10 : 3));
+    return prefix;
 }
 
 } // namespace WebCore

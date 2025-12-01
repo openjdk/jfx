@@ -25,9 +25,11 @@
 
 #pragma once
 
+#if !BUSE(TZONE)
+
 #include "IsoPage.h"
-#include "StdLibExtras.h"
 #include "VMAllocate.h"
+#include <bit>
 
 #if !BUSE(LIBPAS)
 
@@ -74,3 +76,4 @@ inline void IsoSharedPage::stopAllocating(const LockHolder&)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)

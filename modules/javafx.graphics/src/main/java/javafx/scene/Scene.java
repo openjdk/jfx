@@ -4210,6 +4210,12 @@ public class Scene implements EventTarget {
                             fullPDRSource, result));
                 }
             }
+            if (e.getEventType() == MouseEvent.MOUSE_RELEASED) {
+                Event.fireEvent(fullPDRSource, MouseEvent.copyForMouseDragEvent(e,
+                        fullPDRSource, eventTarget,
+                        MouseDragEvent.MOUSE_DRAG_DONE,
+                        fullPDRSource, result));
+            }
         }
 
         private void updateCursor(Cursor newCursor) {
@@ -4773,6 +4779,28 @@ public class Scene implements EventTarget {
         return onMouseDragExited;
     }
 
+    /**
+     * Defines a function to be called when a full press-drag-release gesture ends.
+     *
+     * @see MouseDragEvent#MOUSE_DRAG_DONE
+     * @since 26
+     */
+    private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDone;
+
+    public final void setOnMouseDragDone(EventHandler<? super MouseDragEvent> value) {
+        onMouseDragDoneProperty().set(value);
+    }
+
+    public final EventHandler<? super MouseDragEvent> getOnMouseDragDone() {
+        return onMouseDragDone == null ? null : onMouseDragDone.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDoneProperty() {
+        if (onMouseDragDone == null) {
+            onMouseDragDone = new EventHandlerProperty<>("onMouseDragDone", MouseDragEvent.MOUSE_DRAG_DONE);
+        }
+        return onMouseDragDone;
+    }
 
     /* *************************************************************************
      *                                                                         *

@@ -77,6 +77,7 @@ OptionSet<ResourceType> toResourceType(CachedResource::Type type, ResourceReques
     case CachedResource::Type::Ping:
     case CachedResource::Type::Icon:
 #if ENABLE(MODEL_ELEMENT)
+    case CachedResource::Type::EnvironmentMapResource:
     case CachedResource::Type::ModelResource:
 #endif
 #if ENABLE(APPLICATION_MANIFEST)
@@ -84,8 +85,10 @@ OptionSet<ResourceType> toResourceType(CachedResource::Type type, ResourceReques
 #endif
         return { ResourceType::Other };
 
+#if ENABLE(VIDEO)
     case CachedResource::Type::TextTrackResource:
         return { ResourceType::Media };
+#endif
 
     };
     ASSERT_NOT_REACHED();
@@ -156,6 +159,40 @@ ResourceFlags ResourceLoadInfo::getResourceFlags() const
     flags |= isThirdParty() ? static_cast<ResourceFlags>(LoadType::ThirdParty) : static_cast<ResourceFlags>(LoadType::FirstParty);
     flags |= mainFrameContext ? static_cast<ResourceFlags>(LoadContext::TopFrame) : static_cast<ResourceFlags>(LoadContext::ChildFrame);
     return flags;
+}
+
+ASCIILiteral resourceTypeToString(OptionSet<ResourceType> resourceTypes)
+{
+    switch (*resourceTypes.begin()) {
+    case ResourceType::Document:
+        return "document"_s;
+    case ResourceType::Image:
+        return "image"_s;
+    case ResourceType::StyleSheet:
+        return "style-sheet"_s;
+    case ResourceType::Script:
+        return "script"_s;
+    case ResourceType::Font:
+        return "font"_s;
+    case ResourceType::WebSocket:
+        return "websocket"_s;
+    case ResourceType::Fetch:
+        return "fetch"_s;
+    case ResourceType::SVGDocument:
+        return "svg-document"_s;
+    case ResourceType::Media:
+        return "media"_s;
+    case ResourceType::Popup:
+        return "popup"_s;
+    case ResourceType::Ping:
+        return "ping"_s;
+    case ResourceType::CSPReport:
+        return "csp-report"_s;
+    case ResourceType::Other:
+        return "other"_s;
+    default:
+        return "raw"_s;
+    }
 }
 
 } // namespace WebCore::ContentExtensions

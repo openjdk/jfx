@@ -47,12 +47,12 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OfflineAudioContext);
 
 OfflineAudioContext::OfflineAudioContext(Document& document, const OfflineAudioContextOptions& options)
     : BaseAudioContext(document)
-    , m_destinationNode(makeUniqueRef<OfflineAudioDestinationNode>(*this, options.numberOfChannels, options.sampleRate, AudioBuffer::create(options.numberOfChannels, options.length, options.sampleRate)))
+    , m_destinationNode(makeUniqueRefWithoutRefCountedCheck<OfflineAudioDestinationNode>(*this, options.numberOfChannels, options.sampleRate, AudioBuffer::create(options.numberOfChannels, options.length, options.sampleRate)))
     , m_length(options.length)
 {
     if (!renderTarget())
         document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Failed to construct internal AudioBuffer with "_s, options.numberOfChannels, " channel(s), a sample rate of "_s, options.sampleRate, " and a length of "_s, options.length, '.'));
-    else if (noiseInjectionPolicy() == NoiseInjectionPolicy::Minimal)
+    else if (noiseInjectionPolicies().contains(NoiseInjectionPolicy::Minimal))
         renderTarget()->increaseNoiseInjectionMultiplier();
 }
 
@@ -87,7 +87,7 @@ void OfflineAudioContext::lazyInitialize()
 
 void OfflineAudioContext::increaseNoiseMultiplierIfNeeded()
 {
-    if (noiseInjectionPolicy() == NoiseInjectionPolicy::None)
+    if (!noiseInjectionPolicies())
         return;
 
     Locker locker { graphLock() };

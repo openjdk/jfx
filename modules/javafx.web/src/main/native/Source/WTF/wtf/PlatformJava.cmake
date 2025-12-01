@@ -56,17 +56,16 @@ if (APPLE)
         ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
         ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
     )
-
+    #if_platform_JAVA 
     list(APPEND WTF_PUBLIC_HEADERS
         cf/TypeCastsCF.h
     )
-
+    #endif_platform_JAVA  
     list(APPEND WTF_PRIVATE_INCLUDE_DIRECTORIES
         # Check whether we can use WTF/icu
         # "${WTF_DIR}/icu"
         ${WTF_DERIVED_SOURCES_DIR}
     )
-
     list(APPEND WTF_SOURCES
         BlockObjCExceptions.mm
         cf/LanguageCF.cpp
