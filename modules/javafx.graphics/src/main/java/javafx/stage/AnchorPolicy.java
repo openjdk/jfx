@@ -29,13 +29,13 @@ import javafx.geometry.AnchorPoint;
 import javafx.geometry.Insets;
 
 /**
- * Specifies how a repositioning operation may adjust an anchor point when the preferred placement
- * would violate the screen bounds constraints.
+ * Specifies how a window repositioning operation may adjust an anchor point when the preferred anchor
+ * would place the window outside the usable screen area.
  * <p>
  * The anchor passed to {@link Stage#relocate(double, double, AnchorPoint, AnchorPolicy, Insets)} or specified
  * by {@link PopupWindow#anchorLocationProperty() PopupWindow.anchorLocation} identifies the point on the
  * window that should coincide with the requested screen coordinates. When the preferred anchor would place
- * the window outside the allowed screen area (as defined by the screen bounds and any configured insets),
+ * the window outside the usable screen area (as defined by the screen bounds and any configured insets),
  * an {@code AnchorPolicy} can be used to select an alternative anchor before applying any final position
  * adjustment.
  *
@@ -53,7 +53,7 @@ public enum AnchorPolicy {
     FIXED,
 
     /**
-     * If the preferred placement violates horizontal constraints, attempt a horizontally flipped anchor.
+     * If the preferred anchor violates horizontal constraints, attempt a horizontally flipped anchor.
      * <p>
      * A horizontal flip mirrors the anchor across the vertical center line of the window
      * (for example, {@code TOP_LEFT} becomes {@code TOP_RIGHT}).
@@ -65,7 +65,7 @@ public enum AnchorPolicy {
     FLIP_HORIZONTAL,
 
     /**
-     * If the preferred placement violates vertical constraints, attempt a vertically flipped anchor.
+     * If the preferred anchor violates vertical constraints, attempt a vertically flipped anchor.
      * <p>
      * A vertical flip mirrors the anchor across the horizontal center line of the window
      * (for example, {@code TOP_LEFT} becomes {@code BOTTOM_LEFT}).

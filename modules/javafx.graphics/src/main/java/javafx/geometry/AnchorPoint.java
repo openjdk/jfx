@@ -32,10 +32,10 @@ package javafx.geometry;
  * An {@code AnchorPoint} provides a {@code (x, y)} coordinate together with a flag indicating
  * how those coordinates should be interpreted:
  * <ul>
- *   <li><b>Proportional</b>: {@code x} and {@code y} are expressed as fractions of the target width and height.
+ *   <li>Proportional: {@code x} and {@code y} are expressed as fractions of the target width and height.
  *       In this coordinate system, {@code (0, 0)} refers to the top-left corner, and {@code (1, 1)} refers to
  *       the bottom-right corner. Values outside the {@code [0..1]} range represent points outside the bounds.
- *   <li><b>Absolute</b>: {@code x} and {@code y} are expressed as offsets in pixels from the top-left corner
+ *   <li>Absolute: {@code x} and {@code y} are expressed as offsets in pixels from the top-left corner
  *       of the target area.
  * </ul>
  *

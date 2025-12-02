@@ -124,7 +124,7 @@ public final class WindowBoundsUtil {
      * <p>
      * For each inset value:
      * <ul>
-     *   <li>{@code >= 0} enables a constraint for that edge and contributes to the usable region
+     *   <li>{@code >= 0} enables a constraint for that edge
      *   <li>{@code < 0} disables the constraint for that edge
      * </ul>
      * Enabled constraints shrink the usable region by the given amounts. The computed {@code maxX}

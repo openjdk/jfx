@@ -1227,7 +1227,7 @@ public class Stage extends Window {
      * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
      * If called <em>before</em> the stage is shown, then
      * <ol>
-     *     <li>any previous call to {@link #centerOnScreen()} is canceled,
+     *     <li>any previous call to {@link #centerOnScreen()} is disregarded,
      *     <li>the {@link #xProperty() X} and {@link #yProperty() Y} properties are not updated
      *         immediately; instead, they are updated after the stage is shown.
      * </ol>
@@ -1250,12 +1250,13 @@ public class Stage extends Window {
      * <p>
      * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
      * coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is then
-     * optionally adjusted to keep the stage within screen edge constraints.
+     * optionally adjusted to keep the stage within the usable screen area.
      * <p>
      * The {@code anchorPolicy} controls whether an alternative anchor may be used when the preferred anchor
-     * would violate screen edge constraints. Depending on the policy, the preferred anchor location may be
-     * mirrored to the other side of the window horizontally or vertically, or an anchor might be selected
-     * automatically. If no alternative anchor yields a better placement, the specified {@code anchor} is used.
+     * would place the stage outside the usable screen area. Depending on the policy, the preferred anchor
+     * location may be mirrored to the other side of the window horizontally or vertically, or an anchor might
+     * be selected automatically. If no alternative anchor yields a better placement, the specified
+     * {@code anchor} is used.
      * <p>
      * The {@code screenPadding} parameter defines per-edge constraints against the current screen bounds.
      * Each inset value specifies the minimum distance to maintain between the stage edge and the corresponding

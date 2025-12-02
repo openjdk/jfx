@@ -822,7 +822,7 @@ public class StageTest {
         pulse();
 
         assertEquals(-100, peer.x, 0.0001); // maxX = 200 - 300 = -100
-        assertEquals(0, peer.y, 0.0001); // y still chooses minY because TOP_RIGHT has ayRel = 0
+        assertEquals(0, peer.y, 0.0001); // choose minY because TOP_RIGHT has y = 0
     }
 
     @Test
@@ -834,7 +834,7 @@ public class StageTest {
         s.setWidth(400);
         s.setHeight(300);
 
-        // Point on 2nd screen, but near its bottom-right corner.
+        // Point on screen 2, but near its bottom-right corner.
         double px = 1920 + 1440 - 1;
         double py = 160 + 900 - 1;
 
@@ -842,7 +842,7 @@ public class StageTest {
         s.show();
         pulse();
 
-        // Clamp within screen2: x <= 1920+1440-400 = 2960, y <= 160+900-300 = 760
+        // Clamp within screen 2: x <= 1920+1440-400 = 2960, y <= 160+900-300 = 760
         assertEquals(2960, peer.x, 0.0001);
         assertEquals(760, peer.y, 0.0001);
         assertNotWithinBounds(peer, toolkit.getScreens().get(0), Insets.EMPTY);
@@ -872,13 +872,13 @@ public class StageTest {
         s.setWidth(0);
         s.setHeight(0);
 
-        // Make the constrained space impossible even for a 0-size window:
+        // Make the constrained space impossible even for a zero-size window:
         // Horizontal: minX = 500, maxX = 800 - 400 - 0 = 400 => maxX < minX
         // Vertical:   minY = 300, maxY = 600 - 400 - 0 = 200 => maxY < minY
         var constraints = new Insets(300, 400, 400, 500);
 
-        // axRel = 0.25 => choose minX (since axRel <= 0.5)
-        // ayRel = 0.75 => choose maxY (since ayRel > 0.5)
+        // x = 0.25 => choose minX (since x <= 0.5)
+        // y = 0.75 => choose maxY (since y > 0.5)
         var anchor = AnchorPoint.proportional(0.25, 0.75);
 
         s.relocate(0, 0, anchor, AnchorPolicy.FIXED, constraints);
