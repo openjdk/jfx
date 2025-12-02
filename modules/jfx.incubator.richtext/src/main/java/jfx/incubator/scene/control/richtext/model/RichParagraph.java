@@ -407,7 +407,7 @@ public abstract class RichParagraph {
          */
         public RichParagraph build() {
             List<Consumer<TextCell>> _highlights = highlights;
-            StyleAttributeMap _paragraphAttributes = paragraphAttributes;
+            StyleAttributeMap _paragraphAttributes = (paragraphAttributes == null ? StyleAttributeMap.EMPTY : paragraphAttributes);
             List<StyledSegment> _segments = (segments == null ? List.of() : List.copyOf(segments));
 
             return new RichParagraph() {
