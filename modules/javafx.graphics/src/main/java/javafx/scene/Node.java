@@ -2850,7 +2850,7 @@ public abstract sealed class Node
                     final Parent p = getParent();
 
                     // Propagate layout if this change isn't triggered by its parent
-                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
+                    if (p != null && !p.inLayoutChildren()) {
                         if (isManaged()) {
                             // Force its parent to fix the layout since it is a managed child.
                             p.requestLayout(true);
@@ -2924,7 +2924,7 @@ public abstract sealed class Node
                     final Parent p = getParent();
 
                     // Propagate layout if this change isn't triggered by its parent
-                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
+                    if (p != null && !p.inLayoutChildren()) {
                         if (isManaged()) {
                             // Force its parent to fix the layout since it is a managed child.
                             p.requestLayout(true);
@@ -10103,7 +10103,18 @@ public abstract sealed class Node
      * @since JavaFX 8.0
      */
     public final void applyCss() {
-
+        if (this instanceof Parent nodeParent && nodeParent.inLayoutChildren()) {
+            PlatformLogger logger = Logging.getLayoutLogger();
+            if (logger.isLoggable(Level.WARNING)) {
+                logger.warning("Calling applyCss() while in layouting children is not recommended");
+            }
+        }
+        if (this instanceof Parent nodeParent && nodeParent.isPerformingLayout()) {
+            PlatformLogger logger = Logging.getLayoutLogger();
+            if (logger.isLoggable(Level.WARNING)) {
+                logger.warning("Calling applyCss() while performing the layout is not recommended");
+            }
+        }
         if (getScene() == null) {
             return;
         }
