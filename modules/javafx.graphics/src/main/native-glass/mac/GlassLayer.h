@@ -36,6 +36,7 @@
     andClientContext:(NSObject*)clCtx
          mtlQueuePtr:(long)mtlCommandQueuePtr
       withHiDPIAware:(BOOL)HiDPIAware
+      isVsyncEnabled:(BOOL)isVsyncEnabled
         withIsSwPipe:(BOOL)isSwPipe
          useMTLForSW:(BOOL)mtlForSW;
 
