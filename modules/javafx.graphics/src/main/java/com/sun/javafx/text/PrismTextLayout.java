@@ -198,7 +198,7 @@ public class PrismTextLayout implements TextLayout {
 
         boolean needsLayout = true;
         if (lines != null && oldWidth != 0 && newWidth != 0) {
-            if ((flags & ALIGN_LEFT) != 0) {
+            if (!isMirrored() && (flags & ALIGN_LEFT) != 0) {
                 if (newWidth > oldWidth) {
                     /* If wrapping width is increasing and there is no
                      * wrapped lines then the text remains valid.
