@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,10 +62,10 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
     // SMIL 3.0's definitions that are used for Interpolator.EASE_IN and Interpolator.EASE_OUT.
     // https://www.w3.org/TR/css-easing-1/#cubic-bezier-easing-functions
     //
-    public static final Interpolator CSS_EASE = Interpolator.SPLINE(0.25, 0.1, 0.25, 1);
-    public static final Interpolator CSS_EASE_IN = Interpolator.SPLINE(0.42, 0, 1, 1);
-    public static final Interpolator CSS_EASE_OUT = Interpolator.SPLINE(0, 0, 0.58, 1);
-    public static final Interpolator CSS_EASE_IN_OUT = Interpolator.SPLINE(0.42, 0, 0.58, 1);
+    public static final Interpolator CSS_EASE = Interpolator.ofSpline(0.25, 0.1, 0.25, 1);
+    public static final Interpolator CSS_EASE_IN = Interpolator.ofSpline(0.42, 0, 1, 1);
+    public static final Interpolator CSS_EASE_OUT = Interpolator.ofSpline(0, 0, 0.58, 1);
+    public static final Interpolator CSS_EASE_IN_OUT = Interpolator.ofSpline(0.42, 0, 0.58, 1);
 
     // We're using an LRU cache (least recently used) to limit the number of redundant instances.
     private static final Map<ParsedValue<?, ?>, Interpolator> CACHE = new LinkedHashMap<>(10, 0.75f, true) {
@@ -99,13 +99,13 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
             return switch (funcName) {
                 case "cubic-bezier(" -> CACHE.computeIfAbsent(value, key -> {
                     List<Double> args = arguments(key);
-                    return Interpolator.SPLINE(args.get(0), args.get(1), args.get(2), args.get(3));
+                    return Interpolator.ofSpline(args.get(0), args.get(1), args.get(2), args.get(3));
                 });
 
                 case "steps(" -> CACHE.computeIfAbsent(value, key -> {
                     List<Object> args = arguments(key);
                     String position = args.get(1) != null ? (String)args.get(1) : "end";
-                    return Interpolator.STEPS((int)args.get(0), switch (position) {
+                    return Interpolator.ofSteps((int)args.get(0), switch (position) {
                         case "jump-start", "start" -> StepPosition.START;
                         case "jump-both" -> StepPosition.BOTH;
                         case "jump-none" -> StepPosition.NONE;

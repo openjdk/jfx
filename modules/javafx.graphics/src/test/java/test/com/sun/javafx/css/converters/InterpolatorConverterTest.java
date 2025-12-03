@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,7 +104,7 @@ public class InterpolatorConverterTest {
             new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) },
             null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(SPLINE(0.1, 0.2, 0.3, 0.4), result);
+        assertInterpolatorEquals(ofSpline(0.1, 0.2, 0.3, 0.4), result);
     }
 
     @Test
@@ -130,7 +130,7 @@ public class InterpolatorConverterTest {
                 new ParsedValueImpl<>(List.of(3, cssName), null) },
                 null);
             var result = InterpolatorConverter.getInstance().convert(value, null);
-            assertInterpolatorEquals(STEPS(3, stepPosition), result);
+            assertInterpolatorEquals(ofSteps(3, stepPosition), result);
         }
     }
 
