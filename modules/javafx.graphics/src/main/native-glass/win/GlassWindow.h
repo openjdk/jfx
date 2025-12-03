@@ -128,9 +128,18 @@ private:
     };
     WinChangingReason m_winChangingReason;
 
-    // -1 for x or y indicate the values aren't set
+    // Minimum/maximum sizes and insets are specified with respect to the extended frame bounds as returned by
+    // DwmGetWindowAttribute(DWMWA_EXTENDED_FRAME_BOUNDS), not with respect to the window size as returned by
+    // GetWindowRect(). Beginning with Windows 10, an invisible border is added to the windows's frame to make
+    // it easier to grab the thin border. The extended frame bounds only include the visible borders, but not
+    // the invisible resize border (GetWindowRect also includes the invisible resize border).
+    // Specify -1 for x or y to indicate the values aren't set.
     POINT m_minSize;
     POINT m_maxSize;
+
+    // NOTE: this is not a rectangle.
+    // The left, top, right, and bottom components contain corresponding insets values.
+    RECT m_insets;
 
     HMONITOR m_hMonitor;
 
@@ -156,10 +165,6 @@ private:
     HMENU m_hMenu;
 
     HICON m_hIcon;
-
-    //NOTE: this is not a rectangle. The left, top, right, and bottom
-    //components contain corresponding insets values.
-    RECT m_insets;
 
     static unsigned int sm_instanceCounter;
     static HHOOK sm_hCBTFilter;
