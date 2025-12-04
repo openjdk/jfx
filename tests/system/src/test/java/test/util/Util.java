@@ -466,6 +466,17 @@ public class Util {
     }
 
     /**
+     * Returns true if two pixel values are "near", i.e. the distance between them is less than
+     * an arbitrarily chosen constant (0.1).
+     * @param a the first coordinate
+     * @param b the second coordinate
+     * @return true if two coordinates are near
+     */
+    public static boolean isNear(double a, double b) {
+        return Math.abs(a - b) < 0.1;
+    }
+
+    /**
      * Creates a {@link Timeline} where each {@link KeyFrame} runs a {@link Runnable}.
      * Each {@link Runnable} will be scheduled at an increment of {@code msToIncrement} milliseconds.
      *

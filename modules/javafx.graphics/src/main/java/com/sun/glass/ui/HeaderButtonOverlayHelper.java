@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,38 @@
  * questions.
  */
 
-#import <Metal/Metal.h>
+package com.sun.glass.ui;
 
-@interface GlassMTLFrameBufferObject : NSObject
-{
-    unsigned int _width;
-    unsigned int _height;
+import com.sun.javafx.scene.layout.RegionHelper;
+import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 
-    volatile id<MTLTexture> _texture;
-    BOOL   _isSwPipe;
+final class HeaderButtonOverlayHelper extends RegionHelper {
 
-    NSLock* lock;
+    private static final HeaderButtonOverlayHelper theInstance = new HeaderButtonOverlayHelper();
+    private static Accessor theAccessor;
+
+    private HeaderButtonOverlayHelper() {}
+
+    static {
+        Utils.forceInit(HeaderButtonOverlay.class);
+    }
+
+    public static void setAccessor(Accessor accessor) {
+        theAccessor = accessor;
+    }
+
+    public static void initHelper(HeaderButtonOverlay overlay) {
+        setHelper(overlay, theInstance);
+    }
+
+    @Override
+    protected void processCSSImpl(Node node) {
+        super.processCSSImpl(node);
+        theAccessor.afterProcessCSS((HeaderButtonOverlay)node);
+    }
+
+    public interface Accessor {
+        void afterProcessCSS(HeaderButtonOverlay overlay);
+    }
 }
-
-- (void)blitFromFBO:(GlassMTLFrameBufferObject*)other_fbo;
-- (id<MTLTexture>)texture;
-- (void)setIsSwPipe:(BOOL)isSwPipe;
-- (unsigned int)width;
-- (unsigned int)height;
-- (void)bindForWidth:(unsigned int)width
-           andHeight:(unsigned int)height;
-- (void)blitForWidth:(unsigned int)width
-           andHeight:(unsigned int)height;
-- (bool)tryLockTexture;
-- (void)unlockTexture;
-
-@end
