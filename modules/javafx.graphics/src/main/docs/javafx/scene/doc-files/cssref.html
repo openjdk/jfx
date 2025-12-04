@@ -1789,11 +1789,34 @@
         ) ]+ </span></p>
 
     <h3><a id="typeeasingfunction">&lt;easing-function&gt;</a></h3>
-    <p class="grammar">linear | &lt;cubic-bezier-easing-function&gt; | &lt;step-easing-function&gt; | &lt;fx-easing-function&gt;</p>
+    <p class="grammar">linear | &lt;linear-easing-function&gt; | &lt;cubic-bezier-easing-function&gt; | &lt;step-easing-function&gt; | &lt;fx-easing-function&gt;</p>
     <p><strong>Linear</strong> <span class="grammar" style="font-size: smaller;">linear</span><br>
-       The linear easing function is a simple linear mapping from the input progress value to the output progress value.</p>
+       The linear easing keyword is a simple linear mapping from the input progress value to the output progress value.<br>
+       It it equivalent to <span class="grammar">linear(0, 1)</span></p>
     <figure style="display: inline-block">
         <img src="easing-linear.svg" width="200" alt="Linear easing function">
+    </figure>
+    <p><strong>Linear Easing Function</strong> <span class="grammar" style="font-size: smaller;">&lt;linear-easing-function&gt;</span><br></p>
+    <p class="grammar">linear([ <a href="#typenumber" class="typelink">&lt;number&gt;</a> && <a href="#typepercentage" class="typelink">&lt;percentage&gt;{0,2}</a> ]#)</p>
+    <p>The linear easing function interpolates linearly between its control points. The control points are specified
+        as a comma-separated list of two or more items, where each item consists of a <a href="#typenumber" class="typelink">&lt;number&gt;</a>,
+        optionally followed by one or two <a href="#typepercentage" class="typelink">&lt;percentage&gt;</a> values.</p>
+    <p>The <a href="#typenumber" class="typelink">&lt;number&gt;</a> specifies the progress of the animation in time.
+        The optional <a href="#typepercentage" class="typelink">&lt;percentage&gt;</a> specifies when that progress
+        is reached; if two percentages are specified, they indicate a segment of time when the animation is paused.
+        If no percentage is specified, the control point is spaced evenly between neighboring control points.</p>
+    <p>Examples of linear easing functions:</p>
+    <figure style="display: inline-block">
+        <img src="easing-linear-func1.svg" width="200" alt="linear easing function">
+        <figcaption style="margin-left: 40px" class="grammar">linear(0, 0.25, 1)</figcaption>
+    </figure>
+    <figure style="display: inline-block">
+        <img src="easing-linear-func2.svg" width="200" alt="linear easing function">
+        <figcaption style="margin-left: 20px" class="grammar">linear(0, 0.25 75%, 1)</figcaption>
+    </figure>
+    <figure style="display: inline-block">
+        <img src="easing-linear-func3.svg" width="200" alt="linear easing function">
+        <figcaption style="margin-left: 10px" class="grammar">linear(0, 0.25 25% 75%, 1)</figcaption>
     </figure>
     <p><strong>Cubic Bézier Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;cubic-bezier-easing-function&gt;</span><br></p>
     <p class="grammar">ease | ease-in | ease-out | ease-in-out | cubic-bezier(<a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>)</p>
