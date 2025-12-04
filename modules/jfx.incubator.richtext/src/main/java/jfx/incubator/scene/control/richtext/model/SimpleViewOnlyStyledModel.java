@@ -498,7 +498,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         }
 
         private List<StyledSegment> getSegments() {
-            return segments;
+            return segments == null ? List.of() : segments;
         }
 
         private int size() {
