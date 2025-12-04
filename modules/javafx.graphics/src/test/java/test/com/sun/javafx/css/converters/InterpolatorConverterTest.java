@@ -30,6 +30,7 @@ import com.sun.javafx.css.ParsedValueImpl;
 import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
+import javafx.geometry.Point2D;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,16 @@ public class InterpolatorConverterTest {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("linear", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
         assertInterpolatorEquals(LINEAR, result);
+    }
+
+    @Test
+    public void testConvertLinearInterpolatorWithControlPoints() {
+        var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
+            new ParsedValueImpl<>("linear(", null),
+            new ParsedValueImpl<>(List.of(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), null) },
+            null);
+        var result = InterpolatorConverter.getInstance().convert(value, null);
+        assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), result);
     }
 
     @Test

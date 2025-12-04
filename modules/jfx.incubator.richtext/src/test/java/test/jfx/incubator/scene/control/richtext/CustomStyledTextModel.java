@@ -78,6 +78,10 @@ public class CustomStyledTextModel extends StyledTextModel {
     }
 
     @Override
+    protected void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs) {
+    }
+
+    @Override
     protected void setParagraphStyle(int index, StyleAttributeMap paragraphAttrs) {
     }
 
