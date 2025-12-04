@@ -114,6 +114,7 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                 });
 
                 default -> throw new AssertionError();
+                // This is the end of the switch expr
             };
         }
 
