@@ -216,7 +216,8 @@ public abstract class Interpolator {
     };
 
     /**
-     * Use {@link #ofSpline(double, double, double, double)}.
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofSpline(double, double, double, double)} instead.
      *
      * @param x1 x coordinate of the first control point
      * @param y1 y coordinate of the first control point
@@ -251,7 +252,8 @@ public abstract class Interpolator {
     }
 
     /**
-     * Use {@link #ofTangent(Duration, double, Duration, double)}.
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofTangent(Duration, double, Duration, double)} instead.
      *
      * @param t1 the delta time of the in-tangent, relative to the KeyFrame
      * @param v1 the value of the in-tangent
@@ -301,7 +303,8 @@ public abstract class Interpolator {
     }
 
     /**
-     * Use {@link #ofTangent(Duration, double)}.
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofTangent(Duration, double)} instead.
      *
      * @param t the delta time of the tangent
      * @param v the value of the tangent
@@ -384,7 +387,8 @@ public abstract class Interpolator {
     public static final Interpolator STEP_END = ofSteps(1, StepPosition.END);
 
     /**
-     * Use {@link #ofSteps(int, StepPosition)}.
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofSteps(int, StepPosition)} instead.
      *
      * @param intervalCount the number of intervals in the step interpolator
      * @param position the {@code StepPosition} of the step interpolator
