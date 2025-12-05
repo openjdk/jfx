@@ -313,6 +313,11 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void applyStyleBeyondDocumentEnd() {
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(100, 3), BOLD);
+    }
+
+    @Test
     public void clear() {
         control.appendText("a");
         control.clear();
@@ -715,6 +720,13 @@ public class RichTextAreaTest {
         control.appendText("1234");
         control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-");
         assertEquals("1-4", text());
+    }
+
+    @Test
+    public void replaceTextBeyondDocumentEnd() {
+        control.appendText("1\n");
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(33, 3), "-");
+        assertEquals("1-", text());
     }
 
     @Test

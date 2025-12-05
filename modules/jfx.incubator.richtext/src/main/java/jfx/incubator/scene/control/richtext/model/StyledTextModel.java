@@ -777,6 +777,7 @@ public abstract class StyledTextModel {
     public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
         checkWritable();
 
+        // TODO clamp to document boundaries
         if (start.compareTo(end) > 0) {
             TextPos p = start;
             start = end;
