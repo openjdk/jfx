@@ -27,6 +27,7 @@ package javafx.stage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -36,6 +37,8 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.AnchorPoint;
+import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
@@ -50,6 +53,7 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
+import com.sun.javafx.stage.WindowBoundsUtil;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
@@ -1214,6 +1218,89 @@ public class Stage extends Window {
     }
 
     /**
+     * Moves this stage to the specified screen location using the given anchor.
+     * <p>
+     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
+     * coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is then
+     * adjusted to keep the stage within the screen bounds.
+     * <p>
+     * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
+     * If called <em>before</em> the stage is shown, then
+     * <ol>
+     *     <li>any previous call to {@link #centerOnScreen()} is disregarded,
+     *     <li>the {@link #xProperty() X} and {@link #yProperty() Y} properties are not updated
+     *         immediately; instead, they are updated after the stage is shown.
+     * </ol>
+     * Calling this method is equivalent to calling
+     * {@code relocate(anchorX, anchorY, anchor, AnchorPolicy.FIXED, Insets.EMPTY)}.
+     *
+     * @param anchorX the requested horizontal location of the anchor point on the screen
+     * @param anchorY the requested vertical location of the anchor point on the screen
+     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
+     * @throws NullPointerException if {@code anchor} is {@code null}
+     * @since 26
+     */
+    public final void relocate(double anchorX, double anchorY, AnchorPoint anchor) {
+        relocate(anchorX, anchorY, anchor, AnchorPolicy.FIXED, Insets.EMPTY);
+    }
+
+    /**
+     * Moves this stage to the specified screen location using the given anchor, anchor-selection policy,
+     * and screen edge constraints.
+     * <p>
+     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
+     * coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is then
+     * optionally adjusted to keep the stage within the usable screen area.
+     * <p>
+     * The {@code anchorPolicy} controls whether an alternative anchor may be used when the preferred anchor
+     * would place the stage outside the usable screen area. Depending on the policy, the preferred anchor
+     * location may be mirrored to the other side of the window horizontally or vertically, or an anchor might
+     * be selected automatically. If no alternative anchor yields a better placement, the specified
+     * {@code anchor} is used.
+     * <p>
+     * The {@code screenPadding} parameter defines per-edge constraints against the current screen bounds.
+     * Each inset value specifies the minimum distance to maintain between the stage edge and the corresponding
+     * screen edge. A value {@code >= 0} enables the corresponding edge constraint; a negative value disables
+     * the constraint for that edge. Enabled constraints effectively shrink the usable screen area by the
+     * given insets. For example, a left inset of {@code 10} ensures the stage will not be placed closer than
+     * 10 pixels to the left screen edge.
+     * <p>
+     * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
+     * If called <em>before</em> the stage is shown, then
+     * <ol>
+     *     <li>any previous call to {@link #centerOnScreen()} is disregarded,
+     *     <li>the {@link #xProperty() X} and {@link #yProperty() Y} properties are not updated
+     *         immediately; instead, they are updated after the stage is shown.
+     * </ol>
+     *
+     * @param anchorX the requested horizontal location of the anchor point on the screen
+     * @param anchorY the requested vertical location of the anchor point on the screen
+     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
+     * @param anchorPolicy controls alternative anchor selection if the preferred placement violates
+     *                     enabled screen constraints
+     * @param screenPadding per-edge minimum distance constraints relative to the screen edges;
+     *                      values {@code < 0} disable the constraint for the respective edge
+     * @throws NullPointerException if {@code anchor}, {@code anchorPolicy}, or {@code screenPadding} is {@code null}
+     * @since 26
+     */
+    public final void relocate(double anchorX, double anchorY, AnchorPoint anchor,
+                               AnchorPolicy anchorPolicy, Insets screenPadding) {
+        var request = WindowBoundsUtil.newDeferredRelocation(anchorX, anchorY, anchor, anchorPolicy, screenPadding);
+
+        if (isShowing()) {
+            request.accept(this);
+        } else {
+            this.relocationRequest = request;
+        }
+    }
+
+    @Override
+    public void centerOnScreen() {
+        relocationRequest = null; // cancel previous relocation request
+        super.centerOnScreen();
+    }
+
+    /**
      * Closes this {@code Stage}.
      * This call is equivalent to {@code hide()}.
      *
@@ -1315,4 +1402,11 @@ public class Stage extends Window {
             peer.setPrefHeaderButtonHeight(height);
         }
     }
+
+    @Override
+    final Consumer<Window> getBoundsConfigurator() {
+        return relocationRequest;
+    }
+
+    private Consumer<Window> relocationRequest;
 }
