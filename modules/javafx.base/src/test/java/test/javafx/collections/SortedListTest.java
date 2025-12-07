@@ -45,6 +45,7 @@ import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import test.javafx.util.ReflectionUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -608,5 +609,75 @@ public class SortedListTest {
         assertThrows(IndexOutOfBoundsException.class, () -> sortedList.getViewIndex(-1));
         assertThrows(IndexOutOfBoundsException.class, () -> sortedList.getViewIndex(sortedList.size()));
         assertDoesNotThrow(() -> sortedList.getViewIndex(sortedList.size() - 1));
+    }
+
+    // Tests that there are no unnecessary object references retained in SortedList's internal objects
+    @Test
+    public void testNonRequiredInternalReferencesAreNull() {
+        list.clear();
+
+        // Create SortedList without comparator (unsorted) also (as there are differences in behavior)
+        SortedList<String> unsortedSortedList = new SortedList<>(list);
+        assertEquals(0, sortedList.size());
+        assertEquals(0, unsortedSortedList.size());
+
+        checkElementsBeyondSizeAreNull(0,  ReflectionUtils.getFieldValue(sortedList, "sorted"));
+        checkElementsBeyondSizeAreNull(0, ReflectionUtils.getFieldValue(unsortedSortedList,
+                "sorted"));
+
+        list.addAll("a", "b", "c", "d", "e", "f", "g", "h");
+        assertEquals(8, sortedList.size());
+        assertEquals(8, unsortedSortedList.size());
+        checkElementsBeyondSizeAreNull(8, ReflectionUtils.getFieldValue(sortedList, "sorted"));
+        checkElementsBeyondSizeAreNull(8, ReflectionUtils.getFieldValue(unsortedSortedList,
+                "sorted"));
+
+        // Remove some elements, ensure no unnecessary references are retained after reduction in size
+        list.removeAll("e", "f");
+        assertEquals(6, sortedList.size());
+        assertEquals(6, unsortedSortedList.size());
+        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(sortedList, "sorted"));
+        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(unsortedSortedList,
+                "sorted"));
+
+        // This will trigger SortedList.tempElement assignment (in sortedList, not unsortedSortedList)
+        list.set(3, "3");
+
+        // Now ensure tempElement.e is set to null after the operation
+        assertNull(ReflectionUtils.getFieldValue(ReflectionUtils.getFieldValue(sortedList, "tempElement"), "e"),
+                "tempElement.e property should be null after set operation has completed");
+        assertEquals(6, sortedList.size());
+        assertEquals(6, unsortedSortedList.size());
+
+        // Do a setAll and ensure no unnecessary references are retained after reduction in size
+        list.setAll("x", "y", "z");
+        assertEquals(3, sortedList.size());
+        assertEquals(3, unsortedSortedList.size());
+        checkElementsBeyondSizeAreNull(3, ReflectionUtils.getFieldValue(sortedList, "sorted"));
+        checkElementsBeyondSizeAreNull(3, ReflectionUtils.getFieldValue(unsortedSortedList,
+                "sorted"));
+
+        // Add some valid nulls
+        list.setAll("x", null, null, "z", "y", null);
+        assertEquals(6, sortedList.size());
+        assertEquals(6, unsortedSortedList.size());
+        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(sortedList, "sorted"));
+        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(unsortedSortedList,
+                "sorted"));
+
+        // Finally reduce to single element, ensure no confusion with nulls
+        list.setAll("x");
+        assertEquals(1, sortedList.size());
+        assertEquals(1, unsortedSortedList.size());
+        checkElementsBeyondSizeAreNull(1, ReflectionUtils.getFieldValue(sortedList, "sorted"));
+        checkElementsBeyondSizeAreNull(1, ReflectionUtils.getFieldValue(unsortedSortedList,
+                "sorted"));
+    }
+
+    private void checkElementsBeyondSizeAreNull(int relevantSize, Object[] array) {
+        // Anything at index >= relevantSize should be null
+        for (int i = relevantSize; i < array.length; i++) {
+            assertNull(array[i], "Element at index " + i + " should be null");
+        }
     }
 }
