@@ -107,6 +107,8 @@ typedef enum VertexInputIndex {
     int cullMode;
 
     id<MTLBuffer> pixelBuffer;
+    id<MTLSamplerState> nonMipmappedSamplerState;
+    id<MTLSamplerState> mipmappedSamplerState;
 }
 
 - (void) setCompositeMode:(int)mode;
@@ -183,6 +185,7 @@ typedef enum VertexInputIndex {
 - (void) dealloc;
 - (id<MTLSamplerState>) getSampler:(bool)isLinear wrapMode:(int)wrapMode;
 - (id<MTLSamplerState>) createSampler:(bool)isLinear wrapMode:(int)wrapMode;
+- (id<MTLSamplerState>) get3DSamplerState:(bool)mipmapped;
 - (id<MTLCommandQueue>) getCommandQueue;
 
 - (void) validatePixelBuffer:(NSUInteger)length;

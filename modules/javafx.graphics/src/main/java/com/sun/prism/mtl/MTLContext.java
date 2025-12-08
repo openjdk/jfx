@@ -357,8 +357,10 @@ class MTLContext extends BaseShaderContext {
         nSetSpecularColor(pContext, nativePhongMaterial, set, r, g, b, a);
     }
 
-    void setMap(long nativePhongMaterial, int mapType, long nativeTexture) {
-        nSetMap(pContext, nativePhongMaterial, mapType, nativeTexture);
+    void setMap(long nativePhongMaterial, int mapType,
+                long nativeTexture, boolean useMipmap) {
+        nSetMap(pContext, nativePhongMaterial,
+            mapType, nativeTexture, useMipmap);
     }
 
     long createMTLMeshView(long nativeMesh) {
@@ -534,7 +536,7 @@ class MTLContext extends BaseShaderContext {
     private static native void nSetSpecularColor(long pContext, long nativePhongMaterial,
                                                  boolean set, float r, float g, float b, float a);
     private static native void nSetMap(long pContext, long nativePhongMaterial,
-                                       int mapType, long texID);
+                                       int mapType, long texID, boolean useMipmap);
     private static native long nCreateMTLMeshView(long pContext, long nativeMesh);
     private static native void nReleaseMTLMeshView(long pContext, long nativeHandle);
     private static native void nSetCullingMode(long pContext, long nativeMeshView,

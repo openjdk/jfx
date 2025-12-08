@@ -228,12 +228,20 @@
                                 atIndex:0];
     [phongEncoder setFragmentTexture:[material getMap:DIFFUSE]
                              atIndex:0];
+    [phongEncoder setFragmentSamplerState:[material getSamplerState:DIFFUSE]
+                                  atIndex:0];
     [phongEncoder setFragmentTexture:[material getMap:SPECULAR]
                              atIndex:1];
+    [phongEncoder setFragmentSamplerState:[material getSamplerState:SPECULAR]
+                                  atIndex:0];
     [phongEncoder setFragmentTexture:[material getMap:BUMP]
                              atIndex:2];
+    [phongEncoder setFragmentSamplerState:[material getSamplerState:BUMP]
+                                  atIndex:0];
     [phongEncoder setFragmentTexture:[material getMap:SELFILLUMINATION]
                              atIndex:3];
+    [phongEncoder setFragmentSamplerState:[material getSamplerState:SELFILLUMINATION]
+                                  atIndex:0];
 
     [phongEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
         indexCount:[mesh getNumIndices]

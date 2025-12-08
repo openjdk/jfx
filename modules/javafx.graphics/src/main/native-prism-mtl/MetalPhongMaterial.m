@@ -113,10 +113,12 @@
 
 - (void) setMap:(int)mapID
             map:(id<MTLTexture>)texMap
+      useMipmap:(bool)mipmapped
 {
     // Within the range of DIFFUSE, SPECULAR, BUMP, SELFILLUMINATION
     if (mapID >= 0 && mapID <= 3) {
         map[mapID] = texMap;
+        samplerState[mapID] = [context get3DSamplerState:mipmapped];
     } else {
         NSLog(@"MetalPhongMaterial.setMap(): mapID is out of range");
     }
@@ -130,5 +132,10 @@
     }
     NSLog(@"MetalPhongMaterial.getMap(): mapID is out of range");
     return nil;
+}
+
+- (id<MTLSamplerState>) getSamplerState:(int)mapID
+{
+    return samplerState[mapID];
 }
 @end // MetalPhongMaterial
