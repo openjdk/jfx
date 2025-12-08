@@ -46,33 +46,31 @@ public enum AnchorPolicy {
     /**
      * Always use the preferred anchor and never select an alternative anchor.
      * <p>
-     * If the preferred placement violates the allowed screen area, the window position is adjusted
-     * for the window to fall within the allowed screen area. If this is not possible, the window is
-     * biased towards the edge that is closer to the anchor.
+     * If the preferred anchor places the window outside the usable screen area, the window position is
+     * adjusted for the window to fall within the usable screen area. If this is not possible, the window
+     * is biased towards the edge that is closer to the anchor.
      */
     FIXED,
 
     /**
      * If the preferred anchor violates horizontal constraints, attempt a horizontally flipped anchor.
      * <p>
-     * A horizontal flip mirrors the anchor across the vertical center line of the window
-     * (for example, {@code TOP_LEFT} becomes {@code TOP_RIGHT}).
-     * <p>
-     * If the horizontally flipped anchor does not improve the placement, the original anchor is used
-     * and the final position is adjusted for the window to fall within the allowed screen area.
-     * If this is not possible, the window is biased towards the edge that is closer to the anchor.
+     * A horizontal flip mirrors the anchor across the vertical center line of the window (for example,
+     * {@code TOP_LEFT} becomes {@code TOP_RIGHT}). If the horizontally flipped anchor does not improve
+     * the placement, the original anchor is used and the final position is adjusted for the window to
+     * fall within the usable screen area. If this is not possible, the window is biased towards the
+     * edge that is closer to the anchor.
      */
     FLIP_HORIZONTAL,
 
     /**
      * If the preferred anchor violates vertical constraints, attempt a vertically flipped anchor.
      * <p>
-     * A vertical flip mirrors the anchor across the horizontal center line of the window
-     * (for example, {@code TOP_LEFT} becomes {@code BOTTOM_LEFT}).
-     * <p>
-     * If the vertically flipped anchor does not improve the placement, the original anchor is used
-     * and the final position is adjusted for the window to fall within the allowed screen area.
-     * If this is not possible, the window is biased towards the edge that is closer to the anchor.
+     * A vertical flip mirrors the anchor across the horizontal center line of the window (for example,
+     * {@code TOP_LEFT} becomes {@code BOTTOM_LEFT}). If the vertically flipped anchor does not improve
+     * the placement, the original anchor is used and the final position is adjusted for the window to
+     * fall within the usable screen area. If this is not possible, the window is biased towards the
+     * edge that is closer to the anchor.
      */
     FLIP_VERTICAL,
 
@@ -83,11 +81,11 @@ public enum AnchorPolicy {
      * <ul>
      *   <li>If only horizontal constraints are violated, it behaves like {@link #FLIP_HORIZONTAL}.
      *   <li>If only vertical constraints are violated, it behaves like {@link #FLIP_VERTICAL}.
-     *   <li>If both horizontal and vertical constraints are violated, it may attempt a diagonal flip
-     *       (horizontal and vertical) to keep the window on the opposite side of the requested point.
+     *   <li>If both horizontal and vertical constraints are violated, it attempts a diagonal flip,
+     *       then a horizontal flip, and finally a vertical flip.
      * </ul>
      * If no alternative anchor yields a better placement, the original anchor is used and the final
-     * position is adjusted for the window to fall within the allowed screen area.
+     * position is adjusted for the window to fall within the usable screen area.
      * If this is not possible, the window is biased towards the edge that is closer to the anchor.
      */
     AUTO

@@ -53,7 +53,7 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
-import com.sun.javafx.stage.WindowBoundsUtil;
+import com.sun.javafx.stage.WindowRelocator;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
@@ -1246,11 +1246,11 @@ public class Stage extends Window {
 
     /**
      * Moves this stage to the specified screen location using the given anchor, anchor-selection policy,
-     * and screen edge constraints.
+     * and screen edge constraints that may restrict the usable screen area.
      * <p>
-     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
-     * coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is then
-     * optionally adjusted to keep the stage within the usable screen area.
+     * The {@code anchor} identifies a point in stage coordinates that should coincide with the requested
+     * screen coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is
+     * then optionally adjusted to keep the stage within the usable screen area.
      * <p>
      * The {@code anchorPolicy} controls whether an alternative anchor may be used when the preferred anchor
      * would place the stage outside the usable screen area. Depending on the policy, the preferred anchor
@@ -1275,7 +1275,8 @@ public class Stage extends Window {
      *
      * @param anchorX the requested horizontal location of the anchor point on the screen
      * @param anchorY the requested vertical location of the anchor point on the screen
-     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
+     * @param anchor the point in stage coordinates that should coincide with {@code (anchorX, anchorY)}
+     *               in screen coordinates
      * @param anchorPolicy controls alternative anchor selection if the preferred placement violates
      *                     enabled screen constraints
      * @param screenPadding per-edge minimum distance constraints relative to the screen edges;
@@ -1285,7 +1286,7 @@ public class Stage extends Window {
      */
     public final void relocate(double anchorX, double anchorY, AnchorPoint anchor,
                                AnchorPolicy anchorPolicy, Insets screenPadding) {
-        var request = WindowBoundsUtil.newDeferredRelocation(anchorX, anchorY, anchor, anchorPolicy, screenPadding);
+        var request = WindowRelocator.newDeferredRelocator(anchorX, anchorY, anchor, anchorPolicy, screenPadding);
 
         if (isShowing()) {
             request.accept(this);

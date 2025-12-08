@@ -37,22 +37,24 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public final class WindowBoundsUtil {
+public final class WindowRelocator {
 
-    private WindowBoundsUtil() {}
+    private WindowRelocator() {}
 
     /**
-     * Creates a relocation operation that positions a {@link Window} at the requested screen coordinates
+     * Creates a relocator that positions a {@link Window} at the requested screen coordinates
      * using an {@link AnchorPoint}, {@link AnchorPolicy}, and per-edge screen constraints.
      * <p>
      * Screen edge constraints are specified by {@code screenPadding}:
-     * values {@code >= 0} enable a constraint for the corresponding edge (minimum distance to keep),
-     * values {@code < 0} disable the constraint for that edge. Enabled constraints reduce the usable area
-     * for placement by the given insets.
+     * <ul>
+     *     <li>values {@code >= 0} enable a constraint for the corresponding edge (minimum distance to keep)
+     *     <li>values {@code < 0} disable the constraint for that edge
+     * </ul>
+     * Enabled constraints reduce the usable area for placement by the given insets.
      */
-    public static Consumer<Window> newDeferredRelocation(double screenX, double screenY,
-                                                         AnchorPoint anchor, AnchorPolicy anchorPolicy,
-                                                         Insets screenPadding) {
+    public static Consumer<Window> newDeferredRelocator(double screenX, double screenY,
+                                                        AnchorPoint anchor, AnchorPolicy anchorPolicy,
+                                                        Insets screenPadding) {
         Objects.requireNonNull(anchor, "anchor cannot be null");
         Objects.requireNonNull(anchorPolicy, "anchorPolicy cannot be null");
         Objects.requireNonNull(screenPadding, "screenPadding cannot be null");
@@ -271,19 +273,16 @@ public final class WindowBoundsUtil {
     private static AnchorPoint flipAnchor(AnchorPoint anchor,
                                           double width, double height,
                                           boolean flipH, boolean flipV) {
-        if (anchor.isProportional()) {
-            double x = anchor.getX();
-            double y = anchor.getY();
-            double nx = flipH ? (1.0 - x) : x;
-            double ny = flipV ? (1.0 - y) : y;
-            return AnchorPoint.proportional(nx, ny);
-        } else {
-            double x = anchor.getX();
-            double y = anchor.getY();
-            double nx = flipH ? (width  - x) : x;
-            double ny = flipV ? (height - y) : y;
-            return AnchorPoint.absolute(nx, ny);
-        }
+        double x = anchor.getX();
+        double y = anchor.getY();
+
+        return anchor.isProportional()
+            ? AnchorPoint.proportional(
+                flipH ? (1.0 - x) : x,
+                flipV ? (1.0 - y) : y)
+            : AnchorPoint.absolute(
+                flipH ? (width - x) : x,
+                flipV ? (height - y) : y);
     }
 
     private record Constraints(boolean hasMinX, boolean hasMaxX,

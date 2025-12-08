@@ -30,6 +30,7 @@ import com.sun.javafx.util.Utils;
 import com.sun.javafx.event.DirectEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -62,9 +63,9 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.PopupWindowPeerListener;
-import com.sun.javafx.stage.WindowBoundsUtil;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
+import com.sun.javafx.stage.WindowRelocator;
 import com.sun.javafx.tk.Toolkit;
 
 import com.sun.javafx.stage.PopupWindowHelper;
@@ -813,11 +814,12 @@ public abstract class PopupWindow extends Window {
                             ? currentScreen.getBounds()
                             : currentScreen.getVisualBounds();
 
-            Point2D location = WindowBoundsUtil.computeAdjustedLocation(
+            Point2D location = WindowRelocator.computeAdjustedLocation(
                 newAnchorX, newAnchorY,
                 anchorBounds.getWidth(), anchorBounds.getHeight(),
                 AnchorPoint.proportional(anchorXCoef, anchorYCoef),
-                getAnchorPolicy(), screenBounds, Insets.EMPTY);
+                Objects.requireNonNullElse(getAnchorPolicy(), AnchorPolicy.FIXED),
+                screenBounds, Insets.EMPTY);
 
             anchorScrMinX = location.getX();
             anchorScrMinY = location.getY();
