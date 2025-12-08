@@ -185,7 +185,7 @@ static void set_bytebuffer_data(GtkSelectionData *selection_data, GdkAtom target
 
 static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     const gchar* url = NULL;
-    jstring jurl = NULL;
+    jobject jurl = NULL;
 
     jobjectArray files_array = NULL;
     gsize files_cnt = 0;
@@ -195,10 +195,10 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     typeString = mainEnv->NewStringUTF("text/uri-list");
     if (mainEnv->ExceptionCheck()) return;
     if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
-        jurl = (jstring) mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
+        jurl = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         CHECK_JNI_EXCEPTION(mainEnv);
         if (jurl != NULL && mainEnv->IsInstanceOf(jurl, jStringCls)) {
-            url = getUTF(mainEnv, jurl);
+            url = getUTF(mainEnv, (jstring)jurl);
         }
     }
 
@@ -232,9 +232,9 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     gsize i = 0;
     if (files_cnt > 0) {
         for (; i < files_cnt; ++i) {
-            jstring string = (jstring) mainEnv->GetObjectArrayElement(files_array, i);
-            if (string != NULL && mainEnv->IsInstanceOf(string, jStringCls)) {
-                const gchar* file = getUTF(mainEnv, string);
+            jobject stringObj = mainEnv->GetObjectArrayElement(files_array, i);
+            if (stringObj != NULL && mainEnv->IsInstanceOf(stringObj, jStringCls)) {
+                const gchar* file = getUTF(mainEnv, (jstring)stringObj);
                 uris[i] = g_filename_to_uri(file, NULL, NULL);
                 g_free((gpointer)file);
             }
