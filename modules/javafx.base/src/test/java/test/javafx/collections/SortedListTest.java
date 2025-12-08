@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javafx.beans.Observable;
@@ -618,41 +619,90 @@ public class SortedListTest {
     // Tests that there are no unnecessary object references retained in SortedList's internal sorted array
     @ParameterizedTest
     @MethodSource("parametersRefsNull")
-    public void testNonRequiredInternalReferencesAreNull(List<String> immutableInitialSourceList,
-                                                         Comparator<String> comparator) {
+    public void testNoReferencesRetained(List<String> immutableInitialSourceList,
+                                         Comparator<String> comparator) {
         ObservableList<String> source = FXCollections.observableArrayList(immutableInitialSourceList);
         SortedList<String> testSortedList = new SortedList<>(source, comparator);
 
+        // Make a mutable copy, sort it; will be used and manipulated for comparisons with the SortedList
+        ArrayList<String> expectedList = new ArrayList<>(immutableInitialSourceList);
+
+        // Sorts the list if comparator is non-null
+        Consumer<List<String>> sortIf = (list) -> {
+            if (comparator != null) {
+                list.sort(comparator);
+            }
+        };
+
         // Ensure initial state is as expected
-        int initialSourceSize = immutableInitialSourceList.size();
-        assertEquals(source.size(), initialSourceSize);
-        assertEquals(testSortedList.size(), initialSourceSize);
-        assertTrue(source.containsAll(immutableInitialSourceList));
-        assertTrue(testSortedList.containsAll(immutableInitialSourceList));
+        sortIf.accept(expectedList);
+        assertEquals(expectedList, testSortedList);
         checkElementsBeyondSizeAreNull(testSortedList.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
 
         // Remove some elements, ensure no unnecessary references were retained after reduction in size
         source.removeAll("b", "c");
-        assertEquals(initialSourceSize - 2, testSortedList.size());
-        assertEquals(source.size(), testSortedList.size());
+        expectedList.remove("b");
+        expectedList.remove("c");
+        assertEquals(expectedList, testSortedList);
         checkElementsBeyondSizeAreNull(testSortedList.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
 
         // Set some elements, ensure no unnecessary references were retained
         source.setAll("x", "y");
-        assertEquals(2, testSortedList.size());
-        assertEquals(source.size(), testSortedList.size());
-        checkElementsBeyondSizeAreNull(2, ReflectionUtils.getFieldValue(testSortedList, "sorted"));
+        expectedList.clear();
+        expectedList.addAll(List.of("x", "y"));
+        sortIf.accept(expectedList);
+
+        assertEquals(expectedList, testSortedList);
+        checkElementsBeyondSizeAreNull(source.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
 
         // Reset and remove null elements while ensuring list size is as expected and no unnecessary references are retained
         source.setAll(immutableInitialSourceList);
-        assertEquals(initialSourceSize, testSortedList.size());
+        expectedList.clear();
+        expectedList.addAll(immutableInitialSourceList);
+        sortIf.accept(expectedList);
+        assertEquals(expectedList, testSortedList);
 
-        int count = 0;
         while (source.contains(null)) {
             source.remove(null);
-            assertEquals((initialSourceSize - (++count)), testSortedList.size());
+            expectedList.remove(null);
+            assertEquals(expectedList, testSortedList);
             checkElementsBeyondSizeAreNull(source.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
         }
+    }
+
+    // Similar to testNoReferencesRetained() but specifically tests the code path where comparator is set from existing
+    // to null, which triggers different sorting logic in SortedList (doSortWithPermutationChange())
+    @ParameterizedTest
+    @MethodSource("parametersRefsNull")
+    public void testNoReferencesRetainedWhenComparatorNulled(List<String> immutableInitialSourceList,
+                                                             Comparator<String> comparator) {
+        if (comparator == null) {
+            // This test is for non-null comparators only
+            return;
+        }
+
+        ObservableList<String> source = FXCollections.observableArrayList(immutableInitialSourceList);
+        SortedList<String> testSortedList = new SortedList<>(source, comparator);
+
+        // Make a mutable copy, sort it; will be used and manipulated for comparisons
+        ArrayList<String> expectedList = new ArrayList<>(immutableInitialSourceList);
+        expectedList.sort(comparator);
+
+        source.remove("b");
+        expectedList.remove("b");
+        assertEquals(expectedList, testSortedList);
+        checkElementsBeyondSizeAreNull(testSortedList.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
+
+        // Set the comparator to null, ensure no unnecessary references were retained (covers SortedList's doSortWithPermutationChange() logic)
+        testSortedList.setComparator(null);
+        source.remove("c");
+
+        // We must re-create to unsort expected list
+        expectedList = new ArrayList<>(immutableInitialSourceList);
+        expectedList.remove("b");
+        expectedList.remove("c");
+        assertEquals(expectedList, testSortedList);
+        checkElementsBeyondSizeAreNull(testSortedList.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
     }
 
     private static Stream<Arguments> parametersRefsNull() {
@@ -666,7 +716,7 @@ public class SortedListTest {
         Comparator<String> natural = Comparator.naturalOrder();
         Comparator<String> reverse = Comparator.reverseOrder();
         Comparator<String> nullsFirstNatural = Comparator.nullsFirst(natural);
-        Comparator<String> nullsFirstReverse = Comparator.nullsFirst(natural);
+        Comparator<String> nullsFirstReverse = Comparator.nullsFirst(reverse);
         Comparator<String> nullsLastNatural = Comparator.nullsLast(natural);
         Comparator<String> nullsLastReverse = Comparator.nullsLast(reverse);
 
