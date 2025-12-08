@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import javafx.beans.Observable;
 import javafx.beans.property.SimpleObjectProperty;
@@ -45,6 +46,9 @@ import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.javafx.util.ReflectionUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -611,70 +615,82 @@ public class SortedListTest {
         assertDoesNotThrow(() -> sortedList.getViewIndex(sortedList.size() - 1));
     }
 
-    // Tests that there are no unnecessary object references retained in SortedList's internal objects
-    @Test
-    public void testNonRequiredInternalReferencesAreNull() {
-        list.clear();
+    // Tests that there are no unnecessary object references retained in SortedList's internal sorted array
+    @ParameterizedTest
+    @MethodSource("parametersRefsNull")
+    public void testNonRequiredInternalReferencesAreNull(List<String> immutableInitialSourceList,
+                                                         Comparator<String> comparator) {
+        ObservableList<String> source = FXCollections.observableArrayList(immutableInitialSourceList);
+        SortedList<String> testSortedList = new SortedList<>(source, comparator);
 
-        // Create SortedList without comparator (unsorted) also (as there are differences in behavior)
-        SortedList<String> unsortedSortedList = new SortedList<>(list);
-        assertEquals(0, sortedList.size());
-        assertEquals(0, unsortedSortedList.size());
+        // Ensure initial state is as expected
+        int initialSourceSize = immutableInitialSourceList.size();
+        assertEquals(source.size(), initialSourceSize);
+        assertEquals(testSortedList.size(), initialSourceSize);
+        assertTrue(source.containsAll(immutableInitialSourceList));
+        assertTrue(testSortedList.containsAll(immutableInitialSourceList));
+        checkElementsBeyondSizeAreNull(testSortedList.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
 
-        checkElementsBeyondSizeAreNull(0,  ReflectionUtils.getFieldValue(sortedList, "sorted"));
-        checkElementsBeyondSizeAreNull(0, ReflectionUtils.getFieldValue(unsortedSortedList,
-                "sorted"));
+        // Remove some elements, ensure no unnecessary references were retained after reduction in size
+        source.removeAll("b", "c");
+        assertEquals(initialSourceSize - 2, testSortedList.size());
+        assertEquals(source.size(), testSortedList.size());
+        checkElementsBeyondSizeAreNull(testSortedList.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
 
-        list.addAll("a", "b", "c", "d", "e", "f", "g", "h");
-        assertEquals(8, sortedList.size());
-        assertEquals(8, unsortedSortedList.size());
-        checkElementsBeyondSizeAreNull(8, ReflectionUtils.getFieldValue(sortedList, "sorted"));
-        checkElementsBeyondSizeAreNull(8, ReflectionUtils.getFieldValue(unsortedSortedList,
-                "sorted"));
+        // Set some elements, ensure no unnecessary references were retained
+        source.setAll("x", "y");
+        assertEquals(2, testSortedList.size());
+        assertEquals(source.size(), testSortedList.size());
+        checkElementsBeyondSizeAreNull(2, ReflectionUtils.getFieldValue(testSortedList, "sorted"));
 
-        // Remove some elements, ensure no unnecessary references are retained after reduction in size
-        list.removeAll("e", "f");
-        assertEquals(6, sortedList.size());
-        assertEquals(6, unsortedSortedList.size());
-        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(sortedList, "sorted"));
-        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(unsortedSortedList,
-                "sorted"));
+        // Reset and remove null elements while ensuring list size is as expected and no unnecessary references are retained
+        source.setAll(immutableInitialSourceList);
+        assertEquals(initialSourceSize, testSortedList.size());
 
-        // This will trigger SortedList.tempElement assignment (in sortedList, not unsortedSortedList)
-        list.set(3, "3");
+        int count = 0;
+        while (source.contains(null)) {
+            source.remove(null);
+            assertEquals((initialSourceSize - (++count)), testSortedList.size());
+            checkElementsBeyondSizeAreNull(source.size(), ReflectionUtils.getFieldValue(testSortedList, "sorted"));
+        }
+    }
 
-        // Now ensure tempElement.e is set to null after the operation
-        assertNull(ReflectionUtils.getFieldValue(ReflectionUtils.getFieldValue(sortedList, "tempElement"), "e"),
-                "tempElement.e property should be null after set operation has completed");
-        assertEquals(6, sortedList.size());
-        assertEquals(6, unsortedSortedList.size());
+    private static Stream<Arguments> parametersRefsNull() {
+        List<String> listSurroundNulls =
+                Collections.unmodifiableList(Arrays.asList(null, null, null, null, "b", "c", null, null, null, null));
+        List<String> listWithNulls = Collections.unmodifiableList(
+                Arrays.asList(null, null, "a", "b", "c", "d", null, "e", null, null, null, "f"));
+        List<String> listWithoutNulls =
+                Collections.unmodifiableList(Arrays.asList("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"));
 
-        // Do a setAll and ensure no unnecessary references are retained after reduction in size
-        list.setAll("x", "y", "z");
-        assertEquals(3, sortedList.size());
-        assertEquals(3, unsortedSortedList.size());
-        checkElementsBeyondSizeAreNull(3, ReflectionUtils.getFieldValue(sortedList, "sorted"));
-        checkElementsBeyondSizeAreNull(3, ReflectionUtils.getFieldValue(unsortedSortedList,
-                "sorted"));
+        Comparator<String> natural = Comparator.naturalOrder();
+        Comparator<String> reverse = Comparator.reverseOrder();
+        Comparator<String> nullsFirstNatural = Comparator.nullsFirst(natural);
+        Comparator<String> nullsFirstReverse = Comparator.nullsFirst(natural);
+        Comparator<String> nullsLastNatural = Comparator.nullsLast(natural);
+        Comparator<String> nullsLastReverse = Comparator.nullsLast(reverse);
 
-        // Increase size again
-        list.addAll("a", "b", "c", "d", "e", "f", "g", "h");
+        return Stream.of(
+                Arguments.of(listSurroundNulls, null),
+                Arguments.of(listSurroundNulls, nullsFirstNatural),
+                Arguments.of(listSurroundNulls, nullsFirstReverse),
+                Arguments.of(listSurroundNulls, nullsLastNatural),
+                Arguments.of(listSurroundNulls, nullsLastReverse),
 
-        // Add some valid nulls within range
-        list.setAll("x", null, null, "z", "y", null);
-        assertEquals(6, sortedList.size());
-        assertEquals(6, unsortedSortedList.size());
-        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(sortedList, "sorted"));
-        checkElementsBeyondSizeAreNull(6, ReflectionUtils.getFieldValue(unsortedSortedList,
-                "sorted"));
+                Arguments.of(listWithoutNulls, null),
+                Arguments.of(listWithoutNulls, natural),
+                Arguments.of(listWithoutNulls, nullsFirstNatural),
+                Arguments.of(listWithoutNulls, nullsFirstReverse),
+                Arguments.of(listWithoutNulls, nullsLastNatural),
+                Arguments.of(listWithoutNulls, nullsLastReverse),
+                Arguments.of(listWithoutNulls, reverse),
 
-        // Finally reduce to single element, ensure no confusion with nulls
-        list.setAll("x");
-        assertEquals(1, sortedList.size());
-        assertEquals(1, unsortedSortedList.size());
-        checkElementsBeyondSizeAreNull(1, ReflectionUtils.getFieldValue(sortedList, "sorted"));
-        checkElementsBeyondSizeAreNull(1, ReflectionUtils.getFieldValue(unsortedSortedList,
-                "sorted"));
+                Arguments.of(listWithNulls, null),
+                Arguments.of(listWithNulls, nullsFirstNatural),
+                Arguments.of(listWithNulls, nullsFirstReverse),
+                Arguments.of(listWithNulls, nullsLastReverse),
+                Arguments.of(listWithNulls, nullsLastReverse)
+        );
     }
 
     private void checkElementsBeyondSizeAreNull(int relevantSize, Object[] array) {
@@ -682,5 +698,16 @@ public class SortedListTest {
         for (int i = relevantSize; i < array.length; i++) {
             assertNull(array[i], "Element at index " + i + " should be null");
         }
+    }
+
+    // Tests that there is no unnecessary object reference retained by SortedList's tempElement.e
+    @Test
+    public void testTempElementReferencesAreNull() {
+        // This will trigger SortedList.tempElement assignment (tempElement.e = e)
+        list.set(3, "3");
+
+        // Ensure tempElement.e is set to null after the operation
+        assertNull(ReflectionUtils.getFieldValue(ReflectionUtils.getFieldValue(sortedList, "tempElement"), "e"),
+                "tempElement.e property should be null after set operation has completed");
     }
 }
