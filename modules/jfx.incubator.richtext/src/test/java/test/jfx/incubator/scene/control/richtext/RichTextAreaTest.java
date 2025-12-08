@@ -935,7 +935,7 @@ public class RichTextAreaTest {
     }
 
     private static TextPos tp(int caret) {
-        return new TextPos(0, caret, caret - 1, false);
+        return TextPos.ofLeading(0, caret);
     }
 
     @Test
