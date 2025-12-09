@@ -624,7 +624,7 @@ public class SortedListTest {
         ObservableList<String> source = FXCollections.observableArrayList(immutableInitialSourceList);
         SortedList<String> testSortedList = new SortedList<>(source, comparator);
 
-        // Make a mutable copy, sort it; will be used and manipulated for comparisons with the SortedList
+        // Make a mutable copy; it will be used and manipulated for comparisons with the SortedList
         ArrayList<String> expectedList = new ArrayList<>(immutableInitialSourceList);
 
         // Sorts the list if comparator is non-null
@@ -738,7 +738,7 @@ public class SortedListTest {
                 Arguments.of(listWithNulls, null),
                 Arguments.of(listWithNulls, nullsFirstNatural),
                 Arguments.of(listWithNulls, nullsFirstReverse),
-                Arguments.of(listWithNulls, nullsLastReverse),
+                Arguments.of(listWithNulls, nullsLastNatural),
                 Arguments.of(listWithNulls, nullsLastReverse)
         );
     }
