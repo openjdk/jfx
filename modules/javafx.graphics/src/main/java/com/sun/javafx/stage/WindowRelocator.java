@@ -35,15 +35,14 @@ import javafx.stage.Screen;
 import javafx.stage.Window;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 public final class WindowRelocator {
 
     private WindowRelocator() {}
 
     /**
-     * Creates a relocator that positions a {@link Window} at the requested screen coordinates
-     * using an {@link AnchorPoint}, {@link AnchorPolicy}, and per-edge screen constraints.
+     * Creates a location algorithm that computes the position of the {@link Window} at the requested screen
+     * coordinates using an {@link AnchorPoint}, {@link AnchorPolicy}, and per-edge screen constraints.
      * <p>
      * Screen edge constraints are specified by {@code screenPadding}:
      * <ul>
@@ -52,27 +51,57 @@ public final class WindowRelocator {
      * </ul>
      * Enabled constraints reduce the usable area for placement by the given insets.
      */
-    public static Consumer<Window> newDeferredRelocator(double screenX, double screenY,
-                                                        AnchorPoint anchor, AnchorPolicy anchorPolicy,
-                                                        Insets screenPadding) {
-        Objects.requireNonNull(anchor, "anchor cannot be null");
+    public static WindowLocationAlgorithm newRelocationAlgorithm(AnchorPoint screenAnchor,
+                                                                 AnchorPoint stageAnchor,
+                                                                 AnchorPolicy anchorPolicy,
+                                                                 Insets screenPadding) {
+        Objects.requireNonNull(screenAnchor, "screenAnchor cannot be null");
+        Objects.requireNonNull(stageAnchor, "stageAnchor cannot be null");
         Objects.requireNonNull(anchorPolicy, "anchorPolicy cannot be null");
         Objects.requireNonNull(screenPadding, "screenPadding cannot be null");
 
-        return window -> {
-            Screen currentScreen = Utils.getScreenForPoint(screenX, screenY);
-            Rectangle2D screenBounds = Utils.hasFullScreenStage(currentScreen)
-                ? currentScreen.getBounds()
-                : currentScreen.getVisualBounds();
+        return (windowScreen, windowWidth, windowHeight) -> {
+            double screenX, screenY;
+            double gravityX, gravityY;
+
+            // Compute the absolute coordinates of the screen anchor.
+            // If the screen anchor is specified in proportional coordinates, it refers to the complete
+            // screen bounds when a full-screen stage is showing on the screen, and the visual bounds otherwise.
+            if (screenAnchor.isProportional()) {
+                Rectangle2D bounds = Utils.hasFullScreenStage(windowScreen)
+                    ? windowScreen.getBounds()
+                    : windowScreen.getVisualBounds();
+
+                screenX = bounds.getMinX() + screenAnchor.getX() * bounds.getWidth();
+                screenY = bounds.getMinY() + screenAnchor.getY() * bounds.getHeight();
+            } else {
+                screenX = screenAnchor.getX();
+                screenY = screenAnchor.getY();
+            }
+
+            // The absolute screen anchor might be on a different screen than the current window, so we
+            // need to recompute the actual screen and its bounds (complete when full-screen stage showing,
+            // visual otherwise).
+            Screen targetScreen = Utils.getScreenForPoint(screenX, screenY);
+            Rectangle2D screenBounds = Utils.hasFullScreenStage(targetScreen)
+                ? targetScreen.getBounds()
+                : targetScreen.getVisualBounds();
 
             Point2D location = computeAdjustedLocation(
                 screenX, screenY,
-                window.getWidth(), window.getHeight(),
-                anchor, anchorPolicy,
+                windowWidth, windowHeight,
+                stageAnchor, anchorPolicy,
                 screenBounds, screenPadding);
 
-            window.setX(location.getX());
-            window.setY(location.getY());
+            if (stageAnchor.isProportional()) {
+                gravityX = stageAnchor.getX();
+                gravityY = stageAnchor.getY();
+            } else {
+                gravityX = stageAnchor.getX() / windowWidth;
+                gravityY = stageAnchor.getY() / windowHeight;
+            }
+
+            return new WindowLocationAlgorithm.ComputedLocation(location.getX(), location.getY(), gravityX, gravityY);
         };
     }
 

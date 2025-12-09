@@ -752,12 +752,12 @@ public abstract class PopupWindow extends Window {
     }
 
     @Override
-    void setXInternal(final double value) {
+    void setXInternal(double value, float xGravity) {
         updateWindow(windowToAnchorX(value), getAnchorY());
     }
 
     @Override
-    void setYInternal(final double value) {
+    void setYInternal(double value, float yGravity) {
         updateWindow(getAnchorX(), windowToAnchorY(value));
     }
 
@@ -842,11 +842,11 @@ public abstract class PopupWindow extends Window {
         // update popup position
         // don't set Window.xExplicit unnecessarily
         if (!Double.isNaN(windowScrMinX)) {
-            super.setXInternal(windowScrMinX);
+            super.setXInternal(windowScrMinX, 0);
         }
         // don't set Window.yExplicit unnecessarily
         if (!Double.isNaN(windowScrMinY)) {
-            super.setYInternal(windowScrMinY);
+            super.setYInternal(windowScrMinY, 0);
         }
 
         // set anchor x, anchor y

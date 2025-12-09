@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,6 +90,10 @@ public class WindowHelper {
      * Methods used by Window (base) class only
      */
 
+    public static Window getWindowOwner(Window window) {
+        return windowAccessor.getWindowOwner(window);
+    }
+
     public static TKStage getPeer(Window window) {
         return windowAccessor.getPeer(window);
     }
@@ -145,6 +149,7 @@ public class WindowHelper {
         void setHelper(Window window, WindowHelper windowHelper);
         void doVisibleChanging(Window window, boolean visible);
         void doVisibleChanged(Window window, boolean visible);
+        Window getWindowOwner(Window window);
         TKStage getPeer(Window window);
         void setPeer(Window window, TKStage peer);
         WindowPeerListener getPeerListener(Window window);

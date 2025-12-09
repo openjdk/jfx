@@ -46,6 +46,7 @@ import javafx.stage.Window;
 import java.math.BigDecimal;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 
@@ -744,6 +745,24 @@ public class Utils {
                 parentBounds.getHeight());
 
         return getScreenForRectangle(rect);
+    }
+
+    public static Screen getScreenForWindow(Window window) {
+        do {
+            if (!Double.isNaN(window.getX()) && !Double.isNaN(window.getY())) {
+                if (window.getWidth() >= 0 && window.getHeight() >= 0) {
+                    var bounds = new Rectangle2D(window.getX(), window.getY(),
+                                                 window.getWidth(), window.getHeight());
+                    return getScreenForRectangle(bounds);
+                } else {
+                    return getScreenForPoint(window.getX(), window.getY());
+                }
+            }
+
+            window = WindowHelper.getWindowOwner(window);
+        } while (window != null);
+
+        return Screen.getPrimary();
     }
 
     public static Screen getScreenForRectangle(final Rectangle2D rect) {

@@ -27,7 +27,6 @@ package javafx.stage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
@@ -53,6 +52,7 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
+import com.sun.javafx.stage.WindowLocationAlgorithm;
 import com.sun.javafx.stage.WindowRelocator;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
@@ -1218,11 +1218,8 @@ public class Stage extends Window {
     }
 
     /**
-     * Moves this stage to the specified screen location using the given anchor.
-     * <p>
-     * The {@code anchor} identifies a point on the stage that should coincide with the requested screen
-     * coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is then
-     * adjusted to keep the stage within the screen bounds.
+     * Positions this stage so that a point on the stage ({@code stageAnchor}) coincides with a point on
+     * the screen ({@code screenAnchor}), and ensures that the stage is not placed off-screen.
      * <p>
      * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
      * If called <em>before</em> the stage is shown, then
@@ -1232,38 +1229,25 @@ public class Stage extends Window {
      *         immediately; instead, they are updated after the stage is shown.
      * </ol>
      * Calling this method is equivalent to calling
-     * {@code relocate(anchorX, anchorY, anchor, AnchorPolicy.FIXED, Insets.EMPTY)}.
+     * {@code relocate(screenAnchor, stageAnchor, AnchorPolicy.FIXED, Insets.EMPTY)}.
      *
-     * @param anchorX the requested horizontal location of the anchor point on the screen
-     * @param anchorY the requested vertical location of the anchor point on the screen
-     * @param anchor the point on the stage that should coincide with {@code (anchorX, anchorY)} on the screen
-     * @throws NullPointerException if {@code anchor} is {@code null}
+     * @param screenAnchor An anchor point in absolute or proportional screen coordinates. If the screen anchor
+     *                     is {@linkplain AnchorPoint#proportional(double, double) proportional}, it is first
+     *                     resolved against the {@linkplain Screen#getVisualBounds() visual bounds} of the screen
+     *                     that currently contains this stage; if the stage does not have a location yet, the
+     *                     primary screen is used. If a full-screen stage is showing on the screen, the screen
+     *                     anchor is resolved against its complete {@linkplain Screen#getBounds() bounds}.
+     * @param stageAnchor  An anchor point in absolute or proportional stage coordinates.
+     * @throws NullPointerException if any of the parameters is {@code null}
      * @since 26
      */
-    public final void relocate(double anchorX, double anchorY, AnchorPoint anchor) {
-        relocate(anchorX, anchorY, anchor, AnchorPolicy.FIXED, Insets.EMPTY);
+    public final void relocate(AnchorPoint screenAnchor, AnchorPoint stageAnchor) {
+        relocate(screenAnchor, stageAnchor, AnchorPolicy.FIXED, Insets.EMPTY);
     }
 
     /**
-     * Moves this stage to the specified screen location using the given anchor, anchor-selection policy,
-     * and screen edge constraints that may restrict the usable screen area.
-     * <p>
-     * The {@code anchor} identifies a point in stage coordinates that should coincide with the requested
-     * screen coordinates {@code (anchorX, anchorY)}. The stage location is derived from this anchor and is
-     * then optionally adjusted to keep the stage within the usable screen area.
-     * <p>
-     * The {@code anchorPolicy} controls whether an alternative anchor may be used when the preferred anchor
-     * would place the stage outside the usable screen area. Depending on the policy, the preferred anchor
-     * location may be mirrored to the other side of the window horizontally or vertically, or an anchor might
-     * be selected automatically. If no alternative anchor yields a better placement, the specified
-     * {@code anchor} is used.
-     * <p>
-     * The {@code screenPadding} parameter defines per-edge constraints against the current screen bounds.
-     * Each inset value specifies the minimum distance to maintain between the stage edge and the corresponding
-     * screen edge. A value {@code >= 0} enables the corresponding edge constraint; a negative value disables
-     * the constraint for that edge. Enabled constraints effectively shrink the usable screen area by the
-     * given insets. For example, a left inset of {@code 10} ensures the stage will not be placed closer than
-     * 10 pixels to the left screen edge.
+     * Positions this stage so that a point on the stage ({@code stageAnchor}) coincides with a point on
+     * the screen ({@code screenAnchor}), subject to the specified anchor policy and screen padding.
      * <p>
      * This method may be called either before or after {@link #show()} or {@link #showAndWait()}.
      * If called <em>before</em> the stage is shown, then
@@ -1273,32 +1257,39 @@ public class Stage extends Window {
      *         immediately; instead, they are updated after the stage is shown.
      * </ol>
      *
-     * @param anchorX the requested horizontal location of the anchor point on the screen
-     * @param anchorY the requested vertical location of the anchor point on the screen
-     * @param anchor the point in stage coordinates that should coincide with {@code (anchorX, anchorY)}
-     *               in screen coordinates
-     * @param anchorPolicy controls alternative anchor selection if the preferred placement violates
-     *                     enabled screen constraints
-     * @param screenPadding per-edge minimum distance constraints relative to the screen edges;
-     *                      values {@code < 0} disable the constraint for the respective edge
-     * @throws NullPointerException if {@code anchor}, {@code anchorPolicy}, or {@code screenPadding} is {@code null}
+     * @param screenAnchor  An anchor point in absolute or proportional screen coordinates. If the screen anchor
+     *                      is {@linkplain AnchorPoint#proportional(double, double) proportional}, it is first
+     *                      resolved against the {@linkplain Screen#getVisualBounds() visual bounds} of the screen
+     *                      that currently contains this stage; if the stage does not have a location yet, the
+     *                      primary screen is used. If a full-screen stage is showing on the screen, the screen
+     *                      anchor is resolved against its complete {@linkplain Screen#getBounds() bounds}.
+     * @param stageAnchor   An anchor point in absolute or proportional stage coordinates.
+     * @param anchorPolicy  Controls whether an alternative stage anchor may be used when the preferred anchor would
+     *                      place the stage outside the usable screen area. Depending on the policy, the preferred
+     *                      anchor location may be mirrored across the vertical/horizontal center line of the stage,
+     *                      or an anchor might be selected automatically. If no alternative anchor yields a better
+     *                      placement, the specified {@code stageAnchor} is used.
+     * @param screenPadding Defines per-edge constraints against the screen bounds. Each inset value specifies the
+     *                      minimum distance to maintain between the stage edge and the corresponding screen edge.
+     *                      A value {@code >= 0} enables the corresponding edge constraint; a negative value disables
+     *                      the constraint for that edge. Enabled constraints effectively shrink the usable screen
+     *                      area by the given insets. For example, a left inset of {@code 10} ensures the stage will
+     *                      not be placed closer than 10 pixels to the left screen edge.
+     * @throws NullPointerException if any of the parameters is {@code null}
      * @since 26
      */
-    public final void relocate(double anchorX, double anchorY, AnchorPoint anchor,
+    public final void relocate(AnchorPoint screenAnchor, AnchorPoint stageAnchor,
                                AnchorPolicy anchorPolicy, Insets screenPadding) {
-        var request = WindowRelocator.newDeferredRelocator(anchorX, anchorY, anchor, anchorPolicy, screenPadding);
+        clearLocationExplicit();
+
+        WindowLocationAlgorithm algorithm = WindowRelocator.newRelocationAlgorithm(
+            screenAnchor, stageAnchor, anchorPolicy,screenPadding);
 
         if (isShowing()) {
-            request.accept(this);
+            applyLocationAlgorithm(algorithm);
         } else {
-            this.relocationRequest = request;
+            this.locationAlgorithm = algorithm;
         }
-    }
-
-    @Override
-    public void centerOnScreen() {
-        relocationRequest = null; // cancel previous relocation request
-        super.centerOnScreen();
     }
 
     /**
@@ -1405,9 +1396,15 @@ public class Stage extends Window {
     }
 
     @Override
-    final Consumer<Window> getBoundsConfigurator() {
-        return relocationRequest;
+    final void clearLocationExplicit() {
+        locationAlgorithm = null;
+        super.clearLocationExplicit();
     }
 
-    private Consumer<Window> relocationRequest;
+    @Override
+    final WindowLocationAlgorithm getLocationAlgorithm() {
+        return locationAlgorithm;
+    }
+
+    private WindowLocationAlgorithm locationAlgorithm;
 }
