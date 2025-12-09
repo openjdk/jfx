@@ -400,14 +400,27 @@ public abstract class RichParagraph {
             return this;
         }
 
-        // TODO javadoc
+        /**
+         * Returns the number of segments currently added to the builder.
+         * @return the number of segments
+         * @since 26
+         */
         public int getSegmentCount() {
             return (segments == null ?  0 : segments.size());
         }
 
-        // TODO javadoc
+        /**
+         * Returns the segment at the specified index.
+         * @param index the segment index
+         * @return the segment
+         * @throws IndexOutOfBoundsException if the index is outside of the range {@code 0 ... getSegmentCount()-1} (inclusive)
+         * @since 26
+         */
         public StyledSegment getSegment(int index) {
-            return (segments == null ?  null : segments.get(index));
+            if (segments == null) {
+                throw new IndexOutOfBoundsException(index);
+            }
+            return segments.get(index);
         }
 
         /**

@@ -89,6 +89,7 @@ public class RichTextModel extends StyledTextModel {
      * without impacting the base class implementation.
      * @param index the paragraph index
      * @return the builder
+     * @since 26
      */
     protected RichParagraph.Builder buildParagraph(int index) {
         RParagraph p = paragraphs.get(index);
