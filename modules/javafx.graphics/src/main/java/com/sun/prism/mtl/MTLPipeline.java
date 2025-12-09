@@ -62,6 +62,7 @@ public class MTLPipeline extends GraphicsPipeline {
     @Override
     public boolean init() {
         Map<String, Long> devDetails = new HashMap<>();
+        devDetails.put("isVsyncEnabled", PrismSettings.isVsyncEnabled ? 1L : 0L);
         setDeviceDetails(devDetails);
         return true;
     }

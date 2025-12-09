@@ -42,6 +42,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SyntaxDecorator;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -219,6 +220,7 @@ public class CodeAreaTest {
     @Test
     public void getText() {
         control.setText("123");
+        control.setLineEnding(LineEnding.LF);
         String s = control.getText();
         assertEquals("123", s);
 
@@ -262,5 +264,48 @@ public class CodeAreaTest {
         CustomCodeTextModel m = new CustomCodeTextModel();
         control.setModel(m);
         assertTrue(control.getModel() == m);
+    }
+
+    @Test
+    public void lineEnding() {
+        control.setText("1\n2\n3");
+        assertEquals(3, control.getParagraphCount());
+        t(LineEnding.CR, "1\r2\r3");
+        t(LineEnding.CRLF, "1\r\n2\r\n3");
+        t(LineEnding.LF, "1\n2\n3");
+    }
+
+    @Test
+    public void lineEndingNull() {
+        assertThrows(NullPointerException.class, () -> {
+            control.setLineEnding(null);
+        });
+    }
+
+    private void t(LineEnding lineEnding, String expected) {
+        control.setLineEnding(lineEnding);
+        assertEquals(lineEnding, control.getLineEnding());
+        assertEquals(expected, control.getText());
+        control.select(TextPos.ZERO, control.getDocumentEnd());
+        control.copy();
+        assertEquals(expected, Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void setText() {
+        String expected = "1\n2\n3\n4";
+        String[] variants = {
+            "1\n2\n3\n4",
+            "1\r2\r3\r4",
+            "1\r\n2\r\n3\r\n4",
+            "1\r2\n3\r\n4"
+        };
+        control.setLineEnding(LineEnding.LF);
+        for (int i = 0; i < variants.length; i++) {
+            String s = variants[i];
+            control.setText(s);
+            String text = control.getText();
+            assertEquals(expected, text, "variant=" + i);
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,31 @@
  * questions.
  */
 
-#import <Metal/Metal.h>
+package test.jfx.incubator.scene.control.richtext.model;
 
-@interface GlassMTLFrameBufferObject : NSObject
-{
-    unsigned int _width;
-    unsigned int _height;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import javafx.scene.layout.Region;
+import org.junit.jupiter.api.Test;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 
-    volatile id<MTLTexture> _texture;
-    BOOL   _isSwPipe;
+/**
+ * Tests SimpleViewOnlyStyledModel.
+ */
+public class TestSimpleViewOnlyStyledModel {
+    @Test
+    public void addTextAfterRegion() {
+        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
+        m.addParagraph(() -> new Region());
+        m.addNodeSegment(() -> new Region());
+        assertEquals(2, m.size());
+    }
 
-    NSLock* lock;
+    @Test
+    public void addTextAfterRegionAfterText() {
+        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
+        m.addNodeSegment(() -> new Region());
+        m.addParagraph(() -> new Region());
+        m.addSegment("text");
+        assertEquals(3, m.size());
+    }
 }
-
-- (void)blitFromFBO:(GlassMTLFrameBufferObject*)other_fbo;
-- (id<MTLTexture>)texture;
-- (void)setIsSwPipe:(BOOL)isSwPipe;
-- (unsigned int)width;
-- (unsigned int)height;
-- (void)bindForWidth:(unsigned int)width
-           andHeight:(unsigned int)height;
-- (void)blitForWidth:(unsigned int)width
-           andHeight:(unsigned int)height;
-- (bool)tryLockTexture;
-- (void)unlockTexture;
-
-@end
