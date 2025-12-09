@@ -43,6 +43,9 @@ public final class WindowRelocator {
     /**
      * Creates a location algorithm that computes the position of the {@link Window} at the requested screen
      * coordinates using an {@link AnchorPoint}, {@link AnchorPolicy}, and per-edge screen constraints.
+     * {@code screenAnchor} is specified relative to {@code userScreen}. If {@code userScreen} is {@code null},
+     * the screen anchor is specified relative to the current window screen; if the window has not been shown
+     * yet, it is specified relative to the primary screen.
      * <p>
      * Screen edge constraints are specified by {@code screenPadding}:
      * <ul>
@@ -51,32 +54,33 @@ public final class WindowRelocator {
      * </ul>
      * Enabled constraints reduce the usable area for placement by the given insets.
      */
-    public static WindowLocationAlgorithm newRelocationAlgorithm(AnchorPoint screenAnchor,
+    public static WindowLocationAlgorithm newRelocationAlgorithm(Screen userScreen,
+                                                                 AnchorPoint screenAnchor,
+                                                                 Insets screenPadding,
                                                                  AnchorPoint stageAnchor,
-                                                                 AnchorPolicy anchorPolicy,
-                                                                 Insets screenPadding) {
+                                                                 AnchorPolicy anchorPolicy) {
         Objects.requireNonNull(screenAnchor, "screenAnchor cannot be null");
+        Objects.requireNonNull(screenPadding, "screenPadding cannot be null");
         Objects.requireNonNull(stageAnchor, "stageAnchor cannot be null");
         Objects.requireNonNull(anchorPolicy, "anchorPolicy cannot be null");
-        Objects.requireNonNull(screenPadding, "screenPadding cannot be null");
 
         return (windowScreen, windowWidth, windowHeight) -> {
             double screenX, screenY;
             double gravityX, gravityY;
+            Screen currentScreen = Objects.requireNonNullElse(userScreen, windowScreen);
+            Rectangle2D currentBounds = Utils.hasFullScreenStage(currentScreen)
+                ? currentScreen.getBounds()
+                : currentScreen.getVisualBounds();
 
             // Compute the absolute coordinates of the screen anchor.
-            // If the screen anchor is specified in proportional coordinates, it refers to the complete
+            // If the screen anchor is specified in proportional coordinates, it is proportional to the complete
             // screen bounds when a full-screen stage is showing on the screen, and the visual bounds otherwise.
             if (screenAnchor.isProportional()) {
-                Rectangle2D bounds = Utils.hasFullScreenStage(windowScreen)
-                    ? windowScreen.getBounds()
-                    : windowScreen.getVisualBounds();
-
-                screenX = bounds.getMinX() + screenAnchor.getX() * bounds.getWidth();
-                screenY = bounds.getMinY() + screenAnchor.getY() * bounds.getHeight();
+                screenX = currentBounds.getMinX() + screenAnchor.getX() * currentBounds.getWidth();
+                screenY = currentBounds.getMinY() + screenAnchor.getY() * currentBounds.getHeight();
             } else {
-                screenX = screenAnchor.getX();
-                screenY = screenAnchor.getY();
+                screenX = currentBounds.getMinX() + screenAnchor.getX();
+                screenY = currentBounds.getMinY() + screenAnchor.getY();
             }
 
             // The absolute screen anchor might be on a different screen than the current window, so we

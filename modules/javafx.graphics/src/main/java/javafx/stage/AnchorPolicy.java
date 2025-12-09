@@ -26,16 +26,15 @@
 package javafx.stage;
 
 import javafx.geometry.AnchorPoint;
-import javafx.geometry.Insets;
 
 /**
  * Specifies how a window repositioning operation may adjust an anchor point when the preferred anchor
  * would place the window outside the usable screen area.
  * <p>
- * The stage anchor passed to {@link Stage#relocate(AnchorPoint, AnchorPoint, AnchorPolicy, Insets)} or
- * specified by {@link PopupWindow#anchorLocationProperty() PopupWindow.anchorLocation} identifies the point
- * on the window that should coincide with the requested screen coordinates. When the preferred anchor would
- * place the window outside the usable screen area (as defined by the screen bounds and any configured insets),
+ * The stage anchor passed to {@link Stage#relocate(AnchorPoint,  AnchorPoint)} or specified by
+ * {@link PopupWindow#anchorLocationProperty() PopupWindow.anchorLocation} identifies the point on the
+ * window that should coincide with the requested screen coordinates. When the preferred anchor would place
+ * the window outside the usable screen area (as defined by the screen bounds and any configured insets),
  * an {@code AnchorPolicy} can be used to select an alternative anchor before applying any final position
  * adjustment.
  *
