@@ -400,6 +400,16 @@ public abstract class RichParagraph {
             return this;
         }
 
+        // TODO javadoc
+        public int getSegmentCount() {
+            return (segments == null ?  0 : segments.size());
+        }
+
+        // TODO javadoc
+        public StyledSegment getSegment(int index) {
+            return (segments == null ?  null : segments.get(index));
+        }
+
         /**
          * Creates an instance of immutable {@code RichParagraph} from information
          * in this {@code Builder}.
