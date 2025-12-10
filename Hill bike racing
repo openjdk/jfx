@@ -1,0 +1,66 @@
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyCode;
+import javafx.stage.Stage;
+import javafx.application.Platform;
+
+public class BikeGame extends Application {
+
+    private double bikeX = 250;
+    private double bikeY = 250;
+    private double speed = 0;
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage primaryStage) {
+        primaryStage.setTitle("Bike Game");
+
+        Canvas canvas = new Canvas(500, 500);
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        Scene scene = new Scene(new Group(canvas));
+        scene.setOnKeyPressed(e -> handleKeyPress(e.getCode()));
+        scene.setOnKeyReleased(e -> handleKeyRelease(e.getCode()));
+
+        primaryStage.setScene(scene);
+        primaryStage.show();
+
+        new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                updateGame(gc);
+            }
+        }.start();
+    }
+
+    private void handleKeyPress(KeyCode code) {
+        if (code == KeyCode.UP) {
+            speed += 1;
+        } else if (code == KeyCode.DOWN) {
+            speed -= 1;
+        } else if (code == KeyCode.SPACE) {
+            speed = 0; // Pause
+        }
+        // Additional controls for camera angle can be added here
+    }
+
+    private void handleKeyRelease(KeyCode code) {
+        // Handle key release if needed
+    }
+
+    private void updateGame(GraphicsContext gc) {
+        // Clear the canvas
+        gc.clearRect(0, 0, 500, 500);
+
+        // Update bike position
+        bikeY -= speed;
+
+        // Draw the bike (simple representation)
+        gc.fillRect(bikeX, bikeY, 50, 20);
+    }
+}
