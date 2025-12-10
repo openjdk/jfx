@@ -86,7 +86,7 @@ public class RichTextModel extends StyledTextModel {
 
     /**
      * Builds the paragraph.  This method allows the custom model to add highlights and decorations
-     * without impacting the base class implementation.
+     * without affecting the base class storage model.
      * @param index the paragraph index
      * @return the builder
      * @since 26
