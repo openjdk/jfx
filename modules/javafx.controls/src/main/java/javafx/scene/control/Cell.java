@@ -25,8 +25,6 @@
 
 package javafx.scene.control;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -353,19 +351,17 @@ public class Cell<T> extends Labeled {
         ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
 
-        /**
-         * Indicates whether or not this cell has focus. For example, a
+        /*
+         * Indicates whether this cell has focus. For example, a
          * ListView defines zero or one cell as being the "focused" cell. This cell
          * would have focused set to true.
          */
-        super.focusedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable property) {
-                pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED, isFocused()); // TODO is this necessary??
+        focusedProperty().addListener(_ -> {
+            pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED, isFocused()); // TODO is this necessary??
 
-                // The user has shifted focus, so we should cancel the editing on this cell
-                if (!isFocused() && isEditing()) {
-                    cancelEdit();
-                }
+            // The user has shifted focus, so we should stop the editing on this cell.
+            if (!isFocused() && isEditing()) {
+                stopEdit();
             }
         });
 
@@ -373,6 +369,21 @@ public class Cell<T> extends Labeled {
         pseudoClassStateChanged(PSEUDO_CLASS_EMPTY, true);
     }
 
+    /**
+     * Stops the edit operation of the cell.
+     * This method is called when another cell is edited or the focus changed.
+     * <p>
+     * The default behavior is to cancel the edit.
+     * This method is meant to be subclassed in case the default behavior is not enough.
+     * For example, subclasses decide to rather commit the edit operation instead of cancelling.
+     */
+    public void stopEdit() {
+        if (!isEditing()) {
+            return;
+        }
+
+        cancelEdit();
+    }
 
 
     /* *************************************************************************
