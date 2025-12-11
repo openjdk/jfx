@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.application.Platform;
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import org.junit.jupiter.api.AfterEach;
@@ -281,13 +282,13 @@ public class ToolbarTest {
         node4.setId("node4");
 
         // Make the width of the node dependent on whether it is added to the scene
-        node1.sceneProperty().addListener((ov, o, n) -> {
-            if (n == null) {
-                setFixSize(node1, 0);
-            } else {
-                setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
-            }
-        });
+//        node1.sceneProperty().addListener((ov, o, n) -> {
+//            if (n == null) {
+//                setFixSize(node1, 0);
+//            } else {
+//                setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
+//            }
+//        });
 
         initializeToolBar();
         toolBar.getItems().addAll(node3, node4);

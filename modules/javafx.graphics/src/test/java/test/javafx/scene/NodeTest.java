@@ -35,6 +35,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.shape.RectangleHelper;
@@ -63,18 +64,23 @@ import javafx.scene.transform.Transform;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.ParallelCamera;
+import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SceneShim;
 import javafx.scene.SubScene;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Shear;
@@ -1673,55 +1679,144 @@ public class NodeTest {
 
 
     @Test
-    public void testLayoutXYTriggersParentSizeChange() {
-        final Group rootGroup = new Group();
-        final Group subGroup = new Group();
-        ParentShim.getChildren(rootGroup).add(subGroup);
+    public void testLayoutXYTriggersParentSizeChangeForManagedChild() {
+        Rectangle r1 = new Rectangle(50, 50);
+        Rectangle r2 = new Rectangle(1, 1);
+        Group group = new Group(r1, r2);
+        HBox root = new HBox(group);
 
-        Rectangle r = new Rectangle(50,50);
-        r.setManaged(false);
-        Rectangle staticR = new Rectangle(1,1);
-        ParentShim.getChildren(subGroup).addAll(r, staticR);
+        r1.setManaged(false);
 
-        assertEquals(50,subGroup.getLayoutBounds().getWidth(), 1e-10);
-        assertEquals(50,subGroup.getLayoutBounds().getHeight(), 1e-10);
+        // Assert expected initial state:
+        assertLayoutFlags(group, LayoutFlags.NEEDS_LAYOUT, LayoutFlags.NEEDS_LAYOUT);
+        assertEquals(50, group.getLayoutBounds().getWidth());
+        assertEquals(50, group.getLayoutBounds().getHeight());
 
-        r.setLayoutX(50);
+        root.layout();
 
-        rootGroup.layout();
+        // Assert everything is clean after layout:
+        assertLayoutFlags(group, LayoutFlags.CLEAN, LayoutFlags.CLEAN);
+        assertEquals(50, group.getLayoutBounds().getWidth());
+        assertEquals(50, group.getLayoutBounds().getHeight());
 
-        assertEquals(100,subGroup.getLayoutBounds().getWidth(), 1e-10);
-        assertEquals(50,subGroup.getLayoutBounds().getHeight(), 1e-10);
+        // Test for Layout X change:
+        r1.setLayoutX(50);
 
+        // Assert layout is required:
+        assertLayoutFlags(group, LayoutFlags.NEEDS_LAYOUT, LayoutFlags.CLEAN);
+
+        root.layout();
+
+        // Assert that all is clean, and the change has been applied:
+        assertLayoutFlags(group, LayoutFlags.CLEAN, LayoutFlags.CLEAN);
+        assertEquals(100, group.getLayoutBounds().getWidth());
+        assertEquals(50, group.getLayoutBounds().getHeight());
+
+        // Test for Layout Y change:
+        r1.setLayoutY(40);
+
+        // Assert layout is required:
+        assertLayoutFlags(group, LayoutFlags.NEEDS_LAYOUT, LayoutFlags.CLEAN);
+
+        root.layout();
+
+        // Assert that all is clean, and the change has been applied:
+        assertLayoutFlags(group, LayoutFlags.CLEAN, LayoutFlags.CLEAN);
+        assertEquals(100, group.getLayoutBounds().getWidth());
+        assertEquals(90, group.getLayoutBounds().getHeight());
     }
 
     @Test
-    public void testLayoutXYWontBreakLayout() {
-        final Group rootGroup = new Group();
-        final AnchorPane pane = new AnchorPane();
-        ParentShim.getChildren(rootGroup).add(pane);
-
-        Rectangle r = new Rectangle(50,50);
-        ParentShim.getChildren(pane).add(r);
+    public void testLayoutXYWillRelayoutAndUndoChangesToManagedChild() {
+        Rectangle r = new Rectangle(50, 50);
+        AnchorPane pane = new AnchorPane(r);
+        Group root = new Group(pane);
 
         AnchorPane.setLeftAnchor(r, 10d);
         AnchorPane.setTopAnchor(r, 10d);
 
-        rootGroup.layout();
+        // Assert expected initial state:
+        assertLayoutFlags(pane, LayoutFlags.NEEDS_LAYOUT, LayoutFlags.NEEDS_LAYOUT);
 
-        assertEquals(10, r.getLayoutX(), 1e-10);
-        assertEquals(10, r.getLayoutY(), 1e-10);
+        root.layout();
 
+        // Assert everything is clean after layout:
+        assertLayoutFlags(pane, LayoutFlags.DIRTY_BRANCH, LayoutFlags.CLEAN);
+        assertEquals(10, r.getLayoutX());
+        assertEquals(10, r.getLayoutY());
+
+        // Note: above we expected all to be clean, but code in width/height change listeners interferes
+        // and draws the wrong conclusions. Relayout and reassert should fix this harmless situation:
+
+        root.layout();
+
+        // Assert everything is clean after layout:
+        assertLayoutFlags(pane, LayoutFlags.CLEAN, LayoutFlags.CLEAN);
+        assertEquals(10, r.getLayoutX());
+        assertEquals(10, r.getLayoutY());
+
+        // Test for Layout X change:
         r.setLayoutX(50);
 
-        assertEquals(50, r.getLayoutX(), 1e-10);
-        assertEquals(10, r.getLayoutY(), 1e-10);
+        // Assert layout is required:
+        assertLayoutFlags(pane, LayoutFlags.NEEDS_LAYOUT, LayoutFlags.NEEDS_LAYOUT);
+        assertEquals(50, r.getLayoutX());
+        assertEquals(10, r.getLayoutY());
 
-        rootGroup.layout();
+        root.layout();
 
-        assertEquals(10, r.getLayoutX(), 1e-10);
-        assertEquals(10, r.getLayoutY(), 1e-10);
+        // Assert that all is clean, and the change has been reverted:
+        assertLayoutFlags(pane, LayoutFlags.CLEAN, LayoutFlags.CLEAN);
+        assertEquals(10, r.getLayoutX());
+        assertEquals(10, r.getLayoutY());
 
+        // Test for Layout Y change:
+        r.setLayoutY(40);
+
+        // Assert layout is required:
+        assertLayoutFlags(pane, LayoutFlags.NEEDS_LAYOUT, LayoutFlags.NEEDS_LAYOUT);
+        assertEquals(10, r.getLayoutX());
+        assertEquals(40, r.getLayoutY());
+
+        root.layout();
+
+        // Assert that all is clean, and the change has been reverted:
+        assertLayoutFlags(pane, LayoutFlags.CLEAN, LayoutFlags.CLEAN);
+        assertEquals(10, r.getLayoutX());
+        assertEquals(10, r.getLayoutY());
+    }
+
+    @Test
+    public void shouldOnlyDoSingleLayoutPass() {
+        Rectangle r = new Rectangle(50, 50);
+        AnchorPane pane = new AnchorPane(r);
+        HBox root = new HBox(pane);
+
+        AnchorPane.setLeftAnchor(r, 10d);
+        AnchorPane.setTopAnchor(r, 10d);
+
+        // Assert expected initial state:
+        assertLayoutFlags(pane, LayoutFlags.NEEDS_LAYOUT, LayoutFlags.NEEDS_LAYOUT);
+
+        root.layout();
+
+        /*
+         * Note: we really expect the layout graph to be "CLEAN" after this, however
+         * there is logic for the width/height fields that currently is a bit too
+         * eager (and in this situation doesn't set the flags correct either, but
+         * its relatively harmless). We assert it below, but if this ever changes,
+         * these asserts can be removed:
+         */
+
+        assertLayoutFlags(pane, LayoutFlags.DIRTY_BRANCH, LayoutFlags.CLEAN);
+        assertEquals(10, r.getLayoutX());
+        assertEquals(10, r.getLayoutY());
+        root.layout();  // this should "correct" the harmless intermediate state
+
+        // Assert expected final state:
+        assertLayoutFlags(pane, LayoutFlags.CLEAN, LayoutFlags.CLEAN);
+        assertEquals(10, r.getLayoutX());
+        assertEquals(10, r.getLayoutY());
     }
 
     @Test
@@ -2134,5 +2229,14 @@ public class NodeTest {
         assertTrue(NodeHelper.isTreeVisible(g));
         assertTrue(NodeHelper.isTreeVisible(n1));
         assertTrue(NodeHelper.isTreeVisible(n2));
+    }
+
+    private static void assertLayoutFlags(Parent leaf, LayoutFlags... flags) {
+        List<Parent> subtree = Stream.iterate(leaf, Objects::nonNull, Parent::getParent).toList().reversed();
+
+        for (int i = 0; i < subtree.size(); i++) {
+            Parent p = subtree.get(i);
+            assertEquals(flags[i], ParentShim.getLayoutFlag(p), "" + p);
+        }
     }
 }
