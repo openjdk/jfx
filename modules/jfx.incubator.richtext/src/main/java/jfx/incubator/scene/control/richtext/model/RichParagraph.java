@@ -123,6 +123,7 @@ public abstract class RichParagraph {
         return null;
     }
 
+    // see VFlow.createTextCell()
     List<Consumer<TextCell>> getHighlights() {
         return null;
     }
