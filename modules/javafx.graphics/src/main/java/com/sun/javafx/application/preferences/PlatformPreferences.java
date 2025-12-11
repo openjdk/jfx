@@ -25,7 +25,8 @@
 
 package com.sun.javafx.application.preferences;
 
-import com.sun.javafx.binding.MapExpressionHelper;
+import com.sun.javafx.collections.IterableMapChange;
+import com.sun.javafx.collections.MapListenerHelper;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -38,12 +39,10 @@ import java.lang.reflect.Modifier;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Contains the implementation of a read-only map of platform preferences.
@@ -76,8 +75,7 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
     /** Contains the implementation of the property-based API. */
     private final PreferenceProperties properties = new PreferenceProperties(this);
 
-    private final List<InvalidationListener> invalidationListeners = new CopyOnWriteArrayList<>();
-    private final List<MapChangeListener<? super String, Object>> mapChangeListeners = new CopyOnWriteArrayList<>();
+    private MapListenerHelper<String, Object> helper;
 
     /**
      * Initializes this {@code PlatformPreferences} instance with the given platform-specific keys and key mappings.
@@ -105,22 +103,22 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
 
     @Override
     public void addListener(InvalidationListener listener) {
-        invalidationListeners.add(listener);
+        helper = MapListenerHelper.addListener(helper, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
-        invalidationListeners.remove(listener);
+        helper = MapListenerHelper.removeListener(helper, listener);
     }
 
     @Override
     public void addListener(MapChangeListener<? super String, ? super Object> listener) {
-        mapChangeListeners.add(listener);
+        helper = MapListenerHelper.addListener(helper, listener);
     }
 
     @Override
     public void removeListener(MapChangeListener<? super String, ? super Object> listener) {
-        mapChangeListeners.remove(listener);
+        helper = MapListenerHelper.removeListener(helper, listener);
     }
 
     @Override
@@ -311,25 +309,22 @@ public final class PlatformPreferences extends AbstractMap<String, Object> imple
     }
 
     private void fireValueChangedEvent(Map<String, ChangedValue> changedEntries) {
-        invalidationListeners.forEach(listener -> listener.invalidated(this));
-        var change = new MapExpressionHelper.SimpleChange<>(this);
+        var change = new IterableMapChange.Generic<>(this);
 
         for (Map.Entry<String, ChangedValue> entry : changedEntries.entrySet()) {
             Object oldValue = entry.getValue().oldValue();
             Object newValue = entry.getValue().newValue();
 
             if (oldValue == null && newValue != null) {
-                change.setAdded(entry.getKey(), newValue);
+                change.nextAdded(entry.getKey(), newValue);
             } else if (oldValue != null && newValue == null) {
-                change.setRemoved(entry.getKey(), oldValue);
+                change.nextRemoved(entry.getKey(), oldValue);
             } else {
-                change.setPut(entry.getKey(), oldValue, newValue);
-            }
-
-            for (var listener : mapChangeListeners) {
-                listener.onChanged(change);
+                change.nextReplaced(entry.getKey(), oldValue, newValue);
             }
         }
+
+        MapListenerHelper.fireValueChangedEvent(helper, change);
     }
 
     /**
