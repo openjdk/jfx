@@ -123,7 +123,7 @@ public class DataFormat {
      * <p>
      * This constructor is deprecated and should not be used, please use {@link #of(String...)}
      * instead.
-     * 
+     *
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
      * @throws IllegalArgumentException if one of the given mime types is already
      *         assigned to another DataFormat.
