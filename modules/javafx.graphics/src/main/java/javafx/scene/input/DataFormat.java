@@ -127,8 +127,9 @@ public class DataFormat {
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
      * @throws IllegalArgumentException if one of the given mime types is already
      *         assigned to another DataFormat.
-     * @deprecated since 999 TODO
+     * @deprecated since 27
      */
+    @Deprecated(since = "27")
     private DataFormat(@NamedArg("ids") String... ids) {
         Set<String> normalized = normalize(ids);
         synchronized (DataFormat.class) {
@@ -215,8 +216,9 @@ public class DataFormat {
      * the given mime type as one of its ids.
      * @param mimeType If null or the empty string, then null is returned.
      * @return The matching DataFormat
-     * @deprecated since 999 TODO
+     * @deprecated since 27
      */
+    @Deprecated(since = "27")
     public static DataFormat lookupMimeType(String mimeType) {
         if (mimeType == null || mimeType.length() == 0) {
             return null;
@@ -273,9 +275,11 @@ public class DataFormat {
      * of the "type/subtype" format it won't be possible
      * to drag data of this type from/to {@link javafx.embed.swing.JFXPanel}.
      * </p>
+     * @return the new or cached DataFormat instance
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
      * @throws IllegalArgumentException if one of the given mime types is already
      *         assigned to another DataFormat.
+     * @since 27
      */
     public static DataFormat of(String ... ids) {
         Set<String> types = normalize(ids);
