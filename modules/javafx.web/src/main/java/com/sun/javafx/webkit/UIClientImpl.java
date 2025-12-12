@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -296,19 +296,10 @@ public final class UIClientImpl implements UIClient {
     }
 
     private ClipboardContent content;
-    private static DataFormat getDataFormat(String mimeType) {
-        synchronized (DataFormat.class) {
-            DataFormat ret = DataFormat.lookupMimeType(mimeType);
-            if (ret == null) {
-                ret = new DataFormat(mimeType);
-            }
-            return ret;
-        }
-    }
 
     //copy from com.sun.glass.ui.Clipboard
-    private final static DataFormat DF_DRAG_IMAGE = getDataFormat(DRAG_IMAGE);
-    private final static DataFormat DF_DRAG_IMAGE_OFFSET = getDataFormat(DRAG_IMAGE_OFFSET);
+    private final static DataFormat DF_DRAG_IMAGE = DataFormat.of(DRAG_IMAGE);
+    private final static DataFormat DF_DRAG_IMAGE_OFFSET = DataFormat.of(DRAG_IMAGE_OFFSET);
 
     @Override public void startDrag(WCImage image,
         int imageOffsetX, int imageOffsetY,
@@ -318,7 +309,7 @@ public final class UIClientImpl implements UIClient {
         content = new ClipboardContent();
         for (int i = 0; i < mimeTypes.length; ++i) if (values[i] != null) {
             try {
-                content.put(getDataFormat(mimeTypes[i]),
+                content.put(DataFormat.of(mimeTypes[i]),
                     IE_URL_SHORTCUT_FILENAME.equals(mimeTypes[i])
                         ? (Object)ByteBuffer.wrap(((String)values[i]).getBytes("UTF-16LE"))
                         : (Object)values[i]);

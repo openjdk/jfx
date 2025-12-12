@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,10 @@
 
 package javafx.scene.input;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-
-import com.sun.javafx.util.WeakReferenceQueue;
 import javafx.beans.NamedArg;
+import com.sun.javafx.util.WeakReferenceQueue;
 
 /**
  * Data format identifier used as means
@@ -124,27 +120,28 @@ public class DataFormat {
      * For instance, Swing requires a mime type so if an {@code id} is not
      * of the "type/subtype" format it won't be possible
      * to drag data of this type from/to {@link javafx.embed.swing.JFXPanel}.
-     * </p>
+     * <p>
+     * This constructor is deprecated and should not be used, please use {@link #of(String...)}
+     * instead.
+     * 
      * @param ids The set of ids used to represent this DataFormat on the clipboard.
      * @throws IllegalArgumentException if one of the given mime types is already
      *         assigned to another DataFormat.
+     * @deprecated since 999 TODO
      */
-    public DataFormat(@NamedArg("ids") String... ids) {
-        DATA_FORMAT_LIST.cleanup();
-        if (ids != null) {
-            for (String id : ids) {
-                if (lookupMimeType(id) != null) {
-                    throw new IllegalArgumentException("DataFormat '" + id +
-                            "' already exists.");
-                }
-            }
-            this.identifier = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(ids)));
-        } else {
-            this.identifier = Collections.<String>emptySet();
+    private DataFormat(@NamedArg("ids") String... ids) {
+        Set<String> normalized = normalize(ids);
+        synchronized (DataFormat.class) {
+            DATA_FORMAT_LIST.cleanup();
+            // throws IllegalArgumentException if one of the ids has already been registered
+            lookup(true, normalized);
+            this.identifier = normalized;
+            DATA_FORMAT_LIST.add(this);
         }
+    }
 
-        // Add to the statis data format list.
-        DATA_FORMAT_LIST.add(this);
+    private DataFormat(Set<String> unmodifiedNormalizedMimeTypes) {
+        this.identifier = unmodifiedNormalizedMimeTypes;
     }
 
     /**
@@ -218,19 +215,78 @@ public class DataFormat {
      * the given mime type as one of its ids.
      * @param mimeType If null or the empty string, then null is returned.
      * @return The matching DataFormat
+     * @deprecated since 999 TODO
      */
     public static DataFormat lookupMimeType(String mimeType) {
         if (mimeType == null || mimeType.length() == 0) {
             return null;
         }
+        Set<String> ids = normalize(mimeType);
+        synchronized (DataFormat.class) {
+            return lookup(false, ids);
+        }
+    }
 
+    // requires external synchronization
+    private static DataFormat lookup(boolean validate, Set<String> mimeTypes) {
         Iterator itr = DATA_FORMAT_LIST.iterator();
         while (itr.hasNext()) {
-            DataFormat dataFormat = (DataFormat) itr.next();
-            if (dataFormat.getIdentifiers().contains(mimeType)) {
-                return dataFormat;
+            DataFormat dataFormat = (DataFormat)itr.next();
+            for (String id : mimeTypes) {
+                if (dataFormat.getIdentifiers().contains(id)) {
+                    if (validate) {
+                        throw new IllegalArgumentException("DataFormat '" + id + "' already exists.");
+                    }
+                    return dataFormat;
+                }
             }
         }
         return null;
+    }
+
+    // returns unmodified set
+    // can probably be inlined
+    private static Set<String> normalize(String ... mimeTypes) {
+        // TODO normalize? trim?
+        return Set.of(mimeTypes);
+    }
+
+    /**
+     * Returns an instance of DataFormat, specifying the set of ids that are associated with
+     * this data format. Typically the ids are one or more mime types. For each
+     * id, any data associated with this DataFormat will be registered on the
+     * clipboard. For example, suppose I had the following:
+     * <pre>{@code
+     *     DataFormat fmt = new DataFormat("text/foo", "text/bar");
+     *     Clipboard clipboard = Clipboard.getSystemClipboard();
+     *     ClipboardContent content = new ClipboardContent();
+     *     content.put(fmt, "Hello");
+     *     clipboard.setContent(content);
+     * }</pre>
+     *
+     * With the above code, if I were to look on the clipboard, I'd find the String "Hello"
+     * listed both for "text/foo" and "text/bar" on the clipboard.
+     *
+     * <p>
+     * Note that the ids may be subject to platform restrictions in some cases.
+     * For instance, Swing requires a mime type so if an {@code id} is not
+     * of the "type/subtype" format it won't be possible
+     * to drag data of this type from/to {@link javafx.embed.swing.JFXPanel}.
+     * </p>
+     * @param ids The set of ids used to represent this DataFormat on the clipboard.
+     * @throws IllegalArgumentException if one of the given mime types is already
+     *         assigned to another DataFormat.
+     */
+    public static DataFormat of(String ... ids) {
+        Set<String> types = normalize(ids);
+        synchronized (DataFormat.class) {
+            // throws IllegalArgumentException if one of the ids has already been registered
+            DataFormat f = lookup(true, types);
+            if (f == null) {
+                f = new DataFormat(types);
+                DATA_FORMAT_LIST.add(f);
+            }
+            return f;
+        }
     }
 }

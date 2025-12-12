@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,25 @@
 
 package test.javafx.scene.input;
 
-import java.util.stream.Stream;
-import javafx.scene.input.DataFormat;
-
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.stream.Stream;
+import javafx.scene.input.DataFormat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class DataFormatTest {
 
-    static DataFormat customFormat = new DataFormat("Custom1", "Custom2");
-    static DataFormat uniqueFormat = new DataFormat("Unique");
+    private static final DataFormat customFormat = DataFormat.of("Custom1", "Custom2");
+    private static final DataFormat uniqueFormat = DataFormat.of("Unique");
 
-
-    public static Stream<Arguments> getParams() {
+    private static Stream<Arguments> getParams() {
         return Stream.of(
             Arguments.of( DataFormat.PLAIN_TEXT, "text/plain", null ),
             Arguments.of( DataFormat.HTML, "text/html", null ),
@@ -86,11 +85,10 @@ public class DataFormatTest {
     @MethodSource("getParams")
     public void shouldNotBePossibleToReuseMimeTypes(DataFormat format, String mime1, String mime2) {
         assertThrows(IllegalArgumentException.class, () -> {
-            DataFormat customEqual = new DataFormat(format.getIdentifiers().toArray(
+            DataFormat customEqual = DataFormat.of(format.getIdentifiers().toArray(
                     new String[format.getIdentifiers().size()]));
         });
     }
-
 
     @ParameterizedTest
     @MethodSource("getParams")
@@ -100,5 +98,11 @@ public class DataFormatTest {
         assertEquals(format.hashCode(), format.hashCode());
         assertFalse(uniqueFormat.equals(format));
         assertFalse(uniqueFormat.hashCode() == format.hashCode());
+    }
+
+    @Test
+    public void noMoreNullMimeTypes() {
+        String mime = null;
+        assertThrows(NullPointerException.class, () -> DataFormat.of(mime));
     }
 }

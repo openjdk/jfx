@@ -110,7 +110,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final boolean DEBUG = false;
 
     /** The data format identifier */
-    public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text");
+    public static final DataFormat DATA_FORMAT = DataFormat.of("application/x-com-oracle-editable-rich-text");
 
     private static final StringConverter<Boolean> BOOLEAN_CONVERTER = Converters.booleanConverter();
     private static final StringConverter<Color> COLOR_CONVERTER = Converters.colorConverter();
