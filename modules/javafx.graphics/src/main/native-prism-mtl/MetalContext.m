@@ -126,7 +126,6 @@
         }
         [self commitCurrentCommandBuffer:false];
     }
-    [self create3DSamplerStates];
     return self;
 }
 
@@ -864,6 +863,16 @@
         pixelBuffer = nil;
     }
 
+    if (nonMipmappedSamplerState != nil) {
+        [nonMipmappedSamplerState release];
+        nonMipmappedSamplerState = nil;
+    }
+
+    if (mipmappedSamplerState != nil) {
+        [mipmappedSamplerState release];
+        mipmappedSamplerState = nil;
+    }
+
     device = nil;
 
     [super dealloc];
@@ -1134,6 +1143,18 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLContext_nSetWorldTransformToIde
 {
     MetalContext *mtlContext = (MetalContext *)jlong_to_ptr(context);
     [mtlContext setWorldTransformIdentityMatrix];
+}
+
+/*
+ * Class:     com_sun_prism_mtl_MTLContext
+ * Method:    nSetDeviceParametersFor3D
+ * Signature: (J)J
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLContext_nSetDeviceParametersFor3D
+    (JNIEnv *env, jclass jClass, jlong ctx)
+{
+    MetalContext *pCtx = (MetalContext*) jlong_to_ptr(ctx);
+    [pCtx create3DSamplerStates];
 }
 
 /*

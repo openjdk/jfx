@@ -315,9 +315,10 @@ class MTLContext extends BaseShaderContext {
 
     @Override
     protected void setDeviceParametersFor3D() {
-        // There are no Metal rendering pipeline states changed as a
-        // result of this call, hence the method is no-op.
-        // But overriding the method here for any future reference.
+        // We are using this call in Metal to only initialise the
+        // default 3D texture sampler's filter and addressing states
+        if (checkDisposed()) return;
+        nSetDeviceParametersFor3D(pContext);
     }
 
     long createMTLMesh() {
@@ -523,6 +524,7 @@ class MTLContext extends BaseShaderContext {
                                                   double m20, double m21, double m22, double m23,
                                                   double m30, double m31, double m32, double m33);
     private static native void nSetCameraPosition(long pContext, double x, double y, double z);
+    private static native void nSetDeviceParametersFor3D(long pContext);
     private static native long nCreateMTLMesh(long pContext);
     private static native void nReleaseMTLMesh(long pContext, long nativeHandle);
     private static native boolean nBuildNativeGeometryShort(long pContext, long nativeHandle,
