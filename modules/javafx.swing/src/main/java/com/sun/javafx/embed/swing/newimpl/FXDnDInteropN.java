@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -288,8 +288,9 @@ public class FXDnDInteropN {
             Map<DataFormat, Object> fxData = new HashMap<>();
             for (String mt : activeDSContextPeer.transferable.getMimeTypes()) {
                 DataFormat f = DataFormat.lookupMimeType(mt);
-                //TODO: what to do if f == null?
-                if (f != null) fxData.put(f, activeDSContextPeer.transferable.getData(mt));
+                if (f != null) {
+                    fxData.put(f, activeDSContextPeer.transferable.getData(mt));
+                }
             }
 
             final boolean hasContent = db.setContent(fxData);
