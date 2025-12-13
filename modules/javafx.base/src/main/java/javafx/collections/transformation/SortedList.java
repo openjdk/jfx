@@ -275,6 +275,15 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 }
             }
         }
+
+        // Null out out-of-range array elements to avoid maintaining object references
+        for (int i = size; i < sorted.length; i++) {
+            if (sorted[i] == null) {
+                // Already null, stop checking further
+                break;
+            }
+            sorted[i] = null;
+        }
     }
 
     private static class Element<E> {
@@ -331,6 +340,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
         }
         tempElement.e = e;
         int pos = Arrays.binarySearch(sorted, 0, size, tempElement, elementComparator);
+        tempElement.e = null;
         return pos;
     }
 
