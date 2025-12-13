@@ -235,6 +235,32 @@
     return sampler;
 }
 
+- (void) create3DSamplerStates
+{
+    MTLSamplerDescriptor *samplerDescriptor = [MTLSamplerDescriptor new];
+    samplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
+    samplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
+    samplerDescriptor.rAddressMode = MTLSamplerAddressModeRepeat;
+    samplerDescriptor.sAddressMode = MTLSamplerAddressModeRepeat;
+    samplerDescriptor.tAddressMode = MTLSamplerAddressModeRepeat;
+    samplerDescriptor.mipFilter = MTLSamplerMipFilterNotMipmapped;
+    nonMipmappedSamplerState = [[self getDevice] newSamplerStateWithDescriptor:samplerDescriptor];
+
+    samplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
+    mipmappedSamplerState = [[self getDevice] newSamplerStateWithDescriptor:samplerDescriptor];
+
+    [samplerDescriptor release];
+}
+
+- (id<MTLSamplerState>) get3DSamplerState:(bool)mipmapped
+{
+    if (mipmapped) {
+        return mipmappedSamplerState;
+    } else {
+        return nonMipmappedSamplerState;
+    }
+}
+
 - (id<MTLDevice>) getDevice
 {
     return device;
@@ -837,6 +863,16 @@
         pixelBuffer = nil;
     }
 
+    if (nonMipmappedSamplerState != nil) {
+        [nonMipmappedSamplerState release];
+        nonMipmappedSamplerState = nil;
+    }
+
+    if (mipmappedSamplerState != nil) {
+        [mipmappedSamplerState release];
+        mipmappedSamplerState = nil;
+    }
+
     device = nil;
 
     [super dealloc];
@@ -1111,6 +1147,18 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLContext_nSetWorldTransformToIde
 
 /*
  * Class:     com_sun_prism_mtl_MTLContext
+ * Method:    nSetDeviceParametersFor3D
+ * Signature: (J)J
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLContext_nSetDeviceParametersFor3D
+    (JNIEnv *env, jclass jClass, jlong ctx)
+{
+    MetalContext *pCtx = (MetalContext*) jlong_to_ptr(ctx);
+    [pCtx create3DSamplerStates];
+}
+
+/*
+ * Class:     com_sun_prism_mtl_MTLContext
  * Method:    nCreateMTLMesh
  * Signature: (J)J
  */
@@ -1290,12 +1338,12 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLContext_nSetSpecularColor
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLContext_nSetMap
     (JNIEnv *env, jclass jClass, jlong ctx, jlong nativePhongMaterial,
-    jint mapType, jlong nativeTexture)
+    jint mapType, jlong nativeTexture, jboolean useMipmap)
 {
     MetalPhongMaterial *phongMaterial = (MetalPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
     MetalTexture *texMap = (MetalTexture *)  jlong_to_ptr(nativeTexture);
 
-    [phongMaterial setMap:mapType map:[texMap getTexture]];
+    [phongMaterial setMap:mapType map:[texMap getTexture] useMipmap:useMipmap];
 }
 
 /*
