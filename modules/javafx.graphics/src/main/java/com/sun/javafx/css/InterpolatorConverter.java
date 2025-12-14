@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
+import javafx.geometry.Point2D;
 import javafx.scene.text.Font;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,7 +46,8 @@ import java.util.Map;
  * </ol>
  * <p>
  * If the value is a {@code ParsedValue} array, the first element represents the name of the function
- * ({@code cubic-bezier} or {@code steps}), and the second element contains a list of arguments.
+ * ({@code linear}, {@code cubic-bezier}, or {@code steps}), and the second element contains a list of
+ * arguments.
  */
 public class InterpolatorConverter extends StyleConverter<Object, Interpolator> {
 
@@ -111,6 +113,11 @@ public class InterpolatorConverter extends StyleConverter<Object, Interpolator> 
                         case "jump-none" -> StepPosition.NONE;
                         default -> StepPosition.END;
                     });
+                });
+
+                case "linear(" -> CACHE.computeIfAbsent(value, key -> {
+                    List<Point2D> args = arguments(key);
+                    return Interpolator.ofLinear(args.toArray(Point2D[]::new));
                 });
 
                 default -> throw new AssertionError();

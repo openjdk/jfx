@@ -99,7 +99,12 @@ static std::optional<std::tuple<SVGFilterEffectsGraph, FilterEffectGeometryMap>>
     if (filterElement.countChildNodes() > maxCountChildNodes)
         return std::nullopt;
 
+#if USE(CAIRO)
     const auto colorSpace = filterElement.colorInterpolation() == ColorInterpolation::LinearRGB ? DestinationColorSpace::LinearSRGB() : DestinationColorSpace::SRGB();
+#else
+    const auto colorSpace = DestinationColorSpace::SRGB();
+#endif
+
     SVGFilterEffectsGraph graph(SourceGraphic::create(colorSpace), SourceAlpha::create(colorSpace));
     FilterEffectGeometryMap effectGeometryMap;
 

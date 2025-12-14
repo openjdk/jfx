@@ -289,7 +289,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     end = start;
                 }
 
-                TextPos p = m.replace(vflow, start, end, typed, true);
+                TextPos p = m.replace(vflow, start, end, typed);
                 moveCaret(p, false);
 
                 clearPhantomX();
@@ -324,14 +324,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
     /** returns true if both control and model are editable */
     protected boolean canEdit() {
-        RichTextArea control = getControl();
-        if (control.isEditable()) {
-            StyledTextModel m = control.getModel();
-            if (m != null) {
-                return m.isWritable();
-            }
-        }
-        return false;
+        return RichUtils.canEdit(getControl());
     }
 
     public boolean insertTab() {
@@ -355,7 +348,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 return;
             }
 
-            TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
+            TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"));
             moveCaret(pos, false);
             clearPhantomX();
         }
@@ -910,7 +903,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (p != null) {
             int ix = p.index();
             TextPos an = TextPos.ofLeading(ix, 0);
-            TextPos ca = control.getParagraphEnd(ix);
+            TextPos ca = TextPos.ofLeading(ix + 1, 0);
             control.select(an, ca);
         }
     }
@@ -943,7 +936,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     start = TextPos.ofLeading(ix, off);
                 }
 
-                control.getModel().replace(vflow, start, p, StyledInput.EMPTY, true);
+                control.getModel().replace(vflow, start, p, StyledInput.EMPTY);
                 moveCaret(start, false);
                 clearPhantomX();
             }
@@ -959,7 +952,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 TextPos start = control.getCaretPosition();
                 TextPos end = nextCharacterVisually(start, true);
                 if (end != null) {
-                    control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
+                    control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
                     moveCaret(start, false);
                     clearPhantomX();
                 }
@@ -985,7 +978,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 TextPos p0 = TextPos.ofLeading(ix0, 0);
                 TextPos p1 = clamp(TextPos.ofLeading(ix1 + 1, 0));
                 RichTextArea control = getControl();
-                control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
+                control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY);
                 clearPhantomX();
                 moveCaret(p0, false);
             }
@@ -1002,7 +995,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             TextPos start = sel.getMin();
             TextPos end = sel.getMax();
             RichTextArea control = getControl();
-            control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
+            control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
             clearPhantomX();
             moveCaret(start, false);
         }
@@ -1189,7 +1182,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
             StyleAttributeMap a = control.getActiveStyleAttributeMap();
             try (StyledInput in = h.createStyledInput(text, a)) {
-                TextPos p = m.replace(vflow, start, end, in, true);
+                TextPos p = m.replace(vflow, start, end, in);
                 moveCaret(p, false);
             } catch (IOException e) {
                 control.errorFeedback();
@@ -1591,7 +1584,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 if (p != null) {
                     control.clearSelection();
                     clearPhantomX();
-                    p = control.replaceText(caret, p, "", true);
+                    p = control.replaceText(caret, p, "");
                     control.select(p);
                 }
             }
