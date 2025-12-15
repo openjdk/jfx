@@ -1082,6 +1082,18 @@ public class Window implements EventTarget {
                         SceneHelper.preferredSize(getScene());
                     }
 
+                    /*
+                     * Apply bounds first so the peer is positioned on the correct
+                     * screen before updating the output scales and before sizing
+                     * the window to the size of the scene. Not doing so could result
+                     * in the window being sized based using a different scale which
+                     * can result in the scene being sized slightly too small or
+                     * large which can cause controls to be rendered smaller than
+                     * their preferred sizes (and show ellipsis on Labels for example).
+                     */
+
+                    applyBounds();
+
                     updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
