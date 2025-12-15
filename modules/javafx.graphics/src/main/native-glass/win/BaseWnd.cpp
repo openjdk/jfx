@@ -27,6 +27,7 @@
 
 #include "BaseWnd.h"
 #include "GlassApplication.h"
+#include "Utils.h"
 
 
 //NOTE: it's not thread-safe
@@ -140,7 +141,7 @@ BOOL BaseWnd::GetDefaultWindowBounds(LPRECT r)
     HWND hwnd = ::CreateWindow(szClassName, L"", WS_OVERLAPPED,
                                CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                                0, 0, 0, 0);
-    BOOL res = ::GetWindowRect(hwnd, r);
+    BOOL res = ::GetExtendedFrameBounds(hwnd, r);
     ::DestroyWindow(hwnd);
     ::UnregisterClass(szClassName, hInst);
 

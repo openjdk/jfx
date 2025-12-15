@@ -63,21 +63,6 @@ HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
 static HWND activeTouchWindow = NULL;
 
-namespace
-{
-    BOOL GetExtendedFrameBounds(HWND hwnd, RECT* r) {
-        if (r == NULL) {
-            return FALSE;
-        }
-
-        if (FAILED(::DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, r, sizeof(RECT)))) {
-            return ::GetWindowRect(hwnd, r);
-        }
-
-        return TRUE;
-    }
-}
-
 GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified,
                          bool isExtended, HWND parentOrOwner)
     : BaseWnd(parentOrOwner),
@@ -747,9 +732,10 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
         anchor.x = anchor.y = 0;
     }
 
+    RECT wBounds = {};
+    ::GetWindowRect(hWnd, &wBounds);
+
     if (noMove || noSize) {
-        RECT wBounds;
-        ::GetWindowRect(hWnd, &wBounds);
         if (noMove) {
             pWinPos->x = wBounds.left;
             pWinPos->y = wBounds.top;
@@ -759,6 +745,24 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
             pWinPos->cy = wBounds.bottom - wBounds.top;
         }
     }
+
+    // pWinPos holds the full window rect, but we need to convert it to the visible frame rect
+    // because that's what we pass to JavaFX in the next JNI upcall. In JavaFX, we always reason
+    // about the visual bounds of the window, not including the invisible resize/shadow areas.
+    RECT extBounds = {};
+    ::GetExtendedFrameBounds(hWnd, &extBounds);
+
+    RECT extInsets = {
+        extBounds.left - wBounds.left,
+        extBounds.top - wBounds.top,
+        wBounds.right - extBounds.right,
+        wBounds.bottom - extBounds.bottom
+    };
+
+    pWinPos->x += extInsets.left;
+    pWinPos->y += extInsets.top;
+    pWinPos->cx -= extInsets.left + extInsets.right;
+    pWinPos->cy -= extInsets.top + extInsets.bottom;
 
     UpdateInsets();
 
@@ -806,6 +810,13 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
         }
         env->DeleteLocalRef(jret);
     }
+
+    // pWinPos currently holds the visible frame rect; we need to convert it back to the
+    // full window rect because that's what Windows expects in the WINDOWPOS structure.
+    pWinPos->x -= extInsets.left;
+    pWinPos->y -= extInsets.top;
+    pWinPos->cx += extInsets.left + extInsets.right;
+    pWinPos->cy += extInsets.top + extInsets.bottom;;
 }
 
 void GlassWindow::HandleMoveEvent()
@@ -945,7 +956,7 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
         RECT windowRect;
 
-        if (m_isResizable && ::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
+        if (m_isResizable && ::GetExtendedFrameBounds(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
             result = LRESULT(HTTOP);
             return TRUE;
         }
@@ -1208,6 +1219,8 @@ BOOL GlassWindow::EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepR
     LONG style = ::GetWindowLong(GetHWND(), GWL_STYLE);
     LONG exStyle = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
 
+    // We use GetWindowRect() instead of GetExtendedFrameBounds() because we simply pass
+    // the bounds back to SetWindowPos() when we exit full-screen mode.
     ::GetWindowRect(GetHWND(), &m_beforeFullScreenRect);
     m_beforeFullScreenStyle = style & FS_STYLE_MASK;
     m_beforeFullScreenExStyle = exStyle & FS_EXSTYLE_MASK;
@@ -1808,7 +1821,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1getAnchor
     RECT wRect;
     POINT anchor;
     if (hWnd == ::GetCapture()) {
-        if (::GetCursorPos(&anchor) && ::GetWindowRect(hWnd, &wRect)) {
+        if (::GetCursorPos(&anchor) && ::GetExtendedFrameBounds(hWnd, &wRect)) {
             anchor.x -= wRect.left;
             anchor.y -= wRect.top;
             return ((((jlong) anchor.x) << 32) |

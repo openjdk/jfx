@@ -85,6 +85,8 @@ jboolean CheckAndClearException(JNIEnv *env);
 
 jint GetModifiers();
 
+BOOL GetExtendedFrameBounds(HWND, RECT*);
+
 class JString {
 public:
     JString(JNIEnv *env, jstring jString) {
