@@ -121,20 +121,16 @@ final class MediaFeatures {
                 enumValue(ColorScheme::valueOf, lowerCaseFeatureName, featureValue.getText()));
 
             case "prefers-reduced-motion" -> booleanPreferenceExpression(
-                lowerCaseFeatureName, lowerCaseTextValue(featureValue),
-                "reduce", MediaQueryContext::isReducedMotion);
+                lowerCaseFeatureName, featureValue, "reduce", MediaQueryContext::isReducedMotion);
 
             case "prefers-reduced-transparency" -> booleanPreferenceExpression(
-                lowerCaseFeatureName, lowerCaseTextValue(featureValue),
-                "reduce", MediaQueryContext::isReducedTransparency);
+                lowerCaseFeatureName, featureValue, "reduce", MediaQueryContext::isReducedTransparency);
 
             case "prefers-reduced-data" -> booleanPreferenceExpression(
-                lowerCaseFeatureName, lowerCaseTextValue(featureValue),
-                "reduce", MediaQueryContext::isReducedData);
+                lowerCaseFeatureName, featureValue, "reduce", MediaQueryContext::isReducedData);
 
             case "-fx-prefers-persistent-scrollbars" -> booleanPreferenceExpression(
-                lowerCaseFeatureName, lowerCaseTextValue(featureValue),
-                "persistent", MediaQueryContext::isPersistentScrollBars);
+                lowerCaseFeatureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
 
             default -> throw new IllegalArgumentException(
                 String.format("Unknown media feature <%s>", featureName));
@@ -189,18 +185,20 @@ final class MediaFeatures {
     }
 
     private static MediaQuery booleanPreferenceExpression(String featureName,
-                                                          String featureValue,
+                                                          Token featureValue,
                                                           String trueValue,
                                                           Function<MediaQueryContext, Boolean> argument) {
-        if ("no-preference".equals(featureValue)) {
-            return FunctionExpression.of(featureName, featureValue, argument, false);
+        String lowerCaseFeatureValue = lowerCaseTextValue(featureValue);
+
+        if ("no-preference".equals(lowerCaseFeatureValue)) {
+            return FunctionExpression.of(featureName, lowerCaseFeatureValue, argument, false);
         }
 
-        if (featureValue == null || trueValue.equals(featureValue)) {
-            return FunctionExpression.of(featureName, featureValue, argument, true);
+        if (lowerCaseFeatureValue == null || trueValue.equals(lowerCaseFeatureValue)) {
+            return FunctionExpression.of(featureName, lowerCaseFeatureValue, argument, true);
         }
 
-        throw unknownValue(featureName, featureValue);
+        throw unknownValue(featureName, featureValue.getText());
     }
 
     private static <T> T checkNotNullValue(String featureName, T featureValue) {
@@ -221,7 +219,7 @@ final class MediaFeatures {
     }
 
     private static String lowerCaseTextValue(String text) {
-        return text != null ? text.toLowerCase(Locale.ROOT).intern() : null;
+        return text != null ? text.toLowerCase(Locale.ROOT) : null;
     }
 
     private static String lowerCaseTextValue(Token token) {
