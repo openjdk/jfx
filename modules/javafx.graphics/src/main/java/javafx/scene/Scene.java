@@ -2773,9 +2773,18 @@ public class Scene implements EventTarget {
         public void changedSize(float w, float h) {
             boolean widthChanged = w != Scene.this.getWidth();
             boolean heightChanged = h != Scene.this.getHeight();
-            if (widthChanged) Scene.this.setWidth(w);
-            if (heightChanged) Scene.this.setHeight(h);
-            if (widthChanged || heightChanged) Scene.this.context.notifySizeChanged();
+
+            if (widthChanged) {
+                Scene.this.setWidth(w);
+            }
+
+            if (heightChanged) {
+                Scene.this.setHeight(h);
+            }
+
+            if (widthChanged || heightChanged) {
+                Scene.this.context.notifySizeChanged();
+            }
         }
 
         @Override

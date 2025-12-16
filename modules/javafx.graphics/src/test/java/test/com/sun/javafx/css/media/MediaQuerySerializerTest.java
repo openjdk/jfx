@@ -105,36 +105,56 @@ public class MediaQuerySerializerTest {
 
     @Test
     void serializeGreaterOrEqualExpression() throws IOException {
-        var expected = GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var expected = GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
         var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = GreaterOrEqualExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeGreaterExpression() throws IOException {
-        var expected = GreaterExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var expected = GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
         var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = GreaterExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeLessOrEqualExpression() throws IOException {
-        var expected = LessOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var expected = LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
         var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = LessOrEqualExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeLessExpression() throws IOException {
-        var expected = LessExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var expected = LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
         var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = LessExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 
     @Test
     void serializeEqualExpression() throws IOException {
-        var expected = EqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
+        var expected = EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX));
         var actual = deserialize(serialize(expected));
+        assertEquals(expected, actual);
+
+        expected = EqualExpression.ofNumber(SizeQueryType.WIDTH, 123);
+        actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
     }
 

@@ -42,6 +42,7 @@ import javafx.css.StyleConverter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.function.BiFunction;
 
 /**
  * Serializes and deserializes a {@link MediaQuery} expression into and from a binary representation.
@@ -130,8 +131,12 @@ public final class MediaQuerySerializer {
 
             case RangeExpression expr -> {
                 os.writeInt(stringStore.addString(expr.getFeatureName()));
-                os.writeDouble(expr.getFeatureValue().getValue());
-                os.writeByte(expr.getFeatureValue().getUnits().ordinal());
+                os.writeDouble(expr.getFeatureValue());
+                if (expr.getUnit() != null) {
+                    os.writeByte(expr.getUnit().ordinal());
+                } else {
+                    os.writeByte(-1);
+                }
             }
         }
     }
@@ -148,17 +153,29 @@ public final class MediaQuerySerializer {
             case NEGATION -> NegationExpression.of(readBinary(is, strings));
             case CONJUNCTION -> ConjunctionExpression.of(readBinary(is, strings), readBinary(is, strings));
             case DISJUNCTION -> DisjunctionExpression.of(readBinary(is, strings), readBinary(is, strings));
-            case EQUAL -> EqualExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
-            case GREATER -> GreaterExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
-            case GREATER_OR_EQUAL -> GreaterOrEqualExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
-            case LESS -> LessExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
-            case LESS_OR_EQUAL -> LessOrEqualExpression.of(SizeQueryType.of(strings[is.readInt()]), readSize(is));
+            case EQUAL -> readRangeExpression(is, strings, EqualExpression::ofSize, EqualExpression::ofNumber);
+            case GREATER -> readRangeExpression(is, strings, GreaterExpression::ofSize, GreaterExpression::ofNumber);
+            case GREATER_OR_EQUAL -> readRangeExpression(is, strings, GreaterOrEqualExpression::ofSize, GreaterOrEqualExpression::ofNumber);
+            case LESS -> readRangeExpression(is, strings, LessExpression::ofSize, LessExpression::ofNumber);
+            case LESS_OR_EQUAL -> readRangeExpression(is, strings, LessOrEqualExpression::ofSize, LessOrEqualExpression::ofNumber);
         };
     }
 
-    private static final SizeUnits[] SIZE_UNITS = SizeUnits.values();
-
-    private static Size readSize(DataInputStream is) throws IOException {
-        return new Size(is.readDouble(), SIZE_UNITS[is.readByte()]);
+    private static MediaQuery readRangeExpression(DataInputStream is, String[] strings,
+                                                  BiFunction<SizeQueryType, Size, MediaQuery> sizeFactory,
+                                                  BiFunction<SizeQueryType, Double, MediaQuery> numberFactory) throws IOException {
+        var sizeQueryType = SizeQueryType.of(strings[is.readInt()]);
+        double value = is.readDouble();
+        SizeUnits unit = readUnit(is);
+        return unit != null
+            ? sizeFactory.apply(sizeQueryType, new Size(value, unit))
+            : numberFactory.apply(sizeQueryType, value);
     }
+
+    private static SizeUnits readUnit(DataInputStream is) throws IOException {
+        byte unit = is.readByte();
+        return unit < 0 ? null : SIZE_UNITS[unit];
+    }
+
+    private static final SizeUnits[] SIZE_UNITS = SizeUnits.values();
 }

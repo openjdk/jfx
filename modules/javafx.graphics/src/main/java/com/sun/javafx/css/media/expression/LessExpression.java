@@ -35,21 +35,29 @@ import javafx.css.Size;
  */
 public final class LessExpression extends RangeExpression {
 
-    private LessExpression(SizeQueryType featureType, Size featureValue) {
-        super(featureType, featureValue);
+    private LessExpression(SizeQueryType featureType, Size sizeValue) {
+        super(featureType, sizeValue);
     }
 
-    public static LessExpression of(SizeQueryType featureType, Size featureValue) {
-        return MediaQueryCache.getCachedMediaQuery(new LessExpression(featureType, featureValue));
+    private LessExpression(SizeQueryType featureType, double numberValue) {
+        super(featureType, numberValue);
+    }
+
+    public static LessExpression ofSize(SizeQueryType featureType, Size sizeValue) {
+        return MediaQueryCache.getCachedMediaQuery(new LessExpression(featureType, sizeValue));
+    }
+
+    public static LessExpression ofNumber(SizeQueryType featureType, double numberValue) {
+        return MediaQueryCache.getCachedMediaQuery(new LessExpression(featureType, numberValue));
     }
 
     @Override
     public boolean evaluate(MediaQueryContext context) {
-        return getFeatureType().getSupplier().get(context) < getFeatureValue().pixels();
+        return getFeatureType().evaluate(context) < getValue();
     }
 
     @Override
     public String toString() {
-        return "(" + getFeatureName() + " < " + getFeatureValue() + ")";
+        return "(" + getFeatureName() + " < " + getFormattedValue() + ")";
     }
 }

@@ -35,21 +35,29 @@ import javafx.css.Size;
  */
 public final class GreaterExpression extends RangeExpression {
 
-    private GreaterExpression(SizeQueryType featureType, Size featureValue) {
-        super(featureType, featureValue);
+    private GreaterExpression(SizeQueryType featureType, Size sizeValue) {
+        super(featureType, sizeValue);
     }
 
-    public static GreaterExpression of(SizeQueryType featureType, Size featureValue) {
-        return MediaQueryCache.getCachedMediaQuery(new GreaterExpression(featureType, featureValue));
+    private GreaterExpression(SizeQueryType featureType, double numberValue) {
+        super(featureType, numberValue);
+    }
+
+    public static GreaterExpression ofSize(SizeQueryType featureType, Size sizeValue) {
+        return MediaQueryCache.getCachedMediaQuery(new GreaterExpression(featureType, sizeValue));
+    }
+
+    public static GreaterExpression ofNumber(SizeQueryType featureType, double numberValue) {
+        return MediaQueryCache.getCachedMediaQuery(new GreaterExpression(featureType, numberValue));
     }
 
     @Override
     public boolean evaluate(MediaQueryContext context) {
-        return getFeatureType().getSupplier().get(context) > getFeatureValue().pixels();
+        return getFeatureType().evaluate(context) > getValue();
     }
 
     @Override
     public String toString() {
-        return "(" + getFeatureName() + " > " + getFeatureValue() + ")";
+        return "(" + getFeatureName() + " > " + getFormattedValue() + ")";
     }
 }

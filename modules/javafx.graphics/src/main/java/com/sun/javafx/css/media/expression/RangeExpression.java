@@ -29,6 +29,7 @@ import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.SizeQueryType;
 import javafx.css.Size;
+import javafx.css.SizeUnits;
 import java.util.Objects;
 
 /**
@@ -42,11 +43,19 @@ public sealed abstract class RangeExpression implements MediaQuery
                 LessOrEqualExpression {
 
     private final SizeQueryType featureType;
-    private final Size featureValue;
+    private final Size sizeValue;
+    private final double numberValue;
 
-    RangeExpression(SizeQueryType featureType, Size featureValue) {
+    RangeExpression(SizeQueryType featureType, Size sizeValue) {
         this.featureType = Objects.requireNonNull(featureType, "featureType cannot be null");
-        this.featureValue = Objects.requireNonNull(featureValue, "featureValue cannot be null");
+        this.sizeValue = Objects.requireNonNull(sizeValue, "sizeValue cannot be null");
+        this.numberValue = sizeValue.pixels();
+    }
+
+    RangeExpression(SizeQueryType featureType, double numberValue) {
+        this.featureType = Objects.requireNonNull(featureType, "featureType cannot be null");
+        this.numberValue = numberValue;
+        this.sizeValue = null;
     }
 
     public final SizeQueryType getFeatureType() {
@@ -57,8 +66,26 @@ public sealed abstract class RangeExpression implements MediaQuery
         return featureType.getFeatureName();
     }
 
-    public final Size getFeatureValue() {
-        return featureValue;
+    /**
+     * Gets the feature value as specified in the stylesheet; for example, "100em" will return the value 100.
+     */
+    public final double getFeatureValue() {
+        return sizeValue != null ? sizeValue.getValue() : numberValue;
+    }
+
+    /**
+     * Gets the converted feature value; for example, "100em" will not return the value 100, but the
+     * result of calling {@code SizeUnits.EM.pixels(100, 1, null)}.
+     */
+    public final double getValue() {
+        return numberValue;
+    }
+
+    /**
+     * Gets the unit as specified in the stylesheet, or {@code null} if no unit was specified.
+     */
+    public final SizeUnits getUnit() {
+        return sizeValue != null ? sizeValue.getUnits() : null;
     }
 
     @Override
@@ -74,15 +101,21 @@ public sealed abstract class RangeExpression implements MediaQuery
 
         RangeExpression other = (RangeExpression)obj;
         return other.featureType == featureType
-            && other.featureValue.equals(featureValue);
+            && other.numberValue == numberValue
+            && Objects.equals(other.sizeValue, sizeValue);
     }
 
     @Override
     public final int hashCode() {
-        return Objects.hash(getClass(), featureType, featureValue);
+        return Objects.hash(getClass(), featureType, sizeValue, numberValue);
+    }
+
+    final String getFormattedValue() {
+        return sizeValue != null ? sizeValue.toString() : Double.toString(numberValue);
     }
 
     public interface Supplier {
-        RangeExpression rangeExpression(SizeQueryType featureType, Size featureValue);
+        RangeExpression getSizeExpression(SizeQueryType featureType, Size sizeValue);
+        RangeExpression getNumberExpression(SizeQueryType featureType, double numberValue);
     }
 }

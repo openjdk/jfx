@@ -53,11 +53,16 @@ public class MediaQueryCacheTest {
         CONSTANT(() -> ConstantExpression.of(true)),
         FUNCTION(() -> FunctionExpression.of("test", "value", _ -> 0, 0)),
         NEGATION(() -> NegationExpression.of(ConstantExpression.of(true))),
-        GREATER(() -> GreaterExpression.of(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
-        GREATER_OR_EQUAL(() -> GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
-        LESS(() -> LessExpression.of(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
-        LESS_OR_EQUAL(() -> LessOrEqualExpression.of(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
-        EQUAL(() -> EqualExpression.of(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX)));
+        GREATER_SIZE(() -> GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
+        GREATER_NUMBER(() -> GreaterExpression.ofNumber(SizeQueryType.WIDTH, 123)),
+        GREATER_OR_EQUAL_SIZE(() -> GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
+        GREATER_OR_EQUAL_NUMBER(() -> GreaterOrEqualExpression.ofNumber(SizeQueryType.WIDTH, 123)),
+        LESS_SIZE(() -> LessExpression.ofSize(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
+        LESS_NUMBER(() -> LessExpression.ofNumber(SizeQueryType.WIDTH, 123)),
+        LESS_OR_EQUAL_SIZE(() -> LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
+        LESS_OR_EQUAL_NUMBER(() -> LessOrEqualExpression.ofNumber(SizeQueryType.WIDTH, 123)),
+        EQUAL_SIZE(() -> EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(1, SizeUnits.PX))),
+        EQUAL_NUMBER(() -> EqualExpression.ofNumber(SizeQueryType.WIDTH, 123));
 
         MediaQueryDeduplicationTest(Supplier<MediaQuery> supplier) {
             this.supplier = supplier;

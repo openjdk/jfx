@@ -379,8 +379,13 @@ public final class MediaQueryParser {
                 // operator can only be LESS or LESS_OR_EQUAL.
                 ComparisonOp operator2 = operator1 == ComparisonOp.EQUAL ? null : parseComparisonOp(tokens);
                 if (operator2 == null || !operator2.isSameDirection(operator1)) {
-                    return MediaFeatures.rangeQueryExpression(
-                        featureName.getText(), featureValue1.getText(), operator1.flipped());
+                    try {
+                        return MediaFeatures.rangeQueryExpression(
+                            featureName.getText(), featureValue1.getText(), operator1.flipped());
+                    } catch (IllegalArgumentException ex) {
+                        errorHandler.accept(tokens.consume(), ex.getMessage());
+                        return null;
+                    }
                 }
 
                 Token featureValue2 = tokens.consumeIf(LENGTH);

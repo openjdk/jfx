@@ -25,14 +25,19 @@
 
 package com.sun.javafx.css.media;
 
+import com.sun.javafx.css.media.expression.RangeExpression;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
+
 public enum SizeQueryType {
 
-    WIDTH("width", MediaQueryContext::getWidth),
-    HEIGHT("height", MediaQueryContext::getHeight),
-    ASPECT_RATIO("aspect-ratio", context -> context.getWidth() / context.getHeight());
+    WIDTH("width", SizeQueryType::sizeExpression, MediaQueryContext::getWidth),
+    HEIGHT("height", SizeQueryType::sizeExpression, MediaQueryContext::getHeight),
+    ASPECT_RATIO("aspect-ratio", SizeQueryType::numberExpression, context -> context.getWidth() / context.getHeight());
 
-    SizeQueryType(String featureName, SizeSupplier supplier) {
+    SizeQueryType(String featureName, QuerySupplier supplier, QueryEvaluator evaluator) {
         this.featureName = featureName;
+        this.evaluator = evaluator;
         this.supplier = supplier;
     }
 
@@ -46,15 +51,88 @@ public enum SizeQueryType {
         throw new IllegalArgumentException(String.format("Unknown media feature <%s>", name));
     }
 
+    private static MediaQuery numberExpression(SizeQueryType queryType,
+                                               String featureValue,
+                                               RangeExpression.Supplier rangeExpressionSupplier) {
+        try {
+            return rangeExpressionSupplier.getNumberExpression(queryType, Double.parseDouble(featureValue));
+        } catch (NumberFormatException ignored) {
+            throw invalidValue(queryType.getFeatureName(), featureValue);
+        }
+    }
+
+    private static MediaQuery sizeExpression(SizeQueryType queryType,
+                                             String featureValue,
+                                             RangeExpression.Supplier rangeExpressionSupplier) {
+        try {
+            return rangeExpressionSupplier.getSizeExpression(
+                queryType, sizeValue(queryType.getFeatureName(), featureValue));
+        } catch (NumberFormatException ignored) {
+            throw invalidValue(queryType.getFeatureName(), featureValue);
+        }
+    }
+
     private final String featureName;
-    private final SizeSupplier supplier;
+    private final QueryEvaluator evaluator;
+    private final QuerySupplier supplier;
 
     public String getFeatureName() {
         return featureName;
     }
 
-    public SizeSupplier getSupplier() {
-        return supplier;
+    public MediaQuery getQueryExpression(String featureValue, RangeExpression.Supplier rangeExpressionSupplier) {
+        return supplier.get(this, featureValue, rangeExpressionSupplier);
+    }
+
+    public double evaluate(MediaQueryContext context) {
+        return evaluator.get(context);
+    }
+
+    /*
+     * As per CSS specification (https://www.w3.org/TR/css-values-4/#lengths), a <length> value (called <size>
+     * in JavaFX) always requires a unit. The only exception is the zero value, which can be specified without
+     * a unit. However, JavaFX's CssParser accepts sizes without a unit by implicitly treating them as pixels.
+     */
+    private static Size sizeValue(String featureName, String lowerCaseText) {
+        int unitIndex = -1;
+
+        for (int i = 0; i < lowerCaseText.length(); i++) {
+            if (!Character.isDigit(lowerCaseText.charAt(i))) {
+                unitIndex = i;
+                break;
+            }
+        }
+
+        if (unitIndex == -1) {
+            return new Size(Double.parseDouble(lowerCaseText), SizeUnits.PX);
+        }
+
+        double value = Double.parseDouble(lowerCaseText.substring(0, unitIndex));
+
+        return new Size(value, switch (lowerCaseText.substring(unitIndex)) {
+            case "px" -> SizeUnits.PX;
+            case "em" -> SizeUnits.EM;
+            case "ex" -> SizeUnits.EX;
+            case "cm" -> SizeUnits.CM;
+            case "mm" -> SizeUnits.MM;
+            case "in" -> SizeUnits.IN;
+            case "pt" -> SizeUnits.PT;
+            case "pc" -> SizeUnits.PC;
+            default -> throw invalidValue(featureName, lowerCaseText);
+        });
+    }
+
+    private static RuntimeException invalidValue(String featureName, String featureValue) {
+        return new IllegalArgumentException(
+            String.format("Invalid value <%s> for media feature <%s>", featureValue, featureName));
+    }
+
+    private interface QuerySupplier {
+        MediaQuery get(SizeQueryType queryType, String featureValue, RangeExpression.Supplier supplier);
+    }
+
+    private interface QueryEvaluator {
+        double get(MediaQueryContext context);
     }
 
     private static final SizeQueryType[] VALUES = values();

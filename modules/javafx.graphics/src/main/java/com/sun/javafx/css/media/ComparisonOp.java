@@ -31,14 +31,69 @@ import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
 import com.sun.javafx.css.media.expression.LessExpression;
 import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.RangeExpression;
+import javafx.css.Size;
 
 enum ComparisonOp {
 
-    LESS(LessExpression::of),
-    LESS_OR_EQUAL(LessOrEqualExpression::of),
-    GREATER(GreaterExpression::of),
-    GREATER_OR_EQUAL(GreaterOrEqualExpression::of),
-    EQUAL(EqualExpression::of);
+    LESS(new RangeExpression.Supplier() {
+        @Override
+        public RangeExpression getSizeExpression(SizeQueryType featureType, Size sizeValue) {
+            return LessExpression.ofSize(featureType, sizeValue);
+        }
+
+        @Override
+        public RangeExpression getNumberExpression(SizeQueryType featureType, double numberValue) {
+            return LessExpression.ofNumber(featureType, numberValue);
+        }
+    }),
+
+    LESS_OR_EQUAL(new RangeExpression.Supplier() {
+        @Override
+        public RangeExpression getSizeExpression(SizeQueryType featureType, Size sizeValue) {
+            return LessOrEqualExpression.ofSize(featureType, sizeValue);
+        }
+
+        @Override
+        public RangeExpression getNumberExpression(SizeQueryType featureType, double numberValue) {
+            return LessOrEqualExpression.ofNumber(featureType, numberValue);
+        }
+    }),
+
+    GREATER(new RangeExpression.Supplier() {
+        @Override
+        public RangeExpression getSizeExpression(SizeQueryType featureType, Size sizeValue) {
+            return GreaterExpression.ofSize(featureType, sizeValue);
+        }
+
+        @Override
+        public RangeExpression getNumberExpression(SizeQueryType featureType, double numberValue) {
+            return GreaterExpression.ofNumber(featureType, numberValue);
+        }
+    }),
+
+    GREATER_OR_EQUAL(new RangeExpression.Supplier() {
+        @Override
+        public RangeExpression getSizeExpression(SizeQueryType featureType, Size sizeValue) {
+            return GreaterOrEqualExpression.ofSize(featureType, sizeValue);
+        }
+
+        @Override
+        public RangeExpression getNumberExpression(SizeQueryType featureType, double numberValue) {
+            return GreaterOrEqualExpression.ofNumber(featureType, numberValue);
+        }
+    }),
+
+    EQUAL(new RangeExpression.Supplier() {
+        @Override
+        public RangeExpression getSizeExpression(SizeQueryType featureType, Size sizeValue) {
+            return EqualExpression.ofSize(featureType, sizeValue);
+        }
+
+        @Override
+        public RangeExpression getNumberExpression(SizeQueryType featureType, double numberValue) {
+            return EqualExpression.ofNumber(featureType, numberValue);
+        }
+    });
 
     ComparisonOp(RangeExpression.Supplier supplier) {
         this.supplier = supplier;

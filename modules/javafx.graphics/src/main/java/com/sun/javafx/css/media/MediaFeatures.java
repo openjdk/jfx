@@ -29,8 +29,6 @@ import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import com.sun.javafx.css.media.expression.RangeExpression;
 import javafx.application.ColorScheme;
-import javafx.css.Size;
-import javafx.css.SizeUnits;
 import java.util.Locale;
 import java.util.function.Function;
 
@@ -177,12 +175,10 @@ final class MediaFeatures {
 
     private static MediaQuery rangeQueryExpression(SizeQueryType featureType,
                                                    String lowerCaseFeatureValue,
-                                                   RangeExpression.Supplier supplier) {
-        Size size = lengthValue(
-            featureType.getFeatureName(),
-            checkNotNullValue(featureType.getFeatureName(), lowerCaseFeatureValue));
-
-        return supplier.rangeExpression(featureType, size);
+                                                   RangeExpression.Supplier rangeExpressionSupplier) {
+        return featureType.getQueryExpression(
+            checkNotNullValue(featureType.getFeatureName(), lowerCaseFeatureValue),
+            rangeExpressionSupplier);
     }
 
     private static MediaQuery booleanPreferenceExpression(String featureName,
@@ -219,36 +215,6 @@ final class MediaFeatures {
 
     private static String lowerCaseTextValue(String text) {
         return text != null ? text.toLowerCase(Locale.ROOT).intern() : null;
-    }
-
-    private static Size lengthValue(String featureName, String lowerCaseText) {
-        int unitIndex = -1;
-
-        for (int i = 0; i < lowerCaseText.length(); i++) {
-            if (!Character.isDigit(lowerCaseText.charAt(i))) {
-                unitIndex = i;
-                break;
-            }
-        }
-
-        if (unitIndex == -1) {
-            return new Size(Double.parseDouble(lowerCaseText), SizeUnits.PX);
-        }
-
-        double value = Double.parseDouble(lowerCaseText.substring(0, unitIndex));
-
-        return new Size(value, switch (lowerCaseText.substring(unitIndex)) {
-            case "px" -> SizeUnits.PX;
-            case "em" -> SizeUnits.EM;
-            case "ex" -> SizeUnits.EX;
-            case "cm" -> SizeUnits.CM;
-            case "mm" -> SizeUnits.MM;
-            case "in" -> SizeUnits.IN;
-            case "pt" -> SizeUnits.PT;
-            case "pc" -> SizeUnits.PC;
-            default -> throw new IllegalArgumentException(
-                String.format("Invalid value <%s> for media feature <%s>", lowerCaseText, featureName));
-        });
     }
 
     private static RuntimeException unknownValue(String featureName, String featureValue) {

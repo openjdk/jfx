@@ -182,9 +182,9 @@ public class CssParser_mediaQuery_Test {
                 FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true),
                 FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false),
                 FunctionExpression.of("prefers-reduced-transparency", "no-preference", _ -> null, false),
-                GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)),
-                LessExpression.of(SizeQueryType.HEIGHT, new Size(1000, SizeUnits.PX)),
-                LessOrEqualExpression.of(SizeQueryType.HEIGHT, new Size(500, SizeUnits.PX))
+                GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)),
+                LessExpression.ofSize(SizeQueryType.HEIGHT, new Size(1000, SizeUnits.PX)),
+                LessOrEqualExpression.ofSize(SizeQueryType.HEIGHT, new Size(500, SizeUnits.PX))
             ),
             mediaRule.getQueries());
     }
@@ -486,39 +486,53 @@ public class CssParser_mediaQuery_Test {
                 .foo { bar: baz; }
             }
 
-            @media (100px > width) {
+            @media (100em > width) {
                 .foo { bar: baz; }
             }
 
-            @media (100px <= width) {
+            @media (100cm <= width) {
                 .foo { bar: baz; }
             }
 
-            @media (100px < width) {
+            @media (100 < width) {
                 .foo { bar: baz; }
             }
 
-            @media (100px = width) {
+            @media (100 = width) {
+                .foo { bar: baz; }
+            }
+
+            @media (0.5 < aspect-ratio) {
+                .foo { bar: baz; }
+            }
+
+            @media (0.5em < aspect-ratio) {
                 .foo { bar: baz; }
             }
             """);
 
-        assertEquals(5, stylesheet.getRules().size());
+        assertEquals(7, stylesheet.getRules().size());
         assertEquals(
-            List.of(LessOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
         assertEquals(
-            List.of(LessExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.EM))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
         assertEquals(
-            List.of(GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.CM))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(2)).getQueries());
         assertEquals(
-            List.of(GreaterExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(3)).getQueries());
         assertEquals(
-            List.of(EqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(4)).getQueries());
+        assertEquals(
+            List.of(GreaterExpression.ofNumber(SizeQueryType.ASPECT_RATIO, 0.5)),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(5)).getQueries());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: aspect-ratio is a <number>, not a <size>
+            RuleHelper.getMediaRule(stylesheet.getRules().get(6)).getQueries());
     }
 
     @Test
@@ -528,39 +542,53 @@ public class CssParser_mediaQuery_Test {
                 .foo { bar: baz; }
             }
 
-            @media (width > 100px) {
+            @media (width > 100em) {
                 .foo { bar: baz; }
             }
 
-            @media (width <= 100px) {
+            @media (width <= 100cm) {
                 .foo { bar: baz; }
             }
 
-            @media (width < 100px) {
+            @media (width < 100) {
                 .foo { bar: baz; }
             }
 
-            @media (width = 100px) {
+            @media (width = 100) {
+                .foo { bar: baz; }
+            }
+            
+            @media (aspect-ratio > 0.5) {
+                .foo { bar: baz; }
+            }
+
+            @media (aspect-ratio > 0.5em) {
                 .foo { bar: baz; }
             }
             """);
 
-        assertEquals(5, stylesheet.getRules().size());
+        assertEquals(7, stylesheet.getRules().size());
         assertEquals(
-            List.of(GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
         assertEquals(
-            List.of(GreaterExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.EM))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
         assertEquals(
-            List.of(LessOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.CM))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(2)).getQueries());
         assertEquals(
-            List.of(LessExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(3)).getQueries());
         assertEquals(
-            List.of(EqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(4)).getQueries());
+        assertEquals(
+            List.of(GreaterExpression.ofNumber(SizeQueryType.ASPECT_RATIO, 0.5)),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(5)).getQueries());
+        assertEquals(
+            List.of(ConstantExpression.of(false)), // error: aspect-ratio is a <number>, not a <size>
+            RuleHelper.getMediaRule(stylesheet.getRules().get(6)).getQueries());
     }
 
     @Test
@@ -586,23 +614,23 @@ public class CssParser_mediaQuery_Test {
         assertEquals(4, stylesheet.getRules().size());
         assertEquals(
             List.of(ConjunctionExpression.of(
-                LessExpression.of(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
-                GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+                LessExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
         assertEquals(
             List.of(ConjunctionExpression.of(
-                LessOrEqualExpression.of(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
-                GreaterExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+                LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
         assertEquals(
             List.of(ConjunctionExpression.of(
-                GreaterExpression.of(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
-                LessOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+                GreaterExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(2)).getQueries());
         assertEquals(
             List.of(ConjunctionExpression.of(
-                GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
-                LessExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
+                GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(50, SizeUnits.PX)),
+                LessExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX)))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(3)).getQueries());
     }
 
@@ -655,10 +683,10 @@ public class CssParser_mediaQuery_Test {
 
         assertEquals(2, stylesheet.getRules().size());
         assertEquals(
-            List.of(GreaterOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
         assertEquals(
-            List.of(LessOrEqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            List.of(LessOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
             RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
     }
 
@@ -668,11 +696,18 @@ public class CssParser_mediaQuery_Test {
             @media (width: 100px) {
                 .foo { bar: baz; }
             }
+
+            @media (aspect-ratio: 0.5) {
+                .foo { bar: baz; }
+            }
             """);
 
-        assertEquals(1, stylesheet.getRules().size());
+        assertEquals(2, stylesheet.getRules().size());
         assertEquals(
-            List.of(EqualExpression.of(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
-            RuleHelper.getMediaRule(stylesheet.getRules().getFirst()).getQueries());
+            List.of(EqualExpression.ofSize(SizeQueryType.WIDTH, new Size(100, SizeUnits.PX))),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(0)).getQueries());
+        assertEquals(
+            List.of(EqualExpression.ofNumber(SizeQueryType.ASPECT_RATIO, 0.5)),
+            RuleHelper.getMediaRule(stylesheet.getRules().get(1)).getQueries());
     }
 }

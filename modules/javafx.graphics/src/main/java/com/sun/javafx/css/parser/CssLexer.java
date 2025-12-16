@@ -49,8 +49,6 @@ public final class CssLexer {
     public static final int RAD = 25;
     public static final int TURN = 26;
     public static final int GREATER = 27;
-    public static final int LESS = 48;
-    public static final int EQUALS = 49;
     public static final int LBRACE = 28;
     public static final int RBRACE = 29;
     public static final int SEMI = 30;
@@ -71,6 +69,8 @@ public final class CssLexer {
     public static final int SECONDS = 45;
     public static final int MS = 46;
     public static final int AT_KEYWORD = 47;
+    public static final int LESS = 48;
+    public static final int EQUALS = 49;
 
     private final Recognizer A = (c) -> c == 'a' || c == 'A';
     private final Recognizer B = (c) -> c == 'b' || c == 'B';
