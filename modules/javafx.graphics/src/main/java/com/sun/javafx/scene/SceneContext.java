@@ -223,7 +223,7 @@ public final class SceneContext implements Scene.Preferences, MediaQueryContext 
         }
     }
 
-    private void onFullScreenChanged() {
+    private void onFullScreenChanged(Boolean unused) {
         // We evaluate all queries that we know could potentially change when the full-screen state has changed.
         boolean changed = fullScreenAwareQueries.entrySet().stream()
             .anyMatch(entry -> entry.getKey().evaluate(this) != entry.getValue());
