@@ -1061,6 +1061,7 @@ public class Window implements EventTarget {
                 windows.remove(Window.this);
             }
             Toolkit tk = Toolkit.getToolkit();
+            System.out.println("Window/invalidationListener: shown changed to: " + newVisible);
             if (peer != null) {
                 if (newVisible) {
                     if (peerListener == null) {
@@ -1082,6 +1083,8 @@ public class Window implements EventTarget {
                         SceneHelper.preferredSize(getScene());
                     }
 
+                    System.out.println("Window/invalidationListener: screen=" + screen.get());
+
                     /*
                      * Apply bounds first so the peer is positioned on the correct
                      * screen before updating the output scales and before sizing
@@ -1094,6 +1097,8 @@ public class Window implements EventTarget {
 
                     applyBounds();
 
+                    System.out.println("Window/invalidationListener: after applying bounds screen=" + screen.get());
+
                     updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
@@ -1105,6 +1110,7 @@ public class Window implements EventTarget {
                     // forced setSize and setLocation down below.
                     peerBoundsConfigurator.setRenderScaleX(getRenderScaleX());
                     peerBoundsConfigurator.setRenderScaleY(getRenderScaleY());
+                    System.out.println("Window/invalidationListener: output scale used before sizing scene: " + getRenderScaleX());
 
                     if (!isEmbeddedWindow && getScene() != null) {
                         // The scene of regular windows is initialized
@@ -1173,6 +1179,8 @@ public class Window implements EventTarget {
                 // Reset the flag unconditionally upon visibility changes
                 sizeToScene = false;
             }
+
+            System.out.println("Window/invalidationListener: exit invalidation listener");
         }
 
         @Override
@@ -1518,6 +1526,8 @@ public class Window implements EventTarget {
                 float newRX = (float) renderScaleX;
                 float newRY = (float) renderScaleY;
                 reset();
+                System.out.println("Window/peer: setBounds(" + newX + ", " + newY +", " + xSet + ", " + ySet + ", winW:" + newWW + ", " + newWH + ", clientW:" + newCW + ", " + newCH + ", " + newXG + ", " + newYG +", rsx:" + newRX + ", rsy:"+newRY +")");
+
                 peer.setBounds(newX, newY, xSet, ySet,
                         newWW, newWH, newCW, newCH,
                         newXG, newYG,
