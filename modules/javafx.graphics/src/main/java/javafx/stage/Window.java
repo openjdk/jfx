@@ -325,6 +325,7 @@ public class Window implements EventTarget {
             } else {
                 heightExplicit = false;
             }
+            System.out.println("Window/adjustSize(" + selfSizePriority + "): scene=" + sceneWidth + "x" + sceneHeight + "; explicitWH=" + widthExplicit + "," + heightExplicit + " final: setSize(" + w + ", " + h + ", " + cw + ", " + ch + ")");
 
             peerBoundsConfigurator.setSize(w, h, cw, ch);
             applyBounds();
@@ -1118,6 +1119,7 @@ public class Window implements EventTarget {
                         SceneHelper.initPeer(getScene());
                         peer.setScene(SceneHelper.getPeer(getScene()));
                         SceneHelper.preferredSize(getScene());
+                        System.out.println("Window/invalidationListener: size from scene: " + getScene().getWidth() + "x" + getScene().getHeight());
                     }
 
                     // Set peer bounds
