@@ -285,9 +285,7 @@ public final class MediaQueryParser {
         }
 
         try {
-            return MediaFeatures.discreteQueryExpression(
-                featureName.getText(),
-                featureValue != null ? featureValue.getText() : null);
+            return MediaFeatures.discreteQueryExpression(featureName.getText(), featureValue);
         } catch (IllegalArgumentException ex) {
             errorHandler.accept(featureValue, ex.getMessage());
             return null;
@@ -338,8 +336,7 @@ public final class MediaQueryParser {
                 }
 
                 try {
-                    return MediaFeatures.rangeQueryExpression(
-                        featureName.getText(), featureValue.getText(), operator);
+                    return MediaFeatures.rangeQueryExpression(featureName.getText(), featureValue, operator);
                 } catch (IllegalArgumentException ex) {
                     errorHandler.accept(tokens.consume(), ex.getMessage());
                     return null;
@@ -381,7 +378,7 @@ public final class MediaQueryParser {
                 if (operator2 == null || !operator2.isSameDirection(operator1)) {
                     try {
                         return MediaFeatures.rangeQueryExpression(
-                            featureName.getText(), featureValue1.getText(), operator1.flipped());
+                            featureName.getText(), featureValue1, operator1.flipped());
                     } catch (IllegalArgumentException ex) {
                         errorHandler.accept(tokens.consume(), ex.getMessage());
                         return null;
@@ -397,7 +394,7 @@ public final class MediaQueryParser {
                 try {
                     return MediaFeatures.rangeQueryExpression(
                         featureName.getText(),
-                        featureValue1.getText(), featureValue2.getText(),
+                        featureValue1, featureValue2,
                         operator1, operator2);
                 } catch (IllegalArgumentException ex) {
                     errorHandler.accept(tokens.consume(), ex.getMessage());

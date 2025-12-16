@@ -36,6 +36,8 @@ import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
 import com.sun.javafx.css.media.expression.RangeExpression;
+import com.sun.javafx.css.parser.CssLexer;
+import com.sun.javafx.css.parser.Token;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
@@ -147,7 +149,7 @@ public final class MediaQuerySerializer {
                 String featureName = strings[is.readInt()];
                 int featureValueIdx = is.readInt();
                 String featureValue = featureValueIdx >= 0 ? strings[featureValueIdx] : null;
-                yield MediaFeatures.discreteQueryExpression(featureName, featureValue);
+                yield MediaFeatures.discreteQueryExpression(featureName, new Token(CssLexer.IDENT, featureValue));
             }
             case CONSTANT -> ConstantExpression.of(is.readBoolean());
             case NEGATION -> NegationExpression.of(readBinary(is, strings));

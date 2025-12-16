@@ -37,6 +37,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.media.MediaQueryParser;
+import com.sun.javafx.css.parser.CssParserHelper;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
@@ -122,6 +123,15 @@ import java.util.Stack;
  * @since 9
  */
 final public class CssParser {
+
+    static {
+        CssParserHelper.setAccessor(new CssParserHelper.Accessor() {
+            @Override
+            public Size parseSize(Token token) {
+                return sizeImpl(token);
+            }
+        });
+    }
 
     /**
      * Constructs a {@code CssParser}.
@@ -575,6 +585,21 @@ final public class CssParser {
     }
 
     private Size size(final Token token) throws ParseException {
+        Size size = sizeImpl(token);
+        if (size == null) {
+            if (LOGGER.isLoggable(Level.FINEST)) {
+                LOGGER.finest("Expected \'<number>\'");
+            }
+
+            ParseException re = new ParseException("Expected \'<number>\'", token, this);
+            reportError(createError(re.toString()));
+            throw re;
+        }
+
+        return size;
+    }
+
+    private static Size sizeImpl(final Token token) {
         SizeUnits units = SizeUnits.PX;
         // Amount to trim off the suffix, if any. Most are 2 chars.
         int trim = 2;
@@ -638,12 +663,7 @@ final public class CssParser {
             units = SizeUnits.MS;
             break;
         default:
-            if (LOGGER.isLoggable(Level.FINEST)) {
-                LOGGER.finest("Expected \'<number>\'");
-            }
-            ParseException re = new ParseException("Expected \'<number>\'",token, this);
-            reportError(createError(re.toString()));
-            throw re;
+            return null;
         }
         // TODO: Handle NumberFormatException
         return new Size(
