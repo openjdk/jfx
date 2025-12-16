@@ -53,31 +53,36 @@ final class MediaFeatures {
 
         return switch (lowerCaseFeatureName) {
             // Discrete min-/max-features are just features in a range context in disguise.
-            case "min-width" -> rangeQueryExpression(SizeQueryType.WIDTH, featureValue,
-                                                     ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
+            case "min-width" -> rangeQueryExpression(
+                SizeQueryType.WIDTH, featureValue,
+                ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
 
-            case "max-width" -> rangeQueryExpression(SizeQueryType.WIDTH, featureValue,
-                                                     ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
+            case "max-width" -> rangeQueryExpression(
+                SizeQueryType.WIDTH, featureValue,
+                ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
 
-            case "min-height" -> rangeQueryExpression(SizeQueryType.HEIGHT, featureValue,
-                                                      ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
+            case "min-height" -> rangeQueryExpression(
+                SizeQueryType.HEIGHT, featureValue,
+                ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
 
-            case "max-height" -> rangeQueryExpression(SizeQueryType.HEIGHT, featureValue,
-                                                      ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
+            case "max-height" -> rangeQueryExpression(
+                SizeQueryType.HEIGHT, featureValue,
+                ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
 
-            case "min-aspect-ratio" -> rangeQueryExpression(SizeQueryType.ASPECT_RATIO, featureValue,
-                                                            ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
+            case "min-aspect-ratio" -> rangeQueryExpression(
+                SizeQueryType.ASPECT_RATIO, featureValue,
+                ComparisonOp.GREATER_OR_EQUAL.getExpressionSupplier());
 
-            case "max-aspect-ratio" -> rangeQueryExpression(SizeQueryType.ASPECT_RATIO, featureValue,
-                                                            ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
+            case "max-aspect-ratio" -> rangeQueryExpression(
+                SizeQueryType.ASPECT_RATIO, featureValue,
+                ComparisonOp.LESS_OR_EQUAL.getExpressionSupplier());
 
             // We have to account for range-based features used in a discrete context (e.g. "width: 500px").
             // This is unusual because in most cases these features will be evaluated in a range context, which
             // is handled in rangeQueryExpression().
-            case "width",
-                 "height",
-                 "aspect-ratio" -> rangeQueryExpression(SizeQueryType.of(lowerCaseFeatureName),
-                                                        featureValue, ComparisonOp.EQUAL.getExpressionSupplier());
+            case "width", "height", "aspect-ratio" -> rangeQueryExpression(
+                SizeQueryType.of(lowerCaseFeatureName), featureValue,
+                ComparisonOp.EQUAL.getExpressionSupplier());
 
             // Portrait if height >= width, landscape otherwise.
             case "orientation" -> {
