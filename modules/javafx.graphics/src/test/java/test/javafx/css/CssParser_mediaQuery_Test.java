@@ -557,7 +557,7 @@ public class CssParser_mediaQuery_Test {
             @media (width = 100) {
                 .foo { bar: baz; }
             }
-            
+
             @media (aspect-ratio > 0.5) {
                 .foo { bar: baz; }
             }
