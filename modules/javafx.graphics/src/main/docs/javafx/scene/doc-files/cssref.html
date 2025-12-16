@@ -831,9 +831,10 @@
         the <code>src</code> descriptor. The <code>src</code> descriptor is expected to be a
         <a href="#typeurl" class="typelink">&lt;url&gt;</a>. The <code>format</code> hint is ignored.</p>
     <h4>@media</h4>
-    <p>A media query is a method of testing certain aspects of the <a href="../../../javafx/scene/Scene.html">Scene</a>.
-        Media queries are independent of the contents of the scene graph, its styling, or any other internal aspect;
-        they're only dependent on "external" configuration of the <code>Scene</code>.
+    <p>A media query is a method of testing certain aspects of the <a href="../../../javafx/scene/Scene.html">Scene</a>
+        or <a href="../../../javafx/stage/Stage.html">Stage</a>. Media queries are independent of the contents of the
+        scene graph, its styling, or any other internal aspect; they're only dependent on "external" configuration of
+        the <code>Scene</code> or <code>Stage</code>.
     <p>Several media queries can be combined into a comma-separated <strong>media query list</strong>.
         A media query list evaluates to <code>true</code> if <em>any</em> of the media queries is <code>true</code>,
         and evaluates to <code>false</code> only if <em>all</em> the media queries are <code>false</code>.
@@ -944,31 +945,31 @@
                 <td class="value">width</td>
                 <td class="value"><a href="#typelength" class="typeref">&lt;length&gt;</a></td>
                 <td>range</td>
-                <td></td>
+                <td>corresponds to <code>Scene.width</code></td>
             </tr>
             <tr>
                 <td class="value">height</td>
                 <td class="value"><a href="#typelength" class="typeref">&lt;length&gt;</a></td>
                 <td>range</td>
-                <td></td>
+                <td>corresponds to <code>Scene.height</code></td>
             </tr>
             <tr>
                 <td class="value">aspect-ratio</td>
                 <td class="value"><a href="#typenumber" class="typeref">&lt;number&gt;</a></td>
                 <td>range</td>
-                <td>aspect ratio = width / height</td>
+                <td>aspect ratio = <code>width</code> / <code>height</code></td>
             </tr>
             <tr>
                 <td class="value">orientation</td>
                 <td class="value">portrait | landscape</td>
                 <td>discrete</td>
-                <td><code>portrait</code> if height &gt;= width, <code>landscape</code> otherwise</td>
+                <td><code>portrait</code> if <code>height</code> &gt;= <code>width</code>, <code>landscape</code> otherwise</td>
             </tr>
             <tr>
                 <td class="value">display-mode</td>
                 <td class="value">fullscreen | standalone</td>
                 <td>discrete</td>
-                <td><code>fullscreen</code> if <code>Stage.isFullScreen()</code>, <code>standalone</code> otherwise</code></td>
+                <td><code>fullscreen</code> if <code>Stage.isFullScreen()</code>, <code>standalone</code> otherwise</td>
             </tr>
             <tr>
                 <th class="propertyname subheader">User Preference</th>
