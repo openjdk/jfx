@@ -66,6 +66,8 @@
         linearSamplerDict = [[NSMutableDictionary alloc] init];
         nonLinearSamplerDict = [[NSMutableDictionary alloc] init];
         compositeMode = com_sun_prism_mtl_MTLContext_MTL_COMPMODE_SRCOVER; //default
+        nonMipmappedSamplerState = nil;
+        mipmappedSamplerState = nil;
 
         currentBufferIndex = 0;
         commandQueue = [device newCommandQueue];
@@ -237,19 +239,22 @@
 
 - (void) create3DSamplerStates
 {
-    MTLSamplerDescriptor *samplerDescriptor = [MTLSamplerDescriptor new];
-    samplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
-    samplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
-    samplerDescriptor.rAddressMode = MTLSamplerAddressModeRepeat;
-    samplerDescriptor.sAddressMode = MTLSamplerAddressModeRepeat;
-    samplerDescriptor.tAddressMode = MTLSamplerAddressModeRepeat;
-    samplerDescriptor.mipFilter = MTLSamplerMipFilterNotMipmapped;
-    nonMipmappedSamplerState = [[self getDevice] newSamplerStateWithDescriptor:samplerDescriptor];
+    if (mipmappedSamplerState == nil ||
+        nonMipmappedSamplerState == nil) {
+        MTLSamplerDescriptor *samplerDescriptor = [MTLSamplerDescriptor new];
+        samplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
+        samplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
+        samplerDescriptor.rAddressMode = MTLSamplerAddressModeRepeat;
+        samplerDescriptor.sAddressMode = MTLSamplerAddressModeRepeat;
+        samplerDescriptor.tAddressMode = MTLSamplerAddressModeRepeat;
+        samplerDescriptor.mipFilter = MTLSamplerMipFilterNotMipmapped;
+        nonMipmappedSamplerState = [[self getDevice] newSamplerStateWithDescriptor:samplerDescriptor];
 
-    samplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
-    mipmappedSamplerState = [[self getDevice] newSamplerStateWithDescriptor:samplerDescriptor];
+        samplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
+        mipmappedSamplerState = [[self getDevice] newSamplerStateWithDescriptor:samplerDescriptor];
 
-    [samplerDescriptor release];
+        [samplerDescriptor release];
+    }
 }
 
 - (id<MTLSamplerState>) get3DSamplerState:(bool)mipmapped
