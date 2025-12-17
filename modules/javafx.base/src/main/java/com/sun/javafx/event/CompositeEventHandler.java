@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -244,7 +244,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            eventHandler.handle(event);
+            EventUtil.handleEvent(event, eventHandler);
         }
 
         @Override
@@ -279,7 +279,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            weakEventHandler.handle(event);
+            EventUtil.handleEvent(event, weakEventHandler);
         }
 
         @Override
@@ -318,7 +318,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            eventFilter.handle(event);
+            EventUtil.handleEvent(event, eventFilter);
         }
 
         @Override
@@ -353,7 +353,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            weakEventFilter.handle(event);
+            EventUtil.handleEvent(event, weakEventFilter);
         }
 
         @Override

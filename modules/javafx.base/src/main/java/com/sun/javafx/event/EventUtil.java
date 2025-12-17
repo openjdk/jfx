@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,35 @@
 package com.sun.javafx.event;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
+import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 
 public final class EventUtil {
+
+    static {
+        try {
+            Class.forName(Event.class.getName(), true, Event.class.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    public interface Accessor {
+        void handleEvent(Event event, EventHandler<? extends Event> handler);
+    }
+
+    public static void setAccessor(Accessor accessor) {
+        EventUtil.accessor = accessor;
+    }
+
+    public static void handleEvent(Event event, EventHandler<? extends Event> handler) {
+        accessor.handleEvent(event, handler);
+    }
+
+    private static Accessor accessor;
+
     private static final EventDispatchChainImpl eventDispatchChain =
             new EventDispatchChainImpl();
 
@@ -71,6 +94,9 @@ public final class EventUtil {
                                        Event event) {
         final EventDispatchChain targetDispatchChain =
                 eventTarget.buildEventDispatchChain(eventDispatchChain);
-        return targetDispatchChain.dispatchEvent(event);
+
+        try (var context = new EventDispatchContext()) {
+            return context.dispatchEvent(targetDispatchChain, event);
+        }
     }
 }
