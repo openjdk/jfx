@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -48,7 +48,7 @@ import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
- * Main Panel.
+ * Main panel: the tool bar + editor.
  *
  * @author Andy Goryachev
  */
@@ -59,12 +59,14 @@ public class RichEditorDemoPane extends BorderPane {
     private final ComboBox<Integer> fontSize;
     private final ColorPicker textColor;
     private final ComboBox<TextStyle> textStyle;
+    // TODO need insertStyles property JDK-8374035
 
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
 
         editor = new RichTextArea();
-        // custom function
+
+        // example of a custom function
         editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
             System.out.println("Custom function: W key is pressed");
         });
@@ -74,6 +76,7 @@ public class RichEditorDemoPane extends BorderPane {
 
         fontName = new ComboBox<>();
         fontName.getItems().setAll(collectFonts());
+        fontName.setMaxWidth(170);
         fontName.setOnAction((ev) -> {
             actions.setFontName(fontName.getSelectionModel().getSelectedItem());
         });
@@ -150,8 +153,8 @@ public class RichEditorDemoPane extends BorderPane {
         FX.toggleButton(t, "U\u0332", "Underline text", actions.underline);
         FX.add(t, textStyle);
         FX.space(t);
+        FX.toggleButton(t, "N", "Line Numbers", actions.lineNumbers);
         FX.toggleButton(t, "W", "Wrap Text", actions.wrapText);
-        // TODO line numbers
         return t;
     }
 
@@ -167,7 +170,9 @@ public class RichEditorDemoPane extends BorderPane {
         FX.separator(m);
         FX.item(m, "Select All", actions.selectAll);
         FX.separator(m);
-        // TODO under "Style" submenu?
+        // TODO
+        // FX.item(m, "Paragraph..."
+        // TODO remove
         FX.item(m, "Bold", actions.bold);
         FX.item(m, "Italic", actions.italic);
         FX.item(m, "Strike Through", actions.strikeThrough);
@@ -190,7 +195,7 @@ public class RichEditorDemoPane extends BorderPane {
         textStyle.setValue(v);
     }
 
-    void setEndKey(EndKey v) {
+    private void setEndKey(EndKey v) {
         switch(v) {
         case END_OF_LINE:
             editor.getInputMap().restoreDefaultFunction(RichTextArea.Tag.MOVE_TO_LINE_END);
@@ -202,7 +207,7 @@ public class RichEditorDemoPane extends BorderPane {
     }
 
     // this is an illustration.  we could publish the MOVE_TO_END_OF_TEXT_ON_LINE function tag
-    void moveToEndOfText() {
+    private void moveToEndOfText() {
         TextPos p = editor.getCaretPosition();
         if (p != null) {
             editor.executeDefault(RichTextArea.Tag.MOVE_TO_LINE_END);

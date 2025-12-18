@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,7 +33,7 @@
 package com.oracle.demo.richtext.editor;
 
 import java.io.File;
-import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -42,9 +42,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import com.oracle.demo.richtext.rta.RichTextAreaWindow;
 import com.oracle.demo.richtext.util.FX;
-import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
@@ -73,23 +71,25 @@ public class RichEditorDemoWindow extends Stage {
         setWidth(1200);
         setHeight(600);
 
-        pane.editor.caretPositionProperty().addListener((x) -> {
-            updateStatus();
-        });
-        pane.actions.modifiedProperty().addListener((x) -> {
-            updateTitle();
-        });
-        pane.actions.fileNameProperty().addListener((x) -> {
-            updateTitle();
-        });
         addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, (ev) -> {
             if (pane.actions.askToSave()) {
                 ev.consume();
             }
         });
 
-        updateStatus();
-        updateTitle();
+        status.textProperty().bind(Bindings.createStringBinding(
+            () -> {
+                return statusString(pane.editor.getCaretPosition());
+            },
+            pane.editor.caretPositionProperty()
+        ));
+        titleProperty().bind(Bindings.createStringBinding(
+            () -> {
+                return titleString(pane.actions.getFile(), pane.actions.isModified());
+            },
+            pane.actions.modifiedProperty(),
+            pane.actions.fileNameProperty()
+        ));
     }
 
     private MenuBar createMenu() {
@@ -139,24 +139,17 @@ public class RichEditorDemoWindow extends Stage {
         return m;
     }
 
-    private void updateStatus() {
-        RichTextArea ed = pane.editor;
-        TextPos p = ed.getCaretPosition();
-
-        StringBuilder sb = new StringBuilder();
-
-        if (p != null) {
-            sb.append(" Line: ").append(p.index() + 1);
-            sb.append("  Column: ").append(p.offset() + 1);
+    private String statusString(TextPos p) {
+        if (p == null) {
+            return null;
         }
-
-        status.setText(sb.toString());
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Line: ").append(p.index() + 1);
+        sb.append("  Column: ").append(p.offset() + 1);
+        return sb.toString();
     }
 
-    private void updateTitle() {
-        File f = pane.actions.getFile();
-        boolean modified = pane.actions.isModified();
-
+    private String titleString(File f, boolean modified) {
         StringBuilder sb = new StringBuilder();
         sb.append("Rich Text Editor Demo");
         if (f != null) {
@@ -166,10 +159,10 @@ public class RichEditorDemoWindow extends Stage {
         if (modified) {
             sb.append(" *");
         }
-        setTitle(sb.toString());
+        return sb.toString();
     }
 
-    void openSettings() {
+    private void openSettings() {
         new SettingsWindow(this).show();
     }
 }

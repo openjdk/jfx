@@ -257,7 +257,7 @@ public class Actions {
         apply(StyleAttributeMap.TEXT_COLOR, color);
     }
 
-    void newDocument() {
+    private void newDocument() {
         if (askToSave()) {
             return;
         }
@@ -265,7 +265,7 @@ public class Actions {
         setModified(false);
     }
 
-    void open() {
+    private void open() {
         if (askToSave()) {
             return;
         }
@@ -289,7 +289,7 @@ public class Actions {
         }
     }
 
-    void save() {
+    private void save() {
         File f = getFile();
         if (f == null) {
             f = chooseFileForSave();
@@ -306,7 +306,7 @@ public class Actions {
         }
     }
 
-    boolean saveAs() {
+    private boolean saveAs() {
         File f = chooseFileForSave();
         if (f != null) {
             file.set(f);
@@ -355,47 +355,47 @@ public class Actions {
         }
     }
 
-    void copy() {
+    private void copy() {
         control.copy();
     }
 
-    void cut() {
+    private void cut() {
         control.cut();
     }
 
-    void paste() {
+    private void paste() {
         control.paste();
     }
 
-    void pasteUnformatted() {
+    private void pasteUnformatted() {
         control.pastePlainText();
     }
 
-    void selectAll() {
+    private void selectAll() {
         control.selectAll();
     }
 
-    void redo() {
+    private void redo() {
        control.redo();
     }
 
-    void undo() {
+    private void undo() {
         control.undo();
     }
 
-    void bold() {
+    private void bold() {
         toggleStyle(StyleAttributeMap.BOLD);
     }
 
-    void italic() {
+    private void italic() {
         toggleStyle(StyleAttributeMap.ITALIC);
     }
 
-    void strikeThrough() {
+    private void strikeThrough() {
         toggleStyle(StyleAttributeMap.STRIKE_THROUGH);
     }
 
-    void underline() {
+    private void underline() {
         toggleStyle(StyleAttributeMap.UNDERLINE);
     }
 
@@ -457,19 +457,19 @@ public class Actions {
         return control.getActiveStyleAttributeMap();
     }
 
-    static FileChooser.ExtensionFilter filterAll() {
+    private static FileChooser.ExtensionFilter filterAll() {
         return new FileChooser.ExtensionFilter("All Files", "*.*");
     }
 
-    static FileChooser.ExtensionFilter filterRich() {
+    private static FileChooser.ExtensionFilter filterRich() {
         return new FileChooser.ExtensionFilter("Rich Text Files", "*.rich");
     }
 
-    static FileChooser.ExtensionFilter filterRtf() {
+    private static FileChooser.ExtensionFilter filterRtf() {
         return new FileChooser.ExtensionFilter("RTF Files", "*.rtf");
     }
 
-    static FileChooser.ExtensionFilter filterTxt() {
+    private static FileChooser.ExtensionFilter filterTxt() {
         return new FileChooser.ExtensionFilter("Text Files", "*.txt");
     }
 
