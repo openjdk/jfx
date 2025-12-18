@@ -264,7 +264,8 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 updateIndices(removedTo, removedTo, -c.getRemovedSize());
 
                 // Null out out-of-range array elements to avoid maintaining object references
-                for (int i = size; i < (size + c.getRemovedSize()); i++) {
+                final int ct = size + c.getRemovedSize();
+                for (int i = size; i < ct; i++) {
                     sorted[i] = null;
                 }
             }
