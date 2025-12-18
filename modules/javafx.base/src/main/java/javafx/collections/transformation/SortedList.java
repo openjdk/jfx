@@ -276,7 +276,8 @@ public final class SortedList<E> extends TransformationList<E, E>{
             }
         }
 
-        // Null out out-of-range array elements to avoid maintaining object references
+        // Null out out-of-range array elements to avoid maintaining object references which would otherwise remain in
+        // sorted[] (unused), when the source list shrinks and the size variable accordingly.
         for (int i = size; i < sorted.length; i++) {
             if (sorted[i] == null) {
                 // Already null, stop checking further
