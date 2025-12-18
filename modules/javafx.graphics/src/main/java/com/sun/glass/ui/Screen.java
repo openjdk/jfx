@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,8 @@
  * questions.
  */
 package com.sun.glass.ui;
+
+import com.sun.prism.GraphicsPipeline;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -356,7 +358,7 @@ public final class Screen {
         return this.adapter;
     }
 
-    public void setAdapterOrdinal(int adapter) {
+    private void setAdapterOrdinal(int adapter) {
         this.adapter = adapter;
     }
 
@@ -409,6 +411,13 @@ public final class Screen {
             throw new RuntimeException("Internal graphics failed to initialize");
         }
         screens = Collections.unmodifiableList(Arrays.asList(newScreens));
+    }
+
+    public static void updateAdapterOrdinals() {
+        GraphicsPipeline pipeline = GraphicsPipeline.getPipeline();
+        for (Screen screen : getScreens()) {
+            screen.setAdapterOrdinal(pipeline.getAdapterOrdinal(screen));
+        }
     }
 
     @Override public String toString() {

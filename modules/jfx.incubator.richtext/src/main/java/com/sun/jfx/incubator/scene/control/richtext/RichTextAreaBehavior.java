@@ -289,7 +289,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     end = start;
                 }
 
-                TextPos p = m.replace(vflow, start, end, typed);
+                StyleAttributeMap a = control.getInsertStyles();
+                if (a == null) {
+                    a = m.getStyleAttributeMap(vflow, start);
+                }
+                StyledInput in = StyledInput.of(typed, a);
+                TextPos p = m.replace(vflow, start, end, in);
                 moveCaret(p, false);
 
                 clearPhantomX();
@@ -1584,7 +1589,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 if (p != null) {
                     control.clearSelection();
                     clearPhantomX();
-                    p = control.replaceText(caret, p, "");
+                    p = control.replaceText(caret, p, StyledInput.EMPTY);
                     control.select(p);
                 }
             }
