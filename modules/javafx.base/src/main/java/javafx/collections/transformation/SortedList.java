@@ -262,6 +262,11 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 System.arraycopy(perm, removedTo, perm, c.getFrom(), size - removedTo);
                 size -= c.getRemovedSize();
                 updateIndices(removedTo, removedTo, -c.getRemovedSize());
+
+                // Null out out-of-range array elements to avoid maintaining object references
+                for (int i = size; i < (size + c.getRemovedSize()); i++) {
+                    sorted[i] = null;
+                }
             }
             if (c.wasAdded()) {
                 ensureSize(size + c.getAddedSize());
@@ -274,16 +279,6 @@ public final class SortedList<E> extends TransformationList<E, E>{
                     perm[i] = i;
                 }
             }
-        }
-
-        // Null out out-of-range array elements to avoid maintaining object references which would otherwise remain in
-        // sorted[] (unused), when the source list shrinks and the size variable accordingly.
-        for (int i = size; i < sorted.length; i++) {
-            if (sorted[i] == null) {
-                // Already null, stop checking further
-                break;
-            }
-            sorted[i] = null;
         }
     }
 
