@@ -39,13 +39,14 @@ public final class EventDispatchContext implements AutoCloseable {
     private final static ThreadLocal<Deque<EventDispatchContext>> context =
             ThreadLocal.withInitial(ArrayDeque::new);
 
-    private List<DefaultEventHandler> defaultHandlers;
+    private Object defaultHandlers;
     private boolean preventDefault;
 
     public EventDispatchContext() {
         context.get().push(this);
     }
 
+    @SuppressWarnings("unchecked")
     public static <E extends Event> void addDefaultHandler(Event event, EventHandler<E> handler) {
         EventDispatchContext context = EventDispatchContext.context.get().peek();
         if (context == null || context.preventDefault) {
@@ -53,13 +54,16 @@ public final class EventDispatchContext implements AutoCloseable {
         }
 
         if (context.defaultHandlers == null) {
-            // Most of the time we only expect a small number of handlers.
-            context.defaultHandlers = new ArrayList<>(2);
+            context.defaultHandlers = new DefaultEventHandler(event, (EventHandler<Event>)handler);
+        } else if (context.defaultHandlers instanceof List<?> list) {
+            var typedList = (List<DefaultEventHandler>)list;
+            typedList.add(new DefaultEventHandler(event, (EventHandler<Event>)handler));
+        } else {
+            var list = new ArrayList<DefaultEventHandler>(4);
+            list.add((DefaultEventHandler)context.defaultHandlers);
+            list.add(new DefaultEventHandler(event, (EventHandler<Event>)handler));
+            context.defaultHandlers = list;
         }
-
-        @SuppressWarnings("unchecked")
-        EventHandler<Event> untypedHandler = (EventHandler<Event>)handler;
-        context.defaultHandlers.add(new DefaultEventHandler(event, untypedHandler));
     }
 
     public static void preventDefault() {
@@ -70,18 +74,21 @@ public final class EventDispatchContext implements AutoCloseable {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public Event dispatchEvent(EventDispatchChain eventDispatchChain, Event event) {
         Event resultEvent = eventDispatchChain.dispatchEvent(event);
         if (resultEvent == null) {
             return null;
         }
 
-        if (defaultHandlers != null) {
-            for (DefaultEventHandler handler : defaultHandlers) {
+        if (defaultHandlers instanceof List<?> list) {
+            for (DefaultEventHandler handler : (List<DefaultEventHandler>)list) {
                 if (handler.handle()) {
                     return null;
                 }
             }
+        } else if (defaultHandlers != null && ((DefaultEventHandler)defaultHandlers).handle()) {
+            return null;
         }
 
         return resultEvent;
