@@ -2403,13 +2403,6 @@ public class RichTextArea extends Control {
                     if (pos.compareTo(an) > 0) {
                         pos = an;
                     }
-                } else if (!TextPos.ZERO.equals(pos)) {
-                    int ix = pos.offset() - 1;
-                    if (ix < 0) {
-                        // FIX find previous symbol
-                        ix = 0;
-                    }
-                    pos = TextPos.ofLeading(pos.index(), ix);
                 }
                 return m.getStyleAttributeMap(r, pos);
             }
