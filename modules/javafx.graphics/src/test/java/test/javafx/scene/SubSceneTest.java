@@ -41,8 +41,10 @@ import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.SubSceneShim;
 import javafx.scene.layout.Pane;
+import test.util.property.PropertyMetadataVerifier;
 
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -51,6 +53,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class SubSceneTest {
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new SubScene(new Group(), 10, 10), SubScene.class);
+    }
 
     @Test
     public void isOnFxAppThread() {

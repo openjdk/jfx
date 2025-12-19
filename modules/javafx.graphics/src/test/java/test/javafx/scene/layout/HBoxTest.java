@@ -33,6 +33,7 @@ import javafx.scene.ParentShim;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.shape.Rectangle;
+import test.util.property.PropertyMetadataVerifier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,10 @@ public class HBoxTest {
         this.hbox = new HBox();
     }
 
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new HBox(), HBox.class);
+    }
 
     @Test
     public void testHBoxDefaults() {

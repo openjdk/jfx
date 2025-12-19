@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import javafx.beans.InvalidationListener;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import test.javafx.scene.image.TestImages;
+import test.util.property.PropertyMetadataVerifier;
 
 import test.com.sun.javafx.pgstub.CursorSizeConverter;
 import test.com.sun.javafx.pgstub.StubAsyncImageLoader;
@@ -48,6 +49,7 @@ import javafx.scene.ImageCursor;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -69,6 +71,11 @@ public final class ImageCursorTest {
     public static void tearDownClass() {
         toolkit.setCursorSizeConverter(oldCursorSizeConverter);
         toolkit.setMaximumCursorColors(oldMaximumCursorColors);
+    }
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new ImageCursor(), ImageCursor.class);
     }
 
     @Test

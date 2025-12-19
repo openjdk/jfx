@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -143,6 +143,11 @@ public non-sealed class PerspectiveCamera extends Camera {
                 protected void invalidated() {
                     NodeHelper.markDirty(PerspectiveCamera.this, DirtyBits.NODE_CAMERA);
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return PerspectiveCamera.class;
+                }
             };
         }
         return fieldOfView;
@@ -172,6 +177,11 @@ public non-sealed class PerspectiveCamera extends Camera {
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(PerspectiveCamera.this, DirtyBits.NODE_CAMERA);
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return PerspectiveCamera.class;
                 }
             };
         }

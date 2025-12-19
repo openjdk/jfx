@@ -89,12 +89,12 @@ public class SimpleStringPropertyTest {
         assertEquals(name, v2.getName());
         assertEquals(DEFAULT_VALUE, v2.get());
 
-        final StringProperty v3 = new SimpleStringProperty(bean, null, VALUE_1);
+        final StringProperty v3 = new SimpleStringProperty(bean, (String)null, VALUE_1);
         assertEquals(bean, v3.getBean());
         assertEquals(DEFAULT_NAME, v3.getName());
         assertEquals(VALUE_1, v3.get());
 
-        final StringProperty v4 = new SimpleStringProperty(bean, null, DEFAULT_VALUE);
+        final StringProperty v4 = new SimpleStringProperty(bean, (String)null, DEFAULT_VALUE);
         assertEquals(bean, v4.getBean());
         assertEquals(DEFAULT_NAME, v4.getName());
         assertEquals(DEFAULT_VALUE, v4.get());

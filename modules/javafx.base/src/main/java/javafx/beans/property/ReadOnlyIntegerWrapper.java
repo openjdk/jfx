@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,6 +80,31 @@ public class ReadOnlyIntegerWrapper extends SimpleIntegerProperty {
     }
 
     /**
+     * The constructor of {@code ReadOnlyIntegerWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 26
+     */
+    public ReadOnlyIntegerWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyIntegerWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 26
+     */
+    public ReadOnlyIntegerWrapper(Object bean, Class<?> declaringClass, String name, int initialValue) {
+        super(bean, declaringClass, name, initialValue);
+    }
+
+    /**
      * Returns the readonly property, that is synchronized with this
      * {@code ReadOnlyIntegerWrapper}.
      *
@@ -118,6 +143,16 @@ public class ReadOnlyIntegerWrapper extends SimpleIntegerProperty {
         @Override
         public String getName() {
             return ReadOnlyIntegerWrapper.this.getName();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlyIntegerWrapper.this.getDeclaringClass();
+        }
+
+        @Override
+        public boolean isAttached() {
+            return ReadOnlyIntegerWrapper.this.isAttached();
         }
     }
 }

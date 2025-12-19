@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -136,6 +136,11 @@ public class SpotLight extends PointLight {
                 protected void invalidated() {
                     NodeHelper.markDirty(SpotLight.this, DirtyBits.NODE_LIGHT);
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return SpotLight.class;
+                }
             };
         }
         return direction;
@@ -166,7 +171,7 @@ public class SpotLight extends PointLight {
 
     public final DoubleProperty innerAngleProperty() {
         if (innerAngle == null) {
-            innerAngle = getLightDoubleProperty("innerAngle", DEFAULT_INNER_ANGLE);
+            innerAngle = getLightDoubleProperty(SpotLight.class, "innerAngle", DEFAULT_INNER_ANGLE);
         }
         return innerAngle;
     }
@@ -197,7 +202,7 @@ public class SpotLight extends PointLight {
 
     public final DoubleProperty outerAngleProperty() {
         if (outerAngle == null) {
-            outerAngle = getLightDoubleProperty("outerAngle", DEFAULT_OUTER_ANGLE);
+            outerAngle = getLightDoubleProperty(SpotLight.class, "outerAngle", DEFAULT_OUTER_ANGLE);
         }
         return outerAngle;
     }
@@ -228,7 +233,7 @@ public class SpotLight extends PointLight {
 
     public final DoubleProperty falloffProperty() {
         if (falloff == null) {
-            falloff = getLightDoubleProperty("falloff", DEFAULT_FALLOFF);
+            falloff = getLightDoubleProperty(SpotLight.class, "falloff", DEFAULT_FALLOFF);
         }
         return falloff;
     }

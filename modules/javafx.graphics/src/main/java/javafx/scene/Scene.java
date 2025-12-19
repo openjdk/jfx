@@ -859,6 +859,11 @@ public class Scene implements EventTarget {
                 public String getName() {
                     return "window";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Scene.class;
+                }
             };
         }
         return window;
@@ -964,7 +969,7 @@ public class Scene implements EventTarget {
 
     private ReadOnlyDoubleWrapper xPropertyImpl() {
         if (x == null) {
-            x = new ReadOnlyDoubleWrapper(this, "x");
+            x = new ReadOnlyDoubleWrapper(this, Scene.class, "x");
         }
         return x;
     }
@@ -988,7 +993,7 @@ public class Scene implements EventTarget {
 
     private ReadOnlyDoubleWrapper yPropertyImpl() {
         if (y == null) {
-            y = new ReadOnlyDoubleWrapper(this, "y");
+            y = new ReadOnlyDoubleWrapper(this, Scene.class, "y");
         }
         return y;
     }
@@ -1037,6 +1042,11 @@ public class Scene implements EventTarget {
                 public String getName() {
                     return "width";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Scene.class;
+                }
             };
         }
         return width;
@@ -1081,6 +1091,11 @@ public class Scene implements EventTarget {
                 @Override
                 public String getName() {
                     return "height";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Scene.class;
                 }
             };
         }
@@ -1156,6 +1171,11 @@ public class Scene implements EventTarget {
                 @Override
                 public String getName() {
                     return "camera";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Scene.class;
                 }
             };
         }
@@ -1233,6 +1253,11 @@ public class Scene implements EventTarget {
                 @Override
                 public String getName() {
                     return "fill";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Scene.class;
                 }
             };
         }
@@ -1319,6 +1344,11 @@ public class Scene implements EventTarget {
                 @Override
                 public String getName() {
                     return "root";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Scene.class;
                 }
             };
         }
@@ -1647,6 +1677,11 @@ public class Scene implements EventTarget {
                          public String getName() {
                              return "cursor";
                          }
+
+                         @Override
+                         public Class<?> getDeclaringClass() {
+                             return Scene.class;
+                         }
                      };
         }
         return cursor;
@@ -1739,7 +1774,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
-            userAgentStylesheet = new SimpleObjectProperty<>(Scene.this, "userAgentStylesheet", null) {
+            userAgentStylesheet = new SimpleObjectProperty<>(Scene.this, Scene.class, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(Scene.this);
                     getRoot().reapplyCSS();
@@ -2305,6 +2340,11 @@ public class Scene implements EventTarget {
         @Override
         public String getName() {
             return "focusOwner";
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return Scene.class;
         }
 
         @Override
@@ -4374,9 +4414,7 @@ public class Scene implements EventTarget {
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
             eventDispatcher = new SimpleObjectProperty<>(
-                                          this,
-                                          "eventDispatcher",
-                                          internalEventDispatcher);
+                this, Scene.class, "eventDispatcher", internalEventDispatcher);
         }
     }
 
@@ -5666,6 +5704,11 @@ public class Scene implements EventTarget {
         }
 
         @Override
+        public Class<?> getDeclaringClass() {
+            return Scene.class;
+        }
+
+        @Override
         protected void invalidated() {
             setEventHandler(eventType, get());
         }
@@ -5800,6 +5843,11 @@ public class Scene implements EventTarget {
                 }
 
                 @Override
+                public Class<?> getDeclaringClass() {
+                    return Scene.class;
+                }
+
+                @Override
                 public CssMetaData getCssMetaData() {
                     //TODO - not yet supported
                     throw new UnsupportedOperationException("Not supported yet.");
@@ -5889,6 +5937,11 @@ public class Scene implements EventTarget {
         @Override
         public String getName() {
             return "effectiveNodeOrientation";
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return Scene.class;
         }
 
         public void invalidate() {

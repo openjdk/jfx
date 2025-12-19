@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,6 +155,11 @@ public  class Group extends Parent {
                 @Override
                 public String getName() {
                     return "autoSizeChildren";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Group.class;
                 }
             };
         }

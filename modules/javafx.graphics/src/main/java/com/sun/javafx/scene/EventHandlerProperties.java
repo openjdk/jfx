@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.InputMethodEvent;
@@ -66,7 +67,7 @@ public final class EventHandlerProperties {
         if (onMenuContextRequested == null) {
             onMenuContextRequested = new EventHandlerProperty<>(
                                     bean,
-                                    "onMenuContextRequested",
+                                    "onContextMenuRequested",
                                     ContextMenuEvent.CONTEXT_MENU_REQUESTED);
         }
         return onMenuContextRequested;
@@ -694,6 +695,11 @@ public final class EventHandlerProperties {
                                     final EventType<T> eventType) {
             super(bean, name);
             this.eventType = eventType;
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return Node.class;
         }
 
         @Override

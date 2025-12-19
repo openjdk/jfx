@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -244,6 +244,11 @@ public abstract sealed class LightBase extends Node permits AmbientLight, Direct
                 protected void invalidated() {
                     NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return LightBase.class;
+                }
             };
         }
         return color;
@@ -270,6 +275,11 @@ public abstract sealed class LightBase extends Node permits AmbientLight, Direct
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return LightBase.class;
                 }
             };
         }
@@ -361,8 +371,8 @@ public abstract sealed class LightBase extends Node permits AmbientLight, Direct
      *
      * Creates and returns a SimpleDoubleProperty with an invalidation scheme.
      */
-    DoubleProperty getLightDoubleProperty(String name, double initialValue) {
-        return new SimpleDoubleProperty(this, name, initialValue) {
+    DoubleProperty getLightDoubleProperty(Class<?> declaringClass, String name, double initialValue) {
+        return new SimpleDoubleProperty(this, declaringClass, name, initialValue) {
             @Override
             protected void invalidated() {
                 NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,31 @@ public class ReadOnlyListWrapper<E> extends SimpleListProperty<E> {
     }
 
     /**
+     * The constructor of {@code ReadOnlyListWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 26
+     */
+    public ReadOnlyListWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyListWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 26
+     */
+    public ReadOnlyListWrapper(Object bean, Class<?> declaringClass, String name, ObservableList<E> initialValue) {
+        super(bean, declaringClass, name, initialValue);
+    }
+
+    /**
      * Returns the readonly property, that is synchronized with this
      * {@code ReadOnlyListWrapper}.
      *
@@ -135,6 +160,16 @@ public class ReadOnlyListWrapper<E> extends SimpleListProperty<E> {
         @Override
         public String getName() {
             return ReadOnlyListWrapper.this.getName();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlyListWrapper.this.getDeclaringClass();
+        }
+
+        @Override
+        public boolean isAttached() {
+            return ReadOnlyListWrapper.this.isAttached();
         }
 
         @Override

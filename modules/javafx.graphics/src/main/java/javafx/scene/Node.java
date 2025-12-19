@@ -1087,6 +1087,11 @@ public abstract sealed class Node
                 public String getName() {
                     return "parent";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return parent;
@@ -1111,6 +1116,11 @@ public abstract sealed class Node
         @Override
         public String getName() {
             return "scene";
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return Node.class;
         }
 
         @Override
@@ -1314,6 +1324,11 @@ public abstract sealed class Node
                 public String getName() {
                     return "id";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return id;
@@ -1430,6 +1445,11 @@ public abstract sealed class Node
                 public String getName() {
                     return "style";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return style;
@@ -1488,6 +1508,11 @@ public abstract sealed class Node
                 @Override
                 public String getName() {
                     return "visible";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
                 }
             };
         }
@@ -1577,6 +1602,11 @@ public abstract sealed class Node
                 public String getName() {
                     return "opacity";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return opacity;
@@ -1623,6 +1653,11 @@ public abstract sealed class Node
                 @Override
                 public String getName() {
                     return "blendMode";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
                 }
             };
         }
@@ -1959,7 +1994,7 @@ public abstract sealed class Node
 
     public final BooleanProperty pickOnBoundsProperty() {
         if (pickOnBounds == null) {
-            pickOnBounds = new SimpleBooleanProperty(this, "pickOnBounds");
+            pickOnBounds = new SimpleBooleanProperty(this, Node.class, "pickOnBounds");
         }
         return pickOnBounds;
     }
@@ -2020,6 +2055,11 @@ public abstract sealed class Node
                 @Override
                 public String getName() {
                     return "disabled";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
                 }
             };
         }
@@ -2789,6 +2829,10 @@ public abstract sealed class Node
                     return "managed";
                 }
 
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return managed;
@@ -2871,6 +2915,11 @@ public abstract sealed class Node
                 public String getName() {
                     return "layoutX";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return layoutX;
@@ -2946,6 +2995,10 @@ public abstract sealed class Node
                     return "layoutY";
                 }
 
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return layoutY;
@@ -6207,6 +6260,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "translateX";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return translateX;
@@ -6237,6 +6295,11 @@ public abstract sealed class Node
                     @Override
                     public String getName() {
                         return "translateY";
+                    }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
                     }
                 };
             }
@@ -6269,6 +6332,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "translateZ";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return translateZ;
@@ -6299,6 +6367,11 @@ public abstract sealed class Node
                     @Override
                     public String getName() {
                         return "scaleX";
+                    }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
                     }
                 };
             }
@@ -6331,6 +6404,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "scaleY";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return scaleY;
@@ -6361,6 +6439,11 @@ public abstract sealed class Node
                     @Override
                     public String getName() {
                         return "scaleZ";
+                    }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
                     }
                 };
             }
@@ -6393,6 +6476,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "rotate";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return rotate;
@@ -6420,6 +6508,11 @@ public abstract sealed class Node
                     @Override
                     public String getName() {
                         return "rotationAxis";
+                    }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
                     }
                 };
             }
@@ -6581,6 +6674,11 @@ public abstract sealed class Node
                 @Override
                 public String getName() {
                     return "nodeOrientation";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
                 }
 
                 @Override
@@ -6823,6 +6921,11 @@ public abstract sealed class Node
             return "effectiveNodeOrientation";
         }
 
+        @Override
+        public Class<?> getDeclaringClass() {
+            return Node.class;
+        }
+
         public void invalidate() {
             fireValueChangedEvent();
         }
@@ -6902,6 +7005,11 @@ public abstract sealed class Node
                     @Override
                     public String getName() {
                         return "viewOrder";
+                    }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
                     }
                 };
             }
@@ -7021,6 +7129,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "cache";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return cache;
@@ -7047,6 +7160,11 @@ public abstract sealed class Node
                     @Override
                     public String getName() {
                         return "cacheHint";
+                    }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
                     }
                 };
             }
@@ -7131,6 +7249,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "clip";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return clip;
@@ -7167,6 +7290,10 @@ public abstract sealed class Node
                         return "cursor";
                     }
 
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return cursor;
@@ -7193,6 +7320,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "depthTest";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return depthTest;
@@ -7218,6 +7350,11 @@ public abstract sealed class Node
                     @Override
                     public String getName() {
                         return "disable";
+                    }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
                     }
                 };
             }
@@ -7296,6 +7433,11 @@ public abstract sealed class Node
                     public String getName() {
                         return "effect";
                     }
+
+                    @Override
+                    public Class<?> getDeclaringClass() {
+                        return Node.class;
+                    }
                 };
             }
             return effect;
@@ -7309,11 +7451,8 @@ public abstract sealed class Node
         public ObjectProperty<InputMethodRequests>
                 inputMethodRequestsProperty() {
             if (inputMethodRequests == null) {
-                inputMethodRequests =
-                        new SimpleObjectProperty<>(
-                                Node.this,
-                                "inputMethodRequests",
-                                DEFAULT_INPUT_METHOD_REQUESTS);
+                inputMethodRequests = new SimpleObjectProperty<>(
+                    Node.this, Node.class, "inputMethodRequests", DEFAULT_INPUT_METHOD_REQUESTS);
             }
             return inputMethodRequests;
         }
@@ -7325,11 +7464,8 @@ public abstract sealed class Node
 
         public final BooleanProperty mouseTransparentProperty() {
             if (mouseTransparent == null) {
-                mouseTransparent =
-                        new SimpleBooleanProperty(
-                                Node.this,
-                                "mouseTransparent",
-                                DEFAULT_MOUSE_TRANSPARENT);
+                mouseTransparent = new SimpleBooleanProperty(
+                    Node.this, Node.class, "mouseTransparent", DEFAULT_MOUSE_TRANSPARENT);
             }
             return mouseTransparent;
         }
@@ -7419,6 +7555,11 @@ public abstract sealed class Node
                 public String getName() {
                     return "hover";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return hover;
@@ -7466,6 +7607,11 @@ public abstract sealed class Node
                 @Override
                 public String getName() {
                     return "pressed";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
                 }
             };
         }
@@ -8295,6 +8441,11 @@ public abstract sealed class Node
         }
 
         @Override
+        public Class<?> getDeclaringClass() {
+            return Node.class;
+        }
+
+        @Override
         public boolean get() {
             return value;
         }
@@ -8562,6 +8713,11 @@ public abstract sealed class Node
                 public String getName() {
                     return "focusTraversable";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
+                }
             };
         }
         return focusTraversable;
@@ -8817,6 +8973,11 @@ public abstract sealed class Node
             return "treeVisible";
         }
 
+        @Override
+        public Class<?> getDeclaringClass() {
+            return Node.class;
+        }
+
         protected void invalidate() {
             if (valid) {
                 valid = false;
@@ -8889,6 +9050,11 @@ public abstract sealed class Node
                 @Override
                 public String getName() {
                     return "showMnemonics";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Node.class;
                 }
             };
         }
@@ -8994,9 +9160,7 @@ public abstract sealed class Node
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
             eventDispatcher = new SimpleObjectProperty<>(
-                                          Node.this,
-                                          "eventDispatcher",
-                                          internalEventDispatcher);
+                Node.this, Node.class, "eventDispatcher", internalEventDispatcher);
         }
     }
 
@@ -10241,6 +10405,11 @@ public abstract sealed class Node
         }
 
         @Override
+        public final Class<?> getDeclaringClass() {
+            return Node.class;
+        }
+
+        @Override
         public Transform get() {
             transform = getInternalValue();
             canReuse = false;
@@ -10270,6 +10439,11 @@ public abstract sealed class Node
         private boolean valid;
 
         private Bounds bounds;
+
+        @Override
+        public final Class<?> getDeclaringClass() {
+            return Node.class;
+        }
 
         @Override
         public Bounds get() {
@@ -10318,7 +10492,7 @@ public abstract sealed class Node
 
     public final ObjectProperty<AccessibleRole> accessibleRoleProperty() {
         if (accessibleRole == null) {
-            accessibleRole = new SimpleObjectProperty<>(this, "accessibleRole", AccessibleRole.NODE);
+            accessibleRole = new SimpleObjectProperty<>(this, Node.class, "accessibleRole", AccessibleRole.NODE);
         }
         return accessibleRole;
     }
@@ -10418,21 +10592,22 @@ public abstract sealed class Node
         ObjectProperty<String> accessibleRoleDescription;
         ObjectProperty<String> getAccessibleRoleDescription() {
             if (accessibleRoleDescription == null) {
-                accessibleRoleDescription = new SimpleObjectProperty<>(Node.this, "accessibleRoleDescription", null);
+                accessibleRoleDescription = new SimpleObjectProperty<>(
+                    Node.this, Node.class, "accessibleRoleDescription", null);
             }
             return accessibleRoleDescription;
         }
         ObjectProperty<String> accessibleText;
         ObjectProperty<String> getAccessibleText() {
             if (accessibleText == null) {
-                accessibleText = new SimpleObjectProperty<>(Node.this, "accessibleText", null);
+                accessibleText = new SimpleObjectProperty<>(Node.this, Node.class, "accessibleText", null);
             }
             return accessibleText;
         }
         ObjectProperty<String> accessibleHelp;
         ObjectProperty<String> getAccessibleHelp() {
             if (accessibleHelp == null) {
-                accessibleHelp = new SimpleObjectProperty<>(Node.this, "accessibleHelp", null);
+                accessibleHelp = new SimpleObjectProperty<>(Node.this, Node.class, "accessibleHelp", null);
             }
             return accessibleHelp;
         }
