@@ -27,8 +27,9 @@ package javafx.scene.control;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.WeakHashMap;
+import java.util.Map;
 
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.DoubleProperty;
@@ -312,7 +313,7 @@ public class SplitPane extends Control {
     private final ObservableList<Divider> unmodifiableDividers = FXCollections.unmodifiableObservableList(dividers);
 
     // Cache the divider positions if the items have not been created.
-    private final WeakHashMap<Integer, Double> dividerCache = new WeakHashMap<>();
+    private final Map<Integer, Double> dividerCache = new HashMap<>();
 
     /* *************************************************************************
      *                                                                         *
