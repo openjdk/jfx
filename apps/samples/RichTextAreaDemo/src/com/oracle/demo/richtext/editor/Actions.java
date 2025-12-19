@@ -141,9 +141,15 @@ public class Actions {
             handleCaret();
         });
 
+        // FIX model styles property?
         control.selectionProperty().addListener((p) -> {
             updateSourceStyles();
         });
+        // change of insert styles from shortcuts, menus, toolbar buttons -> changes ui, updates insert styles
+        // non-typing caret move -> update toolbar from the model
+        // typing caret move -> keep insert styles
+        // Q: how to differentiate the two scenarios??  wait, typing should produce the same styles bc it looks for
+        // the previous (just typed) character!
 
         styles.addListener((s,p,a) -> {
             bold.setSelected(hasStyle(a, StyleAttributeMap.BOLD), false);
@@ -206,24 +212,6 @@ public class Actions {
         italic.setSelected(a.getBoolean(StyleAttributeMap.ITALIC), false);
         underline.setSelected(a.getBoolean(StyleAttributeMap.UNDERLINE), false);
         strikeThrough.setSelected(a.getBoolean(StyleAttributeMap.STRIKE_THROUGH), false);
-    }
-
-    private void toggle(StyleAttribute<Boolean> attr) {
-        TextPos start = control.getAnchorPosition();
-        TextPos end = control.getCaretPosition();
-        if (start == null) {
-            return;
-        } else if (start.equals(end)) {
-            // apply to the whole paragraph
-            int ix = start.index();
-            start = TextPos.ofLeading(ix, 0);
-            end = control.getParagraphEnd(ix);
-        }
-
-        StyleAttributeMap a = control.getActiveStyleAttributeMap();
-        boolean on = !a.getBoolean(attr);
-        a = StyleAttributeMap.builder().set(attr, on).build();
-        control.applyStyle(start, end, a);
     }
 
     private <T> void apply(StyleAttribute<T> attr, T value) {
@@ -384,38 +372,40 @@ public class Actions {
     }
 
     private void bold() {
-        toggleStyle(StyleAttributeMap.BOLD);
+        toggleStyle(bold, StyleAttributeMap.BOLD);
     }
 
     private void italic() {
-        toggleStyle(StyleAttributeMap.ITALIC);
+        toggleStyle(italic, StyleAttributeMap.ITALIC);
     }
 
     private void strikeThrough() {
-        toggleStyle(StyleAttributeMap.STRIKE_THROUGH);
+        toggleStyle(strikeThrough, StyleAttributeMap.STRIKE_THROUGH);
     }
 
     private void underline() {
-        toggleStyle(StyleAttributeMap.UNDERLINE);
+        toggleStyle(underline, StyleAttributeMap.UNDERLINE);
     }
 
-    private void toggleStyle(StyleAttribute<Boolean> attr) {
+    private void toggleStyle(FxAction action, StyleAttribute<Boolean> attr) {
         TextPos start = control.getAnchorPosition();
         TextPos end = control.getCaretPosition();
         if (start == null) {
             return;
-        } else if (start.equals(end)) {
-            // apply to the whole paragraph
-            int ix = start.index();
-            start = TextPos.ofLeading(ix, 0);
-            end = control.getParagraphEnd(ix);
         }
-
+        
         StyleAttributeMap a = control.getActiveStyleAttributeMap();
         boolean on = !a.getBoolean(attr);
-        a = StyleAttributeMap.builder().set(attr, on).build();
-        control.applyStyle(start, end, a);
-        updateSourceStyles();
+
+        if (start.equals(end)) {
+            if(on != action.isSelected()) {
+                action.setSelected(on, false);
+            }
+        } else {
+            a = StyleAttributeMap.builder().set(attr, on).build();
+            control.applyStyle(start, end, a);
+            updateSourceStyles();
+        }
     }
 
     public void setTextStyle(TextStyle st) {

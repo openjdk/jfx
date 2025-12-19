@@ -2396,14 +2396,18 @@ public class RichTextArea extends Control {
     private StyleAttributeMap getModelStyleAttrs(StyleResolver r) {
         StyledTextModel m = getModel();
         if (m != null) {
-            TextPos pos = getCaretPosition();
-            if (pos != null) {
-                if (hasNonEmptySelection()) {
-                    TextPos an = getAnchorPosition();
-                    if (pos.compareTo(an) > 0) {
-                        pos = an;
-                    }
-                }
+            SelectionSegment sel = getSelection();
+            if(sel != null) {
+                TextPos pos = sel.getMax();
+            
+//            TextPos pos = getCaretPosition();
+//            if (pos != null) {
+//                if (hasNonEmptySelection()) {
+//                    TextPos an = getAnchorPosition();
+//                    if (pos.compareTo(an) > 0) {
+//                        pos = an;
+//                    }
+//                }
                 return m.getStyleAttributeMap(r, pos);
             }
         }

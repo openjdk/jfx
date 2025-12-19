@@ -33,6 +33,8 @@
 package com.oracle.demo.richtext.editor;
 
 import java.util.List;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -46,6 +48,7 @@ import com.oracle.demo.richtext.util.FX;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Main panel: the tool bar + editor.
@@ -59,12 +62,13 @@ public class RichEditorDemoPane extends BorderPane {
     private final ComboBox<Integer> fontSize;
     private final ColorPicker textColor;
     private final ComboBox<TextStyle> textStyle;
-    // TODO need insertStyles property JDK-8374035
+    private final SimpleObjectProperty<StyleAttributeMap> insertStyles = new SimpleObjectProperty<>();
 
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
 
         editor = new RichTextArea();
+        editor.insertStylesProperty().bind(insertStyles);
 
         // example of a custom function
         editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
@@ -132,8 +136,19 @@ public class RichEditorDemoPane extends BorderPane {
         actions.textStyleProperty().addListener((s,p,c) -> {
             setTextStyle(c);
         });
+        insertStyles.bind(Bindings.createObjectBinding(
+            this::mkInsertStyles,
+            actions.bold.selectedProperty()
+        ));
 
         Settings.endKey.subscribe(this::setEndKey);
+    }
+
+    private StyleAttributeMap mkInsertStyles() {
+        // TODO all attributes
+        return StyleAttributeMap.builder().
+            setBold(actions.bold.isSelected()).
+            build();
     }
 
     private ToolBar createToolBar() {
@@ -172,11 +187,6 @@ public class RichEditorDemoPane extends BorderPane {
         FX.separator(m);
         // TODO
         // FX.item(m, "Paragraph..."
-        // TODO remove
-        FX.item(m, "Bold", actions.bold);
-        FX.item(m, "Italic", actions.italic);
-        FX.item(m, "Strike Through", actions.strikeThrough);
-        FX.item(m, "Underline", actions.underline);
         return m;
     }
 

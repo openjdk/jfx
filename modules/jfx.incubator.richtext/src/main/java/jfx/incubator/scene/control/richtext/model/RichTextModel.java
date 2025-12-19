@@ -321,11 +321,12 @@ public class RichTextModel extends StyledTextModel {
         public StyleAttributeMap getStyleAttributeMap(int offset) {
             int pos = 0;
             int ct = size();
+            int last = ct - 1;
             for (int i = 0; i < ct; i++) {
                 RSegment seg = get(i);
                 int len = seg.getTextLength();
                 pos += len;
-                if ((offset <= pos) || (i + 1 == ct)) {
+                if ((offset <= pos) || (i == last)) {
                     return seg.getStyleAttributeMap();
                 }
             }
