@@ -126,7 +126,6 @@ public class IconifyTest extends VisualTestBase {
 
     @Test
     public void canIconifyDecoratedStage() throws Exception {
-        assumeTrue(!PlatformUtil.isLinux()); // Skip due to JDK-8316891
         canIconifyStage(StageStyle.DECORATED, true);
     }
 
