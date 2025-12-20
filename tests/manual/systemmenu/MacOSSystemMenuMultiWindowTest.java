@@ -22,8 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.com.sun.glass.ui.mac;
-
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -58,26 +56,30 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-public class MacOSSystemMenuMultiWindowFXOnlySwingFirst extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
 
     @Test
     public void test() throws InterruptedException, IOException {
-        initSwing(List.of());
-        initJavaFX(List.of(TEST_MENUS_1, TEST_MENUS_3));
+        initJavaFX(List.of(TEST_MENUS_0, TEST_MENUS_1, TEST_MENUS_2));
 
         focusJavaFX(0);
         waitForUser();
 //        List<Element> jfxElements = getMenusOfFocusedWindow();
-//        compareMenus(jfxElements, TEST_MENUS_1);
+//        compareMenus(jfxElements, TEST_MENUS_0);
 
         focusJavaFX(1);
         waitForUser();
 //        jfxElements = getMenusOfFocusedWindow();
-//        compareMenus(jfxElements, TEST_MENUS_3);
+//        compareMenus(jfxElements, TEST_MENUS_1);
+
+        focusJavaFX(2);
+        waitForUser();
+//        jfxElements = getMenusOfFocusedWindow();
+//        compareMenus(jfxElements, TEST_MENUS_2);
 
         focusJavaFX(0);
         waitForUser();
 //        jfxElements = getMenusOfFocusedWindow();
-//        compareMenus(jfxElements, TEST_MENUS_1);
+//        compareMenus(jfxElements, TEST_MENUS_0);
     }
 }

@@ -22,8 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.com.sun.glass.ui.mac;
-
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -58,12 +56,12 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-public class MacOSSystemMenuMultiWindowFXOnlySwingLast extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuMultiWindowFXOnlySwingFirst extends MacOSSystemMenuTestBase {
 
     @Test
     public void test() throws InterruptedException, IOException {
-        initJavaFX(List.of(TEST_MENUS_1, TEST_MENUS_3));
         initSwing(List.of());
+        initJavaFX(List.of(TEST_MENUS_1, TEST_MENUS_3));
 
         focusJavaFX(0);
         waitForUser();

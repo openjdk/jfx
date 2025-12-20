@@ -22,16 +22,16 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.com.sun.glass.ui.mac;
-
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import javafx.embed.swing.JFXPanel;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,30 +58,43 @@ import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 import test.util.Util;
 
-public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
+public class MacOSSystemMenuJFXPanelSwingFirstTest extends MacOSSystemMenuTestBase {
 
     @Test
     public void test() throws InterruptedException, IOException {
-        initJavaFX(List.of(TEST_MENUS_0, TEST_MENUS_1, TEST_MENUS_2));
+        initSwing(List.of(TEST_MENUS_0, TEST_MENUS_1));
+        initJavaFX(List.of());
 
-        focusJavaFX(0);
-        waitForUser();
-//        List<Element> jfxElements = getMenusOfFocusedWindow();
-//        compareMenus(jfxElements, TEST_MENUS_0);
+        JFrame wnd = swingWindows.get(0);
+        JFXPanel fxPanel = new JFXPanel();
 
-        focusJavaFX(1);
-        waitForUser();
-//        jfxElements = getMenusOfFocusedWindow();
-//        compareMenus(jfxElements, TEST_MENUS_1);
+        wnd.add(fxPanel);
+        wnd.setVisible(true);
 
-        focusJavaFX(2);
-        waitForUser();
-//        jfxElements = getMenusOfFocusedWindow();
-//        compareMenus(jfxElements, TEST_MENUS_2);
+        CountDownLatch latch = new CountDownLatch(1);
 
-        focusJavaFX(0);
+        Platform.runLater(() -> {
+            Scene scene = new Scene(new BorderPane(new Label("Hello World!")));
+            fxPanel.setScene(scene);
+
+            latch.countDown();
+        });
+
+        latch.await();
+
+        focusSwing(0);
         waitForUser();
-//        jfxElements = getMenusOfFocusedWindow();
-//        compareMenus(jfxElements, TEST_MENUS_0);
+//        List<Element> swingElements = getMenusOfFocusedWindow();
+//        compareMenus(swingElements, TEST_MENUS_0);
+
+        focusSwing(1);
+        waitForUser();
+//        swingElements = getMenusOfFocusedWindow();
+//        compareMenus(swingElements, TEST_MENUS_1);
+
+        focusSwing(0);
+        waitForUser();
+//        swingElements = getMenusOfFocusedWindow();
+//        compareMenus(swingElements, TEST_MENUS_0);
     }
 }

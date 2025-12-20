@@ -22,8 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.com.sun.glass.ui.mac;
-
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.PlatformUtil;
 import javafx.application.Platform;
@@ -479,7 +477,7 @@ public class MacOSSystemMenuTestBase {
             try {
                 Thread.sleep(250);
             } catch (InterruptedException e) {
-                // empty
+                throw new RuntimeException(e);
             }
         }
 
