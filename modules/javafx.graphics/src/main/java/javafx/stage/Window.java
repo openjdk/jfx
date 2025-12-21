@@ -1088,20 +1088,26 @@ public class Window implements EventTarget {
                     System.out.println("Window/invalidationListener: screen=" + screen.get());
 
                     /*
-                     * Apply bounds first so the peer is positioned on the correct
-                     * screen before updating the output scales and before sizing
-                     * the window to the size of the scene. Not doing so could result
-                     * in the window being sized based using a different scale which
-                     * can result in the scene being sized slightly too small or
-                     * large which can cause controls to be rendered smaller than
-                     * their preferred sizes (and show ellipsis on Labels for example).
+                     * Based on the position of the Window, find out on what Screen
+                     * it is located to correctly set the output scales. The correct
+                     * output scale is required for the scene to be sized properly
+                     * as there may otherwise be slight differences in size depending
+                     * on the scale (which can cause controls to be cut-off and show
+                     * ellipsis for example).
+                     *
+                     * We don't apply the bounds to the peer just yet, as we need it
+                     * to trigger a width/height change to the Scene **after** we
+                     * set the Scene to its preferred size. Setting the size on the
+                     * scene cannot be skipped when both dimensions are set explicitly
+                     * as PopupWindow seems to be relying on it.
                      */
 
-                    applyBounds();
+                    Screen windowScreen = getWindowScreen();
 
-                    System.out.println("Window/invalidationListener: after applying bounds screen=" + screen.get());
+                    updateOutputScales(windowScreen.getOutputScaleX(), windowScreen.getOutputScaleY());
 
-                    updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
+                    System.out.println("Window/invalidationListener: used screen for output scales: " + windowScreen);
+
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
                     // then the lazy render scale properties might think
@@ -1124,29 +1130,12 @@ public class Window implements EventTarget {
                     }
 
                     // Set peer bounds
-//                    if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
-//                        if (!isEmbeddedWindow) {
-//
-//                            /*
-//                             * Only size the scene if both width and height are not set
-//                             * explicitly. The method name is a bit confusing, but it
-//                             * actually sets the scene to its preferred size, which
-//                             * should only be done if we need to know its width and/or
-//                             * height (as the other dimension may have been set explicitly).
-//                             *
-//                             * After this call, adjustSize is called to ensure the Scene
-//                             * is again resized for the explicit dimension (if any).
-//                             */
-//
-//                            System.out.println("Window/invalidationListener: size from scene: " + getScene().getWidth() + "x" + getScene().getHeight());
-//                        }
-//
-//                    } else {
-//                        peerBoundsConfigurator.setSize(
-//                                getWidth(), getHeight(), -1, -1);
-//                    }
-
-                    adjustSize(true);
+                    if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
+                        adjustSize(true);
+                    } else {
+                        peerBoundsConfigurator.setSize(
+                                getWidth(), getHeight(), -1, -1);
+                    }
 
                     if (!xExplicit && !yExplicit) {
                         centerOnScreen();
