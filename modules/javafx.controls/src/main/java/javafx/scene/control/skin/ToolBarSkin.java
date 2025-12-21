@@ -695,15 +695,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
             if (node.isManaged()) {
                 if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                    x += snapSizeY(node.prefHeight(-1)) + getSpacing();
+                    x = snapPositionY(x + snapSizeY(node.prefHeight(-1)) + getSpacing());
                 } else {
-                    x += snapSizeX(node.prefWidth(-1)) + getSpacing();
+                    x = snapPositionX(x + snapSizeX(node.prefWidth(-1)) + getSpacing());
                 }
             }
 
-            // Use a small epsilon (1e-9 / 0.000000001) to tolerate floating-point rounding error when comparing
-            // doubles. E.g. 117.60000000000001 should be regarded as equal to 117.6.
-            if (x - length > 1e-9) {
+            if (x > length) {
                 overflowIndex = i;
                 break;
             }
