@@ -89,7 +89,7 @@ public class ToolBarSkinTest {
     // overflow menu.
     @ParameterizedTest
     @MethodSource("renderScalesAndOrientations")
-    public void overflowMenuNotShowingWithFloatPrecisionErrors(double scale, Orientation orientation) {
+    public void overflowMenuNotShowingDueToFloatPrecisionErrors(double scale, Orientation orientation) {
 
         // These pref heigh/width values will lead to an "x" value of 117.60000000000001, and a "length" value of
         // 117.6 in getOverflowNodeIndex() in both horizontal and vertical orientations, at 1.25 scale
