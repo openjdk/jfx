@@ -701,7 +701,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                 }
             }
 
-            if (x > length) {
+            // Use a small epsilon (1e-9 / 0.000000001) to tolerate floating-point rounding error when comparing
+            // doubles. E.g. 117.60000000000001 should be regarded as equal to 117.6.
+            if (x - length > 1e-9) {
                 overflowIndex = i;
                 break;
             }
