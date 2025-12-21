@@ -85,14 +85,14 @@ public class ToolBarSkinTest {
     }
 
     // Ensures floating-point precision errors do not cause an overflow menu to show. For example, a length of
-    // 117.60000000000001 should be treated as equal to another length of 117.6 when deciding whether to show the
-    // overflow menu.
+    // 117.60000000000001 should be not be regarded as greater than length of 117.6 when deciding whether to show the
+    // overflow menu based on available space.
     @ParameterizedTest
     @MethodSource("renderScalesAndOrientations")
     public void overflowMenuNotShowingDueToFloatPrecisionErrors(double scale, Orientation orientation) {
 
-        // These pref heigh/width values will lead to an "x" value of 117.60000000000001, and a "length" value of
-        // 117.6 in getOverflowNodeIndex() in both horizontal and vertical orientations, at 1.25 scale
+        // These pref height/width values will lead to an "x" value of 117.60000000000001, and a "length" value of
+        // 117.6 in getOverflowNodeIndex() at 1.25 scale, in both horizontal and vertical orientations
         double buttonPrefDimension = 99.2;
         double separatorPrefDimension = 10.4;
 
@@ -101,8 +101,8 @@ public class ToolBarSkinTest {
         btn.setPrefHeight(buttonPrefDimension);
 
         // Set up a separator in opposite orientation
-        Separator sep = new Separator(orientation == Orientation.VERTICAL ? Orientation.HORIZONTAL :
-                Orientation.VERTICAL);
+        Separator sep = new Separator(orientation == Orientation.VERTICAL ? Orientation.HORIZONTAL
+                : Orientation.VERTICAL);
         sep.setPrefWidth(separatorPrefDimension);
         sep.setPrefHeight(separatorPrefDimension);
 
