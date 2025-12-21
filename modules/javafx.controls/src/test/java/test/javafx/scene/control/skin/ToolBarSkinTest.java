@@ -84,15 +84,15 @@ public class ToolBarSkinTest {
         assertEquals(100, toolbar.maxWidth(-1), 0);
     }
 
-    // Ensures floating-point precision errors do not cause an overflow menu to show. For example, a length of
-    // 117.60000000000001 should be not be regarded as greater than length of 117.6 when deciding whether to show the
-    // overflow menu based on available space.
+    // Tests that floating-point precision errors do not trigger the overflow menu.
+    // For example, a calculation may yield 117.60000000000001, which should not be
+    // treated as greater than 117.6 when determining whether there is sufficient space.
     @ParameterizedTest
     @MethodSource("renderScalesAndOrientations")
     public void overflowMenuNotShowingDueToFloatPrecisionErrors(double scale, Orientation orientation) {
-
-        // These pref height/width values will lead to an "x" value of 117.60000000000001, and a "length" value of
-        // 117.6 in getOverflowNodeIndex() at 1.25 scale, in both horizontal and vertical orientations
+        // These pref height/width values can cause getOverflowNodeIndex() to compute a combined
+        // child length of 117.60000000000001, while the toolbar length is 117.6 (for both horizontal
+        // and vertical orientations), unless snapPositionX/Y() is applied correctly.
         double buttonPrefDimension = 99.2;
         double separatorPrefDimension = 10.4;
 
@@ -112,7 +112,7 @@ public class ToolBarSkinTest {
         BorderPane bp = new BorderPane();
         bp.setTop(new HBox(toolBar));
 
-        assertOverflowNotShown(bp, toolBar, scale);
+        assertOverflowNotShown(bp, toolBar, 1.25);
     }
 
     @ParameterizedTest
