@@ -1102,7 +1102,12 @@ public class Window implements EventTarget {
                      * as PopupWindow seems to be relying on it.
                      */
 
-                    Screen windowScreen = getWindowScreen();
+                    Screen windowScreen = Utils.getScreenForRectangle(new Rectangle2D(
+                        Double.isNaN(getX()) ? 0 : getX(),
+                        Double.isNaN(getY()) ? 0 : getY(),
+                        Double.isNaN(getWidth()) ? 0 : getWidth(),
+                        Double.isNaN(getHeight()) ? 0 : getHeight()
+                    ));
 
                     updateOutputScales(windowScreen.getOutputScaleX(), windowScreen.getOutputScaleY());
 
