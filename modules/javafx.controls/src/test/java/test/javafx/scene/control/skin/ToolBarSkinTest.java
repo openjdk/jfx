@@ -112,7 +112,7 @@ public class ToolBarSkinTest {
         BorderPane bp = new BorderPane();
         bp.setTop(new HBox(toolBar));
 
-        assertOverflowNotShown(bp, toolBar, 1.25);
+        assertOverflowNotShown(bp, toolBar, scale);
     }
 
     @ParameterizedTest
