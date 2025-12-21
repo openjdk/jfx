@@ -1118,12 +1118,27 @@ public class Window implements EventTarget {
                         // after setting the output scale
                         SceneHelper.initPeer(getScene());
                         peer.setScene(SceneHelper.getPeer(getScene()));
-                        SceneHelper.preferredSize(getScene());
-                        System.out.println("Window/invalidationListener: size from scene: " + getScene().getWidth() + "x" + getScene().getHeight());
                     }
 
                     // Set peer bounds
                     if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
+                        if (!isEmbeddedWindow) {
+
+                            /*
+                             * Only size the scene if both width and height are not set
+                             * explicitly. The method name is a bit confusing, but it
+                             * actually sets the scene to its preferred size, which
+                             * should only be done if we need to know its width and/or
+                             * height (as the other dimension may have been set explicitly).
+                             *
+                             * After this call, adjustSize is called to ensure the Scene
+                             * is again resized for the explicit dimension (if any).
+                             */
+
+                            SceneHelper.preferredSize(getScene());
+                            System.out.println("Window/invalidationListener: size from scene: " + getScene().getWidth() + "x" + getScene().getHeight());
+                        }
+
                         adjustSize(true);
                     } else {
                         peerBoundsConfigurator.setSize(
