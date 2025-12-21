@@ -1075,6 +1075,7 @@ public class Window implements EventTarget {
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
 
                     boolean isEmbeddedWindow = Window.this instanceof EmbeddedWindow;
+                    System.out.println("Window/invalidationListener: isEmbeddedWindow = " + isEmbeddedWindow);
                     if (isEmbeddedWindow && getScene() != null) {
                         // JDK-8257719: The scene of embedded windows like JFXPanel
                         // or FXCanvas has to be initialized before setting the
@@ -1112,38 +1113,40 @@ public class Window implements EventTarget {
                     peerBoundsConfigurator.setRenderScaleX(getRenderScaleX());
                     peerBoundsConfigurator.setRenderScaleY(getRenderScaleY());
                     System.out.println("Window/invalidationListener: output scale used before sizing scene: " + getRenderScaleX());
+                    System.out.println("Window/invalidationListener: widthExplicit = " + widthExplicit + "; heightExplicit = " + heightExplicit);
 
                     if (!isEmbeddedWindow && getScene() != null) {
                         // The scene of regular windows is initialized
                         // after setting the output scale
                         SceneHelper.initPeer(getScene());
                         peer.setScene(SceneHelper.getPeer(getScene()));
+                        SceneHelper.preferredSize(getScene());
                     }
 
                     // Set peer bounds
-                    if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
-                        if (!isEmbeddedWindow) {
+//                    if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
+//                        if (!isEmbeddedWindow) {
+//
+//                            /*
+//                             * Only size the scene if both width and height are not set
+//                             * explicitly. The method name is a bit confusing, but it
+//                             * actually sets the scene to its preferred size, which
+//                             * should only be done if we need to know its width and/or
+//                             * height (as the other dimension may have been set explicitly).
+//                             *
+//                             * After this call, adjustSize is called to ensure the Scene
+//                             * is again resized for the explicit dimension (if any).
+//                             */
+//
+//                            System.out.println("Window/invalidationListener: size from scene: " + getScene().getWidth() + "x" + getScene().getHeight());
+//                        }
+//
+//                    } else {
+//                        peerBoundsConfigurator.setSize(
+//                                getWidth(), getHeight(), -1, -1);
+//                    }
 
-                            /*
-                             * Only size the scene if both width and height are not set
-                             * explicitly. The method name is a bit confusing, but it
-                             * actually sets the scene to its preferred size, which
-                             * should only be done if we need to know its width and/or
-                             * height (as the other dimension may have been set explicitly).
-                             *
-                             * After this call, adjustSize is called to ensure the Scene
-                             * is again resized for the explicit dimension (if any).
-                             */
-
-                            SceneHelper.preferredSize(getScene());
-                            System.out.println("Window/invalidationListener: size from scene: " + getScene().getWidth() + "x" + getScene().getHeight());
-                        }
-
-                        adjustSize(true);
-                    } else {
-                        peerBoundsConfigurator.setSize(
-                                getWidth(), getHeight(), -1, -1);
-                    }
+                    adjustSize(true);
 
                     if (!xExplicit && !yExplicit) {
                         centerOnScreen();
