@@ -244,7 +244,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            EventUtil.handleEvent(event, eventHandler);
+            handleEvent(eventHandler, event);
         }
 
         @Override
@@ -279,7 +279,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            EventUtil.handleEvent(event, weakEventHandler);
+            handleEvent(weakEventHandler, event);
         }
 
         @Override
@@ -318,7 +318,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            EventUtil.handleEvent(event, eventFilter);
+            handleEvent(eventFilter, event);
         }
 
         @Override
@@ -353,12 +353,26 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            EventUtil.handleEvent(event, weakEventFilter);
+            handleEvent(weakEventFilter, event);
         }
 
         @Override
         public boolean isDisconnected() {
             return weakEventFilter.wasGarbageCollected();
+        }
+    }
+
+    private static <E extends Event> void handleEvent(EventHandler<? super E> handler, E event) {
+        var context = EventDispatchContext.getCurrent();
+        if (context == null) {
+            handler.handle(event);
+        } else {
+            try {
+                context.setCurrentEvent(event);
+                handler.handle(event);
+            } finally {
+                context.setCurrentEvent(null);
+            }
         }
     }
 }

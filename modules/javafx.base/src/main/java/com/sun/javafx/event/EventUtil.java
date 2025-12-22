@@ -26,35 +26,12 @@
 package com.sun.javafx.event;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
-import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 
 public final class EventUtil {
-
-    static {
-        try {
-            Class.forName(Event.class.getName(), true, Event.class.getClassLoader());
-        } catch (ClassNotFoundException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    public interface Accessor {
-        void handleEvent(Event event, EventHandler<? extends Event> handler);
-    }
-
-    public static void setAccessor(Accessor accessor) {
-        EventUtil.accessor = accessor;
-    }
-
-    public static void handleEvent(Event event, EventHandler<? extends Event> handler) {
-        accessor.handleEvent(event, handler);
-    }
-
-    private static Accessor accessor;
-
     private static final EventDispatchChainImpl eventDispatchChain =
             new EventDispatchChainImpl();
 

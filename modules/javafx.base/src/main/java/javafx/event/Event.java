@@ -44,23 +44,8 @@ import javafx.beans.NamedArg;
  */
 public class Event extends EventObject implements Cloneable {
 
-    static {
-        EventUtil.setAccessor(new EventUtil.Accessor() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public void handleEvent(Event event, EventHandler<? extends Event> handler) {
-                try {
-                    event.locked = true;
-                    ((EventHandler<Event>)handler).handle(event);
-                } finally {
-                    event.locked = false;
-                }
-            }
-        });
-    }
-
     @Serial
-    private static final long serialVersionUID = 20241110L;
+    private static final long serialVersionUID = 20121107L;
 
     /**
      * The constant which represents an unknown event source / target.
@@ -82,12 +67,6 @@ public class Event extends EventObject implements Cloneable {
      * will travel when posted.
      */
     protected transient EventTarget target;
-
-    /**
-     * Indicates whether this event is currently locked, which allows the {@link #ifUnconsumed(EventHandler)}}
-     * and {@link #preventDefault()} methods to be called during event delivery.
-     */
-    private transient boolean locked;
 
     /**
      * Whether this event has been consumed by any filter or handler.
@@ -185,37 +164,45 @@ public class Event extends EventObject implements Cloneable {
      * As soon as a default event handler consumes the event, further propagation is stopped.
      * <p>
      * This method can only be called from an event filter or event handler during event delivery; any attempt
-     * to call it after event delivery is complete will fail with {@link IllegalStateException}.
+     * to call it before event delivery has started or after event delivery is complete, as well as any attempt
+     * to call it for an event that was not received with an event filter or event handler will fail with
+     * {@link IllegalStateException}.
      *
      * @param handler the event handler
      * @param <E> the type of the event
-     * @throws IllegalStateException when event delivery has already been completed
+     * @throws IllegalStateException when event delivery is not in progress, or if the event
+     *                               was not received with an event filter or event handler
      * @since 26
      */
     public final <E extends Event> void ifUnconsumed(EventHandler<E> handler) {
-        if (!locked) {
+        var context = EventDispatchContext.getCurrent();
+        if (context == null) {
             throw new IllegalStateException("Event delivery is not in progress");
         }
 
-        EventDispatchContext.addDefaultHandler(this, handler);
+        context.addDefaultHandler(this, handler);
     }
 
     /**
      * Requests that default event handlers that are added with {@link #ifUnconsumed(EventHandler)} will not
      * be invoked for this event. The event will still propagate normally through the event dispatch chain.
      * <p>
-     * This method can only be called from an event filter or event handler during event delivery; any
-     * attempt to call it after event delivery is complete will fail with {@link IllegalStateException}.
+     * This method can only be called from an event filter or event handler during event delivery; any attempt
+     * to call it before event delivery has started or after event delivery is complete, as well as any attempt
+     * to call it for an event that was not received with an event filter or event handler will fail with
+     * {@link IllegalStateException}.
      *
-     * @throws IllegalStateException when event delivery has already been completed
+     * @throws IllegalStateException when event delivery is not in progress, or if the event
+     *                               was not received with an event filter or event handler
      * @since 26
      */
     public final void preventDefault() {
-        if (!locked) {
+        var context = EventDispatchContext.getCurrent();
+        if (context == null) {
             throw new IllegalStateException("Event delivery is not in progress");
         }
 
-        EventDispatchContext.preventDefault();
+        context.preventDefault(this);
     }
 
     /**

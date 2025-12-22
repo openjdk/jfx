@@ -39,6 +39,7 @@ public final class EventDispatchContext implements AutoCloseable {
     private final static ThreadLocal<Deque<EventDispatchContext>> context =
             ThreadLocal.withInitial(ArrayDeque::new);
 
+    private Event currentEvent;
     private Object defaultHandlers;
     private boolean preventDefault;
 
@@ -46,32 +47,52 @@ public final class EventDispatchContext implements AutoCloseable {
         context.get().push(this);
     }
 
+    public static EventDispatchContext getCurrent() {
+        return context.get().peek();
+    }
+
+    public void setCurrentEvent(Event event) {
+        currentEvent = event;
+    }
+
     @SuppressWarnings("unchecked")
-    public static <E extends Event> void addDefaultHandler(Event event, EventHandler<E> handler) {
-        EventDispatchContext context = EventDispatchContext.context.get().peek();
-        if (context == null || context.preventDefault) {
+    public <E extends Event> void addDefaultHandler(Event event, EventHandler<E> handler) {
+        if (currentEvent == null) {
+            throw new IllegalStateException("Event delivery is not in progress");
+        }
+
+        if (currentEvent != event) {
+            throw new IllegalStateException("Default event handler can only be added for the currently dispatched event");
+        }
+
+        if (preventDefault) {
             return;
         }
 
-        if (context.defaultHandlers == null) {
-            context.defaultHandlers = new DefaultEventHandler(event, (EventHandler<Event>)handler);
-        } else if (context.defaultHandlers instanceof List<?> list) {
+        if (defaultHandlers == null) {
+            defaultHandlers = new DefaultEventHandler(event, (EventHandler<Event>)handler);
+        } else if (defaultHandlers instanceof List<?> list) {
             var typedList = (List<DefaultEventHandler>)list;
             typedList.add(new DefaultEventHandler(event, (EventHandler<Event>)handler));
         } else {
             var list = new ArrayList<DefaultEventHandler>(4);
-            list.add((DefaultEventHandler)context.defaultHandlers);
+            list.add((DefaultEventHandler)defaultHandlers);
             list.add(new DefaultEventHandler(event, (EventHandler<Event>)handler));
-            context.defaultHandlers = list;
+            defaultHandlers = list;
         }
     }
 
-    public static void preventDefault() {
-        EventDispatchContext context = EventDispatchContext.context.get().peek();
-        if (context != null) {
-            context.preventDefault = true;
-            context.defaultHandlers = null;
+    public void preventDefault(Event event) {
+        if (currentEvent == null) {
+            throw new IllegalStateException("Event delivery is not in progress");
         }
+
+        if (currentEvent != event) {
+            throw new IllegalStateException("Default event handling can only be prevented for the currently dispatched event");
+        }
+
+        preventDefault = true;
+        defaultHandlers = null;
     }
 
     @SuppressWarnings("unchecked")
