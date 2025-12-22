@@ -45,6 +45,7 @@ import javafx.scene.text.Font;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.FX;
+import com.oracle.demo.richtext.util.FxAction;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -58,71 +59,62 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 public class RichEditorDemoPane extends BorderPane {
     public final RichTextArea editor;
     public final Actions actions;
-    private final ComboBox<String> fontName;
-    private final ComboBox<Integer> fontSize;
-    private final ColorPicker textColor;
-    private final ComboBox<TextStyle> textStyle;
-    private final SimpleObjectProperty<StyleAttributeMap> insertStyles = new SimpleObjectProperty<>();
+    public final ComboBox<String> fontFamily = new ComboBox<>();
+    public final ComboBox<Double> fontSize = new ComboBox<>();
+    public final ColorPicker textColor = new ColorPicker();
+    private final ComboBox<TextStyle> textStyle = new ComboBox<>();
 
     public RichEditorDemoPane() {
         FX.name(this, "RichEditorDemoPane");
 
         editor = new RichTextArea();
-        editor.insertStylesProperty().bind(insertStyles);
 
         // example of a custom function
         editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
             System.out.println("Custom function: W key is pressed");
         });
 
-        actions = new Actions(editor);
+        actions = new Actions(this, editor);
         editor.setContextMenu(createContextMenu());
 
-        fontName = new ComboBox<>();
-        fontName.getItems().setAll(collectFonts());
-        fontName.setMaxWidth(170);
-        fontName.setOnAction((ev) -> {
-            actions.setFontName(fontName.getSelectionModel().getSelectedItem());
+        fontFamily.getItems().setAll(collectFonts());
+        fontFamily.setMaxWidth(170);
+        fontFamily.setOnAction((ev) -> {
+            actions.setFontFamily(fontFamily.getSelectionModel().getSelectedItem());
+            editor.requestFocus();
         });
 
-        fontSize = new ComboBox<>();
+        fontSize.setEditable(true);
+        fontSize.setMaxWidth(70);
+        fontSize.setConverter(FX.numberConverter());
         fontSize.getItems().setAll(
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            16,
-            18,
-            20,
-            22,
-            24,
-            28,
-            32,
-            36,
-            48,
-            72,
-            96,
-            128
+            8.0,
+            9.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            16.0,
+            18.0,
+            24.0,
+            32.0,
+            48.0,
+            96.0
         );
         fontSize.setOnAction((ev) -> {
             actions.setFontSize(fontSize.getSelectionModel().getSelectedItem());
         });
 
-        textColor = new ColorPicker();
         // TODO save/restore custom colors
         FX.tooltip(textColor, "Text Color");
-        // FIX there is no API for this!  why is this a property of a skin, not the control??
+        // there is no API for this!  why is this a property of a skin, not the control??
         // https://stackoverflow.com/questions/21246137/remove-text-from-colour-picker
         textColor.setStyle("-fx-color-label-visible: false ;");
         textColor.setOnAction((ev) -> {
             actions.setTextColor(textColor.getValue());
         });
 
-        textStyle = new ComboBox<>();
         textStyle.getItems().setAll(TextStyle.values());
         textStyle.setConverter(TextStyle.converter());
         textStyle.setOnAction((ev) -> {
@@ -136,24 +128,37 @@ public class RichEditorDemoPane extends BorderPane {
         actions.textStyleProperty().addListener((s,p,c) -> {
             setTextStyle(c);
         });
-        insertStyles.bind(Bindings.createObjectBinding(
-            this::mkInsertStyles,
-            actions.bold.selectedProperty()
+
+        editor.insertStylesProperty().bind(Bindings.createObjectBinding(
+            this::getInsertStyles,
+            actions.bold.selectedProperty(),
+            fontFamily.getSelectionModel().selectedItemProperty(),
+            fontSize.getSelectionModel().selectedItemProperty(),
+            actions.italic.selectedProperty(),
+            actions.strikeThrough.selectedProperty(),
+            actions.underline.selectedProperty()
         ));
 
         Settings.endKey.subscribe(this::setEndKey);
     }
 
-    private StyleAttributeMap mkInsertStyles() {
-        // TODO all attributes
-        return StyleAttributeMap.builder().
+    private StyleAttributeMap getInsertStyles() {
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+        b.
             setBold(actions.bold.isSelected()).
-            build();
+            setFontFamily(fontFamily.getSelectionModel().getSelectedItem()).
+            setItalic(actions.italic.isSelected()).
+            setStrikeThrough(actions.strikeThrough.isSelected()).
+            setUnderline(actions.underline.isSelected());
+        if (fontSize.getSelectionModel().getSelectedItem() != null) {
+            b.setFontSize(fontSize.getSelectionModel().getSelectedItem());
+        }
+        return b.build();
     }
 
     private ToolBar createToolBar() {
         ToolBar t = new ToolBar();
-        FX.add(t, fontName);
+        FX.add(t, fontFamily);
         FX.add(t, fontSize);
         FX.add(t, textColor);
         FX.space(t);

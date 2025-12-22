@@ -102,13 +102,15 @@ public class Actions {
     public final FxAction lineNumbers = new FxAction();
     public final FxAction wrapText = new FxAction();
 
+    private final RichEditorDemoPane pane;
     private final RichTextArea control;
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
 
-    public Actions(RichTextArea control) {
+    public Actions(RichEditorDemoPane pane, RichTextArea control) {
+        this.pane = pane;
         this.control = control;
 
         // undo/redo actions
@@ -212,32 +214,18 @@ public class Actions {
         italic.setSelected(a.getBoolean(StyleAttributeMap.ITALIC), false);
         underline.setSelected(a.getBoolean(StyleAttributeMap.UNDERLINE), false);
         strikeThrough.setSelected(a.getBoolean(StyleAttributeMap.STRIKE_THROUGH), false);
-    }
-
-    private <T> void apply(StyleAttribute<T> attr, T value) {
-        TextPos start = control.getAnchorPosition();
-        TextPos end = control.getCaretPosition();
-        if (start == null) {
-            return;
-        } else if (start.equals(end)) {
-            // apply to the whole paragraph
-            int ix = start.index();
-            start = TextPos.ofLeading(ix, 0);
-            end = control.getParagraphEnd(ix);
-        }
-
-        StyleAttributeMap a = control.getActiveStyleAttributeMap();
-        a = StyleAttributeMap.builder().set(attr, value).build();
-        control.applyStyle(start, end, a);
+        FX.select(pane.fontFamily, a.getFontFamily());
+        FX.select(pane.fontSize, a.getFontSize());
+        pane.textColor.setValue(a.getTextColor());
     }
 
     // TODO need to bind selected item in the combo
-    public void setFontSize(Integer size) {
-        apply(StyleAttributeMap.FONT_SIZE, size.doubleValue());
+    public void setFontSize(Double size) {
+        apply(StyleAttributeMap.FONT_SIZE, size);
     }
 
     // TODO need to bind selected item in the combo
-    public void setFontName(String name) {
+    public void setFontFamily(String name) {
         apply(StyleAttributeMap.FONT_FAMILY, name);
     }
 
@@ -385,6 +373,24 @@ public class Actions {
 
     private void underline() {
         toggleStyle(underline, StyleAttributeMap.UNDERLINE);
+    }
+
+    private <T> void apply(StyleAttribute<T> attr, T value) {
+        TextPos start = control.getAnchorPosition();
+        TextPos end = control.getCaretPosition();
+        if (start == null) {
+            return;
+        } else if (start.equals(end)) {
+            // apply to the whole paragraph
+//            int ix = start.index();
+//            start = TextPos.ofLeading(ix, 0);
+//            end = control.getParagraphEnd(ix);
+            return; // FIX
+        }
+
+        StyleAttributeMap a = control.getActiveStyleAttributeMap();
+        a = StyleAttributeMap.builder().set(attr, value).build();
+        control.applyStyle(start, end, a);
     }
 
     private void toggleStyle(FxAction action, StyleAttribute<Boolean> attr) {

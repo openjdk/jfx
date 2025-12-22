@@ -32,6 +32,7 @@
 
 package com.oracle.demo.richtext.util;
 
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -473,5 +474,27 @@ public class FX {
             };
         }
         return (StringConverter<T>)converter;
+    }
+
+    public static StringConverter<Double> numberConverter() {
+        return new StringConverter<Double>() {
+            private final DecimalFormat format1dp = new DecimalFormat("0.#");
+
+            @Override
+            public String toString(Double v) {
+                if (v == null) {
+                    return null;
+                }
+                return format1dp.format(v);
+            }
+
+            @Override
+            public Double fromString(String s) {
+                if ((s == null) || (s.trim().length() == 0)) {
+                    return null;
+                }
+                return Double.parseDouble(s.trim());
+            }
+        };
     }
 }
