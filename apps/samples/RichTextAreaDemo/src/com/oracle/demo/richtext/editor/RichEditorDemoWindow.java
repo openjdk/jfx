@@ -36,13 +36,17 @@ import java.io.File;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import com.oracle.demo.richtext.util.FX;
+import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
@@ -51,18 +55,33 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * @author Andy Goryachev
  */
 public class RichEditorDemoWindow extends Stage {
-    public final RichEditorDemoPane pane;
+    public final RichEditorToolbar toolbar;
+    public final RichTextArea editor;
+    public final Actions actions;
     public final Label status;
 
     public RichEditorDemoWindow() {
-        pane = new RichEditorDemoPane();
+        toolbar = new RichEditorToolbar();
+
+        editor = new RichTextArea();
+
+        // example of a custom function
+        editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
+            System.out.println("Custom function: W key is pressed");
+        });
 
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));
+        
+        actions = new Actions(toolbar, editor);
+        
+        BorderPane cp = new BorderPane();
+        cp.setTop(toolbar);
+        cp.setCenter(editor);
 
         BorderPane bp = new BorderPane();
         bp.setTop(createMenu());
-        bp.setCenter(pane);
+        bp.setCenter(cp);
         bp.setBottom(status);
 
         Scene scene = new Scene(bp);
@@ -72,28 +91,28 @@ public class RichEditorDemoWindow extends Stage {
         setHeight(600);
 
         addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, (ev) -> {
-            if (pane.actions.askToSave()) {
+            if (actions.askToSave()) {
                 ev.consume();
             }
         });
 
         status.textProperty().bind(Bindings.createStringBinding(
             () -> {
-                return statusString(pane.editor.getCaretPosition());
+                return statusString(editor.getCaretPosition());
             },
-            pane.editor.caretPositionProperty()
+            editor.caretPositionProperty()
         ));
         titleProperty().bind(Bindings.createStringBinding(
             () -> {
-                return titleString(pane.actions.getFile(), pane.actions.isModified());
+                return titleString(actions.getFile(), actions.isModified());
             },
-            pane.actions.modifiedProperty(),
-            pane.actions.fileNameProperty()
+            actions.modifiedProperty(),
+            actions.fileNameProperty()
         ));
+        editor.setContextMenu(createContextMenu());
     }
 
     private MenuBar createMenu() {
-        Actions actions = pane.actions;
         MenuBar m = new MenuBar();
         // file
         FX.menu(m, "File");
@@ -136,6 +155,23 @@ public class RichEditorDemoWindow extends Stage {
         FX.menu(m, "Help");
         FX.item(m, "About"); // TODO
 
+        return m;
+    }
+
+    private ContextMenu createContextMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Undo", actions.undo);
+        FX.item(m, "Redo", actions.redo);
+        FX.separator(m);
+        FX.item(m, "Cut", actions.cut);
+        FX.item(m, "Copy", actions.copy);
+        FX.item(m, "Paste", actions.paste);
+        FX.item(m, "Paste and Retain Style", actions.pasteUnformatted);
+        FX.separator(m);
+        FX.item(m, "Select All", actions.selectAll);
+        FX.separator(m);
+        // TODO
+        // FX.item(m, "Paragraph..."
         return m;
     }
 

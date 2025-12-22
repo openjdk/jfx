@@ -53,6 +53,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import com.oracle.demo.richtext.common.Styles;
 import com.oracle.demo.richtext.common.TextStyle;
+import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.ExceptionDialog;
 import com.oracle.demo.richtext.util.FX;
 import com.oracle.demo.richtext.util.FxAction;
@@ -102,56 +103,63 @@ public class Actions {
     public final FxAction lineNumbers = new FxAction();
     public final FxAction wrapText = new FxAction();
 
-    private final RichEditorDemoPane pane;
-    private final RichTextArea control;
+    private final RichEditorToolbar toolbar;
+    private final RichTextArea editor;
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
 
-    public Actions(RichEditorDemoPane pane, RichTextArea control) {
-        this.pane = pane;
-        this.control = control;
+    public Actions(RichEditorToolbar tb, RichTextArea ed) {
+        this.toolbar = tb;
+        this.editor = ed;
 
         // undo/redo actions
-        redo.disabledProperty().bind(control.redoableProperty().not());
-        undo.disabledProperty().bind(control.undoableProperty().not());
+        redo.disabledProperty().bind(editor.redoableProperty().not());
+        undo.disabledProperty().bind(editor.undoableProperty().not());
 
         undo.disabledProperty().bind(Bindings.createBooleanBinding(() -> {
-            return !control.isUndoable();
-        }, control.undoableProperty()));
+            return !editor.isUndoable();
+        }, editor.undoableProperty()));
 
         redo.disabledProperty().bind(Bindings.createBooleanBinding(() -> {
-            return !control.isRedoable();
-        }, control.redoableProperty()));
+            return !editor.isRedoable();
+        }, editor.redoableProperty()));
 
-        highlightCurrentLine.selectedProperty().bindBidirectional(control.highlightCurrentParagraphProperty());
-        wrapText.selectedProperty().bindBidirectional(control.wrapTextProperty());
+        highlightCurrentLine.selectedProperty().bindBidirectional(editor.highlightCurrentParagraphProperty());
+        wrapText.selectedProperty().bindBidirectional(editor.wrapTextProperty());
 
         lineNumbers.selectedProperty().addListener((s,p,on) -> {
-            control.setLeftDecorator(on ? new LineNumberDecorator() : null);
+            editor.setLeftDecorator(on ? new LineNumberDecorator() : null);
         });
 
-        control.getModel().addListener(new StyledTextModel.Listener() {
+        // editor
+
+        editor.getModel().addListener(new StyledTextModel.Listener() {
             @Override
             public void onContentChange(ContentChange ch) {
                 handleEdit();
             }
         });
 
-        control.caretPositionProperty().addListener((x) -> {
+        editor.caretPositionProperty().addListener((x) -> {
             handleCaret();
         });
 
         // FIX model styles property?
-        control.selectionProperty().addListener((p) -> {
+        editor.selectionProperty().addListener((p) -> {
             updateSourceStyles();
         });
-        // change of insert styles from shortcuts, menus, toolbar buttons -> changes ui, updates insert styles
-        // non-typing caret move -> update toolbar from the model
-        // typing caret move -> keep insert styles
-        // Q: how to differentiate the two scenarios??  wait, typing should produce the same styles bc it looks for
-        // the previous (just typed) character!
+
+        editor.insertStylesProperty().bind(Bindings.createObjectBinding(
+            this::getInsertStyles,
+            bold.selectedProperty(),
+            toolbar.fontFamily.getSelectionModel().selectedItemProperty(),
+            toolbar.fontSize.getSelectionModel().selectedItemProperty(),
+            italic.selectedProperty(),
+            strikeThrough.selectedProperty(),
+            underline.selectedProperty()
+        ));
 
         styles.addListener((s,p,a) -> {
             bold.setSelected(hasStyle(a, StyleAttributeMap.BOLD), false);
@@ -161,6 +169,39 @@ public class Actions {
         });
 
         updateSourceStyles();
+
+        // toolbar
+        
+        bold.selectedProperty().bindBidirectional(toolbar.bold.selectedProperty());
+        italic.selectedProperty().bindBidirectional(toolbar.italic.selectedProperty());
+        strikeThrough.selectedProperty().bindBidirectional(toolbar.strikeThrough.selectedProperty());
+        underline.selectedProperty().bindBidirectional(toolbar.underline.selectedProperty());
+
+        toolbar.fontFamily.setOnAction((ev) -> {
+            setFontFamily(toolbar.fontFamily.getSelectionModel().getSelectedItem());
+            editor.requestFocus();
+        });
+
+        toolbar.fontSize.setOnAction((ev) -> {
+            setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());
+        });
+
+        toolbar.textColor.setOnAction((ev) -> {
+            setTextColor(toolbar.textColor.getValue());
+        });
+
+        toolbar.textStyle.setOnAction((ev) -> {
+            updateTextStyle();
+            editor.requestFocus();
+        });
+
+        textStyleProperty().addListener((s,p,c) -> {
+            toolbar.setTextStyle(c);
+        });
+
+        // settings
+        
+        Settings.endKey.subscribe(this::setEndKey);
 
         // defaults
         highlightCurrentLine.setSelected(true, false);
@@ -204,8 +245,8 @@ public class Actions {
     }
 
     private void handleCaret() {
-        boolean sel = control.hasNonEmptySelection();
-        StyleAttributeMap a = control.getActiveStyleAttributeMap();
+        boolean sel = editor.hasNonEmptySelection();
+        StyleAttributeMap a = editor.getActiveStyleAttributeMap();
 
         cut.setEnabled(sel);
         copy.setEnabled(sel);
@@ -214,9 +255,9 @@ public class Actions {
         italic.setSelected(a.getBoolean(StyleAttributeMap.ITALIC), false);
         underline.setSelected(a.getBoolean(StyleAttributeMap.UNDERLINE), false);
         strikeThrough.setSelected(a.getBoolean(StyleAttributeMap.STRIKE_THROUGH), false);
-        FX.select(pane.fontFamily, a.getFontFamily());
-        FX.select(pane.fontSize, a.getFontSize());
-        pane.textColor.setValue(a.getTextColor());
+        FX.select(toolbar.fontFamily, a.getFontFamily());
+        FX.select(toolbar.fontSize, a.getFontSize());
+        toolbar.textColor.setValue(a.getTextColor());
     }
 
     // TODO need to bind selected item in the combo
@@ -237,7 +278,7 @@ public class Actions {
         if (askToSave()) {
             return;
         }
-        control.setModel(new RichTextModel());
+        editor.setModel(new RichTextModel());
         setModified(false);
     }
 
@@ -260,7 +301,7 @@ public class Actions {
                 DataFormat fmt = guessFormat(f);
                 readFile(f, fmt);
             } catch (Exception e) {
-                new ExceptionDialog(control, e).open();
+                new ExceptionDialog(editor, e).open();
             }
         }
     }
@@ -278,7 +319,7 @@ public class Actions {
         try {
             writeFile(f);
         } catch (Exception e) {
-            new ExceptionDialog(control, e).open();
+            new ExceptionDialog(editor, e).open();
         }
     }
 
@@ -290,7 +331,7 @@ public class Actions {
                 writeFile(f);
                 return true;
             } catch(Exception e) {
-                new ExceptionDialog(control, e).open();
+                new ExceptionDialog(editor, e).open();
             }
         }
         return false;
@@ -315,9 +356,9 @@ public class Actions {
 
     private void readFile(File f, DataFormat fmt) throws Exception {
         try (FileInputStream in = new FileInputStream(f)) {
-            control.read(fmt, in);
+            editor.read(fmt, in);
             file.set(f);
-            control.setEditable(f.canWrite());
+            editor.setEditable(f.canWrite());
             setModified(false);
         }
     }
@@ -325,38 +366,38 @@ public class Actions {
     private void writeFile(File f) throws Exception {
         DataFormat fmt = guessFormat(f);
         try (FileOutputStream out = new FileOutputStream(f)) {
-            control.write(fmt, out);
+            editor.write(fmt, out);
             file.set(f);
             setModified(false);
         }
     }
 
     private void copy() {
-        control.copy();
+        editor.copy();
     }
 
     private void cut() {
-        control.cut();
+        editor.cut();
     }
 
     private void paste() {
-        control.paste();
+        editor.paste();
     }
 
     private void pasteUnformatted() {
-        control.pastePlainText();
+        editor.pastePlainText();
     }
 
     private void selectAll() {
-        control.selectAll();
+        editor.selectAll();
     }
 
     private void redo() {
-       control.redo();
+       editor.redo();
     }
 
     private void undo() {
-        control.undo();
+        editor.undo();
     }
 
     private void bold() {
@@ -376,8 +417,8 @@ public class Actions {
     }
 
     private <T> void apply(StyleAttribute<T> attr, T value) {
-        TextPos start = control.getAnchorPosition();
-        TextPos end = control.getCaretPosition();
+        TextPos start = editor.getAnchorPosition();
+        TextPos end = editor.getCaretPosition();
         if (start == null) {
             return;
         } else if (start.equals(end)) {
@@ -388,19 +429,19 @@ public class Actions {
             return; // FIX
         }
 
-        StyleAttributeMap a = control.getActiveStyleAttributeMap();
+        StyleAttributeMap a = editor.getActiveStyleAttributeMap();
         a = StyleAttributeMap.builder().set(attr, value).build();
-        control.applyStyle(start, end, a);
+        editor.applyStyle(start, end, a);
     }
 
     private void toggleStyle(FxAction action, StyleAttribute<Boolean> attr) {
-        TextPos start = control.getAnchorPosition();
-        TextPos end = control.getCaretPosition();
+        TextPos start = editor.getAnchorPosition();
+        TextPos end = editor.getCaretPosition();
         if (start == null) {
             return;
         }
         
-        StyleAttributeMap a = control.getActiveStyleAttributeMap();
+        StyleAttributeMap a = editor.getActiveStyleAttributeMap();
         boolean on = !a.getBoolean(attr);
 
         if (start.equals(end)) {
@@ -409,29 +450,29 @@ public class Actions {
             }
         } else {
             a = StyleAttributeMap.builder().set(attr, on).build();
-            control.applyStyle(start, end, a);
+            editor.applyStyle(start, end, a);
             updateSourceStyles();
         }
     }
 
     public void setTextStyle(TextStyle st) {
-        TextPos start = control.getAnchorPosition();
-        TextPos end = control.getCaretPosition();
+        TextPos start = editor.getAnchorPosition();
+        TextPos end = editor.getCaretPosition();
         if (start == null) {
             return;
         } else if (start.equals(end)) {
-            TextStyle cur = Styles.guessTextStyle(control.getActiveStyleAttributeMap());
+            TextStyle cur = Styles.guessTextStyle(editor.getActiveStyleAttributeMap());
             if (cur == st) {
                 return;
             }
             // apply to the whole paragraph
             int ix = start.index();
             start = TextPos.ofLeading(ix, 0);
-            end = control.getParagraphEnd(ix);
+            end = editor.getParagraphEnd(ix);
         }
 
         StyleAttributeMap a = Styles.getStyleAttributeMap(st);
-        control.applyStyle(start, end, a);
+        editor.applyStyle(start, end, a);
         updateSourceStyles();
     }
 
@@ -446,11 +487,11 @@ public class Actions {
     }
 
     private StyleAttributeMap getSourceStyleAttrs() {
-        SelectionSegment sel = control.getSelection();
+        SelectionSegment sel = editor.getSelection();
         if ((sel == null) || (!sel.isCollapsed())) {
             return null;
         }
-        return control.getActiveStyleAttributeMap();
+        return editor.getActiveStyleAttributeMap();
     }
 
     private static FileChooser.ExtensionFilter filterAll() {
@@ -536,6 +577,66 @@ public class Actions {
     }
 
     private Window parentWindow() {
-        return FX.getParentWindow(control);
+        return FX.getParentWindow(editor);
+    }
+
+    private void updateTextStyle() {
+        TextStyle st = toolbar.textStyle.getSelectionModel().getSelectedItem();
+        if (st != null) {
+            setTextStyle(st);
+        }
+    }
+
+    private void setEndKey(EndKey v) {
+        switch(v) {
+        case END_OF_LINE:
+            editor.getInputMap().restoreDefaultFunction(RichTextArea.Tag.MOVE_TO_LINE_END);
+            break;
+        case END_OF_TEXT:
+            editor.getInputMap().registerFunction(RichTextArea.Tag.MOVE_TO_LINE_END, this::moveToEndOfText);
+            break;
+        }
+    }
+
+    // this is an illustration.  we could publish the MOVE_TO_END_OF_TEXT_ON_LINE function tag
+    private void moveToEndOfText() {
+        TextPos p = editor.getCaretPosition();
+        if (p != null) {
+            editor.executeDefault(RichTextArea.Tag.MOVE_TO_LINE_END);
+            TextPos p2 = editor.getCaretPosition();
+            if (p2 != null) {
+                String text = editor.getPlainText(p2.index());
+                int ix = findLastText(text, p2.charIndex());
+                if (ix > p.charIndex()) {
+                    editor.select(TextPos.ofLeading(p2.index(), ix));
+                }
+            }
+        }
+    }
+
+    private static int findLastText(String text, int start) {
+        int i = start - 1;
+        while (i >= 0) {
+            char c = text.charAt(i);
+            if (!Character.isWhitespace(c)) {
+                return i + 1;
+            }
+            --i;
+        }
+        return i;
+    }
+
+    private StyleAttributeMap getInsertStyles() {
+        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
+        b.
+            setBold(bold.isSelected()).
+            setFontFamily(toolbar.fontFamily.getSelectionModel().getSelectedItem()).
+            setItalic(italic.isSelected()).
+            setStrikeThrough(strikeThrough.isSelected()).
+            setUnderline(underline.isSelected());
+        if (toolbar.fontSize.getSelectionModel().getSelectedItem() != null) {
+            b.setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());
+        }
+        return b.build();
     }
 }

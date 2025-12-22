@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -238,7 +238,6 @@ public class FX {
     public static ToggleButton toggleButton(ToolBar t, String text, String tooltip) {
         ToggleButton b = new ToggleButton(text);
         b.setTooltip(new Tooltip(tooltip));
-        b.setDisable(true);
         t.getItems().add(b);
         return b;
     }
