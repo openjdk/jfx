@@ -120,7 +120,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addWithInlineAndStyleNames(String text, String style, String... css) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -136,7 +136,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addWithStyleNames(String text, String... css) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -152,7 +152,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addWithInlineStyle(String text, String style) {
         Objects.requireNonNull(text);
         StyleAttributeMap a = StyleAttributeMap.fromInlineStyle(style);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -168,7 +168,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
     public SimpleViewOnlyStyledModel addSegment(String text, StyleAttributeMap a) {
         // TODO split into paragraphs if \n is found, or check for \n ?
         Objects.requireNonNull(a);
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSegment(text, a);
         return this;
     }
@@ -182,7 +182,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel highlight(int start, int length, Color c) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addHighlight(start, length, c);
         return this;
     }
@@ -198,7 +198,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @since 25
      */
     public SimpleViewOnlyStyledModel highlight(int start, int length, String ... css) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addHighlight(start, length, css);
         return this;
     }
@@ -212,7 +212,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel addWavyUnderline(int start, int length, Color c) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSquiggly(start, length, c);
         return this;
     }
@@ -228,19 +228,24 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @since 25
      */
     public SimpleViewOnlyStyledModel addWavyUnderline(int start, int length, String ... css) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addSquiggly(start, length, css);
         return this;
     }
 
-    private Paragraph lastParagraph() {
+    // returns the last text paragraph, adding one if necessary
+    private Paragraph textParagraph() {
         int sz = paragraphs.size();
-        if (sz == 0) {
-            Paragraph p = new Paragraph();
-            paragraphs.add(p);
-            return p;
+        if (sz > 0) {
+            Paragraph p = paragraphs.get(sz - 1);
+            if (p.isTextParagraph()) {
+                return p;
+            }
+            // not a text paragraph, create new
         }
-        return paragraphs.get(sz - 1);
+        Paragraph p = new Paragraph();
+        paragraphs.add(p);
+        return p;
     }
 
     /**
@@ -293,7 +298,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel addNodeSegment(Supplier<Node> generator) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.addInlineNode(generator);
         return this;
     }
@@ -345,7 +350,7 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
      * @return this model instance
      */
     public SimpleViewOnlyStyledModel setParagraphAttributes(StyleAttributeMap a) {
-        Paragraph p = lastParagraph();
+        Paragraph p = textParagraph();
         p.setParagraphAttributes(a);
         return this;
     }
@@ -357,6 +362,10 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
         private StyleAttributeMap paragraphAttributes;
 
         public Paragraph() {
+        }
+
+        public boolean isTextParagraph() {
+            return true;
         }
 
         public static Paragraph of(Supplier<Region> paragraphGenerator) {
@@ -375,6 +384,11 @@ public class SimpleViewOnlyStyledModel extends StyledTextModelViewOnlyBase {
                 public void export(int start, int end, StyledOutput out) throws IOException {
                     StyledSegment seg = StyledSegment.ofRegion(paragraphGenerator);
                     out.consume(seg);
+                }
+
+                @Override
+                public boolean isTextParagraph() {
+                    return false;
                 }
             };
         }

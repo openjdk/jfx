@@ -209,6 +209,16 @@ public abstract class StyledTextModel {
     protected abstract void insertParagraph(int index, Supplier<Region> generator);
 
     /**
+     * Applies paragraph styles in the specified paragraph.
+     *
+     * @param index the paragraph index
+     * @param paragraphAttrs the paragraph attributes
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
+     * @since 26
+     */
+    protected abstract void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs);
+
+    /**
      * Replaces the paragraph styles in the specified paragraph.
      *
      * @param index the paragraph index
@@ -573,7 +583,7 @@ public abstract class StyledTextModel {
             return TextPos.ZERO;
         } else if (ix < ct) {
             len = getParagraphLength(ix);
-            if (p.offset() < len) {
+            if (p.offset() <= len) {
                 return p;
             }
         } else {
@@ -674,7 +684,9 @@ public abstract class StyledTextModel {
     private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo, boolean isEdit) {
         checkWritable();
 
-        // TODO clamp to document boundaries
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         int cmp = start.compareTo(end);
         if (cmp > 0) {
             TextPos p = start;
@@ -767,6 +779,9 @@ public abstract class StyledTextModel {
     public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
         checkWritable();
 
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         if (start.compareTo(end) > 0) {
             TextPos p = start;
             start = end;
@@ -793,10 +808,20 @@ public abstract class StyledTextModel {
         boolean allowUndo = isUndoRedoEnabled();
         UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd, false) : null;
 
-        if (pa != null) {
-            // set paragraph attributes
+        // paragraph attributes
+        if (pa == null) {
+            if (!mergeAttributes) {
+                for (int ix = start.index(); ix <= end.index(); ix++) {
+                    setParagraphStyle(ix, pa);
+                }
+            }
+        } else {
             for (int ix = start.index(); ix <= end.index(); ix++) {
-                setParagraphStyle(ix, pa);
+                if (mergeAttributes) {
+                    applyParagraphStyle(ix, pa);
+                } else {
+                    setParagraphStyle(ix, pa);
+                }
             }
         }
 
