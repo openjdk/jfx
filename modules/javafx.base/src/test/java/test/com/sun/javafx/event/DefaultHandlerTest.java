@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class UnconsumedEventsTest {
+public class DefaultHandlerTest {
 
     private List<String> trace;
     private EventTargetImpl target0;
@@ -55,9 +55,51 @@ public class UnconsumedEventsTest {
     }
 
     @Test
-    void defaultEventHandlerIsCalledAtEndOfDelivery() {
+    void addAndRemoveDefaultHandler() {
+        EventHandler<Event> defaultHandler = e -> trace.add("default:" + e.getSource());
+        target0.addDefaultEventHandler(EmptyEvent.ANY, defaultHandler);
+        EventUtil.fireEvent(target2, new EmptyEvent());
+        assertEquals(
+            List.of(
+                "filter:target0", "filter:target1", "filter:target2",
+                "handler:target2", "handler:target1", "handler:target0",
+                "default:target0"),
+            trace);
+
+        trace.clear();
+        target0.removeDefaultEventHandler(EmptyEvent.ANY, defaultHandler);
+        EventUtil.fireEvent(target2, new EmptyEvent());
+        assertEquals(
+            List.of(
+                "filter:target0", "filter:target1", "filter:target2",
+                "handler:target2", "handler:target1", "handler:target0"),
+            trace);
+    }
+
+    @Test
+    void ifUnconsumedHandlerIsCalledAtEndOfDelivery() {
         target2.addEventFilter(EmptyEvent.ANY, e -> {
             e.ifUnconsumed(_ -> trace.add("default:" + e.getSource()));
+        });
+
+        EventUtil.fireEvent(target2, new EmptyEvent());
+
+        assertEquals(
+            List.of(
+                "filter:target0",
+                "filter:target1",
+                "filter:target2",
+                "handler:target2",
+                "handler:target1",
+                "handler:target0",
+                "default:target2"),
+            trace);
+    }
+
+    @Test
+    void defaultEventHandlerIsCalledAtEndOfDelivery() {
+        target2.addDefaultEventFilter(EmptyEvent.ANY, e -> {
+            trace.add("default:" + e.getSource());
         });
 
         EventUtil.fireEvent(target2, new EmptyEvent());
@@ -79,10 +121,10 @@ public class UnconsumedEventsTest {
         EventHandler<Event> defaultFilter = e -> trace.add("default-filter:" + e.getSource());
         EventHandler<Event> defaultHandler = e -> trace.add("default-handler:" + e.getSource());
         target0.addEventFilter(EmptyEvent.ANY, e -> e.ifUnconsumed(defaultFilter));
-        target1.addEventFilter(EmptyEvent.ANY, e -> e.ifUnconsumed(defaultFilter));
+        target1.addDefaultEventFilter(EmptyEvent.ANY, defaultFilter);
         target2.addEventFilter(EmptyEvent.ANY, e -> e.ifUnconsumed(defaultFilter));
         target0.addEventHandler(EmptyEvent.ANY, e -> e.ifUnconsumed(defaultHandler));
-        target1.addEventHandler(EmptyEvent.ANY, e -> e.ifUnconsumed(defaultHandler));
+        target1.addDefaultEventHandler(EmptyEvent.ANY, defaultHandler);
         target2.addEventHandler(EmptyEvent.ANY, e -> e.ifUnconsumed(defaultHandler));
 
         EventUtil.fireEvent(target2, new EmptyEvent());
@@ -135,13 +177,16 @@ public class UnconsumedEventsTest {
 
     @Test
     void cannotAddDefaultHandlerAfterDeliveryIsComplete() {
-        target2.addEventFilter(EmptyEvent.ANY, e -> {
-            e.ifUnconsumed(e2 -> {
-                // This call will fail with IllegalStateException:
-                e2.ifUnconsumed(_ -> {});
-            });
-        });
+        EventHandler<Event> defaultHandler = e -> {
+            // This call will fail with IllegalStateException:
+            e.ifUnconsumed(_ -> {});
+        };
 
+        target2.addDefaultEventFilter(EmptyEvent.ANY, defaultHandler);
+        assertThrows(IllegalStateException.class, () -> EventUtil.fireEvent(target2, new EmptyEvent()));
+
+        target2.removeDefaultEventFilter(EmptyEvent.ANY, defaultHandler);
+        target2.addEventFilter(EmptyEvent.ANY, e -> e.ifUnconsumed(defaultHandler));
         assertThrows(IllegalStateException.class, () -> EventUtil.fireEvent(target2, new EmptyEvent()));
     }
 
@@ -210,8 +255,18 @@ public class UnconsumedEventsTest {
         }
 
         @Override
+        public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+            handlerManager.removeEventFilter(eventType, eventFilter);
+        }
+
+        @Override
         public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
             handlerManager.addEventHandler(eventType, eventHandler);
+        }
+
+        @Override
+        public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+            handlerManager.removeEventHandler(eventType, eventHandler);
         }
 
         @Override
