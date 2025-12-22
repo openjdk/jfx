@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Assertions;
@@ -329,5 +330,25 @@ public class TestRichTextModel {
             m.setLineEnding(null);
         });
         assertEquals(LineEnding.system(), m.getLineEnding());
+    }
+
+    @Test
+    public void prepareParagraph() {
+        AtomicInteger counter = new AtomicInteger(0);
+        RichTextModel m = new RichTextModel() {
+            @Override
+            protected RichParagraph.Builder prepareParagraph(int index) {
+                RichParagraph.Builder b = super.prepareParagraph(index);
+                b.addSegment("yo!");
+                counter.incrementAndGet();
+                return b;
+            }
+        };
+        m.replace(null, TextPos.ZERO, TextPos.ZERO, "1\n2\n");
+        counter.set(0);
+        RichParagraph p = m.getParagraph(0);
+        assertEquals(1, counter.get());
+        String text = p.getPlainText();
+        assertEquals("1yo!", text);
     }
 }

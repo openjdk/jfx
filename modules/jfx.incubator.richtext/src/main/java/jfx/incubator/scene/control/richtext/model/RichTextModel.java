@@ -80,18 +80,19 @@ public class RichTextModel extends StyledTextModel {
 
     @Override
     public RichParagraph getParagraph(int index) {
-        RichParagraph.Builder b = buildParagraph(index);
+        RichParagraph.Builder b = prepareParagraph(index);
         return b.build();
     }
 
     /**
-     * Builds the paragraph.  This method allows the custom model to add highlights and decorations
+     * Prepares the paragraph by populating a builder with the paragraph content.
+     * This method allows the custom model to add highlights and decorations
      * without affecting the base class storage model.
      * @param index the paragraph index
      * @return the builder
      * @since 26
      */
-    protected RichParagraph.Builder buildParagraph(int index) {
+    protected RichParagraph.Builder prepareParagraph(int index) {
         RParagraph p = paragraphs.get(index);
         return p.buildParagraph();
     }
