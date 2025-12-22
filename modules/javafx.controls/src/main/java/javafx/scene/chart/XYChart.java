@@ -1266,7 +1266,7 @@ public abstract class XYChart<X,Y> extends Chart {
         private boolean setToRemove = false;
         /** The series this data belongs to */
         private Series<X,Y> series;
-        private ObjectProperty<Series<X, Y>> seriesProperty = new SimpleObjectProperty<>();
+        private final ObjectProperty<Series<X, Y>> seriesProperty = new SimpleObjectProperty<>();
         void setSeries(Series<X,Y> series) {
             this.series = series;
             this.seriesProperty.set(series);
@@ -1359,6 +1359,20 @@ public abstract class XYChart<X,Y> extends Chart {
         public final void setExtraValue(Object value) { extraValue.set(value); }
         public final ObjectProperty<Object> extraValueProperty() { return extraValue; }
 
+        private final ObservableValue<String> seriesLabel = seriesProperty
+            .flatMap(Series::nameProperty)
+            .orElse("");
+        private final ObservableValue<String> xAxisLabel= seriesProperty
+            .flatMap(Series::chartProperty)
+            .flatMap(XYChart::xAxisProperty)
+            .flatMap(Axis::labelProperty)
+            .orElse(ControlResources.getString("XYChart.series.xaxis"));
+        private final ObservableValue<String> yAxisLabel = seriesProperty
+            .flatMap(Series::chartProperty)
+            .flatMap(XYChart::yAxisProperty)
+            .flatMap(Axis::labelProperty)
+            .orElse(ControlResources.getString("XYChart.series.yaxis"));
+
         /**
          * The node to display for this data item. You can either create your own node and set it on the data item
          * before you add the item to the chart. Otherwise the chart will create a node for you that has the default
@@ -1372,19 +1386,6 @@ public abstract class XYChart<X,Y> extends Chart {
                 Node node = get();
                 if (node != null) {
                     node.accessibleTextProperty().unbind();
-                    ObservableValue<String> seriesLabel = seriesProperty
-                            .flatMap(Series::nameProperty)
-                            .orElse("");
-                    ObservableValue<String> xAxisLabel= seriesProperty
-                            .flatMap(Series::chartProperty)
-                            .flatMap(XYChart::xAxisProperty)
-                            .flatMap(Axis::labelProperty)
-                            .orElse(ControlResources.getString("XYChart.series.xaxis"));
-                    ObservableValue<String> yAxisLabel = seriesProperty
-                            .flatMap(Series::chartProperty)
-                            .flatMap(XYChart::yAxisProperty)
-                            .flatMap(Axis::labelProperty)
-                            .orElse(ControlResources.getString("XYChart.series.yaxis"));
                     node.accessibleTextProperty().bind(new StringBinding() {
                         {
                             bind(currentXProperty(),
@@ -1533,12 +1534,13 @@ public abstract class XYChart<X,Y> extends Chart {
                         // update data items reference to series
                         for (Data<X, Y> item : c.getRemoved()) {
                             item.setToRemove = true;
+                            item.setSeries(null);
                         }
 
                         if (c.getAddedSize() > 0) {
                             for (Data<X, Y> itemPtr : c.getAddedSubList()) {
                                 if (itemPtr.setToRemove) {
-                                    if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
+                                    chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
                                     itemPtr.setToRemove = false;
                                 }
                             }
@@ -1561,6 +1563,10 @@ public abstract class XYChart<X,Y> extends Chart {
                             if (!dupCheck.add(d)) {
                                 throw new IllegalArgumentException("Duplicate data added");
                             }
+                        }
+
+                        for (Data<X, Y> item : c.getRemoved()) {
+                            item.setSeries(null);
                         }
 
                         for (Data<X, Y> d : c.getAddedSubList()) {
