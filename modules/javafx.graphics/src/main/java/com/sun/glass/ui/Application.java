@@ -819,6 +819,21 @@ public abstract class Application {
      */
     public void checkPlatformPreferencesSupport() {}
 
+    /**
+     * Hides the current application. Only implemented on Mac.
+     */
+    public void hideApplication() {}
+
+    /**
+     * Hides all other applications. Only implemented on Mac.
+     */
+    public void hideOtherApplications() {}
+
+    /**
+     * Undoes the effects of hideOtherApplications. Only implemented on Mac.
+     */
+    public void showAllApplications() {}
+
     private static native void _overrideNativeWindowHandle(Class lwFrameWrapperClass,
                                                            Object frame,
                                                            long handle, Runnable closeWindow);
