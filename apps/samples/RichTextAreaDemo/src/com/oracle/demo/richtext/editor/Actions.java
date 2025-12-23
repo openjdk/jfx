@@ -44,6 +44,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.event.ActionEvent;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -127,11 +128,6 @@ public class Actions {
         }, editor.redoableProperty()));
 
         highlightCurrentLine.selectedProperty().bindBidirectional(editor.highlightCurrentParagraphProperty());
-        wrapText.selectedProperty().bindBidirectional(editor.wrapTextProperty());
-
-        lineNumbers.selectedProperty().addListener((s,p,on) -> {
-            editor.setLeftDecorator(on ? new LineNumberDecorator() : null);
-        });
 
         // editor
 
@@ -153,18 +149,7 @@ public class Actions {
             toolbar.textColor.valueProperty()
         ));
 
-        styles.addListener((s,p,a) -> {
-            // TODO move to toolbar?
-            bold.setSelected(hasStyle(a, StyleAttributeMap.BOLD), false);
-            italic.setSelected(hasStyle(a, StyleAttributeMap.ITALIC), false);
-            strikeThrough.setSelected(hasStyle(a, StyleAttributeMap.STRIKE_THROUGH), false);
-            underline.setSelected(hasStyle(a, StyleAttributeMap.UNDERLINE), false);
-            // TODO font/size/color
-        });
-
-        // FIX model styles property?
         editor.selectionProperty().addListener((p) -> {
-            // FIX merge with caret listener!
             updateSourceStyles();
             handleSelection();
         });
@@ -172,10 +157,27 @@ public class Actions {
         
         // toolbar
         
-        bold.selectedProperty().bindBidirectional(toolbar.bold.selectedProperty());
-        italic.selectedProperty().bindBidirectional(toolbar.italic.selectedProperty());
-        strikeThrough.selectedProperty().bindBidirectional(toolbar.strikeThrough.selectedProperty());
-        underline.selectedProperty().bindBidirectional(toolbar.underline.selectedProperty());
+        toolbar.bold.selectedProperty().bindBidirectional(bold.selectedProperty());
+        toolbar.bold.setOnAction(this::focusEditor);
+
+        toolbar.italic.selectedProperty().bindBidirectional(italic.selectedProperty());
+        toolbar.italic.setOnAction(this::focusEditor);
+
+        toolbar.strikeThrough.selectedProperty().bindBidirectional(strikeThrough.selectedProperty());
+        toolbar.strikeThrough.setOnAction(this::focusEditor);
+        
+        toolbar.underline.selectedProperty().bindBidirectional(underline.selectedProperty());
+        toolbar.underline.setOnAction(this::focusEditor);
+        
+        toolbar.lineNumbers.selectedProperty().bindBidirectional(lineNumbers.selectedProperty());
+        toolbar.lineNumbers.setOnAction(this::focusEditor);
+        lineNumbers.selectedProperty().addListener((s,p,on) -> {
+            editor.setLeftDecorator(on ? new LineNumberDecorator() : null);
+        });
+
+        toolbar.wrapText.selectedProperty().bindBidirectional(wrapText.selectedProperty());
+        toolbar.wrapText.setOnAction(this::focusEditor);
+        wrapText.selectedProperty().bindBidirectional(editor.wrapTextProperty());
 
         toolbar.fontFamily.setOnAction((ev) -> {
             setFontFamily(toolbar.fontFamily.getSelectionModel().getSelectedItem());
@@ -247,7 +249,6 @@ public class Actions {
     }
 
     private void handleSelection() {
-        System.out.println("A.handleSelection"); // FIX
         boolean sel = editor.hasNonEmptySelection();
         cut.setEnabled(sel);
         copy.setEnabled(sel);
@@ -256,18 +257,15 @@ public class Actions {
         toolbar.updateStyles(a);
     }
 
-    // TODO need to bind selected item in the combo
     public void setFontSize(Double size) {
         apply(StyleAttributeMap.FONT_SIZE, size);
     }
 
-    // TODO need to bind selected item in the combo
     public void setFontFamily(String name) {
         apply(StyleAttributeMap.FONT_FAMILY, name);
     }
 
     public void setTextColor(Color color) {
-        System.out.println("A.setTextColor " + color); // FIX
         apply(StyleAttributeMap.TEXT_COLOR, color);
     }
 
@@ -414,17 +412,12 @@ public class Actions {
     }
 
     private <T> void apply(StyleAttribute<T> attr, T value) {
-        System.out.println("A.apply " + attr + "=" + value); // FIX
         TextPos start = editor.getAnchorPosition();
         TextPos end = editor.getCaretPosition();
         if (start == null) {
             return;
         } else if (start.equals(end)) {
-            // apply to the whole paragraph
-//            int ix = start.index();
-//            start = TextPos.ofLeading(ix, 0);
-//            end = control.getParagraphEnd(ix);
-            return; // FIX
+            return;
         }
 
         StyleAttributeMap a = editor.getActiveStyleAttributeMap();
@@ -637,5 +630,9 @@ public class Actions {
             b.setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());
         }
         return b.build();
+    }
+
+    private void focusEditor(ActionEvent ev) {
+        editor.requestFocus();
     }
 }

@@ -116,6 +116,9 @@ public class RichEditorToolbar extends ToolBar {
         FX.add(this, textStyle);
         lineNumbers = FX.toggleButton(this, "N", "Line Numbers");
         wrapText = FX.toggleButton(this, "W", "Wrap Text");
+
+        FX.name(lineNumbers, "lineNumbers");
+        FX.name(wrapText, "wrapText");
     }
 
     private static List<String> collectFonts() {
@@ -132,7 +135,6 @@ public class RichEditorToolbar extends ToolBar {
     }
 
     public void updateStyles(StyleAttributeMap a) {
-        System.out.println("TB.updateStyles " + a); // FIX
         bold.setSelected(getBoolean(a, StyleAttributeMap.BOLD));
         italic.setSelected(getBoolean(a, StyleAttributeMap.ITALIC));
         underline.setSelected(getBoolean(a, StyleAttributeMap.UNDERLINE));
