@@ -992,8 +992,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->menubar = (GlassMenubar*)jlong_to_ptr(jMenubarPtr);
-        [NSApp setMainMenu:window->menubar->menu];
-        [[NSApp mainMenu] update];
+
+        BOOL isEmbedded = [GlassApplication isEmbedded];
+        BOOL isKeyWindow = [window->nsWindow isKeyWindow];
+
+        if (!isEmbedded || isKeyWindow) {
+            [NSApp setMainMenu:window->menubar->menu];
+            [[NSApp mainMenu] update];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
