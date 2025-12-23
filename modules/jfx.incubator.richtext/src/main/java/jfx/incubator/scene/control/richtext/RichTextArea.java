@@ -601,7 +601,7 @@ public class RichTextArea extends Control {
      *
      * @return the insert styles property
      * @defaultValue null
-     * @since 999 TODO
+     * @since 26
      */
     public final ObjectProperty<StyleAttributeMap> insertStylesProperty() {
         if (insertStyles == null) {
