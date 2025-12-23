@@ -262,6 +262,12 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 System.arraycopy(perm, removedTo, perm, c.getFrom(), size - removedTo);
                 size -= c.getRemovedSize();
                 updateIndices(removedTo, removedTo, -c.getRemovedSize());
+
+                // Null out out-of-range array elements to avoid maintaining object references
+                final int ct = size + c.getRemovedSize();
+                for (int i = size; i < ct; i++) {
+                    sorted[i] = null;
+                }
             }
             if (c.wasAdded()) {
                 ensureSize(size + c.getAddedSize());
@@ -331,6 +337,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
         }
         tempElement.e = e;
         int pos = Arrays.binarySearch(sorted, 0, size, tempElement, elementComparator);
+        tempElement.e = null;
         return pos;
     }
 

@@ -198,7 +198,7 @@ public class PrismTextLayout implements TextLayout {
 
         boolean needsLayout = true;
         if (lines != null && oldWidth != 0 && newWidth != 0) {
-            if ((flags & ALIGN_LEFT) != 0) {
+            if (!isMirrored() && (flags & ALIGN_LEFT) != 0) {
                 if (newWidth > oldWidth) {
                     /* If wrapping width is increasing and there is no
                      * wrapped lines then the text remains valid.
@@ -1396,8 +1396,20 @@ public class PrismTextLayout implements TextLayout {
             int lineStart = line.getStart();
             RectBounds bounds = line.getBounds();
 
+            float contentWidth = bounds.getWidth();
+            if (isMirrored()) {
+                float runWidth = 0;
+                TextRun[] lineRunsForWidth = line.getRuns();
+                for (int j = 0; j < lineRunsForWidth.length; j++) {
+                    runWidth += lineRunsForWidth[j].getWidth();
+                }
+                if (runWidth > contentWidth) {
+                    contentWidth = runWidth;
+                }
+            }
+
             /* Center and right alignment */
-            float unusedWidth = fullWidth - bounds.getWidth();
+            float unusedWidth = fullWidth - contentWidth;
             float lineX = unusedWidth * align;
             line.setAlignment(lineX);
 

@@ -4524,6 +4524,9 @@ allprojects {
             doLast {
                 setFileTimestamps(archiveFile, buildInstant)
             }
+        } else {
+            preserveFileTimestamps = true
+            reproducibleFileOrder = false
         }
     }
 
