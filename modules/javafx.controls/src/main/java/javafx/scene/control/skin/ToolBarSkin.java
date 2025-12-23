@@ -608,12 +608,12 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         // If the overflow button is displayed, the length must be corrected
         // and the overflow index recalculated.
         if (newOverflowNodeIndex < getSkinnable().getItems().size()) {
-            length -= getSpacing();
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                length = snapSizeY(length - overflowMenu.prefHeight(-1));
+                length -= snapSizeY(overflowMenu.prefHeight(-1));
             } else {
-                length = snapSizeX(length - overflowMenu.prefWidth(-1));
+                length -= snapSizeX(overflowMenu.prefWidth(-1));
             }
+            length -= getSpacing();
             newOverflowNodeIndex = getOverflowNodeIndex(length);
         }
 
@@ -695,9 +695,11 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
             if (node.isManaged()) {
                 if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                    x = snapSizeY(x + node.prefHeight(-1) + getSpacing());
+                    x = snapPositionY(x + snapSizeY(node.prefHeight(-1)) + getSpacing());
+                    length = snapPositionY(length);
                 } else {
-                    x = snapSizeX(x + node.prefWidth(-1) + getSpacing());
+                    x = snapPositionX(x + snapSizeX(node.prefWidth(-1)) + getSpacing());
+                    length = snapPositionX(length);
                 }
             }
 
