@@ -31,7 +31,7 @@ package javafx.util.converter;
 /// @since JavaFX 2.1
 public class FloatStringConverter extends BaseStringConverter<Float> {
 
-    /// Creates a default {@code FloatStringConverter}.
+    /// Creates a default `FloatStringConverter`.
     public FloatStringConverter() {
     }
 

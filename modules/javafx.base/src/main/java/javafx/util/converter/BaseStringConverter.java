@@ -42,7 +42,7 @@ abstract class BaseStringConverter<T> extends StringConverter<T> {
         return fromNonEmptyString(string);
     }
 
-    /// Returns an object parsed from a non-{@code null} non-empty string.
+    /// Returns an object parsed from a non-`null` non-empty string.
     ///
     /// Treat as protected (implementing classes are public so they can't add a new protected method).
     abstract T fromNonEmptyString(String string);

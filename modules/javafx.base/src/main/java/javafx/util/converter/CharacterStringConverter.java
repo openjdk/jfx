@@ -25,9 +25,8 @@
 
 package javafx.util.converter;
 
-/// A `StringConverter` implementation for `Character` (and `character`) values. Formatting is done by
-/// [Character#toString()] for non-`null` values, and parsing with [Character#valueOf(char)] for non-`null` non-empty
-/// strings.
+/// A `StringConverter` implementation for `Character` (and `char`) values. Formatting is done by [Character#toString()]
+/// for non-`null` values, and parsing with [Character#valueOf(char)] for non-`null` non-empty strings.
 ///
 /// @since JavaFX 2.1
 public class CharacterStringConverter extends BaseStringConverter<Character> {

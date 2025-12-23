@@ -31,7 +31,7 @@ package javafx.util.converter;
 /// @since JavaFX 2.1
 public class ByteStringConverter extends BaseStringConverter<Byte> {
 
-    /// Creates a default {@code ByteStringConverter}.
+    /// Creates a default `ByteStringConverter`.
     public ByteStringConverter() {
     }
 
