@@ -373,14 +373,14 @@ public abstract class Interpolator {
     }
 
     /**
-     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.START)}.
+     * Built-in interpolator instance that is equivalent to {@code Interpolator.ofSteps(1, StepPosition.START)}.
      *
      * @since 23
      */
     public static final Interpolator STEP_START = ofSteps(1, StepPosition.START);
 
     /**
-     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
+     * Built-in interpolator instance that is equivalent to {@code Interpolator.ofSteps(1, StepPosition.END)}.
      *
      * @since 23
      */
