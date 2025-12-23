@@ -142,34 +142,34 @@ public class Actions {
             }
         });
 
-        editor.caretPositionProperty().addListener((x) -> {
-            handleCaret();
-        });
-
-        // FIX model styles property?
-        editor.selectionProperty().addListener((p) -> {
-            updateSourceStyles();
-        });
-
         editor.insertStylesProperty().bind(Bindings.createObjectBinding(
             this::getInsertStyles,
-            bold.selectedProperty(),
+            toolbar.bold.selectedProperty(),
             toolbar.fontFamily.getSelectionModel().selectedItemProperty(),
             toolbar.fontSize.getSelectionModel().selectedItemProperty(),
-            italic.selectedProperty(),
-            strikeThrough.selectedProperty(),
-            underline.selectedProperty()
+            toolbar.italic.selectedProperty(),
+            toolbar.strikeThrough.selectedProperty(),
+            toolbar.underline.selectedProperty(),
+            toolbar.textColor.valueProperty()
         ));
 
         styles.addListener((s,p,a) -> {
+            // TODO move to toolbar?
             bold.setSelected(hasStyle(a, StyleAttributeMap.BOLD), false);
             italic.setSelected(hasStyle(a, StyleAttributeMap.ITALIC), false);
             strikeThrough.setSelected(hasStyle(a, StyleAttributeMap.STRIKE_THROUGH), false);
             underline.setSelected(hasStyle(a, StyleAttributeMap.UNDERLINE), false);
+            // TODO font/size/color
         });
 
+        // FIX model styles property?
+        editor.selectionProperty().addListener((p) -> {
+            // FIX merge with caret listener!
+            updateSourceStyles();
+            handleSelection();
+        });
         updateSourceStyles();
-
+        
         // toolbar
         
         bold.selectedProperty().bindBidirectional(toolbar.bold.selectedProperty());
@@ -184,10 +184,12 @@ public class Actions {
 
         toolbar.fontSize.setOnAction((ev) -> {
             setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());
+            editor.requestFocus();
         });
 
         toolbar.textColor.setOnAction((ev) -> {
             setTextColor(toolbar.textColor.getValue());
+            editor.requestFocus();
         });
 
         toolbar.textStyle.setOnAction((ev) -> {
@@ -208,7 +210,7 @@ public class Actions {
         wrapText.setSelected(true, false);
 
         handleEdit();
-        handleCaret();
+        handleSelection();
         setModified(false);
     }
 
@@ -244,20 +246,14 @@ public class Actions {
         setModified(true);
     }
 
-    private void handleCaret() {
+    private void handleSelection() {
+        System.out.println("A.handleSelection"); // FIX
         boolean sel = editor.hasNonEmptySelection();
-        StyleAttributeMap a = editor.getActiveStyleAttributeMap();
-
         cut.setEnabled(sel);
         copy.setEnabled(sel);
 
-        bold.setSelected(a.getBoolean(StyleAttributeMap.BOLD), false);
-        italic.setSelected(a.getBoolean(StyleAttributeMap.ITALIC), false);
-        underline.setSelected(a.getBoolean(StyleAttributeMap.UNDERLINE), false);
-        strikeThrough.setSelected(a.getBoolean(StyleAttributeMap.STRIKE_THROUGH), false);
-        FX.select(toolbar.fontFamily, a.getFontFamily());
-        FX.select(toolbar.fontSize, a.getFontSize());
-        toolbar.textColor.setValue(a.getTextColor());
+        StyleAttributeMap a = editor.getActiveStyleAttributeMap();
+        toolbar.updateStyles(a);
     }
 
     // TODO need to bind selected item in the combo
@@ -271,6 +267,7 @@ public class Actions {
     }
 
     public void setTextColor(Color color) {
+        System.out.println("A.setTextColor " + color); // FIX
         apply(StyleAttributeMap.TEXT_COLOR, color);
     }
 
@@ -417,6 +414,7 @@ public class Actions {
     }
 
     private <T> void apply(StyleAttribute<T> attr, T value) {
+        System.out.println("A.apply " + attr + "=" + value); // FIX
         TextPos start = editor.getAnchorPosition();
         TextPos end = editor.getCaretPosition();
         if (start == null) {
@@ -633,6 +631,7 @@ public class Actions {
             setFontFamily(toolbar.fontFamily.getSelectionModel().getSelectedItem()).
             setItalic(italic.isSelected()).
             setStrikeThrough(strikeThrough.isSelected()).
+            setTextColor(toolbar.textColor.getValue()).
             setUnderline(underline.isSelected());
         if (toolbar.fontSize.getSelectionModel().getSelectedItem() != null) {
             b.setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());

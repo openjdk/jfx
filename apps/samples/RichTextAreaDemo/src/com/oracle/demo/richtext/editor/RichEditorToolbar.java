@@ -41,6 +41,8 @@ import javafx.scene.control.ToolBar;
 import javafx.scene.text.Font;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.util.FX;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Rich editor toolbar.
@@ -122,5 +124,21 @@ public class RichEditorToolbar extends ToolBar {
 
     public void setTextStyle(TextStyle v) {
         textStyle.setValue(v);
+    }
+
+    private static boolean getBoolean(StyleAttributeMap m, StyleAttribute<Boolean> a) {
+        Boolean v = m.getBoolean(a);
+        return v == null ? false : v.booleanValue();
+    }
+
+    public void updateStyles(StyleAttributeMap a) {
+        System.out.println("TB.updateStyles " + a); // FIX
+        bold.setSelected(getBoolean(a, StyleAttributeMap.BOLD));
+        italic.setSelected(getBoolean(a, StyleAttributeMap.ITALIC));
+        underline.setSelected(getBoolean(a, StyleAttributeMap.UNDERLINE));
+        strikeThrough.setSelected(getBoolean(a, StyleAttributeMap.STRIKE_THROUGH));
+        FX.select(fontFamily, a.getFontFamily());
+        FX.select(fontSize, a.getFontSize());
+        textColor.setValue(a.getTextColor());
     }
 }
