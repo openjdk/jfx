@@ -690,20 +690,21 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         ObservableList<Node> items = getSkinnable().getItems();
         int overflowIndex = items.size();
         double x = 0;
+        boolean isVertical = getSkinnable().getOrientation() == Orientation.VERTICAL;
+        double snappedLength = isVertical ? snapPositionY(length) : snapPositionX(length);
+
         for (int i = 0; i < items.size(); i++) {
             Node node = items.get(i);
 
             if (node.isManaged()) {
-                if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+                if (isVertical) {
                     x = snapPositionY(x + snapSizeY(node.prefHeight(-1)) + getSpacing());
-                    length = snapPositionY(length);
                 } else {
                     x = snapPositionX(x + snapSizeX(node.prefWidth(-1)) + getSpacing());
-                    length = snapPositionX(length);
                 }
             }
 
-            if (x > length) {
+            if (x > snappedLength) {
                 overflowIndex = i;
                 break;
             }
