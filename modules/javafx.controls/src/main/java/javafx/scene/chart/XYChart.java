@@ -1265,16 +1265,15 @@ public abstract class XYChart<X,Y> extends Chart {
 
         private boolean setToRemove = false;
         /** The series this data belongs to */
-        private Series<X,Y> series;
         private final ObjectProperty<Series<X, Y>> seriesProperty = new SimpleObjectProperty<>();
         void setSeries(Series<X,Y> series) {
-            this.series = series;
             this.seriesProperty.set(series);
         }
 
         /** The generic data value to be plotted on the X axis */
         private ObjectProperty<X> xValue = new SimpleObjectProperty<>(Data.this, "XValue") {
             @Override protected void invalidated() {
+                Series<X, Y> series = seriesProperty.get();
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
                     if(chart!=null) chart.dataValueChanged(Data.this, get(), currentXProperty());
@@ -1298,8 +1297,9 @@ public abstract class XYChart<X,Y> extends Chart {
             xValue.set(value);
             // handle the case where this is a init because the default constructor was used
             // and the case when series is not associated to a chart due to a remove series
-            if (currentX.get() == null ||
-                    (series != null && series.getChart() == null)) currentX.setValue(value);
+            if (currentX.get() == null || isNullChart()) {
+                currentX.setValue(value);
+            }
         }
         /**
          * The generic data value to be plotted on the X axis.
@@ -1310,6 +1310,7 @@ public abstract class XYChart<X,Y> extends Chart {
         /** The generic data value to be plotted on the Y axis */
         private ObjectProperty<Y> yValue = new SimpleObjectProperty<>(Data.this, "YValue") {
             @Override protected void invalidated() {
+                Series<X, Y> series = seriesProperty.get();
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
                     if(chart!=null) chart.dataValueChanged(Data.this, get(), currentYProperty());
@@ -1333,9 +1334,9 @@ public abstract class XYChart<X,Y> extends Chart {
             yValue.set(value);
             // handle the case where this is a init because the default constructor was used
             // and the case when series is not associated to a chart due to a remove series
-            if (currentY.get() == null ||
-                    (series != null && series.getChart() == null)) currentY.setValue(value);
-
+            if (currentY.get() == null || isNullChart()) {
+                currentY.setValue(value);
+            }
         }
         /**
          * The generic data value to be plotted on the Y axis.
@@ -1349,6 +1350,7 @@ public abstract class XYChart<X,Y> extends Chart {
          */
         private ObjectProperty<Object> extraValue = new SimpleObjectProperty<>(Data.this, "extraValue") {
             @Override protected void invalidated() {
+                Series<X, Y> series = seriesProperty.get();
                 if (series!=null) {
                     XYChart<X,Y> chart = series.getChart();
                     if(chart!=null) chart.dataValueChanged(Data.this, get(), currentExtraValueProperty());
@@ -1492,6 +1494,10 @@ public abstract class XYChart<X,Y> extends Chart {
             return "Data["+getXValue()+","+getYValue()+","+getExtraValue()+"]";
         }
 
+        private boolean isNullChart() {
+            Series<X, Y> series = seriesProperty.get();
+            return (series != null && series.getChart() == null);
+        }
     }
 
     /**
