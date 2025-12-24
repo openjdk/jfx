@@ -2700,94 +2700,30 @@ project(":graphics") {
     }
 
     if (IS_MAC) {
-        task compileMSLPassThroughVS(group: "Build") {
-            def PASSTHROUGH_VS_SRC = file("src/main/native-prism-mtl/msl/PassThroughVS.metal")
+        task compileMetalShaders(group: "Build") {
+            description = "Compiles all .metal files in src/main/native-prism-mtl/msl"
             doLast {
                 mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$PASSTHROUGH_VS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/PassThroughVS.air" ]
+                def shaderFiles = fileTree(dir: "src/main/native-prism-mtl/msl", include: "**/*.metal")
+                shaderFiles.files.each { file ->
+                    def outputFile = new File("$buildDir/msl", file.name.replace(".metal", ".air"))
+                    execOps.exec { spec ->
+                        commandLine("${metalCompiler}")
+                        args += [ "-std=${mslVersion}" ]
+                        args += [ "-c" ]
+                        args += [ "$file.absolutePath" ]
+                        args += [ "-o" ]
+                        args += [ "$outputFile.absolutePath" ]
+                    }
                 }
             }
         }
-        nativePrism.dependsOn compileMSLPassThroughVS;
-
-        task compileMSLClearRttShaders(group: "Build") {
-            def CLEAR_RTT_VFS_SRC = file("src/main/native-prism-mtl/msl/ClearRttShaders.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$CLEAR_RTT_VFS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/ClearRttShaders.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLClearRttShaders;
-
-        task compileMSLComputeKernels(group: "Build") {
-            def COMPUTE_KERNELS_SRC = file("src/main/native-prism-mtl/msl/ComputeKernels.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$COMPUTE_KERNELS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/ComputeKernels.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLComputeKernels;
-
-        task compileMSLPhongVS(group: "Build") {
-            def PHONG_VS_SRC = file("src/main/native-prism-mtl/msl/PhongVS.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$PHONG_VS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/PhongVS.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLPhongVS;
-
-        task compileMSLPhongPS(group: "Build") {
-            def PHONG_PS_SRC = file("src/main/native-prism-mtl/msl/PhongPS.metal")
-            doLast {
-                mkdir "$buildDir/msl"
-                execOps.exec { spec ->
-                    commandLine("${metalCompiler}")
-                    args += [ "-std=${mslVersion}" ]
-                    args += [ "-c" ]
-                    args += [ "$PHONG_PS_SRC" ]
-                    args += [ "-o" ]
-                    args += [ "$buildDir/msl/PhongPS.air" ]
-                }
-            }
-        }
-        nativePrism.dependsOn compileMSLPhongPS;
+        nativePrism.dependsOn compileMetalShaders;
 
         task linkMSLShader(group: "Build") {
             dependsOn(compileDecoraMSLShaders,
                       compilePrismMSLShaders,
-                      compileMSLPassThroughVS,
-                      compileMSLClearRttShaders,
-                      compileMSLComputeKernels,
-                      compileMSLPhongVS,
-                      compileMSLPhongPS)
+                      compileMetalShaders)
             doLast {
                 mkdir "$buildDir/msl/com/sun/prism/mtl/msl"
                 def shaderFiles = fileTree(dir: "$buildDir/msl", include: "**/*.air")
@@ -4588,6 +4524,9 @@ allprojects {
             doLast {
                 setFileTimestamps(archiveFile, buildInstant)
             }
+        } else {
+            preserveFileTimestamps = true
+            reproducibleFileOrder = false
         }
     }
 

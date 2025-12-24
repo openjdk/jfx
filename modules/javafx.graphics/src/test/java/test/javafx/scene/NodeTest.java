@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,6 +82,8 @@ import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -1349,14 +1351,20 @@ public class NodeTest {
                                      // the Circle
     }
 
-    @Test
-    public void testLocalToScreen() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+        -1, -1
+        0, 0
+        1, 1
+        100, 100
+    """)
+    public void testLocalToScreen(double sceneWidth, double sceneHeight) {
         Rectangle rect = new Rectangle();
 
         rect.setTranslateX(10);
         rect.setTranslateY(20);
 
-        TestScene scene = new TestScene(new Group(rect));
+        TestScene scene = new TestScene(new Group(rect), sceneWidth, sceneHeight);
         final TestStage testStage = new TestStage("");
         testStage.setX(100);
         testStage.setY(200);
@@ -1371,14 +1379,22 @@ public class NodeTest {
         assertEquals(4.0, b.getHeight(), 0.0001);
     }
 
-    @Test
-    public void testLocalToScreen3D() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+         -1,   -1,  111.420,  223.140,  110.661,  221.080,  1.879,   4.300
+          0,    0,  100.000,  200.000,  100.000,  200.000,  0.000,   0.000
+          1,    1,   94.248,  187.699,   93.653,  186.508,  9.973,  20.379
+        100,  100,  109.926,  221.229,  109.926,  221.229,  3.065,   3.449
+    """)
+    public void testLocalToScreen3D(double sceneWidth, double sceneHeight,
+                                    double x, double y,
+                                    double minX, double minY,
+                                    double width, double height) {
         Box box = new Box(10, 10, 10);
-
         box.setTranslateX(10);
         box.setTranslateY(20);
 
-        TestScene scene = new TestScene(new Group(box));
+        TestScene scene = new TestScene(new Group(box), sceneWidth, sceneHeight);
         scene.setCamera(new PerspectiveCamera());
         final TestStage testStage = new TestStage("");
         testStage.setX(100);
@@ -1386,24 +1402,30 @@ public class NodeTest {
         scene.set_window(testStage);
 
         Point2D p = box.localToScreen(new Point3D(1, 2, -5));
-        assertEquals(111.42, p.getX(), 0.1);
-        assertEquals(223.14, p.getY(), 0.1);
+        assertEquals(x, p.getX(), 0.0005);
+        assertEquals(y, p.getY(), 0.0005);
+
         Bounds b = box.localToScreen(new BoundingBox(1, 2, -5, 1, 2, 10));
-        assertEquals(110.66, b.getMinX(), 0.1);
-        assertEquals(221.08, b.getMinY(), 0.1);
-        assertEquals(1.88, b.getWidth(), 0.1);
-        assertEquals(4.3, b.getHeight(), 0.1);
-        assertEquals(0.0, b.getDepth(), 0.0001);
+        assertEquals(minX, b.getMinX(), 0.0005);
+        assertEquals(minY, b.getMinY(), 0.0005);
+        assertEquals(width, b.getWidth(), 0.0005);
+        assertEquals(height, b.getHeight(), 0.0005);
+        assertEquals(0, b.getDepth(), 0.00005);
     }
 
-    @Test
-    public void testScreenToLocal() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+        -1, -1
+        0, 0
+        1, 1
+        100, 100
+    """)
+    public void testScreenToLocal(double sceneWidth, double sceneHeight) {
         Rectangle rect = new Rectangle();
-
         rect.setTranslateX(10);
         rect.setTranslateY(20);
 
-        TestScene scene = new TestScene(new Group(rect));
+        TestScene scene = new TestScene(new Group(rect), sceneWidth, sceneHeight);
         final TestStage testStage = new TestStage("");
         testStage.setX(100);
         testStage.setY(200);
@@ -1413,15 +1435,20 @@ public class NodeTest {
         assertEquals(new BoundingBox(1, 2, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
     }
 
-    @Test
-    public void testLocalToScreenWithTranslatedCamera() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+        -1, -1
+        0, 0
+        1, 1
+        100, 100
+    """)
+    public void testLocalToScreenWithTranslatedCamera(double sceneWidth, double sceneHeight) {
         Rectangle rect = new Rectangle();
-
         rect.setTranslateX(10);
         rect.setTranslateY(20);
 
         ParallelCamera cam = new ParallelCamera();
-        TestScene scene = new TestScene(new Group(rect, cam));
+        TestScene scene = new TestScene(new Group(rect, cam), sceneWidth, sceneHeight);
         scene.setCamera(cam);
         final TestStage testStage = new TestStage("");
         testStage.setX(100);
@@ -1440,15 +1467,21 @@ public class NodeTest {
         assertEquals(4.0, b.getHeight(), 0.0001);
     }
 
-    @Test
-    public void testScreenToLocalWithTranslatedCamera() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+        -1, -1
+        0, 0
+        1, 1
+        100, 100
+    """)
+    public void testScreenToLocalWithTranslatedCamera(double sceneWidth, double sceneHeight) {
         Rectangle rect = new Rectangle();
 
         rect.setTranslateX(10);
         rect.setTranslateY(20);
 
         ParallelCamera cam = new ParallelCamera();
-        TestScene scene = new TestScene(new Group(rect, cam));
+        TestScene scene = new TestScene(new Group(rect, cam), sceneWidth, sceneHeight);
         scene.setCamera(cam);
         final TestStage testStage = new TestStage("");
         testStage.setX(100);
@@ -1461,12 +1494,18 @@ public class NodeTest {
         assertEquals(new BoundingBox(31, 22, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
     }
 
-    @Test
-    public void testLocalToScreenInsideSubScene() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+        0, 0
+        1, 1
+        100, 100
+    """)
+    public void testLocalToScreenInsideSubScene(double subSceneWidth, double subSceneHeight) {
         Rectangle rect = new Rectangle();
         rect.setTranslateX(4);
         rect.setTranslateY(9);
-        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+
+        SubScene subScene = new SubScene(new Group(rect), subSceneWidth, subSceneHeight);
         subScene.setTranslateX(6);
         subScene.setTranslateY(11);
 
@@ -1486,12 +1525,18 @@ public class NodeTest {
         assertEquals(4.0, b.getHeight(), 0.0001);
     }
 
-    @Test
-    public void testScreenToLocalInsideSubScene() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+        0, 0
+        1, 1
+        100, 100
+    """)
+    public void testScreenToLocalInsideSubScene(double subSceneWidth, double subSceneHeight) {
         Rectangle rect = new Rectangle();
         rect.setTranslateX(4);
         rect.setTranslateY(9);
-        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+
+        SubScene subScene = new SubScene(new Group(rect), subSceneWidth, subSceneHeight);
         subScene.setTranslateX(6);
         subScene.setTranslateY(11);
 
@@ -1505,12 +1550,21 @@ public class NodeTest {
         assertEquals(new BoundingBox(1, 2, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
     }
 
-    @Test
-    public void test2DLocalToScreenOn3DRotatedSubScene() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+          0,    0,  111.445,  226.429,  111.445,  226.429,  4.670,  9.007
+          1,    1,  111.122,  225.433,  111.122,  225.433,  4.179,  8.003
+        100,  100,  124.365,  225.996,  124.365,  225.755,  1.851,  3.757
+    """)
+    public void test2DLocalToScreenOn3DRotatedSubScene(double subSceneWidth, double subSceneHeight,
+                                                       double x, double y,
+                                                       double minX, double minY,
+                                                       double width, double height) {
         Rectangle rect = new Rectangle();
         rect.setTranslateX(5);
         rect.setTranslateY(10);
-        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+
+        SubScene subScene = new SubScene(new Group(rect), subSceneWidth, subSceneHeight);
         subScene.setTranslateX(5);
         subScene.setTranslateY(10);
         subScene.setRotationAxis(Rotate.Y_AXIS);
@@ -1524,21 +1578,31 @@ public class NodeTest {
         scene.set_window(testStage);
 
         Point2D p = rect.localToScreen(new Point2D(1, 2));
-        assertEquals(124.36, p.getX(), 0.1);
-        assertEquals(226.0, p.getY(), 0.1);
+        assertEquals(x, p.getX(), 0.0005);
+        assertEquals(y, p.getY(), 0.0005);
+
         Bounds b = rect.localToScreen(new BoundingBox(1, 2, 3, 4));
-        assertEquals(124.36, b.getMinX(), 0.1);
-        assertEquals(225.75, b.getMinY(), 0.1);
-        assertEquals(1.85, b.getWidth(), 0.1);
-        assertEquals(3.76, b.getHeight(), 0.1);
+        assertEquals(minX, b.getMinX(), 0.0005);
+        assertEquals(minY, b.getMinY(), 0.0005);
+        assertEquals(width, b.getWidth(), 0.0005);
+        assertEquals(height, b.getHeight(), 0.0005);
     }
 
-    @Test
-    public void test2DScreenToLocalTo3DRotatedSubScene() {
+    @ParameterizedTest
+    @CsvSource(textBlock = """
+          0,    0,  7.745,  -3.219,  7.745,  -3.828,  0.656,  2.578
+          1,    1,  8.627,  -2.427,  8.627,  -3.036,  0.729,  2.677
+        100,  100,  0.992,   2.003,  0.992,   1.719,  2.998,  4.518
+    """)
+    public void test2DScreenToLocalTo3DRotatedSubScene(double subSceneWidth, double subSceneHeight,
+                                                       double x, double y,
+                                                       double minX, double minY,
+                                                       double width, double height) {
         Rectangle rect = new Rectangle();
         rect.setTranslateX(5);
         rect.setTranslateY(10);
-        SubScene subScene = new SubScene(new Group(rect), 100, 100);
+
+        SubScene subScene = new SubScene(new Group(rect), subSceneWidth, subSceneHeight);
         subScene.setTranslateX(5);
         subScene.setTranslateY(10);
         subScene.setRotationAxis(Rotate.Y_AXIS);
@@ -1552,13 +1616,14 @@ public class NodeTest {
         scene.set_window(testStage);
 
         Point2D p = rect.screenToLocal(new Point2D(124.36, 226.0));
-        assertEquals(1, p.getX(), 0.1);
-        assertEquals(2, p.getY(), 0.1);
+        assertEquals(x, p.getX(), 0.0005);
+        assertEquals(y, p.getY(), 0.0005);
+
         Bounds b = rect.screenToLocal(new BoundingBox(124.36, 225.75, 1.85, 3.76));
-        assertEquals(1, b.getMinX(), 0.1);
-        assertEquals(1.72, b.getMinY(), 0.1);
-        assertEquals(3, b.getWidth(), 0.1);
-        assertEquals(4.52, b.getHeight(), 0.1);
+        assertEquals(minX, b.getMinX(), 0.0005);
+        assertEquals(minY, b.getMinY(), 0.0005);
+        assertEquals(width, b.getWidth(), 0.0005);
+        assertEquals(height, b.getHeight(), 0.0005);
     }
 
     @Test

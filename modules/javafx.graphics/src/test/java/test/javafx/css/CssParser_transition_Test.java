@@ -31,6 +31,7 @@ import javafx.css.CssParser;
 import javafx.css.Declaration;
 import javafx.css.Rule;
 import javafx.css.Stylesheet;
+import javafx.geometry.Point2D;
 import javafx.util.Duration;
 import com.sun.javafx.css.TransitionDefinition;
 import org.junit.jupiter.api.Test;
@@ -168,10 +169,16 @@ public class CssParser_transition_Test {
                                                  steps(3, jump-none), steps(3, jump-both),
                                                  steps(3, start), steps(3, end); }
             .rule4 { transition-timing-function: steps(3); }
+            .rule5 { transition-timing-function: linear(0, 0.25, 1),
+                                                 linear(0, 0.25 75%, 1),
+                                                 linear(0, 0.25 25% 75%, 1), /* equivalent to (0, 0.25 25%, 0.25 75%, 1) */
+                                                 linear(0, 0.25 25%, 0.25 75%, 1),
+                                                 linear(0, .1 25%, .75 50%, 1); }
             .err1 { transition-timing-function: cubic-bezier(2, 0, 0, 0); }
             .err2 { transition-timing-function: steps(2, 3); }
             .err3 { transition-timing-function: steps(1, foo); }
             .err4 { transition-timing-function: steps(foo, start); }
+            .err5 { transition-timing-function: linear(0, 0.25 0.5, 1); }
         """);
 
         Interpolator[] values = values("transition-timing-function", stylesheet.getRules().get(0));
@@ -198,10 +205,21 @@ public class CssParser_transition_Test {
         values = values("transition-timing-function", stylesheet.getRules().get(3));
         assertInterpolatorEquals(STEPS(3, StepPosition.END), values[0]);
 
+        values = values("transition-timing-function", stylesheet.getRules().get(4));
+        assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), values[0]);
+        assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[1]);
+        assertInterpolatorEquals(
+                ofLinear(new Point2D(0, 0), new Point2D(0.25, 0.25), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[2]);
+        assertInterpolatorEquals(
+                ofLinear(new Point2D(0, 0), new Point2D(0.25, 0.25), new Point2D(0.75, 0.25), new Point2D(1, 1)), values[3]);
+        assertInterpolatorEquals(
+                ofLinear(new Point2D(0, 0), new Point2D(0.25, 0.1), new Point2D(0.5, 0.75), new Point2D(1, 1)), values[4]);
+
         assertStartsWith("Expected '<number [0,1]>'", CssParser.errorsProperty().get(0).getMessage());
         assertStartsWith("Expected '<step-position>'", CssParser.errorsProperty().get(2).getMessage());
         assertStartsWith("Expected '<step-position>'", CssParser.errorsProperty().get(4).getMessage());
         assertStartsWith("Expected '<integer>'", CssParser.errorsProperty().get(6).getMessage());
+        assertStartsWith("Expected '<percentage>'", CssParser.errorsProperty().get(8).getMessage());
     }
 
     @Test
