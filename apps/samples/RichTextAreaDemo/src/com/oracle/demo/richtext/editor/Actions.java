@@ -44,7 +44,6 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.event.ActionEvent;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -158,25 +157,25 @@ public class Actions {
         // toolbar
         
         toolbar.bold.selectedProperty().bindBidirectional(bold.selectedProperty());
-        toolbar.bold.setOnAction(this::focusEditor);
+        toolbar.bold.setOnAction((_) -> bold());
 
         toolbar.italic.selectedProperty().bindBidirectional(italic.selectedProperty());
-        toolbar.italic.setOnAction(this::focusEditor);
+        toolbar.italic.setOnAction((_) -> italic());
 
         toolbar.strikeThrough.selectedProperty().bindBidirectional(strikeThrough.selectedProperty());
-        toolbar.strikeThrough.setOnAction(this::focusEditor);
+        toolbar.strikeThrough.setOnAction((_) -> strikeThrough());
         
         toolbar.underline.selectedProperty().bindBidirectional(underline.selectedProperty());
-        toolbar.underline.setOnAction(this::focusEditor);
+        toolbar.underline.setOnAction((_) -> underline());
         
         toolbar.lineNumbers.selectedProperty().bindBidirectional(lineNumbers.selectedProperty());
-        toolbar.lineNumbers.setOnAction(this::focusEditor);
+        toolbar.lineNumbers.setOnAction((_) -> focusEditor());
         lineNumbers.selectedProperty().addListener((s,p,on) -> {
             editor.setLeftDecorator(on ? new LineNumberDecorator() : null);
         });
 
         toolbar.wrapText.selectedProperty().bindBidirectional(wrapText.selectedProperty());
-        toolbar.wrapText.setOnAction(this::focusEditor);
+        toolbar.wrapText.setOnAction((_) -> focusEditor());
         wrapText.selectedProperty().bindBidirectional(editor.wrapTextProperty());
 
         toolbar.fontFamily.setOnAction((ev) -> {
@@ -444,6 +443,7 @@ public class Actions {
             editor.applyStyle(start, end, a);
             updateSourceStyles();
         }
+        focusEditor();
     }
 
     public void setTextStyle(TextStyle st) {
@@ -632,7 +632,7 @@ public class Actions {
         return b.build();
     }
 
-    private void focusEditor(ActionEvent ev) {
+    private void focusEditor() {
         editor.requestFocus();
     }
 }

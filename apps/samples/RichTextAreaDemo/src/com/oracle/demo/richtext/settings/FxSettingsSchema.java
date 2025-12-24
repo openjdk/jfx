@@ -41,6 +41,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.ButtonBase;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DialogPane;
@@ -217,6 +218,8 @@ public class FxSettingsSchema {
                 } else {
                     return "Pane";
                 }
+            } else if (n instanceof ButtonBase) {
+                return null;
             } else if (n instanceof Group) {
                 return "Group";
             } else if (n instanceof Region) {
