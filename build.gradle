@@ -612,6 +612,11 @@ ext.IS_CHMOD_ARTIFACTS = Boolean.parseBoolean(CHMOD_ARTIFACTS)
 // Define the number of threads to use when compiling (specifically for native compilation, including webkit)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
 
+// Define the maximum number of threads to use when compiling.
+// If MAX_COMPILE_THREADS is > 0, the number of threads used will be the
+// smaller of MAX_COMPILE_THREADS and NUM_COMPILE_THREADS
+defineProperty("MAX_COMPILE_THREADS", "0")
+
 //
 // The next three sections of properties are used to generate the
 // VersionInfo class, and the Windows DLL manifest.
@@ -1420,12 +1425,20 @@ if (CONF != "Release" && CONF != "Debug" && CONF != "DebugNative") {
     logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
 }
 
-// If the number of compile threads is less than 1 then we have a problem!
-if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
+// Compute numCompileThreads as follows:
+// if NUM_COMPILE_THREADS < 1 warn and set numCompileThreads to 1
+// if MAX_COMPILE_THREADS > 0 set to min(numCompileThreads, MAX_COMPILE_THREADS)
+def numCompileThreads = Integer.parseInt(NUM_COMPILE_THREADS.toString())
+if (numCompileThreads < 1) {
     logger.warn("NUM_COMPILE_THREADS was specified as '$NUM_COMPILE_THREADS' which is less than the minimum value of 1. " +
             "Building with a value of 1 instead.")
-    NUM_COMPILE_THREADS = 1
+    numCompileThreads = 1
 }
+def maxCompileThreads = Integer.parseInt(MAX_COMPILE_THREADS.toString())
+if (maxCompileThreads > 0) {
+    numCompileThreads = Math.min(numCompileThreads, maxCompileThreads)
+}
+NUM_COMPILE_THREADS = numCompileThreads;
 
 // Check gradle version
 if (gradle.gradleVersion != jfxGradleVersion) {
