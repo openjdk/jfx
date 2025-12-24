@@ -117,7 +117,9 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
      */
     public ReadOnlySetProperty<E> getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -167,11 +169,6 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
         }
 
         @Override
-        public boolean isAttached() {
-            return ReadOnlySetWrapper.this.isAttached();
-        }
-
-        @Override
         public ReadOnlyIntegerProperty sizeProperty() {
             return ReadOnlySetWrapper.this.sizeProperty();
         }
@@ -179,6 +176,14 @@ public class ReadOnlySetWrapper<E> extends SimpleSetProperty<E> {
         @Override
         public ReadOnlyBooleanProperty emptyProperty() {
             return ReadOnlySetWrapper.this.emptyProperty();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlySetWrapper.this).getTargetClass();
         }
     }
 }

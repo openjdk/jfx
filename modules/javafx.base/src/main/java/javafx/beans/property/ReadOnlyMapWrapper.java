@@ -118,7 +118,9 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
      */
     public ReadOnlyMapProperty<K, V> getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -168,11 +170,6 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
         }
 
         @Override
-        public boolean isAttached() {
-            return ReadOnlyMapWrapper.this.isAttached();
-        }
-
-        @Override
         public ReadOnlyIntegerProperty sizeProperty() {
             return ReadOnlyMapWrapper.this.sizeProperty();
         }
@@ -180,6 +177,14 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
         @Override
         public ReadOnlyBooleanProperty emptyProperty() {
             return ReadOnlyMapWrapper.this.emptyProperty();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyMapWrapper.this).getTargetClass();
         }
     }
 }

@@ -61,9 +61,9 @@ public interface ReadOnlyProperty<T> extends ObservableValue<T> {
      * If this property is not contained in an object, {@code null} is returned.
      *
      * @return the declaring class of this property, or {@code null}
-     * @implSpec Implementations of attached properties must override this method and return the declaring
-     *           class of the attached property, as the default implementation will not be able to discover
-     *           the declaring class at runtime.
+     * @implSpec Implementations of {@linkplain AttachedProperty attached properties} must override this method
+     *           and return the declaring class of the attached property, as the default implementation will not
+     *           be able to discover the declaring class at runtime.
      * @implNote For instance properties, the default implementation uses reflection to search for a method
      *           with a signature compatible with {@code ReadOnlyProperty<?> <name>Property()}, where
      *           {@code <name>} is the name of the property as returned by the {@link #getName()} method.
@@ -102,18 +102,5 @@ public interface ReadOnlyProperty<T> extends ObservableValue<T> {
         } while (beanClass != null);
 
         return null;
-    }
-
-    /**
-     * Returns whether this property is an attached property.
-     *
-     * @implSpec Attached property implementations that override this method must also override
-     *           the {@link #getDeclaringClass()} method and return the class in which the property
-     *           is declared.
-     * @return {@code true} if this property is an attached property, {@code false} otherwise
-     * @since 26
-     */
-    default boolean isAttached() {
-        return false;
     }
 }

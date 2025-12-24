@@ -25,6 +25,7 @@
 
 package test.util.property;
 
+import javafx.beans.property.AttachedProperty;
 import javafx.beans.property.ReadOnlyProperty;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -43,7 +44,7 @@ public final class PropertyMetadataVerifier {
      *     <li>{@link ReadOnlyProperty#getBean()}
      *     <li>{@link ReadOnlyProperty#getName()}
      *     <li>{@link ReadOnlyProperty#getDeclaringClass()}
-     *     <li>{@link ReadOnlyProperty#isAttached()}
+     *     <li>{@link AttachedProperty#getTargetClass()}
      * </ul>
      *
      * @param bean an object of the specified class
@@ -61,24 +62,24 @@ public final class PropertyMetadataVerifier {
      *     <li>{@link ReadOnlyProperty#getBean()}
      *     <li>{@link ReadOnlyProperty#getName()}
      *     <li>{@link ReadOnlyProperty#getDeclaringClass()}
-     *     <li>{@link ReadOnlyProperty#isAttached()}
+     *     <li>{@link AttachedProperty#getTargetClass()}
      * </ul>
      *
      * @param bean an object of the specified class
      * @param declaringClass the class that declares the properties to be tested
-     * @param hostObjectSupplier a function that supplies the host object for attached properties
+     * @param targetObjectSupplier a function that supplies the target object for attached properties
      */
     public static <T> void assertPropertyMetadata(
-            T bean, Class<T> declaringClass, Function<Class<?>, Object> hostObjectSupplier) {
+            T bean, Class<T> declaringClass, Function<Class<?>, Object> targetObjectSupplier) {
         try {
-            assertPropertyMetadataImpl(bean, declaringClass, hostObjectSupplier);
+            assertPropertyMetadataImpl(bean, declaringClass, targetObjectSupplier);
         } catch (ReflectiveOperationException e) {
             fail(e.getMessage(), e);
         }
     }
 
     private static <T> void assertPropertyMetadataImpl(
-            T bean, Class<T> declaringClass, Function<Class<?>, Object> hostObjectSupplier)
+            Object bean, Class<T> declaringClass, Function<Class<?>, Object> targetObjectSupplier)
                 throws ReflectiveOperationException {
         assertTrue(declaringClass.isInstance(bean), "Bean is not an instance of declaring class");
 
@@ -90,19 +91,23 @@ public final class PropertyMetadataVerifier {
 
             assertPropertyStaticity(propertyInfo, method);
 
-            ReadOnlyProperty<?> property = propertyInfo.attached()
-                ? (ReadOnlyProperty<?>)method.invoke(null, hostObjectSupplier.apply(propertyInfo.hostClass()))
-                : (ReadOnlyProperty<?>)method.invoke(bean);
+            Object actualBean = propertyInfo.targetClass() != null
+                ? targetObjectSupplier.apply(propertyInfo.targetClass())
+                : bean;
 
-            assertPropertyBean(property, propertyInfo, bean);
+            ReadOnlyProperty<?> property = propertyInfo.targetClass() != null
+                ? (ReadOnlyProperty<?>)method.invoke(null, actualBean)
+                : (ReadOnlyProperty<?>)method.invoke(actualBean);
+
+            assertPropertyBean(property, propertyInfo, actualBean);
             assertPropertyName(property, propertyInfo);
             assertPropertyDeclaringClass(property, propertyInfo);
-            assertPropertyAttached(property, propertyInfo);
+            assertPropertyTargetClass(property, propertyInfo);
         }
     }
 
     private static void assertPropertyStaticity(PropertyInfo propertyInfo, Method method) {
-        if (propertyInfo.attached()) {
+        if (propertyInfo.targetClass() != null) {
             assertTrue((method.getModifiers() & Modifier.STATIC) != 0,
                propertyInfo.displayName() + " is declared like an attached property, but has a non-static property getter");
         } else {
@@ -135,15 +140,21 @@ public final class PropertyMetadataVerifier {
                 + propertyInfo.declaringClass().getName());
     }
 
-    private static void assertPropertyAttached(ReadOnlyProperty<?> property, PropertyInfo propertyInfo) {
-        if (propertyInfo.attached()) {
+    private static void assertPropertyTargetClass(ReadOnlyProperty<?> property, PropertyInfo propertyInfo) {
+        if (propertyInfo.targetClass() != null) {
             assertTrue(
-                property.isAttached(),
-                propertyInfo.displayName() + "#isAttached() returns false, but expected true");
+                property instanceof AttachedProperty,
+                propertyInfo.displayName() + " is declared like an attached property, but does not implement AttachedProperty");
+
+            Class<?> actual = ((AttachedProperty)property).getTargetClass();
+            Class<?> expected = propertyInfo.targetClass();
+            assertEquals(expected, actual,
+                propertyInfo.displayName() + "#getTargetClass() returns "
+                + (actual != null ? actual.getName() : "null") + ", but expected " + expected.getName());
         } else {
             assertFalse(
-                property.isAttached(),
-                propertyInfo.displayName() + "#isAttached() returns true, but expected false");
+                property instanceof AttachedProperty,
+                propertyInfo.displayName() + " implements AttachedProperty, but is not declared like an attached property");
         }
     }
 
@@ -165,9 +176,9 @@ public final class PropertyMetadataVerifier {
 
         return method.getParameterCount() == 1
             ? new PropertyInfo(propertyName, displayName, declaringClass,
-                               method.getReturnType(), method.getParameterTypes()[0], true)
+                               method.getReturnType(), method.getParameterTypes()[0])
             : new PropertyInfo(propertyName, displayName, declaringClass,
-                               method.getReturnType(), null, false);
+                               method.getReturnType(), null);
     }
 
     private record PropertyInfo(
@@ -175,6 +186,5 @@ public final class PropertyMetadataVerifier {
         String displayName,
         Class<?> declaringClass,
         Class<?> propertyClass,
-        Class<?> hostClass,
-        boolean attached) {}
+        Class<?> targetClass) {}
 }

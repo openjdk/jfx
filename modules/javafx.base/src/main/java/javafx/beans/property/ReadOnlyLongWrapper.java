@@ -112,7 +112,9 @@ public class ReadOnlyLongWrapper extends SimpleLongProperty {
      */
     public ReadOnlyLongProperty getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -149,10 +151,13 @@ public class ReadOnlyLongWrapper extends SimpleLongProperty {
         public Class<?> getDeclaringClass() {
             return ReadOnlyLongWrapper.this.getDeclaringClass();
         }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
 
         @Override
-        public boolean isAttached() {
-            return ReadOnlyLongWrapper.this.isAttached();
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyLongWrapper.this).getTargetClass();
         }
     }
 }

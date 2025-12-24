@@ -113,7 +113,9 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
      */
     public ReadOnlyDoubleProperty getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -150,10 +152,13 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
         public Class<?> getDeclaringClass() {
             return ReadOnlyDoubleWrapper.this.getDeclaringClass();
         }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
 
         @Override
-        public boolean isAttached() {
-            return ReadOnlyDoubleWrapper.this.isAttached();
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyDoubleWrapper.this).getTargetClass();
         }
     }
 }

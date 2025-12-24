@@ -113,7 +113,9 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
      */
     public ReadOnlyObjectProperty<T> getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -150,10 +152,13 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
         public Class<?> getDeclaringClass() {
             return ReadOnlyObjectWrapper.this.getDeclaringClass();
         }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
 
         @Override
-        public boolean isAttached() {
-            return ReadOnlyObjectWrapper.this.isAttached();
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyObjectWrapper.this).getTargetClass();
         }
     }
 }
