@@ -37,6 +37,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
@@ -99,6 +100,38 @@ public class HeaderBarTest {
         headerBar.setMinHeight(50);
         minSystemHeight.set(200);
         assertEquals(50, headerBar.minHeight(-1));
+    }
+
+    @Test
+    void dragType_attachedProperty() {
+        var child = new Rectangle();
+        var type = new HeaderDragType[1];
+        assertNull(HeaderBar.getDragType(child));
+        HeaderBar.dragTypeProperty(child).subscribe(v -> type[0] = v);
+        HeaderBar.setDragType(child, HeaderDragType.DRAGGABLE);
+        assertEquals(HeaderDragType.DRAGGABLE, type[0]);
+        assertEquals(HeaderDragType.DRAGGABLE, HeaderBar.getDragType(child));
+    }
+
+    @Test
+    void buttonType_attachedProperty() {
+        var child = new Rectangle();
+        var type = new HeaderButtonType[1];
+        assertNull(HeaderBar.getButtonType(child));
+        HeaderBar.buttonTypeProperty(child).subscribe(v -> type[0] = v);
+        HeaderBar.setButtonType(child, HeaderButtonType.MAXIMIZE);
+        assertEquals(HeaderButtonType.MAXIMIZE, type[0]);
+        assertEquals(HeaderButtonType.MAXIMIZE, HeaderBar.getButtonType(child));
+    }
+
+    @Test
+    void prefButtonHeight_attachedProperty() {
+        var minHeight = new double[1];
+        assertEquals(HeaderBar.USE_DEFAULT_SIZE, HeaderBar.getPrefButtonHeight(stage));
+        HeaderBar.prefButtonHeightProperty(stage).subscribe(v -> minHeight[0] = v.doubleValue());
+        HeaderBar.prefButtonHeightProperty(stage).set(123);
+        assertEquals(123, minHeight[0]);
+        assertEquals(123, HeaderBar.getPrefButtonHeight(stage));
     }
 
     @Nested
