@@ -585,7 +585,7 @@ public final class StyleAttributeMap {
          * @param d the paragraph direction
          * @return this Builder instance
          */
-        public Builder setRTL(ParagraphDirection d) {
+        public Builder setParagraphDirection(ParagraphDirection d) {
             set(PARAGRAPH_DIRECTION, d);
             return this;
         }
