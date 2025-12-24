@@ -82,7 +82,9 @@ public class PasswordField extends TextField {
         switch (attribute) {
             case TEXT:
                 String accText = getAccessibleText();
-                if (accText != null && !accText.isEmpty()) return accText;
+                if (accText != null && !accText.isEmpty()) {
+                    return accText;
+                }
                 return getPromptText();
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
