@@ -80,7 +80,10 @@ public class PasswordField extends TextField {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TEXT: return null;
+            case TEXT:
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+                return getPromptText();
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
