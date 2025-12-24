@@ -27,8 +27,11 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextInputControlShim;
 import org.junit.jupiter.api.BeforeEach;
@@ -93,5 +96,22 @@ public class PasswordFieldTest {
         final String string = "Hello\n";
         pwdField.setText(string);
         assertEquals(string.length()-1, pwdField.getLength());
+    }
+
+    @Test public void accessibleAttributeText() {
+        pwdField.setText("secret");
+        assertEquals("", pwdField.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+
+        pwdField.setAccessibleText("accessible");
+        assertEquals("accessible", pwdField.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+
+        pwdField.setPromptText("prompt");
+        assertEquals("accessible", pwdField.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+
+        pwdField.setAccessibleText(null);
+        assertEquals("prompt", pwdField.queryAccessibleAttribute(AccessibleAttribute.TEXT));
+
+        pwdField.setPromptText(null);
+        assertNull(pwdField.queryAccessibleAttribute(AccessibleAttribute.TEXT));
     }
 }
