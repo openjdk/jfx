@@ -58,6 +58,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RegionShim;
 import test.com.sun.javafx.pgstub.StubToolkit;
+import test.util.property.PropertyMetadataVerifier;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,6 +70,11 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  */
 public class RegionTest {
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new Region(), Region.class);
+    }
 
     @Test
     public void testPaddingEmptyByDefault() {

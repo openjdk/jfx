@@ -340,6 +340,11 @@ public non-sealed class SubScene extends Node {
                 public String getName() {
                     return "root";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return SubScene.class;
+                }
             };
         }
         return root;
@@ -408,6 +413,11 @@ public non-sealed class SubScene extends Node {
                 @Override
                 public String getName() {
                     return "camera";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return SubScene.class;
                 }
             };
         }
@@ -481,6 +491,11 @@ public non-sealed class SubScene extends Node {
                 public String getName() {
                     return "width";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return SubScene.class;
+                }
             };
         }
         return width;
@@ -526,6 +541,11 @@ public non-sealed class SubScene extends Node {
                 public String getName() {
                     return "height";
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return SubScene.class;
+                }
             };
         }
         return height;
@@ -565,6 +585,11 @@ public non-sealed class SubScene extends Node {
                 @Override
                 public String getName() {
                     return "fill";
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return SubScene.class;
                 }
             };
         }
@@ -661,7 +686,7 @@ public non-sealed class SubScene extends Node {
      */
     public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
-            userAgentStylesheet = new SimpleObjectProperty<>(SubScene.this, "userAgentStylesheet", null) {
+            userAgentStylesheet = new SimpleObjectProperty<>(SubScene.this, SubScene.class, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(SubScene.this);
                     reapplyCSS();

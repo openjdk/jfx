@@ -84,6 +84,8 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import test.util.property.PropertyMetadataVerifier;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -170,6 +172,11 @@ public class NodeTest {
      *                              Basic Node Tests                           *
      *                                                                         *
      **************************************************************************/
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new Rectangle(), Node.class);
+    }
 
     @Test
     public void testGetPseudoClassStatesShouldReturnSameSet() {

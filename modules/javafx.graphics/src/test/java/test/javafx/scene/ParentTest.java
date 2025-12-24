@@ -27,7 +27,6 @@ package test.javafx.scene;
 
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
-import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.geom.PickRay;
@@ -49,9 +48,13 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
+import test.util.property.PropertyMetadataVerifier;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -73,6 +76,11 @@ public class ParentTest {
     @AfterEach
     public void tearDown() {
         stage.close();
+    }
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new Group(), Parent.class);
     }
 
     @Test

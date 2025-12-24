@@ -967,7 +967,7 @@ public abstract non-sealed class Parent extends Node {
 
     public final ReadOnlyBooleanProperty needsLayoutProperty() {
         if (needsLayout == null) {
-            needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
+            needsLayout = new ReadOnlyBooleanWrapper(this, Parent.class, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
         }
         return needsLayout.getReadOnlyProperty();
     }

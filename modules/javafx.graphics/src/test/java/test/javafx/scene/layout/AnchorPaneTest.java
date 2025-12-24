@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,10 +39,16 @@ import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
+import test.util.property.PropertyMetadataVerifier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AnchorPaneTest {
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new AnchorPane(), AnchorPane.class);
+    }
 
     @Test
     public void testNoAnchorsSet() {

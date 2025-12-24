@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,8 +50,10 @@ import javafx.stage.Stage;
 
 import test.com.sun.javafx.scene.StubParallelCameraHelper;
 import test.com.sun.javafx.scene.StubPerspectiveCameraHelper;
+import test.util.property.PropertyMetadataVerifier;
 
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -71,6 +73,13 @@ public class CameraTest {
         view.scale(scale, scale, scale);
         expected.mul(view);
         DEFAULT_PROJVIEW_TX = expected;
+    }
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new PerspectiveCamera(), Camera.class);
+        PropertyMetadataVerifier.assertPropertyMetadata(new PerspectiveCamera(), PerspectiveCamera.class);
+        PropertyMetadataVerifier.assertPropertyMetadata(new ParallelCamera(), ParallelCamera.class);
     }
 
     /**

@@ -40,6 +40,7 @@ public class SimpleFloatProperty extends FloatPropertyBase {
 
     private final Object bean;
     private final String name;
+    private Class<?> declaringClass;
 
     /**
      * {@inheritDoc}
@@ -55,6 +56,15 @@ public class SimpleFloatProperty extends FloatPropertyBase {
     @Override
     public String getName() {
         return name;
+    }
+
+    @Override
+    public Class<?> getDeclaringClass() {
+        if (declaringClass != null) {
+            return declaringClass;
+        }
+
+        return declaringClass = super.getDeclaringClass();
     }
 
     /**
@@ -103,4 +113,33 @@ public class SimpleFloatProperty extends FloatPropertyBase {
         this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
+    /**
+     * The constructor of {@code SimpleFloatProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 26
+     */
+    public SimpleFloatProperty(Object bean, Class<?> declaringClass, String name) {
+        this.bean = bean;
+        this.declaringClass = declaringClass;
+        this.name = (name == null) ? DEFAULT_NAME : name;
+    }
+
+    /**
+     * The constructor of {@code SimpleFloatProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 26
+     */
+    public SimpleFloatProperty(Object bean, Class<?> declaringClass, String name, float initialValue) {
+        super(initialValue);
+        this.bean = bean;
+        this.declaringClass = declaringClass;
+        this.name = (name == null) ? DEFAULT_NAME : name;
+    }
 }

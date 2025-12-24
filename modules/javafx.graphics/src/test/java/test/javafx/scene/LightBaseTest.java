@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,16 @@
 package test.javafx.scene;
 
 import javafx.collections.ObservableList;
+import javafx.scene.AmbientLight;
+import javafx.scene.DirectionalLight;
 import javafx.scene.Group;
+import javafx.scene.LightBase;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.Parent;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
+import javafx.scene.SpotLight;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import javafx.stage.Stage;
@@ -49,6 +53,7 @@ import com.sun.javafx.sg.prism.NGShape3D;
 import com.sun.javafx.tk.Toolkit;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
+import test.util.property.PropertyMetadataVerifier;
 
 public class LightBaseTest {
 
@@ -98,6 +103,15 @@ public class LightBaseTest {
     @AfterEach
     public void tearDown() {
         stage.close();
+    }
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new AmbientLight(), LightBase.class);
+        PropertyMetadataVerifier.assertPropertyMetadata(new AmbientLight(), AmbientLight.class);
+        PropertyMetadataVerifier.assertPropertyMetadata(new DirectionalLight(), DirectionalLight.class);
+        PropertyMetadataVerifier.assertPropertyMetadata(new PointLight(), PointLight.class);
+        PropertyMetadataVerifier.assertPropertyMetadata(new SpotLight(), SpotLight.class);
     }
 
     // This test tests several methods together because a single operation causes multiple changes.

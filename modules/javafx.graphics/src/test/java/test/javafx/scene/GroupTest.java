@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,8 +35,10 @@ import java.util.Set;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
+import test.util.property.PropertyMetadataVerifier;
 
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -100,6 +102,11 @@ public class GroupTest {
     // TODO this exception handling infrastructure should be reconciled
     // with the infrastructure in StructureTest.fx. Perhaps all the
     // exception-throwing tests should be moved into the same file.
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new Group(), Group.class);
+    }
 
     /***************************************************************************
      *                                                                         *

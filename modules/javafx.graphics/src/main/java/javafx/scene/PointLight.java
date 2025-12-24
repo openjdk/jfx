@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -111,7 +111,7 @@ public non-sealed class PointLight extends LightBase {
 
     public final DoubleProperty maxRangeProperty() {
         if (maxRange == null) {
-            maxRange = getLightDoubleProperty("maxRange", DEFAULT_MAX_RANGE);
+            maxRange = getLightDoubleProperty(PointLight.class, "maxRange", DEFAULT_MAX_RANGE);
         }
         return maxRange;
     }
@@ -140,7 +140,7 @@ public non-sealed class PointLight extends LightBase {
 
     public final DoubleProperty constantAttenuationProperty() {
         if (constantAttenuation == null) {
-            constantAttenuation = getLightDoubleProperty("constantAttenuation", DEFAULT_CONSTANT_ATTENUATION);
+            constantAttenuation = getLightDoubleProperty(PointLight.class, "constantAttenuation", DEFAULT_CONSTANT_ATTENUATION);
         }
         return constantAttenuation;
     }
@@ -169,7 +169,7 @@ public non-sealed class PointLight extends LightBase {
 
     public final DoubleProperty linearAttenuationProperty() {
         if (linearAttenuation == null) {
-            linearAttenuation = getLightDoubleProperty("linearAttenuation", DEFAULT_LINEAR_ATTENUATION);
+            linearAttenuation = getLightDoubleProperty(PointLight.class, "linearAttenuation", DEFAULT_LINEAR_ATTENUATION);
         }
         return linearAttenuation;
     }
@@ -198,7 +198,7 @@ public non-sealed class PointLight extends LightBase {
 
     public final DoubleProperty quadraticAttenuationProperty() {
         if (quadraticAttenuation == null) {
-            quadraticAttenuation = getLightDoubleProperty("quadraticAttenuation", DEFAULT_QUADRATIC_ATTENUATION);
+            quadraticAttenuation = getLightDoubleProperty(PointLight.class, "quadraticAttenuation", DEFAULT_QUADRATIC_ATTENUATION);
         }
         return quadraticAttenuation;
     }

@@ -254,6 +254,11 @@ public abstract sealed class Camera extends Node permits ParallelCamera, Perspec
                     clipInSceneValid = false;
                     NodeHelper.markDirty(Camera.this, DirtyBits.NODE_CAMERA);
                 }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Camera.class;
+                }
             };
         }
         return nearClip;
@@ -288,6 +293,11 @@ public abstract sealed class Camera extends Node permits ParallelCamera, Perspec
                 protected void invalidated() {
                     clipInSceneValid = false;
                     NodeHelper.markDirty(Camera.this, DirtyBits.NODE_CAMERA);
+                }
+
+                @Override
+                public Class<?> getDeclaringClass() {
+                    return Camera.class;
                 }
             };
         }

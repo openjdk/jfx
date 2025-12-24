@@ -64,10 +64,12 @@ import javafx.scene.Scene;
 import javafx.scene.SceneShim;
 import javafx.scene.SubScene;
 import test.util.memory.JMemoryBuddy;
+import test.util.property.PropertyMetadataVerifier;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -98,6 +100,11 @@ public class SceneTest {
     @AfterEach
     public void tearDown() {
         stage.hide();
+    }
+
+    @Test
+    public void testPropertyMetadata() {
+        PropertyMetadataVerifier.assertPropertyMetadata(new Scene(new Group()), Scene.class);
     }
 
     /***************************************************************************
