@@ -196,7 +196,7 @@ public class ParagraphDialog extends Stage {
     private StyleAttributeMap getAttributes() {
         StyleAttributeMap.Builder b = StyleAttributeMap.builder();
         b.setTextAlignment(alignment.getSelectionModel().getSelectedItem());
-        b.setRTL(rtlButton.isSelected() ? ParagraphDirection.RIGHT_TO_LEFT : ParagraphDirection.LEFT_TO_RIGHT);
+        b.setParagraphDirection(rtlButton.isSelected() ? ParagraphDirection.RIGHT_TO_LEFT : ParagraphDirection.LEFT_TO_RIGHT);
         return b.build();
     }
 
