@@ -71,7 +71,7 @@ import static com.sun.javafx.scene.control.Properties.getColorPickerString;
 // Not public API - this is (presently) an implementation detail only
 class ColorPalette extends Region {
 
-    private static final int SQUARE_SIZE = 15;
+    private double squareSize = 15.0;
 
     // package protected for testing purposes
     ColorPickerGrid colorPickerGrid;
@@ -97,6 +97,51 @@ class ColorPalette extends Region {
     private int customColorLastRowLength = 0;
 
     private final ColorSquare hoverSquare = new ColorSquare();
+
+    private VBox paletteBox;
+
+    public double getSquareSize(){
+        return squareSize;
+    }
+
+    public void setSquareSize(double size){
+        if(size <= 0 ){
+            throw new IllegalArgumentException("Square size must be positive");
+        }
+
+        if (getSquareSize() != size) {
+            this.squareSize = size;
+            rebuildSquares();
+        }
+    }
+
+    private void rebuildSquares() {
+        buildStandardColors();
+        buildCustomColors();
+        colorPickerGrid = new ColorPickerGrid();
+
+        paletteBox.getChildren().setAll(
+                standardColorGrid, colorPickerGrid,
+                customColorLabel, customColorGrid,
+                separator, customColorLink
+        );
+
+        customColorLabel.prefWidthProperty().unbind();
+        customColorLink.prefWidthProperty().unbind();
+        standardColorGrid.prefWidthProperty().unbind();
+        customColorGrid.prefWidthProperty().unbind();
+
+        customColorLabel.prefWidthProperty().bind(colorPickerGrid.widthProperty());
+        customColorLink.prefWidthProperty().bind(colorPickerGrid.widthProperty());
+        standardColorGrid.prefWidthProperty().bind(colorPickerGrid.widthProperty());
+        customColorGrid.prefWidthProperty().bind(colorPickerGrid.widthProperty());
+
+        hoverSquare.setMouseTransparent(true);
+        hoverSquare.getStyleClass().addAll("hover-square");
+        setFocusedSquare(null);
+
+        requestLayout();
+    }
 
     public ColorPalette(final ColorPicker colorPicker) {
         getStyleClass().add("color-palette-region");
@@ -151,9 +196,14 @@ class ColorPalette extends Region {
             }
         });
 
-        VBox paletteBox = new VBox();
+        paletteBox = new VBox();
         paletteBox.getStyleClass().add("color-palette");
-        paletteBox.getChildren().addAll(standardColorGrid, colorPickerGrid, customColorLabel, customColorGrid, separator, customColorLink);
+        paletteBox.setFillWidth(true);
+        paletteBox.getChildren().addAll(
+                standardColorGrid, colorPickerGrid,
+                customColorLabel, customColorGrid,
+                separator, customColorLink
+        );
 
         hoverSquare.setMouseTransparent(true);
         hoverSquare.getStyleClass().addAll("hover-square");
@@ -501,7 +551,7 @@ class ColorPalette extends Region {
             }
             this.index = index;
             this.colorType = type;
-            rectangle = new Rectangle(SQUARE_SIZE, SQUARE_SIZE);
+            rectangle = new Rectangle(squareSize, squareSize);
             if (color == null) {
                 rectangle.setFill(Color.WHITE);
                 isEmpty = true;
@@ -593,9 +643,9 @@ class ColorPalette extends Region {
                     mouseDragColor = colorPicker.getValue();
                 }
                 int xIndex = com.sun.javafx.util.Utils.clamp(0,
-                        (int)t.getX()/(SQUARE_SIZE + 1), NUM_OF_COLUMNS - 1);
+                        (int)Math.floor(t.getX()/(squareSize + 1)), NUM_OF_COLUMNS - 1);
                 int yIndex = com.sun.javafx.util.Utils.clamp(0,
-                        (int)t.getY()/(SQUARE_SIZE + 1), NUM_OF_ROWS - 1);
+                        (int)Math.floor(t.getY()/(squareSize + 1)), NUM_OF_ROWS - 1);
                 int index = xIndex + yIndex*NUM_OF_COLUMNS;
                 colorPicker.setValue((Color) squares.get(index).rectangle.getFill());
                 updateSelection(colorPicker.getValue());
@@ -621,11 +671,11 @@ class ColorPalette extends Region {
         }
 
         @Override protected double computePrefWidth(double height) {
-            return (SQUARE_SIZE + 1)*NUM_OF_COLUMNS;
+            return (squareSize + 1)*NUM_OF_COLUMNS;
         }
 
         @Override protected double computePrefHeight(double width) {
-            return (SQUARE_SIZE + 1)*NUM_OF_ROWS;
+            return (squareSize + 1)*NUM_OF_ROWS;
         }
     }
 
