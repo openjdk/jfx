@@ -110,6 +110,8 @@ public class RichEditorDemoWindow extends Stage {
             actions.fileNameProperty()
         ));
         editor.setContextMenu(createContextMenu());
+        editor.requestFocus();
+        editor.select(TextPos.ZERO);
     }
 
     private MenuBar createMenu() {
@@ -170,8 +172,8 @@ public class RichEditorDemoWindow extends Stage {
         FX.separator(m);
         FX.item(m, "Select All", actions.selectAll);
         FX.separator(m);
-        // TODO
-        // FX.item(m, "Paragraph..."
+        // TODO Font...
+        FX.item(m, "Paragraph...", this::showParagraphDialog);
         return m;
     }
 
@@ -200,5 +202,9 @@ public class RichEditorDemoWindow extends Stage {
 
     private void openSettings() {
         new SettingsWindow(this).show();
+    }
+
+    private void showParagraphDialog() {
+        new ParagraphDialog(this, editor).show();
     }
 }

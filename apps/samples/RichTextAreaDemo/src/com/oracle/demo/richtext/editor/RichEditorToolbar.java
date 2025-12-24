@@ -64,7 +64,7 @@ public class RichEditorToolbar extends ToolBar {
     public RichEditorToolbar() {
         FX.name(this, "RichEditorToolbar");
         setStyle("-fx-spacing: 1px;");
-        setPadding(new Insets(1, 2, 1, 2));
+        setPadding(new Insets(2, 2, 2, 2));
 
         fontFamily.getItems().setAll(collectFonts());
         fontFamily.setMaxWidth(170);

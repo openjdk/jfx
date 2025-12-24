@@ -35,6 +35,7 @@ package com.oracle.demo.richtext.util;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.application.Platform;
 import javafx.css.PseudoClass;
@@ -130,6 +131,14 @@ public class FX {
         applyMnemonic(mi);
         cm.getItems().add(mi);
         a.attach(mi);
+        return mi;
+    }
+
+    public static MenuItem item(ContextMenu cm, String text, Runnable action) {
+        MenuItem mi = new MenuItem(text);
+        applyMnemonic(mi);
+        cm.getItems().add(mi);
+        mi.setOnAction((ev) -> action.run());
         return mi;
     }
 
@@ -279,6 +288,13 @@ public class FX {
     }
 
     public static <T> void select(ComboBox<T> cb, T value) {
+        cb.getSelectionModel().select(value);
+    }
+
+    public static <T> void select(ComboBox<T> cb, T value, T defaultValue) {
+        if (value == null) {
+            value = defaultValue;
+        }
         cb.getSelectionModel().select(value);
     }
 
@@ -467,12 +483,25 @@ public class FX {
 
                 @Override
                 public Object fromString(String s) {
-                    // not supported
-                    return null;
+                    throw new UnsupportedOperationException();
                 }
             };
         }
         return (StringConverter<T>)converter;
+    }
+
+    public static <T> StringConverter<T> converter(Function<T, String> conv) {
+        return new StringConverter<>() {
+            @Override
+            public String toString(T v) {
+                return conv.apply(v);
+            }
+
+            @Override
+            public T fromString(String s) {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 
     public static StringConverter<Double> numberConverter() {
@@ -495,5 +524,9 @@ public class FX {
                 return Double.parseDouble(s.trim());
             }
         };
+    }
+
+    public static CC cc() {
+        return new CC();
     }
 }
