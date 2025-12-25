@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.javafx.event;
 
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.WeakEventHandler;
 
 public final class CompositeEventHandler<T extends Event> {
@@ -43,9 +44,10 @@ public final class CompositeEventHandler<T extends Event> {
         return eventHandler;
     }
 
-    public void addEventHandler(final EventHandler<? super T> eventHandler) {
+    public void addEventHandler(final EventHandler<? super T> eventHandler,
+                                final EventHandlerPriority eventHandlerPriority) {
         if (find(eventHandler, false) == null) {
-            append(lastRecord, createEventHandlerRecord(eventHandler));
+            append(lastRecord, createEventHandlerRecord(eventHandler, eventHandlerPriority));
         }
     }
 
@@ -56,9 +58,10 @@ public final class CompositeEventHandler<T extends Event> {
         }
     }
 
-    public void addEventFilter(final EventHandler<? super T> eventFilter) {
+    public void addEventFilter(final EventHandler<? super T> eventFilter,
+                               final EventHandlerPriority eventFilterPriority) {
         if (find(eventFilter, true) == null) {
-            append(lastRecord, createEventFilterRecord(eventFilter));
+            append(lastRecord, createEventFilterRecord(eventFilter, eventFilterPriority));
         }
     }
 
@@ -69,36 +72,106 @@ public final class CompositeEventHandler<T extends Event> {
         }
     }
 
-    public void dispatchBubblingEvent(final Event event) {
+    /**
+     * Dispatches a bubbling event to event handlers.
+     *
+     * @param event the event to dispatch
+     * @param dispatchDefault {@code true} to dispatch to default handlers, {@code false} to dispatch to primary handlers
+     * @return if {@code dispatchDefault} is {@code false}, returns whether any default handlers are present;
+     *         otherwise the return value is unspecified
+     */
+    public boolean dispatchBubblingEvent(final Event event, final boolean dispatchDefault) {
+        @SuppressWarnings("unchecked")
         final T specificEvent = (T) event;
-
         EventProcessorRecord<T> record = firstRecord;
+
+        if (dispatchDefault) {
+            if (specificEvent.isDefaultPrevented()) {
+                return false;
+            }
+
+            record = firstRecord;
+            while (record != null && !specificEvent.isConsumed()) {
+                if (record.isDefault) {
+                    record.handleBubblingEvent(specificEvent);
+                }
+
+                record = record.nextRecord;
+            }
+
+            return false;
+        }
+
+        boolean hasDefaultHandlers = false;
+
         while (record != null) {
             if (record.isDisconnected()) {
                 remove(record);
-            } else {
-                record.handleBubblingEvent(specificEvent);
+            } else if (!specificEvent.isConsumed()) {
+                hasDefaultHandlers |= record.isDefault;
+
+                if (!record.isDefault) {
+                    record.handleBubblingEvent(specificEvent);
+                }
             }
+
             record = record.nextRecord;
         }
 
-        if (eventHandler != null) {
+        if (eventHandler != null && !specificEvent.isConsumed()) {
             eventHandler.handle(specificEvent);
         }
+
+        return hasDefaultHandlers;
     }
 
-    public void dispatchCapturingEvent(final Event event) {
+    /**
+     * Dispatches a capturing event to event handlers.
+     *
+     * @param event the event to dispatch
+     * @param dispatchDefault {@code true} to dispatch to default handlers, {@code false} to dispatch to primary handlers
+     * @return if {@code dispatchDefault} is {@code false}, returns whether any default handlers are present;
+     *         otherwise the return value is unspecified
+     */
+    public boolean dispatchCapturingEvent(final Event event, final boolean dispatchDefault) {
+        @SuppressWarnings("unchecked")
         final T specificEvent = (T) event;
-
         EventProcessorRecord<T> record = firstRecord;
+
+        if (dispatchDefault) {
+            if (specificEvent.isDefaultPrevented()) {
+                return false;
+            }
+
+            record = firstRecord;
+            while (record != null && !specificEvent.isConsumed()) {
+                if (record.isDefault) {
+                    record.handleCapturingEvent(specificEvent);
+                }
+
+                record = record.nextRecord;
+            }
+
+            return false;
+        }
+
+        boolean hasDefaultHandlers = false;
+
         while (record != null) {
             if (record.isDisconnected()) {
                 remove(record);
-            } else {
-                record.handleCapturingEvent(specificEvent);
+            } else if (!specificEvent.isConsumed()) {
+                hasDefaultHandlers |= record.isDefault;
+
+                if (!record.isDefault) {
+                    record.handleCapturingEvent(specificEvent);
+                }
             }
+
             record = record.nextRecord;
         }
+
+        return hasDefaultHandlers;
     }
 
     public boolean hasFilter() {
@@ -121,19 +194,19 @@ public final class CompositeEventHandler<T extends Event> {
     }
 
     private EventProcessorRecord<T> createEventHandlerRecord(
-            final EventHandler<? super T> eventHandler) {
-        return (eventHandler instanceof WeakEventHandler)
-                   ? new WeakEventHandlerRecord(
-                             (WeakEventHandler<? super T>) eventHandler)
-                   : new NormalEventHandlerRecord(eventHandler);
+            final EventHandler<? super T> eventHandler,
+            final EventHandlerPriority eventHandlerPriority) {
+        return (eventHandler instanceof WeakEventHandler<? super T> weakHandler)
+               ? new WeakEventHandlerRecord<>(weakHandler, eventHandlerPriority == EventHandlerPriority.DEFAULT)
+               : new NormalEventHandlerRecord<>(eventHandler, eventHandlerPriority == EventHandlerPriority.DEFAULT);
     }
 
     private EventProcessorRecord<T> createEventFilterRecord(
-            final EventHandler<? super T> eventFilter) {
-        return (eventFilter instanceof WeakEventHandler)
-                   ? new WeakEventFilterRecord(
-                             (WeakEventHandler<? super T>) eventFilter)
-                   : new NormalEventFilterRecord(eventFilter);
+            final EventHandler<? super T> eventFilter,
+            final EventHandlerPriority eventFilterPriority) {
+        return (eventFilter instanceof WeakEventHandler<? super T> weakHandler)
+               ? new WeakEventFilterRecord<>(weakHandler, eventFilterPriority == EventHandlerPriority.DEFAULT)
+               : new NormalEventFilterRecord<>(eventFilter, eventFilterPriority == EventHandlerPriority.DEFAULT);
     }
 
     private void remove(final EventProcessorRecord<T> record) {
@@ -207,8 +280,13 @@ public final class CompositeEventHandler<T extends Event> {
     }
 
     private static abstract class EventProcessorRecord<T extends Event> {
+        private final boolean isDefault;
         private EventProcessorRecord<T> nextRecord;
         private EventProcessorRecord<T> prevRecord;
+
+        EventProcessorRecord(boolean isDefault) {
+            this.isDefault = isDefault;
+        }
 
         public abstract boolean stores(EventHandler<? super T> eventProcessor,
                                        boolean isFilter);
@@ -226,8 +304,8 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final EventHandler<? super T> eventHandler;
 
-        public NormalEventHandlerRecord(
-                final EventHandler<? super T> eventHandler) {
+        public NormalEventHandlerRecord(EventHandler<? super T> eventHandler, boolean isDefault) {
+            super(isDefault);
             this.eventHandler = eventHandler;
         }
 
@@ -261,8 +339,8 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final WeakEventHandler<? super T> weakEventHandler;
 
-        public WeakEventHandlerRecord(
-                final WeakEventHandler<? super T> weakEventHandler) {
+        public WeakEventHandlerRecord(WeakEventHandler<? super T> weakEventHandler, boolean isDefault) {
+            super(isDefault);
             this.weakEventHandler = weakEventHandler;
         }
 
@@ -296,8 +374,8 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final EventHandler<? super T> eventFilter;
 
-        public NormalEventFilterRecord(
-                final EventHandler<? super T> eventFilter) {
+        public NormalEventFilterRecord(EventHandler<? super T> eventFilter, boolean isDefault) {
+            super(isDefault);
             this.eventFilter = eventFilter;
         }
 
@@ -331,8 +409,8 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final WeakEventHandler<? super T> weakEventFilter;
 
-        public WeakEventFilterRecord(
-                final WeakEventHandler<? super T> weakEventFilter) {
+        public WeakEventFilterRecord(WeakEventHandler<? super T> weakEventFilter, boolean isDefault) {
+            super(isDefault);
             this.weakEventFilter = weakEventFilter;
         }
 

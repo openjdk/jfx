@@ -41,6 +41,7 @@ import javafx.beans.property.StringProperty;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import java.util.concurrent.BlockingQueue;
@@ -738,7 +739,16 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         checkThread();
-        getEventHelper().addEventHandler(eventType, eventHandler);
+        getEventHelper().addEventHandler(eventType, eventHandler, EventHandlerPriority.PRIMARY);
+    }
+
+    @Override
+    public final <T extends Event> void addEventHandler(
+            final EventType<T> eventType,
+            final EventHandlerPriority eventHandlerPriority,
+            final EventHandler<? super T> eventHandler) {
+        checkThread();
+        getEventHelper().addEventHandler(eventType, eventHandler, eventHandlerPriority);
     }
 
     /**
@@ -762,7 +772,16 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
         checkThread();
-        getEventHelper().addEventFilter(eventType, eventFilter);
+        getEventHelper().addEventFilter(eventType, eventFilter, EventHandlerPriority.PRIMARY);
+    }
+
+    @Override
+    public final <T extends Event> void addEventFilter(
+            final EventType<T> eventType,
+            final EventHandlerPriority eventFilterPriority,
+            final EventHandler<? super T> eventFilter) {
+        checkThread();
+        getEventHelper().addEventFilter(eventType, eventFilter, eventFilterPriority);
     }
 
     /**

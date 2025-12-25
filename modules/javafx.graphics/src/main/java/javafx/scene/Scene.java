@@ -4319,7 +4319,16 @@ public class Scene implements EventTarget {
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventHandler(eventType, eventHandler);
+                                    .addEventHandler(eventType, eventHandler, EventHandlerPriority.PRIMARY);
+    }
+
+    @Override
+    public final <T extends Event> void addEventHandler(
+            final EventType<T> eventType,
+            final EventHandlerPriority eventHandlerPriority,
+            final EventHandler<? super T> eventHandler) {
+        getInternalEventDispatcher().getEventHandlerManager()
+                                    .addEventHandler(eventType, eventHandler, eventHandlerPriority);
     }
 
     @Override
@@ -4336,7 +4345,16 @@ public class Scene implements EventTarget {
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventFilter(eventType, eventFilter);
+                                    .addEventFilter(eventType, eventFilter, EventHandlerPriority.PRIMARY);
+    }
+
+    @Override
+    public final <T extends Event> void addEventFilter(
+            final EventType<T> eventType,
+            final EventHandlerPriority eventFilterPriority,
+            final EventHandler<? super T> eventFilter) {
+        getInternalEventDispatcher().getEventHandlerManager()
+                                    .addEventFilter(eventType, eventFilter, eventFilterPriority);
     }
 
     @Override

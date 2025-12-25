@@ -126,9 +126,10 @@ class EventHelper {
      */
     final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventHandler) {
+            final EventHandler<? super T> eventHandler,
+            final EventHandlerPriority eventHandlerPriority) {
         getInternalEventDispatcher()
-                .addEventHandler(eventType, eventHandler);
+                .addEventHandler(eventType, eventHandler, eventHandlerPriority);
     }
 
     /**
@@ -158,9 +159,10 @@ class EventHelper {
      */
     final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventFilter) {
+            final EventHandler<? super T> eventFilter,
+            final EventHandlerPriority eventFilterPriority) {
         getInternalEventDispatcher()
-                .addEventFilter(eventType, eventFilter);
+                .addEventFilter(eventType, eventFilter, eventFilterPriority);
     }
 
     /**
