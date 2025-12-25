@@ -70,6 +70,7 @@ import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.BoundingBox;
@@ -8938,8 +8939,16 @@ public abstract sealed class Node
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        addEventHandler(eventType, EventHandlerPriority.PRIMARY, eventHandler);
+    }
+
+    @Override
+    public final <E extends Event> void addEventHandler(
+            final EventType<E> eventType,
+            final EventHandlerPriority eventHandlerPriority,
+            final EventHandler<? super E> eventHandler) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventHandler(eventType, eventHandler);
+                                    .addEventHandler(eventType, eventHandler, eventHandlerPriority);
     }
 
     @Override
@@ -8955,8 +8964,16 @@ public abstract sealed class Node
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
+        addEventFilter(eventType, EventHandlerPriority.PRIMARY, eventFilter);
+    }
+
+    @Override
+    public final <E extends Event> void addEventFilter(
+            final EventType<E> eventType,
+            final EventHandlerPriority eventFilterPriority,
+            final EventHandler<? super E> eventFilter) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventFilter(eventType, eventFilter);
+                                    .addEventFilter(eventType, eventFilter, eventFilterPriority);
     }
 
     @Override
