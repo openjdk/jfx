@@ -94,7 +94,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private static final Duration DURATION = new Duration(125.0);
     private static final double SWIPE_THRESHOLD = 0.30;
     private static final double TOUCH_THRESHOLD = 15;
-    private static final Interpolator interpolator = Interpolator.SPLINE(0.4829, 0.5709, 0.6803, 0.9928);
+    private static final Interpolator interpolator = Interpolator.ofSpline(0.4829, 0.5709, 0.6803, 0.9928);
 
 
 

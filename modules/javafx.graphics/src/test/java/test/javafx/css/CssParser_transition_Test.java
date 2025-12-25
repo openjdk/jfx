@@ -189,21 +189,21 @@ public class CssParser_transition_Test {
         assertInterpolatorEquals(CSS_EASE_IN, values[1]);
         assertInterpolatorEquals(CSS_EASE_OUT, values[2]);
         assertInterpolatorEquals(CSS_EASE_IN_OUT, values[3]);
-        assertInterpolatorEquals(SPLINE(0.1, 0.2, 0.3, 0.4), values[4]);
-        assertInterpolatorEquals(SPLINE(0.5, 2, 0.5, -1), values[5]);
+        assertInterpolatorEquals(ofSpline(0.1, 0.2, 0.3, 0.4), values[4]);
+        assertInterpolatorEquals(ofSpline(0.5, 2, 0.5, -1), values[5]);
 
         values = values("transition-timing-function", stylesheet.getRules().get(2));
         assertInterpolatorEquals(STEP_START, values[0]);
         assertInterpolatorEquals(STEP_END, values[1]);
-        assertInterpolatorEquals(STEPS(3, StepPosition.START), values[2]);
-        assertInterpolatorEquals(STEPS(3, StepPosition.END), values[3]);
-        assertInterpolatorEquals(STEPS(3, StepPosition.NONE), values[4]);
-        assertInterpolatorEquals(STEPS(3, StepPosition.BOTH), values[5]);
-        assertInterpolatorEquals(STEPS(3, StepPosition.START), values[6]);
-        assertInterpolatorEquals(STEPS(3, StepPosition.END), values[7]);
+        assertInterpolatorEquals(ofSteps(3, StepPosition.START), values[2]);
+        assertInterpolatorEquals(ofSteps(3, StepPosition.END), values[3]);
+        assertInterpolatorEquals(ofSteps(3, StepPosition.NONE), values[4]);
+        assertInterpolatorEquals(ofSteps(3, StepPosition.BOTH), values[5]);
+        assertInterpolatorEquals(ofSteps(3, StepPosition.START), values[6]);
+        assertInterpolatorEquals(ofSteps(3, StepPosition.END), values[7]);
 
         values = values("transition-timing-function", stylesheet.getRules().get(3));
-        assertInterpolatorEquals(STEPS(3, StepPosition.END), values[0]);
+        assertInterpolatorEquals(ofSteps(3, StepPosition.END), values[0]);
 
         values = values("transition-timing-function", stylesheet.getRules().get(4));
         assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), values[0]);
@@ -247,12 +247,12 @@ public class CssParser_transition_Test {
 
         assertTransition(
             new TransitionDefinition("foo", seconds(0.3), seconds(0.4),
-                                     SPLINE(0.1, 0.2, 0.3, .4)),
+                                     ofSpline(0.1, 0.2, 0.3, .4)),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(3)))[0]);
 
         assertTransition(
             new TransitionDefinition("foo", seconds(0.3), seconds(0.4),
-                                     SPLINE(0.1, 0.2, 0.3, .4)),
+                                     ofSpline(0.1, 0.2, 0.3, .4)),
             ((TransitionDefinition[])values("transition", stylesheet.getRules().get(4)))[0]);
 
         assertStartsWith("Expected '<single-transition-property>'", CssParser.errorsProperty().get(0).getMessage());
