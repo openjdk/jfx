@@ -25,7 +25,7 @@
 
 package com.sun.javafx.application.preferences;
 
-import com.sun.javafx.scene.ScenePreferences;
+import com.sun.javafx.scene.SceneContext;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 import javafx.application.ColorScheme;
@@ -43,7 +43,7 @@ import java.util.Objects;
 /**
  * Contains {@link Property}-based preference implementations.
  * <p>
- * All properties in this class can be read from any thread in order to allow {@link ScenePreferences} to safely
+ * All properties in this class can be read from any thread in order to allow {@link SceneContext} to safely
  * initialize its values on a background thread (creating and configuring a {@code Scene} on a background thread
  * is allowed by its specification). This is not a specified capability for users, it is an implementation detail.
  * <p>

@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.application.ColorScheme;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -56,6 +57,7 @@ public class Scene_preferences_Test {
         scene = new Scene(new Group(rect));
         stage = new Stage();
         stage.setScene(scene);
+        stage.show();
     }
 
     @AfterEach
@@ -103,11 +105,11 @@ public class Scene_preferences_Test {
             """.formatted(testRun.mediaQuery).getBytes(StandardCharsets.UTF_8)));
 
         testRun.state1.accept(scene.getPreferences());
-        rect.applyCss();
+        Toolkit.getToolkit().firePulse();
         assertEquals(Color.RED, rect.getFill());
 
         testRun.state2.accept(scene.getPreferences());
-        rect.applyCss();
+        Toolkit.getToolkit().firePulse();
         assertEquals(Color.GREEN, rect.getFill());
     }
 }

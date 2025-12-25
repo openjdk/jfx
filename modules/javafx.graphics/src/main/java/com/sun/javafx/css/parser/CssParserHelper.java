@@ -23,55 +23,31 @@
  * questions.
  */
 
-package com.sun.javafx.css.media.expression;
+package com.sun.javafx.css.parser;
 
-import com.sun.javafx.css.media.ContextAwareness;
-import com.sun.javafx.css.media.MediaQuery;
-import com.sun.javafx.css.media.MediaQueryCache;
-import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+import com.sun.javafx.util.Utils;
+import javafx.css.CssParser;
+import javafx.css.Size;
 
-/**
- * Evaluates to a constant boolean value.
- */
-public final class ConstantExpression implements MediaQuery {
+public final class CssParserHelper {
 
-    private final boolean value;
+    private static Accessor accessor;
 
-    private ConstantExpression(boolean value) {
-        this.value = value;
+    static {
+        Utils.forceInit(CssParser.class);
     }
 
-    public static ConstantExpression of(boolean value) {
-        return MediaQueryCache.getCachedMediaQuery(new ConstantExpression(value));
+    private CssParserHelper() {}
+
+    public static void setAccessor(Accessor accessor) {
+        CssParserHelper.accessor = accessor;
     }
 
-    public boolean value() {
-        return value;
+    public static Size parseSize(Token token) {
+        return accessor.parseSize(token);
     }
 
-    @Override
-    public int getContextAwareness() {
-        return ContextAwareness.NONE.value();
-    }
-
-    @Override
-    public boolean evaluate(MediaQueryContext context) {
-        return value;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ConstantExpression other && value == other.value;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(ConstantExpression.class, value);
-    }
-
-    @Override
-    public String toString() {
-        return "(" + value + ")";
+    public interface Accessor {
+        Size parseSize(Token token);
     }
 }
