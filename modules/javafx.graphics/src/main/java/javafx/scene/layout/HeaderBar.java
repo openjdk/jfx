@@ -494,6 +494,7 @@ public class HeaderBar extends Region {
      * The left area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
+     * @since 26
      */
     private final ObjectProperty<Node> left = new NodeProperty("left");
 
@@ -532,6 +533,7 @@ public class HeaderBar extends Region {
      * The right area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
+     * since 26
      */
     private final ObjectProperty<Node> right = new NodeProperty("right");
 
@@ -559,6 +561,7 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code true}
      * @see #rightSystemPaddingProperty() rightSystemPadding
+     * @since 26
      */
     private final BooleanProperty leftSystemPadding = new BooleanPropertyBase(true) {
         @Override
@@ -601,6 +604,7 @@ public class HeaderBar extends Region {
      *
      * @defaultValue {@code true}
      * @see #leftSystemPaddingProperty() leftSystemPadding
+     * @since 26
      */
     private final BooleanProperty rightSystemPadding = new BooleanPropertyBase(true) {
         @Override
