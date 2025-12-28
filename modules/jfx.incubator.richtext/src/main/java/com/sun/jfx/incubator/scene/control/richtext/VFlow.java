@@ -1717,6 +1717,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     public Point2D getImeLocationOnScreen(TextPos pos) {
         CaretInfo ci = getCaretInfo(pos);
+        if (ci == null) {
+            return new Point2D(0, 0);
+        }
         return content.localToScreen(ci.getMinX(), ci.getMaxY());
     }
 }

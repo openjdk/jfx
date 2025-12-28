@@ -212,6 +212,10 @@ LRESULT CALLBACK GlassWindow::CBTFilter(int nCode, WPARAM wParam, LPARAM lParam)
     return ::CallNextHookEx(GlassWindow::sm_hCBTFilter, nCode, wParam, lParam);
 }
 
+#ifndef USER_DEFAULT_SCREEN_DPI
+#define USER_DEFAULT_SCREEN_DPI 96
+#endif
+
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED       0x02E0
 #endif
@@ -366,6 +370,10 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
                     break;
             }
             HandleViewSizeEvent(GetHWND(), msg, wParam, lParam);
+            break;
+        case WM_DPICHANGED:
+            HandleDPIEvent(wParam, lParam);
+            GlassScreen::HandleDisplayChange();
             break;
         case WM_MOVING:
             m_winChangingReason = WasMoved;
@@ -839,6 +847,15 @@ void GlassWindow::HandleSizeEvent(int type)
         env->CallVoidMethod(m_grefThis, midNotifyResize, type, r.right - r.left, r.bottom - r.top);
         CheckAndClearException(env);
     }
+}
+
+void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam)
+{
+    JNIEnv* env = GetEnv();
+    float scale = (float) LOWORD(wParam) / USER_DEFAULT_SCREEN_DPI;
+
+    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, scale, scale, scale, scale);
+    CheckAndClearException(env);
 }
 
 void GlassWindow::HandleActivateEvent(jint event)
