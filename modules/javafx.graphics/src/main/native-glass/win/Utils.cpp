@@ -149,14 +149,14 @@ BOOL GetExtendedFrameBounds(HWND hwnd, RECT* r) {
                 UINT pathSize = sizeof(path) / sizeof(wchar_t);
                 UINT rval = GetSystemDirectoryW(path, pathSize);
                 if (rval == 0 || rval >= pathSize) {
-                    fprintf(stderr, "BaseWnd: Failed to get system directory");
+                    fprintf(stderr, "GetExtendedFrameBounds: Failed to get system directory");
                     return;
                 }
 
                 HMODULE hModule;
                 memcpy_s(file, sizeof(file), path, sizeof(path));
                 if (wcscat_s(file, MAX_PATH-1, L"\\shcore.dll") != 0 || !(hModule = LoadLibraryW(file))) {
-                    fprintf(stderr, "BaseWnd: Failed to load shcore.dll");
+                    fprintf(stderr, "GetExtendedFrameBounds: Failed to load shcore.dll");
                     return;
                 }
 
@@ -216,14 +216,13 @@ BOOL GetExtendedFrameBounds(HWND hwnd, RECT* r) {
                 oldAwareness = pSetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
             }
 
-            RECT physBounds = {};
-            BOOL res = GetWindowRect(hwnd, &physBounds);
-
-            // If SetThreadDpiAwarenessContext failed, oldAwareness will be NULL and physBounds is not a
-            // reliable physical baseline; return to the fallback path.
+            // If SetThreadDpiAwarenessContext failed, oldAwareness will be NULL; return to the fallback path.
             if (!oldAwareness) {
                 return FALSE;
             }
+
+            RECT physBounds = {};
+            BOOL res = GetWindowRect(hwnd, &physBounds);
 
             // Switch thread back to the original DPI awareness context.
             pSetThreadDpiAwarenessContext(oldAwareness);
