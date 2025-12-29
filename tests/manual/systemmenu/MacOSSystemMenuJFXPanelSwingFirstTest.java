@@ -22,7 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -32,11 +31,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.embed.swing.JFXPanel;
-
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -56,11 +50,13 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
-import test.util.Util;
 
 public class MacOSSystemMenuJFXPanelSwingFirstTest extends MacOSSystemMenuTestBase {
 
-    @Test
+    public static void main(String[] args) throws InterruptedException, IOException {
+        new MacOSSystemMenuJFXPanelSwingFirstTest().test();
+    }
+
     public void test() throws InterruptedException, IOException {
         initSwing(List.of(TEST_MENUS_0, TEST_MENUS_1));
         initJavaFX(List.of());

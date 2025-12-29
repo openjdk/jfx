@@ -22,8 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.PlatformUtil;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Menu;
@@ -57,12 +55,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JTextArea;
 import javax.swing.JButton;
 import javax.swing.SwingUtilities;
-
-import org.junit.jupiter.api.BeforeAll;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class MacOSSystemMenuTestBase {
 
@@ -170,17 +162,6 @@ public class MacOSSystemMenuTestBase {
     private boolean nextStep = false;
 
     private CountDownLatch latch = null;
-
-    /***************************************************
-     *
-     * Only run on MacOS
-     *
-     **************************************************/
-
-    @BeforeAll
-    private static void ensureMacOS() {
-        assumeTrue(PlatformUtil.isMac());
-    }
 
     /***************************************************
      *
@@ -496,5 +477,17 @@ public class MacOSSystemMenuTestBase {
 
     private void releaseLock() {
         latch.countDown();
+    }
+
+    protected void assertFalse(boolean value, String msg) {
+        if (value) throw new RuntimeException(msg);
+    }
+
+    protected void assertTrue(boolean value, String msg) {
+        if (!value) throw new RuntimeException(msg);
+    }
+
+    protected void assertEquals(Object first, Object second, String msg) {
+        if (!Objects.equals(first, second)) throw new RuntimeException(msg);
     }
 }
