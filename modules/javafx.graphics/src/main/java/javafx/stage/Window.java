@@ -325,6 +325,7 @@ public class Window implements EventTarget {
             } else {
                 heightExplicit = false;
             }
+            System.out.println("Window/adjustSize(" + selfSizePriority + "): scene=" + sceneWidth + "x" + sceneHeight + "; explicitWH=" + widthExplicit + "," + heightExplicit + " final: setSize(" + w + ", " + h + ", " + cw + ", " + ch + ")");
 
             peerBoundsConfigurator.setSize(w, h, cw, ch);
             applyBounds();
@@ -1061,6 +1062,7 @@ public class Window implements EventTarget {
                 windows.remove(Window.this);
             }
             Toolkit tk = Toolkit.getToolkit();
+            System.out.println("Window/invalidationListener: shown changed to: " + newVisible);
             if (peer != null) {
                 if (newVisible) {
                     if (peerListener == null) {
@@ -1073,6 +1075,7 @@ public class Window implements EventTarget {
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
 
                     boolean isEmbeddedWindow = Window.this instanceof EmbeddedWindow;
+                    System.out.println("Window/invalidationListener: isEmbeddedWindow = " + isEmbeddedWindow);
                     if (isEmbeddedWindow && getScene() != null) {
                         // JDK-8257719: The scene of embedded windows like JFXPanel
                         // or FXCanvas has to be initialized before setting the
@@ -1082,7 +1085,34 @@ public class Window implements EventTarget {
                         SceneHelper.preferredSize(getScene());
                     }
 
-                    updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
+                    System.out.println("Window/invalidationListener: screen=" + screen.get());
+
+                    /*
+                     * Based on the position of the Window, find out on what Screen
+                     * it is located to correctly set the output scales. The correct
+                     * output scale is required for the scene to be sized properly
+                     * as there may otherwise be slight differences in size depending
+                     * on the scale (which can cause controls to be cut-off and show
+                     * ellipsis for example).
+                     *
+                     * We don't apply the bounds to the peer just yet, as we need it
+                     * to trigger a width/height change to the Scene **after** we
+                     * set the Scene to its preferred size. Setting the size on the
+                     * scene cannot be skipped when both dimensions are set explicitly
+                     * as PopupWindow seems to be relying on it.
+                     */
+
+                    Screen windowScreen = Utils.getScreenForRectangle(new Rectangle2D(
+                        Double.isNaN(getX()) ? 0 : getX(),
+                        Double.isNaN(getY()) ? 0 : getY(),
+                        Double.isNaN(getWidth()) ? 0 : getWidth(),
+                        Double.isNaN(getHeight()) ? 0 : getHeight()
+                    ));
+
+                    updateOutputScales(windowScreen.getOutputScaleX(), windowScreen.getOutputScaleY());
+
+                    System.out.println("Window/invalidationListener: used screen for output scales: " + windowScreen);
+
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
                     // then the lazy render scale properties might think
@@ -1093,6 +1123,8 @@ public class Window implements EventTarget {
                     // forced setSize and setLocation down below.
                     peerBoundsConfigurator.setRenderScaleX(getRenderScaleX());
                     peerBoundsConfigurator.setRenderScaleY(getRenderScaleY());
+                    System.out.println("Window/invalidationListener: output scale used before sizing scene: " + getRenderScaleX());
+                    System.out.println("Window/invalidationListener: widthExplicit = " + widthExplicit + "; heightExplicit = " + heightExplicit);
 
                     if (!isEmbeddedWindow && getScene() != null) {
                         // The scene of regular windows is initialized
@@ -1161,6 +1193,8 @@ public class Window implements EventTarget {
                 // Reset the flag unconditionally upon visibility changes
                 sizeToScene = false;
             }
+
+            System.out.println("Window/invalidationListener: exit invalidation listener");
         }
 
         @Override
@@ -1506,6 +1540,8 @@ public class Window implements EventTarget {
                 float newRX = (float) renderScaleX;
                 float newRY = (float) renderScaleY;
                 reset();
+                System.out.println("Window/peer: setBounds(" + newX + ", " + newY +", " + xSet + ", " + ySet + ", winW:" + newWW + ", " + newWH + ", clientW:" + newCW + ", " + newCH + ", " + newXG + ", " + newYG +", rsx:" + newRX + ", rsy:"+newRY +")");
+
                 peer.setBounds(newX, newY, xSet, ySet,
                         newWW, newWH, newCW, newCH,
                         newXG, newYG,
