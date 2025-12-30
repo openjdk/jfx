@@ -434,10 +434,14 @@ final class PaintCollector implements CompletionListener {
                 if (!needsHint) {
                     needsHint = gs.isSynchronous();
                 }
+            }
+
+            for (final GlassScene gs : dirtyScenes) {
                 // On platforms with a window manager, we always set doPresent = true, because
                 // we always need to rerender the scene  if it's in the dirty list and we do a
                 // swap on a per-window basis
                 gs.setDoPresent(true);
+                gs.setDoVSync(needsHint && dirtyScenes.getLast() == gs);
                 try {
                     gs.repaint();
                 } catch (Throwable t) {

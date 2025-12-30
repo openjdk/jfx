@@ -270,6 +270,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
             dlsym(RTLD_DEFAULT,"glBlitFramebuffer");
 
     if (isExtensionSupported(ctxInfo->glxExtensionStr,
+                "GLX_EXT_swap_control")) {
+        ctxInfo->glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)
+                dlsym(RTLD_DEFAULT, "glXSwapIntervalEXT");
+        if (ctxInfo->glXSwapIntervalEXT == NULL) {
+            ctxInfo->glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)
+                glXGetProcAddress((const GLubyte *)"glXSwapIntervalEXT");
+        }
+    } else if (isExtensionSupported(ctxInfo->glxExtensionStr,
             "GLX_SGI_swap_control")) {
         ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
                 dlsym(RTLD_DEFAULT, "glXSwapIntervalSGI");
@@ -278,14 +286,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
             ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
                 glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
         }
-
     }
 
-    // initialize platform states and properties to match
-    // cached states and properties
-    if (ctxInfo->glXSwapIntervalSGI != NULL) {
+    if (ctxInfo->glXSwapIntervalEXT != NULL) {
+        ctxInfo->glXSwapIntervalEXT(dInfo->display, dInfo->win, 0);
+    } else if (ctxInfo->glXSwapIntervalSGI != NULL) {
         ctxInfo->glXSwapIntervalSGI(0);
     }
+
     ctxInfo->state.vSyncEnabled = JNI_FALSE;
     ctxInfo->vSyncRequested = vSyncRequested;
 
@@ -333,7 +341,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_X11GLContext_nMakeCurrent
     }
     interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
-    if (ctxInfo->glXSwapIntervalSGI != NULL) {
+
+    if (ctxInfo->glXSwapIntervalEXT != NULL) {
+        ctxInfo->glXSwapIntervalEXT(dInfo->display, dInfo->win, interval);
+    } else if (ctxInfo->glXSwapIntervalSGI != NULL) {
         ctxInfo->glXSwapIntervalSGI(interval);
     }
 }
