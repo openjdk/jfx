@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,22 +26,29 @@
 package test.javafx.stage;
 
 import java.util.ArrayList;
+import java.util.stream.Stream;
+import javafx.geometry.AnchorPoint;
+import javafx.geometry.Insets;
 import javafx.scene.image.Image;
-import com.sun.javafx.stage.WindowHelper;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.stage.AnchorPolicy;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.Toolkit;
-import javafx.stage.Stage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class StageTest {
 
@@ -54,15 +61,19 @@ public class StageTest {
     @BeforeEach
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
+        toolkit.setScreens(new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96));
+
         s = new Stage();
-        s.show();
-        peer = (StubStage) WindowHelper.getPeer(s);
-        initialNumTimesSetSizeAndLocation = peer.numTimesSetSizeAndLocation;
+        s.setOnShown(_ -> {
+            peer = (StubStage) WindowHelper.getPeer(s);
+            initialNumTimesSetSizeAndLocation = peer.numTimesSetSizeAndLocation;
+        });
     }
 
     @AfterEach
     public void tearDown() {
         s.hide();
+        toolkit.resetScreens();
     }
 
     private void pulse() {
@@ -75,6 +86,7 @@ public class StageTest {
      */
     @Test
     public void testMovingStage() {
+        s.show();
         s.setX(100);
         pulse();
         assertEquals(100f, peer.x);
@@ -88,6 +100,7 @@ public class StageTest {
      */
     @Test
     public void testResizingStage() {
+        s.show();
         s.setWidth(100);
         s.setHeight(100);
         pulse();
@@ -103,6 +116,7 @@ public class StageTest {
      */
     @Test
     public void testMovingAndResizingStage() {
+        s.show();
         s.setX(101);
         s.setY(102);
         s.setWidth(103);
@@ -122,6 +136,7 @@ public class StageTest {
      */
     @Test
     public void testResizingTooSmallStage() {
+        s.show();
         s.setWidth(60);
         s.setHeight(70);
         s.setMinWidth(150);
@@ -137,6 +152,7 @@ public class StageTest {
      */
     @Test
     public void testResizingTooBigStage() {
+        s.show();
         s.setWidth(100);
         s.setHeight(100);
         s.setMaxWidth(60);
@@ -152,6 +168,7 @@ public class StageTest {
      */
     @Test
     public void testSizeAndLocationChangedOverTime() {
+        s.show();
         pulse();
         assertTrue((peer.numTimesSetSizeAndLocation - initialNumTimesSetSizeAndLocation) <= 1);
         initialNumTimesSetSizeAndLocation = peer.numTimesSetSizeAndLocation;
@@ -176,6 +193,7 @@ public class StageTest {
 
     @Test
     public void testSecondCenterOnScreenNotIgnored() {
+        s.show();
         s.centerOnScreen();
 
         s.setX(0);
@@ -191,6 +209,7 @@ public class StageTest {
 
     @Test
     public void testSecondSizeToSceneNotIgnored() {
+        s.show();
         final Scene scene = new Scene(new Group(), 200, 100);
         s.setScene(scene);
 
@@ -215,6 +234,7 @@ public class StageTest {
                                         1920, 160, 1440, 900, 96));
 
         try {
+            s.show();
             s.setX(1920);
             s.setY(160);
             s.setWidth(300);
@@ -238,6 +258,7 @@ public class StageTest {
                                         1920, 160, 1440, 900, 96));
 
         try {
+            s.show();
             s.setX(1920);
             s.setY(160);
             s.setWidth(300);
@@ -260,6 +281,7 @@ public class StageTest {
 
     @Test
     public void testSwitchSceneWithFixedSize() {
+        s.show();
         Scene scene = new Scene(new Group(), 200, 100);
         s.setScene(scene);
 
@@ -285,6 +307,7 @@ public class StageTest {
 
     @Test
     public void testSetBoundsNotLostForAsyncNotifications() {
+        s.show();
         s.setX(20);
         s.setY(50);
         s.setWidth(400);
@@ -309,6 +332,7 @@ public class StageTest {
 
     @Test
     public void testFullscreenNotLostForAsyncNotifications() {
+        s.show();
         peer.holdNotifications();
 
         s.setFullScreen(true);
@@ -327,6 +351,7 @@ public class StageTest {
 
     @Test
     public void testFullScreenNotification() {
+        s.show();
         peer.setFullScreen(true);
         assertTrue(s.isFullScreen());
         peer.setFullScreen(false);
@@ -335,6 +360,7 @@ public class StageTest {
 
     @Test
     public void testResizableNotLostForAsyncNotifications() {
+        s.show();
         peer.holdNotifications();
 
         s.setResizable(false);
@@ -353,6 +379,7 @@ public class StageTest {
 
     @Test
     public void testResizableNotification() {
+        s.show();
         peer.setResizable(false);
         assertFalse(s.isResizable());
         peer.setResizable(true);
@@ -361,6 +388,7 @@ public class StageTest {
 
     @Test
     public void testIconifiedNotLostForAsyncNotifications() {
+        s.show();
         peer.holdNotifications();
 
         s.setIconified(true);
@@ -379,6 +407,7 @@ public class StageTest {
 
     @Test
     public void testIconifiedNotification() {
+        s.show();
         peer.setIconified(true);
         assertTrue(s.isIconified());
         peer.setIconified(false);
@@ -387,6 +416,7 @@ public class StageTest {
 
     @Test
     public void testMaximixedNotLostForAsyncNotifications() {
+        s.show();
         peer.holdNotifications();
 
         s.setMaximized(true);
@@ -405,6 +435,7 @@ public class StageTest {
 
     @Test
     public void testMaximizedNotification() {
+        s.show();
         peer.setMaximized(true);
         assertTrue(s.isMaximized());
         peer.setMaximized(false);
@@ -413,6 +444,7 @@ public class StageTest {
 
     @Test
     public void testAlwaysOnTopNotLostForAsyncNotifications() {
+        s.show();
         peer.holdNotifications();
 
         s.setAlwaysOnTop(true);
@@ -431,6 +463,7 @@ public class StageTest {
 
     @Test
     public void testAlwaysOnTopNotification() {
+        s.show();
         peer.setAlwaysOnTop(true);
         assertTrue(s.isAlwaysOnTop());
         peer.setAlwaysOnTop(false);
@@ -439,6 +472,7 @@ public class StageTest {
 
     @Test
     public void testBoundsSetAfterPeerIsRecreated() {
+        s.show();
         s.setX(20);
         s.setY(50);
         s.setWidth(400);
@@ -517,5 +551,632 @@ public class StageTest {
         } catch (Exception e) {
             assertTrue(e instanceof NullPointerException, failMessage);
         }
+    }
+
+    @Test
+    public void relocateNullArgumentsThrowNPE() {
+        s.show();
+        assertNotNull(peer);
+        assertThrows(NullPointerException.class, () -> s.relocate(null, AnchorPoint.TOP_LEFT));
+        assertThrows(NullPointerException.class, () -> s.relocate(AnchorPoint.TOP_LEFT, null));
+
+        assertThrows(NullPointerException.class, () -> s.relocate(null, Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED));
+        assertThrows(NullPointerException.class, () -> s.relocate(AnchorPoint.TOP_LEFT, Insets.EMPTY, null, AnchorPolicy.FIXED));
+        assertThrows(NullPointerException.class, () -> s.relocate(AnchorPoint.TOP_LEFT, Insets.EMPTY, AnchorPoint.TOP_LEFT, null));
+        assertThrows(NullPointerException.class, () -> s.relocate(AnchorPoint.TOP_LEFT, null, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED));
+
+        assertThrows(NullPointerException.class, () -> s.relocate(null, null, Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED));
+        assertThrows(NullPointerException.class, () -> s.relocate(null, AnchorPoint.TOP_LEFT, Insets.EMPTY, null, AnchorPolicy.FIXED));
+        assertThrows(NullPointerException.class, () -> s.relocate(null, AnchorPoint.TOP_LEFT, Insets.EMPTY, AnchorPoint.TOP_LEFT, null));
+        assertThrows(NullPointerException.class, () -> s.relocate(null, AnchorPoint.TOP_LEFT, null, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED));
+    }
+
+    /**
+     * Tests that {@code relocate()} called before {@code show()} is applied when the stage is shown.
+     */
+    @Test
+    public void relocateBeforeShowPositionsStageOnShow() {
+        s.setWidth(300);
+        s.setHeight(200);
+        s.relocate(AnchorPoint.absolute(100, 120), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(100, peer.x, 0.0001);
+        assertEquals(120, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@code relocate()} called after {@code show()} updates the stage position immediately.
+     */
+    @Test
+    public void relocateAfterShowMovesStageImmediately() {
+        s.setWidth(300);
+        s.setHeight(200);
+        s.show();
+        s.relocate(AnchorPoint.absolute(200, 220), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        pulse();
+
+        assertEquals(200, peer.x, 0.0001);
+        assertEquals(220, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that proportional screen anchors resolve against visual bounds.
+     */
+    @Test
+    public void relocateWithProportionalScreenAnchorResolvesAgainstVisualBounds() {
+        // Visual bounds differ from full bounds (e.g., task bar / menu bar reserved area).
+        toolkit.setScreens(new ScreenConfiguration(0, 0, 800, 600, 0, 30, 800, 570, 96));
+
+        s.setWidth(200);
+        s.setHeight(100);
+
+        // Proportional screen anchors are resolved against visual bounds when no fullscreen stage is present.
+        s.relocate(AnchorPoint.proportional(0, 0), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(0, peer.x, 0.0001);
+        assertEquals(30, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that proportional screen anchors resolve against the stage's current screen.
+     */
+    @Test
+    public void relocateWithProportionalScreenAnchorUsesCurrentScreen() {
+        toolkit.setScreens(
+            new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96),
+            new ScreenConfiguration(800, 0, 800, 600, 800, 40, 800, 560, 96));
+
+        // Ensure the stage is on screen 2 when resolving the proportional screen anchor.
+        s.setX(850);
+        s.setY(10);
+        s.setWidth(200);
+        s.setHeight(200);
+
+        // Center stage on screen 2's visual bounds:
+        // screen center = (800 + 0.5*800, 40 + 0.5*560) = (1200, 320)
+        // stage top-left = center - (100, 100) = (1100, 220)
+        s.relocate(AnchorPoint.proportional(0.5, 0.5), Insets.EMPTY, AnchorPoint.CENTER, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(1100, peer.x, 0.0001);
+        assertEquals(220, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().get(0), Insets.EMPTY);
+        assertWithinBounds(peer, toolkit.getScreens().get(1), Insets.EMPTY);
+    }
+
+    /**
+     * Absolute screenAnchor is relative to the specified screen's reference rectangle.
+     */
+    @Test
+    public void relocateWithScreenParameterAbsoluteAnchorIsRelativeToScreenVisualBounds() {
+        toolkit.setScreens(
+            new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96),
+            new ScreenConfiguration(800, 0, 800, 600, 800, 40, 800, 560, 96));
+
+        s.setWidth(100);
+        s.setHeight(100);
+
+        Screen screen2 = Screen.getScreens().get(1);
+
+        // Absolute coordinates are relative to the reference rectangle of screen2.
+        // Here: visual min = (800, 40), so (10, 20) => (810, 60)
+        s.relocate(screen2, AnchorPoint.absolute(10, 20), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(810, peer.x, 0.0001);
+        assertEquals(60, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().get(0), Insets.EMPTY);
+        assertWithinBounds(peer, toolkit.getScreens().get(1), Insets.EMPTY);
+    }
+
+    /**
+     * Proportional screenAnchor uses the specified screen even if the stage is currently on another screen.
+     */
+    @Test
+    public void relocateWithScreenParameterProportionalAnchorUsesSpecifiedScreen() {
+        toolkit.setScreens(
+            new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96),
+            new ScreenConfiguration(800, 0, 800, 600, 800, 40, 800, 560, 96));
+
+        s.setX(10);
+        s.setY(10);
+        s.setWidth(200);
+        s.setHeight(200);
+        s.show();
+
+        Screen screen2 = Screen.getScreens().get(1);
+
+        // Center of screen2 visual bounds:
+        // (800 + 0.5*800, 40 + 0.5*560) = (1200, 320)
+        // Stage anchor CENTER => top-left = (1200-100, 320-100) = (1100, 220)
+        s.relocate(screen2, AnchorPoint.proportional(0.5, 0.5), Insets.EMPTY, AnchorPoint.CENTER, AnchorPolicy.FIXED);
+        pulse();
+
+        assertEquals(1100, peer.x, 0.0001);
+        assertEquals(220, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().get(0), Insets.EMPTY);
+        assertWithinBounds(peer, toolkit.getScreens().get(1), Insets.EMPTY);
+    }
+
+    /**
+     * Constraints (screenPadding) are applied against the specified screen's usable bounds.
+     */
+    @Test
+    public void relocateWithScreenParameterHonorsPaddingOnSpecifiedScreen() {
+        toolkit.setScreens(
+            new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96),
+            new ScreenConfiguration(800, 0, 800, 600, 800, 40, 800, 560, 96));
+
+        s.setWidth(300);
+        s.setHeight(200);
+
+        Screen screen2 = Screen.getScreens().get(1);
+        Insets padding = new Insets(10, 20, 30, 40); // top, right, bottom, left
+
+        // Request a TOP_LEFT placement beyond bottom-right; should clamp within padded usable area.
+        // Screen2 visual: min=(800,40), size=(800,560)
+        // Padded usable maxX = 800+800-20 = 1580; maxY = 40+560-30 = 570
+        // Stage max top-left: x = 1580-300 = 1280; y = 570-200 = 370
+        s.relocate(screen2, AnchorPoint.absolute(800, 560), padding, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(1280, peer.x, 0.0001);
+        assertEquals(370, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().get(0), padding);
+        assertWithinBounds(peer, toolkit.getScreens().get(1), padding);
+    }
+
+    /**
+     * "Before show" path works with the screen overload too (deferred application).
+     */
+    @Test
+    public void relocateWithScreenParameterBeforeShowPositionsStageOnShow() {
+        toolkit.setScreens(
+            new ScreenConfiguration(0, 0, 800, 600, 0, 0, 800, 600, 96),
+            new ScreenConfiguration(800, 0, 800, 600, 800, 40, 800, 560, 96));
+
+        Screen screen2 = Screen.getScreens().get(1);
+
+        s.setWidth(120);
+        s.setHeight(80);
+        s.relocate(screen2, AnchorPoint.TOP_LEFT, Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(800, peer.x, 0.0001);
+        assertEquals(40, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().get(0), Insets.EMPTY);
+        assertWithinBounds(peer, toolkit.getScreens().get(1), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@code relocate()} called before show overrides any prior {@code centerOnScreen()} request.
+     */
+    @Test
+    public void relocateCancelsCenterOnScreenWhenCalledBeforeShow() {
+        s.setWidth(200);
+        s.setHeight(200);
+        s.centerOnScreen();
+
+        // If centerOnScreen were honored, we'd expect (300, 200) on 800x600.
+        // relocate should override/cancel it.
+        s.relocate(AnchorPoint.absolute(0, 0), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(0, peer.x, 0.0001);
+        assertEquals(0, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that enabled padding insets constrain the resulting stage position.
+     */
+    @Test
+    public void relocateHonorsPaddingForEnabledEdges() {
+        s.setWidth(200);
+        s.setHeight(200);
+
+        var padding = new Insets(10, 20, 30, 40); // top, right, bottom, left
+
+        // Ask to place the TOP_LEFT anchor beyond the bottom-right safe area to force adjustment
+        s.relocate(AnchorPoint.absolute(800, 600), padding, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        // Allowed top-left: x <= 800 - 20 - 200 = 580, y <= 600 - 30 - 200 = 370
+        assertEquals(580, peer.x, 0.0001);
+        assertEquals(370, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), padding);
+    }
+
+    /**
+     * Tests that negative insets disable constraints for the corresponding edges.
+     */
+    @Test
+    public void relocateNegativeInsetsDisableConstraintsPerEdge() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Disable right and bottom constraints (negative), keep left/top enabled at 0.
+        var padding = new Insets(0, -1, -1, 0);
+        s.relocate(AnchorPoint.absolute(790, 590), padding, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(790, peer.x, 0.0001);
+        assertEquals(590, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().getFirst(), padding);
+    }
+
+    /**
+     * Tests that a single enabled left-edge constraint is honored.
+     */
+    @Test
+    public void relocateOneSidedLeftConstraintOnly() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Enable left constraint (10), disable others
+        var padding = new Insets(-1, -1, -1, 10);
+        s.relocate(AnchorPoint.absolute(0, 100), padding, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(10, peer.x, 0.0001);
+        assertEquals(100, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), padding);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#FLIP_HORIZONTAL} selects a horizontally flipped anchor to avoid right overflow.
+     */
+    @Test
+    public void relocateFlipHorizontalFitsWithoutAdjustment() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // TOP_LEFT at (790,10) overflows to the right.
+        // TOP_RIGHT at (790,10) => rawX=790-300=490 fits.
+        s.relocate(AnchorPoint.absolute(790, 10), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FLIP_HORIZONTAL);
+        s.show();
+
+        assertEquals(490, peer.x, 0.0001);
+        assertEquals(10, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#AUTO} prefers a diagonal flip when both horizontal and vertical
+     * constraints are violated.
+     */
+    @Test
+    public void relocateAutoDiagonalBeatsAdjustOnly() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // TOP_LEFT at (790,590) overflows right and bottom.
+        // AUTO should choose BOTTOM_RIGHT (diagonal flip) => raw=(490,390) fits with no adjustment.
+        s.relocate(AnchorPoint.absolute(790, 590), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.AUTO);
+        s.show();
+
+        assertEquals(490, peer.x, 0.0001);
+        assertEquals(390, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#FLIP_HORIZONTAL} may still require vertical clamping after flipping.
+     */
+    @Test
+    public void relocateFlipHorizontalStillRequiresVerticalAdjustment() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Flip horizontally resolves X, but Y still needs adjustment.
+        // TOP_RIGHT raw = (490,590) => y clamps to 400.
+        s.relocate(AnchorPoint.absolute(790, 590), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FLIP_HORIZONTAL);
+        s.show();
+
+        assertEquals(490, peer.x, 0.0001);
+        assertEquals(400, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#FLIP_VERTICAL} may still require horizontal clamping after flipping.
+     */
+    @Test
+    public void relocateFlipVerticalStillRequiresHorizontalAdjustment() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Flip vertically resolves Y, but X still needs adjustment.
+        // BOTTOM_LEFT raw = (790,390) => x clamps to 500.
+        s.relocate(AnchorPoint.absolute(790, 590), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FLIP_VERTICAL);
+        s.show();
+
+        assertEquals(500, peer.x, 0.0001);
+        assertEquals(390, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#AUTO} flips horizontally when only the right constraint is enabled and violated.
+     */
+    @Test
+    public void relocateAutoWithRightOnlyConstraintFlipsHorizontally() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Only right edge constrained, others disabled
+        var constraints = new Insets(-1, 0, -1, -1);
+
+        // Preferred TOP_LEFT: rawX=790 => violates right constraint (maxX=500)
+        // AUTO should choose TOP_RIGHT: rawX = 790-300 = 490 (fits without adjustment)
+        s.relocate(AnchorPoint.absolute(790, 10), constraints, AnchorPoint.TOP_LEFT, AnchorPolicy.AUTO);
+        s.show();
+
+        assertEquals(490, peer.x, 0.0001);
+        assertEquals(10, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#AUTO} keeps the preferred anchor when flipping would worsen the adjustment.
+     */
+    @Test
+    public void relocateAutoWithLeftOnlyConstraintDoesNotFlipWhenFlipWouldBeWorse() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Only left edge constrained to x >= 10, others disabled
+        var constraints = new Insets(-1, -1, -1, 10);
+
+        // Preferred TOP_LEFT: rawX = 0 -> adjusted to 10 (cost 10)
+        // Flipped TOP_RIGHT: rawX = 0-300 = -300 -> adjusted to 10 (cost 310)
+        // AUTO may consider the flip, but should keep the original anchor as "better".
+        s.relocate(AnchorPoint.absolute(0, 10), constraints, AnchorPoint.TOP_LEFT, AnchorPolicy.AUTO);
+        s.show();
+
+        assertEquals(10, peer.x, 0.0001);
+        assertEquals(10, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#AUTO} flips vertically when only the bottom constraint is enabled and violated.
+     */
+    @Test
+    public void relocateAutoWithBottomOnlyConstraintFlipsVertically() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Only bottom constrained, others disabled
+        var constraints = new Insets(-1, -1, 0, -1);
+
+        // Preferred TOP_LEFT at y=590 => rawY=590 violates bottom maxY=400
+        // Vertical flip to BOTTOM_LEFT yields rawY=590-200=390 (fits)
+        s.relocate(AnchorPoint.absolute(100, 590), constraints, AnchorPoint.TOP_LEFT, AnchorPolicy.AUTO);
+        s.show();
+
+        assertEquals(100, peer.x, 0.0001);
+        assertEquals(390, peer.y, 0.0001);
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#AUTO} ignores disabled edge constraints when deciding whether to flip.
+     */
+    @Test
+    public void relocateAutoIgnoresDisabledEdgesWhenDecidingWhetherToFlip() {
+        s.setWidth(300);
+        s.setHeight(200);
+
+        // Disable right constraint, enable left constraint (x >= 0).
+        // This means "overflow to the right is allowed", so AUTO should not flip horizontally
+        // just because rawX would exceed the screen width.
+        var constraints = new Insets(-1, -1, -1, 0);
+
+        s.relocate(AnchorPoint.absolute(790, 10), constraints, AnchorPoint.TOP_LEFT, AnchorPolicy.AUTO);
+        s.show();
+
+        // With only left constraint, rawX=790 is allowed (since right is disabled).
+        assertEquals(790.0, peer.x, 0.0001);
+        assertEquals(10.0, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().getFirst(), Insets.EMPTY);
+    }
+
+    /**
+     * Tests side selection when the stage cannot fit in the constrained span.
+     */
+    @Test
+    public void relocateWhenStageDoesNotFitInConstrainedSpanUsesAnchorToChooseSide() {
+        // Make a screen smaller than the stage, so maxX < minX (and maxY < minY).
+        toolkit.setScreens(new ScreenConfiguration(0, 0, 200, 200, 0, 0, 200, 200, 96));
+        s.setWidth(300);
+        s.setHeight(250);
+
+        // With TOP_LEFT, choose minX/minY in non-fit scenario.
+        s.relocate(AnchorPoint.absolute(0, 0), Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+        assertEquals(0, peer.x, 0.0001);
+        assertEquals(0, peer.y, 0.0001);
+
+        // Now recreate with TOP_RIGHT and ensure we choose maxX/minY in non-fit scenario.
+        s.hide();
+        s.setWidth(300);
+        s.setHeight(250);
+        s.relocate(AnchorPoint.absolute(0, 0), Insets.EMPTY, AnchorPoint.TOP_RIGHT, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(-100, peer.x, 0.0001); // maxX = 200 - 300 = -100
+        assertEquals(0, peer.y, 0.0001); // choose minY because TOP_RIGHT has y = 0
+    }
+
+    /**
+     * Tests that {@code relocate()} uses the screen containing the request point to apply constraints.
+     */
+    @Test
+    public void relocateUsesSecondScreenBoundsForConstraints() {
+        toolkit.setScreens(
+            new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96),
+            new ScreenConfiguration(1920, 160, 1440, 900, 1920, 160, 1440, 900, 96));
+
+        s.setWidth(400);
+        s.setHeight(300);
+
+        // Point on screen 2, but near its bottom-right corner.
+        var p = AnchorPoint.absolute(1920 + 1440 - 1, 160 + 900 - 1);
+        s.relocate(p, Insets.EMPTY, AnchorPoint.TOP_LEFT, AnchorPolicy.FIXED);
+        s.show();
+
+        // Clamp within screen 2: x <= 1920+1440-400 = 2960, y <= 160+900-300 = 760
+        assertEquals(2960, peer.x, 0.0001);
+        assertEquals(760, peer.y, 0.0001);
+        assertNotWithinBounds(peer, toolkit.getScreens().get(0), Insets.EMPTY);
+        assertWithinBounds(peer, toolkit.getScreens().get(1), Insets.EMPTY);
+    }
+
+    /**
+     * Tests {@code relocate()} behavior for a zero-size stage with proportional anchors (no NaN/Infinity).
+     */
+    @Test
+    public void relocateWithZeroSizeAndProportionalAnchorDoesNotProduceNaNAndConstrainsNormally() {
+        // Force zero size at positioning time.
+        s.setWidth(0);
+        s.setHeight(0);
+
+        // Enable all edges (Insets.EMPTY), so negative coordinate requests are constrained.
+        s.relocate(AnchorPoint.absolute(-10, -20), Insets.EMPTY, AnchorPoint.CENTER, AnchorPolicy.AUTO);
+        s.show();
+
+        // With width/height == 0, maxX == 800, and maxY == 600; raw is (-10, -20) => constrained to (0,0)
+        assertEquals(0, peer.x, 0.0001);
+        assertEquals(0, peer.y, 0.0001);
+        assertFalse(Double.isNaN(peer.x) || Double.isInfinite(peer.x));
+        assertFalse(Double.isNaN(peer.y) || Double.isInfinite(peer.y));
+    }
+
+    /**
+     * Tests side selection when constraints define an impossible usable area for a zero-size stage.
+     */
+    @Test
+    public void relocateWithZeroSizeAndImpossibleConstraintsChoosesSideUsingAnchorPosition() {
+        s.setWidth(0);
+        s.setHeight(0);
+
+        // Make the constrained space impossible even for a zero-size window:
+        // Horizontal: minX = 500, maxX = 800 - 400 - 0 = 400 => maxX < minX
+        // Vertical:   minY = 300, maxY = 600 - 400 - 0 = 200 => maxY < minY
+        var constraints = new Insets(300, 400, 400, 500);
+
+        // x = 0.25 => choose minX (since x <= 0.5)
+        // y = 0.75 => choose maxY (since y > 0.5)
+        var anchor = AnchorPoint.proportional(0.25, 0.75);
+
+        s.relocate(AnchorPoint.absolute(0, 0), constraints, anchor, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(500, peer.x, 0.0001);
+        assertEquals(200, peer.y, 0.0001);
+    }
+
+    /**
+     * Tests that zero-size relocation with absolute anchors does not divide by zero in fallback paths.
+     */
+    @Test
+    public void relocateWithZeroSizeAndAbsoluteAnchorDoesNotDivideByZero() {
+        s.setWidth(0);
+        s.setHeight(0);
+
+        // Force max < min to exercise the "choose side" fallback.
+        var constraints = new Insets(300, 400, 400, 500);
+        var anchor = AnchorPoint.absolute(10, 10);
+
+        s.relocate(AnchorPoint.absolute(0, 0), constraints, anchor, AnchorPolicy.FIXED);
+        s.show();
+
+        assertEquals(500, peer.x, 0.0001); // minX
+        assertEquals(300, peer.y, 0.0001); // minY
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#FIXED} constrains the stage within screen bounds for several anchors.
+     */
+    @ParameterizedTest
+    @MethodSource("relocateHonorsScreenBounds_arguments")
+    public void relocateWithFixedAnchorPolicyHonorsScreenBounds(
+            AnchorPoint stageAnchor,
+            Insets screenPadding,
+            double stageW, double stageH,
+            double requestX, double requestY) {
+        s.setWidth(stageW);
+        s.setHeight(stageH);
+        s.relocate(AnchorPoint.absolute(requestX, requestY), screenPadding, stageAnchor, AnchorPolicy.FIXED);
+        s.show();
+
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), screenPadding);
+    }
+
+    /**
+     * Tests that {@link AnchorPolicy#FIXED} constrains the stage within padded usable bounds for several anchors.
+     */
+    @ParameterizedTest
+    @MethodSource("relocateHonorsScreenBoundsWithPadding_arguments")
+    public void relocateWithFixedAnchorPolicyHonorsScreenBoundsWithPadding(
+            AnchorPoint stageAnchor,
+            Insets screenPadding,
+            double stageW, double stageH,
+            double requestX, double requestY) {
+        s.setWidth(stageW);
+        s.setHeight(stageH);
+        s.relocate(AnchorPoint.absolute(requestX, requestY), screenPadding, stageAnchor, AnchorPolicy.FIXED);
+        s.show();
+
+        assertWithinBounds(peer, toolkit.getScreens().getFirst(), screenPadding);
+    }
+
+    private static Stream<Arguments> relocateHonorsScreenBounds_arguments() {
+        return relocateHonorsScreenBounds_argumentsImpl(false);
+    }
+
+    private static Stream<Arguments> relocateHonorsScreenBoundsWithPadding_arguments() {
+        return relocateHonorsScreenBounds_argumentsImpl(true);
+    }
+
+    private static Stream<Arguments> relocateHonorsScreenBounds_argumentsImpl(boolean padding) {
+        final double screenW = 800;
+        final double screenH = 600;
+        final double stageW = 200;
+        final double stageH = 200;
+        final double overshoot = 10; // push past the edge to force adjustment
+        final var insets = padding ? new Insets(10, 20, 30, 40) : Insets.EMPTY;
+
+        Stream.Builder<Arguments> b = Stream.builder();
+        b.add(Arguments.of(AnchorPoint.TOP_LEFT, insets, stageW, stageH,
+                           screenW - stageW + overshoot, screenH - stageH + overshoot));
+        b.add(Arguments.of(AnchorPoint.TOP_RIGHT, insets, stageW, stageH,
+                           stageW - overshoot, screenH - stageH + overshoot));
+        b.add(Arguments.of(AnchorPoint.BOTTOM_LEFT, insets, stageW, stageH,
+                           screenW - stageW + overshoot, stageH - overshoot));
+        b.add(Arguments.of(AnchorPoint.BOTTOM_RIGHT, insets, stageW, stageH,
+                           stageW - overshoot, stageH - overshoot));
+        return b.build();
+    }
+
+    private static void assertWithinBounds(StubStage peer, ScreenConfiguration screen, Insets padding) {
+        assertTrue(isWithinBounds(peer, screen, padding), "Stage is not within bounds");
+    }
+
+    private static void assertNotWithinBounds(StubStage peer, ScreenConfiguration screen, Insets padding) {
+        assertFalse(isWithinBounds(peer, screen, padding), "Stage is within bounds");
+    }
+
+    private static boolean isWithinBounds(StubStage peer, ScreenConfiguration screen, Insets padding) {
+        return screen.getMinX() + padding.getLeft() <= peer.x
+            && screen.getMinY() + padding.getTop() <= peer.y
+            && screen.getMinX() + screen.getWidth() - padding.getRight() >= peer.x + peer.width
+            && screen.getMinY() + screen.getHeight() - padding.getBottom() >= peer.y + peer.height;
     }
 }
