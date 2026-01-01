@@ -193,7 +193,9 @@ public class HeaderBar extends Region {
      * @param value the {@code HeaderDragType}, or {@code null} to remove the flag
      */
     public static void setDragType(Node child, HeaderDragType value) {
-        dragTypeProperty(child).set(value);
+        if (getDragType(child) != value) {
+            dragTypeProperty(child).set(value);
+        }
     }
 
     /**
@@ -202,8 +204,15 @@ public class HeaderBar extends Region {
      * @param child the child node
      * @return the {@code HeaderDragType}, or {@code null} if not set
      */
+    @SuppressWarnings("unchecked")
     public static HeaderDragType getDragType(Node child) {
-        return dragTypeProperty(child).get();
+        if (!child.hasProperties()) {
+            return null;
+        }
+
+        return child.getProperties().get(HeaderDragType.class) instanceof ObjectProperty<?> property
+            ? ((ObjectProperty<HeaderDragType>)property).get()
+            : null;
     }
 
     /**
@@ -233,7 +242,9 @@ public class HeaderBar extends Region {
      * @param value the {@code HeaderButtonType}, or {@code null}
      */
     public static void setButtonType(Node child, HeaderButtonType value) {
-        buttonTypeProperty(child).set(value);
+        if (getButtonType(child) != value) {
+            buttonTypeProperty(child).set(value);
+        }
     }
 
     /**
@@ -242,8 +253,15 @@ public class HeaderBar extends Region {
      * @param child the child node
      * @return the {@code HeaderButtonType}, or {@code null}
      */
+    @SuppressWarnings("unchecked")
     public static HeaderButtonType getButtonType(Node child) {
-        return buttonTypeProperty(child).get();
+        if (!child.hasProperties()) {
+            return null;
+        }
+
+        return child.getProperties().get(HeaderButtonType.class) instanceof ObjectProperty<?> property
+            ? ((ObjectProperty<HeaderButtonType>)property).get()
+            : null;
     }
 
     /**

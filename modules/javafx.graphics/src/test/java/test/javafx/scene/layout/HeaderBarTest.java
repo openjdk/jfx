@@ -521,7 +521,6 @@ public class HeaderBarTest {
             final Box box1 = new Box(box2, 50, 0, 200, 100);
 
             TestHeaderBar() {
-                resize(250, 100);
                 setCenter(box1);
             }
         }
@@ -537,104 +536,193 @@ public class HeaderBarTest {
             }
         }
 
-        @Test
-         void pickDraggableNode() {
-            var headerBar = new TestHeaderBar();
-            HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE);
+        Stage stage;
+        Scene scene;
+        TestHeaderBar headerBar;
 
-            var scene = new Scene(headerBar, 250, 200);
-            var stage = new Stage();
+        @BeforeEach
+        void setup() {
+            headerBar = new TestHeaderBar();
+            headerBar.setManaged(false);
+            scene = new Scene(headerBar, 250, 200);
+            stage = new Stage();
             stage.setScene(scene);
             stage.show();
+            headerBar.resize(250, 100);
+        }
+
+        @AfterEach
+        void teardown() {
+            stage.close();
+        }
+
+        @Test
+        void pickDraggableNode() {
+            HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE);
 
             // 1. HeaderBar is always draggable
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 10, 10);
 
             // 2. box1 is draggable because its drag type is DRAGGABLE
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 60, 10);
 
             // 3. box2/box3/box4 are not draggable, because they don't inherit DRAGGABLE from box1
-            assertNull(pickHeaderArea(scene, 110, 10));
-            assertNull(pickHeaderArea(scene, 160, 10));
-            assertNull(pickHeaderArea(scene, 210, 10));
+            assertHeaderArea(null, 110, 10);
+            assertHeaderArea(null, 160, 10);
+            assertHeaderArea(null, 210, 10);
         }
 
         @Test
         void pickDraggableNodeInSubtree() {
-            var headerBar = new TestHeaderBar();
             HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE_SUBTREE);
 
-            var scene = new Scene(headerBar, 250, 200);
-            var stage = new Stage();
-            stage.setScene(scene);
-            stage.show();
-
             // 1. HeaderBar is always draggable
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 10, 10);
 
             // 2. box1 is draggable because its drag type is DRAGGABLE_SUBTREE
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 60, 10);
 
             // 3. box2/box3/box4 are draggable, because they inherit DRAGGABLE_SUBTREE from box1
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 110, 10));
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 160, 10));
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 210, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 110, 10);
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 160, 10);
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 210, 10);
         }
 
         @Test
         void stopInheritanceOfDraggableSubtree() {
-            var headerBar = new TestHeaderBar();
             HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE_SUBTREE);
             HeaderBar.setDragType(headerBar.box3, HeaderDragType.NONE);
 
-            var scene = new Scene(headerBar, 250, 200);
-            var stage = new Stage();
-            stage.setScene(scene);
-            stage.show();
-
             // 1. HeaderBar is always draggable
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 10, 10);
 
             // 2. box1 is draggable because its drag type is DRAGGABLE_SUBTREE
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 60, 10);
 
             // 3. box2 is draggable, because it inherits DRAGGABLE_SUBTREE from box1
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 110, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 110, 10);
 
             // 4. box3/box4 are not draggable, because NONE stops the inherited DRAGGABLE_SUBTREE
-            assertNull(pickHeaderArea(scene, 160, 10));
-            assertNull(pickHeaderArea(scene, 210, 10));
+            assertHeaderArea(null, 160, 10);
+            assertHeaderArea(null, 210, 10);
         }
 
         @Test
         void draggableNodeDoesNotStopInheritanceOfDraggableSubtree() {
-            var headerBar = new TestHeaderBar();
             HeaderBar.setDragType(headerBar.box1, HeaderDragType.DRAGGABLE_SUBTREE);
             HeaderBar.setDragType(headerBar.box3, HeaderDragType.DRAGGABLE);
 
-            var scene = new Scene(headerBar, 250, 200);
-            var stage = new Stage();
-            stage.setScene(scene);
-            stage.show();
-
             // 1. HeaderBar is always draggable
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 10, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 10, 10);
 
             // 2. box1 is draggable because its drag type is DRAGGABLE_SUBTREE
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 60, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 60, 10);
 
             // 3. box2 is draggable, because it inherits DRAGGABLE_SUBTREE from box1
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 110, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 110, 10);
 
             // 4. box3/box4 are draggable, because DRAGGABLE doesn't stop the inherited DRAGGABLE_SUBTREE from box1
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 160, 10));
-            assertEquals(HeaderAreaType.DRAGBAR, pickHeaderArea(scene, 210, 10));
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 160, 10);
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 210, 10);
         }
 
-        private static HeaderAreaType pickHeaderArea(Scene scene, double x, double y) {
+        @Test
+        void transparentSiblingIsOnlyDraggableOnExistingDraggableArea() {
+            var sibling = new Rectangle(100, 150);
+            sibling.setManaged(false);
+            HeaderBar.setDragType(sibling, HeaderDragType.TRANSPARENT);
+
+            var root = new StackPane(headerBar, sibling);
+            root.setManaged(false);
+            scene.setRoot(root);
+
+            // 1. Overlapping transparent sibling is draggable where it overlaps the HeaderBar
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 25, 90);
+
+            // 2. It is not draggable where it overlaps a non-draggable box on the HeaderBar
+            assertHeaderArea(null, 75, 90);
+
+            // 3. It is also not draggable outside the bounds of the HeaderBar
+            assertHeaderArea(null, 25, 110);
+        }
+
+        @Test
+        void childOfSiblingInheritsTransparentDragType() {
+            var sibling = new StackPane(new Rectangle(100, 150));
+            sibling.setManaged(false);
+            sibling.resize(100, 150);
+
+            scene.setRoot(new StackPane(headerBar, sibling));
+
+            // 1. Even though the sibling is TRANSPARENT, its child is not.
+            HeaderBar.setDragType(sibling, HeaderDragType.TRANSPARENT);
+            assertHeaderArea(null, 25, 90);
+
+            // 2. With TRANSPARENT_SUBTREE, the child inherits the transparent flag.
+            HeaderBar.setDragType(sibling, HeaderDragType.TRANSPARENT_SUBTREE);
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 25, 90);
+
+            // 3. Sibling is not draggable where it overlaps a non-draggable box on the HeaderBar
+            assertHeaderArea(null, 75, 90);
+
+            // 4. It is also not draggable outside the bounds of the HeaderBar
+            assertHeaderArea(null, 25, 110);
+        }
+
+        @Test
+        void draggableNodeInTransparentSubtree() {
+            var rect = new Rectangle(50, 50);
+            var area = new StackPane(rect);
+            area.setManaged(false);
+            area.resizeRelocate(50, 0, 50, 100);
+
+            headerBar.setLeft(area);
+            HeaderBar.setDragType(area, HeaderDragType.TRANSPARENT_SUBTREE);
+            HeaderBar.setDragType(rect, HeaderDragType.DRAGGABLE);
+
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 75, 25);
+        }
+
+        @Test
+        void draggableSubtreeInTransparentSubtree() {
+            var rect = new Rectangle(50, 50);
+            var area2 = new StackPane(rect);
+            area2.setManaged(false);
+            area2.resizeRelocate(50, 0, 50, 100);
+
+            var area1 = new StackPane(area2);
+            area1.setManaged(false);
+            area2.resizeRelocate(50, 0, 50, 100);
+
+            headerBar.setLeft(area1);
+            HeaderBar.setDragType(area1, HeaderDragType.TRANSPARENT_SUBTREE);
+            HeaderBar.setDragType(area2, HeaderDragType.DRAGGABLE_SUBTREE);
+
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 75, 25);
+        }
+
+        @Test
+        void transparentSubtreeInDraggableSubtree() {
+            var rect = new Rectangle(50, 50);
+            var area2 = new StackPane(rect);
+            area2.setManaged(false);
+            area2.resizeRelocate(50, 0, 50, 100);
+
+            var area1 = new StackPane(area2);
+            area1.setManaged(false);
+            area2.resizeRelocate(50, 0, 50, 100);
+
+            headerBar.setLeft(area1);
+            HeaderBar.setDragType(area1, HeaderDragType.DRAGGABLE_SUBTREE);
+            HeaderBar.setDragType(area2, HeaderDragType.TRANSPARENT_SUBTREE);
+
+            assertHeaderArea(HeaderAreaType.DRAGBAR, 75, 25);
+        }
+
+        private void assertHeaderArea(HeaderAreaType expected, double x, double y) {
             var peer = (StubScene)SceneHelper.getPeer(scene);
             TKSceneListener listener = ReflectionUtils.getFieldValue(peer, "listener");
-            return listener.pickHeaderArea(x, y);
+            assertEquals(expected, listener.pickHeaderArea(x, y));
         }
     }
 }
