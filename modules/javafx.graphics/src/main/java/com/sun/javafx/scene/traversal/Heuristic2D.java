@@ -25,13 +25,13 @@
 
 package com.sun.javafx.scene.traversal;
 
-import static com.sun.javafx.scene.traversal.Direction.DOWN;
-import static com.sun.javafx.scene.traversal.Direction.LEFT;
-import static com.sun.javafx.scene.traversal.Direction.NEXT;
-import static com.sun.javafx.scene.traversal.Direction.NEXT_IN_LINE;
-import static com.sun.javafx.scene.traversal.Direction.PREVIOUS;
-import static com.sun.javafx.scene.traversal.Direction.RIGHT;
-import static com.sun.javafx.scene.traversal.Direction.UP;
+import static javafx.scene.TraversalDirection.DOWN;
+import static javafx.scene.TraversalDirection.LEFT;
+import static javafx.scene.TraversalDirection.NEXT;
+import static javafx.scene.TraversalDirection.NEXT_IN_LINE;
+import static javafx.scene.TraversalDirection.PREVIOUS;
+import static javafx.scene.TraversalDirection.RIGHT;
+import static javafx.scene.TraversalDirection.UP;
 import java.util.List;
 import java.util.Stack;
 import java.util.function.Function;
@@ -39,23 +39,28 @@ import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.TraversalDirection;
+import javafx.scene.TraversalPolicy;
 
-public class Heuristic2D implements Algorithm {
+public class Heuristic2D extends TraversalPolicy {
 
     Heuristic2D() {
     }
 
     @Override
-    public Node select(Node node, Direction dir, TraversalContext context) {
+    public Node select(Parent root, Node node, TraversalDirection dir) {
+        System.out.println(dir + " node=" + node);
         Node newNode = null;
 
         cacheTraversal(node, dir);
 
-        if (NEXT.equals(dir) || NEXT_IN_LINE.equals(dir)) {
-            newNode = TabOrderHelper.findNextFocusablePeer(node, context.getRoot(), dir == NEXT);
-        }
-        else if (PREVIOUS.equals(dir)) {
-            newNode = TabOrderHelper.findPreviousFocusablePeer(node, context.getRoot());
+        if (NEXT.equals(dir)) {
+            newNode = findNextFocusableNode(root, node);
+        } else if (NEXT_IN_LINE.equals(dir)) {
+            newNode = findNextInLineFocusableNode(root, node);
+        } else if (PREVIOUS.equals(dir)) {
+            newNode = findPreviousFocusableNode(root, node);
         }
         else if (UP.equals(dir) || DOWN.equals(dir) || LEFT.equals(dir) || RIGHT.equals(dir) ) {
             /*
@@ -77,11 +82,11 @@ public class Heuristic2D implements Algorithm {
                     switch (dir) {
                         case UP:
                         case DOWN:
-                            newNode = getNearestNodeUpOrDown(currentB, cachedB, context, dir);
+                            newNode = getNearestNodeUpOrDown(currentB, cachedB, root, dir);
                             break;
                         case LEFT:
                         case RIGHT:
-                            newNode = getNearestNodeLeftOrRight(currentB, cachedB, context, dir);
+                            newNode = getNearestNodeLeftOrRight(currentB, cachedB, root, dir);
                             break;
                         default:
                             break;
@@ -105,16 +110,16 @@ public class Heuristic2D implements Algorithm {
     }
 
     @Override
-    public Node selectFirst(TraversalContext context) {
-        return TabOrderHelper.getFirstTargetNode(context.getRoot());
+    public Node selectFirst(Parent root) {
+        return TabOrderHelper.getFirstTargetNode(root);
     }
 
     @Override
-    public Node selectLast(TraversalContext context) {
-        return TabOrderHelper.getLastTargetNode(context.getRoot());
+    public Node selectLast(Parent root) {
+        return TabOrderHelper.getLastTargetNode(root);
     }
 
-    private boolean isOnAxis(Direction dir, Bounds cur, Bounds tgt) {
+    private boolean isOnAxis(TraversalDirection dir, Bounds cur, Bounds tgt) {
 
         final double cmin, cmax, tmin, tmax;
 
@@ -138,7 +143,7 @@ public class Heuristic2D implements Algorithm {
      * Compute the out-distance to the near edge of the target in the
      * traversal direction. Negative means the near edge is "behind".
      */
-    private double outDistance(Direction dir, Bounds cur, Bounds tgt) {
+    private double outDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
 
         final double distance;
         if (dir == UP) {
@@ -160,7 +165,7 @@ public class Heuristic2D implements Algorithm {
      * Computes the side distance from current center to target center.
      * Always positive. This is only used for on-axis nodes.
      */
-    private double centerSideDistance(Direction dir, Bounds cur, Bounds tgt) {
+    private double centerSideDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
         final double cc; // current center
         final double tc; // target center
 
@@ -179,7 +184,7 @@ public class Heuristic2D implements Algorithm {
      * Computes the side distance between the closest corners of the current
      * and target. Always positive. This is only used for off-axis nodes.
      */
-    private double cornerSideDistance(Direction dir, Bounds cur, Bounds tgt) {
+    private double cornerSideDistance(TraversalDirection dir, Bounds cur, Bounds tgt) {
 
         final double distance;
 
@@ -208,12 +213,12 @@ public class Heuristic2D implements Algorithm {
     }
 
     protected Node cacheStartTraversalNode = null;
-    protected Direction cacheStartTraversalDirection = null;
+    protected TraversalDirection cacheStartTraversalDirection = null;
     protected boolean reverseDirection = false;
     protected Node cacheLastTraversalNode = null;
     protected Stack<Node> traversalNodeStack = new Stack();
 
-    private void cacheTraversal(Node node, Direction dir) {
+    private void cacheTraversal(Node node, TraversalDirection dir) {
         if (!traversalNodeStack.empty() && node != cacheLastTraversalNode) {
             /*
             ** we didn't get here by arrow key,
@@ -224,7 +229,7 @@ public class Heuristic2D implements Algorithm {
         /*
         ** Next or Previous cancels the row caching
         */
-        if (dir == Direction.NEXT || dir == Direction.PREVIOUS) {
+        if (dir == TraversalDirection.NEXT || dir == TraversalDirection.PREVIOUS) {
             traversalNodeStack.clear();
             reverseDirection = false;
         } else {
@@ -260,9 +265,9 @@ public class Heuristic2D implements Algorithm {
 
     private static final Function<Bounds, Double> BOUNDS_BOTTOM_SIDE = t -> t.getMaxY();
 
-    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
+    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, Parent root, TraversalDirection dir) {
 
-        List<Node> nodes = context.getAllTargetNodes();
+        List<Node> nodes = TraversalUtils.getAllTargetNodes(root);
 
         Function<Bounds, Double> ySideInDirection = dir == DOWN ? BOUNDS_BOTTOM_SIDE : BOUNDS_TOP_SIDE;
         Function<Bounds, Double> ySideInOpositeDirection = dir == DOWN ? BOUNDS_TOP_SIDE : BOUNDS_BOTTOM_SIDE;
@@ -554,9 +559,9 @@ public class Heuristic2D implements Algorithm {
 
     private static final Function<Bounds, Double> BOUNDS_RIGHT_SIDE = t -> t.getMaxX();
 
-    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
+    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, Parent root, TraversalDirection dir) {
 
-        List<Node> nodes = context.getAllTargetNodes();
+        List<Node> nodes = TraversalUtils.getAllTargetNodes(root);
 
         Function<Bounds, Double> xSideInDirection = dir == LEFT ? BOUNDS_LEFT_SIDE : BOUNDS_RIGHT_SIDE;
         Function<Bounds, Double> xSideInOpositeDirection = dir == LEFT ? BOUNDS_RIGHT_SIDE : BOUNDS_LEFT_SIDE;
