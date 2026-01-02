@@ -87,6 +87,10 @@ public enum HeaderDragType {
      * node behaves as if it were draggable, but only where it overlaps a draggable area of the header bar;
      * it does not create any additional draggable area.
      * <p>
+     * An interactive node (for example, a {@code Control}) should not be transparent in regard to draggable
+     * area hit testing. This can cause problems as both the header bar and the interactive node may react to
+     * mouse events in incompatible ways.
+     * <p>
      * This drag type does not apply to descendants of the node on which it is set. However, it does
      * not stop an inherited {@link #TRANSPARENT_SUBTREE} drag type from being inherited by descendants
      * of the node.
@@ -107,6 +111,10 @@ public enum HeaderDragType {
      * may overlap it (for example, a sibling shown on top of the header bar). In that case, the overlapping
      * node and its descendants behave as if they were draggable, but only where they overlap a draggable
      * area of the header bar; they do not create any additional draggable area.
+     * <p>
+     * An interactive node (for example, a {@code Control}) should not be transparent in regard to draggable
+     * area hit testing. This can cause problems as both the header bar and the interactive node may react to
+     * mouse events in incompatible ways.
      * <p>
      * This drag type is inherited by descendants of the node until a descendant specifies {@link #NONE}.
      *
