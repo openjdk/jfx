@@ -43,6 +43,8 @@
 
 #define ABM_GETAUTOHIDEBAREX 0x0000000b // multimon aware autohide bars
 
+#define HTUNSPECIFIED ('H' << 24 | 'T' << 16 | 'U' << 8 | 'N') // see WinWindow.java:nonClientHitTest
+
 // Helper LEAVE_MAIN_THREAD for GlassWindow
 #define LEAVE_MAIN_THREAD_WITH_hWnd  \
     HWND hWnd;  \
@@ -939,19 +941,23 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
     CheckAndClearException(env);
 
     // The left, right, and bottom resize borders are outside of the client area and are provided for free.
-    // In contrast, the top resize border is not outside, but inside the client area and below user controls.
-    // For example, if a control extends to the top of the client area, it covers the resize border at that
-    // location. We know that the cursor is on top of the caption area (and not on top of a control) when
-    // the nonClientHitTest() function returns HTCAPTION (instead of HTCLIENT). In this case, we apply the
-    // default resize border.
-    if (res == HTCAPTION) {
+    // In contrast, the top resize border is not outside, but inside the client area and may be below user
+    // controls. For example, if a control with HeaderDragType.NONE extends to the top of the client area,
+    // it covers the resize border at that location. We know that the cursor is on top of the caption area
+    // (and not on top of a control) when the nonClientHitTest() function returns HTCAPTION instead of
+    // HTCLIENT. In this case, we apply the default resize border.
+    // Note that HTUNSPECIFIED is a custom JavaFX classification that means the cursor is on the HeaderBar,
+    // but no user-specified HeaderDragType is known. In this case, we treat the current cursor position as
+    // HTTOP if the cursor is on the top resize border, and as HTCLIENT otherwise.
+    if (res == HTCAPTION || res == HTUNSPECIFIED) {
         // Note: there is no SM_CYPADDEDBORDER
         int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
         RECT windowRect;
 
         if (m_isResizable && ::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
-            result = LRESULT(HTTOP);
-            return TRUE;
+            res = HTTOP;
+        } else if (res == HTUNSPECIFIED) {
+            res = HTCLIENT;
         }
     }
 

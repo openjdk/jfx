@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,13 @@
 
 // Resize border width of EXTENDED windows
 #define RESIZE_BORDER_WIDTH 5
+
+// See GtkWindow.java:dragAreaHitTest.HitTestResult
+enum HitTestResult {
+    HT_UNSPECIFIED,
+    HT_CAPTION,
+    HT_CLIENT
+};
 
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
@@ -1433,11 +1440,11 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
 
     // Double-clicking on the drag area maximizes the window (or restores its size).
     if (is_resizable() && event->type == GDK_2BUTTON_PRESS) {
-        jboolean dragArea = mainEnv->CallBooleanMethod(
-            jwindow, jGtkWindowDragAreaHitTest, (jint)event->x, (jint)event->y);
+        jint hitTestResult = mainEnv->CallBooleanMethod(
+            jwindow, jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
         CHECK_JNI_EXCEPTION(mainEnv);
 
-        if (dragArea) {
+        if (hitTestResult == HT_CAPTION) {
             set_maximized(!is_maximized);
         }
 
@@ -1446,8 +1453,15 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
     }
 
     if (event->button == 1 && event->type == GDK_BUTTON_PRESS) {
+        jint hitTestResult = mainEnv->CallBooleanMethod(
+            jwindow, jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
+
         GdkWindowEdge edge;
-        bool shouldStartResizeDrag = is_resizable() && !is_maximized && get_window_edge(event->x, event->y, &edge);
+        bool shouldStartResizeDrag =
+            is_resizable() &&
+            !is_maximized &&
+            get_window_edge(event->x, event->y, &edge) &&
+            (edge != GDK_WINDOW_EDGE_NORTH || hitTestResult != HT_CLIENT);
 
         // Clicking on a window edge starts a move-resize operation.
         if (shouldStartResizeDrag) {
@@ -1464,12 +1478,8 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
             return;
         }
 
-        bool shouldStartMoveDrag = mainEnv->CallBooleanMethod(
-            jwindow, jGtkWindowDragAreaHitTest, (jint)event->x, (jint)event->y);
-        CHECK_JNI_EXCEPTION(mainEnv);
-
         // Clicking on a draggable area starts a move-drag operation.
-        if (shouldStartMoveDrag) {
+        if (hitTestResult == HT_CAPTION) {
             // Send a synthetic PRESS + RELEASE to FX.
             WindowContextBase::process_mouse_button(event, true);
             event->type = GDK_BUTTON_RELEASE;
@@ -1500,6 +1510,15 @@ void WindowContextTop::process_mouse_motion(GdkEventMotion* event) {
             || frame_type != EXTENDED
             || !is_resizable()
             || !get_window_edge(event->x, event->y, &edge)) {
+        set_cursor_override(NULL);
+        WindowContextBase::process_mouse_motion(event);
+        return;
+    }
+
+    jint hitTestResult = mainEnv->CallBooleanMethod(
+        jwindow, jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
+
+    if (edge == GDK_WINDOW_EDGE_NORTH && hitTestResult == HT_CLIENT) {
         set_cursor_override(NULL);
         WindowContextBase::process_mouse_motion(event);
         return;

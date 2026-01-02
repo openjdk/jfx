@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import com.sun.javafx.util.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.event.EventUtil;
@@ -3110,6 +3109,10 @@ public class Scene implements EventTarget {
             getRoot().pickNode(headerAreaPickRay, headerAreaPickResultChooser);
             PickResult result = headerAreaPickResultChooser.toPickResult();
             headerAreaPickResultChooser.reset();
+            if (result == null) {
+                return null;
+            }
+
             Node intersectedNode = result.getIntersectedNode();
             HeaderDragType dragType = intersectedNode instanceof HeaderBar ? HeaderDragType.DRAGGABLE : null;
 
@@ -3119,7 +3122,9 @@ public class Scene implements EventTarget {
                         || dragType == HeaderDragType.DRAGGABLE
                         || HeaderBar.getDragType(result.getIntersectedNode()) == HeaderDragType.DRAGGABLE
                             ? HeaderAreaType.DRAGBAR
-                            : null;
+                            : dragType != HeaderDragType.NONE
+                                ? HeaderAreaType.UNSPECIFIED
+                                : null;
                 }
 
                 if (HeaderBar.getButtonType(intersectedNode) instanceof HeaderButtonType type) {

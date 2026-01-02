@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,8 @@ import javafx.scene.Node;
 public enum HeaderDragType {
 
     /**
-     * The node is not a draggable part of the {@code HeaderBar}, and not transparent in regard to
-     * draggable-area hit testing.
+     * The node and its descendants are not a draggable part of the {@code HeaderBar}, and not transparent
+     * in regard to draggable-area hit testing.
      * <p>
      * If the node inherits {@link #DRAGGABLE_SUBTREE} or {@link #TRANSPARENT_SUBTREE} from its parent,
      * the inheritance stops and descendants of the node will not inherit either drag type.

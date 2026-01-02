@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -515,10 +515,10 @@ public class HeaderBarTest {
          * </pre>
          */
         private static class TestHeaderBar extends HeaderBar {
-            final Box box4 = new Box(null, 50, 0, 50, 100);
-            final Box box3 = new Box(box4, 50, 0, 100, 100);
-            final Box box2 = new Box(box3, 50, 0, 150, 100);
-            final Box box1 = new Box(box2, 50, 0, 200, 100);
+            final Box box4 = new Box("box4", null, 50, 0, 50, 100);
+            final Box box3 = new Box("box3", box4, 50, 0, 100, 100);
+            final Box box2 = new Box("box2", box3, 50, 0, 150, 100);
+            final Box box1 = new Box("box1", box2, 50, 0, 200, 100);
 
             TestHeaderBar() {
                 setCenter(box1);
@@ -526,13 +526,21 @@ public class HeaderBarTest {
         }
 
         private static class Box extends StackPane {
-            Box(Node child, double x, double y, double width, double height) {
+            final String name;
+
+            Box(String name, Node child, double x, double y, double width, double height) {
+                this.name = name;
                 setManaged(false);
                 resizeRelocate(x, y, width, height);
 
                 if (child != null) {
                     getChildren().add(child);
                 }
+            }
+
+            @Override
+            public String toString() {
+                return name;
             }
         }
 
@@ -567,9 +575,9 @@ public class HeaderBarTest {
             assertHeaderArea(HeaderAreaType.DRAGBAR, 60, 10);
 
             // 3. box2/box3/box4 are not draggable, because they don't inherit DRAGGABLE from box1
-            assertHeaderArea(null, 110, 10);
-            assertHeaderArea(null, 160, 10);
-            assertHeaderArea(null, 210, 10);
+            assertHeaderArea(HeaderAreaType.UNSPECIFIED, 110, 10);
+            assertHeaderArea(HeaderAreaType.UNSPECIFIED, 160, 10);
+            assertHeaderArea(HeaderAreaType.UNSPECIFIED, 210, 10);
         }
 
         @Test
@@ -640,7 +648,7 @@ public class HeaderBarTest {
             assertHeaderArea(HeaderAreaType.DRAGBAR, 25, 90);
 
             // 2. It is not draggable where it overlaps a non-draggable box on the HeaderBar
-            assertHeaderArea(null, 75, 90);
+            assertHeaderArea(HeaderAreaType.UNSPECIFIED, 75, 90);
 
             // 3. It is also not draggable outside the bounds of the HeaderBar
             assertHeaderArea(null, 25, 110);
@@ -663,7 +671,7 @@ public class HeaderBarTest {
             assertHeaderArea(HeaderAreaType.DRAGBAR, 25, 90);
 
             // 3. Sibling is not draggable where it overlaps a non-draggable box on the HeaderBar
-            assertHeaderArea(null, 75, 90);
+            assertHeaderArea(HeaderAreaType.UNSPECIFIED, 75, 90);
 
             // 4. It is also not draggable outside the bounds of the HeaderBar
             assertHeaderArea(null, 25, 110);
