@@ -53,6 +53,9 @@ public enum HeaderDragType {
      * the node participates in draggable-area hit testing. If the node extends beyond the header bar, the
      * effective draggable area is extended accordingly.
      * <p>
+     * An interactive node (for example, a {@code Control}) should not be draggable. This can cause problems
+     * as both the header bar and the interactive node may react to mouse events in incompatible ways.
+     * <p>
      * This drag type does not apply to descendants of the node on which it is set. However, it does not stop
      * an inherited {@link #DRAGGABLE_SUBTREE} drag type from being inherited by descendants of the node.
      */
@@ -64,6 +67,9 @@ public enum HeaderDragType {
      * This drag type is only relevant for nodes that are descendants of the header bar. When set on a node,
      * the node and its descendants participate in draggable-area hit testing. If the node or its descendants
      * extend beyond the header bar, the effective draggable area is extended accordingly.
+     * <p>
+     * An interactive node (for example, a {@code Control}) should not be draggable. This can cause problems
+     * as both the header bar and the interactive node may react to mouse events in incompatible ways.
      * <p>
      * This drag type is inherited by descendants of the node until a descendant specifies {@link #NONE}.
      */
