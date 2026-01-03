@@ -26,9 +26,25 @@
 package javafx.scene.layout;
 
 import javafx.scene.Node;
+import javafx.stage.StageStyle;
 
 /**
- * Specifies whether a node is a draggable part of a {@link HeaderBar}.
+ * Specifies how a {@link Node} participates in {@link HeaderBar} draggable-area hit testing.
+ * <p>
+ * In stages with the {@link StageStyle#EXTENDED} style, the window can be moved (and on some platforms,
+ * resized near the top edge) by interacting with a draggable area. {@code HeaderBar} provides such an
+ * area in the scene graph, and uses {@code HeaderDragType} flags on nodes to decide which parts of the
+ * scene graph count as draggable, block an underlying draggable area, or are ignored during draggable
+ * area hit testing.
+ *
+ * <h2>Recommended usage</h2>
+ * <ul>
+ *   <li>Mark non-interactive "blank" areas as {@link #DRAGGABLE} / {@link #DRAGGABLE_SUBTREE}.
+ *   <li>Do <em>not</em> mark interactive controls (buttons, menu bars, text inputs) as draggable; use
+ *       {@link #NONE} on controls if you need them to explicitly opt out or stop inheritance.
+ *   <li>Mark overlays that may cover the header area as {@link #TRANSPARENT} / {@link #TRANSPARENT_SUBTREE}
+ *       so they do not obstruct existing draggable areas.
+ * </ul>
  *
  * @since 25
  * @deprecated This is a preview feature which may be changed or removed in a future release.
@@ -39,7 +55,9 @@ public enum HeaderDragType {
 
     /**
      * The node and its descendants are not a draggable part of the {@code HeaderBar}, and not transparent
-     * in regard to draggable-area hit testing.
+     * in regard to draggable-area hit testing. Explicitly opting out of draggability can be useful for
+     * controls that are flush with the top edge (for example a {@code MenuBar}), where some platforms
+     * may otherwise prioritize a window resize border over control interaction.
      * <p>
      * If the node inherits {@link #DRAGGABLE_SUBTREE} or {@link #TRANSPARENT_SUBTREE} from its parent,
      * the inheritance stops and descendants of the node will not inherit either drag type.
