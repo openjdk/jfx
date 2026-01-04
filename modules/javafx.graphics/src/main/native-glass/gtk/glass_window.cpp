@@ -1465,12 +1465,9 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
 
         // Clicking on a window edge starts a move-resize operation.
         if (shouldStartResizeDrag) {
-            // Send a synthetic PRESS + RELEASE to FX. This allows FX to do things that need to be done
-            // prior to resizing the window, like closing a popup menu. We do this because we won't be
-            // sending events to FX once the resize operation has started.
-            WindowContextBase::process_mouse_button(event, true);
-            event->type = GDK_BUTTON_RELEASE;
-            WindowContextBase::process_mouse_button(event, true);
+            // We send FocusUngrabEvent to FX before we start the resize-drag operation. This allows FX
+            // to do things that need to be done prior to resizing the window, like closing a popup menu.
+            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
 
             gint rx = 0, ry = 0;
             gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
@@ -1480,10 +1477,7 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
 
         // Clicking on a draggable area starts a move-drag operation.
         if (hitTestResult == HT_CAPTION) {
-            // Send a synthetic PRESS + RELEASE to FX.
-            WindowContextBase::process_mouse_button(event, true);
-            event->type = GDK_BUTTON_RELEASE;
-            WindowContextBase::process_mouse_button(event, true);
+            mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
 
             gint rx = 0, ry = 0;
             gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
@@ -1494,6 +1488,30 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
 
     // Call the base implementation for client area events.
     WindowContextBase::process_mouse_button(event);
+}
+
+void WindowContextTop::process_mouse_cross(GdkEventCrossing* event) {
+    // Delegate to the base implementation for non-EXTENDED windows.
+    if (frame_type != EXTENDED) {
+        WindowContextBase::process_mouse_cross(event);
+        return;
+    }
+
+    // We only send MouseEvent.EXIT if we didn't already send it when the cursor was moved
+    // from the client area to the resize border. This is indicated by is_mouse_entered
+    // being false at this point.
+    if (is_mouse_entered && event->type != GDK_ENTER_NOTIFY) {
+        is_mouse_entered = false;
+        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+            com_sun_glass_events_MouseEvent_EXIT,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            gdk_modifier_mask_to_glass(event->state),
+            JNI_FALSE,
+            JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 /*
@@ -1510,6 +1528,22 @@ void WindowContextTop::process_mouse_motion(GdkEventMotion* event) {
             || frame_type != EXTENDED
             || !is_resizable()
             || !get_window_edge(event->x, event->y, &edge)) {
+        // If is_mouse_entered is false at this point, the cursor was on the resize border just a moment
+        // ago (which doesn't count as a client area, even though it is on the window). Since the cursor
+        // has now entered the client area, we need to send MouseEvent.ENTER to FX.
+        if (!is_mouse_entered) {
+            is_mouse_entered = true;
+            mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+                com_sun_glass_events_MouseEvent_ENTER,
+                com_sun_glass_events_MouseEvent_BUTTON_NONE,
+                (jint) event->x, (jint) event->y,
+                (jint) event->x_root, (jint) event->y_root,
+                gdk_modifier_mask_to_glass(event->state),
+                JNI_FALSE,
+                JNI_FALSE);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
+
         set_cursor_override(NULL);
         WindowContextBase::process_mouse_motion(event);
         return;
@@ -1553,6 +1587,22 @@ void WindowContextTop::process_mouse_motion(GdkEventMotion* event) {
     // If the cursor is not on a resize border, call the base handler.
     if (cursor == NULL) {
         WindowContextBase::process_mouse_motion(event);
+        return;
+    }
+
+    // If the cursor has moved to a resize border, we need to send MouseEvent.EXIT to FX,
+    // since from the perspective of FX, resize borders are not a part of client area.
+    if (is_mouse_entered && jview) {
+        is_mouse_entered = false;
+        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+            com_sun_glass_events_MouseEvent_EXIT,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            gdk_modifier_mask_to_glass(event->state),
+            JNI_FALSE,
+            JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
     }
 }
 
