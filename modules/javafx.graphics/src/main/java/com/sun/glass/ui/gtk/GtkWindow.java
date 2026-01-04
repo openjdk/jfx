@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -262,7 +262,7 @@ class GtkWindow extends Window {
     }
 
     /**
-     * Returns whether the window is draggable at the specified coordinate.
+     * Classifies the window region at the specified physical coordinate.
      * <p>
      * This method is called from native code.
      *
@@ -270,24 +270,35 @@ class GtkWindow extends Window {
      * @param y the Y coordinate in physical pixels
      */
     @SuppressWarnings("unused")
-    private boolean dragAreaHitTest(int x, int y) {
+    private int nonClientHitTest(int x, int y) {
+        // See glass_window.cpp:HitTestResult
+        enum HitTestResult {
+            HT_UNSPECIFIED,
+            HT_CAPTION,
+            HT_CLIENT
+        }
+
         // A full-screen window has no draggable area.
         if (view == null || view.isInFullscreen() || !isExtendedWindow()) {
-            return false;
+            return HitTestResult.HT_CLIENT.ordinal();
         }
 
         double wx = x / platformScaleX;
         double wy = y / platformScaleY;
 
         if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay && overlay.buttonAt(wx, wy) != null) {
-            return false;
+            return HitTestResult.HT_CLIENT.ordinal();
         }
 
         View.EventHandler eventHandler = view.getEventHandler();
         if (eventHandler == null) {
-            return false;
+            return HitTestResult.HT_CLIENT.ordinal();
         }
 
-        return eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR;
+        return switch (eventHandler.pickHeaderArea(wx, wy)) {
+            case UNSPECIFIED -> HitTestResult.HT_UNSPECIFIED.ordinal();
+            case DRAGBAR -> HitTestResult.HT_CAPTION.ordinal();
+            case null, default -> HitTestResult.HT_CLIENT.ordinal();
+        };
     }
 }

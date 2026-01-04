@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,7 +81,7 @@ jfieldID jWindowPtr;
 jfieldID jCursorPtr;
 
 jmethodID jGtkWindowNotifyStateChanged;
-jmethodID jGtkWindowDragAreaHitTest;
+jmethodID jGtkWindowNonClientHitTest;
 
 jmethodID jClipboardContentChanged;
 
@@ -272,7 +272,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jGtkWindowNotifyStateChanged = env->GetMethodID(clazz, "notifyStateChanged", "(I)V");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jGtkWindowDragAreaHitTest = env->GetMethodID(clazz, "dragAreaHitTest", "(II)Z");
+    jGtkWindowNonClientHitTest = env->GetMethodID(clazz, "nonClientHitTest", "(II)I");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Clipboard");
