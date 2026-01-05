@@ -52,7 +52,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.Window;
 import com.oracle.demo.richtext.util.FX;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -82,9 +81,9 @@ public class ParagraphDialog extends Stage {
         Tabs...
      */
 
-    public ParagraphDialog(Window parent, RichTextArea editor) {
+    public ParagraphDialog(RichTextArea editor) {
         this.editor = editor;
-        initOwner(parent);
+        initOwner(FX.getParentWindow(editor));
         initModality(Modality.APPLICATION_MODAL);
 
         // FIX cannot set <null> value

@@ -141,6 +141,8 @@ public class RichEditorDemoWindow extends Stage {
         FX.item(m, "Italic", actions.italic).setAccelerator(KeyCombination.keyCombination("shortcut+I"));
         FX.item(m, "Strike Through", actions.strikeThrough);
         FX.item(m, "Underline", actions.underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
+        FX.separator(m);
+        FX.item(m, "Paragraph...", actions.paragraphStyle);
 
         // view
         FX.menu(m, "View");
@@ -173,7 +175,7 @@ public class RichEditorDemoWindow extends Stage {
         FX.item(m, "Select All", actions.selectAll);
         FX.separator(m);
         // TODO Font...
-        FX.item(m, "Paragraph...", this::showParagraphDialog);
+        FX.item(m, "Paragraph...", actions.paragraphStyle);
         return m;
     }
 
@@ -202,9 +204,5 @@ public class RichEditorDemoWindow extends Stage {
 
     private void openSettings() {
         new SettingsWindow(this).show();
-    }
-
-    private void showParagraphDialog() {
-        new ParagraphDialog(this, editor).show();
     }
 }

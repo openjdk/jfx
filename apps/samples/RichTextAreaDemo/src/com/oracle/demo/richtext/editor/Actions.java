@@ -90,6 +90,7 @@ public class Actions {
     public final FxAction italic = new FxAction(this::italic);
     public final FxAction strikeThrough = new FxAction(this::strikeThrough);
     public final FxAction underline = new FxAction(this::underline);
+    public final FxAction paragraphStyle = new FxAction(this::showParagraphDialog);
     // editing
     public final FxAction copy = new FxAction(this::copy);
     public final FxAction cut = new FxAction(this::cut);
@@ -167,7 +168,12 @@ public class Actions {
         
         toolbar.underline.selectedProperty().bindBidirectional(underline.selectedProperty());
         toolbar.underline.setOnAction((_) -> underline());
-        
+
+        paragraphStyle.attach(toolbar.paragraphButton);
+        paragraphStyle.disabledProperty().bind(Bindings.createBooleanBinding(() -> {
+            return editor.getSelection() == null;
+        }, editor.selectionProperty()));
+
         toolbar.lineNumbers.selectedProperty().bindBidirectional(lineNumbers.selectedProperty());
         toolbar.lineNumbers.setOnAction((_) -> focusEditor());
         lineNumbers.selectedProperty().addListener((s,p,on) -> {
@@ -634,5 +640,10 @@ public class Actions {
 
     private void focusEditor() {
         editor.requestFocus();
+    }
+
+
+    private void showParagraphDialog() {
+        new ParagraphDialog(editor).show();
     }
 }

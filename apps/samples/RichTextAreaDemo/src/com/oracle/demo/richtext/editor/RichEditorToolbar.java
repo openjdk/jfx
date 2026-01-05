@@ -34,6 +34,7 @@ package com.oracle.demo.richtext.editor;
 
 import java.util.List;
 import javafx.geometry.Insets;
+import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ToggleButton;
@@ -58,6 +59,7 @@ public class RichEditorToolbar extends ToolBar {
     public final ToggleButton italic;
     public final ToggleButton strikeThrough;
     public final ToggleButton underline;
+    public final Button paragraphButton;
     public final ToggleButton lineNumbers;
     public final ToggleButton wrapText;
 
@@ -114,6 +116,8 @@ public class RichEditorToolbar extends ToolBar {
         strikeThrough = FX.toggleButton(this, "S\u0336", "Strike through text");
         underline = FX.toggleButton(this, "U\u0332", "Underline text");
         FX.add(this, textStyle);
+        paragraphButton = FX.button(this, "P", "Paragraph Styles", null);
+        FX.space(this);
         lineNumbers = FX.toggleButton(this, "N", "Line Numbers");
         wrapText = FX.toggleButton(this, "W", "Wrap Text");
 

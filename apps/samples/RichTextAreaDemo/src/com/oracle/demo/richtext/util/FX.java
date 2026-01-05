@@ -254,7 +254,9 @@ public class FX {
     public static Button button(ToolBar t, String text, String tooltip, FxAction a) {
         Button b = new Button(text);
         b.setTooltip(new Tooltip(tooltip));
-        a.attach(b);
+        if (a != null) {
+            a.attach(b);
+        }
         t.getItems().add(b);
         return b;
     }
