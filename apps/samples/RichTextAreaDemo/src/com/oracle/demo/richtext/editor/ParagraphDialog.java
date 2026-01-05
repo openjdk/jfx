@@ -37,6 +37,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
@@ -65,31 +66,40 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
  */
 public class ParagraphDialog extends Stage {
     private final RichTextArea editor;
+    private final ColorPicker background;
     private final ComboBox<TextAlignment> alignment;
     private final RadioButton ltrButton;
     private final RadioButton rtlButton;
+    private final ComboBox<Double> beforeText;
+    private final ComboBox<Double> afterText;
+    private final ComboBox<Double> spaceAbove;
+    private final ComboBox<Double> spaceBelow;
 
     /** TODO
-        BACKGROUND
-        BULLET
-        FIRST_LINE_INDENT
-        LINE_SPACING
-        PARAGRAPH_DIRECTION
-        SPACE_ABOVE
-        SPACE_BELOW
-        SPACE_LEFT
-        SPACE_RIGHT
-        TEXT_ALIGNMENT
+        General:
+            BULLET
+            FIRST_LINE_INDENT (* broken)
+        Tabs...
      */
 
     public ParagraphDialog(Window parent, RichTextArea editor) {
         this.editor = editor;
         initOwner(parent);
         initModality(Modality.APPLICATION_MODAL);
+
+        // FIX cannot set <null> value
+        background = new ColorPicker();
+        background.setStyle("-fx-color-label-visible: false;");
+        background.setValue(null);
         
         alignment = new ComboBox<>();
         alignment.getItems().setAll(TextAlignment.values());
         alignment.setConverter(FX.converter(this::toString));
+        
+        beforeText = combo();
+        afterText = combo();
+        spaceAbove = combo();
+        spaceBelow = combo();
         
         ltrButton = new RadioButton("Left-to-right");
         rtlButton = new RadioButton("Right-to-left");
@@ -120,6 +130,12 @@ public class ParagraphDialog extends Stage {
         int r = 0;
         g.add(heading("General"), 0, r, 3, 1);
         r++;
+        g.add(new Label("Background:"), 1, r);
+        g.add(background, 2, r);
+        //r++;
+        //g.add(new Label("Bullet:"), 1, r);
+        // TODO g.add(background, 2, r);
+        r++;
         g.add(new Label("Alignment:"), 1, r);
         g.add(alignment, 2, r);
         r++;
@@ -128,7 +144,23 @@ public class ParagraphDialog extends Stage {
         r++;
         g.add(separator(), 0, r, 3, 1);
         r++;
+        g.add(heading("Indentation"), 0, r, 3, 1);
+        r++;
+        g.add(new Label("Before Text:"), 1, r);
+        g.add(beforeText, 2, r);
+        r++;
+        g.add(new Label("After Text:"), 1, r);
+        g.add(afterText, 2, r);
+        r++;
+        g.add(separator(), 0, r, 3, 1);
+        r++;
         g.add(heading("Spacing"), 0, r, 3, 1);
+        r++;
+        g.add(new Label("Before:"), 1, r);
+        g.add(spaceAbove, 2, r);
+        r++;
+        g.add(new Label("After:"), 1, r);
+        g.add(spaceBelow, 2, r);
         
         ButtonBar bb = new ButtonBar();
         bb.getButtons().setAll(
@@ -149,16 +181,17 @@ public class ParagraphDialog extends Stage {
                 hide();
             }
         });
+
         // TODO center in window
-        
+
         load();
     }
 
     private String toString(TextAlignment a) {
-        if(a == null) {
+        if (a == null) {
             return "";
         }
-        return switch(a) {
+        return switch (a) {
         case CENTER -> "Center";
         case JUSTIFY -> "Justify";
         case LEFT -> "Left";
@@ -181,8 +214,29 @@ public class ParagraphDialog extends Stage {
         return n;
     }
 
+    private static ComboBox<Double> combo() {
+        ComboBox<Double> c = new ComboBox<>();
+        c.getItems().setAll(
+            null,
+            0.0,
+            10.0,
+            50.0,
+            100.0
+        );
+        c.setEditable(true);
+        c.setConverter(FX.numberConverter());
+        return c;
+    }
+
+    private static void load(ComboBox<Double> c, Double val) {
+        c.setValue(val);
+    }
+
     private void load() {
         StyleAttributeMap a = editor.getActiveStyleAttributeMap();
+
+        background.setValue(a.getBackground());
+
         FX.select(alignment, a.getTextAlignment(), TextAlignment.LEFT);
 
         ParagraphDirection dir = a.getParagraphDirection();
@@ -191,12 +245,22 @@ public class ParagraphDialog extends Stage {
         }
         ltrButton.setSelected(dir == ParagraphDirection.LEFT_TO_RIGHT);
         rtlButton.setSelected(dir == ParagraphDirection.RIGHT_TO_LEFT);
+        load(beforeText, a.getSpaceLeft());
+        load(afterText, a.getSpaceRight());
+        load(spaceAbove, a.getSpaceAbove());
+        load(spaceBelow, a.getSpaceBelow());
     }
 
     private StyleAttributeMap getAttributes() {
         StyleAttributeMap.Builder b = StyleAttributeMap.builder();
-        b.setTextAlignment(alignment.getSelectionModel().getSelectedItem());
+        b.setBackground(background.getValue());
         b.setParagraphDirection(rtlButton.isSelected() ? ParagraphDirection.RIGHT_TO_LEFT : ParagraphDirection.LEFT_TO_RIGHT);
+        b.setTextAlignment(alignment.getSelectionModel().getSelectedItem());
+        // perhaps Builder.setXXX(double) should accept a Double instead
+        b.set(StyleAttributeMap.SPACE_LEFT, beforeText.getValue());
+        b.set(StyleAttributeMap.SPACE_RIGHT, afterText.getValue());
+        b.set(StyleAttributeMap.SPACE_ABOVE, spaceAbove.getValue());
+        b.set(StyleAttributeMap.SPACE_BELOW, spaceBelow.getValue());
         return b.build();
     }
 
