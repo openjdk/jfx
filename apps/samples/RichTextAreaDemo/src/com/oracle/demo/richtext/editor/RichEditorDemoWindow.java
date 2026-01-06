@@ -72,9 +72,9 @@ public class RichEditorDemoWindow extends Stage {
 
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));
-        
+
         actions = new Actions(toolbar, editor);
-        
+
         BorderPane cp = new BorderPane();
         cp.setTop(toolbar);
         cp.setCenter(editor);

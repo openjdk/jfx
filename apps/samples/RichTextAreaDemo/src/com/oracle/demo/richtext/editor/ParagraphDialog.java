@@ -104,12 +104,12 @@ public class ParagraphDialog extends Stage {
             "◉",
             "‣"
         );
-        
+
         beforeText = combo();
         afterText = combo();
         spaceAbove = combo();
         spaceBelow = combo();
-        
+
         ltrButton = new RadioButton("Left-to-right");
         rtlButton = new RadioButton("Right-to-left");
         new ToggleGroup().getToggles().setAll(ltrButton, rtlButton);
@@ -117,11 +117,11 @@ public class ParagraphDialog extends Stage {
         Button tabsButton = new Button("Tabs...");
         tabsButton.setDisable(true); // TODO
         ButtonBar.setButtonData(tabsButton, ButtonData.LEFT);
-        
+
         Button cancelButton = new Button("Cancel");
         cancelButton.setOnAction((_) -> hide());
         ButtonBar.setButtonData(cancelButton, ButtonData.CANCEL_CLOSE);
-        
+
         Button okButton = new Button("OK");
         okButton.setOnAction((_) -> commit());
         okButton.setDefaultButton(true);
@@ -170,14 +170,14 @@ public class ParagraphDialog extends Stage {
         r++;
         g.add(new Label("After:"), 1, r);
         g.add(spaceBelow, 2, r);
-        
+
         ButtonBar bb = new ButtonBar();
         bb.getButtons().setAll(
             tabsButton,
             cancelButton,
             okButton
         );
-        
+
         BorderPane bp = new BorderPane();
         bp.setPadding(new Insets(10));
         bp.setCenter(g);

@@ -154,9 +154,9 @@ public class Actions {
             handleSelection();
         });
         updateSourceStyles();
-        
+
         // toolbar
-        
+
         toolbar.bold.selectedProperty().bindBidirectional(bold.selectedProperty());
         toolbar.bold.setOnAction((_) -> bold());
 
@@ -165,7 +165,7 @@ public class Actions {
 
         toolbar.strikeThrough.selectedProperty().bindBidirectional(strikeThrough.selectedProperty());
         toolbar.strikeThrough.setOnAction((_) -> strikeThrough());
-        
+
         toolbar.underline.selectedProperty().bindBidirectional(underline.selectedProperty());
         toolbar.underline.setOnAction((_) -> underline());
 
@@ -209,7 +209,7 @@ public class Actions {
         });
 
         // settings
-        
+
         Settings.endKey.subscribe(this::setEndKey);
 
         // defaults
@@ -436,7 +436,7 @@ public class Actions {
         if (start == null) {
             return;
         }
-        
+
         StyleAttributeMap a = editor.getActiveStyleAttributeMap();
         boolean on = !a.getBoolean(attr);
 
@@ -641,7 +641,6 @@ public class Actions {
     private void focusEditor() {
         editor.requestFocus();
     }
-
 
     private void showParagraphDialog() {
         new ParagraphDialog(editor).show();
