@@ -667,12 +667,12 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             double val = Double.longBitsToDouble(is.readLong());
             SizeUnits units = SizeUnits.PX;
             String unitStr = strings[is.readShort()];
-            try {
-                units = Enum.valueOf(SizeUnits.class, unitStr);
-            } catch (IllegalArgumentException iae) {
-                System.err.println(iae.toString());
-            } catch (NullPointerException npe) {
-                System.err.println(npe.toString());
+            if (unitStr != null) {
+                try {
+                    units = Enum.valueOf(SizeUnits.class, unitStr);
+                } catch (IllegalArgumentException iae) {
+                    System.err.println(iae.toString());
+                }
             }
             return new ParsedValueImpl<Size,Size>(new Size(val,units), converter, lookup);
 
