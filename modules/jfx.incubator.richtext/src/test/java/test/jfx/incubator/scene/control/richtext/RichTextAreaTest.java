@@ -584,6 +584,13 @@ public class RichTextAreaTest {
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
         control.select(TextPos.ofLeading(0, 6));
         assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+
+        // verify that the model styles are used when insertStyles=null
+        control.setInsertStyles(null);
+        control.select(TextPos.ofLeading(0, 2));
+        type("**");
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
     }
 
     @Test
