@@ -34,6 +34,7 @@
 #include <com_sun_glass_events_KeyEvent.h>
 
 #include <com_sun_glass_ui_Window_Level.h>
+#include <com_sun_glass_ui_gtk_GtkWindow.h>
 
 #include <X11/extensions/shape.h>
 #include <cairo.h>
@@ -53,13 +54,6 @@
 
 // Resize border width of EXTENDED windows
 #define RESIZE_BORDER_WIDTH 5
-
-// See GtkWindow.java:dragAreaHitTest.HitTestResult
-enum HitTestResult {
-    HT_UNSPECIFIED,
-    HT_CAPTION,
-    HT_CLIENT
-};
 
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
@@ -1444,7 +1438,7 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
             jwindow, jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
         CHECK_JNI_EXCEPTION(mainEnv);
 
-        if (hitTestResult == HT_CAPTION) {
+        if (hitTestResult == com_sun_glass_ui_gtk_GtkWindow_HT_CAPTION) {
             set_maximized(!is_maximized);
         }
 
@@ -1461,7 +1455,7 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
             is_resizable() &&
             !is_maximized &&
             get_window_edge(event->x, event->y, &edge) &&
-            (edge != GDK_WINDOW_EDGE_NORTH || hitTestResult != HT_CLIENT);
+            (edge != GDK_WINDOW_EDGE_NORTH || hitTestResult != com_sun_glass_ui_gtk_GtkWindow_HT_CLIENT);
 
         // Clicking on a window edge starts a move-resize operation.
         if (shouldStartResizeDrag) {
@@ -1476,7 +1470,7 @@ void WindowContextTop::process_mouse_button(GdkEventButton* event, bool synthesi
         }
 
         // Clicking on a draggable area starts a move-drag operation.
-        if (hitTestResult == HT_CAPTION) {
+        if (hitTestResult == com_sun_glass_ui_gtk_GtkWindow_HT_CAPTION) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocusUngrab);
 
             gint rx = 0, ry = 0;
@@ -1552,7 +1546,7 @@ void WindowContextTop::process_mouse_motion(GdkEventMotion* event) {
     jint hitTestResult = mainEnv->CallBooleanMethod(
         jwindow, jGtkWindowNonClientHitTest, (jint)event->x, (jint)event->y);
 
-    if (edge == GDK_WINDOW_EDGE_NORTH && hitTestResult == HT_CLIENT) {
+    if (edge == GDK_WINDOW_EDGE_NORTH && hitTestResult == com_sun_glass_ui_gtk_GtkWindow_HT_CLIENT) {
         set_cursor_override(NULL);
         WindowContextBase::process_mouse_motion(event);
         return;

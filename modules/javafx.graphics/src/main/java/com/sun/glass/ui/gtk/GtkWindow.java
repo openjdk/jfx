@@ -32,7 +32,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.HeaderButtonOverlay;
-import com.sun.javafx.tk.HeaderAreaType;
+import java.lang.annotation.Native;
 
 class GtkWindow extends Window {
 
@@ -261,6 +261,10 @@ class GtkWindow extends Window {
         return overlay;
     }
 
+    @Native private static final int HT_UNSPECIFIED = 0;
+    @Native private static final int HT_CAPTION = 1;
+    @Native private static final int HT_CLIENT = 2;
+
     /**
      * Classifies the window region at the specified physical coordinate.
      * <p>
@@ -271,34 +275,27 @@ class GtkWindow extends Window {
      */
     @SuppressWarnings("unused")
     private int nonClientHitTest(int x, int y) {
-        // See glass_window.cpp:HitTestResult
-        enum HitTestResult {
-            HT_UNSPECIFIED,
-            HT_CAPTION,
-            HT_CLIENT
-        }
-
         // A full-screen window has no draggable area.
         if (view == null || view.isInFullscreen() || !isExtendedWindow()) {
-            return HitTestResult.HT_CLIENT.ordinal();
+            return HT_CLIENT;
         }
 
         double wx = x / platformScaleX;
         double wy = y / platformScaleY;
 
         if (headerButtonOverlay.get() instanceof HeaderButtonOverlay overlay && overlay.buttonAt(wx, wy) != null) {
-            return HitTestResult.HT_CLIENT.ordinal();
+            return HT_CLIENT;
         }
 
         View.EventHandler eventHandler = view.getEventHandler();
         if (eventHandler == null) {
-            return HitTestResult.HT_CLIENT.ordinal();
+            return HT_CLIENT;
         }
 
         return switch (eventHandler.pickHeaderArea(wx, wy)) {
-            case UNSPECIFIED -> HitTestResult.HT_UNSPECIFIED.ordinal();
-            case DRAGBAR -> HitTestResult.HT_CAPTION.ordinal();
-            case null, default -> HitTestResult.HT_CLIENT.ordinal();
+            case UNSPECIFIED -> HT_UNSPECIFIED;
+            case DRAGBAR -> HT_CAPTION;
+            case null, default -> HT_CLIENT;
         };
     }
 }
