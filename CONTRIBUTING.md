@@ -17,7 +17,7 @@ Feature requests
 
 If you find yourself wishing for a feature that doesn't exist in OpenJFX, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that OpenJFX has today have been added because our users saw the need. Please be aware that
 all new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.org/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
-[JBS issue](https://bugs.openjdk.org). See the [New features / API additions](#new-features--api-additions) section below for more information.
+[JBS issue](https://bugs.openjdk.org/projects/JDK). See the [New features / API additions](#new-features--api-additions) section below for more information.
 
 Contributing code and documentation changes
 -------------------------------------------
@@ -50,7 +50,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * File a bug in JBS for every pull request
 
-    A unique [JBS](https://bugs.openjdk.org) bug ID is needed for every
+    A unique [JBS](https://bugs.openjdk.org/projects/JDK) bug ID is needed for every
     pull request. If there isn't already a bug filed in JBS, then please
     file one at [bugreport.java.com](https://bugreport.java.com/).
     A developer with an active OpenJDK ID can file a bug directly in JBS.
