@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates.
+ * Copyright (c) 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -67,19 +67,14 @@ public class ParagraphDialog extends Stage {
     private final RichTextArea editor;
     private final ColorPicker background;
     private final ComboBox<TextAlignment> alignment;
+    private final ComboBox<String> bullet;
     private final RadioButton ltrButton;
     private final RadioButton rtlButton;
     private final ComboBox<Double> beforeText;
     private final ComboBox<Double> afterText;
     private final ComboBox<Double> spaceAbove;
     private final ComboBox<Double> spaceBelow;
-
-    /** TODO
-        General:
-            BULLET
-            FIRST_LINE_INDENT (* broken)
-        Tabs...
-     */
+    // TODO FIRST_LINE_INDENT (* broken)
 
     public ParagraphDialog(RichTextArea editor) {
         this.editor = editor;
@@ -94,6 +89,21 @@ public class ParagraphDialog extends Stage {
         alignment = new ComboBox<>();
         alignment.getItems().setAll(TextAlignment.values());
         alignment.setConverter(FX.converter(this::toString));
+
+        bullet = new ComboBox<>();
+        bullet.setEditable(true);
+        bullet.getItems().setAll(
+            null,
+            "•",
+            "○",
+            "●",
+            "☑",
+            "☐",
+            "⦾",
+            "⦿",
+            "◉",
+            "‣"
+        );
         
         beforeText = combo();
         afterText = combo();
@@ -131,9 +141,9 @@ public class ParagraphDialog extends Stage {
         r++;
         g.add(new Label("Background:"), 1, r);
         g.add(background, 2, r);
-        //r++;
-        //g.add(new Label("Bullet:"), 1, r);
-        // TODO g.add(background, 2, r);
+        r++;
+        g.add(new Label("Bullet:"), 1, r);
+        g.add(bullet, 2, r);
         r++;
         g.add(new Label("Alignment:"), 1, r);
         g.add(alignment, 2, r);
@@ -227,14 +237,11 @@ public class ParagraphDialog extends Stage {
         return c;
     }
 
-    private static void load(ComboBox<Double> c, Double val) {
-        c.setValue(val);
-    }
-
     private void load() {
         StyleAttributeMap a = editor.getActiveStyleAttributeMap();
 
         background.setValue(a.getBackground());
+        bullet.setValue(a.getBullet());
 
         FX.select(alignment, a.getTextAlignment(), TextAlignment.LEFT);
 
@@ -244,15 +251,16 @@ public class ParagraphDialog extends Stage {
         }
         ltrButton.setSelected(dir == ParagraphDirection.LEFT_TO_RIGHT);
         rtlButton.setSelected(dir == ParagraphDirection.RIGHT_TO_LEFT);
-        load(beforeText, a.getSpaceLeft());
-        load(afterText, a.getSpaceRight());
-        load(spaceAbove, a.getSpaceAbove());
-        load(spaceBelow, a.getSpaceBelow());
+        beforeText.setValue(a.getSpaceLeft());
+        afterText.setValue(a.getSpaceRight());
+        spaceAbove.setValue(a.getSpaceAbove());
+        spaceBelow.setValue(a.getSpaceBelow());
     }
 
     private StyleAttributeMap getAttributes() {
         StyleAttributeMap.Builder b = StyleAttributeMap.builder();
         b.setBackground(background.getValue());
+        b.setBullet(bullet.getValue());
         b.setParagraphDirection(rtlButton.isSelected() ? ParagraphDirection.RIGHT_TO_LEFT : ParagraphDirection.LEFT_TO_RIGHT);
         b.setTextAlignment(alignment.getSelectionModel().getSelectedItem());
         // perhaps Builder.setXXX(double) should accept a Double instead
