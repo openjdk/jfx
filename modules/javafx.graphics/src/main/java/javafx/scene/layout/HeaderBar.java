@@ -551,7 +551,7 @@ public class HeaderBar extends Region {
      * The right area of the {@code HeaderBar}.
      *
      * @defaultValue {@code null}
-     * since 26
+     * @since 26
      */
     private final ObjectProperty<Node> right = new NodeProperty("right");
 
