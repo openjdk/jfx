@@ -85,7 +85,7 @@ public class ParagraphDialog extends Stage {
         background = new ColorPicker();
         background.setStyle("-fx-color-label-visible: false;");
         background.setValue(null);
-        
+
         alignment = new ComboBox<>();
         alignment.getItems().setAll(TextAlignment.values());
         alignment.setConverter(FX.converter(this::toString));
