@@ -36,11 +36,9 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import javafx.beans.NamedArg;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
-import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
@@ -585,6 +583,13 @@ public class RichTextAreaTest {
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
         control.select(TextPos.ofLeading(0, 6));
         assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+
+        // verify that the model styles are used when insertStyles=null
+        control.setInsertStyles(null);
+        control.select(TextPos.ofLeading(0, 2));
+        type("**");
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
     }
 
     @Test

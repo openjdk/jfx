@@ -597,7 +597,7 @@ public class RichTextArea extends Control {
 
     /**
      * Specifies the styles to be in effect for the characters to be inserted via user input.
-     * The value can be null.
+     * The value can be {@code null}, in which case the styles are determined by the model.
      *
      * @return the insert styles property
      * @defaultValue null
