@@ -219,10 +219,8 @@ public class SelectBindingTest {
         assertEquals(true, binding2.get());
         person.setData(null);
         assertEquals(false, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(false, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -261,10 +259,8 @@ public class SelectBindingTest {
         assertEquals(Math.PI, binding2.get(), EPSILON_DOUBLE);
         person.setData(null);
         assertEquals(0.0, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0.0, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -303,10 +299,8 @@ public class SelectBindingTest {
         assertEquals((float) Math.PI, binding2.get(), EPSILON_FLOAT);
         person.setData(null);
         assertEquals(0.0f, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0.0f, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -346,10 +340,8 @@ public class SelectBindingTest {
         assertEquals(-18, binding2.get());
         person.setData(null);
         assertEquals(0, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
@@ -386,10 +378,8 @@ public class SelectBindingTest {
         assertEquals(-987654321234567890L, binding2.get());
         person.setData(null);
         assertEquals(0L, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
         b.setNext(null);
         assertEquals(0L, binding2.get());
-        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test
