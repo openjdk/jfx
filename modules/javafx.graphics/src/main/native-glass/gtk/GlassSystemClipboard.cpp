@@ -185,7 +185,7 @@ static void set_bytebuffer_data(GtkSelectionData *selection_data, GdkAtom target
 
 static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     const gchar* url = NULL;
-    jstring jurl = NULL;
+    jobject jurl = NULL;
 
     jobjectArray files_array = NULL;
     gsize files_cnt = 0;
@@ -195,9 +195,11 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     typeString = mainEnv->NewStringUTF("text/uri-list");
     if (mainEnv->ExceptionCheck()) return;
     if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
-        jurl = (jstring) mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
+        jurl = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         CHECK_JNI_EXCEPTION(mainEnv);
-        url = getUTF(mainEnv, jurl);
+        if (jurl != NULL && mainEnv->IsInstanceOf(jurl, jStringCls)) {
+            url = getUTF(mainEnv, (jstring)jurl);
+        }
     }
 
     typeString = mainEnv->NewStringUTF("application/x-java-file-list");
@@ -230,10 +232,12 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     gsize i = 0;
     if (files_cnt > 0) {
         for (; i < files_cnt; ++i) {
-            jstring string = (jstring) mainEnv->GetObjectArrayElement(files_array, i);
-            const gchar* file = getUTF(mainEnv, string);
-            uris[i] = g_filename_to_uri(file, NULL, NULL);
-            g_free((gpointer)file);
+            jobject stringObj = mainEnv->GetObjectArrayElement(files_array, i);
+            if (stringObj != NULL && mainEnv->IsInstanceOf(stringObj, jStringCls)) {
+                const gchar* file = getUTF(mainEnv, (jstring)stringObj);
+                uris[i] = g_filename_to_uri(file, NULL, NULL);
+                g_free((gpointer)file);
+            }
         }
     }
 
@@ -277,14 +281,16 @@ static void set_data(GdkAtom target, GtkSelectionData *selection_data, jobject d
         typeString = mainEnv->NewStringUTF("text/plain");
         EXCEPTION_OCCURED(mainEnv);
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-        if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
+        if (!EXCEPTION_OCCURED(mainEnv) && result != NULL &&
+            mainEnv->IsInstanceOf(result, jStringCls)) {
             set_text_data(selection_data, (jstring)result);
         }
     } else if (gtk_targets_include_image(&target, 1, TRUE)) {
         typeString = mainEnv->NewStringUTF("application/x-java-rawimage");
         EXCEPTION_OCCURED(mainEnv);
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
-        if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
+        if (!EXCEPTION_OCCURED(mainEnv) && result != NULL &&
+            mainEnv->IsInstanceOf(result, jGtkPixelsCls)) {
             set_image_data(selection_data, result);
         }
     } else if (target == MIME_TEXT_URI_LIST_TARGET) {
