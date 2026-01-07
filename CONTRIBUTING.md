@@ -65,6 +65,8 @@ Once your changes and tests are ready to submit for review:
 
     Run the test suite to make sure that nothing is broken. For most code changes, you need to provide new tests covering those changes. At least one of the new tests should fail before your proposed fix and pass after your proposed fix. All tests are written using [JUnit5](https://junit.org/junit5/).
 
+    Enable GitHub Actions (GHA) Workflows in your personal fork. This will allow sanity tests to run when you push code changes to your branch of your personal fork, and allow the Skara bot to report the results of the tests in the PR. Navigate to the home page of your GitHub repo, click on the "Actions" tab, and then click on the green button that says something like: "I understand my workflows, go ahead and enable them".
+
 2. Rebase your changes
 
     Update your local repository with the most recent code from the main [repository]((https://github.com/openjdk/jfx)), and rebase your branch on top of the latest `master` branch. We prefer your initial changes to be squashed into a single commit. See the [GitHub help page](https://help.github.com/articles/about-git-rebase/) for help. Later, if we ask you to make changes, add them as separate commits. This makes them easier to review.
