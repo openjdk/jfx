@@ -1061,7 +1061,6 @@ public class Window implements EventTarget {
                 windows.remove(Window.this);
             }
             Toolkit tk = Toolkit.getToolkit();
-
             if (peer != null) {
                 if (newVisible) {
                     if (peerListener == null) {
@@ -1074,7 +1073,6 @@ public class Window implements EventTarget {
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
 
                     boolean isEmbeddedWindow = Window.this instanceof EmbeddedWindow;
-
                     if (isEmbeddedWindow && getScene() != null) {
                         // JDK-8257719: The scene of embedded windows like JFXPanel
                         // or FXCanvas has to be initialized before setting the
@@ -1531,7 +1529,6 @@ public class Window implements EventTarget {
                 float newRX = (float) renderScaleX;
                 float newRY = (float) renderScaleY;
                 reset();
-
                 peer.setBounds(newX, newY, xSet, ySet,
                         newWW, newWH, newCW, newCH,
                         newXG, newYG,
