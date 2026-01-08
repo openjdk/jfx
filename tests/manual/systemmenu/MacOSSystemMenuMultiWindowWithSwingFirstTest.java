@@ -83,5 +83,7 @@ public class MacOSSystemMenuMultiWindowWithSwingFirstTest extends MacOSSystemMen
         waitForUser();
 //        swingElements = getMenusOfFocusedWindow();
 //        compareMenus(swingElements, TEST_MENUS_2);
+
+        System.exit(0);
     }
 }

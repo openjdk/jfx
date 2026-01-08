@@ -92,5 +92,7 @@ public class MacOSSystemMenuJFXPanelSwingFirstTest extends MacOSSystemMenuTestBa
         waitForUser();
 //        swingElements = getMenusOfFocusedWindow();
 //        compareMenus(swingElements, TEST_MENUS_0);
+
+        System.exit(0);
     }
 }

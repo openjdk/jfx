@@ -70,5 +70,7 @@ public class MacOSSystemMenuSingleWindowWithSwingFirstTest extends MacOSSystemMe
 
 //        compareMenus(swingElements, TEST_MENUS_0);
 //        compareMenus(jfxElements, TEST_MENUS_1);
+
+        System.exit(0);
     }
 }

@@ -73,5 +73,7 @@ public class MacOSSystemMenuMultiWindowFXOnlySwingFirst extends MacOSSystemMenuT
         waitForUser();
 //        jfxElements = getMenusOfFocusedWindow();
 //        compareMenus(jfxElements, TEST_MENUS_1);
+
+        System.exit(0);
     }
 }

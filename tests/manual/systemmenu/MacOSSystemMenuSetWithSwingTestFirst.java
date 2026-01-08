@@ -100,6 +100,8 @@ public class MacOSSystemMenuSetWithSwingTestFirst extends MacOSSystemMenuTestBas
 
 //        elements = getMenusOfFocusedWindow();
 //        compareMenus(elements, TEST_MENUS_1);
+
+        System.exit(0);
     }
 
     private void runOnFXThread(Runnable runnable) throws InterruptedException {

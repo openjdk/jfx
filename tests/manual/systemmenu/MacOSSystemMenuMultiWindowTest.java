@@ -77,5 +77,7 @@ public class MacOSSystemMenuMultiWindowTest extends MacOSSystemMenuTestBase {
         waitForUser();
 //        jfxElements = getMenusOfFocusedWindow();
 //        compareMenus(jfxElements, TEST_MENUS_0);
+
+        System.exit(0);
     }
 }

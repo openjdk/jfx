@@ -58,6 +58,10 @@ import javax.swing.SwingUtilities;
 
 public class MacOSSystemMenuTestBase {
 
+    private static final int WINDOW_WIDTH = 600;
+
+    private static final int WINDOW_HEIGHT = 400;
+
     /**
      * A utility record to represent a menu and its possible children (items)
      */
@@ -231,7 +235,7 @@ public class MacOSSystemMenuTestBase {
     protected void initJavaFXWindow(boolean fullscreen, int id, List<Element> menus) {
         MenuBar menuBar = new MenuBar();
         BorderPane root = new BorderPane();
-        Scene scene = new Scene(root);
+        Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
         Stage window = new Stage();
 
         for (Element menu : menus) {
@@ -274,6 +278,8 @@ public class MacOSSystemMenuTestBase {
     protected void initSwingWindow(boolean fullscreen, int id, List<Element> menus) {
         JMenuBar menuBar = new JMenuBar();
         JFrame window = new JFrame();
+
+        window.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 
         for (Element menu : menus) {
             menuBar.add(createSwingMenu(menu));
