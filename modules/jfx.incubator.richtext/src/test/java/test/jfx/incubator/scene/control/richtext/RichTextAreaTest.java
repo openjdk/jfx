@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,9 +36,11 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.NamedArg;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
+import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
@@ -48,6 +50,8 @@ import javafx.scene.input.DataFormat;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -569,6 +573,27 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void insertStyles() {
+        control.select(TextPos.ZERO);
+        control.setInsertStyles(BOLD);
+        type("bold");
+        control.setInsertStyles(ITALIC);
+        type("italic");
+
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 6));
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+
+        // verify that the model styles are used when insertStyles=null
+        control.setInsertStyles(null);
+        control.select(TextPos.ofLeading(0, 2));
+        type("**");
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+    }
+
+    @Test
     public void insertTextWithStyles() {
         TextPos p = control.appendText("a", BOLD);
         assertEquals(TextPos.ofLeading(0, 1), p);
@@ -958,5 +983,24 @@ public class RichTextAreaTest {
         fireIME(0, "yoyo");
         assertEquals(tp(4), control.getCaretPosition());
         assertEquals("yoyo", text());
+    }
+
+    private void type(String text) {
+        for (char c : text.toCharArray()) {
+            String ch = String.valueOf(c);
+            KeyEvent ev = new KeyEvent(
+                this,
+                control,
+                KeyEvent.KEY_TYPED,
+                ch,
+                "",
+                KeyCode.UNDEFINED,
+                false, // shiftDown
+                false, // controlDown
+                false, // altDown
+                false // metaDown
+            );
+            Event.fireEvent(control, ev);
+        }
     }
 }
