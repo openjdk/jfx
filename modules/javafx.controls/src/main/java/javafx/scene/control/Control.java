@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -607,8 +607,8 @@ public abstract class Control extends Region implements Skinnable {
         if (skinBase != null) {
             final double x = snappedLeftInset();
             final double y = snappedTopInset();
-            final double w = snapSizeX(getWidth()) - x - snappedRightInset();
-            final double h = snapSizeY(getHeight()) - y - snappedBottomInset();
+            final double w = snapSpaceX(snapSizeX(getWidth()) - x - snappedRightInset());
+            final double h = snapSpaceY(snapSizeY(getHeight()) - y - snappedBottomInset());
             skinBase.layoutChildren(x, y, w, h);
         } else {
             Node n = getSkinNode();

@@ -212,6 +212,10 @@ LRESULT CALLBACK GlassWindow::CBTFilter(int nCode, WPARAM wParam, LPARAM lParam)
     return ::CallNextHookEx(GlassWindow::sm_hCBTFilter, nCode, wParam, lParam);
 }
 
+#ifndef USER_DEFAULT_SCREEN_DPI
+#define USER_DEFAULT_SCREEN_DPI 96
+#endif
+
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED       0x02E0
 #endif
@@ -248,6 +252,8 @@ char *StringForMsg(UINT msg) {
         case WM_MOVE: return "WM_MOVE";
         case WM_WINDOWPOSCHANGING: return "WM_WINDOWPOSCHANGING";
         case WM_WINDOWPOSCHANGED: return "WM_WINDOWPOSCHANGED";
+        case WM_DISPLAYCHANGE: return "WM_DISPLAYCHANGE";
+        case WM_SETTINGCHANGE: return "WM_SETTINGCHANGE";
         case WM_CLOSE: return "WM_CLOSE";
         case WM_DESTROY: return "WM_DESTROY";
         case WM_ACTIVATE: return "WM_ACTIVATE";
@@ -365,9 +371,18 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             HandleViewSizeEvent(GetHWND(), msg, wParam, lParam);
             break;
+        case WM_DPICHANGED:
+            HandleDPIEvent(wParam, lParam);
+            GlassScreen::HandleDisplayChange();
+            break;
         case WM_MOVING:
             m_winChangingReason = WasMoved;
             break;
+        case WM_DISPLAYCHANGE:
+        case WM_SETTINGCHANGE:
+          // Trigger a move event to notify the stage about possible changes in the window location
+          // (for instance, if this is a secondary screen and the primary screen changed its resolution,
+          // or if the screens relative position was rearranged)
         case WM_MOVE:
             if (!::IsIconic(GetHWND())) {
                 HandleMoveEvent(NULL);
@@ -807,6 +822,15 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
 
     env->CallVoidMethod(m_grefThis, midNotifyResize,
                         type, pRect->right-pRect->left, pRect->bottom-pRect->top);
+    CheckAndClearException(env);
+}
+
+void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam)
+{
+    JNIEnv* env = GetEnv();
+    float scale = (float) LOWORD(wParam) / USER_DEFAULT_SCREEN_DPI;
+
+    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, scale, scale, scale, scale);
     CheckAndClearException(env);
 }
 

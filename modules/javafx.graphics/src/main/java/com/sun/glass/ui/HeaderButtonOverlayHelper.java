@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,18 +23,38 @@
  * questions.
  */
 
-package javafx.scene;
+package com.sun.glass.ui;
 
-class PropertyHelper {
+import com.sun.javafx.scene.layout.RegionHelper;
+import com.sun.javafx.util.Utils;
+import javafx.scene.Node;
 
-    // Function to return whether a system property is set to true.
-    static boolean getBooleanProperty(final String propName) {
-        try {
-            String propVal = System.getProperty(propName);
-            return "true".equals(propVal.toLowerCase());
-        } catch (Exception any) {
-        }
-        return false;
+final class HeaderButtonOverlayHelper extends RegionHelper {
+
+    private static final HeaderButtonOverlayHelper theInstance = new HeaderButtonOverlayHelper();
+    private static Accessor theAccessor;
+
+    private HeaderButtonOverlayHelper() {}
+
+    static {
+        Utils.forceInit(HeaderButtonOverlay.class);
     }
 
+    public static void setAccessor(Accessor accessor) {
+        theAccessor = accessor;
+    }
+
+    public static void initHelper(HeaderButtonOverlay overlay) {
+        setHelper(overlay, theInstance);
+    }
+
+    @Override
+    protected void processCSSImpl(Node node) {
+        super.processCSSImpl(node);
+        theAccessor.afterProcessCSS((HeaderButtonOverlay)node);
+    }
+
+    public interface Accessor {
+        void afterProcessCSS(HeaderButtonOverlay overlay);
+    }
 }

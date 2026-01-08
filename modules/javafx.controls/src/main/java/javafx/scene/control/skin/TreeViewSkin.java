@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,9 +102,9 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
 
     private MapChangeListener<Object, Object> propertiesMapListener = c -> {
         if (! c.wasAdded()) return;
-        if (Properties.RECREATE.equals(c.getKey())) {
+        if (Properties.REBUILD.equals(c.getKey())) {
             requestRebuildCells();
-            getSkinnable().getProperties().remove(Properties.RECREATE);
+            getSkinnable().getProperties().remove(Properties.REBUILD);
         }
     };
 
@@ -184,7 +184,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         final ObservableMap<Object, Object> properties = control.getProperties();
-        properties.remove(Properties.RECREATE);
+        properties.remove(Properties.REBUILD);
         properties.addListener(propertiesMapListener);
 
         // init the behavior 'closures'

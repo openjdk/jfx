@@ -54,6 +54,7 @@
     NSUInteger          enabledStyleMask; // valid while the window is disabled
     BOOL                isTransparent;
     BOOL                isDecorated;
+    BOOL                isExtended;
     BOOL                isResizable;
     BOOL                isStandardButtonsVisible;
     BOOL                suppressWindowMoveEvent;

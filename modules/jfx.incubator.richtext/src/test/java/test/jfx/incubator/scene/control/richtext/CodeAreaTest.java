@@ -30,18 +30,28 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
+import java.util.Set;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.scene.Scene;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.DataFormat;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SyntaxDecorator;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.RichParagraph;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.skin.CodeAreaSkin;
+import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.util.TUtil;
 
 /**
@@ -144,6 +154,62 @@ public class CodeAreaTest {
     // functional API tests
 
     @Test
+    public void copy() {
+        RTUtil.copyToClipboard("yo");
+        control.appendText("123");
+        control.selectAll();
+        control.copy();
+        assertEquals("123", Clipboard.getSystemClipboard().getString());
+
+        control.select(TextPos.ZERO, TextPos.ofLeading(0, 1));
+        control.copy();
+        assertEquals("1", Clipboard.getSystemClipboard().getString());
+
+        control.select(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 2));
+        control.copy();
+        assertEquals("2", Clipboard.getSystemClipboard().getString());
+
+        control.select(TextPos.ofLeading(0, 2), TextPos.ofLeading(0, 3));
+        control.copy();
+        assertEquals("3", Clipboard.getSystemClipboard().getString());
+
+        control.appendText("\n4");
+        control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
+        control.copy();
+        String nl = System.getProperty("line.separator");
+        assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void copyWithSyntaxDecorator() {
+        control.appendText("123");
+        control.setSyntaxDecorator(new SyntaxDecorator() {
+            private static final StyleAttributeMap DIGITS = StyleAttributeMap.builder().setTextColor(Color.MAGENTA).build();
+
+            @Override
+            public RichParagraph createRichParagraph(CodeTextModel model, int index) {
+                String text = model.getPlainText(index);
+                RichParagraph.Builder b = RichParagraph.builder();
+                int len = text.length();
+                b.addSegment(text, 0, 1, null);
+                b.addSegment(text, 1, 2, DIGITS);
+                b.addSegment(text, 2, len, null);
+                return b.build();
+            }
+
+            @Override
+            public void handleChange(CodeTextModel m, TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
+            }
+        });
+        control.select(TextPos.ZERO);
+        control.selectParagraph();
+        control.copy();
+        Clipboard cb = Clipboard.getSystemClipboard();
+        assertEquals("123", cb.getString());
+        assertEquals(Set.of(DataFormat.PLAIN_TEXT, DataFormat.HTML, DataFormat.RTF), cb.getContentTypes());
+    }
+
+    @Test
     public void getControlCssMetaData() {
         List<CssMetaData<? extends Styleable, ?>> md = control.getControlCssMetaData();
         // CodeArea:395
@@ -154,6 +220,7 @@ public class CodeAreaTest {
     @Test
     public void getText() {
         control.setText("123");
+        control.setLineEnding(LineEnding.LF);
         String s = control.getText();
         assertEquals("123", s);
 
@@ -197,5 +264,48 @@ public class CodeAreaTest {
         CustomCodeTextModel m = new CustomCodeTextModel();
         control.setModel(m);
         assertTrue(control.getModel() == m);
+    }
+
+    @Test
+    public void lineEnding() {
+        control.setText("1\n2\n3");
+        assertEquals(3, control.getParagraphCount());
+        t(LineEnding.CR, "1\r2\r3");
+        t(LineEnding.CRLF, "1\r\n2\r\n3");
+        t(LineEnding.LF, "1\n2\n3");
+    }
+
+    @Test
+    public void lineEndingNull() {
+        assertThrows(NullPointerException.class, () -> {
+            control.setLineEnding(null);
+        });
+    }
+
+    private void t(LineEnding lineEnding, String expected) {
+        control.setLineEnding(lineEnding);
+        assertEquals(lineEnding, control.getLineEnding());
+        assertEquals(expected, control.getText());
+        control.select(TextPos.ZERO, control.getDocumentEnd());
+        control.copy();
+        assertEquals(expected, Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void setText() {
+        String expected = "1\n2\n3\n4";
+        String[] variants = {
+            "1\n2\n3\n4",
+            "1\r2\r3\r4",
+            "1\r\n2\r\n3\r\n4",
+            "1\r2\n3\r\n4"
+        };
+        control.setLineEnding(LineEnding.LF);
+        for (int i = 0; i < variants.length; i++) {
+            String s = variants[i];
+            control.setText(s);
+            String text = control.getText();
+            assertEquals(expected, text, "variant=" + i);
+        }
     }
 }

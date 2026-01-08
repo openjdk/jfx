@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,6 +88,10 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
     @Override
     public void update(MediaFrame frame, boolean skipFlush)
     {
+        if (!resource.isValid()) {
+            return;
+        }
+
         if (frame.getPixelFormat() == PixelFormat.MULTI_YCbCr_420) {
             // shouldn't have gotten this far
             throw new IllegalArgumentException("Unsupported format "+frame.getPixelFormat());
@@ -138,6 +142,10 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
                        int srcscan,
                        boolean skipFlush)
     {
+        if (!resource.isValid()) {
+            return;
+        }
+
         checkUpdateParams(pixels, format,
                           dstx, dsty, srcx, srcy, srcw, srch, srcscan);
 
