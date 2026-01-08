@@ -628,6 +628,10 @@ bool GlassWindow::HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
         return true;
     }
 
+    if (m_isExtended && HandleCaptionMouseEvents(msg, wParam, lParam)) {
+        return true;
+    }
+
     BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam, m_isExtended);
     if (handled && msg == WM_RBUTTONUP) {
         // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
@@ -639,6 +643,94 @@ bool GlassWindow::HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
     if (handled) {
         // Do not call the DefWindowProc() for mouse events that were handled
         return true;
+    }
+
+    return false;
+}
+
+/*
+ * This method is only called for windows with the EXTENDED style to handle a press-drag-release interaction
+ * on the title bar, which will move the window. Ordinarily, this wouldn't be required at all, since correctly
+ * responding to the WM_NCHITTEST message tells Windows which part of our window it should treat as the title
+ * bar area; this automatically enables the press-drag-release interaction.
+ *
+ * However, there's a small problem with serious consequences: Windows will send us a WM_NCLBUTTONDOWN message
+ * when the mouse button is pressed on the title bar, but it will NOT send us a WM_NCLBUTTONUP message when the
+ * button is released again. Pressing the mouse button on the title bar area starts a move-modal message loop,
+ * and the corresponding WM_LBUTTONUP (NB: not WM_NCLBUTTONUP) event is handled inside of this modal loop;
+ * it doesn't arrive at the message loop in this class where we could react to it. This is a problem because
+ * JavaFX has its own press-drag-release detection in the Scene class, and this missing release event messes
+ * up its state.
+ *
+ * So, how can we still get a notification when the mouse button was released on the title bar? For future
+ * reference, here are potential solutions that don't work well for various reasons:
+ *
+ * 1. Listen to WM_ENTERSIZEMOVE/WM_EXITSIZEMOVE, which are posted at the beginning and the end of a PDR
+ *    interaction. Unfortunately, a single short click on the title bar doesn't count as a PDR interaction,
+ *    and none of the messages are posted. Interestingly, a single click with about a one-second delay between
+ *    press and release does count as a PDR interaction.
+ *
+ * 2. Install a WH_MOUSE hook to intercept mouse messages before they are posted to the move-modal message loop,
+ *    and use it to discover the "missing" WM_LBUTTONUP message. While this works, some anti-virus tools might
+ *    dislike us using the SetWindowsHookEx API.
+ *
+ * What seems to work best is to not rely on Windows to start the move-modal message loop for us, but to start
+ * it ourselves. When it returns, we know that the mouse button was released. The prerequisite for this solution
+ * is that we never tell Windows that the cursor is on the title bar area, as Windows would then invariably start
+ * the move-modal message loop. So every time we determine in HandleNCHitTestEvent() that the cursor is on the
+ * title bar, we tell Windows that it's HTCLIENT instead.
+ */
+bool GlassWindow::HandleCaptionMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg) {
+        // Pressing the left mouse button on the title bar area initializes PDR tracking.
+        // We don't consume this message, so it will be handled as usual in HandleViewMouseEvent()
+        // to generate a normal JavaFX event. Note that HandleViewMouseEvent() calls SetCapture().
+        case WM_LBUTTONDOWN:
+            if (m_caption.entered) {
+                m_caption.tracking = true;
+                m_caption.dragStart = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            }
+            break;
+
+        // Releasing the left mouse button without moving the cursor cancels PDR tracking.
+        // We don't consume this message, so it will be handled as usual in HandleViewMouseEvent()
+        // to generate a normal JavaFX event.
+        case WM_LBUTTONUP:
+            if (m_caption.tracking && GetCapture() == GetHWND()) {
+                m_caption.tracking = false;
+            }
+            break;
+
+        // Moving the cursor starts up a modal message loop that handles the window movement.
+        // Note that we only start the window drag operation when the cursor movement exceeds the
+        // minimum distance for a PDR interaction.
+        case WM_MOUSEMOVE:
+            if (m_caption.tracking && GetCapture() == GetHWND()) {
+                POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+                const int dx = abs(pt.x - m_caption.dragStart.x);
+                const int dy = abs(pt.y - m_caption.dragStart.y);
+                const int cx = GetSystemMetrics(SM_CXDRAG);
+                const int cy = GetSystemMetrics(SM_CYDRAG);
+
+                if (dx >= cx || dy >= cy) {
+                    // Start the move-modal message loop, and return when the drag operation has finished.
+                    ReleaseCapture();
+                    SendMessage(GetHWND(), WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
+
+                    // Cancel tracking and synthesize a WM_LBUTTONUP event.
+                    m_caption.tracking = false;
+                    HandleViewMouseEvent(GetHWND(), WM_LBUTTONUP, wParam, lParam, true);
+                    return true;
+                }
+            }
+            break;
+
+        // Cancel tracking when an in-progress PDR interaction is canceled.
+        case WM_CANCELMODE:
+        case WM_CAPTURECHANGED:
+            m_caption.tracking = false;
+            break;
     }
 
     return false;
@@ -959,6 +1051,13 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         } else if (res == HTUNSPECIFIED) {
             res = HTCLIENT;
         }
+    }
+
+    // If the cursor is on the title bar, lie to Windows and say it's on the client area instead.
+    // See GlassWindow::HandleCaptionMouseEvents() for more information.
+    m_caption.entered = res == HTCAPTION;
+    if (res == HTCAPTION) {
+        res = HTCLIENT;
     }
 
     result = LRESULT(res);
