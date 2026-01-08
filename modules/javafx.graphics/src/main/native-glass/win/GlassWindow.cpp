@@ -721,8 +721,10 @@ bool GlassWindow::HandleCaptionMouseEvents(UINT msg, WPARAM wParam, LPARAM lPara
                     // Cancel tracking and synthesize a WM_LBUTTONUP event.
                     m_caption.tracking = false;
                     HandleViewMouseEvent(GetHWND(), WM_LBUTTONUP, wParam, lParam, true);
-                    return true;
                 }
+
+                // Always consume WM_MOUSEMOVE when we're in a PDR interaction.
+                return true;
             }
             break;
 
