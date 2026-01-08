@@ -61,7 +61,7 @@ public final class FunctionExpression<T> implements MediaQuery {
      * @param featureName the feature name
      * @param featureValue the feature value, or {@code null} to indicate a boolean context
      * @param function the evaluation function
-     * @param value the expected return value of the function+
+     * @param value the expected return value of the function
      * @param contextAwareness the context awareness of the function, see {@link MediaQuery#getContextAwareness()}
      */
     public static <T> FunctionExpression<T> of(String featureName,
