@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -296,6 +296,7 @@ public class RichTextArea extends Control {
     private SimpleObjectProperty<StyledTextModel> model;
     private final SelectionModel selectionModel = new SingleSelectionModel();
     private SimpleBooleanProperty editableProperty;
+    private SimpleObjectProperty<StyleAttributeMap> insertStyles;
     private SimpleObjectProperty<SideDecorator> leftDecorator;
     private SimpleObjectProperty<SideDecorator> rightDecorator;
     private ReadOnlyBooleanWrapper undoable;
@@ -592,6 +593,32 @@ public class RichTextArea extends Control {
 
     public final void setHighlightCurrentParagraph(boolean on) {
         highlightCurrentParagraphProperty().set(on);
+    }
+
+    /**
+     * Specifies the styles to be in effect for the characters to be inserted via user input.
+     * The value can be {@code null}, in which case the styles are determined by the model.
+     *
+     * @return the insert styles property
+     * @defaultValue null
+     * @since 26
+     */
+    public final ObjectProperty<StyleAttributeMap> insertStylesProperty() {
+        if (insertStyles == null) {
+            insertStyles = new SimpleObjectProperty<>(this, "insertStyles");
+        }
+        return insertStyles;
+    }
+
+    public final StyleAttributeMap getInsertStyles() {
+        if (insertStyles == null) {
+            return null;
+        }
+        return insertStyles.get();
+    }
+
+    public final void setInsertStyles(StyleAttributeMap v) {
+        insertStylesProperty().set(v);
     }
 
     /**

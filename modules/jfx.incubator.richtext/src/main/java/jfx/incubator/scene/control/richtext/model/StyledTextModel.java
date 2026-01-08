@@ -583,7 +583,7 @@ public abstract class StyledTextModel {
             return TextPos.ZERO;
         } else if (ix < ct) {
             len = getParagraphLength(ix);
-            if (p.offset() < len) {
+            if (p.offset() <= len) {
                 return p;
             }
         } else {
@@ -684,7 +684,9 @@ public abstract class StyledTextModel {
     private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo, boolean isEdit) {
         checkWritable();
 
-        // TODO clamp to document boundaries
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         int cmp = start.compareTo(end);
         if (cmp > 0) {
             TextPos p = start;
@@ -777,6 +779,9 @@ public abstract class StyledTextModel {
     public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
         checkWritable();
 
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         if (start.compareTo(end) > 0) {
             TextPos p = start;
             start = end;

@@ -115,7 +115,7 @@ public class InterpolatorConverterTest {
             new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) },
             null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(SPLINE(0.1, 0.2, 0.3, 0.4), result);
+        assertInterpolatorEquals(ofSpline(0.1, 0.2, 0.3, 0.4), result);
     }
 
     @Test
@@ -141,7 +141,7 @@ public class InterpolatorConverterTest {
                 new ParsedValueImpl<>(List.of(3, cssName), null) },
                 null);
             var result = InterpolatorConverter.getInstance().convert(value, null);
-            assertInterpolatorEquals(STEPS(3, stepPosition), result);
+            assertInterpolatorEquals(ofSteps(3, stepPosition), result);
         }
     }
 

@@ -216,28 +216,59 @@ public abstract class Interpolator {
     };
 
     /**
-     * Creates an {@code Interpolator}, which {@link #curve(double) curve()} is
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofSpline(double, double, double, double)} instead.
+     *
+     * @param x1 x coordinate of the first control point
+     * @param y1 y coordinate of the first control point
+     * @param x2 x coordinate of the second control point
+     * @param y2 y coordinate of the second control point
+     * @throws IllegalArgumentException if {@code x1} or {@code x2} is outside of {@code [0, 1]}
+     * @return a spline interpolator
+     * @deprecated use {@link #ofSpline(double, double, double, double)} instead
+     */
+    @Deprecated(since = "26")
+    public static Interpolator SPLINE(double x1, double y1, double x2, double y2) {
+        return ofSpline(x1, y1, x2, y2);
+    }
+
+    /**
+     * Returns an {@code Interpolator} whose {@link #curve(double) curve()} is
      * shaped using the spline control points defined by ({@code x1}, {@code y1}
      * ) and ({@code x2}, {@code y2}). The anchor points of the spline are
      * implicitly defined as ({@code 0.0}, {@code 0.0}) and ({@code 1.0},
      * {@code 1.0}).
      *
-     * @param x1
-     *            x coordinate of the first control point
-     * @param y1
-     *            y coordinate of the first control point
-     * @param x2
-     *            x coordinate of the second control point
-     * @param y2
-     *            y coordinate of the second control point
-     * @return A spline interpolator
+     * @param x1 x coordinate of the first control point
+     * @param y1 y coordinate of the first control point
+     * @param x2 x coordinate of the second control point
+     * @param y2 y coordinate of the second control point
+     * @throws IllegalArgumentException if {@code x1} or {@code x2} is outside of {@code [0, 1]}
+     * @return a spline interpolator
+     * @since 26
      */
-    public static Interpolator SPLINE(double x1, double y1, double x2, double y2) {
+    public static Interpolator ofSpline(double x1, double y1, double x2, double y2) {
         return new SplineInterpolator(x1, y1, x2, y2);
     }
 
     /**
-     * Create a tangent interpolator. A tangent interpolator allows to define
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofTangent(Duration, double, Duration, double)} instead.
+     *
+     * @param t1 the delta time of the in-tangent, relative to the KeyFrame
+     * @param v1 the value of the in-tangent
+     * @param t2 the delta time of the out-tangent, relative to the KeyFrame
+     * @param v2 the value of the out-tangent
+     * @return a tangent interpolator
+     * @deprecated use {@link #ofTangent(Duration, double, Duration, double)} instead
+     */
+    @Deprecated(since = "26")
+    public static Interpolator TANGENT(Duration t1, double v1, Duration t2, double v2) {
+        return ofTangent(t1, v1, t2, v2);
+    }
+
+    /**
+     * Returns a tangent interpolator. A tangent interpolator allows to define
      * the behavior of an animation curve very precisely by defining the
      * tangents close to a key frame.
      *
@@ -260,36 +291,45 @@ public abstract class Interpolator {
      * The interpolation then follows a bezier curve, with 2 control points defined by the specified tangent and
      * positioned at 1/3 of the duration before the second KeyFrame or after the first KeyFrame. See the picture above.
      *
-     * @param t1
-     *            The delta time of the in-tangent, relative to the KeyFrame
-     * @param v1
-     *            The value of the in-tangent
-     * @param t2
-     *            The delta time of the out-tangent, relative to the KeyFrame
-     * @param v2
-     *            The value of the out-tangent
-     * @return the new tangent interpolator
+     * @param t1 the delta time of the in-tangent, relative to the KeyFrame
+     * @param v1 the value of the in-tangent
+     * @param t2 the delta time of the out-tangent, relative to the KeyFrame
+     * @param v2 the value of the out-tangent
+     * @return a tangent interpolator
+     * @since 26
      */
-    public static Interpolator TANGENT(Duration t1, double v1, Duration t2,
-            double v2) {
+    public static Interpolator ofTangent(Duration t1, double v1, Duration t2, double v2) {
         return new NumberTangentInterpolator(t1, v1, t2, v2);
     }
 
     /**
-     * Creates a tangent interpolator, for which in-tangent and out-tangent are
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofTangent(Duration, double)} instead.
+     *
+     * @param t the delta time of the tangent
+     * @param v the value of the tangent
+     * @return a tangent interpolator
+     * @deprecated use {@link #ofTangent(Duration, double)} instead
+     */
+    @Deprecated(since = "26")
+    public static Interpolator TANGENT(Duration t, double v) {
+        return ofTangent(t, v);
+    }
+
+    /**
+     * Returns a tangent interpolator, for which in-tangent and out-tangent are
      * identical. This is especially useful for the first and the last key frame
      * of a {@link Timeline}, because for these key frames only one tangent is
      * used.
      *
-     * @see #TANGENT(Duration, double, Duration, double)
+     * @see #ofTangent(Duration, double, Duration, double)
      *
-     * @param t
-     *            The delta time of the tangent
-     * @param v
-     *            The value of the tangent
-     * @return the new Tangent interpolator
+     * @param t the delta time of the tangent
+     * @param v the value of the tangent
+     * @return a tangent interpolator
+     * @since 26
      */
-    public static Interpolator TANGENT(Duration t, double v) {
+    public static Interpolator ofTangent(Duration t, double v) {
         return new NumberTangentInterpolator(t, v);
     }
 
@@ -333,21 +373,39 @@ public abstract class Interpolator {
     }
 
     /**
-     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.START)}.
+     * Built-in interpolator instance that is equivalent to {@code Interpolator.ofSteps(1, StepPosition.START)}.
      *
      * @since 23
      */
-    public static final Interpolator STEP_START = STEPS(1, StepPosition.START);
+    public static final Interpolator STEP_START = ofSteps(1, StepPosition.START);
 
     /**
-     * Built-in interpolator instance that is equivalent to {@code STEPS(1, StepPosition.END)}.
+     * Built-in interpolator instance that is equivalent to {@code Interpolator.ofSteps(1, StepPosition.END)}.
      *
      * @since 23
      */
-    public static final Interpolator STEP_END = STEPS(1, StepPosition.END);
+    public static final Interpolator STEP_END = ofSteps(1, StepPosition.END);
 
     /**
-     * Creates a step interpolator that divides the input time into a series of intervals, each
+     * This is a legacy method named inconsistently with method naming conventions,
+     * use {@link #ofSteps(int, StepPosition)} instead.
+     *
+     * @param intervalCount the number of intervals in the step interpolator
+     * @param position the {@code StepPosition} of the step interpolator
+     * @throws IllegalArgumentException if {@code intervals} is less than 1, or if {@code intervals} is
+     *                                  less than 2 when {@code position} is {@link StepPosition#NONE}
+     * @throws NullPointerException if {@code position} is {@code null}
+     * @return a new step interpolator
+     * @deprecated use {@link #ofSteps(int, StepPosition)} instead
+     * @since 23
+     */
+    @Deprecated(since = "26")
+    public static Interpolator STEPS(int intervalCount, StepPosition position) {
+        return ofSteps(intervalCount, position);
+    }
+
+    /**
+     * Returns a step interpolator that divides the input time into a series of intervals, each
      * interval being equal in length, where each interval maps to a constant output time value.
      * The output time value is determined by the {@link StepPosition}.
      *
@@ -356,11 +414,10 @@ public abstract class Interpolator {
      * @throws IllegalArgumentException if {@code intervals} is less than 1, or if {@code intervals} is
      *                                  less than 2 when {@code position} is {@link StepPosition#NONE}
      * @throws NullPointerException if {@code position} is {@code null}
-     * @return a new step interpolator
-     *
-     * @since 23
+     * @return a step interpolator
+     * @since 26
      */
-    public static Interpolator STEPS(int intervalCount, StepPosition position) {
+    public static Interpolator ofSteps(int intervalCount, StepPosition position) {
         return new StepInterpolator(intervalCount, position);
     }
 

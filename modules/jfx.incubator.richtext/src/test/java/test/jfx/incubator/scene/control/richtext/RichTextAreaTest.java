@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,9 +37,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.NamedArg;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
+import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
@@ -50,6 +52,8 @@ import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.layout.Region;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -316,6 +320,11 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void applyStyleBeyondDocumentEnd() {
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(100, 3), BOLD);
+    }
+
+    @Test
     public void clear() {
         control.appendText("a");
         control.clear();
@@ -567,6 +576,27 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void insertStyles() {
+        control.select(TextPos.ZERO);
+        control.setInsertStyles(BOLD);
+        type("bold");
+        control.setInsertStyles(ITALIC);
+        type("italic");
+
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 6));
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+
+        // verify that the model styles are used when insertStyles=null
+        control.setInsertStyles(null);
+        control.select(TextPos.ofLeading(0, 2));
+        type("**");
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+    }
+
+    @Test
     public void insertTextWithStyles() {
         TextPos p = control.appendText("a", BOLD);
         assertEquals(TextPos.ofLeading(0, 1), p);
@@ -718,6 +748,13 @@ public class RichTextAreaTest {
         control.appendText("1234");
         control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-");
         assertEquals("1-4", text());
+    }
+
+    @Test
+    public void replaceTextBeyondDocumentEnd() {
+        control.appendText("1\n");
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(33, 3), "-");
+        assertEquals("1-", text());
     }
 
     @Test
@@ -926,7 +963,7 @@ public class RichTextAreaTest {
     }
 
     private static TextPos tp(int caret) {
-        return new TextPos(0, caret, caret - 1, false);
+        return TextPos.ofLeading(0, caret);
     }
 
     @Test
@@ -980,5 +1017,24 @@ public class RichTextAreaTest {
         double h2 = control.prefHeight(-1);
         control.getHeight();
         assertTrue(h1 != h2, "heights should differ: h1=" + h1 + " h2=" + h2);
+    }
+
+    private void type(String text) {
+        for (char c : text.toCharArray()) {
+            String ch = String.valueOf(c);
+            KeyEvent ev = new KeyEvent(
+                this,
+                control,
+                KeyEvent.KEY_TYPED,
+                ch,
+                "",
+                KeyCode.UNDEFINED,
+                false, // shiftDown
+                false, // controlDown
+                false, // altDown
+                false // metaDown
+            );
+            Event.fireEvent(control, ev);
+        }
     }
 }
