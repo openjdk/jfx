@@ -1,6 +1,6 @@
 # Compiling and Running
 
-To compile and run the tests, run the following command:
+To compile and run the tests, run the following command (You do need to run the gradle build first):
 
 ```
 java @../../../build/run.args MacOSSystemMenuMultiWindowTest.java
