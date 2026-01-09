@@ -1014,6 +1014,7 @@ public class RichTextAreaTest {
     })
     public void setTextNewlines(String text) {
         control.appendText(text);
+        control.setLineEnding(LineEnding.LF);
 
         String s = RichTestUtil.getText(control, TextPos.ZERO, control.getDocumentEnd());
         assertEquals(text, s);
@@ -1052,6 +1053,7 @@ public class RichTextAreaTest {
     public void appendTextSelectAll() {
         String text = "1\n2\n";
         control.appendText(text);
+        control.setLineEnding(LineEnding.LF);
         assertEquals(3, control.getParagraphCount());
 
         control.selectAll();
