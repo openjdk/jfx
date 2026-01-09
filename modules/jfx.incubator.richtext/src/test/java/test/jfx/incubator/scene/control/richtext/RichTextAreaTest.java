@@ -55,6 +55,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.LineEnding;
@@ -1016,6 +1017,35 @@ public class RichTextAreaTest {
 
         String s = RichTestUtil.getText(control, TextPos.ZERO, control.getDocumentEnd());
         assertEquals(text, s);
+    }
+
+    @ParameterizedTest
+    @CsvSource(textBlock =
+        """
+        0, 0, 0, 1, '1'
+        0, 0, 0, 2, '11'
+        0, 0, 0, 3, '11'
+        0, 0, 1, 0, '11\n'
+        0, 0, 1, 1, '11\n2'
+        0, 0, 1, 3, '11\n22'
+        0, 0, 2, 0, '11\n22'
+        0, 0, 2, 222, '11\n22'
+        0, 1, 9, 9, '1\n22'
+        0, 2, 9, 9, '\n22'
+        0, 3, 9, 9, '\n22'
+        1, 0, 9, 9, '22'
+        1, 1, 9, 9, '2'
+        1, 2, 9, 9, ''
+        1, 9, 9, 9, ''
+        """
+    )
+    public void getTextRanges(int startIndex, int startOffset, int endIndex, int endOffset, String expected) {
+        control.appendText("11\n22");
+        control.setLineEnding(LineEnding.LF);
+        TextPos start = TextPos.ofLeading(startIndex, startOffset);
+        TextPos end = TextPos.ofLeading(endIndex, endOffset);
+        String s = RichTestUtil.getText(control, start, end);
+        assertEquals(expected, s);
     }
 
     @Test
