@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,53 +25,39 @@
 
 package com.sun.javafx.css.media.expression;
 
-import com.sun.javafx.css.media.ContextAwareness;
-import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
+import com.sun.javafx.css.media.SizeQueryType;
 import com.sun.javafx.css.media.MediaQueryContext;
-import java.util.Objects;
+import javafx.css.Size;
 
 /**
- * Evaluates to a constant boolean value.
+ * Evaluates whether a media feature is equal to a specified value.
  */
-public final class ConstantExpression implements MediaQuery {
+public final class EqualExpression extends RangeExpression {
 
-    private final boolean value;
-
-    private ConstantExpression(boolean value) {
-        this.value = value;
+    private EqualExpression(SizeQueryType featureType, Size sizeValue) {
+        super(featureType, sizeValue);
     }
 
-    public static ConstantExpression of(boolean value) {
-        return MediaQueryCache.getCachedMediaQuery(new ConstantExpression(value));
+    private EqualExpression(SizeQueryType featureType, double numberValue) {
+        super(featureType, numberValue);
     }
 
-    public boolean value() {
-        return value;
+    public static EqualExpression ofSize(SizeQueryType featureType, Size sizeValue) {
+        return MediaQueryCache.getCachedMediaQuery(new EqualExpression(featureType, sizeValue));
     }
 
-    @Override
-    public int getContextAwareness() {
-        return ContextAwareness.NONE.value();
+    public static EqualExpression ofNumber(SizeQueryType featureType, double numberValue) {
+        return MediaQueryCache.getCachedMediaQuery(new EqualExpression(featureType, numberValue));
     }
 
     @Override
     public boolean evaluate(MediaQueryContext context) {
-        return value;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ConstantExpression other && value == other.value;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(ConstantExpression.class, value);
+        return getFeatureType().evaluate(context) == getValue();
     }
 
     @Override
     public String toString() {
-        return "(" + value + ")";
+        return "(" + getFeatureName() + " = " + getFormattedValue() + ")";
     }
 }
