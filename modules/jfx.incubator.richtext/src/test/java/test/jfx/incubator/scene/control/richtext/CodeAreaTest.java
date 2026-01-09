@@ -322,6 +322,7 @@ public class CodeAreaTest {
     })
     public void setTextNewlines(String text) {
         control.setText(text);
+        control.setLineEnding(LineEnding.LF);
 
         String s = RichTestUtil.getText(control, TextPos.ZERO, control.getDocumentEnd());
         assertEquals(text, s);
@@ -360,6 +361,7 @@ public class CodeAreaTest {
     public void setTextSelectAll() {
         String text = "1\n2\n";
         control.setText(text);
+        control.setLineEnding(LineEnding.LF);
         assertEquals(3, control.getParagraphCount());
 
         control.selectAll();

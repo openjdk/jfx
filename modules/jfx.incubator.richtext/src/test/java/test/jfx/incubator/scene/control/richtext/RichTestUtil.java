@@ -47,7 +47,6 @@ public class RichTestUtil {
     }
 
     /**
-     * 
      * @param r the rich text area
      * @param start the start position
      * @param end the end position
