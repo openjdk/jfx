@@ -1539,7 +1539,6 @@ public class RichTextArea extends Control {
         int toCopy = limit;
         int index = start.index();
         boolean first = true;
-        boolean all = true;
         while (toCopy > 0) {
             int beg;
             if (first) {
@@ -1550,6 +1549,7 @@ public class RichTextArea extends Control {
                 beg = 0;
             }
             String text = getPlainText(index);
+            // FIX end offset?
             int len = Math.min(toCopy, text.length() - beg);
             sb.append(text, beg, beg + len);
             toCopy -= len;
@@ -1558,15 +1558,19 @@ public class RichTextArea extends Control {
             // did we copy all?
             if (toCopy == 0) {
                 if (index < end.index()) {
-                    all = false;
+                    return false;
                 } else if (index == end.index()) {
                     if (beg + len < end.offset()) {
-                        all = false;
+                        return false;
                     }
                 }
             }
+
+            if (index > end.index()) {
+                break;
+            }
         }
-        return all;
+        return true;
     }
 
     /**
