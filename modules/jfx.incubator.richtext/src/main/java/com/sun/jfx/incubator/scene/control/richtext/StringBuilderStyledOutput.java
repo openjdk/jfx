@@ -47,16 +47,31 @@ public class StringBuilderStyledOutput implements StyledOutput {
     }
 
     @Override
-    public void consume(StyledSegment seg) {
+    public void consume(StyledSegment seg) throws IOException {
         switch (seg.getType()) {
         case LINE_BREAK:
-            sb.append(newline);
+            append(newline, false);
             break;
         case TEXT:
             String text = seg.getText();
-            sb.append(text);
+            // append as much text as possible
+            // potentially risking breaking up code points and grapheme clusters
+            append(text, true);
             break;
         }
+    }
+
+    private void append(String text, boolean allowPartial) throws IOException {
+        if (limit < Integer.MAX_VALUE) {
+            int available = limit - sb.length();
+            if (text.length() > available) {
+                if (allowPartial) {
+                    sb.append(text, 0, available);
+                }
+                throw new IOException("limit exceeded");
+            }
+        }
+        sb.append(text);
     }
 
     @Override
