@@ -23,11 +23,9 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
 #import <jni.h>
 
 #import "GlassHostView.h"
-#import "GlassDragSource.h"
 #import "GlassDraggingSource.h"
 #import "GlassAccessible.h"
 
@@ -83,7 +81,7 @@ typedef enum GestureMaskType {
 - (void)sendJavaMouseEvent:(NSEvent *)theEvent;
 - (void)resetMouseTracking;
 - (void)sendJavaMenuEvent:(NSEvent *)theEvent;
-- (BOOL)sendJavaKeyEvent:(NSEvent *)event isDown:(BOOL)isDown;
+- (BOOL)sendJavaKeyEvent:(NSEvent *)event isDown:(BOOL)isDown character:(unichar)textChar;
 - (void)sendJavaModifierKeyEvent:(NSEvent *)theEvent;
 - (void)sendJavaGestureEvent:(NSEvent *)theEvent type:(int)type;
 - (void)sendJavaGestureBeginEvent:(NSEvent *)theEvent;

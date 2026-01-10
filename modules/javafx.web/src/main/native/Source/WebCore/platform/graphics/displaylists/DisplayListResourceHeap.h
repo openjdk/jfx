@@ -26,6 +26,7 @@
 #pragma once
 
 #include "DecomposedGlyphs.h"
+#include "DisplayListItem.h"
 #include "Filter.h"
 #include "Font.h"
 #include "FontCustomPlatformData.h"
@@ -142,7 +143,7 @@ public:
         return get<FontCustomPlatformData>(renderingResourceIdentifier);
     }
 
-    const HashMap<RenderingResourceIdentifier, Resource>& resources() const
+    const UncheckedKeyHashMap<RenderingResourceIdentifier, Resource>& resources() const
     {
         return m_resources;
     }
@@ -285,7 +286,7 @@ private:
 #endif
     }
 
-    HashMap<RenderingResourceIdentifier, Resource> m_resources;
+    UncheckedKeyHashMap<RenderingResourceIdentifier, Resource> m_resources;
     unsigned m_imageBufferCount { 0 };
     unsigned m_renderingResourceCount { 0 };
     unsigned m_fontCount { 0 };

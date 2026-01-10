@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     // assembly route.
     // Generate icudt*l_dat.obj file into the <out_dir>.
     // UNUSED(argv[1])
-    writeObjectCode(argv[2], argv[3], argv[4], NULL, NULL, NULL, 0, true);
+    writeObjectCode(argv[2], argv[3], argv[4], NULL, NULL, NULL, NULL, 0, true);
 #else
     if (!checkAssemblyHeaderName(argv[1])) {
         fprintf(stderr, "%s: Unable to recogonize assembler type:%s\n", argv[0], argv[1]);

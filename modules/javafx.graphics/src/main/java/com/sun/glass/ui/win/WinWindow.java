@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.win;
 
+import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.glass.ui.HeaderButtonOverlay;
@@ -122,8 +123,11 @@ class WinWindow extends Window {
             fxReqHeight = fx_ch;
 
             int maxW = getMaximumWidth(), maxH = getMaximumHeight();
+            int oldPw = pw;
+            int oldPh = ph;
             pw = Math.max(Math.min(pw, maxW > 0 ? maxW : Integer.MAX_VALUE), getMinimumWidth());
             ph = Math.max(Math.min(ph, maxH > 0 ? maxH : Integer.MAX_VALUE), getMinimumHeight());
+            boolean minMaxEnforced = (oldPw != pw || oldPh != ph);
 
             long anchor = _getAnchor(getRawHandle());
             int resizeMode = (anchor == ANCHOR_NO_CAPTURE)
@@ -150,7 +154,18 @@ class WinWindow extends Window {
             if (!ySet) ySet = (py != this.y);
             pfReqWidth = (int) Math.ceil(fxReqWidth * platformScaleX);
             pfReqHeight = (int) Math.ceil(fxReqHeight * platformScaleY);
+            boolean alreadyAtSize = (pw == width && ph == height);
             _setBounds(getRawHandle(), px, py, xSet, ySet, pw, ph, 0, 0, xGravity, yGravity);
+
+            if (minMaxEnforced && alreadyAtSize) {
+                var eventType = WindowEvent.RESIZE;
+                if (isMaximized()) {
+                    eventType = WindowEvent.MAXIMIZE;
+                } else if (isMinimized()) {
+                    eventType = WindowEvent.MINIMIZE;
+                }
+                notifyResize(eventType, pw, ph);
+            }
         }
     }
 
@@ -265,6 +280,13 @@ class WinWindow extends Window {
         return true;
     }
 
+    private native void _setDarkFrame(long ptr, boolean value);
+
+    @Override
+    public void setDarkFrame(boolean value) {
+        _setDarkFrame(getRawHandle(), value);
+    }
+
     native private long _getInsets(long ptr);
     native private long _getAnchor(long ptr);
     native private void _showSystemMenu(long ptr, int x, int y);
@@ -289,9 +311,6 @@ class WinWindow extends Window {
     @Override native protected void _setIcon(long ptr, Pixels pixels);
     @Override native protected void _toFront(long ptr);
     @Override native protected void _toBack(long ptr);
-    @Override native protected void _enterModal(long ptr);
-    @Override native protected void _enterModalWithWindow(long dialog, long window);
-    @Override native protected void _exitModal(long ptr);
     @Override native protected boolean _grabFocus(long ptr);
     @Override native protected void _ungrabFocus(long ptr);
     @Override native protected void _setCursor(long ptr, Cursor cursor);
@@ -381,7 +400,7 @@ class WinWindow extends Window {
      */
     private HeaderButtonOverlay createHeaderButtonOverlay() {
         var overlay = new WinHeaderButtonOverlay(
-            isUtilityWindow(),
+            isModal() || getOwner() != null, isUtilityWindow(),
             (getStyleMask() & RIGHT_TO_LEFT) != 0);
 
         overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());

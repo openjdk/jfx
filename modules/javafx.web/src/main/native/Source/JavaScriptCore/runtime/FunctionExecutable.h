@@ -54,9 +54,7 @@ public:
         executable->finishCreation(vm);
         return executable;
     }
-    static FunctionExecutable* fromGlobalCode(
-        const Identifier& name, JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures,
-        JSObject*& exception, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition);
+    static FunctionExecutable* fromGlobalCode(const Identifier& name, JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, JSObject*& exception, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition, FunctionConstructionMode);
 
     static void destroy(JSCell*);
 
@@ -82,7 +80,7 @@ public:
 
     FunctionCodeBlock* codeBlockForCall() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForCall.get());
+        return std::bit_cast<FunctionCodeBlock*>(m_codeBlockForCall.get());
     }
 
     bool isGeneratedForConstruct() const
@@ -92,7 +90,7 @@ public:
 
     FunctionCodeBlock* codeBlockForConstruct() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForConstruct.get());
+        return std::bit_cast<FunctionCodeBlock*>(m_codeBlockForConstruct.get());
     }
 
     bool isGeneratedFor(CodeSpecializationKind kind)
@@ -165,9 +163,10 @@ public:
     DECLARE_VISIT_OUTPUT_CONSTRAINTS;
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
+    static constexpr int overrideLineNumberNotFound = -1;
     void setOverrideLineNumber(int overrideLineNumber)
     {
-        if (overrideLineNumber == -1) {
+        if (overrideLineNumber == overrideLineNumberNotFound) {
             if (UNLIKELY(m_rareData))
                 m_rareData->m_overrideLineNumber = std::nullopt;
             return;

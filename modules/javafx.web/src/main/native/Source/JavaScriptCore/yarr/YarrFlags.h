@@ -42,6 +42,11 @@ namespace JSC { namespace Yarr {
     macro('v', UnicodeSets, unicodeSets, 6) \
     macro('y', Sticky, sticky, 7) \
 
+#define JSC_REGEXP_MOD_FLAGS(macro) \
+    macro('i', IgnoreCase, ignoreCase) \
+    macro('m', Multiline, multiline) \
+    macro('s', DotAll, dotAll) \
+
 #define JSC_COUNT_REGEXP_FLAG(key, name, lowerCaseName, index) + 1
 static constexpr unsigned numberOfFlags = 0 JSC_REGEXP_FLAGS(JSC_COUNT_REGEXP_FLAG);
 #undef JSC_COUNT_REGEXP_FLAG

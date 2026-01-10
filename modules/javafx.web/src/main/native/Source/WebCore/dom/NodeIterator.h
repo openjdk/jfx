@@ -28,11 +28,12 @@
 #include "NodeFilter.h"
 #include "ScriptWrappable.h"
 #include "Traversal.h"
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class NodeIterator final : public ScriptWrappable, public RefCounted<NodeIterator>, public CanMakeWeakPtr<NodeIterator>, public NodeIteratorBase {
+class NodeIterator final : public ScriptWrappable, public RefCountedAndCanMakeWeakPtr<NodeIterator>, public NodeIteratorBase {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(NodeIterator, WEBCORE_EXPORT);
 public:
     static Ref<NodeIterator> create(Node&, unsigned whatToShow, RefPtr<NodeFilter>&&);

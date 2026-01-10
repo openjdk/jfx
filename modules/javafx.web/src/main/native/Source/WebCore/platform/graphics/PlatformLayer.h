@@ -42,9 +42,9 @@ class PlatformLayer;
 using PlatformLayer = Nicosia::PlatformLayer;
 #elif USE(COORDINATED_GRAPHICS)
 namespace WebCore {
-class TextureMapperPlatformLayerProxyProvider;
+class CoordinatedPlatformLayerBufferProxy;
 };
-using PlatformLayer = WebCore::TextureMapperPlatformLayerProxyProvider;
+using PlatformLayer = WebCore::CoordinatedPlatformLayerBufferProxy;
 #elif USE(TEXTURE_MAPPER)
 namespace WebCore {
 class TextureMapperPlatformLayer;

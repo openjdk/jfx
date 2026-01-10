@@ -33,7 +33,7 @@
 #include "WebGPUTexture.h"
 #include <optional>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -45,7 +45,7 @@ class GPUTextureView;
 struct GPUTextureDescriptor;
 struct GPUTextureViewDescriptor;
 
-class GPUTexture : public RefCounted<GPUTexture>, public CanMakeWeakPtr<GPUTexture> {
+class GPUTexture : public RefCountedAndCanMakeWeakPtr<GPUTexture> {
 public:
     static Ref<GPUTexture> create(Ref<WebGPU::Texture>&& backing, const GPUTextureDescriptor& descriptor, const GPUDevice& device)
     {

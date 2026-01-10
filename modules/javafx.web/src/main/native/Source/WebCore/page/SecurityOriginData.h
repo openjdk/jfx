@@ -37,7 +37,7 @@ class LocalFrame;
 class SecurityOrigin;
 
 enum class OpaqueOriginIdentifierType { };
-using OpaqueOriginIdentifier = LegacyNullableAtomicObjectIdentifier<OpaqueOriginIdentifierType>;
+using OpaqueOriginIdentifier = AtomicObjectIdentifier<OpaqueOriginIdentifierType>;
 
 class SecurityOriginData {
 public:
@@ -125,6 +125,7 @@ public:
     // Serialize the security origin to a string that could be used as part of
     // file names. This format should be used in storage APIs only.
     WEBCORE_EXPORT String databaseIdentifier() const;
+    WEBCORE_EXPORT String optionalDatabaseIdentifier() const;
     WEBCORE_EXPORT static std::optional<SecurityOriginData> fromDatabaseIdentifier(StringView);
 
     bool isNull() const

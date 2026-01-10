@@ -59,8 +59,22 @@
 
 #pragma mark --- Delegate
 
+- (void)windowDidChangeScreen:(NSNotification *)notification
+{
+    //NSLog(@"windowDidChangeScreen: %p  screen: %p", self, [self->nsWindow screen]);
+
+    // Fix up window stacking order
+    [self reorderChildWindows];
+}
+
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
+    //NSLog(@"windowDidBecomeKey: %p", self);
+
+    // store host menu if running embedded, otherwise we
+    // just store a default menu
+    self->hostMenu = [NSApp mainMenu];
+
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -76,10 +90,28 @@
         [NSApp setMainMenu:self->menubar->menu];
     }
     [[NSApp mainMenu] update];
+
+    // Fix up window stacking order
+    [self reorderChildWindows];
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification
 {
+    //NSLog(@"windowDidResignKey: %p", self);
+
+    NSMenu* menu = nil;
+
+    if (self->menubar != nil) {
+        menu = self->menubar->menu;
+    }
+
+    // restore menu of host application if running embedded,
+    // otherwise we just restore a default menu
+    if ([NSApp mainMenu] == menu) {
+        [NSApp setMainMenu:self->hostMenu];
+        [[NSApp mainMenu] update];
+    }
+
     [self _ungrabFocus];
 
     GET_MAIN_JENV_NOWARN;
@@ -90,18 +122,25 @@
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-    // Unparent self. Otherwise the code hangs
-    if ([self->nsWindow parentWindow])
-    {
-        [[self->nsWindow parentWindow] removeChildWindow:self->nsWindow];
+    //NSLog(@"windowWillClose");
+    // Remove self from list of owner's child windows
+    if (self->owner != nil) {
+        [self->owner removeChildWindow:self];
     }
 
     // Finally, close owned windows to mimic MS Windows behavior
-    NSArray *children = [self->nsWindow childWindows];
-    for (NSUInteger i=0; i<[children count]; i++)
-    {
-        NSWindow *child = (NSWindow*)[children objectAtIndex:i];
-        [child close];
+    if (self->childWindows != nil) {
+        // Iterate over an immutable copy
+        NSArray *children = [[NSArray alloc] initWithArray:self->childWindows];
+        for (GlassWindow *child in children) {
+            [child->nsWindow close];
+        }
+        [children release];
+    }
+
+    // If we have an owner, reorder its remaining children
+    if (self->owner != nil) {
+        [self->owner reorderChildWindows];
     }
 
     // Call the notification method
@@ -160,14 +199,24 @@
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESIZE forFrame:frame];
 }
 
+- (void)windowWillMiniaturize:(NSNotification *)notification
+{
+    //NSLog(@"windowWillMiniaturize: %p", self);
+}
+
 - (void)windowDidMiniaturize:(NSNotification *)notification
 {
+    //NSLog(@"windowDidMiniaturize: %p", self);
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_MINIMIZE forFrame:[self _flipFrame]];
+    [self minimizeChildWindows:YES];
 }
 
 - (void)windowDidDeminiaturize:(NSNotification *)notification
 {
+    //NSLog(@"windowDidDeminiaturize: %p", self);
     [self _sendJavaWindowResizeEvent:com_sun_glass_events_WindowEvent_RESTORE forFrame:[self _flipFrame]];
+    [self minimizeChildWindows:NO];
+    [self reorderChildWindows];
 }
 
 - (BOOL)windowShouldZoom:(NSWindow *)window toFrame:(NSRect)newFrame
@@ -180,8 +229,6 @@
     if (newFrame.size.width <= 1 || newFrame.size.height <= 1) {
         return NO;
     }
-
-    (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize, com_sun_glass_events_WindowEvent_MAXIMIZE, (int)newFrame.size.width, (int)newFrame.size.height);
 
     return YES;
 }
@@ -202,6 +249,8 @@
     if (nsWindow.toolbar != nil) {
         nsWindow.toolbar.visible = NO;
     }
+    // Allow child windows to move to the same space as this full-screen window
+    [self setMoveToActiveSpaceChildWindows:YES];
 }
 
 - (void)windowDidEnterFullScreen:(NSNotification *)notification
@@ -209,6 +258,10 @@
     //NSLog(@"windowDidEnterFullScreen");
     [(GlassViewDelegate*)[self->view delegate] sendJavaFullScreenEvent:YES withNativeWidget:YES];
     [GlassApplication leaveFullScreenExitingLoopIfNeeded];
+
+    // Fix up window stacking order then disable moving child windows to active space
+    [self reorderChildWindows];
+    [self setMoveToActiveSpaceChildWindows:NO];
 }
 
 - (void)windowWillExitFullScreen:(NSNotification *)notification
@@ -236,6 +289,9 @@
 
     [delegate sendJavaFullScreenEvent:NO withNativeWidget:YES];
     [GlassApplication leaveFullScreenExitingLoopIfNeeded];
+
+    // Fix up window stacking order
+    [self reorderChildWindows];
 }
 
 - (BOOL)windowShouldClose:(NSNotification *)notification

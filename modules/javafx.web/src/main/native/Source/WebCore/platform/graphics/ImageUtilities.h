@@ -25,12 +25,17 @@
 
 #pragma once
 
+#include "IntSize.h"
+
 #include <wtf/Forward.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
 
-WEBCORE_EXPORT WorkQueue& sharedImageTranscodingQueue();
+class ShareableBitmap;
+class SharedBuffer;
+
+WEBCORE_EXPORT WorkQueue& sharedImageTranscodingQueueSingleton();
 
 // Given a list of files' 'paths' and 'allowedMIMETypes', the function returns a list
 // of strings whose size is the same as the size of 'paths' and its entries are all
@@ -43,5 +48,15 @@ WEBCORE_EXPORT Vector<String> findImagesForTranscoding(const Vector<String>& pat
 // of paths to the result temporary files. If an entry in 'paths' is null or an error
 // happens while transcoding, a null string will be added to the returned list.
 WEBCORE_EXPORT Vector<String> transcodeImages(const Vector<String>& paths, const String& destinationUTI, const String& destinationExtension);
+
+enum class ImageDecodingError : uint8_t {
+    Internal,
+    BadData,
+    UnsupportedType
+};
+WEBCORE_EXPORT String descriptionString(ImageDecodingError);
+WEBCORE_EXPORT Expected<std::pair<String, Vector<IntSize>>, ImageDecodingError> utiAndAvailableSizesFromImageData(std::span<const uint8_t>);
+WEBCORE_EXPORT RefPtr<SharedBuffer> createIconDataFromImageData(std::span<const uint8_t> data, std::span<const unsigned> lengths);
+WEBCORE_EXPORT RefPtr<ShareableBitmap> decodeImageWithSize(std::span<const uint8_t> data, std::optional<FloatSize>);
 
 } // namespace WebCore

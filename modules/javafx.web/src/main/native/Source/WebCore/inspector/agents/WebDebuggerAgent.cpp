@@ -31,10 +31,13 @@
 #include "InstrumentingAgents.h"
 #include "ScriptExecutionContext.h"
 #include "Timer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebDebuggerAgent);
 
 WebDebuggerAgent::WebDebuggerAgent(WebAgentContext& context)
     : InspectorDebuggerAgent(context)
@@ -181,6 +184,29 @@ void WebDebuggerAgent::didDispatchPostMessage(int postMessageIdentifier)
     didDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::PostMessage, postMessageIdentifier);
 
     m_postMessageTasks.remove(it);
+}
+
+void WebDebuggerAgent::didRequestAnimationFrame(int callbackId, JSC::JSGlobalObject& state)
+{
+    if (!breakpointsActive())
+        return;
+
+    didScheduleAsyncCall(&state, InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId, true);
+}
+
+void WebDebuggerAgent::willFireAnimationFrame(int callbackId)
+{
+    willDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId);
+}
+
+void WebDebuggerAgent::didCancelAnimationFrame(int callbackId)
+{
+    didCancelAsyncCall(InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId);
+}
+
+void WebDebuggerAgent::didFireAnimationFrame(int callbackId)
+{
+    didDispatchAsyncCall(InspectorDebuggerAgent::AsyncCallType::RequestAnimationFrame, callbackId);
 }
 
 void WebDebuggerAgent::didClearAsyncStackTraceData()

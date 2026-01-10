@@ -40,8 +40,9 @@ Vector<ServerTiming> parseServerTiming(const String& headerValue)
     auto entries = Vector<ServerTiming>();
     if (headerValue.isNull())
         return entries;
-
+#if !PLATFORM(JAVA)
     ASSERT(headerValue.is8Bit());
+#endif
 
     HeaderFieldTokenizer tokenizer(headerValue);
     while (!tokenizer.isConsumed()) {

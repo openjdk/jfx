@@ -31,21 +31,22 @@
 
 namespace WebCore {
 
-std::optional<const char*> hashAlgorithmName(CryptoAlgorithmIdentifier identifier)
+ASCIILiteral hashAlgorithmName(CryptoAlgorithmIdentifier identifier)
 {
     switch (identifier) {
     case CryptoAlgorithmIdentifier::SHA_1:
-        return "sha1";
-    case CryptoAlgorithmIdentifier::SHA_224:
-        return "sha224";
+        return "sha1"_s;
+    case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE(sha224DeprecationMessage);
+        return "sha256"_s;
     case CryptoAlgorithmIdentifier::SHA_256:
-        return "sha256";
+        return "sha256"_s;
     case CryptoAlgorithmIdentifier::SHA_384:
-        return "sha384";
+        return "sha384"_s;
     case CryptoAlgorithmIdentifier::SHA_512:
-        return "sha512";
+        return "sha512"_s;
     default:
-        return std::nullopt;
+        return { };
     }
 }
 
@@ -54,8 +55,9 @@ std::optional<int> hmacAlgorithm(CryptoAlgorithmIdentifier identifier)
     switch (identifier) {
     case CryptoAlgorithmIdentifier::SHA_1:
         return GCRY_MAC_HMAC_SHA1;
-    case CryptoAlgorithmIdentifier::SHA_224:
-        return GCRY_MAC_HMAC_SHA224;
+    case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE(sha224DeprecationMessage);
+        return GCRY_MAC_HMAC_SHA256;
     case CryptoAlgorithmIdentifier::SHA_256:
         return GCRY_MAC_HMAC_SHA256;
     case CryptoAlgorithmIdentifier::SHA_384:
@@ -72,8 +74,9 @@ std::optional<int> digestAlgorithm(CryptoAlgorithmIdentifier identifier)
     switch (identifier) {
     case CryptoAlgorithmIdentifier::SHA_1:
         return GCRY_MD_SHA1;
-    case CryptoAlgorithmIdentifier::SHA_224:
-        return GCRY_MD_SHA224;
+    case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE(sha224DeprecationMessage);
+        return GCRY_MD_SHA256;
     case CryptoAlgorithmIdentifier::SHA_256:
         return GCRY_MD_SHA256;
     case CryptoAlgorithmIdentifier::SHA_384:
@@ -90,8 +93,9 @@ std::optional<PAL::CryptoDigest::Algorithm> hashCryptoDigestAlgorithm(CryptoAlgo
     switch (identifier) {
     case CryptoAlgorithmIdentifier::SHA_1:
         return PAL::CryptoDigest::Algorithm::SHA_1;
-    case CryptoAlgorithmIdentifier::SHA_224:
-        return PAL::CryptoDigest::Algorithm::SHA_224;
+    case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE(sha224DeprecationMessage);
+        return PAL::CryptoDigest::Algorithm::SHA_256;
     case CryptoAlgorithmIdentifier::SHA_256:
         return PAL::CryptoDigest::Algorithm::SHA_256;
     case CryptoAlgorithmIdentifier::SHA_384:
@@ -155,7 +159,7 @@ std::optional<Vector<uint8_t>> mpiZeroPrefixedData(gcry_mpi_t paramMPI, size_t t
     // and copy the MPI data into memory area following the prefix (if any).
     Vector<uint8_t> output(targetLength, 0);
     size_t prefixLength = targetLength - *length;
-    gcry_error_t error = gcry_mpi_print(GCRYMPI_FMT_USG, output.data() + prefixLength, targetLength, nullptr, paramMPI);
+    gcry_error_t error = gcry_mpi_print(GCRYMPI_FMT_USG, const_cast<uint8_t*>(output.subspan(prefixLength).data()), targetLength, nullptr, paramMPI);
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
         return std::nullopt;

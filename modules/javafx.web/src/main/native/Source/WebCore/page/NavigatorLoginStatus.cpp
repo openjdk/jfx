@@ -28,14 +28,17 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Navigator.h"
 #include "Page.h"
 #include "RegistrableDomain.h"
 #include "SecurityOrigin.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorLoginStatus);
 
 NavigatorLoginStatus* NavigatorLoginStatus::from(Navigator& navigator)
 {
@@ -71,7 +74,7 @@ bool NavigatorLoginStatus::hasSameOrigin() const
     Ref origin = document->securityOrigin();
     bool isSameSite = true;
     for (RefPtr parentDocument = document->parentDocument(); parentDocument; parentDocument = parentDocument->parentDocument()) {
-        if (!origin->isSameOriginAs(parentDocument->securityOrigin())) {
+        if (!origin->isSameOriginAs(parentDocument->protectedSecurityOrigin())) {
             isSameSite = false;
             break;
         }

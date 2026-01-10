@@ -30,6 +30,7 @@
 
 #include "ChromeClient.h"
 #include "CryptoClient.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 // Empty client classes for use by WebCore.
@@ -45,7 +46,7 @@ class HTMLImageElement;
 class PageConfiguration;
 
 class EmptyChromeClient : public ChromeClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EmptyChromeClient);
 
     void chromeDestroyed() override { }
 
@@ -63,7 +64,7 @@ class EmptyChromeClient : public ChromeClient {
     void focusedElementChanged(Element*) final { }
     void focusedFrameChanged(Frame*) final { }
 
-    Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
+    RefPtr<Page> createWindow(LocalFrame&, const String&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
     void show() final { }
 
     bool canRunModal() const final { return false; }
@@ -102,9 +103,9 @@ class EmptyChromeClient : public ChromeClient {
     bool selectItemAlignmentFollowsMenuWritingDirection() final { return false; }
     RefPtr<PopupMenu> createPopupMenu(PopupMenuClient&) const final;
     RefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient&) const final;
-
+#if PLATFORM(JAVA)
     void setStatusbarText(const String&) final { }
-
+#endif
     KeyboardUIMode keyboardUIMode() final { return KeyboardAccessDefault; }
 
     bool hoverSupportedByPrimaryPointingDevice() const final { return false; };
@@ -118,6 +119,7 @@ class EmptyChromeClient : public ChromeClient {
     void scroll(const IntSize&, const IntRect&, const IntRect&) final { }
 
     IntPoint screenToRootView(const IntPoint& p) const final { return p; }
+    IntPoint rootViewToScreen(const IntPoint& p) const final { return p; }
     IntRect rootViewToScreen(const IntRect& r) const final { return r; }
     IntPoint accessibilityScreenToRootView(const IntPoint& p) const final { return p; };
     IntRect rootViewToAccessibilityScreen(const IntRect& r) const final { return r; };
@@ -140,18 +142,12 @@ class EmptyChromeClient : public ChromeClient {
     void reachedMaxAppCacheSize(int64_t) final { }
     void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t) final { }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
-#endif
+    RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
 
-#if ENABLE(DATALIST_ELEMENT)
-    std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
+    RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
-#endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
-#endif
+    RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
 
     void setTextIndicator(const TextIndicatorData&) const final;
 
@@ -181,9 +177,9 @@ class EmptyChromeClient : public ChromeClient {
 #endif
 
 #if PLATFORM(PLAYSTATION)
-    void postAccessibilityNotification(AccessibilityObject&, AXObjectCache::AXNotification) final { }
+    void postAccessibilityNotification(AccessibilityObject&, AXNotification) final { }
     void postAccessibilityNodeTextChangeNotification(AccessibilityObject*, AXTextChange, unsigned, const String&) final { }
-    void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXObjectCache::AXLoadingEvent) final { }
+    void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXLoadingEvent) final { }
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -230,7 +226,7 @@ class EmptyChromeClient : public ChromeClient {
     void didAssociateFormControls(const Vector<RefPtr<Element>>&, LocalFrame&) final { }
     bool shouldNotifyOnFormChanges() final { return false; }
 
-    RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) final { return nullptr; }
+    RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) final;
 
     void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) final;
 };
@@ -239,7 +235,7 @@ DiagnosticLoggingClient& emptyDiagnosticLoggingClient();
 WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier>, PAL::SessionID);
 
 class EmptyCryptoClient: public CryptoClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EmptyCryptoClient);
 public:
     EmptyCryptoClient() = default;
     ~EmptyCryptoClient() = default;

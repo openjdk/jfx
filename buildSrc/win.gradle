@@ -23,6 +23,10 @@
  * questions.
  */
 
+import org.gradle.process.ExecOperations
+
+def execOps = project.services.get(ExecOperations)
+
 ext.WIN = [:]
 
 WIN.canBuild = IS_WINDOWS
@@ -64,7 +68,7 @@ setupTools("windows_tools",
             // Create the properties file
             ByteArrayOutputStream results = new ByteArrayOutputStream();
             String winsdkDir = System.getenv().get("WINSDK_DIR");
-            exec({
+            execOps.exec { spec ->
                 environment([
                         "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
                         "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
@@ -73,7 +77,7 @@ setupTools("windows_tools",
                 ]);
                 commandLine("cmd", "/q", "/c", "buildSrc\\genVSproperties.bat");
                 setStandardOutput(results);
-            });
+            }
             BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
             reader.readLine();
             reader.readLine();
@@ -326,9 +330,9 @@ WIN.glass.rcFlags = [
 WIN.glass.ccFlags = [ccFlags].flatten()
 WIN.glass.linker = linker
 WIN.glass.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
-        "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib",
+        "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib", "version.lib",
         "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll",
-        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"]).flatten()
+        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll", "/DELAYLOAD:version.dll"]).flatten()
 WIN.glass.lib = "glass"
 
 WIN.decora = [:]

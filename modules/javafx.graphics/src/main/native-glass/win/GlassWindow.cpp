@@ -212,6 +212,10 @@ LRESULT CALLBACK GlassWindow::CBTFilter(int nCode, WPARAM wParam, LPARAM lParam)
     return ::CallNextHookEx(GlassWindow::sm_hCBTFilter, nCode, wParam, lParam);
 }
 
+#ifndef USER_DEFAULT_SCREEN_DPI
+#define USER_DEFAULT_SCREEN_DPI 96
+#endif
+
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED       0x02E0
 #endif
@@ -248,6 +252,8 @@ char *StringForMsg(UINT msg) {
         case WM_MOVE: return "WM_MOVE";
         case WM_WINDOWPOSCHANGING: return "WM_WINDOWPOSCHANGING";
         case WM_WINDOWPOSCHANGED: return "WM_WINDOWPOSCHANGED";
+        case WM_DISPLAYCHANGE: return "WM_DISPLAYCHANGE";
+        case WM_SETTINGCHANGE: return "WM_SETTINGCHANGE";
         case WM_CLOSE: return "WM_CLOSE";
         case WM_DESTROY: return "WM_DESTROY";
         case WM_ACTIVATE: return "WM_ACTIVATE";
@@ -315,10 +321,12 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             // It's possible that move/size events are reported by the platform
             // before the peer listener is set. As a result, location/size are
             // not reported, so resending them from here.
-            HandleMoveEvent(NULL);
-            HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
-            // The call below may be restricted to WS_POPUP windows
-            NotifyViewSize(GetHWND());
+            if (!::IsIconic(GetHWND())) {
+                HandleMoveEvent(NULL);
+                HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
+                // The call below may be restricted to WS_POPUP windows
+                NotifyViewSize(GetHWND());
+            }
 
             if (!wParam) {
                 ResetMouseTracking(GetHWND());
@@ -363,9 +371,18 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             HandleViewSizeEvent(GetHWND(), msg, wParam, lParam);
             break;
+        case WM_DPICHANGED:
+            HandleDPIEvent(wParam, lParam);
+            GlassScreen::HandleDisplayChange();
+            break;
         case WM_MOVING:
             m_winChangingReason = WasMoved;
             break;
+        case WM_DISPLAYCHANGE:
+        case WM_SETTINGCHANGE:
+          // Trigger a move event to notify the stage about possible changes in the window location
+          // (for instance, if this is a secondary screen and the primary screen changed its resolution,
+          // or if the screens relative position was rearranged)
         case WM_MOVE:
             if (!::IsIconic(GetHWND())) {
                 HandleMoveEvent(NULL);
@@ -808,6 +825,15 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
     CheckAndClearException(env);
 }
 
+void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam)
+{
+    JNIEnv* env = GetEnv();
+    float scale = (float) LOWORD(wParam) / USER_DEFAULT_SCREEN_DPI;
+
+    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, scale, scale, scale, scale);
+    CheckAndClearException(env);
+}
+
 void GlassWindow::HandleActivateEvent(jint event)
 {
     const bool active = event != com_sun_glass_events_WindowEvent_FOCUS_LOST;
@@ -831,10 +857,9 @@ void GlassWindow::HandleFocusDisabledEvent()
 
 LRESULT GlassWindow::HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    // Capture the top and size before DefWindowProc applies the default frame.
+    // Capture the top before DefWindowProc applies the default frame.
     NCCALCSIZE_PARAMS *p = (NCCALCSIZE_PARAMS*)lParam;
     LONG originalTop = p->rgrc[0].top;
-    RECT originalSize = p->rgrc[0];
 
     // Apply the default window frame.
     LRESULT res = DefWindowProc(GetHWND(), msg, wParam, lParam);
@@ -924,7 +949,7 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
         RECT windowRect;
 
-        if (::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
+        if (m_isResizable && ::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
             result = LRESULT(HTTOP);
             return TRUE;
         }
@@ -1258,6 +1283,55 @@ void GlassWindow::SetIcon(HICON hIcon)
     m_hIcon = hIcon;
 }
 
+void GlassWindow::SetDarkFrame(bool dark)
+{
+    // The value of the DWMWA_USE_IMMERSIVE_DARK_MODE constant may be different depending on the OS version.
+    // We are going to query the file version of dwmapi.dll to make sure we use the right constant, or the
+    // value 0 to indicate that we don't support this feature.
+    // See: https://github.com/MicrosoftDocs/sdk-api/commit/c19f1c8a148b930444dce998d3c717c8fb7751e1
+    static const DWORD DWMWA_USE_IMMERSIVE_DARK_MODE = []() {
+        DWORD ignored;
+        DWORD infoSize = GetFileVersionInfoSizeExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", &ignored);
+        if (infoSize <= 0) {
+            return 0;
+        }
+
+        std::vector<char> buffer(infoSize);
+        if (!GetFileVersionInfoExW(FILE_VER_GET_NEUTRAL, L"dwmapi.dll", ignored,
+                                   static_cast<DWORD>(buffer.size()), &buffer[0])) {
+            return 0;
+        }
+
+        UINT size = 0;
+        VS_FIXEDFILEINFO* fileInfo = nullptr;
+        if (!VerQueryValueW(buffer.data(), L"\\", reinterpret_cast<LPVOID*>(&fileInfo), &size)) {
+            return 0;
+        }
+
+        WORD major = HIWORD(fileInfo->dwFileVersionMS);
+        WORD minor = LOWORD(fileInfo->dwFileVersionMS);
+        WORD build = HIWORD(fileInfo->dwFileVersionLS);
+
+        // Windows 10 before build 10.0.17763: not supported
+        if (major < 10 || (major == 10 && minor == 0 && build < 17763)) {
+            return 0;
+        }
+
+        // Windows 10 build 10.0.17763 until 10.0.18985
+        if (major == 10 && minor == 0 && build >= 17763 && build < 18985) {
+            return 19;
+        }
+
+        // Windows 10 build 10.0.18985 or later
+        return 20;
+    }();
+
+    if (DWMWA_USE_IMMERSIVE_DARK_MODE) {
+        BOOL darkMode = dark;
+        DwmSetWindowAttribute(GetHWND(), DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
+    }
+}
+
 void GlassWindow::ShowSystemMenu(int x, int y)
 {
     WINDOWPLACEMENT placement;
@@ -1453,6 +1527,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
                     ::EnableMenuItem(hSysMenu, SC_CLOSE,
                             MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
                 }
+            }
+
+            if (mask & com_sun_glass_ui_Window_DARK_FRAME) {
+                pWindow->SetDarkFrame(true);
             }
         }
 
@@ -1692,6 +1770,28 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground2
     PERFORM();
 
     return JNI_TRUE;
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _setDarkFrame
+ * Signature: (JZ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setDarkFrame
+    (JNIEnv *env, jobject jThis, jlong ptr, jboolean dark)
+{
+    ENTER_MAIN_THREAD()
+    {
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+        if (pWindow) {
+            pWindow->SetDarkFrame(dark);
+        }
+    }
+    jboolean dark;
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+
+    ARG(dark) = dark;
+    PERFORM();
 }
 
 /*

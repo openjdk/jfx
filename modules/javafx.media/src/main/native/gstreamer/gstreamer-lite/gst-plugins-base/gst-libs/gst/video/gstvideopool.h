@@ -51,7 +51,7 @@ GST_VIDEO_API
 void             gst_buffer_pool_config_set_video_alignment  (GstStructure *config, const GstVideoAlignment *align);
 
 GST_VIDEO_API
-gboolean         gst_buffer_pool_config_get_video_alignment  (GstStructure *config, GstVideoAlignment *align);
+gboolean         gst_buffer_pool_config_get_video_alignment  (const GstStructure *config, GstVideoAlignment *align);
 
 /* video bufferpool */
 typedef struct _GstVideoBufferPool GstVideoBufferPool;

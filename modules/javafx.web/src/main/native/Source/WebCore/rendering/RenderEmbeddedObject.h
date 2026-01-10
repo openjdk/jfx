@@ -26,8 +26,18 @@
 
 namespace WebCore {
 
+class LayoutSize;
 class MouseEvent;
 class TextRun;
+
+enum class PluginUnavailabilityReason : uint8_t {
+    PluginMissing,
+    PluginCrashed,
+    PluginBlockedByContentSecurityPolicy,
+    InsecurePluginVersion,
+    UnsupportedPlugin,
+    PluginTooSmall
+};
 
 // Renderer for embeds and objects, often, but not always, rendered via plug-ins.
 // For example, <embed src="foo.html"> does not invoke a plug-in.
@@ -38,35 +48,24 @@ public:
     RenderEmbeddedObject(HTMLFrameOwnerElement&, RenderStyle&&);
     virtual ~RenderEmbeddedObject();
 
-    enum PluginUnavailabilityReason {
-        PluginMissing,
-        PluginCrashed,
-        PluginBlockedByContentSecurityPolicy,
-        InsecurePluginVersion,
-        UnsupportedPlugin,
-        PluginTooSmall
-    };
     PluginUnavailabilityReason pluginUnavailabilityReason() const { return m_pluginUnavailabilityReason; };
     WEBCORE_EXPORT void setPluginUnavailabilityReason(PluginUnavailabilityReason);
-    WEBCORE_EXPORT void setPluginUnavailabilityReasonWithDescription(PluginUnavailabilityReason, const String& description);
 
     bool isPluginUnavailable() const { return m_isPluginUnavailable; }
-
-    WEBCORE_EXPORT void setUnavailablePluginIndicatorIsHidden(bool);
 
     void handleUnavailablePluginIndicatorEvent(Event*);
 
     bool requiresAcceleratedCompositing() const override;
 
-    LayoutRect unavailablePluginIndicatorBounds(const LayoutPoint& accumulatedOffset) const;
-
-    const String& pluginReplacementTextIfUnavailable() const { return m_unavailablePluginReplacementText; }
-
     ScrollableArea* scrollableArea() const;
     bool usesAsyncScrolling() const;
-    ScrollingNodeID scrollingNodeID() const;
+    std::optional<ScrollingNodeID> scrollingNodeID() const;
     void willAttachScrollingNode();
     void didAttachScrollingNode();
+
+    bool paintsContent() const final;
+
+    void setHasShadowContent() { m_hasShadowContent = true; }
 
 private:
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
@@ -79,8 +78,6 @@ private:
 
     ASCIILiteral renderName() const final { return "RenderEmbeddedObject"_s; }
 
-    bool showsUnavailablePluginIndicator() const { return isPluginUnavailable() && m_isUnavailablePluginIndicatorState != UnavailablePluginIndicatorState::Hidden; }
-
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
     bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1, Element** stopElement = nullptr, RenderBox* startBox = nullptr, const IntPoint& wheelEventAbsolutePoint = IntPoint()) final;
@@ -92,14 +89,15 @@ private:
     void getReplacementTextGeometry(const LayoutPoint& accumulatedOffset, FloatRect& contentRect, FloatRect& indicatorRect, FloatRect& replacementTextRect, FloatRect& arrowRect, FontCascade&, TextRun&, float& textWidth) const;
     LayoutRect getReplacementTextGeometry(const LayoutPoint& accumulatedOffset) const;
 
+    bool canHaveChildren() const override { return m_hasShadowContent; }
+
     bool m_isPluginUnavailable;
-    enum class UnavailablePluginIndicatorState { Uninitialized, Hidden, Visible };
-    UnavailablePluginIndicatorState m_isUnavailablePluginIndicatorState { UnavailablePluginIndicatorState::Uninitialized };
     PluginUnavailabilityReason m_pluginUnavailabilityReason;
     String m_unavailablePluginReplacementText;
     bool m_unavailablePluginIndicatorIsPressed;
     bool m_mouseDownWasInUnavailablePluginIndicator;
     String m_unavailabilityDescription;
+    bool m_hasShadowContent { false };
 };
 
 } // namespace WebCore

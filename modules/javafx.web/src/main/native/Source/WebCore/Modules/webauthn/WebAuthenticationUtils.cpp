@@ -34,21 +34,17 @@
 #include "WebAuthenticationConstants.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/JSONValues.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t length)
-{
-    return { std::span { byteArray, length } };
-}
-
 Vector<uint8_t> produceRpIdHash(const String& rpId)
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto rpIdUTF8 = rpId.utf8();
-    crypto->addBytes(rpIdUTF8.span());
+    crypto->addBytes(byteCast<uint8_t>(rpIdUTF8.span()));
     return crypto->computeHash();
 }
 
@@ -138,7 +134,7 @@ cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&& authData, String
     if (attestation == AttestationConveyancePreference::None) {
         const size_t aaguidOffset = rpIdHashLength + flagsLength + signCounterLength;
         if (authData.size() >= aaguidOffset + aaguidLength && shouldZero == ShouldZeroAAGUID::Yes)
-            memset(authData.data() + aaguidOffset, 0, aaguidLength);
+            zeroSpan(authData.mutableSpan().subspan(aaguidOffset, aaguidLength));
         format = String::fromLatin1(noneAttestationValue);
         statementMap.clear();
     }
@@ -157,9 +153,9 @@ Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& form
     return *attestationObject;
 }
 
-// FIXME(181948): Add token binding ID.
 Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& challenge, const SecurityOrigin& origin, WebAuthn::Scope scope, const String& topOrigin)
 {
+    // https://www.w3.org/TR/webauthn-2/#clientdatajson-verification
     auto object = JSON::Object::create();
     switch (type) {
     case ClientDataType::Create:
@@ -172,13 +168,13 @@ Ref<ArrayBuffer> buildClientDataJson(ClientDataType type, const BufferSource& ch
     object->setString("challenge"_s, base64URLEncodeToString(challenge.span()));
     object->setString("origin"_s, origin.toRawString());
 
-    if (!topOrigin.isNull())
-        object->setString("topOrigin"_s, topOrigin);
-
     if (scope != WebAuthn::Scope::SameOrigin)
         object->setBoolean("crossOrigin"_s, scope != WebAuthn::Scope::SameOrigin);
 
-    return ArrayBuffer::create(object->toJSONString().utf8().span());
+    if (!topOrigin.isNull())
+        object->setString("topOrigin"_s, topOrigin);
+
+    return ArrayBuffer::create(byteCast<uint8_t>(object->toJSONString().utf8().span()));
 }
 
 Vector<uint8_t> buildClientDataJsonHash(const ArrayBuffer& clientDataJson)

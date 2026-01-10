@@ -77,10 +77,10 @@ void RenderButton::setInnerRenderer(RenderBlock& innerRenderer)
     updateAnonymousChildStyle(m_inner->mutableStyle());
 
     if (m_inner && m_inner->layoutBox()) {
-        if (auto* inlineFormattingContextRoot = dynamicDowncast<RenderBlockFlow>(*m_inner); inlineFormattingContextRoot && inlineFormattingContextRoot->modernLineLayout())
-            inlineFormattingContextRoot->modernLineLayout()->rootStyleWillChange(*inlineFormattingContextRoot, inlineFormattingContextRoot->style());
+        if (auto* inlineFormattingContextRoot = dynamicDowncast<RenderBlockFlow>(*m_inner); inlineFormattingContextRoot && inlineFormattingContextRoot->inlineLayout())
+            inlineFormattingContextRoot->inlineLayout()->rootStyleWillChange(*inlineFormattingContextRoot, inlineFormattingContextRoot->style());
         if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*m_inner))
-            lineLayout->styleWillChange(*m_inner, m_inner->style());
+            lineLayout->styleWillChange(*m_inner, m_inner->style(), StyleDifference::Layout);
         LayoutIntegration::LineLayout::updateStyle(*m_inner);
         for (auto& child : childrenOfType<RenderText>(*m_inner))
             LayoutIntegration::LineLayout::updateStyle(child);
@@ -108,6 +108,7 @@ void RenderButton::updateAnonymousChildStyle(RenderStyle& childStyle) const
     childStyle.setFlexWrap(style().flexWrap());
     childStyle.setAlignItems(style().alignItems());
     childStyle.setAlignContent(style().alignContent());
+    childStyle.setTextBoxTrim(style().textBoxTrim());
 }
 
 void RenderButton::updateFromElement()
@@ -168,7 +169,7 @@ LayoutRect RenderButton::controlClipRect(const LayoutPoint& additionalOffset) co
 
 static LayoutUnit synthesizedBaselineFromContentBox(const RenderBox& box, LineDirectionMode direction)
 {
-    return direction == HorizontalLine ? box.borderTop() + box.paddingTop() + box.contentHeight() : box.borderRight() + box.paddingRight() + box.contentWidth();
+    return direction == HorizontalLine ? box.borderTop() + box.paddingTop() + box.contentBoxHeight() : box.borderRight() + box.paddingRight() + box.contentBoxWidth();
 }
 
 LayoutUnit RenderButton::baselinePosition(FontBaseline fontBaseline, bool firstLine, LineDirectionMode direction, LinePositionMode mode) const

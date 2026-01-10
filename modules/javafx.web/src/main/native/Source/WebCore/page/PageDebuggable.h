@@ -29,13 +29,15 @@
 
 #include <JavaScriptCore/RemoteInspectionTarget.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Page;
 
 class PageDebuggable final : public Inspector::RemoteInspectionTarget {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PageDebuggable);
     WTF_MAKE_NONCOPYABLE(PageDebuggable);
 public:
     static Ref<PageDebuggable> create(Page&);
@@ -60,7 +62,7 @@ public:
 private:
     explicit PageDebuggable(Page&);
 
-    Page* m_page;
+    WeakPtr<Page> m_page;
     String m_nameOverride;
 };
 

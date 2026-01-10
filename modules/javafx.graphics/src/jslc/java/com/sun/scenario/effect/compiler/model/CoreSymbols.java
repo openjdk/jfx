@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.scenario.effect.compiler.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -50,6 +51,10 @@ public class CoreSymbols {
 
     public static Function getFunction(String name, List<Type> ptypes) {
         return SymbolTable.getFunctionForSignature(funcs, name, ptypes);
+    }
+
+    public static Set<Function> getFunctions() {
+        return Collections.unmodifiableSet(getAllFunctions());
     }
 
     static {

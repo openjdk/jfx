@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -452,5 +452,16 @@ public class Util {
 
         String waylandDisplay = System.getenv("WAYLAND_DISPLAY");
         return waylandDisplay != null && !waylandDisplay.isEmpty();
+    }
+
+    /**
+     * Returns true if two pixel values are "near", i.e. the distance between them is less than
+     * an arbitrarily chosen constant (0.1).
+     * @param a the first coordinate
+     * @param b the second coordinate
+     * @return true if two coordinates are near
+     */
+    public static boolean isNear(double a, double b) {
+        return Math.abs(a - b) < 0.1;
     }
 }

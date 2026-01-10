@@ -223,8 +223,8 @@ gst_buffer_list_remove_range_internal (GstBufferList * list, guint idx,
 /**
  * gst_buffer_list_foreach:
  * @list: a #GstBufferList
- * @func: (scope call): a #GstBufferListFunc to call
- * @user_data: (closure): user data passed to @func
+ * @func: (scope call) (closure user_data): a #GstBufferListFunc to call
+ * @user_data: user data passed to @func
  *
  * Calls @func with @data for each buffer in @list.
  *
@@ -332,9 +332,9 @@ gst_buffer_list_foreach (GstBufferList * list, GstBufferListFunc func,
  * You must make sure that @idx does not exceed the number of
  * buffers available.
  *
- * Returns: (transfer none) (nullable): the buffer at @idx in @group
- *     or %NULL when there is no buffer. The buffer remains valid as
- *     long as @list is valid and buffer is not removed from the list.
+ * Returns: (transfer none): the buffer at @idx in @group.
+ *     The returned buffer remains valid as long as @list is valid and
+ *     buffer is not removed from the list.
  */
 GstBuffer *
 gst_buffer_list_get (GstBufferList * list, guint idx)
@@ -355,8 +355,8 @@ gst_buffer_list_get (GstBufferList * list, guint idx)
  * You must make sure that @idx does not exceed the number of
  * buffers available.
  *
- * Returns: (transfer none) (nullable): the buffer at @idx in @group.
- *     The returned  buffer remains valid as long as @list is valid and
+ * Returns: (transfer none): the buffer at @idx in @group.
+ *     The returned buffer remains valid as long as @list is valid and
  *     the buffer is not removed from the list.
  *
  * Since: 1.14

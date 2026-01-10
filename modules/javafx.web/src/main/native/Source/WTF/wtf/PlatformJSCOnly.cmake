@@ -49,15 +49,15 @@ else ()
     if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
         list(APPEND WTF_SOURCES
             glib/FileSystemGlib.cpp
+            glib/Sandbox.cpp
         )
-    else ()
+    endif ()
+
         list(APPEND WTF_SOURCES
             posix/FileSystemPOSIX.cpp
 
             unix/UniStdExtrasUnix.cpp
         )
-    endif ()
-
 endif ()
 
 if (WIN32)
@@ -107,6 +107,11 @@ else ()
 endif ()
 
 if (LOWERCASE_EVENT_LOOP_TYPE STREQUAL "glib")
+    list(APPEND WTF_PUBLIC_HEADERS
+        glib/GRefPtr.h
+        glib/GTypedefs.h
+        glib/RunLoopSourcePriority.h
+    )
     list(APPEND WTF_SOURCES
         glib/GRefPtr.cpp
         glib/RunLoopGLib.cpp

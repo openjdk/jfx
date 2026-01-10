@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,8 +29,8 @@
 #include "ControlPart.h"
 #include "DashArray.h"
 #include "DestinationColorSpace.h"
-#include "DisplayListItem.h"
 #include "FloatRect.h"
+#include "FloatSegment.h"
 #include "FontCascade.h"
 #include "GraphicsContextState.h"
 #include "Image.h"
@@ -43,7 +43,7 @@
 #include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
-
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -53,10 +53,7 @@ class Filter;
 class FilterResults;
 class FloatRoundedRect;
 class Gradient;
-class GraphicsContextPlatformPrivate;
 class ImageBuffer;
-class MediaPlayer;
-class GraphicsContextGL;
 class Path;
 class SystemImage;
 class TextRun;
@@ -64,11 +61,11 @@ class VideoFrame;
 
 namespace DisplayList {
 class DrawNativeImage;
-class ResourceHeap;
 }
 
 class GraphicsContext {
-    WTF_MAKE_NONCOPYABLE(GraphicsContext); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(GraphicsContext, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(GraphicsContext);
     friend class BifurcatedGraphicsContext;
     friend class DisplayList::DrawNativeImage;
     friend class NativeImage;
@@ -106,76 +103,74 @@ public:
     Gradient* fillGradient() const { return fillBrush().gradient(); }
     const AffineTransform& fillGradientSpaceTransform() const { return fillBrush().gradientSpaceTransform(); }
     Pattern* fillPattern() const { return fillBrush().pattern(); }
-    void setFillBrush(const SourceBrush& brush) { m_state.setFillBrush(brush); didUpdateState(m_state); }
-    void setFillColor(const Color& color) { m_state.setFillColor(color); didUpdateState(m_state); }
-    void setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform = { }) { m_state.setFillGradient(WTFMove(gradient), spaceTransform); didUpdateState(m_state); }
-    void setFillPattern(Ref<Pattern>&& pattern) { m_state.setFillPattern(WTFMove(pattern)); didUpdateState(m_state); }
+    void setFillBrush(const SourceBrush& brush) { m_state.setFillBrush(brush); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::FillBrush)); }
+    void setFillColor(const Color& color) { m_state.setFillColor(color); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::FillBrush)); }
+    void setFillGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform = { }) { m_state.setFillGradient(WTFMove(gradient), spaceTransform); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::FillBrush)); }
+    void setFillPattern(Ref<Pattern>&& pattern) { m_state.setFillPattern(WTFMove(pattern)); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::FillBrush)); }
 
     WindRule fillRule() const { return m_state.fillRule(); }
-    void setFillRule(WindRule fillRule) { m_state.setFillRule(fillRule); didUpdateState(m_state); }
+    void setFillRule(WindRule fillRule) { m_state.setFillRule(fillRule); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::FillRule)); }
 
     const SourceBrush& strokeBrush() const { return m_state.strokeBrush(); }
     const Color& strokeColor() const { return strokeBrush().color(); }
     Gradient* strokeGradient() const { return strokeBrush().gradient(); }
     const AffineTransform& strokeGradientSpaceTransform() const { return strokeBrush().gradientSpaceTransform(); }
     Pattern* strokePattern() const { return strokeBrush().pattern(); }
-    void setStrokeBrush(const SourceBrush& brush) { m_state.setStrokeBrush(brush); didUpdateState(m_state); }
-    void setStrokeColor(const Color& color) { m_state.setStrokeColor(color); didUpdateState(m_state); }
-    void setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform = { }) { m_state.setStrokeGradient(WTFMove(gradient), spaceTransform); didUpdateState(m_state); }
-    void setStrokePattern(Ref<Pattern>&& pattern) { m_state.setStrokePattern(WTFMove(pattern)); didUpdateState(m_state); }
+    void setStrokeBrush(const SourceBrush& brush) { m_state.setStrokeBrush(brush); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::StrokeBrush)); }
+    void setStrokeColor(const Color& color) { m_state.setStrokeColor(color); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::StrokeBrush)); }
+    void setStrokeGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform = { }) { m_state.setStrokeGradient(WTFMove(gradient), spaceTransform); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::StrokeBrush)); }
+    void setStrokePattern(Ref<Pattern>&& pattern) { m_state.setStrokePattern(WTFMove(pattern)); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::StrokeBrush)); }
 
     float strokeThickness() const { return m_state.strokeThickness(); }
-    void setStrokeThickness(float thickness) { m_state.setStrokeThickness(thickness); didUpdateState(m_state); }
+    void setStrokeThickness(float thickness) { m_state.setStrokeThickness(thickness); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::StrokeThickness)); }
 
     StrokeStyle strokeStyle() const { return m_state.strokeStyle(); }
-    void setStrokeStyle(StrokeStyle style) { m_state.setStrokeStyle(style); didUpdateState(m_state); }
+    void setStrokeStyle(StrokeStyle style) { m_state.setStrokeStyle(style); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::StrokeStyle)); }
 
     std::optional<GraphicsDropShadow> dropShadow() const { return m_state.dropShadow(); }
-    void setDropShadow(const GraphicsDropShadow& dropShadow) { m_state.setDropShadow(dropShadow); didUpdateState(m_state); }
-    void clearDropShadow() { m_state.setDropShadow(std::nullopt); didUpdateState(m_state); }
+    void setDropShadow(const GraphicsDropShadow& dropShadow) { m_state.setDropShadow(dropShadow); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::DropShadow)); }
+    void clearDropShadow() { m_state.setDropShadow(std::nullopt); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::DropShadow)); }
     bool hasBlurredDropShadow() const { return dropShadow() && dropShadow()->isBlurred(); }
     bool hasDropShadow() const { return dropShadow() && dropShadow()->hasOutsets(); }
 
     std::optional<GraphicsStyle> style() const { return m_state.style(); }
-    void setStyle(const std::optional<GraphicsStyle>& style) { m_state.setStyle(style); didUpdateState(m_state); }
+    void setStyle(const std::optional<GraphicsStyle>& style) { m_state.setStyle(style); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::Style)); }
 
     CompositeMode compositeMode() const { return m_state.compositeMode(); }
     CompositeOperator compositeOperation() const { return compositeMode().operation; }
     BlendMode blendMode() const { return compositeMode().blendMode; }
-    void setCompositeMode(CompositeMode compositeMode) { m_state.setCompositeMode(compositeMode); didUpdateState(m_state); }
+    void setCompositeMode(CompositeMode compositeMode) { m_state.setCompositeMode(compositeMode); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::CompositeMode)); }
     void setCompositeOperation(CompositeOperator operation, BlendMode blendMode = BlendMode::Normal) { setCompositeMode({ operation, blendMode }); }
 
     float alpha() const { return m_state.alpha(); }
-    void setAlpha(float alpha) { m_state.setAlpha(alpha); didUpdateState(m_state); }
+    void setAlpha(float alpha) { m_state.setAlpha(alpha); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::Alpha)); }
 
     TextDrawingModeFlags textDrawingMode() const { return m_state.textDrawingMode(); }
-    void setTextDrawingMode(TextDrawingModeFlags textDrawingMode) { m_state.setTextDrawingMode(textDrawingMode); didUpdateState(m_state); }
+    void setTextDrawingMode(TextDrawingModeFlags textDrawingMode) { m_state.setTextDrawingMode(textDrawingMode); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::TextDrawingMode)); }
 
     InterpolationQuality imageInterpolationQuality() const { return m_state.imageInterpolationQuality(); }
-    void setImageInterpolationQuality(InterpolationQuality imageInterpolationQuality) { m_state.setImageInterpolationQuality(imageInterpolationQuality); didUpdateState(m_state); }
+    void setImageInterpolationQuality(InterpolationQuality imageInterpolationQuality) { m_state.setImageInterpolationQuality(imageInterpolationQuality); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::ImageInterpolationQuality)); }
 
     bool shouldAntialias() const { return m_state.shouldAntialias(); }
-    void setShouldAntialias(bool shouldAntialias) { m_state.setShouldAntialias(shouldAntialias); didUpdateState(m_state); }
+    void setShouldAntialias(bool shouldAntialias) { m_state.setShouldAntialias(shouldAntialias); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::ShouldAntialias)); }
 
     bool shouldSmoothFonts() const { return m_state.shouldSmoothFonts(); }
-    void setShouldSmoothFonts(bool shouldSmoothFonts) { m_state.setShouldSmoothFonts(shouldSmoothFonts); didUpdateState(m_state); }
+    void setShouldSmoothFonts(bool shouldSmoothFonts) { m_state.setShouldSmoothFonts(shouldSmoothFonts); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::ShouldSmoothFonts)); }
 
     // Normally CG enables subpixel-quantization because it improves the performance of aligning glyphs.
     // In some cases we have to disable to to ensure a high-quality output of the glyphs.
     bool shouldSubpixelQuantizeFonts() const { return m_state.shouldSubpixelQuantizeFonts(); }
-    void setShouldSubpixelQuantizeFonts(bool shouldSubpixelQuantizeFonts) { m_state.setShouldSubpixelQuantizeFonts(shouldSubpixelQuantizeFonts); didUpdateState(m_state); }
+    void setShouldSubpixelQuantizeFonts(bool shouldSubpixelQuantizeFonts) { m_state.setShouldSubpixelQuantizeFonts(shouldSubpixelQuantizeFonts); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::ShouldSubpixelQuantizeFonts)); }
 
     bool shadowsIgnoreTransforms() const { return m_state.shadowsIgnoreTransforms(); }
-    void setShadowsIgnoreTransforms(bool shadowsIgnoreTransforms) { m_state.setShadowsIgnoreTransforms(shadowsIgnoreTransforms); didUpdateState(m_state); }
+    void setShadowsIgnoreTransforms(bool shadowsIgnoreTransforms) { m_state.setShadowsIgnoreTransforms(shadowsIgnoreTransforms); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::ShadowsIgnoreTransforms)); }
     FloatSize platformShadowOffset(const FloatSize&) const;
 
     bool drawLuminanceMask() const { return m_state.drawLuminanceMask(); }
-    void setDrawLuminanceMask(bool drawLuminanceMask) { m_state.setDrawLuminanceMask(drawLuminanceMask); didUpdateState(m_state); }
+    void setDrawLuminanceMask(bool drawLuminanceMask) { m_state.setDrawLuminanceMask(drawLuminanceMask); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::DrawLuminanceMask)); }
 
-#if HAVE(OS_DARK_MODE_SUPPORT)
     bool useDarkAppearance() const { return m_state.useDarkAppearance(); }
-    void setUseDarkAppearance(bool useDarkAppearance) { m_state.setUseDarkAppearance(useDarkAppearance); didUpdateState(m_state); }
-#endif
+    void setUseDarkAppearance(bool useDarkAppearance) { m_state.setUseDarkAppearance(useDarkAppearance); didUpdateSingleState(m_state, GraphicsContextState::toIndex(GraphicsContextState::Change::UseDarkAppearance)); }
 
     virtual const GraphicsContextState& state() const { return m_state; }
     void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
@@ -184,6 +179,7 @@ public:
     // Called *after* any change to GraphicsContextState; generally used to propagate changes
     // to the platform context's state.
     virtual void didUpdateState(GraphicsContextState&) = 0;
+    virtual void didUpdateSingleState(GraphicsContextState& state, GraphicsContextState::ChangeIndex) { didUpdateState(state); }
 
     WEBCORE_EXPORT virtual void save(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore);
     WEBCORE_EXPORT virtual void restore(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore);
@@ -203,6 +199,7 @@ public:
 #endif
 
     virtual RenderingMode renderingMode() const { return RenderingMode::Unaccelerated; }
+    WEBCORE_EXPORT RenderingMode renderingModeForCompatibleBuffer() const;
 
     // Pixel Snapping
 
@@ -294,8 +291,7 @@ public:
     WEBCORE_EXPORT virtual void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&);
 
 #if ENABLE(VIDEO)
-    WEBCORE_EXPORT virtual void paintFrameForMedia(MediaPlayer&, const FloatRect& destination);
-    WEBCORE_EXPORT virtual void paintVideoFrame(VideoFrame&, const FloatRect& destination, bool shouldDiscardAlpha);
+    WEBCORE_EXPORT virtual void drawVideoFrame(VideoFrame&, const FloatRect& destination, ImageOrientation, bool shouldDiscardAlpha);
 #endif
 
     // Clipping
@@ -317,21 +313,20 @@ public:
     WEBCORE_EXPORT virtual void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt);
     WEBCORE_EXPORT virtual void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::CustomFontNotReadyAction::DoNotPaintIfFontNotReady);
 
-    virtual void drawGlyphsAndCacheResources(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
+    virtual void drawGlyphsAndCacheResources(const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
     {
-        drawGlyphs(font, glyphs, advances, numGlyphs, point, fontSmoothingMode);
+        drawGlyphs(font, glyphs, advances, point, fontSmoothingMode);
     }
 
-    WEBCORE_EXPORT virtual void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
+    WEBCORE_EXPORT virtual void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode);
     WEBCORE_EXPORT virtual void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&);
 
     WEBCORE_EXPORT FloatRect computeUnderlineBoundsForText(const FloatRect&, bool printing);
-    WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
-    virtual void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke) = 0;
+    WEBCORE_EXPORT void drawLineForText(const FloatRect&, bool isPrinting, bool doubleLines = false, StrokeStyle = StrokeStyle::SolidStroke);
+    // The `origin` defines the line origin point.
+    // The `lineSegments` defines the start and end offset of each segment along the line.
+    virtual void drawLinesForText(const FloatPoint& origin, float thickness, std::span<const FloatSegment> lineSegments, bool isPrinting, bool doubleLines, StrokeStyle) = 0;
     virtual void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) = 0;
-
-    // DisplayList
-    WEBCORE_EXPORT virtual void drawDisplayListItems(const Vector<DisplayList::Item>&, const DisplayList::ResourceHeap&, const FloatPoint& destination);
 
     // Transparency Layers
 
@@ -365,6 +360,10 @@ public:
     virtual void applyDeviceScaleFactor(float factor) { scale(factor); }
     WEBCORE_EXPORT FloatSize scaleFactor() const;
     WEBCORE_EXPORT FloatSize scaleFactorForDrawing(const FloatRect& destRect, const FloatRect& srcRect) const;
+
+    // PDF, printing and snapshotting
+    virtual void beginPage(const IntSize&) { }
+    virtual void endPage() { }
 
     // Links
 
@@ -402,6 +401,16 @@ protected:
     float dashedLinePatternWidthForStrokeWidth(float) const;
     float dashedLinePatternOffsetForPatternAndStrokeWidth(float patternWidth, float strokeWidth) const;
     Vector<FloatPoint> centerLineAndCutOffCorners(bool isVerticalLine, float cornerWidth, FloatPoint point1, FloatPoint point2) const;
+
+    struct RectsAndStrokeColor {
+#if USE(CG)
+        Vector<CGRect, 4> rects;
+#else
+        Vector<FloatRect, 4> rects;
+#endif
+        Color strokeColor;
+    };
+    RectsAndStrokeColor computeRectsAndStrokeColorForLinesForText(const FloatPoint& origin, float thickness, std::span<const FloatSegment>, bool isPrinting, bool doubleLines, StrokeStyle);
 
     GraphicsContextState m_state;
 private:

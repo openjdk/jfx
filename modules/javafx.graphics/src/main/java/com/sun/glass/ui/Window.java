@@ -173,6 +173,11 @@ public abstract class Window {
      */
     @Native public static final int MODAL = 1 << 10;
 
+    /**
+     * Indicates that the window should use a dark window frame.
+     */
+    @Native public static final int DARK_FRAME = 1 << 11;
+
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;
@@ -280,6 +285,7 @@ public abstract class Window {
         this.styleMask = styleMask;
         this.isDecorated = (this.styleMask & Window.TITLED) != 0;
         this.isPopup = (this.styleMask & Window.POPUP) != 0;
+        this.isModal = (this.styleMask & Window.MODAL) != 0;
 
         this.screen = screen != null ? screen : Screen.getMainScreen();
         if (PrismSettings.allowHiDPIScaling) {
@@ -987,6 +993,8 @@ public abstract class Window {
         return _setBackground(this.ptr, r, g, b);
     }
 
+    public void setDarkFrame(boolean value) {}
+
     public boolean isEnabled() {
         Application.checkEventThread();
         return this.disableCount == 0;
@@ -1155,43 +1163,6 @@ public abstract class Window {
         Application.checkEventThread();
         checkNotClosed();
         _toBack(this.ptr);
-    }
-
-    // *****************************************************
-    // modality (prototype using native platform feature)
-    // *****************************************************
-    protected abstract void _enterModal(long ptr);
-    /**
-     * Enter modal state blocking everything except our window.
-     */
-    public void enterModal() {
-        checkNotClosed();
-        if (this.isModal == false) {
-            this.isModal = true;
-            _enterModal(this.ptr);
-        }
-    }
-
-    protected abstract void _enterModalWithWindow(long dialog, long window);
-    /**
-     * Enter modal state only blocking the given window.
-     * On Mac OS X this is done using a dialog sheet.
-     */
-    public void enterModal(final Window window) {
-        checkNotClosed();
-        if (this.isModal == false) {
-            this.isModal = true;
-            _enterModalWithWindow(this.ptr, window.getNativeHandle());
-        }
-    }
-
-    protected abstract void _exitModal(long ptr);
-    public void exitModal() {
-        checkNotClosed();
-        if (this.isModal == true) {
-            _exitModal(this.ptr);
-            this.isModal = false;
-        }
     }
 
     public boolean isModal() {

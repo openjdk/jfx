@@ -31,7 +31,7 @@
 #include "JSValueInWrappedObject.h"
 #include "TransformationMatrix.h"
 #include <JavaScriptCore/Forward.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -40,7 +40,7 @@ namespace WebCore {
 struct DOMPointInit;
 class DOMPointReadOnly;
 
-class WebXRRigidTransform : public RefCounted<WebXRRigidTransform>, public CanMakeWeakPtr<WebXRRigidTransform> {
+class WebXRRigidTransform : public RefCountedAndCanMakeWeakPtr<WebXRRigidTransform> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(WebXRRigidTransform, WEBCORE_EXPORT);
 public:
     static Ref<WebXRRigidTransform> create();

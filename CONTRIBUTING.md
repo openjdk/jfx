@@ -17,7 +17,7 @@ Feature requests
 
 If you find yourself wishing for a feature that doesn't exist in OpenJFX, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that OpenJFX has today have been added because our users saw the need. Please be aware that
 all new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.org/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
-[JBS issue](https://bugs.openjdk.org). See the [New features / API additions](#new-features--api-additions) section below for more information.
+[JBS issue](https://bugs.openjdk.org/projects/JDK). See the [New features / API additions](#new-features--api-additions) section below for more information.
 
 Contributing code and documentation changes
 -------------------------------------------
@@ -50,7 +50,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * File a bug in JBS for every pull request
 
-    A unique [JBS](https://bugs.openjdk.org) bug ID is needed for every
+    A unique [JBS](https://bugs.openjdk.org/projects/JDK) bug ID is needed for every
     pull request. If there isn't already a bug filed in JBS, then please
     file one at [bugreport.java.com](https://bugreport.java.com/).
     A developer with an active OpenJDK ID can file a bug directly in JBS.
@@ -63,7 +63,9 @@ Once your changes and tests are ready to submit for review:
 
 1. Test your changes
 
-    Run the test suite to make sure that nothing is broken. For most code changes, you need to provide new tests covering those changes. At least one of the new tests should fail before your proposed fix and pass after your proposed fix.
+    Run the test suite to make sure that nothing is broken. For most code changes, you need to provide new tests covering those changes. At least one of the new tests should fail before your proposed fix and pass after your proposed fix. All tests are written using [JUnit5](https://junit.org/junit5/).
+
+    Enable GitHub Actions (GHA) Workflows in your personal fork. This will allow sanity tests to run when you push code changes to your branch of your personal fork, and allow the Skara bot to report the results of the tests in the PR. Navigate to the home page of your GitHub repo, click on the "Actions" tab, and then click on the green button that says something like: "I understand my workflows, go ahead and enable them".
 
 2. Rebase your changes
 
@@ -227,14 +229,14 @@ Please also follow these formatting guidelines:
 * The rest is left to Java coding standards
 * Avoid making changes that are unrelated to the bug you are fixing. This includes fixing minor errors such as warnings, spacing / indentation, spelling errors, etc, in code that you aren't otherwise modifying as part of your fix.
 * Disable &ldquo;auto-format on save&rdquo; to prevent your IDE from making unnecessary formatting changes. This makes reviews much harder as it generates unnecessary diffs. If your IDE supports formatting only modified chunks, that is fine to do.
-* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.Assert.*;`.
+* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.jupiter.api.Assertions.*;`.
 * Don't worry too much about import order. Try not to change it but don't worry about fighting your IDE to stop it from doing so.
 
 New code should be formatted consistently in accordance with the above guidelines. However, please do not reformat existing code as part of a bug fix. This makes more changes for code reviewers to track and review, and can lead to merge conflicts.
 
 ### Building and testing
 
-JDK 22 (at a minimum) is required to build OpenJFX. You must have the JDK
+JDK 24 (at a minimum) is required to build OpenJFX. You must have the JDK
 installed on your system
 with the environment variable `JAVA_HOME` referencing the path to Java home for
 your JDK installation. By default, tests use the same runtime as `JAVA_HOME`.

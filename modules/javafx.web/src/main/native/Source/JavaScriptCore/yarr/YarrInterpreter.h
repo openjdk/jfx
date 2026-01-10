@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -116,13 +116,15 @@ struct ByteTerm {
         DotStarEnclosure,
     };
     Type type;
+    OptionSet<Flags> m_flags;
     bool m_capture : 1;
     bool m_invert : 1;
     MatchDirection m_matchDirection : 1;
     unsigned inputPosition { 0 };
 
-    ByteTerm(char32_t ch, unsigned inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType)
+    ByteTerm(char32_t ch, unsigned inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType, OptionSet<Flags> flags)
         : frameLocation(frameLocation)
+        , m_flags(flags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(Forward)
@@ -148,8 +150,9 @@ struct ByteTerm {
         }
     }
 
-    ByteTerm(char32_t lo, char32_t hi, unsigned inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType)
+    ByteTerm(char32_t lo, char32_t hi, unsigned inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType, OptionSet<Flags> flags)
         : frameLocation(frameLocation)
+        , m_flags(flags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(Forward)
@@ -176,8 +179,9 @@ struct ByteTerm {
         atom.quantityMaxCount = quantityCount;
     }
 
-    ByteTerm(CharacterClass* characterClass, bool invert, unsigned inputPos)
+    ByteTerm(CharacterClass* characterClass, bool invert, unsigned inputPos, OptionSet<Flags> flags)
         : type(ByteTerm::Type::CharacterClass)
+        , m_flags(flags)
         , m_capture(false)
         , m_invert(invert)
         , m_matchDirection(Forward)
@@ -189,8 +193,9 @@ struct ByteTerm {
         atom.quantityMaxCount = 1;
     }
 
-    ByteTerm(Type type, unsigned subpatternId, ByteDisjunction* parenthesesInfo, bool capture, unsigned inputPos)
+    ByteTerm(Type type, unsigned subpatternId, ByteDisjunction* parenthesesInfo, bool capture, unsigned inputPos, OptionSet<Flags> flags)
         : type(type)
+        , m_flags(flags)
         , m_capture(capture)
         , m_invert(false)
         , m_matchDirection(Forward)
@@ -204,8 +209,9 @@ struct ByteTerm {
         atom.quantityMaxCount = 1;
     }
 
-    ByteTerm(Type type, bool invert = false)
+    ByteTerm(Type type, OptionSet<Flags> flags, bool invert = false)
         : type(type)
+        , m_flags(flags)
         , m_capture(false)
         , m_invert(invert)
         , m_matchDirection(Forward)
@@ -215,8 +221,9 @@ struct ByteTerm {
         atom.quantityMaxCount = 1;
     }
 
-    ByteTerm(Type type, unsigned subpatternId, bool capture, bool invert, unsigned inputPos)
+    ByteTerm(Type type, unsigned subpatternId, bool capture, bool invert, unsigned inputPos, OptionSet<Flags> flags)
         : type(type)
+        , m_flags(flags)
         , m_capture(capture)
         , m_invert(invert)
         , m_matchDirection(Forward)
@@ -229,8 +236,9 @@ struct ByteTerm {
         atom.quantityMaxCount = 1;
     }
 
-    ByteTerm(Type type, unsigned subpatternId, bool capture, bool invert, MatchDirection matchDirection, unsigned inputPos)
+    ByteTerm(Type type, unsigned subpatternId, bool capture, bool invert, MatchDirection matchDirection, unsigned inputPos, OptionSet<Flags> flags)
         : type(type)
+        , m_flags(flags)
         , m_capture(capture)
         , m_invert(invert)
         , m_matchDirection(matchDirection)
@@ -243,130 +251,130 @@ struct ByteTerm {
         atom.quantityMaxCount = 1;
     }
 
-    static ByteTerm BOL(unsigned inputPos)
+    static ByteTerm BOL(unsigned inputPos, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::AssertionBOL);
+        ByteTerm term(Type::AssertionBOL, flags);
         term.inputPosition = inputPos;
         return term;
     }
 
-    static ByteTerm CheckInput(Checked<unsigned> count)
+    static ByteTerm CheckInput(Checked<unsigned> count, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::CheckInput);
+        ByteTerm term(Type::CheckInput, flags);
         term.checkInputCount = count;
         return term;
     }
 
-    static ByteTerm UncheckInput(Checked<unsigned> count)
+    static ByteTerm UncheckInput(Checked<unsigned> count, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::UncheckInput);
+        ByteTerm term(Type::UncheckInput, flags);
         term.checkInputCount = count;
         return term;
     }
 
-    static ByteTerm HaveCheckedInput(Checked<unsigned> count)
+    static ByteTerm HaveCheckedInput(Checked<unsigned> count, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::HaveCheckedInput);
+        ByteTerm term(Type::HaveCheckedInput, flags);
         term.checkInputCount = count;
         return term;
     }
 
-    static ByteTerm EOL(unsigned inputPos)
+    static ByteTerm EOL(unsigned inputPos, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::AssertionEOL);
+        ByteTerm term(Type::AssertionEOL, flags);
         term.inputPosition = inputPos;
         return term;
     }
 
-    static ByteTerm WordBoundary(bool invert, MatchDirection matchDirection, unsigned inputPos)
+    static ByteTerm WordBoundary(bool invert, MatchDirection matchDirection, unsigned inputPos, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::AssertionWordBoundary, invert);
+        ByteTerm term(Type::AssertionWordBoundary, flags, invert);
         term.m_matchDirection = matchDirection;
         term.inputPosition = inputPos;
         return term;
     }
 
-    static ByteTerm BackReference(unsigned subpatternId, MatchDirection matchDirection, unsigned inputPos)
+    static ByteTerm BackReference(unsigned subpatternId, MatchDirection matchDirection, unsigned inputPos, OptionSet<Flags> flags)
     {
-        return ByteTerm(Type::BackReference, subpatternId, false, false, matchDirection, inputPos);
+        return ByteTerm(Type::BackReference, subpatternId, false, false, matchDirection, inputPos, flags);
     }
 
-    static ByteTerm BodyAlternativeBegin(bool onceThrough)
+    static ByteTerm BodyAlternativeBegin(bool onceThrough, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::BodyAlternativeBegin);
+        ByteTerm term(Type::BodyAlternativeBegin, flags);
         term.alternative.next = 0;
         term.alternative.end = 0;
         term.alternative.onceThrough = onceThrough;
         return term;
     }
 
-    static ByteTerm BodyAlternativeDisjunction(bool onceThrough)
+    static ByteTerm BodyAlternativeDisjunction(bool onceThrough, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::BodyAlternativeDisjunction);
+        ByteTerm term(Type::BodyAlternativeDisjunction, flags);
         term.alternative.next = 0;
         term.alternative.end = 0;
         term.alternative.onceThrough = onceThrough;
         return term;
     }
 
-    static ByteTerm BodyAlternativeEnd()
+    static ByteTerm BodyAlternativeEnd(OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::BodyAlternativeEnd);
+        ByteTerm term(Type::BodyAlternativeEnd, flags);
         term.alternative.next = 0;
         term.alternative.end = 0;
         term.alternative.onceThrough = false;
         return term;
     }
 
-    static ByteTerm AlternativeBegin()
+    static ByteTerm AlternativeBegin(OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::AlternativeBegin);
+        ByteTerm term(Type::AlternativeBegin, flags);
         term.alternative.next = 0;
         term.alternative.end = 0;
         term.alternative.onceThrough = false;
         return term;
     }
 
-    static ByteTerm AlternativeDisjunction()
+    static ByteTerm AlternativeDisjunction(OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::AlternativeDisjunction);
+        ByteTerm term(Type::AlternativeDisjunction, flags);
         term.alternative.next = 0;
         term.alternative.end = 0;
         term.alternative.onceThrough = false;
         return term;
     }
 
-    static ByteTerm AlternativeEnd()
+    static ByteTerm AlternativeEnd(OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::AlternativeEnd);
+        ByteTerm term(Type::AlternativeEnd, flags);
         term.alternative.next = 0;
         term.alternative.end = 0;
         term.alternative.onceThrough = false;
         return term;
     }
 
-    static ByteTerm SubpatternBegin()
+    static ByteTerm SubpatternBegin(OptionSet<Flags> flags)
     {
-        return ByteTerm(Type::SubpatternBegin);
+        return ByteTerm(Type::SubpatternBegin, flags);
     }
 
-    static ByteTerm SubpatternEnd()
+    static ByteTerm SubpatternEnd(OptionSet<Flags> flags)
     {
-        return ByteTerm(Type::SubpatternEnd);
+        return ByteTerm(Type::SubpatternEnd, flags);
     }
 
-    static ByteTerm ParentheticalAssertionBegin(unsigned firstSubpatternId, bool invert, MatchDirection matchDirection)
+    static ByteTerm ParentheticalAssertionBegin(unsigned firstSubpatternId, bool invert, MatchDirection matchDirection, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::ParentheticalAssertionBegin);
+        ByteTerm term(Type::ParentheticalAssertionBegin, flags);
         term.atom.assertionIds.firstSubpatternId = firstSubpatternId;
         term.m_invert = invert;
         term.m_matchDirection = matchDirection;
         return term;
     }
 
-    static ByteTerm ParentheticalAssertionEnd(unsigned firstSubpatternId, unsigned lastSubpatternId, bool invert, MatchDirection matchDirection)
+    static ByteTerm ParentheticalAssertionEnd(unsigned firstSubpatternId, unsigned lastSubpatternId, bool invert, MatchDirection matchDirection, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::ParentheticalAssertionEnd);
+        ByteTerm term(Type::ParentheticalAssertionEnd, flags);
         term.atom.assertionIds.firstSubpatternId = firstSubpatternId;
         term.atom.assertionIds.lastSubpatternId = lastSubpatternId;
         term.m_invert = invert;
@@ -374,9 +382,9 @@ struct ByteTerm {
         return term;
     }
 
-    static ByteTerm DotStarEnclosure(bool bolAnchor, bool eolAnchor)
+    static ByteTerm DotStarEnclosure(bool bolAnchor, bool eolAnchor, OptionSet<Flags> flags)
     {
-        ByteTerm term(Type::DotStarEnclosure);
+        ByteTerm term(Type::DotStarEnclosure, flags);
         term.anchors.m_bol = bolAnchor;
         term.anchors.m_eol = eolAnchor;
         return term;
@@ -437,6 +445,21 @@ struct ByteTerm {
     {
         return m_capture;
     }
+
+    bool ignoreCase()
+    {
+        return m_flags.contains(Flags::IgnoreCase);
+    }
+
+    bool multiline()
+    {
+        return m_flags.contains(Flags::Multiline);
+    }
+
+    bool dotAll()
+    {
+        return m_flags.contains(Flags::DotAll);
+    }
 };
 
 class ByteDisjunction {
@@ -470,9 +493,10 @@ public:
         m_body->terms.shrinkToFit();
 
         newlineCharacterClass = pattern.newlineCharacterClass();
-        if (eitherUnicode() && ignoreCase())
-            wordcharCharacterClass = pattern.wordUnicodeIgnoreCaseCharCharacterClass();
+        if (eitherUnicode())
+            ignoreCaseWordcharCharacterClass = pattern.wordUnicodeIgnoreCaseCharCharacterClass();
         else
+            ignoreCaseWordcharCharacterClass = pattern.wordcharCharacterClass();
             wordcharCharacterClass = pattern.wordcharCharacterClass();
 
         m_allParenthesesInfo.swap(parenthesesInfoToAdopt);
@@ -528,6 +552,7 @@ public:
 
     CharacterClass* newlineCharacterClass;
     CharacterClass* wordcharCharacterClass;
+    CharacterClass* ignoreCaseWordcharCharacterClass;
 
 private:
     Vector<std::unique_ptr<ByteDisjunction>> m_allParenthesesInfo;
@@ -536,7 +561,5 @@ private:
 
 JS_EXPORT_PRIVATE std::unique_ptr<BytecodePattern> byteCompile(YarrPattern&, BumpPointerAllocator*, ErrorCode&, ConcurrentJSLock* = nullptr);
 JS_EXPORT_PRIVATE unsigned interpret(BytecodePattern*, StringView input, unsigned start, unsigned* output);
-unsigned interpret(BytecodePattern*, std::span<const LChar> input, unsigned start, unsigned* output);
-unsigned interpret(BytecodePattern*, std::span<const UChar> input, unsigned start, unsigned* output);
 
 } } // namespace JSC::Yarr

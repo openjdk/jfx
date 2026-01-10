@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
+import org.gradle.process.ExecOperations
+
+def execOps = project.services.get(ExecOperations)
 
 ext.MAC = [:]
 
@@ -71,7 +75,7 @@ setupTools("mac_tools",
         } else if (!file(defaultSdkPath).isDirectory()) {
             // Get list of all macosx sdks
             ByteArrayOutputStream results = new ByteArrayOutputStream();
-            def xcodeBuildResult = exec {
+            def xcodeBuildResult = execOps.exec { spec ->
                 commandLine("xcodebuild", "-version", "-showsdks");
                 setStandardOutput(results);
                 ignoreExitValue(true);
@@ -91,14 +95,14 @@ setupTools("mac_tools",
                 }
 
                 results = new ByteArrayOutputStream();
-                exec {
+                execOps.exec { spec ->
                     commandLine("xcodebuild", "-version", "-sdk", sdk, "Path");
                     setStandardOutput(results);
                 }
             } else {
                 // try with command line developer tools
                 results = new ByteArrayOutputStream();
-                exec {
+                execOps.exec { spec ->
                     commandLine("xcrun", "--show-sdk-path");
                     setStandardOutput(results);
                 }
@@ -157,6 +161,7 @@ def dynamicLinkFlags = [
         "-framework", "QuartzCore",
         "-framework", "Security",
         "-framework", "Network",
+        "-framework", "Metal",
         "-dynamiclib", "-lobjc"].flatten();
 def dynamicLinkFlagsAlt = ["-dynamiclib", commonParams].flatten()
 
@@ -167,14 +172,48 @@ def linkFlags = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlags
 def linkFlagsAlt = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlagsAlt
 
 def toolchainDir
+def metalCompiler
+def metalLinker
+
 if (hasProperty('toolchainDir')) {
     toolchainDir = ext.toolchainDir + "/"
+    metalCompiler = "${toolchainDir}metal"
+    metalLinker = "${toolchainDir}metallib"
 } else {
     toolchainDir = ""
+    ByteArrayOutputStream path = new ByteArrayOutputStream();
+    execOps.exec { spec ->
+        // xcrun -f --sdk macosx metal
+        commandLine("xcrun", "-f", "--sdk", "macosx", "metal");
+        setStandardOutput(path);
+        ignoreExitValue(true);
+    }
+    metalCompiler = path.toString().trim();
+
+    path = new ByteArrayOutputStream();
+    execOps.exec { spec ->
+        // xcrun -f --sdk macosx metallib
+        commandLine("xcrun", "-f", "--sdk", "macosx", "metallib");
+        setStandardOutput(path);
+        ignoreExitValue(true);
+    }
+    metalLinker = path.toString().trim();
+
+    if (metalCompiler == "" || metalLinker == "") {
+        throw new GradleException(
+            """
+            FAIL: Cannot find Metal Shader Language (MSL) tools: metal and metallib
+            Please make sure that MSL tools metal and metallib are installed and available on PATH.
+            """
+        );
+    }
 }
 
 def compiler = IS_COMPILE_PARFAIT ? "parfait-clang" : "${toolchainDir}clang";
 def linker = IS_STATIC_BUILD ? "libtool" : IS_COMPILE_PARFAIT ? "parfait-clang++" : "${toolchainDir}clang++";
+
+ext.metalCompiler = metalCompiler
+ext.metalLinker = metalLinker
 
 // Strip native .dylib shared libraries as a postprocess step when copying them
 MAC.strip = "${toolchainDir}strip"
@@ -245,6 +284,17 @@ MAC.prismES2.ccFlags = ["-DGL_SILENCE_DEPRECATION", "-DMACOSX", ccFlags].flatten
 MAC.prismES2.linker = linker
 MAC.prismES2.linkFlags = [linkFlags].flatten()
 MAC.prismES2.lib = "prism_es2"
+
+MAC.prismMTL = [:]
+MAC.prismMTL.javahInclude = ["com/sun/prism/mtl/**/*"]
+MAC.prismMTL.nativeSource = [
+    file("${project("graphics").projectDir}/src/main/native-prism-mtl")
+]
+MAC.prismMTL.compiler = compiler
+MAC.prismMTL.ccFlags = ["-I${project("graphics").projectDir}/build/gensrc/mtl-headers", "-DMACOSX", "-Werror=objc-method-access", ccFlags].flatten()
+MAC.prismMTL.linker = linker
+MAC.prismMTL.linkFlags = [linkFlags].flatten()
+MAC.prismMTL.lib = "prism_mtl"
 
 def closedDir = file("$projectDir/../rt-closed")
 MAC.font = [:]

@@ -65,14 +65,14 @@ private:
     void doUnapply() override
     {
         if (!m_hasBeenUndone) {
-            protectedDocument()->editor().unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
+            protectedDocument()->protectedEditor()->unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
             m_hasBeenUndone = true;
         }
 
     }
 
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override
+    void getNodesInCommand(NodeSet&) override
     {
     }
 #endif

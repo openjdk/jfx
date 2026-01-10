@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.javafx.scene;
 import com.sun.glass.ui.Accessible;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -220,6 +221,14 @@ public abstract class NodeHelper {
         nodeAccessor.layoutBoundsChanged(node);
     }
 
+    public static void nodeResolvedOrientationInvalidated(Node node) {
+        nodeAccessor.nodeResolvedOrientationInvalidated(node);
+    }
+
+    public static void setInheritOrientationFromScene(Node node, boolean value) {
+        nodeAccessor.setInheritOrientationFromScene(node, value);
+    }
+
     public static void setShowMnemonics(Node node, boolean value) {
         nodeAccessor.setShowMnemonics(node, value);
     }
@@ -282,6 +291,10 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
+    public static void scheduleReapplyCSS(Node node) {
+        nodeAccessor.scheduleReapplyCSS(node);
+    }
+
     public static boolean isInitialCssState(Node node) {
         return nodeAccessor.isInitialCssState(node);
     }
@@ -339,6 +352,10 @@ public abstract class NodeHelper {
         return nodeAccessor.findTransitionTimer(node, propertyName);
     }
 
+    public static MediaQueryContext getMediaQueryContext(Node node) {
+        return nodeAccessor.getMediaQueryContext(node);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -378,6 +395,8 @@ public abstract class NodeHelper {
         void syncPeer(Node node);
         <P extends NGNode> P getPeer(Node node);
         void layoutBoundsChanged(Node node);
+        void nodeResolvedOrientationInvalidated(Node node);
+        void setInheritOrientationFromScene(Node node, boolean value);
         void setShowMnemonics(Node node, boolean value);
         boolean isShowMnemonics(Node node);
         BooleanProperty showMnemonicsProperty(Node node);
@@ -394,6 +413,7 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
+        void scheduleReapplyCSS(Node node);
         boolean isInitialCssState(Node node);
         void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);
@@ -410,6 +430,7 @@ public abstract class NodeHelper {
         void addTransitionTimer(Node node, String propertyName, TransitionTimer timer);
         void removeTransitionTimer(Node node, String propertyName);
         TransitionTimer findTransitionTimer(Node node, String propertyName);
+        MediaQueryContext getMediaQueryContext(Node node);
     }
 
 }

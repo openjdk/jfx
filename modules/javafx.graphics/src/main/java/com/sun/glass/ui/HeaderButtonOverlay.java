@@ -26,7 +26,6 @@
 package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
-import com.sun.javafx.binding.ObjectConstant;
 import com.sun.javafx.util.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -45,6 +44,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.event.Event;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -57,6 +57,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
 import javafx.util.Subscription;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -147,6 +148,26 @@ import java.util.stream.Stream;
  */
 public class HeaderButtonOverlay extends Region {
 
+    // The size and placement of the window button area depends on many variables, most of which
+    // are CSS-styleable properties of HeaderButtonOverlay and HeaderButtonOverlay#ButtonRegion.
+    // Detecting when the window button area has changed is quite difficult, and doing so manually
+    // would require adding listeners to all properties that can affect it. This not only includes
+    // all properties declared in this class, but also properties like button borders, padding, etc.
+    // Instead of doing that, we always recompute the window button area after a CSS processing pass
+    // for HeaderButtonOverlay has completed and notify potential listeners if it has changed.
+    static {
+        HeaderButtonOverlayHelper.setAccessor(new HeaderButtonOverlayHelper.Accessor() {
+            @Override
+            public void afterProcessCSS(HeaderButtonOverlay overlay) {
+                overlay.updateButtonMetrics();
+            }
+        });
+    }
+
+    {
+        HeaderButtonOverlayHelper.initHelper(this);
+    }
+
     private static final CssMetaData<HeaderButtonOverlay, Number> BUTTON_DEFAULT_HEIGHT_METADATA =
         new CssMetaData<>("-fx-button-default-height", StyleConverter.getSizeConverter()) {
             @Override
@@ -216,15 +237,28 @@ public class HeaderButtonOverlay extends Region {
      * with their preferred height set to the value of {@link #buttonDefaultHeight}.
      */
     private final DoubleProperty prefButtonHeight = new SimpleDoubleProperty(
-        this, "prefButtonHeight", HeaderBar.USE_DEFAULT_SIZE);
+        this, "prefButtonHeight", HeaderBar.USE_DEFAULT_SIZE) {
+            @Override
+            protected void invalidated() {
+                updateButtonMetrics(); // needed here because this property is not CSS-styleable
+                requestLayout();
+            }
+        };
 
     /**
      * Specifies the default height of header buttons.
      * <p>
      * This property corresponds to the {@code -fx-button-default-height} CSS property.
      */
-    private final StyleableDoubleProperty buttonDefaultHeight = new SimpleStyleableDoubleProperty(
-        BUTTON_DEFAULT_HEIGHT_METADATA, this, "buttonDefaultHeight");
+    private final StyleableDoubleProperty buttonDefaultHeight =
+        new SimpleStyleableDoubleProperty(
+                BUTTON_DEFAULT_HEIGHT_METADATA, this, "buttonDefaultHeight") {
+            @Override
+            protected void invalidated() {
+                // updateButtonMetrics() not needed here, see afterProcessCSS()
+                requestLayout();
+            }
+        };
 
     /**
      * Specifies the placement of the header buttons on the left or the right side of the window.
@@ -236,6 +270,7 @@ public class HeaderButtonOverlay extends Region {
                 BUTTON_PLACEMENT_METADATA, this, "buttonPlacement", ButtonPlacement.RIGHT) {
             @Override
             protected void invalidated() {
+                // updateButtonMetrics() not needed here, see afterProcessCSS()
                 requestLayout();
             }
         };
@@ -251,6 +286,7 @@ public class HeaderButtonOverlay extends Region {
                 ButtonVerticalAlignment.CENTER) {
             @Override
             protected void invalidated() {
+                // updateButtonMetrics() not needed here, see afterProcessCSS()
                 requestLayout();
             }
         };
@@ -260,16 +296,20 @@ public class HeaderButtonOverlay extends Region {
      * This list is automatically updated by the implementation of {@link ButtonRegion#buttonOrder}.
      */
     private final List<ButtonRegion> orderedButtons = new ArrayList<>(3);
+    private final ButtonLayoutInfo layoutInfo = new ButtonLayoutInfo();
     private final ButtonRegion iconifyButton = new ButtonRegion(HeaderButtonType.ICONIFY, "-FX-INTERNAL-iconify-button", 0);
     private final ButtonRegion maximizeButton = new ButtonRegion(HeaderButtonType.MAXIMIZE, "-FX-INTERNAL-maximize-button", 1);
     private final ButtonRegion closeButton = new ButtonRegion(HeaderButtonType.CLOSE, "-FX-INTERNAL-close-button", 2);
     private final Subscription subscriptions;
+    private final boolean modalOrOwned;
     private final boolean utility;
     private final boolean rightToLeft;
 
     private Node buttonAtMouseDown;
 
-    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean utility, boolean rightToLeft) {
+    public HeaderButtonOverlay(ObservableValue<String> stylesheet, boolean modalOrOwned,
+                               boolean utility, boolean rightToLeft) {
+        this.modalOrOwned = modalOrOwned;
         this.utility = utility;
         this.rightToLeft = rightToLeft;
 
@@ -303,20 +343,17 @@ public class HeaderButtonOverlay extends Region {
             resizableSubscription,
             maximizedSubscription,
             updateStylesheetSubscription,
-            stylesheet.subscribe(this::updateStylesheet),
-            prefButtonHeight.subscribe(this::requestLayout),
-            buttonDefaultHeight.subscribe(this::requestLayout));
+            stylesheet.subscribe(this::updateStylesheet));
 
         getStyleClass().setAll("-FX-INTERNAL-header-button-container");
 
         if (utility) {
-            iconifyButton.managedProperty().bind(ObjectConstant.valueOf(false));
-            maximizeButton.managedProperty().bind(ObjectConstant.valueOf(false));
             getChildren().add(closeButton);
-            getStyleClass().add(UTILITY_STYLE_CLASS);
         } else {
             getChildren().addAll(iconifyButton, maximizeButton, closeButton);
         }
+
+        updateButtonMetrics();
     }
 
     public void dispose() {
@@ -438,7 +475,7 @@ public class HeaderButtonOverlay extends Region {
             switch (buttonType) {
                 case ICONIFY -> stage.setIconified(true);
                 case MAXIMIZE -> stage.setMaximized(!stage.isMaximized());
-                case CLOSE -> stage.close();
+                case CLOSE -> Event.fireEvent(stage, new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
             }
         }
     }
@@ -450,6 +487,9 @@ public class HeaderButtonOverlay extends Region {
     }
 
     private void onResizableChanged(boolean resizable) {
+        boolean utilityStyle = utility || (modalOrOwned && !resizable);
+        toggleStyleClass(this, UTILITY_STYLE_CLASS, utilityStyle);
+        iconifyButton.setDisable(utility || modalOrOwned);
         maximizeButton.setDisable(!resizable);
     }
 
@@ -500,8 +540,7 @@ public class HeaderButtonOverlay extends Region {
         }
     }
 
-    @Override
-    protected void layoutChildren() {
+    private boolean updateButtonLayoutInfo() {
         boolean left;
         Region button1, button2, button3;
 
@@ -526,16 +565,12 @@ public class HeaderButtonOverlay extends Region {
         ensureRegionPrefHeight(button2, buttonHeight);
         ensureRegionPrefHeight(button3, buttonHeight);
 
-        double width = getWidth();
         double button1Width = snapSizeX(boundedWidth(button1));
         double button2Width = snapSizeX(boundedWidth(button2));
         double button3Width = snapSizeX(boundedWidth(button3));
         double button1Height = snapSizeY(boundedHeight(button1));
         double button2Height = snapSizeY(boundedHeight(button2));
         double button3Height = snapSizeY(boundedHeight(button3));
-        double button1X = snapPositionX(left ? 0 : width - button1Width - button2Width - button3Width);
-        double button2X = snapPositionX(left ? button1Width : width - button3Width - button2Width);
-        double button3X = snapPositionX(left ? button1Width + button2Width : width - button3Width);
         double totalWidth = snapSizeX(button1Width + button2Width + button3Width);
         double totalHeight;
 
@@ -545,15 +580,9 @@ public class HeaderButtonOverlay extends Region {
         if (buttonVerticalAlignment.get() == ButtonVerticalAlignment.CENTER) {
             if (left) {
                 double offset = getButtonOffsetY(button1Height);
-                button1X = snapPositionX(button1X + offset);
-                button2X = snapPositionX(button2X + offset);
-                button3X = snapPositionX(button3X + offset);
                 totalWidth = snapSizeX(totalWidth + offset * 2);
             } else {
                 double offset = getButtonOffsetY(button3Height);
-                button1X = snapPositionX(button1X - offset);
-                button2X = snapPositionX(button2X - offset);
-                button3X = snapPositionX(button3X - offset);
                 totalWidth = snapSizeX(totalWidth + offset * 2);
             }
 
@@ -562,29 +591,42 @@ public class HeaderButtonOverlay extends Region {
             totalHeight = snapSizeY(Math.max(button1Height, Math.max(button2Height, button3Height)));
         }
 
-        Dimension2D currentSize = left ? metrics.get().leftInset() : metrics.get().rightInset();
+        return layoutInfo.update(
+            button1, button1Width, button1Height,
+            button2, button2Width, button2Height,
+            button3, button3Width, button3Height,
+            totalWidth, totalHeight, left);
+    }
+
+    private void updateButtonMetrics() {
+        if (!updateButtonLayoutInfo()) {
+            return;
+        }
+
+        Dimension2D currentSize = layoutInfo.left() ? metrics.get().leftInset() : metrics.get().rightInset();
 
         // Update the overlay metrics if they have changed.
-        if (currentSize.getWidth() != totalWidth || currentSize.getHeight() != totalHeight) {
+        if (currentSize.getWidth() != layoutInfo.totalWidth() || currentSize.getHeight() != layoutInfo.totalHeight()) {
             var empty = new Dimension2D(0, 0);
-            var size = new Dimension2D(totalWidth, totalHeight);
-            HeaderButtonMetrics newMetrics = left
+            var size = new Dimension2D(layoutInfo.totalWidth(), layoutInfo.totalHeight());
+            HeaderButtonMetrics newMetrics = layoutInfo.left()
                 ? new HeaderButtonMetrics(size, empty, buttonDefaultHeight.get())
                 : new HeaderButtonMetrics(empty, size, buttonDefaultHeight.get());
             metrics.set(newMetrics);
         }
+    }
 
-        layoutInArea(button1, button1X, getButtonOffsetY(button1Height), button1Width, button1Height,
-                     BASELINE_OFFSET_SAME_AS_HEIGHT, Insets.EMPTY, true, true,
-                     HPos.LEFT, VPos.TOP, false);
+    @Override
+    protected void layoutChildren() {
+        double[] offsets = layoutInfo.getLayoutOffsetsForWidth(getWidth());
 
-        layoutInArea(button2, button2X, getButtonOffsetY(button2Height), button2Width, button2Height,
-                     BASELINE_OFFSET_SAME_AS_HEIGHT, Insets.EMPTY, true, true,
-                     HPos.LEFT, VPos.TOP, false);
-
-        layoutInArea(button3, button3X, getButtonOffsetY(button3Height), button3Width, button3Height,
-                     BASELINE_OFFSET_SAME_AS_HEIGHT, Insets.EMPTY, true, true,
-                     HPos.LEFT, VPos.TOP, false);
+        for (int i = 0; i < 3; ++i) {
+            ButtonSizeInfo sizeInfo = layoutInfo.buttonSizeAt(i);
+            layoutInArea(sizeInfo.button(), offsets[i], getButtonOffsetY(sizeInfo.height()),
+                         sizeInfo.width(), sizeInfo.height(),
+                         BASELINE_OFFSET_SAME_AS_HEIGHT, Insets.EMPTY, true, true,
+                         HPos.LEFT, VPos.TOP, false);
+        }
     }
 
     @Override
@@ -681,5 +723,116 @@ public class HeaderButtonOverlay extends Region {
 
     private enum ButtonVerticalAlignment {
         STRETCH, CENTER
+    }
+
+    /**
+     * Contains the computed size for a window button.
+     */
+    private static final class ButtonSizeInfo {
+
+        private Region button;
+        private double width;
+        private double height;
+
+        public Region button() {
+            return button;
+        }
+
+        public double width() {
+            return width;
+        }
+
+        public double height() {
+            return height;
+        }
+
+        boolean update(Region button, double width, double height) {
+            if (this.button != button || this.width != width || this.height != height) {
+                this.button = button;
+                this.width = width;
+                this.height = height;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    /**
+     * Contains the sizes of the window buttons, the total width and height of the window button area,
+     * and its placement. The horizontal layout offsets of the window buttons are not precomputed, as
+     * they depend on the window width.
+     */
+    private final class ButtonLayoutInfo {
+
+        private final double[] temp = new double[3];
+        private final ButtonSizeInfo[] buttonSizes = new ButtonSizeInfo[] {
+            new ButtonSizeInfo(), new ButtonSizeInfo(), new ButtonSizeInfo()
+        };
+
+        private boolean left;
+        private double totalWidth;
+        private double totalHeight;
+
+        public ButtonSizeInfo buttonSizeAt(int i) {
+            return buttonSizes[i];
+        }
+
+        public boolean left() {
+            return left;
+        }
+
+        public double totalWidth() {
+            return totalWidth;
+        }
+
+        public double totalHeight() {
+            return totalHeight;
+        }
+
+        public double[] getLayoutOffsetsForWidth(double width) {
+            double button1X = snapPositionX(left ? 0 : width - buttonSizes[0].width - buttonSizes[1].width - buttonSizes[2].width);
+            double button2X = snapPositionX(left ? buttonSizes[0].width : width - buttonSizes[2].width - buttonSizes[1].width);
+            double button3X = snapPositionX(left ? buttonSizes[0].width + buttonSizes[1].width : width - buttonSizes[2].width);
+
+            if (buttonVerticalAlignment.get() == ButtonVerticalAlignment.CENTER) {
+                if (left) {
+                    double offset = getButtonOffsetY(buttonSizes[0].height);
+                    button1X = snapPositionX(button1X + offset);
+                    button2X = snapPositionX(button2X + offset);
+                    button3X = snapPositionX(button3X + offset);
+                } else {
+                    double offset = getButtonOffsetY(buttonSizes[2].height);
+                    button1X = snapPositionX(button1X - offset);
+                    button2X = snapPositionX(button2X - offset);
+                    button3X = snapPositionX(button3X - offset);
+                }
+            }
+
+            temp[0] = button1X;
+            temp[1] = button2X;
+            temp[2] = button3X;
+            return temp;
+        }
+
+        boolean update(Region button1, double width1, double height1,
+                       Region button2, double width2, double height2,
+                       Region button3, double width3, double height3,
+                       double totalWidth, double totalHeight, boolean left) {
+            // Note: the following disjunction operators are NOT short-circuiting:
+            boolean changed =
+                this.buttonSizes[0].update(button1, width1, height1) |
+                this.buttonSizes[1].update(button2, width2, height2) |
+                this.buttonSizes[2].update(button3, width3, height3);
+
+            if (this.totalWidth != totalWidth || this.totalHeight != totalHeight || this.left != left || changed) {
+                this.totalWidth = totalWidth;
+                this.totalHeight = totalHeight;
+                this.left = left;
+                return true;
+            }
+
+            return false;
+        }
     }
 }

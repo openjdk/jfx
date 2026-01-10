@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,6 +131,7 @@ import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.TransitionDefinitionCssMetaData;
 import com.sun.javafx.css.TransitionTimer;
+import com.sun.javafx.css.media.MediaQueryContext;
 import javafx.css.Selector;
 import javafx.css.Style;
 import javafx.css.converter.BooleanConverter;
@@ -524,6 +525,16 @@ public abstract sealed class Node
             }
 
             @Override
+            public void nodeResolvedOrientationInvalidated(Node node) {
+                node.nodeResolvedOrientationInvalidated();
+            }
+
+            @Override
+            public void setInheritOrientationFromScene(Node node, boolean value) {
+                node.setInheritOrientationFromScene(value);
+            }
+
+            @Override
             public <P extends NGNode> P getPeer(Node node) {
                 return node.getPeer();
             }
@@ -611,6 +622,12 @@ public abstract sealed class Node
             }
 
             @Override
+            public void scheduleReapplyCSS(Node node) {
+                node.cssFlag = CssFlags.REAPPLY;
+                Toolkit.getToolkit().requestNextPulse();
+            }
+
+            @Override
             public boolean isInitialCssState(Node node) {
                 return node.initialCssState;
             }
@@ -690,6 +707,11 @@ public abstract sealed class Node
             @Override
             public TransitionTimer findTransitionTimer(Node node, String propertyName) {
                 return node.findTransitionTimer(propertyName);
+            }
+
+            @Override
+            public MediaQueryContext getMediaQueryContext(Node node) {
+                return node.getMediaQueryContext();
             }
         });
     }
@@ -1168,8 +1190,8 @@ public abstract sealed class Node
         if (oldScene != null) {
             oldScene.clearNodeMnemonics(this);
         }
-        if (getParent() == null) {
-            // if we are the root we need to handle scene change
+
+        if (getParent() == null || isInheritOrientationFromScene(resolvedNodeOrientation)) {
             parentResolvedOrientationInvalidated();
         }
 
@@ -6531,6 +6553,13 @@ public abstract sealed class Node
     private static final byte AUTOMATIC_ORIENTATION_RTL = 2;
     private static final byte AUTOMATIC_ORIENTATION_MASK = 2;
 
+    /**
+     * Indicates that the effective node orientation only depends on the explicit value set on this node
+     * and on the scene (if the node orientation is inherited), but not on the parent. This flag must only
+     * be set with {@link NodeHelper#setInheritOrientationFromScene(Node, boolean)} for scene overlays.
+     */
+    private static final byte INHERIT_ORIENTATION_FROM_SCENE = 4;
+
     private byte resolvedNodeOrientation =
             EFFECTIVE_ORIENTATION_LTR | AUTOMATIC_ORIENTATION_LTR;
 
@@ -6629,6 +6658,10 @@ public abstract sealed class Node
                 (byte) (calcEffectiveNodeOrientation()
                             | calcAutomaticNodeOrientation());
 
+        if (isInheritOrientationFromScene(oldResolvedNodeOrientation)) {
+            resolvedNodeOrientation |= INHERIT_ORIENTATION_FROM_SCENE;
+        }
+
         if ((effectiveNodeOrientationProperty != null)
                 && (getEffectiveOrientation(resolvedNodeOrientation)
                         != getEffectiveOrientation(
@@ -6649,6 +6682,10 @@ public abstract sealed class Node
     }
 
     private Node getMirroringOrientationParent() {
+        if (isInheritOrientationFromScene(resolvedNodeOrientation)) {
+            return null;
+        }
+
         Node parentValue = getParent();
         while (parentValue != null) {
             if (parentValue.usesMirroring()) {
@@ -6666,6 +6703,10 @@ public abstract sealed class Node
     }
 
     private Node getOrientationParent() {
+        if (isInheritOrientationFromScene(resolvedNodeOrientation)) {
+            return null;
+        }
+
         final Node parentValue = getParent();
         if (parentValue != null) {
             return parentValue;
@@ -6757,6 +6798,18 @@ public abstract sealed class Node
     private static byte getAutomaticOrientation(
             final byte resolvedNodeOrientation) {
         return (byte) (resolvedNodeOrientation & AUTOMATIC_ORIENTATION_MASK);
+    }
+
+    private static boolean isInheritOrientationFromScene(byte resolvedNodeOrientation) {
+        return (resolvedNodeOrientation & INHERIT_ORIENTATION_FROM_SCENE) != 0;
+    }
+
+    private void setInheritOrientationFromScene(boolean value) {
+        if (value) {
+            resolvedNodeOrientation |= INHERIT_ORIENTATION_FROM_SCENE;
+        } else {
+            resolvedNodeOrientation &= ~INHERIT_ORIENTATION_FROM_SCENE;
+        }
     }
 
     private final class EffectiveOrientationProperty
@@ -7699,6 +7752,25 @@ public abstract sealed class Node
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragExitedProperty() {
         return getEventHandlerProperties().onMouseDragExitedProperty();
+    }
+
+    public final void setOnMouseDragDone(EventHandler<? super MouseDragEvent> value) {
+        onMouseDragDoneProperty().set(value);
+    }
+
+    public final EventHandler<? super MouseDragEvent> getOnMouseDragDone() {
+        return (eventHandlerProperties == null) ? null : eventHandlerProperties.getOnMouseDragDone();
+    }
+
+    /**
+     * Defines a function to be called when a full press-drag-release gesture ends with this node as its source.
+     *
+     * @return the event handler that is called when a full press-drag-release finishes
+     * @see MouseDragEvent#MOUSE_DRAG_DONE
+     * @since 26
+     */
+    public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDoneProperty() {
+        return getEventHandlerProperties().onMouseDragDoneProperty();
     }
 
 
@@ -9861,8 +9933,8 @@ public abstract sealed class Node
     }
 
     final void reapplyCSS() {
-
-        if (getScene() == null) return;
+        var scene = getScene();
+        if (scene == null) return;
 
         if (cssFlag == CssFlags.REAPPLY) return;
 
@@ -9878,6 +9950,10 @@ public abstract sealed class Node
             cssFlag = CssFlags.REAPPLY;
             notifyParentsOfInvalidatedCSS();
             return;
+        }
+
+        if (scene.getRoot() == this) {
+            SceneHelper.getSceneContext(scene).notifyReapplyCSS();
         }
 
         reapplyCss();
@@ -10099,6 +10175,10 @@ public abstract sealed class Node
 
         // if REAPPLY was deferred, process it now...
         if (cssFlag == CssFlags.REAPPLY) {
+            if (getScene() instanceof Scene scene && scene.getRoot() == this) {
+                SceneHelper.getSceneContext(scene).notifyReapplyCSS();
+            }
+
             reapplyCss();
         }
 
@@ -10130,6 +10210,11 @@ public abstract sealed class Node
 
     void clearInitialCssStateFlag() {
         initialCssState = false;
+    }
+
+    private MediaQueryContext getMediaQueryContext() {
+        Scene scene = getScene();
+        return scene != null ? SceneHelper.getSceneContext(scene) : null;
     }
 
     /**

@@ -205,7 +205,7 @@ String FontPlatformData::familyName() const
 {
     FcChar8* family = nullptr;
     FcPatternGetString(m_pattern.get(), FC_FAMILY, 0, &family);
-    return String::fromUTF8(span8(reinterpret_cast<const char*>(family)));
+    return String::fromUTF8(unsafeSpan8(reinterpret_cast<const char*>(family)));
 }
 
 Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(ShouldLocalizeAxisNames shouldLocalizeAxisNames) const
@@ -357,6 +357,18 @@ FontPlatformData FontPlatformData::create(const Attributes& data, const FontCust
 FontPlatformData::Attributes FontPlatformData::attributes() const
 {
     return Attributes(m_size, m_orientation, m_widthVariant, m_textRenderingMode, m_syntheticBold, m_syntheticOblique);
+}
+
+std::optional<FontPlatformData> FontPlatformData::fromIPCData(float, FontOrientation&&, FontWidthVariant&&, TextRenderingMode&&, bool, bool, IPCData&&)
+{
+    ASSERT_NOT_REACHED();
+    return std::nullopt;
+}
+
+FontPlatformData::IPCData FontPlatformData::toIPCData() const
+{
+    ASSERT_NOT_REACHED();
+    return FontPlatformSerializedData { };
 }
 
 } // namespace WebCore

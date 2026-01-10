@@ -57,11 +57,11 @@ static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vect
     PAL::GCrypt::Handle<gcry_sexp_t> dataSexp;
     {
         auto shaAlgorithm = hashAlgorithmName(hashAlgorithmIdentifier);
-        if (!shaAlgorithm)
+        if (shaAlgorithm.isNull())
             return std::nullopt;
 
         gcry_error_t error = gcry_sexp_build(&dataSexp, nullptr, "(data(flags pss)(salt-length %u)(hash %s %b))",
-            saltLength, *shaAlgorithm, dataHash.size(), dataHash.data());
+            saltLength, shaAlgorithm.characters(), dataHash.size(), dataHash.data());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
             return std::nullopt;
@@ -117,11 +117,11 @@ static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_
     PAL::GCrypt::Handle<gcry_sexp_t> dataSexp;
     {
         auto shaAlgorithm = hashAlgorithmName(hashAlgorithmIdentifier);
-        if (!shaAlgorithm)
+        if (shaAlgorithm.isNull())
             return std::nullopt;
 
         error = gcry_sexp_build(&dataSexp, nullptr, "(data(flags pss)(salt-length %u)(hash %s %b))",
-            saltLength, *shaAlgorithm, dataHash.size(), dataHash.data());
+            saltLength, shaAlgorithm.characters(), dataHash.size(), dataHash.data());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
             return std::nullopt;

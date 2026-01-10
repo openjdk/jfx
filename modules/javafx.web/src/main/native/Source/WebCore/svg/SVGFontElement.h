@@ -24,18 +24,19 @@
 
 #include "SVGElement.h"
 #include "SVGParserUtilities.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 // Describe an SVG <hkern>/<vkern> element
 struct SVGKerningPair {
     UnicodeRanges unicodeRange1;
-    HashSet<String> unicodeName1;
-    HashSet<String> glyphName1;
+    UncheckedKeyHashSet<String> unicodeName1;
+    UncheckedKeyHashSet<String> glyphName1;
 
     UnicodeRanges unicodeRange2;
-    HashSet<String> unicodeName2;
-    HashSet<String> glyphName2;
+    UncheckedKeyHashSet<String> unicodeName2;
+    UncheckedKeyHashSet<String> glyphName2;
     float kerning { 0 };
 };
 
@@ -45,12 +46,12 @@ class SVGFontElement final : public SVGElement {
 public:
     static Ref<SVGFontElement> create(const QualifiedName&, Document&);
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFontElement, SVGElement>;
+
 private:
     SVGFontElement(const QualifiedName&, Document&);
 
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFontElement, SVGElement>;
 };
 
 } // namespace WebCore

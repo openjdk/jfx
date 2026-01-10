@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
+import com.sun.javafx.scene.SceneContext;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
@@ -60,6 +61,7 @@ import com.sun.prism.impl.PrismSettings;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
@@ -502,6 +504,11 @@ public class Scene implements EventTarget {
                         @Override
                         public Accessible getAccessible(Scene scene) {
                             return scene.getAccessible();
+                        }
+
+                        @Override
+                        public SceneContext getSceneContext(Scene scene) {
+                            return scene.context;
                         }
                     });
         }
@@ -1817,6 +1824,7 @@ public class Scene implements EventTarget {
             setHeight((float)height);
         }
         sizeInitialized = (widthSetByUser >= 0 && heightSetByUser >= 0);
+        context.notifySizeChanged();
     }
 
     private void init() {
@@ -1857,6 +1865,7 @@ public class Scene implements EventTarget {
         }
 
         sizeInitialized = (getWidth() > 0) && (getHeight() > 0);
+        context.notifySizeChanged();
 
         PerformanceTracker.logEvent("Scene preferred bounds computation complete");
     }
@@ -2762,8 +2771,20 @@ public class Scene implements EventTarget {
 
         @Override
         public void changedSize(float w, float h) {
-            if (w != Scene.this.getWidth()) Scene.this.setWidth(w);
-            if (h != Scene.this.getHeight()) Scene.this.setHeight(h);
+            boolean widthChanged = w != Scene.this.getWidth();
+            boolean heightChanged = h != Scene.this.getHeight();
+
+            if (widthChanged) {
+                Scene.this.setWidth(w);
+            }
+
+            if (heightChanged) {
+                Scene.this.setHeight(h);
+            }
+
+            if (widthChanged || heightChanged) {
+                Scene.this.context.notifySizeChanged();
+            }
         }
 
         @Override
@@ -4166,6 +4187,12 @@ public class Scene implements EventTarget {
                             fullPDRSource, result));
                 }
             }
+            if (e.getEventType() == MouseEvent.MOUSE_RELEASED) {
+                Event.fireEvent(fullPDRSource, MouseEvent.copyForMouseDragEvent(e,
+                        fullPDRSource, eventTarget,
+                        MouseDragEvent.MOUSE_DRAG_DONE,
+                        fullPDRSource, result));
+            }
         }
 
         private void updateCursor(Cursor newCursor) {
@@ -4729,6 +4756,28 @@ public class Scene implements EventTarget {
         return onMouseDragExited;
     }
 
+    /**
+     * Defines a function to be called when a full press-drag-release gesture ends.
+     *
+     * @see MouseDragEvent#MOUSE_DRAG_DONE
+     * @since 26
+     */
+    private ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDone;
+
+    public final void setOnMouseDragDone(EventHandler<? super MouseDragEvent> value) {
+        onMouseDragDoneProperty().set(value);
+    }
+
+    public final EventHandler<? super MouseDragEvent> getOnMouseDragDone() {
+        return onMouseDragDone == null ? null : onMouseDragDone.get();
+    }
+
+    public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDoneProperty() {
+        if (onMouseDragDone == null) {
+            onMouseDragDone = new EventHandlerProperty<>("onMouseDragDone", MouseDragEvent.MOUSE_DRAG_DONE);
+        }
+        return onMouseDragDone;
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -5704,6 +5753,18 @@ public class Scene implements EventTarget {
         return getProperties().get(USER_DATA_KEY);
     }
 
+    private final SceneContext context = new SceneContext(this);
+
+    /**
+     * Gets the scene preferences that can override {@link Platform.Preferences platform} preferences.
+     *
+     * @return the {@code Preferences} instance
+     * @since 25
+     */
+    public final Preferences getPreferences() {
+        return context;
+    }
+
     /* *************************************************************************
      *                                                                         *
      *                       Component Orientation Properties                  *
@@ -5960,5 +6021,160 @@ public class Scene implements EventTarget {
             PlatformImpl.accessibilityActiveProperty().set(true);
         }
         return accessible;
+    }
+
+    /**
+     * Contains scene preferences that can override {@link Platform.Preferences platform} preferences.
+     * <p>
+     * All preferences are <em>null-coalesting</em> properties: if set to {@code null} (using the setter method,
+     * {@link Property#setValue(Object)}, or with a binding), the property evalutes to the value of the corresponding
+     * platform-provided preference. Likewise, specifying a non-null value for any given property will override the
+     * platform-provided value.
+     *
+     * @see Platform.Preferences
+     * @since 25
+     */
+    public sealed interface Preferences permits SceneContext {
+
+        /**
+         * Specifies whether applications should always show scroll bars. If set to {@code false}, applications
+         * may choose to hide scroll bars that are not actively used, or make them smaller or less noticeable.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code -fx-prefers-persistent-scrollbars}</a> media feature.
+         *
+         * @return the {@code persistentScrollBars} property
+         * @defaultValue {@link Platform.Preferences#isPersistentScrollBars()}
+         * @see Platform.Preferences#persistentScrollBarsProperty()
+         */
+        ObjectProperty<Boolean> persistentScrollBarsProperty();
+
+        /**
+         * Gets the value of the {@code persistentScrollBars} property.
+         *
+         * @return the value of the {@code persistentScrollBars} property
+         * @see #persistentScrollBarsProperty()
+         * @see #setPersistentScrollBars(Boolean)
+         */
+        boolean isPersistentScrollBars();
+
+        /**
+         * Sets the value of the {@code persistentScrollBars} property.
+         *
+         * @param value the value
+         * @see #persistentScrollBarsProperty()
+         * @see #isPersistentScrollBars()
+         */
+        void setPersistentScrollBars(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of non-essential animations,
+         * reducing discomfort for users who experience motion sickness or vertigo.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-motion}</a> media feature.
+         *
+         * @return the {@code reducedMotion} property
+         * @defaultValue {@link Platform.Preferences#isReducedMotion()}
+         * @see Platform.Preferences#reducedMotionProperty()
+         */
+        ObjectProperty<Boolean> reducedMotionProperty();
+
+        /**
+         * Gets the value of the {@code reducedMotion} property.
+         *
+         * @return the value of the {@code reducedMotion} property
+         * @see #reducedMotionProperty()
+         * @see #setReducedMotion(Boolean)
+         */
+        boolean isReducedMotion();
+
+        /**
+         * Sets the value of the {@code reducedMotion} property.
+         *
+         * @param value the value
+         * @see #reducedMotionProperty()
+         * @see #isReducedMotion()
+         */
+        void setReducedMotion(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of transparent or translucent
+         * layer effects, which can help to increase contrast and readability for some users.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-transparency}</a> media feature.
+         *
+         * @return the {@code reducedTransparency} property
+         * @defaultValue {@link Platform.Preferences#isReducedTransparency()}
+         * @see Platform.Preferences#reducedTransparencyProperty()
+         */
+        ObjectProperty<Boolean> reducedTransparencyProperty();
+
+        /**
+         * Gets the value of the {@code reducedTransparency} property.
+         *
+         * @return the value of the {@code reducedTransparency} property
+         * @see #reducedTransparencyProperty()
+         * @see #setReducedTransparency(Boolean)
+         */
+        boolean isReducedTransparency();
+
+        /**
+         * Sets the value of the {@code reducedTransparency} property.
+         *
+         * @param value the value
+         * @see #reducedTransparencyProperty()
+         * @see #isReducedTransparency()
+         */
+        void setReducedTransparency(Boolean value);
+
+        /**
+         * Specifies whether the scene should minimize the amount of internet traffic, which users
+         * might request because they are on a metered network or a limited data plan.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-reduced-data}</a> media feature.
+         *
+         * @return the {@code reducedData} property
+         * @defaultValue {@link Platform.Preferences#isReducedData()}
+         * @see Platform.Preferences#reducedDataProperty()
+         */
+        ObjectProperty<Boolean> reducedDataProperty();
+
+        /**
+         * Gets the value of the {@code reducedData} property.
+         *
+         * @return the value of the {@code reducedData} property
+         * @see #reducedDataProperty()
+         * @see #setReducedData(Boolean)
+         */
+        boolean isReducedData();
+
+        /**
+         * Sets the value of the {@code reducedData} property.
+         *
+         * @param value the value
+         * @see #reducedDataProperty()
+         * @see #isReducedData()
+         */
+        void setReducedData(Boolean value);
+
+        /**
+         * Specifies whether the scene should prefer light text on dark backgrounds, or dark text
+         * on light backgrounds.
+         * <p>
+         * This property corresponds to the <a href="doc-files/cssref.html#mediafeatures">
+         * {@code prefers-color-scheme}</a> media feature.
+         *
+         * @return the {@code colorScheme} property
+         * @defaultValue {@link Platform.Preferences#getColorScheme()}
+         * @see Platform.Preferences#colorSchemeProperty()
+         */
+        ObjectProperty<ColorScheme> colorSchemeProperty();
+
+        ColorScheme getColorScheme();
+
+        void setColorScheme(ColorScheme colorScheme);
     }
 }
