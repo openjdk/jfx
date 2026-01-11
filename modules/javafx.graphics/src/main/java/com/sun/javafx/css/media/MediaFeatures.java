@@ -31,14 +31,20 @@ import com.sun.javafx.css.media.expression.RangeExpression;
 import com.sun.javafx.css.parser.Token;
 import javafx.application.ColorScheme;
 import java.util.Locale;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
  * Contains the implementations of all supported media feature queries.
  */
-final class MediaFeatures {
+public final class MediaFeatures {
 
     private MediaFeatures() {}
+
+    // Extension point for unit tests to add media features
+    public static BiFunction<String, Token, MediaQuery> DEFAULT = (featureName, _) -> {
+        throw new IllegalArgumentException(String.format("Unknown media feature <%s>", featureName));
+    };
 
     /**
      * Returns a {@code MediaQuery} that evaluates the specified feature in a discrete context.
@@ -132,8 +138,7 @@ final class MediaFeatures {
             case "-fx-prefers-persistent-scrollbars" -> booleanPreferenceExpression(
                 lowerCaseFeatureName, featureValue, "persistent", MediaQueryContext::isPersistentScrollBars);
 
-            default -> throw new IllegalArgumentException(
-                String.format("Unknown media feature <%s>", featureName));
+            default -> DEFAULT.apply(featureName, featureValue);
         };
     }
 

@@ -39,6 +39,7 @@ import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import javafx.application.ColorScheme;
 import javafx.css.CssParser;
+import javafx.css.CssParserShim;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.Stylesheet;
@@ -273,17 +274,21 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void disjunctionAndConjunctionCanNotBeCombined() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media (prefers-color-scheme: light) or
                    (prefers-reduced-motion: reduce) and
                    (prefers-reduced-transparency: no-preference) {
                 .foo { bar: baz; }
             }
-            """);
+            """;
 
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
@@ -345,20 +350,24 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void emptyMediaQueryWithNotKeywordEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media not {
                 .foo { bar: baz; }
             }
-            """);
+            """;
 
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
     void invalidMediaFeatureEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media (invalid-media-feature) {
                 .foo { bar: baz; }
             }
@@ -366,7 +375,9 @@ public class CssParser_mediaQuery_Test {
             @media (invalid-feature > 100px) {
                 .foo { bar: baz; }
             }
-            """);
+            """;
+
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
 
         var mediaRule1 = RuleHelper.getMediaRule(stylesheet.getRules().get(0));
         assertEquals(1, mediaRule1.getQueries().size());
@@ -375,11 +386,14 @@ public class CssParser_mediaQuery_Test {
         var mediaRule2 = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
         assertEquals(1, mediaRule2.getQueries().size());
         assertEquals(ConstantExpression.of(false), mediaRule2.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
     void invalidFeatureValueEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
             @media (prefers-reduced-motion: invalid-value) {
                 .foo { bar: baz; }
             }
@@ -387,7 +401,7 @@ public class CssParser_mediaQuery_Test {
             @media (width > invalid-value) {
                 .foo { bar: baz; }
             }
-            """);
+            """, true);
 
         var mediaRule1 = RuleHelper.getMediaRule(stylesheet.getRules().get(0));
         assertEquals(1, mediaRule1.getQueries().size());
@@ -419,15 +433,19 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void invalidCombinationOfConjunctionAndNegationEvaluatesToFalse() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        String stylesheetText = """
             @media (prefers-reduced-motion: reduce) and not (prefers-color-scheme: dark) {
                 .foo { bar: baz; }
             }
-            """);
+            """;
 
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged(stylesheetText, true);
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().getFirst());
         assertEquals(1, mediaRule.getQueries().size());
         assertEquals(ConstantExpression.of(false), mediaRule.getQueries().getFirst());
+
+        stylesheet = new CssParser().parse(stylesheetText);
+        assertEquals(0, stylesheet.getRules().size());
     }
 
     @Test
@@ -481,7 +499,7 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void parseRangeForm_leadingValue() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
             @media (100px >= width) {
                 .foo { bar: baz; }
             }
@@ -509,7 +527,7 @@ public class CssParser_mediaQuery_Test {
             @media (0.5em < aspect-ratio) {
                 .foo { bar: baz; }
             }
-            """);
+            """, true);
 
         assertEquals(7, stylesheet.getRules().size());
         assertEquals(
@@ -537,7 +555,7 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void parseRangeForm_trailingValue() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
             @media (width >= 100px) {
                 .foo { bar: baz; }
             }
@@ -565,7 +583,7 @@ public class CssParser_mediaQuery_Test {
             @media (aspect-ratio > 0.5em) {
                 .foo { bar: baz; }
             }
-            """);
+            """, true);
 
         assertEquals(7, stylesheet.getRules().size());
         assertEquals(
@@ -636,7 +654,7 @@ public class CssParser_mediaQuery_Test {
 
     @Test
     void parseRangeForm_invalidInterval() {
-        Stylesheet stylesheet = new CssParser().parse("""
+        Stylesheet stylesheet = new CssParserShim().parseUnmerged("""
             @media (50px > width = 100px) {
                 .foo { bar: baz; }
             }
@@ -652,7 +670,7 @@ public class CssParser_mediaQuery_Test {
             @media (50px = width < 100px) {
                 .foo { bar: baz; }
             }
-            """);
+            """, true);
 
         assertEquals(4, stylesheet.getRules().size());
         assertEquals(
