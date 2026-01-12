@@ -7471,13 +7471,8 @@ public final class Bindings {
 
             @Override
             protected V computeValue() {
-                final V val = op.get(key);
-                if (val != null) {
-                    return val;
-                } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
-                }
-                return null;
+                final V val = getMapValue(op, key);
+                return val;
             }
 
             @Override
@@ -7517,13 +7512,8 @@ public final class Bindings {
             @Override
             protected V computeValue() {
                 final Object currentKey = key.getValue();
-                final V val = op.get(currentKey);
-                if (val != null) {
-                    return val;
-                } else {
-                    Logging.getLogger().fine("Element not found in map, returning default value instead.");
-                }
-                return null;
+                final V val = getMapValue(op, currentKey);
+                return val;
             }
 
             @Override
@@ -7562,11 +7552,11 @@ public final class Bindings {
 
             @Override
             protected boolean computeValue() {
-                final Object val = op.get(key);
+                final Object val = getMapValue(op, key);
                 if (val instanceof Boolean booleanVal) {
                     return booleanVal;
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expecting Boolean. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7610,11 +7600,11 @@ public final class Bindings {
             @Override
             protected boolean computeValue() {
                 final Object currentKey = key.getValue();
-                final Object val = op.get(currentKey);
+                final Object val = getMapValue(op, currentKey);
                 if (val instanceof Boolean booleanVal) {
                     return booleanVal;
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Boolean. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7657,11 +7647,11 @@ public final class Bindings {
 
             @Override
             protected double computeValue() {
-                final Object val = op.get(key);
+                final Object val = getMapValue(op, key);
                 if (val instanceof Number numberVal) {
                     return numberVal.doubleValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7705,11 +7695,11 @@ public final class Bindings {
             @Override
             protected double computeValue() {
                 final Object currentKey = key.getValue();
-                final Object val = op.get(currentKey);
+                final Object val = getMapValue(op, currentKey);
                 if (val instanceof Number numberVal) {
                     return numberVal.doubleValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7752,11 +7742,11 @@ public final class Bindings {
 
             @Override
             protected float computeValue() {
-                final Object val = op.get(key);
+                final Object val = getMapValue(op, key);
                 if (val instanceof Number numberVal) {
                     return numberVal.floatValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7800,11 +7790,11 @@ public final class Bindings {
             @Override
             protected float computeValue() {
                 final Object currentKey = key.getValue();
-                final Object val = op.get(currentKey);
+                final Object val = getMapValue(op, currentKey);
                 if (val instanceof Number numberVal) {
                     return numberVal.floatValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7847,11 +7837,11 @@ public final class Bindings {
 
             @Override
             protected int computeValue() {
-                final Object val = op.get(key);
+                final Object val = getMapValue(op, key);
                 if (val instanceof Number numberVal) {
                     return numberVal.intValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7895,11 +7885,11 @@ public final class Bindings {
             @Override
             protected int computeValue() {
                 final Object currentKey = key.getValue();
-                final Object val = op.get(currentKey);
+                final Object val = getMapValue(op, currentKey);
                 if (val instanceof Number numberVal) {
                     return numberVal.intValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7942,11 +7932,11 @@ public final class Bindings {
 
             @Override
             protected long computeValue() {
-                final Object val = op.get(key);
+                final Object val = getMapValue(op, key);
                 if (val instanceof Number numberVal) {
                     return numberVal.longValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -7990,11 +7980,11 @@ public final class Bindings {
             @Override
             protected long computeValue() {
                 final Object currentKey = key.getValue();
-                final Object val = op.get(currentKey);
+                final Object val = getMapValue(op, currentKey);
                 if (val instanceof Number numberVal) {
                     return numberVal.longValue();
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected Number. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -8037,11 +8027,11 @@ public final class Bindings {
 
             @Override
             protected String computeValue() {
-                final Object val = op.get(key);
+                final Object val = getMapValue(op, key);
                 if (val instanceof String stringVal) {
                     return stringVal;
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected String. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -8085,11 +8075,11 @@ public final class Bindings {
             @Override
             protected String computeValue() {
                 final Object currentKey = key.getValue();
-                final Object val = op.get(currentKey);
+                final Object val = getMapValue(op, currentKey);
                 if (val instanceof String stringVal) {
                     return stringVal;
                 } else if (val != null) {
-                    Logging.getLogger().warning("Map element value has wrong type, returning default value.");
+                    Logging.getLogger().warning("Map element value has wrong type, expected String. Returning default value.");
                 } else {
                     Logging.getLogger().fine("Element not found in map, returning default value instead.");
                 }
@@ -8103,5 +8093,15 @@ public final class Bindings {
         };
     }
 
-
+    public static <K, V> V getMapValue(ObservableMap<K, V> op, Object key) {
+        try {
+            // This can throw a NPE if the map does not support null keys
+            // or a ClassCastException for mismatched types
+            // However, custom map implementations can throw arbitrary exceptions, so just catch all
+            return op.get(key);
+        } catch (Exception ex) {
+            Logging.getLogger().warning("Exception while evaluating binding", ex);
+            return null;
+        }
+    }
 }
