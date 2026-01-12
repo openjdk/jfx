@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,13 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
-import com.sun.javafx.scene.ScenePreferences;
+import com.sun.javafx.scene.SceneContext;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.media.MediaQueryContext;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.event.EventUtil;
@@ -505,6 +504,11 @@ public class Scene implements EventTarget {
                         @Override
                         public Accessible getAccessible(Scene scene) {
                             return scene.getAccessible();
+                        }
+
+                        @Override
+                        public SceneContext getSceneContext(Scene scene) {
+                            return scene.context;
                         }
                     });
         }
@@ -1820,6 +1824,7 @@ public class Scene implements EventTarget {
             setHeight((float)height);
         }
         sizeInitialized = (widthSetByUser >= 0 && heightSetByUser >= 0);
+        context.notifySizeChanged();
     }
 
     private void init() {
@@ -1860,6 +1865,7 @@ public class Scene implements EventTarget {
         }
 
         sizeInitialized = (getWidth() > 0) && (getHeight() > 0);
+        context.notifySizeChanged();
 
         PerformanceTracker.logEvent("Scene preferred bounds computation complete");
     }
@@ -2765,8 +2771,20 @@ public class Scene implements EventTarget {
 
         @Override
         public void changedSize(float w, float h) {
-            if (w != Scene.this.getWidth()) Scene.this.setWidth(w);
-            if (h != Scene.this.getHeight()) Scene.this.setHeight(h);
+            boolean widthChanged = w != Scene.this.getWidth();
+            boolean heightChanged = h != Scene.this.getHeight();
+
+            if (widthChanged) {
+                Scene.this.setWidth(w);
+            }
+
+            if (heightChanged) {
+                Scene.this.setHeight(h);
+            }
+
+            if (widthChanged || heightChanged) {
+                Scene.this.context.notifySizeChanged();
+            }
         }
 
         @Override
@@ -5735,7 +5753,7 @@ public class Scene implements EventTarget {
         return getProperties().get(USER_DATA_KEY);
     }
 
-    final ScenePreferences preferences = new ScenePreferences(this);
+    private final SceneContext context = new SceneContext(this);
 
     /**
      * Gets the scene preferences that can override {@link Platform.Preferences platform} preferences.
@@ -5744,7 +5762,7 @@ public class Scene implements EventTarget {
      * @since 25
      */
     public final Preferences getPreferences() {
-        return preferences;
+        return context;
     }
 
     /* *************************************************************************
@@ -6016,7 +6034,7 @@ public class Scene implements EventTarget {
      * @see Platform.Preferences
      * @since 25
      */
-    public sealed interface Preferences permits ScenePreferences {
+    public sealed interface Preferences permits SceneContext {
 
         /**
          * Specifies whether applications should always show scroll bars. If set to {@code false}, applications

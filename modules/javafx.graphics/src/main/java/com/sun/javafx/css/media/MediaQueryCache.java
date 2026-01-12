@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,35 +23,32 @@
  * questions.
  */
 
-package com.sun.jfx.incubator.scene.control.richtext;
+package com.sun.javafx.css.media;
 
-import java.util.List;
-import java.util.function.Consumer;
-import com.sun.javafx.util.Utils;
-import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import java.lang.ref.WeakReference;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
- * Provides access to internal methods in RichParagraph.
+ * A cache for {@link MediaQuery} instances that is used to deduplicate media queries. More specifically,
+ * this cache ensures that only a single instance of any distinct media query exists at any point in time.
+ * This cache holds weak references, ensuring that media queries that are no longer in use will be eligible
+ * for garbage collection.
  */
-public class RichParagraphHelper {
-    public interface Accessor {
-        public List<Consumer<TextCell>> getHighlights(RichParagraph p);
-    }
+public final class MediaQueryCache {
 
-    static {
-        Utils.forceInit(RichParagraph.class);
-    }
+    private MediaQueryCache() {}
 
-    private static Accessor accessor;
+    private static final Map<MediaQuery, WeakReference<MediaQuery>> CACHE = new WeakHashMap<>();
 
-    public static void setAccessor(Accessor a) {
-        if (accessor != null) {
-            throw new IllegalStateException();
+    @SuppressWarnings("unchecked")
+    public static synchronized <T extends MediaQuery> T getCachedMediaQuery(T query) {
+        if (CACHE.get(query) instanceof WeakReference<MediaQuery> wref
+                && wref.get() instanceof MediaQuery cachedQuery) {
+            return (T)cachedQuery;
         }
-        accessor = a;
-    }
 
-    public static List<Consumer<TextCell>> getHighlights(RichParagraph p) {
-        return accessor.getHighlights(p);
+        CACHE.put(query, new WeakReference<>(query));
+        return query;
     }
 }

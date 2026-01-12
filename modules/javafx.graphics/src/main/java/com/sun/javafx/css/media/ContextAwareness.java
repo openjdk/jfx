@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,35 +23,46 @@
  * questions.
  */
 
-package com.sun.jfx.incubator.scene.control.richtext;
+package com.sun.javafx.css.media;
 
-import java.util.List;
-import java.util.function.Consumer;
-import com.sun.javafx.util.Utils;
-import jfx.incubator.scene.control.richtext.model.RichParagraph;
+public enum ContextAwareness {
 
-/**
- * Provides access to internal methods in RichParagraph.
- */
-public class RichParagraphHelper {
-    public interface Accessor {
-        public List<Consumer<TextCell>> getHighlights(RichParagraph p);
+    /**
+     * Indicates no context awareness.
+     */
+    NONE(0),
+
+    /**
+     * Indicates that the media query probes the viewport size (width or height).
+     */
+    VIEWPORT_SIZE(1),
+
+    /**
+     * Indicates that the media query probes the full-screen state.
+     */
+    FULLSCREEN(2);
+
+    ContextAwareness(int value) {
+        this.value = value;
     }
 
-    static {
-        Utils.forceInit(RichParagraph.class);
+    private final int value;
+
+    public int value() {
+        return value;
     }
 
-    private static Accessor accessor;
+    public boolean isSet(int flags) {
+        return (flags & value) != 0;
+    }
 
-    public static void setAccessor(Accessor a) {
-        if (accessor != null) {
-            throw new IllegalStateException();
+    public static int combine(ContextAwareness... contextAwareness) {
+        int result = 0;
+
+        for (ContextAwareness value : contextAwareness) {
+            result |= value.value;
         }
-        accessor = a;
-    }
 
-    public static List<Consumer<TextCell>> getHighlights(RichParagraph p) {
-        return accessor.getHighlights(p);
+        return result;
     }
 }

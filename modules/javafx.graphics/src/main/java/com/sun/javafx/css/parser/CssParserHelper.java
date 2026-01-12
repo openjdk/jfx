@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,35 +23,31 @@
  * questions.
  */
 
-package com.sun.jfx.incubator.scene.control.richtext;
+package com.sun.javafx.css.parser;
 
-import java.util.List;
-import java.util.function.Consumer;
 import com.sun.javafx.util.Utils;
-import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import javafx.css.CssParser;
+import javafx.css.Size;
 
-/**
- * Provides access to internal methods in RichParagraph.
- */
-public class RichParagraphHelper {
-    public interface Accessor {
-        public List<Consumer<TextCell>> getHighlights(RichParagraph p);
-    }
-
-    static {
-        Utils.forceInit(RichParagraph.class);
-    }
+public final class CssParserHelper {
 
     private static Accessor accessor;
 
-    public static void setAccessor(Accessor a) {
-        if (accessor != null) {
-            throw new IllegalStateException();
-        }
-        accessor = a;
+    static {
+        Utils.forceInit(CssParser.class);
     }
 
-    public static List<Consumer<TextCell>> getHighlights(RichParagraph p) {
-        return accessor.getHighlights(p);
+    private CssParserHelper() {}
+
+    public static void setAccessor(Accessor accessor) {
+        CssParserHelper.accessor = accessor;
+    }
+
+    public static Size parseSize(Token token) {
+        return accessor.parseSize(token);
+    }
+
+    public interface Accessor {
+        Size parseSize(Token token);
     }
 }
