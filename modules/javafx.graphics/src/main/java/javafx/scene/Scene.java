@@ -3711,16 +3711,18 @@ public class Scene implements EventTarget {
             ClickCounter cc = counters.get(e.getButton());
             boolean still = lastPress != null ? lastPress.isStill() : false;
 
-            if (e.getEventType() == MouseEvent.MOUSE_PRESSED && cc != null) {
+            if (e.getEventType() == MouseEvent.MOUSE_PRESSED) {
 
                 if (! e.isPrimaryButtonDown()) { counters.get(MouseButton.PRIMARY).clear(); }
                 if (! e.isSecondaryButtonDown()) { counters.get(MouseButton.SECONDARY).clear(); }
                 if (! e.isMiddleButtonDown()) { counters.get(MouseButton.MIDDLE).clear(); }
                 if (! e.isBackButtonDown()) { counters.get(MouseButton.BACK).clear(); }
                 if (! e.isForwardButtonDown()) { counters.get(MouseButton.FORWARD).clear(); }
-                cc.applyOut();
-                cc.inc();
-                cc.start(e.getSceneX(), e.getSceneY());
+                if (cc != null) {
+                    cc.applyOut();
+                    cc.inc();
+                    cc.start(e.getSceneX(), e.getSceneY());
+                }
                 lastPress = cc;
             }
 
