@@ -3696,10 +3696,6 @@ public class Scene implements EventTarget {
         private List<EventTarget> releasedTargets = new ArrayList<>();
 
         public ClickGenerator() {
-            // Include MouseButton.NONE in counters
-            // While this button can not be sent normally,
-            // one can still construct a mouse event
-            // with the NONE button manually
             for (MouseButton mb : MouseButton.values()) {
                 counters.put(mb, new ClickCounter());
             }
