@@ -3697,7 +3697,9 @@ public class Scene implements EventTarget {
 
         public ClickGenerator() {
             for (MouseButton mb : MouseButton.values()) {
-                counters.put(mb, new ClickCounter());
+                if (mb != MouseButton.NONE) {
+                    counters.put(mb, new ClickCounter());
+                }
             }
         }
 
@@ -3709,7 +3711,7 @@ public class Scene implements EventTarget {
             ClickCounter cc = counters.get(e.getButton());
             boolean still = lastPress != null ? lastPress.isStill() : false;
 
-            if (e.getEventType() == MouseEvent.MOUSE_PRESSED) {
+            if (e.getEventType() == MouseEvent.MOUSE_PRESSED && cc != null) {
 
                 if (! e.isPrimaryButtonDown()) { counters.get(MouseButton.PRIMARY).clear(); }
                 if (! e.isSecondaryButtonDown()) { counters.get(MouseButton.SECONDARY).clear(); }
