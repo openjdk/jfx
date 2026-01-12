@@ -8093,7 +8093,7 @@ public final class Bindings {
         };
     }
 
-    public static <K, V> V getMapValue(ObservableMap<K, V> op, Object key) {
+    private static <K, V> V getMapValue(ObservableMap<K, V> op, Object key) {
         try {
             // This can throw a NPE if the map does not support null keys
             // or a ClassCastException for mismatched types
