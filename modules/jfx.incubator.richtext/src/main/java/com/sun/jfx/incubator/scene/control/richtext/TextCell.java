@@ -477,7 +477,7 @@ public final class TextCell extends BorderPane {
         super.requestLayout();
 
         if (embedsNode) {
-            VFlow vf = RichUtils.getAncestorOfClass(VFlow.class, this);
+            VFlow vf = RichUtils.getParentOfClass(VFlow.class, this);
             if (vf != null) {
                 vf.requestLayout();
             }
