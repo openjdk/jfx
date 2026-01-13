@@ -532,7 +532,7 @@ final public class CssParser {
         try {
             return new ParsedValueImpl<>(Color.web(str), null);
         } catch (final IllegalArgumentException e) {
-        } catch (final NullPointerException e) {
+            // Invalid color specification
         }
 
         // not a color
