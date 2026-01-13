@@ -25,20 +25,23 @@
 
 package test.robot.javafx.stage;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static test.util.Util.TIMEOUT;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
+import test.util.Util;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
+import static test.util.Util.TIMEOUT;
 
 public class StageAttributesTest extends VisualTestBase {
 
@@ -50,11 +53,15 @@ public class StageAttributesTest extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
+    private static final int WAIT = 1000;
+    private static final int SHORT_WAIT = 100;
+
     private Stage bottomStage;
     private Scene topScene;
     private Stage topStage;
 
-    private void setupStages(boolean overlayed, boolean topShown) throws InterruptedException {
+    private void setupStages(boolean overlayed, boolean topShown, StageStyle topStageStyle)
+            throws InterruptedException {
         final CountDownLatch bottomShownLatch = new CountDownLatch(1);
         final CountDownLatch topShownLatch = new CountDownLatch(1);
 
@@ -76,7 +83,7 @@ public class StageAttributesTest extends VisualTestBase {
         runAndWait(() -> {
             // Top stage, will be inconified
             topStage = getStage(true);
-            topStage.initStyle(StageStyle.DECORATED);
+            topStage.initStyle(topStageStyle);
             topScene = new Scene(new Pane(), WIDTH, HEIGHT);
             topScene.setFill(TOP_COLOR);
             topStage.setScene(topScene);
@@ -97,16 +104,13 @@ public class StageAttributesTest extends VisualTestBase {
             assertTrue(topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for top stage to be shown");
         }
 
-        sleep(1000);
+        sleep(WAIT);
     }
 
-    @Test
-    public void testIconifiedStage() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(true, true);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    public void testIconifiedStage(StageStyle stageStyle) throws InterruptedException {
+        setupStages(true, true, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -116,7 +120,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        sleep(WAIT);
 
         runAndWait(() -> {
             assertTrue(topStage.isIconified());
@@ -125,13 +129,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testMaximizedStage() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(false, true);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    public void testMaximizedStage(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, true, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -141,7 +142,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        sleep(WAIT);
 
         runAndWait(() -> {
             assertTrue(topStage.isMaximized());
@@ -151,9 +152,14 @@ public class StageAttributesTest extends VisualTestBase {
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
 
+        // Do not test decorations for UNDECORATED
+        if (stageStyle.equals(StageStyle.UNDECORATED)) {
+            return;
+        }
+
         // wait a little bit between getColor() calls - on macOS the below one
         // would fail without this wait
-        sleep(100);
+        sleep(SHORT_WAIT);
 
         runAndWait(() -> {
             // top left corner (plus some tolerance) should show decorations (so not TOP_COLOR)
@@ -163,13 +169,15 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testFullScreenStage() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    public void testFullScreenStage(StageStyle stageStyle) throws InterruptedException {
+        // Causes Stage to hang on Wayland
+        if (stageStyle == StageStyle.UNDECORATED && Util.isOnWayland()) {
+            return;
+        }
 
-        setupStages(false, true);
+        setupStages(false, true, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -179,19 +187,19 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        sleep(WAIT);
 
         runAndWait(() -> {
             assertTrue(topStage.isFullScreen());
 
-            // fullscreen stage should take over the bottom stage
+            // screen stage should take over the bottom stage
             Color color = getColor(200, 200);
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
 
         // wait a little bit between getColor() calls - on macOS the below one
         // would fail without this wait
-        sleep(100);
+        sleep(SHORT_WAIT);
 
         runAndWait(() -> {
             // top left corner (plus some tolerance) should NOT show decorations
@@ -200,13 +208,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testIconifiedStageBeforeShow() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(true, false);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    public void testIconifiedStageBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(true, false, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -218,7 +223,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        sleep(WAIT);
 
         runAndWait(() -> {
             assertTrue(topStage.isIconified());
@@ -229,14 +234,10 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testMaximizedStageBeforeShow() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        //  - JDK-8316425
-        assumeTrue(!PlatformUtil.isLinux());
-
-        setupStages(false, false);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    public void testMaximizedStageBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        setupStages(false, false, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -247,7 +248,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        sleep(WAIT);
 
         runAndWait(() -> {
             assertTrue(topStage.isMaximized());
@@ -257,9 +258,15 @@ public class StageAttributesTest extends VisualTestBase {
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
 
+
+        // Do not test decorations for UNDECORATED
+        if (stageStyle.equals(StageStyle.UNDECORATED)) {
+            return;
+        }
+
         // wait a little bit between getColor() calls - on macOS the below one
         // would fail without this wait
-        sleep(100);
+        sleep(SHORT_WAIT);
 
         runAndWait(() -> {
             // top left corner (plus some tolerance) should show decorations (so not TOP_COLOR)
@@ -269,14 +276,15 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    @Test
-    public void testFullScreenStageBeforeShow() throws InterruptedException {
-        // Skip on Linux due to:
-        //  - JDK-8316423
-        //  - JDK-8316425
-        assumeTrue(!PlatformUtil.isLinux());
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    public void testFullScreenStageBeforeShow(StageStyle stageStyle) throws InterruptedException {
+        // Causes Stage to hang on Wayland
+        if (stageStyle == StageStyle.UNDECORATED && Util.isOnWayland()) {
+            return;
+        }
 
-        setupStages(false, false);
+        setupStages(false, false, stageStyle);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -287,7 +295,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        sleep(WAIT);
 
         runAndWait(() -> {
             assertTrue(topStage.isFullScreen());
@@ -299,7 +307,7 @@ public class StageAttributesTest extends VisualTestBase {
 
         // wait a little bit between getColor() calls - on macOS the below one
         // would fail without this wait
-        sleep(100);
+        sleep(SHORT_WAIT);
 
         runAndWait(() -> {
             // top left corner (plus some tolerance) should NOT show decorations
