@@ -1131,4 +1131,15 @@ public class SceneTest {
 
         assertFalse(keyboardShortcutsHandler.isMnemonicsDisplayEnabled());
     }
+
+    @Test
+    public void invalidMouseButtonTypeNoneEvent() {
+        Group g = new Group();
+        Scene scene = new Scene(g, 100, 100, true);
+
+        MouseEvent event = new MouseEvent(MouseEvent.MOUSE_PRESSED, 0, 0, 0, 0, MouseButton.NONE,
+                1, false, false, false, false, false,
+                false, false, false, false, false, null);
+        SceneHelper.processMouseEvent(scene, event);
+    }
 }
