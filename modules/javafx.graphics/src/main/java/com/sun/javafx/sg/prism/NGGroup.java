@@ -246,6 +246,9 @@ public class NGGroup extends NGNode {
             if (renderRoot.hasNext()) {
                 renderRoot.next();
                 startPos = orderedChildren.indexOf(renderRoot.getCurrentNode());
+                if (startPos == -1) {
+                    startPos = 0;
+                }
             } else {
                 g.setRenderRoot(null);
             }
