@@ -166,10 +166,6 @@ private:
 
     HICON m_hIcon;
 
-    //NOTE: this is not a rectangle. The left, top, right, and bottom
-    //components contain corresponding insets values.
-    RECT m_insets;
-
     struct {
         bool entered = false;
         bool tracking = false;
