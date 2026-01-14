@@ -246,9 +246,6 @@ public class NGGroup extends NGNode {
             if (renderRoot.hasNext()) {
                 renderRoot.next();
                 startPos = orderedChildren.indexOf(renderRoot.getCurrentNode());
-                if (startPos == -1) {
-                    startPos = 0;
-                }
             } else {
                 g.setRenderRoot(null);
             }
@@ -256,8 +253,7 @@ public class NGGroup extends NGNode {
 
         if (blendMode == Blend.Mode.SRC_OVER ||
                 orderedChildren.size() < 2) {  // Blend modes only work "between" siblings
-
-            for (int i = startPos; i < orderedChildren.size(); i++) {
+            for (int i = startPos == -1 ? 0 : startPos; i < orderedChildren.size(); i++) {
                 NGNode child;
                 try {
                     child = orderedChildren.get(i);
