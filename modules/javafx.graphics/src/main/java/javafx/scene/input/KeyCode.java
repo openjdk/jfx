@@ -130,22 +130,22 @@ public enum KeyCode {
     HOME(0x24, "Home", KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the <b>left</b> arrow key.
+     * Constant for the non-numpad <b>left</b> arrow key.
      */
     LEFT(0x25, "Left", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the <b>up</b> arrow key.
+     * Constant for the non-numpad <b>up</b> arrow key.
      */
     UP(0x26, "Up", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the <b>right</b> arrow key.
+     * Constant for the non-numpad <b>right</b> arrow key.
      */
     RIGHT(0x27, "Right", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
     /**
-     * Constant for the <b>down</b> arrow key.
+     * Constant for the non-numpad <b>down</b> arrow key.
      */
     DOWN(0x28, "Down", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION),
 
@@ -620,27 +620,23 @@ public enum KeyCode {
     QUOTE(0xDE, "Quote"),
 
     /**
-     * @deprecated Use {@link KeyCode#UP} instead.
+     * Constant for the numeric keypad <b>up</b> arrow key.
      */
-    @Deprecated
     KP_UP(0xE0, "Numpad Up", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**
-     * @deprecated Use {@link KeyCode#DOWN} instead.
+     * Constant for the numeric keypad <b>down</b> arrow key.
      */
-    @Deprecated
     KP_DOWN(0xE1, "Numpad Down", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**
-     * @deprecated Use {@link KeyCode#LEFT} instead.
+     * Constant for the numeric keypad <b>left</b> arrow key.
      */
-    @Deprecated
     KP_LEFT(0xE2, "Numpad Left", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**
-     * @deprecated Use {@link KeyCode#RIGHT} instead.
+     * Constant for the numeric keypad <b>right</b> arrow key.
      */
-    @Deprecated
     KP_RIGHT(0xE3, "Numpad Right", KeyCodeClass.ARROW | KeyCodeClass.NAVIGATION | KeyCodeClass.KEYPAD),
 
     /**
