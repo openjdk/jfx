@@ -197,23 +197,25 @@
  * </p>
  *
  * <h2>Layout Orientation</h2>
- * <p>
- * The layout direction for a branch of the scene graph is controlled by the
+ *
+ * The layout orientation for a branch of the scene graph is controlled by the
  * {@link javafx.scene.Scene#nodeOrientationProperty() Scene.nodeOrientation} and
  * {@link javafx.scene.Node#nodeOrientationProperty() Node.nodeOrientation} properties.
  * A value set on a {@code Scene} applies to its root, and a value set on any {@code Node} applies to that
- * node and its descendants. It is effectively left-to-right by default, but can be right-to-left depending
- * on the locale of the operating system. If a layout orientation is set on the scene or on any node of the
- * scene graph, descendants of the scene or node will inherit the specified orientation.
+ * node and its descendants. It is typically left-to-right by default, but can be right-to-left depending
+ * on the locale of the operating system.
  * <p>
  * For layout containers, the effective orientation determines how children are ordered and how horizontal
- * positions are interpreted (leading vs. trailing). In a left-to-right orientation, the first child usually
- * appears at the left edge and subsequent children flow to the right. Similarly, in a right-to-left orientation,
- * the first child usually appears at the right edge and subsequent children flow to the left. Containers that
- * expose named regions keep the same API, but the visual placement is mirrored in right-to-left mode.
- * For example, the {@code left} and {@code right} regions of {@link javafx.scene.layout.BorderPane BorderPane}
- * and {@link javafx.scene.layout.HeaderBar HeaderBar} retain their names, yet when the orientation is
- * right-to-left, the node in the {@code left} region is laid out on the right side, and the node in the
- * {@code right} region is laid out on the left side.
+ * positions are interpreted. In a left-to-right orientation, the first child usually appears at the left edge
+ * and subsequent children flow to the right. Similarly, in a right-to-left orientation, the first child
+ * usually appears at the right edge and subsequent children flow to the left. When a container exposes
+ * named regions, the {@code left} region refers to the leading edge of the container, and the {@code right}
+ * region refers to the trailing edge of the container. In right-to-left mode, the {@code left} region will
+ * therefore be laid out on the right side, and the {@code right} region will be laid out on the left side.
+ * <p>
+ * Authors typically do not need to account for layout orientation when laying out nodes. In right-to-left
+ * mode, a mirroring transform is automatically applied to nodes, flipping the visual flow in the horizontal
+ * direction. If this behavior is not desired, nodes can override {@link javafx.scene.Node#usesMirroring()}
+ * and return {@code false}.
  */
 package javafx.scene.layout;
