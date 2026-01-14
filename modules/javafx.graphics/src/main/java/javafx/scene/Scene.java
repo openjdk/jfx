@@ -3077,9 +3077,61 @@ public class Scene implements EventTarget {
             }
         }
 
+        private final PickRay headerAreaPickRay = new PickRay();
+
+        /**
+         * A pick result chooser for header area hit testing that ignores nodes that
+         * are effectively {@link HeaderDragType#TRANSPARENT}.
+         */
+        private final PickResultChooser headerAreaPickResultChooser = new PickResultChooser() {
+
+            @Override
+            protected boolean processOffer(Node node, Node depthTestNode, double distance, Point3D point, int face,
+                                           Point3D normal, Point2D texCoord) {
+                // If the offered node is draggable, don't decline.
+                HeaderDragType dragType = HeaderBar.getDragType(node);
+                if (node instanceof HeaderBar
+                        || dragType == HeaderDragType.DRAGGABLE
+                        || dragType == HeaderDragType.DRAGGABLE_SUBTREE) {
+                    return super.processOffer(node, depthTestNode, distance, point, face, normal, texCoord);
+                }
+
+                // If the offered node is transparent, always decline.
+                if (dragType == HeaderDragType.TRANSPARENT || dragType == HeaderDragType.TRANSPARENT_SUBTREE) {
+                    return false;
+                }
+
+                // Walk up the scene graph and only decline if we're in a transparent subtree.
+                for (Node parent = node.getParent(); parent != null; parent = parent.getParent()) {
+                    if (parent instanceof HeaderBar) {
+                        break;
+                    }
+
+                    HeaderDragType parentDragType = HeaderBar.getDragType(parent);
+                    if (parentDragType == HeaderDragType.NONE || parentDragType == HeaderDragType.DRAGGABLE_SUBTREE) {
+                        break;
+                    }
+
+                    if (parentDragType == HeaderDragType.TRANSPARENT_SUBTREE) {
+                        return false;
+                    }
+                }
+
+                return super.processOffer(node, depthTestNode, distance, point, face, normal, texCoord);
+            }
+        };
+
         @Override
         public HeaderAreaType pickHeaderArea(double x, double y) {
-            PickResult result = pick(x, y);
+            getEffectiveCamera().computePickRay(x, y, headerAreaPickRay);
+            headerAreaPickRay.getDirectionNoClone().normalize();
+            getRoot().pickNode(headerAreaPickRay, headerAreaPickResultChooser);
+            PickResult result = headerAreaPickResultChooser.toPickResult();
+            headerAreaPickResultChooser.reset();
+            if (result == null) {
+                return null;
+            }
+
             Node intersectedNode = result.getIntersectedNode();
             HeaderDragType dragType = intersectedNode instanceof HeaderBar ? HeaderDragType.DRAGGABLE : null;
 
@@ -3089,7 +3141,9 @@ public class Scene implements EventTarget {
                         || dragType == HeaderDragType.DRAGGABLE
                         || HeaderBar.getDragType(result.getIntersectedNode()) == HeaderDragType.DRAGGABLE
                             ? HeaderAreaType.DRAGBAR
-                            : null;
+                            : dragType != HeaderDragType.NONE
+                                ? HeaderAreaType.UNSPECIFIED
+                                : null;
                 }
 
                 if (HeaderBar.getButtonType(intersectedNode) instanceof HeaderButtonType type) {
@@ -3102,7 +3156,8 @@ public class Scene implements EventTarget {
 
                 if (dragType == null
                         && HeaderBar.getDragType(intersectedNode) instanceof HeaderDragType type
-                        && type != HeaderDragType.DRAGGABLE) {
+                        && type != HeaderDragType.DRAGGABLE
+                        && type != HeaderDragType.TRANSPARENT) {
                     dragType = type;
                 }
 
