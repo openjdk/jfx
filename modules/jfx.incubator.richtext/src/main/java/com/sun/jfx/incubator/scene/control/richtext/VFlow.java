@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -787,7 +787,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         if (gen != null) {
             // it's a paragraph node
             Region content = gen.get();
-            cell = new TextCell(index, content);
+            cell = new TextCell(index, content, true);
         } else {
             // it's a regular text cell
             cell = new TextCell(index);
@@ -813,7 +813,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             if (count == 0) {
                 // a bit of a hack: avoid TextCells with an empty TextFlow,
                 // otherwise it makes the caret collapse to a single point
-                cell.add(createTextNode("", StyleAttributeMap.EMPTY));
+                cell.addTextSegment(createTextNode("", StyleAttributeMap.EMPTY));
             } else {
                 for (int i=0; i<count; i++) {
                     StyledSegment seg = par.getSegment(i);
@@ -826,7 +826,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                         String text = seg.getText();
                         StyleAttributeMap a = seg.getStyleAttributeMap(this);
                         Text t = createTextNode(text, a);
-                        cell.add(t);
+                        cell.addTextSegment(t);
                         break;
                     }
                 }
