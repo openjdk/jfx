@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -716,35 +716,44 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         pt.y = GET_Y_LPARAM(msgPos);
         RECT windowRect;
 
-        // We know that the cursor has moved from the client area to the title bar when the following two
-        // conditions are met:
-        //   1. The window under the cursor is our own window. This allows us to disambiguate the situation
-        //      when the cursor was moved to another overlapping window that just happens to be placed over
-        //      our title bar.
-        //   2. The cursor position is still within the client area of our window. This allows us to detect
-        //      when the cursor was moved to the resize border of our window, which isn't part of the client
-        //      area and should therefore emit an EXIT event.
-        if (::ChildWindowFromPointEx(::GetDesktopWindow(), pt, CWP_SKIPINVISIBLE) == hwnd
-                && ::GetClientRect(hwnd, &windowRect)
-                && ::ClientToScreen(hwnd, reinterpret_cast<POINT*>(&windowRect.left))
-                && ::ClientToScreen(hwnd, reinterpret_cast<POINT*>(&windowRect.right))
-                && ::PtInRect(&windowRect, pt)) { // pt is still in screen coordinates here
-            TRACKMOUSEEVENT trackData;
-            trackData.cbSize = sizeof(trackData);
-            trackData.dwFlags = TME_LEAVE | TME_NONCLIENT;
-            trackData.hwndTrack = hwnd;
-            trackData.dwHoverTime = HOVER_DEFAULT;
-
-            // The cursor is now on the non-client hit-testing area of our window, and we need to enable
-            // non-client mouse tracking to get a WM_NCMOUSELEAVE message when the cursor leaves the
-            // non-client hit-testing area.
-            if (::TrackMouseEvent(&trackData)) {
-                m_bTrackingMouse = TRUE;
-            }
-        } else {
+        // If the cursor is not over our window, we reset mouse tracking and emit an EXIT event.
+        if (::ChildWindowFromPointEx(::GetDesktopWindow(), pt, CWP_SKIPINVISIBLE) != hwnd) {
             type = com_sun_glass_events_MouseEvent_EXIT;
             m_bTrackingMouse = FALSE;
             m_lastMouseMovePosition = -1;
+        } else {
+            // If the cursor is still on our window, we need to detect whether it has moved from the client area
+            // to the title bar, and suppress the EXIT event in this case.
+            // Important: WM_MOUSELEAVE does not necessarily imply that the cursor physically left the client area.
+            // In particular, during OLE drag-and-drop, Windows can disrupt the TrackMouseEvent state and deliver
+            // WM_MOUSELEAVE even though the cursor is still over this window and still over the client area.
+            // Therefore we query WM_NCHITTEST at the current cursor position to determine what area the cursor
+            // is actually over. Only when the hit-test indicates a true non-client target (caption/buttons) do
+            // we switch tracking to TME_NONCLIENT and keep the mouse "entered".
+            LRESULT ht = ::SendMessage(hwnd, WM_NCHITTEST, 0, MAKELPARAM(pt.x, pt.y));
+
+            // If hit testing indicates that the cursor is over our client area, we reset mouse tracking.
+            // The hit-test return values that do not identify meaningful areas of our window are included
+            // here, but should not happen in practice (see ChildWindowFromPointEx).
+            if (ht == HTCLIENT || ht == HTNOWHERE || ht == HTERROR || ht == HTTRANSPARENT) {
+                type = com_sun_glass_events_MouseEvent_EXIT;
+                m_bTrackingMouse = FALSE;
+                m_lastMouseMovePosition = -1;
+            } else {
+                // In this branch, we know that the cursor is on the non-client area of our window, and we need
+                // to enable non-client mouse tracking to get a WM_NCMOUSELEAVE message when the cursor leaves
+                // the non-client area.
+                TRACKMOUSEEVENT trackData = {
+                    sizeof(trackData),
+                    TME_LEAVE | TME_NONCLIENT,
+                    hwnd,
+                    HOVER_DEFAULT
+                };
+
+                if (::TrackMouseEvent(&trackData)) {
+                    m_bTrackingMouse = TRUE;
+                }
+            }
         }
 
         ::ScreenToClient(hwnd, &pt);
@@ -1028,6 +1037,16 @@ void ViewContainer::HandleViewNonClientMouseEvent(HWND hwnd, UINT msg, WPARAM wP
         }
 
         ::ScreenToClient(hwnd, &pt);
+    } else if (msg == WM_NCMOUSEMOVE && wParam == HTTOP && m_bTrackingMouse) {
+        // We are here because the mouse cursor moved from the client area to the HTTOP non-client area.
+        // We emit an EXIT event to signal to JavaFX that the mouse cursor is no longer within the client area.
+        pt.x = GET_X_LPARAM(lParam);
+        pt.y = GET_Y_LPARAM(lParam);
+        ::MapWindowPoints(NULL, hwnd, &pt, 1);
+
+        type = com_sun_glass_events_MouseEvent_EXIT;
+        m_bTrackingMouse = FALSE;
+        m_lastMouseMovePosition = -1;
     } else if (msg >= WM_NCMOUSEMOVE
                    && msg <= WM_NCXBUTTONDBLCLK
                    && (wParam == HTCAPTION || wParam == HTMINBUTTON || wParam == HTMAXBUTTON || wParam == HTCLOSE)) {
