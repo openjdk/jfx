@@ -57,6 +57,11 @@ public class LabeledImpl extends Label {
         labeledImpl.setText(labeled.getText());
         labeled.textProperty().addListener(shuttler);
 
+        labeledImpl.textTruncatedProperty().subscribe(v -> {
+            LabeledHelper.setTextTruncated(labeled, v);
+        });
+
+
         labeledImpl.setGraphic(labeled.getGraphic());
         labeled.graphicProperty().addListener(shuttler);
 
@@ -98,8 +103,13 @@ public class LabeledImpl extends Label {
 
         @Override public void invalidated(Observable valueModel) {
 
+            //System.out.println("Shuttler invalidated");
+
             if (valueModel == labeled.textProperty()) {
+                //System.out.println("Text Model");
                 labeledImpl.setText(labeled.getText());
+                //System.out.println(" is truncated: " + labeled.isTextTruncated());
+                //LabeledHelper.setTextTruncated(labeledImpl, labeled.isTextTruncated());
             } else if (valueModel == labeled.graphicProperty()) {
                 // If the user set the graphic, then mirror that.
                 // Otherwise, the graphic was set via the imageUrlProperty which
