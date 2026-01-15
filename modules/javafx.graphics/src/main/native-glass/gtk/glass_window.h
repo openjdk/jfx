@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -306,6 +306,7 @@ public:
     void process_state(GdkEventWindowState*);
     void process_configure(GdkEventConfigure*);
     void process_destroy();
+    void process_mouse_cross(GdkEventCrossing*);
     void process_mouse_motion(GdkEventMotion*);
     void process_mouse_button(GdkEventButton*, bool synthesized = false);
     void work_around_compiz_state();
