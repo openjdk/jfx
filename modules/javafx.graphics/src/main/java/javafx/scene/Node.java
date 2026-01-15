@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -609,6 +609,12 @@ public abstract sealed class Node
             @Override
             public void reapplyCSS(Node node) {
                 node.reapplyCSS();
+            }
+
+            @Override
+            public void scheduleReapplyCSS(Node node) {
+                node.cssFlag = CssFlags.REAPPLY;
+                Toolkit.getToolkit().requestNextPulse();
             }
 
             @Override
@@ -9903,8 +9909,8 @@ public abstract sealed class Node
     }
 
     final void reapplyCSS() {
-
-        if (getScene() == null) return;
+        var scene = getScene();
+        if (scene == null) return;
 
         if (cssFlag == CssFlags.REAPPLY) return;
 
@@ -9920,6 +9926,10 @@ public abstract sealed class Node
             cssFlag = CssFlags.REAPPLY;
             notifyParentsOfInvalidatedCSS();
             return;
+        }
+
+        if (scene.getRoot() == this) {
+            SceneHelper.getSceneContext(scene).notifyReapplyCSS();
         }
 
         reapplyCss();
@@ -10141,6 +10151,10 @@ public abstract sealed class Node
 
         // if REAPPLY was deferred, process it now...
         if (cssFlag == CssFlags.REAPPLY) {
+            if (getScene() instanceof Scene scene && scene.getRoot() == this) {
+                SceneHelper.getSceneContext(scene).notifyReapplyCSS();
+            }
+
             reapplyCss();
         }
 
@@ -10176,7 +10190,7 @@ public abstract sealed class Node
 
     private MediaQueryContext getMediaQueryContext() {
         Scene scene = getScene();
-        return scene != null ? scene.preferences : null;
+        return scene != null ? SceneHelper.getSceneContext(scene) : null;
     }
 
     /**

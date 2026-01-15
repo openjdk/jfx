@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,18 +23,31 @@
  * questions.
  */
 
-package javafx.scene;
+package com.sun.javafx.css.parser;
 
-class PropertyHelper {
+import com.sun.javafx.util.Utils;
+import javafx.css.CssParser;
+import javafx.css.Size;
 
-    // Function to return whether a system property is set to true.
-    static boolean getBooleanProperty(final String propName) {
-        try {
-            String propVal = System.getProperty(propName);
-            return "true".equals(propVal.toLowerCase());
-        } catch (Exception any) {
-        }
-        return false;
+public final class CssParserHelper {
+
+    private static Accessor accessor;
+
+    static {
+        Utils.forceInit(CssParser.class);
     }
 
+    private CssParserHelper() {}
+
+    public static void setAccessor(Accessor accessor) {
+        CssParserHelper.accessor = accessor;
+    }
+
+    public static Size parseSize(Token token) {
+        return accessor.parseSize(token);
+    }
+
+    public interface Accessor {
+        Size parseSize(Token token);
+    }
 }
