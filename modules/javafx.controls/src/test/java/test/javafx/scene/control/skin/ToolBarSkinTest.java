@@ -28,20 +28,28 @@ package test.javafx.scene.control.skin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.util.stream.Stream;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Separator;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.skin.ToolBarSkin;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.binding.DoubleConstant;
 
 /**
@@ -76,44 +84,69 @@ public class ToolBarSkinTest {
         assertEquals(100, toolbar.maxWidth(-1), 0);
     }
 
-    @Test
-    public void overflowMenuNotShowingWithDifferentRenderScales() {
-        double[] renderScales = {
-            1.0,
-            1.25,
-            1.5,
-            1.75,
-            2.0,
-            2.25
-        };
+    // Tests that floating-point precision errors do not trigger the overflow menu. For example, a calculation may yield
+    // 117.60000000000001, which should not be treated as greater than 117.6 when determining whether there is
+    // sufficient space.
+    @ParameterizedTest
+    @MethodSource("renderScalesAndOrientations")
+    public void overflowMenuNotShowingDueToFloatPrecisionErrors(double scale, Orientation orientation) {
+        // These pref height/width values can cause getOverflowNodeIndex() to compute a combined
+        // child length of 117.60000000000001, while the toolbar length is 117.6 (for both horizontal
+        // and vertical orientations). This would cause the overflow node to display unnecessarily, unless snapping
+        // (e.g., snapPositionX/Y()) is applied correctly; which is what this test verifies.
+        double buttonPrefDimension = 99.2;
+        double separatorPrefDimension = 10.4;
 
-        for (var orientation : Orientation.values()) {
-            for (double scale : renderScales) {
-                Rectangle rect = new Rectangle(100, 100);
-                ToolBar toolBar = new ToolBar(rect);
-                toolBar.setSkin(new ToolBarSkin(toolBar));
+        Button btn = new Button("123456 123456");
+        btn.setPrefWidth(buttonPrefDimension);
+        btn.setPrefHeight(buttonPrefDimension);
 
-                toolBar.setOrientation(orientation);
+        // Set up a separator in opposite orientation
+        Separator sep = new Separator(orientation == Orientation.VERTICAL ? Orientation.HORIZONTAL
+                : Orientation.VERTICAL);
+        sep.setPrefWidth(separatorPrefDimension);
+        sep.setPrefHeight(separatorPrefDimension);
 
-                Stage stage = new Stage();
-                stage.renderScaleXProperty().bind(DoubleConstant.valueOf(scale));
-                stage.renderScaleYProperty().bind(DoubleConstant.valueOf(scale));
-                stage.setScene(new Scene(new HBox(toolBar), 600, 600));
-                stage.show();
+        ToolBar toolBar = new ToolBar(sep, btn);
+        toolBar.setOrientation(orientation);
 
-                try {
-                    assertOverflowNotShown(toolBar);
-                } finally {
-                    stage.hide();
-                }
-            }
-        }
+        BorderPane bp = new BorderPane();
+        bp.setTop(new HBox(toolBar));
+
+        assertOverflowNotShown(bp, toolBar, scale);
     }
 
-    private static void assertOverflowNotShown(ToolBar tb) {
-        Pane p = (Pane)tb.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
-        assertNotNull(p, "failed to obtain the overflow button");
-        assertFalse(p.isVisible(), "the overflow button is expected to be hidden");
+    @ParameterizedTest
+    @MethodSource("renderScalesAndOrientations")
+    public void overflowMenuNotShowingWithDifferentRenderScales(double scale, Orientation orientation) {
+        Rectangle rect = new Rectangle(100, 100);
+        ToolBar toolBar = new ToolBar(rect);
+        toolBar.setSkin(new ToolBarSkin(toolBar));
+        toolBar.setOrientation(orientation);
+
+        assertOverflowNotShown(new HBox(toolBar), toolBar, scale);
+    }
+
+    private static Stream<Arguments> renderScalesAndOrientations() {
+        return Stream.of(1.0, 1.25, 1.5, 1.75, 2.0, 2.25)
+            .flatMap(scale -> Stream.of(Orientation.values())
+                .map(orientation -> Arguments.of(scale, orientation)));
+    }
+
+    private static void assertOverflowNotShown(Parent rootNode, ToolBar tb, double scale) {
+        Stage stage = new Stage();
+        stage.renderScaleXProperty().bind(DoubleConstant.valueOf(scale));
+        stage.renderScaleYProperty().bind(DoubleConstant.valueOf(scale));
+        stage.setScene(new Scene(rootNode, 600, 600));
+        stage.show();
+
+        try {
+            Pane p = (Pane) tb.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+            assertNotNull(p, "failed to obtain the overflow button");
+            assertFalse(p.isVisible(), "the overflow button is expected to be hidden");
+        } finally {
+            stage.hide();
+        }
     }
 
     public static final class ToolBarSkinMock extends ToolBarSkin {

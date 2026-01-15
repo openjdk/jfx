@@ -74,6 +74,9 @@ public class Params {
     /** ensures the caret is always visible when reaching the edge of screen in unwrapped mode, in pixels. */
     public static final double HORIZONTAL_GUARD = 0; //10; FIX restore
 
+    /** maximum length of the text to pass to IME subsystem */
+    public static final int IME_MAX_TEXT_LENGTH = 4096;
+
     /** focus background outline size */
     public static final double LAYOUT_FOCUS_BORDER = 1;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,33 +29,50 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
+import javafx.event.Event;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodHighlight;
+import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.RichTextAreaShim;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.StyleHandlerRegistry;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
+import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.control.richtext.support.TestStyledInput;
@@ -74,6 +91,8 @@ import test.jfx.incubator.scene.util.TUtil;
 public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
+    private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final String NL = System.getProperty("line.separator");
 
     @BeforeEach
     public void beforeEach() {
@@ -260,6 +279,9 @@ public class RichTextAreaTest {
         TextPos p = control.appendText("a");
         assertEquals(TextPos.ofLeading(0, 1), p);
         assertEquals("a", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
@@ -269,6 +291,9 @@ public class RichTextAreaTest {
         control.select(p);
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
         assertEquals("a", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
@@ -276,14 +301,28 @@ public class RichTextAreaTest {
         TestStyledInput in = TestStyledInput.plainText("a\nb");
         TextPos p = control.appendText(in);
         assertEquals(TextPos.ofLeading(1, 1), p);
+        assertEquals("a" + NL + "b", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
     public void applyStyle() {
-        TestStyledInput in = TestStyledInput.plainText("a\nb");
+        TestStyledInput in = TestStyledInput.plainText("a\nbbb");
         TextPos p = control.appendText(in);
-        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(0, 1), BOLD);
-        assertEquals(TextPos.ofLeading(1, 1), p);
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD);
+        assertEquals(TextPos.ofLeading(1, 3), p);
+        control.select(TextPos.ofLeading(1, 0));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // undo
+        control.undo();
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
+    }
+
+    @Test
+    public void applyStyleBeyondDocumentEnd() {
+        control.applyStyle(TextPos.ZERO, TextPos.ofLeading(100, 3), BOLD);
     }
 
     @Test
@@ -331,8 +370,44 @@ public class RichTextAreaTest {
         control.appendText("\n4");
         control.select(new TextPos(0, 3, 2, false), control.getDocumentEnd());
         control.copy();
-        String nl = System.getProperty("line.separator");
-        assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
+        assertEquals(NL + "4", Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void lineEndingCopy() {
+        control.appendText("1\n2\n3");
+        assertEquals(3, control.getParagraphCount());
+        t(LineEnding.CR, "1\r2\r3");
+        t(LineEnding.CRLF, "1\r\n2\r\n3");
+        t(LineEnding.LF, "1\n2\n3");
+    }
+
+    @Test
+    public void lineEndingNull() {
+        assertThrows(NullPointerException.class, () -> {
+            control.getModel().setLineEnding(null);
+        });
+    }
+
+    @Test
+    public void lineEndingNullModel() {
+        control.setModel(null);
+        assertEquals(LineEnding.system(), control.getLineEnding());
+        control.setLineEnding(LineEnding.CR);
+        assertEquals(LineEnding.system(), control.getLineEnding());
+        assertThrows(NullPointerException.class, () -> {
+            control.setLineEnding(null);
+        });
+    }
+
+    private void t(LineEnding lineEnding, String expected) {
+        StyledTextModel m = control.getModel();
+        m.setLineEnding(lineEnding);
+        assertEquals(lineEnding, m.getLineEnding());
+        assertEquals(expected, text());
+        control.select(TextPos.ZERO, control.getDocumentEnd());
+        control.copy();
+        assertEquals(expected, Clipboard.getSystemClipboard().getString());
     }
 
     @Test
@@ -470,10 +545,81 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void insertBetweenSegments() {
+        TextPos p = control.appendText("a", BOLD);
+        control.appendText("b", ITALIC);
+        control.appendText("c", BOLD);
+        control.select(p);
+        control.insertTab();
+        control.insertTab();
+        assertEquals("a\t\tbc", text());
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ZERO);
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 1));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 4));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 5));
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+    }
+
+    @Test
     public void insertLineBreak() {
         control.appendText("123");
         control.select(TextPos.ofLeading(0, 1));
         control.insertLineBreak();
+    }
+
+    @Test
+    public void insertStyles() {
+        control.select(TextPos.ZERO);
+        control.setInsertStyles(BOLD);
+        type("bold");
+        control.setInsertStyles(ITALIC);
+        type("italic");
+
+        control.select(TextPos.ofLeading(0, 2));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 6));
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+
+        // verify that the model styles are used when insertStyles=null
+        control.setInsertStyles(null);
+        control.select(TextPos.ofLeading(0, 2));
+        type("**");
+        control.select(TextPos.ofLeading(0, 3));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+    }
+
+    @Test
+    public void insertTextWithStyles() {
+        TextPos p = control.appendText("a", BOLD);
+        assertEquals(TextPos.ofLeading(0, 1), p);
+        p = control.insertText(TextPos.ZERO, "b", ITALIC);
+        assertEquals(TextPos.ofLeading(0, 1), p);
+        control.select(p);
+        assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+        assertEquals("ba", text());
+        // undo
+        control.undo();
+        assertEquals("a", text());
+    }
+
+    @Test
+    public void insertTextFromStyledInput() {
+        TestStyledInput in = TestStyledInput.plainText("a\nb");
+        TextPos p = control.appendText(in);
+        assertEquals(TextPos.ofLeading(1, 1), p);
+        assertEquals("a" + NL + "b", text());
+        // undo
+        control.undo();
+        assertEquals("", text());
     }
 
     @Test
@@ -567,9 +713,13 @@ public class RichTextAreaTest {
         String text1 = text();
 
         control = new RichTextArea();
+        control.appendText("should not see me");
         ByteArrayInputStream in = new ByteArrayInputStream(b);
         control.read(fmt, in);
         String text2 = text();
+        assertEquals(text1, text2);
+        // read clears undo buffer
+        control.undo();
         assertEquals(text1, text2);
     }
 
@@ -597,16 +747,36 @@ public class RichTextAreaTest {
     @Test
     public void replaceText() {
         control.appendText("1234");
-        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-", false);
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), "-");
         assertEquals("1-4", text());
+    }
+
+    @Test
+    public void replaceTextBeyondDocumentEnd() {
+        control.appendText("1\n");
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(33, 3), "-");
+        assertEquals("1-", text());
     }
 
     @Test
     public void replaceTextFromStyledInput() {
         TestStyledInput in = TestStyledInput.plainText("-");
         control.appendText("1234");
-        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in, false);
+        control.replaceText(TextPos.ofLeading(0, 1), TextPos.ofLeading(0, 3), in);
         assertEquals("1-4", text());
+    }
+
+    @Test
+    public void setStyle() {
+        TestStyledInput in = TestStyledInput.plainText("a\nbbb");
+        TextPos p = control.appendText(in);
+        control.setStyle(TextPos.ZERO, TextPos.ofLeading(1, 3), BOLD);
+        assertEquals(TextPos.ofLeading(1, 3), p);
+        control.select(TextPos.ofLeading(1, 0));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // allow undo
+        control.undo();
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
     }
 
     @Test
@@ -643,6 +813,23 @@ public class RichTextAreaTest {
     }
 
     @Test
+    public void selectParagraph() {
+        control.appendText("123\n456\n789");
+        // first line
+        control.select(TextPos.ZERO);
+        control.selectParagraph();
+        SelectionSegment sel = control.getSelection();
+        assertEquals(TextPos.ZERO, sel.getMin());
+        assertEquals(TextPos.ofLeading(1, 0), sel.getMax());
+        // last line, no trailing line separator
+        control.select(TextPos.ofLeading(2, 0));
+        control.selectParagraph();
+        sel = control.getSelection();
+        assertEquals(TextPos.ofLeading(2, 0), sel.getMin());
+        assertEquals(new TextPos(2, 3, 2, false), sel.getMax());
+    }
+
+    @Test
     public void undo() {
         control.appendText("1");
         control.undo();
@@ -656,6 +843,44 @@ public class RichTextAreaTest {
         control.undo();
         control.undo();
         assertEquals("", text());
+    }
+
+    @Test
+    public void undoStyleChange() {
+        ArrayList<ContentChange> changes = new ArrayList<>();
+        String text = "BOLD";
+        TextPos p = control.appendText(text);
+        control.getModel().addListener((ch) -> {
+            changes.add(ch);
+        });
+        TextPos p2 = TextPos.ofLeading(0, 2);
+        assertEquals(text, text());
+        control.applyStyle(TextPos.ZERO, p, BOLD);
+        control.select(p2);
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        control.undo();
+        assertEquals(text, text());
+        assertEquals(StyleAttributeMap.EMPTY, control.getActiveStyleAttributeMap());
+        assertEquals(2, changes.size());
+        control.redo();
+        assertEquals(text, text());
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
+        // changes
+        assertEquals(3, changes.size());
+        ContentChange ch0 = changes.get(0);
+        assertEquals(TextPos.ZERO, ch0.getStart());
+        assertEquals(p, ch0.getEnd());
+        assertFalse(ch0.isEdit());
+        //
+        ContentChange ch1 = changes.get(1);
+        assertFalse(ch1.isEdit());
+        assertEquals(TextPos.ZERO, ch1.getStart());
+        assertEquals(p, ch1.getEnd());
+        //
+        ContentChange ch2 = changes.get(2);
+        assertFalse(ch2.isEdit());
+        assertEquals(TextPos.ZERO, ch2.getStart());
+        assertEquals(p, ch2.getEnd());
     }
 
     @Test
@@ -687,5 +912,189 @@ public class RichTextAreaTest {
     public void testShim() {
         RichTextArea t = new RichTextArea();
         VFlow f = RichTextAreaShim.vflow(t);
+    }
+
+    @Test
+    public void undoRedoEnabled() {
+        // api
+        assertTrue(control.isUndoRedoEnabled());
+        control.setUndoRedoEnabled(false);
+        assertFalse(control.isUndoRedoEnabled());
+        control.setModel(null);
+        control.setUndoRedoEnabled(true);
+        assertFalse(control.isUndoRedoEnabled());
+        control.setModel(new RichTextModel());
+        assertTrue(control.isUndoRedoEnabled());
+        // undo-redo enabled
+        control.appendText("1");
+        assertEquals("1", text());
+        control.undo();
+        assertEquals("", text());
+        // undo-redo disabled
+        control.setUndoRedoEnabled(false);
+        control.appendText("2");
+        assertEquals("2", text());
+        control.undo();
+        assertEquals("2", text());
+        // disabling undo-redo clears undo stack
+        control.setUndoRedoEnabled(true);
+        control.appendText("3");
+        assertEquals("23", text());
+        assertTrue(control.isUndoable());
+        control.setUndoRedoEnabled(false);
+        assertFalse(control.isUndoable());
+        control.setUndoRedoEnabled(true);
+        control.appendText("4");
+        assertEquals("234", text());
+        control.undo();
+        assertEquals("23", text());
+        control.undo();
+        assertEquals("23", text());
+    }
+
+    private void fireIME(int caret, String committed, Object... runs) {
+        ArrayList<InputMethodTextRun> composed = new ArrayList<>();
+        for (int i = 0; i < runs.length;) {
+            String s = (String)runs[i++];
+            InputMethodHighlight h = (InputMethodHighlight)runs[i++];
+            composed.add(new InputMethodTextRun(s, h));
+        }
+        InputMethodEvent ev = new InputMethodEvent(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, composed, committed, caret);
+        Event.fireEvent(control, ev);
+    }
+
+    private static TextPos tp(int caret) {
+        return TextPos.ofLeading(0, caret);
+    }
+
+    @Test
+    public void testIME() {
+        TextPos p = new TextPos(0, 0, 0, false);
+        control.select(p);
+        // compose "a" "b"
+        fireIME(0, "", "a", InputMethodHighlight.UNSELECTED_RAW, "b", InputMethodHighlight.UNSELECTED_RAW);
+        assertEquals(tp(2), control.getCaretPosition());
+        assertEquals("ab", text());
+        // escape, cancel composition
+        fireIME(0, "");
+        assertEquals(TextPos.ofLeading(0, 0), control.getCaretPosition());
+        assertEquals("", text());
+        // compose, "c" "d"
+        fireIME(0, "", "c", InputMethodHighlight.UNSELECTED_RAW, "d", InputMethodHighlight.UNSELECTED_RAW);
+        assertEquals(tp(2), control.getCaretPosition());
+        assertEquals("cd", text());
+        // commit "yoyo"
+        fireIME(0, "yoyo");
+        assertEquals(tp(4), control.getCaretPosition());
+        assertEquals("yoyo", text());
+    }
+
+    @Test
+    public void withEmbeddedNodes() {
+        class ARegion extends Region {
+            public ARegion(SimpleDoubleProperty height) {
+                setPrefWidth(10);
+                minHeightProperty().bind(height);
+                maxHeightProperty().bind(height);
+            }
+        }
+
+        SimpleDoubleProperty height = new SimpleDoubleProperty(10.0);
+        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
+        m.addSegment("Trailing node: ");
+        m.addNodeSegment(() -> new ARegion(height));
+        m.addParagraph(() -> new ARegion(height));
+        control.setModel(m);
+        control.setWrapText(false);
+        control.setUseContentHeight(true);
+        control.layout();
+
+        double h1 = control.prefHeight(-1);
+        control.getHeight();
+
+        height.set(100.0);
+        control.layout();
+
+        double h2 = control.prefHeight(-1);
+        control.getHeight();
+        assertTrue(h1 != h2, "heights should differ: h1=" + h1 + " h2=" + h2);
+    }
+
+    private void type(String text) {
+        for (char c : text.toCharArray()) {
+            String ch = String.valueOf(c);
+            KeyEvent ev = new KeyEvent(
+                this,
+                control,
+                KeyEvent.KEY_TYPED,
+                ch,
+                "",
+                KeyCode.UNDEFINED,
+                false, // shiftDown
+                false, // controlDown
+                false, // altDown
+                false // metaDown
+            );
+            Event.fireEvent(control, ev);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "1",
+        "1\n",
+        "1\n2",
+        "1\n2\n"
+    })
+    public void setTextNewlines(String text) {
+        control.appendText(text);
+        control.setLineEnding(LineEnding.LF);
+
+        String s = RichTestUtil.getText(control, TextPos.ZERO, control.getDocumentEnd());
+        assertEquals(text, s);
+    }
+
+    @ParameterizedTest
+    @CsvSource(textBlock =
+        """
+        0, 0, 0, 1, '1'
+        0, 0, 0, 2, '11'
+        0, 0, 0, 3, '11'
+        0, 0, 1, 0, '11\n'
+        0, 0, 1, 1, '11\n2'
+        0, 0, 1, 3, '11\n22'
+        0, 0, 2, 0, '11\n22'
+        0, 0, 2, 222, '11\n22'
+        0, 1, 9, 9, '1\n22'
+        0, 2, 9, 9, '\n22'
+        0, 3, 9, 9, '\n22'
+        1, 0, 9, 9, '22'
+        1, 1, 9, 9, '2'
+        1, 2, 9, 9, ''
+        1, 9, 9, 9, ''
+        """
+    )
+    public void getTextRanges(int startIndex, int startOffset, int endIndex, int endOffset, String expected) {
+        control.appendText("11\n22");
+        control.setLineEnding(LineEnding.LF);
+        TextPos start = TextPos.ofLeading(startIndex, startOffset);
+        TextPos end = TextPos.ofLeading(endIndex, endOffset);
+        String s = RichTestUtil.getText(control, start, end);
+        assertEquals(expected, s);
+    }
+
+    @Test
+    public void appendTextSelectAll() {
+        String text = "1\n2\n";
+        control.appendText(text);
+        control.setLineEnding(LineEnding.LF);
+        assertEquals(3, control.getParagraphCount());
+
+        control.selectAll();
+        SelectionSegment sel = control.getSelection();
+        assertEquals(TextPos.ofLeading(2, 0), sel.getMax());
+
+        String s = RichTestUtil.getText(control, sel);
+        assertEquals(text, s);
     }
 }

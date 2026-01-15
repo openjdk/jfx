@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.win;
 
+import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.HeaderButtonMetrics;
 import com.sun.glass.ui.HeaderButtonOverlay;
@@ -122,8 +123,11 @@ class WinWindow extends Window {
             fxReqHeight = fx_ch;
 
             int maxW = getMaximumWidth(), maxH = getMaximumHeight();
+            int oldPw = pw;
+            int oldPh = ph;
             pw = Math.max(Math.min(pw, maxW > 0 ? maxW : Integer.MAX_VALUE), getMinimumWidth());
             ph = Math.max(Math.min(ph, maxH > 0 ? maxH : Integer.MAX_VALUE), getMinimumHeight());
+            boolean minMaxEnforced = (oldPw != pw || oldPh != ph);
 
             long anchor = _getAnchor(getRawHandle());
             int resizeMode = (anchor == ANCHOR_NO_CAPTURE)
@@ -150,7 +154,18 @@ class WinWindow extends Window {
             if (!ySet) ySet = (py != this.y);
             pfReqWidth = (int) Math.ceil(fxReqWidth * platformScaleX);
             pfReqHeight = (int) Math.ceil(fxReqHeight * platformScaleY);
+            boolean alreadyAtSize = (pw == width && ph == height);
             _setBounds(getRawHandle(), px, py, xSet, ySet, pw, ph, 0, 0, xGravity, yGravity);
+
+            if (minMaxEnforced && alreadyAtSize) {
+                var eventType = WindowEvent.RESIZE;
+                if (isMaximized()) {
+                    eventType = WindowEvent.MAXIMIZE;
+                } else if (isMinimized()) {
+                    eventType = WindowEvent.MINIMIZE;
+                }
+                notifyResize(eventType, pw, ph);
+            }
         }
     }
 
@@ -404,7 +419,8 @@ class WinWindow extends Window {
     private int nonClientHitTest(int x, int y) {
         // https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest
         enum HT {
-            CLIENT(1), CAPTION(2), MINBUTTON(8), MAXBUTTON(9), CLOSE(20);
+            CLIENT(1), CAPTION(2), MINBUTTON(8), MAXBUTTON(9), CLOSE(20),
+            UNSPECIFIED('H' << 24 | 'T' << 16 | 'U' << 8 | 'N'); // see GlassWindow.cpp:HandleNCHitTestEvent
             HT(int value) { this.value = value; }
             final int value;
         }
@@ -426,9 +442,10 @@ class WinWindow extends Window {
             case null: break;
         }
 
-        // Otherwise, test if the cursor is over a draggable area and return HTCAPTION.
+        // Otherwise, pick the header area under the cursor and return the appropriate hit-testing constant.
         View.EventHandler eventHandler = view.getEventHandler();
         return switch (eventHandler != null ? eventHandler.pickHeaderArea(wx, wy) : null) {
+            case UNSPECIFIED -> HT.UNSPECIFIED.value;
             case DRAGBAR -> HT.CAPTION.value;
             case ICONIFY -> HT.MINBUTTON.value;
             case MAXIMIZE -> HT.MAXBUTTON.value;

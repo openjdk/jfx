@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 
@@ -57,16 +58,19 @@ public final class TextCell extends BorderPane {
     private double width;
     private double height;
     private double y;
+    private boolean embedsNode;
 
     /**
      * Creates a text cell with the specified {@code Region} as its content.
      * @param index paragraph index
      * @param content non-null content
+     * @param embedsNode whether the content is a paragraph
      */
-    public TextCell(int index, Region content) {
+    public TextCell(int index, Region content, boolean embedsNode) {
         Objects.nonNull(content);
         this.index = index;
         this.content = content;
+        this.embedsNode = embedsNode;
         setManaged(false);
         setCenter(content);
     }
@@ -76,7 +80,7 @@ public final class TextCell extends BorderPane {
      * @param index paragraph index
      */
     public TextCell(int index) {
-        this(index, textFlow());
+        this(index, textFlow(), false);
     }
 
     private static TextFlow textFlow() {
@@ -94,11 +98,20 @@ public final class TextCell extends BorderPane {
     }
 
     /**
-     * Adds a node to the text flow.
+     * Adds a non-text node to the text flow.
      * @param node the node to add
      */
     public void add(Node node) {
         flow().getChildren().add(node);
+        embedsNode = true;
+    }
+
+    /**
+     * Adds a text segment to the text flow.
+     * @param t the text segment
+     */
+    public void addTextSegment(Text t) {
+        flow().getChildren().add(t);
     }
 
     /**
@@ -213,6 +226,38 @@ public final class TextCell extends BorderPane {
     }
 
     /**
+     * Returns the {@code PathElement} array for the underline shape,
+     * translated to the {@code target} frame of reference.
+     *
+     * @param target the Region that provides the target frame of reference
+     * @param start the start offset
+     * @param end the end offset
+     * @return the array of path elements translated to the target coordinates
+     */
+    public PathElement[] getUnderlineShape(Region target, int start, int end) {
+        PathElement[] p;
+        double dx;
+        double dy;
+        if (content instanceof TextFlow f) {
+            dx = f.snappedLeftInset(); // TODO RTL?
+            dy = f.snappedTopInset();
+
+            p = f.getUnderlineShape(start, end);
+        } else {
+            dx = 0.0;
+            dy = 0.0;
+            double w = getWidth();
+            double h = getHeight();
+
+            p = new PathElement[] {
+                new MoveTo(0.0, h),
+                new LineTo(w, h)
+            };
+        }
+        return RichUtils.translatePath(target, content, p, dx, dy);
+    }
+
+    /**
      * Returns the {@code PathElement} array for the range shape,
      * translated to the {@code target} frame of reference.
      *
@@ -229,7 +274,7 @@ public final class TextCell extends BorderPane {
             dx = f.snappedLeftInset(); // TODO RTL?
             dy = f.snappedTopInset();
 
-            p = f.rangeShape(start, end);
+            p = f.rangeShape(start, end); // TODO new api, no null
 
             if ((p == null) || (p.length == 0)) {
                 p = new PathElement[] {
@@ -365,7 +410,7 @@ public final class TextCell extends BorderPane {
     private RangeInfo getTextRange() {
         if (content instanceof TextFlow f) {
             int len = getTextLength();
-            PathElement[] pe = f.rangeShape(0, len);
+            PathElement[] pe = f.rangeShape(0, len); // TODO new api
             if (pe.length > 0) {
                 double sp = f.getLineSpacing();
                 return RangeInfo.of(pe, sp);
@@ -425,5 +470,17 @@ public final class TextCell extends BorderPane {
             }
         }
         return null;
+    }
+
+    @Override
+    public void requestLayout() {
+        super.requestLayout();
+
+        if (embedsNode) {
+            VFlow vf = RichUtils.getParentOfClass(VFlow.class, this);
+            if (vf != null) {
+                vf.requestLayout();
+            }
+        }
     }
 }

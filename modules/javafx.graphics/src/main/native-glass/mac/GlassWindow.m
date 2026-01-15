@@ -309,6 +309,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         }
 
         [self _checkUngrab];
+        [self reorderChildWindows];
     }
 }
 
@@ -343,6 +344,90 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         return YES;
     }
     return self->isFocusable;
+}
+
+- (void) addChildWindow:(GlassWindow*)childWindow
+{
+    LOG("addChildWindow: %p  child: %p", self, childWindow);
+    if (self->childWindows == nil) {
+        self->childWindows = [[NSMutableArray alloc] init];
+    }
+    [self->childWindows addObject:childWindow];
+}
+
+- (void) removeChildWindow:(GlassWindow*)childWindow
+{
+    LOG("removeChildWindow: %p  child: %p", self, childWindow);
+    if (self->childWindows != nil) {
+        [self->childWindows removeObject:childWindow];
+    }
+}
+
+//
+// Recursively orders all child windows so that they are above their owner.
+//
+- (void) reorderChildWindows
+{
+    LOG("reorderChildWindows: %p", self);
+    if ((self->childWindows != nil) && (!nsWindow.isMiniaturized)) {
+        for (GlassWindow *child in self->childWindows)
+        {
+            // Owned windows must set their level to at least the level of their owner
+            NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
+            [child->nsWindow setLevel:level];
+            // Order child above the owner window
+            if (child->nsWindow.isVisible) {
+                [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
+            }
+            [child reorderChildWindows];
+        }
+    }
+}
+
+//
+// Recursively minimize or unminimize all child windows.
+//
+- (void) minimizeChildWindows:(BOOL)minimize
+{
+    LOG("minimizeChildWindows: %p  minimize:%d", self, minimize);
+    if (self->childWindows != nil) {
+        for (GlassWindow *child in self->childWindows)
+        {
+            if (minimize) {
+                [child->nsWindow orderOut:child];
+            } else {
+                [child->nsWindow orderFront:child];
+            }
+
+            [child minimizeChildWindows:minimize];
+        }
+    }
+}
+
+//
+// Recursively set the collection behavior for the child windows to enable or
+// disable the "move to active space" behavior. This is used when the owner
+// enters full-screen, so that the children will follow the owner to the
+// full-screen space. It is called with "true" when first entering full screen
+// and "false" once the transition to full-screen is complete.
+//
+- (void) setMoveToActiveSpaceChildWindows:(BOOL)moveToActiveSpace
+{
+    LOG("setMoveToActiveSpaceChildWindows: %p  moveToActiveSpace:%d", self, moveToActiveSpace);
+    if (self->childWindows != nil) {
+        for (GlassWindow *child in self->childWindows)
+        {
+            NSWindowCollectionBehavior behavior = [child->nsWindow collectionBehavior];
+            if (moveToActiveSpace) {
+                behavior |= NSWindowCollectionBehaviorMoveToActiveSpace;
+            } else {
+                behavior &= ~NSWindowCollectionBehaviorMoveToActiveSpace;
+            }
+            [child->nsWindow setCollectionBehavior: behavior];
+
+            [child setMoveToActiveSpaceChildWindows:moveToActiveSpace];
+        }
+    }
 }
 
 - (NSColor*)setBackgroundColor:(NSColor *)color
@@ -462,14 +547,19 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setFrame:CGRectMake(0, 0, 0, 0)];
             [[window->nsWindow standardWindowButton:NSWindowZoomButton] setFrame:CGRectMake(0, 0, 0, 0)];
 
-            if (!jOwnerPtr) {
-                [window->nsWindow setLevel:NSNormalWindowLevel];
-            }
+            [window->nsWindow setLevel:NSNormalWindowLevel];
         }
 
+        window->prefLevel = [window->nsWindow level];
         if (jOwnerPtr != 0L)
         {
-            window->owner = getGlassWindow(env, jOwnerPtr)->nsWindow; // not retained (use weak reference?)
+            // Get owner glass window and add this window as a child window
+            window->owner = getGlassWindow(env, jOwnerPtr);
+            [window->owner addChildWindow:window];
+
+            // Owned windows must set their level to at least the level of their owner
+            NSWindowLevel level = MAX(window->prefLevel, [window->owner->nsWindow level]);
+            [window->nsWindow setLevel:level];
         }
 
         /* 10.7 full screen window support */
@@ -502,6 +592,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         }
 
         window->isDecorated = isTitled || isExtended;
+        window->isExtended = isExtended;
         window->isTransparent = isTransparent;
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
@@ -680,7 +771,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
                 level = NSScreenSaverWindowLevel;
                 break;
         }
+        window->prefLevel = level; // Save preferred level
+        if (window->owner != nil) {
+            // Owned windows must set their level to at least the level of their owner
+            level = MAX(level, [window->owner->nsWindow level]);
+        }
         [window->nsWindow setLevel:level];
+        [window reorderChildWindows];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -895,8 +992,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->menubar = (GlassMenubar*)jlong_to_ptr(jMenubarPtr);
-        [NSApp setMainMenu:window->menubar->menu];
-        [[NSApp mainMenu] update];
+
+        BOOL isEmbedded = [GlassApplication isEmbedded];
+        BOOL isKeyWindow = [window->nsWindow isKeyWindow];
+
+        if (!isEmbedded || isKeyWindow) {
+            [NSApp setMainMenu:window->menubar->menu];
+            [[NSApp mainMenu] update];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1138,7 +1241,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setMinSize:NSMakeSize(jW, jH)];
+        NSSize minSize = NSMakeSize(jW, jH);
+
+        if (window->isExtended) {
+            window->nsWindow.contentMinSize = minSize;
+        } else {
+            [window->nsWindow setMinSize:minSize];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1161,8 +1270,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        [window->nsWindow setMaxSize:NSMakeSize(jW == -1 ? FLT_MAX : (CGFloat)jW,
-                                                jH == -1 ? FLT_MAX : (CGFloat)jH)];
+        NSSize maxSize = NSMakeSize(
+            jW == -1 ? FLT_MAX : (CGFloat)jW,
+            jH == -1 ? FLT_MAX : (CGFloat)jH);
+
+        if (window->isExtended) {
+            window->nsWindow.contentMaxSize = maxSize;
+        } else {
+            [window->nsWindow setMaxSize:maxSize];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1224,11 +1340,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
         else
         {
             [window _ungrabFocus];
-            if (window->owner != nil)
-            {
-                LOG("   removeChildWindow: %p", window);
-                [window->owner removeChildWindow:window->nsWindow];
-            }
             [window->nsWindow orderOut:window->nsWindow];
         }
         now = [window->nsWindow isVisible] ? JNI_TRUE : JNI_FALSE;

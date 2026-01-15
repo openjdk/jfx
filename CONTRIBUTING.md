@@ -17,7 +17,7 @@ Feature requests
 
 If you find yourself wishing for a feature that doesn't exist in OpenJFX, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that OpenJFX has today have been added because our users saw the need. Please be aware that
 all new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.org/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
-[JBS issue](https://bugs.openjdk.org). See the [New features / API additions](#new-features--api-additions) section below for more information.
+[JBS issue](https://bugs.openjdk.org/projects/JDK). See the [New features / API additions](#new-features--api-additions) section below for more information.
 
 Contributing code and documentation changes
 -------------------------------------------
@@ -50,7 +50,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * File a bug in JBS for every pull request
 
-    A unique [JBS](https://bugs.openjdk.org) bug ID is needed for every
+    A unique [JBS](https://bugs.openjdk.org/projects/JDK) bug ID is needed for every
     pull request. If there isn't already a bug filed in JBS, then please
     file one at [bugreport.java.com](https://bugreport.java.com/).
     A developer with an active OpenJDK ID can file a bug directly in JBS.
@@ -64,6 +64,8 @@ Once your changes and tests are ready to submit for review:
 1. Test your changes
 
     Run the test suite to make sure that nothing is broken. For most code changes, you need to provide new tests covering those changes. At least one of the new tests should fail before your proposed fix and pass after your proposed fix. All tests are written using [JUnit5](https://junit.org/junit5/).
+
+    Enable GitHub Actions (GHA) Workflows in your personal fork. This will allow sanity tests to run when you push code changes to your branch of your personal fork, and allow the Skara bot to report the results of the tests in the PR. Navigate to the home page of your GitHub repo, click on the "Actions" tab, and then click on the green button that says something like: "I understand my workflows, go ahead and enable them".
 
 2. Rebase your changes
 
