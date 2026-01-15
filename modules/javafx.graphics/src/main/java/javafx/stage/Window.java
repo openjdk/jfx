@@ -61,6 +61,7 @@ import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.stage.WindowPeerListener;
+import com.sun.javafx.stage.WindowLocationAlgorithm;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
@@ -133,6 +134,11 @@ public class Window implements EventTarget {
                     @Override
                     public void doVisibleChanged(Window window, boolean visible) {
                         window.doVisibleChanged(visible);
+                    }
+
+                    @Override
+                    public Window getWindowOwner(Window window) {
+                        return window.getWindowOwner();
                     }
 
                     @Override
@@ -334,6 +340,16 @@ public class Window implements EventTarget {
     private static final float CENTER_ON_SCREEN_X_FRACTION = 1.0f / 2;
     private static final float CENTER_ON_SCREEN_Y_FRACTION = 1.0f / 3;
 
+    private static final WindowLocationAlgorithm CENTER_ON_SCREEN_ALGORITHM = new WindowLocationAlgorithm() {
+        @Override
+        public ComputedLocation compute(Screen screen, double windowWidth, double windowHeight) {
+            Rectangle2D bounds = screen.getVisualBounds();
+            double centerX = bounds.getMinX() + (bounds.getWidth() - windowWidth) * CENTER_ON_SCREEN_X_FRACTION;
+            double centerY = bounds.getMinY() + (bounds.getHeight() - windowHeight) * CENTER_ON_SCREEN_Y_FRACTION;
+            return new ComputedLocation(centerX, centerY, CENTER_ON_SCREEN_X_FRACTION, CENTER_ON_SCREEN_Y_FRACTION);
+        }
+    };
+
     /**
      * Sets x and y properties on this Window so that it is centered on the
      * current screen.
@@ -341,22 +357,10 @@ public class Window implements EventTarget {
      * visual bounds of all screens.
      */
     public void centerOnScreen() {
-        xExplicit = false;
-        yExplicit = false;
-        if (peer != null) {
-            Rectangle2D bounds = getWindowScreen().getVisualBounds();
-            double centerX =
-                    bounds.getMinX() + (bounds.getWidth() - getWidth())
-                                           * CENTER_ON_SCREEN_X_FRACTION;
-            double centerY =
-                    bounds.getMinY() + (bounds.getHeight() - getHeight())
-                                           * CENTER_ON_SCREEN_Y_FRACTION;
+        clearLocationExplicit();
 
-            x.set(centerX);
-            y.set(centerY);
-            peerBoundsConfigurator.setLocation(centerX, centerY,
-                                               CENTER_ON_SCREEN_X_FRACTION,
-                                               CENTER_ON_SCREEN_Y_FRACTION);
+        if (peer != null) {
+            applyLocationAlgorithm(CENTER_ON_SCREEN_ALGORITHM);
             applyBounds();
         }
     }
@@ -547,14 +551,14 @@ public class Window implements EventTarget {
             new ReadOnlyDoubleWrapper(this, "x", Double.NaN);
 
     public final void setX(double value) {
-        setXInternal(value);
+        setXInternal(value, 0);
     }
     public final double getX() { return x.get(); }
     public final ReadOnlyDoubleProperty xProperty() { return x.getReadOnlyProperty(); }
 
-    void setXInternal(double value) {
+    void setXInternal(double value, float gravity) {
         x.set(value);
-        peerBoundsConfigurator.setX(value, 0);
+        peerBoundsConfigurator.setX(value, gravity);
         xExplicit = true;
     }
 
@@ -578,14 +582,14 @@ public class Window implements EventTarget {
             new ReadOnlyDoubleWrapper(this, "y", Double.NaN);
 
     public final void setY(double value) {
-        setYInternal(value);
+        setYInternal(value, 0);
     }
     public final double getY() { return y.get(); }
     public final ReadOnlyDoubleProperty yProperty() { return y.getReadOnlyProperty(); }
 
-    void setYInternal(double value) {
+    void setYInternal(double value, float gravity) {
         y.set(value);
-        peerBoundsConfigurator.setY(value, 0);
+        peerBoundsConfigurator.setY(value, gravity);
         yExplicit = true;
     }
 
@@ -599,6 +603,40 @@ public class Window implements EventTarget {
     void notifyLocationChanged(double newX, double newY) {
         x.set(newX);
         y.set(newY);
+    }
+
+    void clearLocationExplicit() {
+        xExplicit = false;
+        yExplicit = false;
+    }
+
+    /**
+     * Allows subclasses to specify an algorithm that computes the window location.
+     */
+    WindowLocationAlgorithm getLocationAlgorithm() {
+        return null;
+    }
+
+    /**
+     * Applies the specified location algorithm, but does not change explicitly specified window coordinates.
+     */
+    final void applyLocationAlgorithm(WindowLocationAlgorithm algorithm) {
+        if (xExplicit && yExplicit) {
+            return;
+        }
+
+        WindowLocationAlgorithm.ComputedLocation location =
+            algorithm.compute(Utils.getScreenForWindow(this), getWidth(), getHeight());
+
+        if (!xExplicit) {
+            x.set(location.x());
+            peerBoundsConfigurator.setX(location.x(), (float)location.xGravity());
+        }
+
+        if (!yExplicit) {
+            y.set(location.y());
+            peerBoundsConfigurator.setY(location.y(), (float)location.yGravity());
+        }
     }
 
     private boolean widthExplicit = false;
@@ -1060,7 +1098,10 @@ public class Window implements EventTarget {
             } else {
                 windows.remove(Window.this);
             }
+
             Toolkit tk = Toolkit.getToolkit();
+            WindowLocationAlgorithm locationAlgorithm = getLocationAlgorithm();
+
             if (peer != null) {
                 if (newVisible) {
                     if (peerListener == null) {
@@ -1110,14 +1151,15 @@ public class Window implements EventTarget {
                                 getWidth(), getHeight(), -1, -1);
                     }
 
-                    if (!xExplicit && !yExplicit) {
-                        centerOnScreen();
-                    } else {
-                        peerBoundsConfigurator.setLocation(getX(), getY(),
-                                                           0, 0);
-                    }
+                    // Set the location of the window peer first, because it might not have a location yet.
+                    // This is the case when a window is hidden and then shown again: we have a location, but
+                    // the new peer doesn't know about that yet. This location might be overwritten by a
+                    // location algorithm later if X and Y are not specified explicitly.
+                    peerBoundsConfigurator.setLocation(x.get(), y.get(), 0, 0);
 
-                    // set peer bounds before the window is shown
+                    // If a derived class has provided us a location algorithm, now is the time to apply it.
+                    // If we don't have a location algorithm, we use the default center-on-screen algorithm.
+                    applyLocationAlgorithm(locationAlgorithm != null ? locationAlgorithm : CENTER_ON_SCREEN_ALGORITHM);
                     applyBounds();
 
                     peer.setOpacity((float)getOpacity());
@@ -1156,6 +1198,12 @@ public class Window implements EventTarget {
                     // might have changed (e.g. due to setResizable(false)). Reapply the
                     // sizeToScene() request if needed to account for the new insets.
                     sizeToScene();
+
+                    // If the window size has changed, we need to run the location algorithm again.
+                    if (locationAlgorithm != null) {
+                        applyLocationAlgorithm(locationAlgorithm);
+                        applyBounds();
+                    }
                 }
 
                 // Reset the flag unconditionally upon visibility changes
@@ -1369,26 +1417,6 @@ public class Window implements EventTarget {
 
     Window getWindowOwner() {
         return null;
-    }
-
-    private Screen getWindowScreen() {
-        Window window = this;
-        do {
-            if (!Double.isNaN(window.getX())
-                    && !Double.isNaN(window.getY())
-                    && !Double.isNaN(window.getWidth())
-                    && !Double.isNaN(window.getHeight())) {
-                return Utils.getScreenForRectangle(
-                                     new Rectangle2D(window.getX(),
-                                                     window.getY(),
-                                                     window.getWidth(),
-                                                     window.getHeight()));
-            }
-
-            window = window.getWindowOwner();
-        } while (window != null);
-
-        return Screen.getPrimary();
     }
 
     private final ReadOnlyObjectWrapper<Screen> screen = new ReadOnlyObjectWrapper<>(Screen.getPrimary());

@@ -30,6 +30,7 @@ import com.sun.javafx.util.Utils;
 import com.sun.javafx.event.DirectEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -44,8 +45,11 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.AnchorPoint;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -61,6 +65,7 @@ import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
+import com.sun.javafx.stage.WindowRelocator;
 import com.sun.javafx.tk.Toolkit;
 
 import com.sun.javafx.stage.PopupWindowHelper;
@@ -632,6 +637,32 @@ public abstract class PopupWindow extends Window {
     }
 
     /**
+     * Controls whether an alternative anchor location may be used when the preferred
+     * {@link #anchorLocationProperty() anchorLocation} would place the popup window outside the screen bounds.
+     * Depending on the policy, the preferred anchor location may be mirrored to the other side of the window
+     * horizontally or vertically, or an anchor location may be selected automatically.
+     * <p>
+     * If no alternative anchor location yields a better placement, the specified {@code anchorLocation} is used.
+     *
+     * @defaultValue {@link AnchorPolicy#FIXED}
+     * @since 26
+     */
+    private final ObjectProperty<AnchorPolicy> anchorPolicy =
+            new SimpleObjectProperty<>(this, "anchorPolicy", AnchorPolicy.FIXED);
+
+    public final ObjectProperty<AnchorPolicy> anchorPolicyProperty() {
+        return anchorPolicy;
+    }
+
+    public final AnchorPolicy getAnchorPolicy() {
+        return anchorPolicy.get();
+    }
+
+    public final void setAnchorPolicy(AnchorPolicy value) {
+        anchorPolicy.set(value);
+    }
+
+    /**
      * Specifies the popup anchor point which is used in popup positioning. The
      * point can be set to a corner of the popup window or a corner of its
      * content. In this context the content corners are derived from the popup
@@ -721,12 +752,12 @@ public abstract class PopupWindow extends Window {
     }
 
     @Override
-    void setXInternal(final double value) {
+    void setXInternal(double value, float xGravity) {
         updateWindow(windowToAnchorX(value), getAnchorY());
     }
 
     @Override
-    void setYInternal(final double value) {
+    void setYInternal(double value, float yGravity) {
         updateWindow(getAnchorX(), windowToAnchorY(value));
     }
 
@@ -783,34 +814,15 @@ public abstract class PopupWindow extends Window {
                             ? currentScreen.getBounds()
                             : currentScreen.getVisualBounds();
 
-            if (anchorXCoef <= 0.5) {
-                // left side of the popup is more important, try to keep it
-                // visible if the popup width is larger than screen width
-                anchorScrMinX = Math.min(anchorScrMinX,
-                                         screenBounds.getMaxX()
-                                             - anchorBounds.getWidth());
-                anchorScrMinX = Math.max(anchorScrMinX, screenBounds.getMinX());
-            } else {
-                // right side of the popup is more important
-                anchorScrMinX = Math.max(anchorScrMinX, screenBounds.getMinX());
-                anchorScrMinX = Math.min(anchorScrMinX,
-                                         screenBounds.getMaxX()
-                                             - anchorBounds.getWidth());
-            }
+            Point2D location = WindowRelocator.computeAdjustedLocation(
+                newAnchorX, newAnchorY,
+                anchorBounds.getWidth(), anchorBounds.getHeight(),
+                AnchorPoint.proportional(anchorXCoef, anchorYCoef),
+                Objects.requireNonNullElse(getAnchorPolicy(), AnchorPolicy.FIXED),
+                screenBounds, Insets.EMPTY);
 
-            if (anchorYCoef <= 0.5) {
-                // top side of the popup is more important
-                anchorScrMinY = Math.min(anchorScrMinY,
-                                         screenBounds.getMaxY()
-                                             - anchorBounds.getHeight());
-                anchorScrMinY = Math.max(anchorScrMinY, screenBounds.getMinY());
-            } else {
-                // bottom side of the popup is more important
-                anchorScrMinY = Math.max(anchorScrMinY, screenBounds.getMinY());
-                anchorScrMinY = Math.min(anchorScrMinY,
-                                         screenBounds.getMaxY()
-                                             - anchorBounds.getHeight());
-            }
+            anchorScrMinX = location.getX();
+            anchorScrMinY = location.getY();
         }
 
         final double windowScrMinX =
@@ -830,11 +842,11 @@ public abstract class PopupWindow extends Window {
         // update popup position
         // don't set Window.xExplicit unnecessarily
         if (!Double.isNaN(windowScrMinX)) {
-            super.setXInternal(windowScrMinX);
+            super.setXInternal(windowScrMinX, 0);
         }
         // don't set Window.yExplicit unnecessarily
         if (!Double.isNaN(windowScrMinY)) {
-            super.setYInternal(windowScrMinY);
+            super.setYInternal(windowScrMinY, 0);
         }
 
         // set anchor x, anchor y
