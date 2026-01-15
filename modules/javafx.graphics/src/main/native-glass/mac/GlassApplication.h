@@ -74,4 +74,6 @@
 
 + (BOOL)syncRenderingDisabled;
 
++ (BOOL)isEmbedded;
+
 @end

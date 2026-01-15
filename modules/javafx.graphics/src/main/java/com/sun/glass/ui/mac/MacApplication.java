@@ -402,7 +402,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return true;
     }
 
-    @Override native protected boolean _supportsSystemMenu();
+    @Override protected boolean _supportsSystemMenu() {
+        return true;
+    }
 
     // NOTE: this will not return a valid result until the native _runloop
     // method has been executed and called the Runnable passed to that method.
