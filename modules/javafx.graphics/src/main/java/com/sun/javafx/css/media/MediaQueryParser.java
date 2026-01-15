@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,8 +40,6 @@ import java.util.function.Predicate;
 
 /**
  * Parser for the media query grammar.
- * <p>
- * This parser implements the subset of the grammar that is required for JavaFX CSS.
  *
  * @see <a href="https://www.w3.org/TR/mediaqueries-5/#mq-syntax">Media query syntax</a>
  */
@@ -55,6 +53,18 @@ public final class MediaQueryParser {
     private static final Predicate<Token> NOT_KEYWORD = token -> equalsIdentIgnoreCase(token, "not");
     private static final Predicate<Token> AND_KEYWORD = token -> equalsIdentIgnoreCase(token, "and");
     private static final Predicate<Token> OR_KEYWORD = token -> equalsIdentIgnoreCase(token, "or");
+    private static final Predicate<Token> GREATER = token -> token.getType() == CssLexer.GREATER;
+    private static final Predicate<Token> LESS = token -> token.getType() == CssLexer.LESS;
+    private static final Predicate<Token> EQUALS = token -> token.getType() == CssLexer.EQUALS;
+    private static final Predicate<Token> GREATER_LESS_EQUALS = token -> switch (token.getType()) {
+        case CssLexer.GREATER, CssLexer.LESS, CssLexer.EQUALS -> true;
+        default -> false;
+    };
+    private static final Predicate<Token> LENGTH = token -> switch (token.getType()) {
+        case CssLexer.NUMBER, CssLexer.CM, CssLexer.EMS, CssLexer.EXS, CssLexer.IN, CssLexer.MM,
+             CssLexer.PC, CssLexer.PT, CssLexer.PX -> true;
+        default -> false;
+    };
 
     private final BiConsumer<Token, String> errorHandler;
 
@@ -103,7 +113,7 @@ public final class MediaQueryParser {
                         }
 
                         // Invalid expressions always evaluate to false.
-                        expressions.add(new ConstantExpression(false));
+                        expressions.add(ConstantExpression.of(false));
                     }
                 }
 
@@ -132,7 +142,7 @@ public final class MediaQueryParser {
         // <media-not>
         if (tokens.consumeIf(NOT_KEYWORD) != null) {
             MediaQuery mediaInParens = parseMediaInParens(tokens);
-            return mediaInParens != null ? new NegationExpression(mediaInParens) : null;
+            return mediaInParens != null ? NegationExpression.of(mediaInParens) : null;
         }
 
         List<MediaQuery> expressions = new ArrayList<>();
@@ -205,16 +215,21 @@ public final class MediaQueryParser {
      * Parses a {@code media-in-parens} production.
      *
      * <pre>{@code
-     *     <media-in-parens> = ( <media-condition> ) | <media-feature>
+     *     <media-in-parens> = ( <media-condition> ) | <discrete-media-feature> | <range-media-feature>
      * }</pre>
      *
      * @param tokens the token stream
      * @return the expression
      */
     private MediaQuery parseMediaInParens(TokenStream tokens) {
-        // <media-feature>
+        // <discrete-media-feature>
         if (tokens.matches(LPAREN, IDENT, RPAREN) || tokens.matches(LPAREN, IDENT, COLON)) {
-            return parseMediaFeature(tokens);
+            return parseDiscreteMediaFeature(tokens);
+        }
+
+        // <range-media-feature>
+        if (tokens.matches(LPAREN, LENGTH) || tokens.matches(LPAREN, IDENT, GREATER_LESS_EQUALS)) {
+            return parseRangeMediaFeature(tokens);
         }
 
         // ( <media-condition> )
@@ -234,10 +249,10 @@ public final class MediaQueryParser {
     }
 
     /**
-     * Parses a {@code media-feature} production.
+     * Parses a {@code discrete-media-feature} production.
      *
      * <pre>{@code
-     *     <media-feature> = ( [ <mf-plain> | <mf-boolean> ] )
+     *     <discrete-media-feature> = ( [ <mf-plain> | <mf-boolean> ] )
      *     <mf-plain> = <ident> : <any>
      *     <mf-boolean> = <ident>
      * }</pre>
@@ -245,7 +260,7 @@ public final class MediaQueryParser {
      * @param tokens the token stream
      * @return the expression
      */
-    private MediaQuery parseMediaFeature(TokenStream tokens) {
+    private MediaQuery parseDiscreteMediaFeature(TokenStream tokens) {
         if (tokens.consumeIf(LPAREN) == null) {
             errorHandler.accept(tokens.consume(), "Expected LPAREN");
             return null;
@@ -270,13 +285,155 @@ public final class MediaQueryParser {
         }
 
         try {
-            return MediaFeatures.featureQueryExpression(
-                featureName.getText(),
-                featureValue != null ? featureValue.getText() : null);
+            return MediaFeatures.discreteQueryExpression(featureName.getText(), featureValue);
         } catch (IllegalArgumentException ex) {
             errorHandler.accept(featureValue, ex.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Parses a {@code range-media-feature} production.
+     *
+     * <pre>{@code
+     *     <range-media-feature> = ( <mf-name> <mf-comparison> <mf-value>
+     *                             | <mf-value> <mf-comparison> <mf-name>
+     *                             | <mf-value> <mf-lt> <mf-name> <mf-lt> <mf-value>
+     *                             | <mf-value> <mf-gt> <mf-name> <mf-gt> <mf-value> )
+     *     <mf-name> = <ident>
+     *     <mf-value> = <number> | <dimension>
+     *     <mf-lt> = '<' '='?
+     *     <mf-gt> = '>' '='?
+     *     <mf-eq> = '='
+     *     <mf-comparison> = <mf-lt> | <mf-gt> | <mf-eq>
+     * }</pre>
+     *
+     * @param tokens the token stream
+     * @return the expression
+     */
+    private MediaQuery parseRangeMediaFeature(TokenStream tokens) {
+        class LocalMethods {
+            /**
+             * Parses a {@code <mf-name> <mf-comparison> <mf-value>} production.
+             */
+            static MediaQuery parseNameFirst(TokenStream tokens, BiConsumer<Token, String> errorHandler) {
+                Token featureName = tokens.consumeIf(IDENT);
+                if (featureName == null) {
+                    errorHandler.accept(tokens.consume(), "Expected IDENT");
+                    return null;
+                }
+
+                ComparisonOp operator = parseComparisonOp(tokens);
+                if (operator == null) {
+                    errorHandler.accept(tokens.consume(), "Expected <comparison>");
+                    return null;
+                }
+
+                Token featureValue = tokens.consumeIf(LENGTH);
+                if (featureValue == null) {
+                    errorHandler.accept(tokens.consume(), "Expected <length>");
+                    return null;
+                }
+
+                try {
+                    return MediaFeatures.rangeQueryExpression(featureName.getText(), featureValue, operator);
+                } catch (IllegalArgumentException ex) {
+                    errorHandler.accept(tokens.consume(), ex.getMessage());
+                    return null;
+                }
+            }
+
+            /**
+             * Parses any of the following productions:
+             *
+             * <pre>{@code
+             *     1. <mf-value> <mf-comparison> <mf-name>
+             *     2. <mf-value> <mf-lt> <mf-name> <mf-lt> <mf-value>
+             *     3. <mf-value> <mf-gt> <mf-name> <mf-gt> <mf-value>
+             * }</pre>
+             */
+            static MediaQuery parseValueFirst(TokenStream tokens, BiConsumer<Token, String> errorHandler) {
+                Token featureValue1 = tokens.consumeIf(LENGTH);
+                if (featureValue1 == null) {
+                    errorHandler.accept(tokens.consume(), "Expected <length>");
+                    return null;
+                }
+
+                ComparisonOp operator1 = parseComparisonOp(tokens);
+                if (operator1 == null) {
+                    errorHandler.accept(tokens.consume(), "Expected <comparison>");
+                    return null;
+                }
+
+                Token featureName = tokens.consumeIf(IDENT);
+                if (featureName == null) {
+                    errorHandler.accept(tokens.consume(), "Expected IDENT");
+                    return null;
+                }
+
+                // An interval query of the form X >= Y >= Z restricts the operators to the same "direction"
+                // and excludes the equality operator. For example, if the first operator is LESS, the second
+                // operator can only be LESS or LESS_OR_EQUAL.
+                ComparisonOp operator2 = operator1 == ComparisonOp.EQUAL ? null : parseComparisonOp(tokens);
+                if (operator2 == null || !operator2.isSameDirection(operator1)) {
+                    try {
+                        return MediaFeatures.rangeQueryExpression(
+                            featureName.getText(), featureValue1, operator1.flipped());
+                    } catch (IllegalArgumentException ex) {
+                        errorHandler.accept(tokens.consume(), ex.getMessage());
+                        return null;
+                    }
+                }
+
+                Token featureValue2 = tokens.consumeIf(LENGTH);
+                if (featureValue2 == null) {
+                    errorHandler.accept(tokens.consume(), "Expected <length>");
+                    return null;
+                }
+
+                try {
+                    return MediaFeatures.rangeQueryExpression(
+                        featureName.getText(),
+                        featureValue1, featureValue2,
+                        operator1, operator2);
+                } catch (IllegalArgumentException ex) {
+                    errorHandler.accept(tokens.consume(), ex.getMessage());
+                    return null;
+                }
+            }
+
+            static ComparisonOp parseComparisonOp(TokenStream tokens) {
+                if (tokens.consumeIf(GREATER) != null) {
+                    return tokens.consumeIf(EQUALS) != null
+                        ? ComparisonOp.GREATER_OR_EQUAL
+                        : ComparisonOp.GREATER;
+                } else if (tokens.consumeIf(LESS) != null) {
+                    return tokens.consumeIf(EQUALS) != null
+                        ? ComparisonOp.LESS_OR_EQUAL
+                        : ComparisonOp.LESS;
+                } else if (tokens.consumeIf(EQUALS) != null) {
+                    return ComparisonOp.EQUAL;
+                } else {
+                    return null;
+                }
+            }
+        }
+
+        if (tokens.consumeIf(LPAREN) == null) {
+            errorHandler.accept(tokens.consume(), "Expected LPAREN");
+            return null;
+        }
+
+        MediaQuery query = tokens.matches(LENGTH)
+            ? LocalMethods.parseValueFirst(tokens, errorHandler)
+            : LocalMethods.parseNameFirst(tokens, errorHandler);
+
+        if (query != null && tokens.consumeIf(RPAREN) == null) {
+            errorHandler.accept(tokens.consume(), "Expected RPAREN");
+            return null;
+        }
+
+        return query;
     }
 
     private static boolean equalsIdentIgnoreCase(Token token, String value) {

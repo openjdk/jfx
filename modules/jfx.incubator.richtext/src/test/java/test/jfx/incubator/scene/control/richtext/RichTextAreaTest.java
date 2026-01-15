@@ -36,11 +36,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import javafx.beans.NamedArg;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
-import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
@@ -52,10 +51,14 @@ import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
@@ -67,6 +70,7 @@ import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
+import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
@@ -985,6 +989,37 @@ public class RichTextAreaTest {
         assertEquals("yoyo", text());
     }
 
+    @Test
+    public void withEmbeddedNodes() {
+        class ARegion extends Region {
+            public ARegion(SimpleDoubleProperty height) {
+                setPrefWidth(10);
+                minHeightProperty().bind(height);
+                maxHeightProperty().bind(height);
+            }
+        }
+
+        SimpleDoubleProperty height = new SimpleDoubleProperty(10.0);
+        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
+        m.addSegment("Trailing node: ");
+        m.addNodeSegment(() -> new ARegion(height));
+        m.addParagraph(() -> new ARegion(height));
+        control.setModel(m);
+        control.setWrapText(false);
+        control.setUseContentHeight(true);
+        control.layout();
+
+        double h1 = control.prefHeight(-1);
+        control.getHeight();
+
+        height.set(100.0);
+        control.layout();
+
+        double h2 = control.prefHeight(-1);
+        control.getHeight();
+        assertTrue(h1 != h2, "heights should differ: h1=" + h1 + " h2=" + h2);
+    }
+
     private void type(String text) {
         for (char c : text.toCharArray()) {
             String ch = String.valueOf(c);
@@ -1002,5 +1037,64 @@ public class RichTextAreaTest {
             );
             Event.fireEvent(control, ev);
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "1",
+        "1\n",
+        "1\n2",
+        "1\n2\n"
+    })
+    public void setTextNewlines(String text) {
+        control.appendText(text);
+        control.setLineEnding(LineEnding.LF);
+
+        String s = RichTestUtil.getText(control, TextPos.ZERO, control.getDocumentEnd());
+        assertEquals(text, s);
+    }
+
+    @ParameterizedTest
+    @CsvSource(textBlock =
+        """
+        0, 0, 0, 1, '1'
+        0, 0, 0, 2, '11'
+        0, 0, 0, 3, '11'
+        0, 0, 1, 0, '11\n'
+        0, 0, 1, 1, '11\n2'
+        0, 0, 1, 3, '11\n22'
+        0, 0, 2, 0, '11\n22'
+        0, 0, 2, 222, '11\n22'
+        0, 1, 9, 9, '1\n22'
+        0, 2, 9, 9, '\n22'
+        0, 3, 9, 9, '\n22'
+        1, 0, 9, 9, '22'
+        1, 1, 9, 9, '2'
+        1, 2, 9, 9, ''
+        1, 9, 9, 9, ''
+        """
+    )
+    public void getTextRanges(int startIndex, int startOffset, int endIndex, int endOffset, String expected) {
+        control.appendText("11\n22");
+        control.setLineEnding(LineEnding.LF);
+        TextPos start = TextPos.ofLeading(startIndex, startOffset);
+        TextPos end = TextPos.ofLeading(endIndex, endOffset);
+        String s = RichTestUtil.getText(control, start, end);
+        assertEquals(expected, s);
+    }
+
+    @Test
+    public void appendTextSelectAll() {
+        String text = "1\n2\n";
+        control.appendText(text);
+        control.setLineEnding(LineEnding.LF);
+        assertEquals(3, control.getParagraphCount());
+
+        control.selectAll();
+        SelectionSegment sel = control.getSelection();
+        assertEquals(TextPos.ofLeading(2, 0), sel.getMax());
+
+        String s = RichTestUtil.getText(control, sel);
+        assertEquals(text, s);
     }
 }
