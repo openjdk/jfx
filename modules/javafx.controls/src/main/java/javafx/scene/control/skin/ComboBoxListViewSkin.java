@@ -116,6 +116,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
             itemCountDirty = true;
             getSkinnable().requestLayout();
+            requestPopupLayout();
         }
     };
 
@@ -401,6 +402,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         itemCountDirty = true;
         getSkinnable().requestLayout();
+        requestPopupLayout();
     }
 
     private void updateValue() {
