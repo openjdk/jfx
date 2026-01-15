@@ -96,6 +96,7 @@ public:
     HWND GetDelegateWindow() { return m_delegateWindow; }
 
     void HandleActivateEvent(jint event);
+    void HandleFocusEvent(jint event);
     void HandleCloseEvent();
 
     virtual BOOL EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepRatio);
