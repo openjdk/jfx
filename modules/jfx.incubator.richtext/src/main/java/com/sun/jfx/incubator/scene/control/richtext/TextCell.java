@@ -37,9 +37,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Provides a visual representation of a paragraph.
@@ -470,6 +473,21 @@ public final class TextCell extends BorderPane {
             }
         }
         return null;
+    }
+
+    public void setParagraphAttributes(StyleAttributeMap a) {
+        Double firstLineIndent = a.getFirstLineIndent();
+        if (firstLineIndent != null) {
+            add(new FirstLineIndentSpacer(firstLineIndent));
+        }
+
+        TabStop[] tabStops = a.getTabStops();
+        if (tabStops != null) {
+            TabStopPolicy p = new TabStopPolicy();
+            p.tabStops().setAll(tabStops);
+            // TODO p.setDefaultStops();
+            flow().setTabStopPolicy(p);
+        }
     }
 
     @Override
