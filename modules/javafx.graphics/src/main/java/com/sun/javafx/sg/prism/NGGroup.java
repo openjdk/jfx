@@ -253,6 +253,8 @@ public class NGGroup extends NGNode {
 
         if (blendMode == Blend.Mode.SRC_OVER ||
                 orderedChildren.size() < 2) {  // Blend modes only work "between" siblings
+
+            // Guard against case where renderRoot is not part of orderedChildren
             for (int i = (startPos == -1 ? 0 : startPos); i < orderedChildren.size(); i++) {
                 NGNode child;
                 try {
