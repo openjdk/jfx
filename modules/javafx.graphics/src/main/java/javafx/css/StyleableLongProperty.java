@@ -56,16 +56,7 @@ public abstract class StyleableLongProperty
         StyleablePropertyHelper.setLongAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
             public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
-                if (!(value instanceof Long longValue)) {
-                    return false;
-                }
-
-                var longProperty = (StyleableLongProperty)property;
-                long endValue = longProperty.mediator != null
-                    ? longProperty.mediator.endValue
-                    : longProperty.get();
-
-                return longValue == endValue;
+                return ((StyleableLongProperty)property).equalsEndValue(value);
             }
         });
     }
@@ -134,6 +125,15 @@ public abstract class StyleableLongProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Long longValue)) {
+            return false;
+        }
+
+        long endValue = mediator != null ? mediator.endValue : get();
+        return longValue == endValue;
     }
 
     private StyleOrigin origin;

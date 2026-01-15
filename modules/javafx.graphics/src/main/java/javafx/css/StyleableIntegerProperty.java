@@ -55,16 +55,7 @@ public abstract class StyleableIntegerProperty
         StyleablePropertyHelper.setIntegerAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
             public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
-                if (!(value instanceof Integer intValue)) {
-                    return false;
-                }
-
-                var integerProperty = (StyleableIntegerProperty)property;
-                int endValue = integerProperty.mediator != null
-                    ? integerProperty.mediator.endValue
-                    : integerProperty.get();
-
-                return intValue == endValue;
+                return ((StyleableIntegerProperty)property).equalsEndValue(value);
             }
         });
     }
@@ -133,6 +124,15 @@ public abstract class StyleableIntegerProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Integer intValue)) {
+            return false;
+        }
+
+        int endValue = mediator != null ? mediator.endValue : get();
+        return intValue == endValue;
     }
 
     private StyleOrigin origin;

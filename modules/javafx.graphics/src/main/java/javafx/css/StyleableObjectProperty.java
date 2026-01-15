@@ -64,12 +64,7 @@ public abstract class StyleableObjectProperty<T>
         StyleablePropertyHelper.setObjectAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
             public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
-                var objectProperty = (StyleableObjectProperty<?>)property;
-                Object endValue = objectProperty.controller != null
-                    ? objectProperty.controller.getTargetValue()
-                    : objectProperty.get();
-
-                return Objects.equals(endValue, value);
+                return ((StyleableObjectProperty<?>)property).equalsEndValue(value);
             }
         });
     }
@@ -282,6 +277,10 @@ public abstract class StyleableObjectProperty<T>
         if (controller != null) {
             controller.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        return Objects.equals(value, controller != null ? controller.getTargetValue() : get());
     }
 
     private StyleOrigin origin;

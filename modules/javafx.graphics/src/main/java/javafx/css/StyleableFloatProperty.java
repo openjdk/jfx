@@ -55,16 +55,7 @@ public abstract class StyleableFloatProperty
         StyleablePropertyHelper.setFloatAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
             public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
-                if (!(value instanceof Float floatValue)) {
-                    return false;
-                }
-
-                var floatProperty = (StyleableFloatProperty)property;
-                float endValue = floatProperty.mediator != null
-                    ? floatProperty.mediator.endValue
-                    : floatProperty.get();
-
-                return Float.compare(floatValue, endValue) == 0;
+                return ((StyleableFloatProperty)property).equalsEndValue(value);
             }
         });
     }
@@ -133,6 +124,15 @@ public abstract class StyleableFloatProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Float floatValue)) {
+            return false;
+        }
+
+        float endValue = mediator != null ? mediator.endValue : get();
+        return Float.compare(floatValue, endValue) == 0;
     }
 
     private StyleOrigin origin;

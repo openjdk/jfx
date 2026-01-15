@@ -56,16 +56,7 @@ public abstract class StyleableStringProperty
         StyleablePropertyHelper.setStringAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
             public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
-                if (!(value instanceof String stringValue)) {
-                    return false;
-                }
-
-                var stringProperty = (StyleableStringProperty)property;
-                String endValue = stringProperty.mediator != null
-                    ? stringProperty.mediator.endValue
-                    : stringProperty.get();
-
-                return Objects.equals(endValue, stringValue);
+                return ((StyleableStringProperty)property).equalsEndValue(value);
             }
         });
     }
@@ -133,6 +124,14 @@ public abstract class StyleableStringProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof String stringValue)) {
+            return false;
+        }
+
+        return Objects.equals(stringValue, mediator != null ? mediator.endValue : get());
     }
 
     private StyleOrigin origin;

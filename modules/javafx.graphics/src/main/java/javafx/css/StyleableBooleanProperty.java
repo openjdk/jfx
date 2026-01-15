@@ -55,16 +55,7 @@ public abstract class StyleableBooleanProperty
         StyleablePropertyHelper.setBooleanAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
             public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
-                if (!(value instanceof Boolean booleanValue)) {
-                    return false;
-                }
-
-                var booleanProperty = (StyleableBooleanProperty)property;
-                boolean endValue = booleanProperty.mediator != null
-                    ? booleanProperty.mediator.endValue
-                    : booleanProperty.get();
-
-                return booleanValue == endValue;
+                return ((StyleableBooleanProperty)property).equalsEndValue(value);
             }
         });
     }
@@ -133,6 +124,15 @@ public abstract class StyleableBooleanProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Boolean booleanValue)) {
+            return false;
+        }
+
+        boolean endValue = mediator != null ? mediator.endValue : get();
+        return booleanValue == endValue;
     }
 
     private StyleOrigin origin;

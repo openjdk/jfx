@@ -55,16 +55,7 @@ public abstract class StyleableDoubleProperty
         StyleablePropertyHelper.setDoubleAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
             public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
-                if (!(value instanceof Double doubleValue)) {
-                    return false;
-                }
-
-                var doubleProperty = (StyleableDoubleProperty)property;
-                double endValue = doubleProperty.mediator != null
-                    ? doubleProperty.mediator.endValue
-                    : doubleProperty.get();
-
-                return Double.compare(doubleValue, endValue) == 0;
+                return ((StyleableDoubleProperty)property).equalsEndValue(value);
             }
         });
     }
@@ -133,6 +124,15 @@ public abstract class StyleableDoubleProperty
         if (mediator != null) {
             mediator.cancel();
         }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Double doubleValue)) {
+            return false;
+        }
+
+        double endValue = mediator != null ? mediator.endValue : get();
+        return Double.compare(doubleValue, endValue) == 0;
     }
 
     private StyleOrigin origin;
