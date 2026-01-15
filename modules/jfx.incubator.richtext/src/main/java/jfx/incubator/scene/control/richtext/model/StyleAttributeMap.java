@@ -85,7 +85,7 @@ public final class StyleAttributeMap {
 
     /**
      * Tab stops paragraph attribute.
-     * @since 25
+     * @since 27
      */
     public static final StyleAttribute<TabStop[]> TAB_STOPS = new StyleAttribute<>("TAB_STOPS", TabStop[].class, true);
 
