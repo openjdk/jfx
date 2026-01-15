@@ -397,8 +397,6 @@ public class SelectBindingTest {
         assertEquals("b", select.get());
         a.setName(null);
         assertNull(select.get());
-        ErrorLoggingUtility.checkWarning(NullPointerException.class);
-        OutputRedirect.checkAndRestoreStderr(NullPointerException.class);
     }
 
     @Test
@@ -413,6 +411,7 @@ public class SelectBindingTest {
         select = Bindings.selectString(a.nextProperty(), "dummy", "name");
         assertNull(select.get());
         ErrorLoggingUtility.checkWarning(NoSuchMethodException.class);
+        OutputRedirect.checkAndRestoreStderr(NoSuchMethodException.class);
     }
 
     @Test
