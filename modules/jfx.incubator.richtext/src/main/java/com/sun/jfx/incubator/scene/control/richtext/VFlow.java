@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -787,7 +787,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         if (gen != null) {
             // it's a paragraph node
             Region content = gen.get();
-            cell = new TextCell(index, content);
+            cell = new TextCell(index, content, true);
         } else {
             // it's a regular text cell
             cell = new TextCell(index);
@@ -806,13 +806,14 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
 
             // segments
-            List<StyledSegment> segments = RichParagraphHelper.getSegments(par);
-            if ((segments == null) || segments.isEmpty()) {
+            int count = par.getSegmentCount();
+            if (count == 0) {
                 // a bit of a hack: avoid TextCells with an empty TextFlow,
                 // otherwise it makes the caret collapse to a single point
-                cell.add(createTextNode("", StyleAttributeMap.EMPTY));
+                cell.addTextSegment(createTextNode("", StyleAttributeMap.EMPTY));
             } else {
-                for (StyledSegment seg : segments) {
+                for (int i=0; i<count; i++) {
+                    StyledSegment seg = par.getSegment(i);
                     switch (seg.getType()) {
                     case INLINE_NODE:
                         Node n = seg.getInlineNodeGenerator().get();
@@ -822,7 +823,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                         String text = seg.getText();
                         StyleAttributeMap a = seg.getStyleAttributeMap(this);
                         Text t = createTextNode(text, a);
-                        cell.add(t);
+                        cell.addTextSegment(t);
                         break;
                     }
                 }
@@ -1714,6 +1715,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     public Point2D getImeLocationOnScreen(TextPos pos) {
         CaretInfo ci = getCaretInfo(pos);
+        if (ci == null) {
+            return new Point2D(0, 0);
+        }
         return content.localToScreen(ci.getMinX(), ci.getMaxY());
     }
 }

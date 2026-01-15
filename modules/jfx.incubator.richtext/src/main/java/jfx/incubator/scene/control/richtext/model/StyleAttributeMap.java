@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -600,7 +600,7 @@ public final class StyleAttributeMap {
          * @param d the paragraph direction
          * @return this Builder instance
          */
-        public Builder setRTL(ParagraphDirection d) {
+        public Builder setParagraphDirection(ParagraphDirection d) {
             set(PARAGRAPH_DIRECTION, d);
             return this;
         }

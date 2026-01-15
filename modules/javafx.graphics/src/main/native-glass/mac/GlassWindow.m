@@ -369,15 +369,16 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 - (void) reorderChildWindows
 {
     LOG("reorderChildWindows: %p", self);
-    if (self->childWindows != nil) {
+    if ((self->childWindows != nil) && (!nsWindow.isMiniaturized)) {
         for (GlassWindow *child in self->childWindows)
         {
             // Owned windows must set their level to at least the level of their owner
             NSWindowLevel level = MAX(child->prefLevel, [self->nsWindow level]);
             [child->nsWindow setLevel:level];
             // Order child above the owner window
-            [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
-
+            if (child->nsWindow.isVisible) {
+                [child->nsWindow orderWindow:NSWindowAbove relativeTo:[self->nsWindow windowNumber]];
+            }
             [child reorderChildWindows];
         }
     }
@@ -991,8 +992,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->menubar = (GlassMenubar*)jlong_to_ptr(jMenubarPtr);
-        [NSApp setMainMenu:window->menubar->menu];
-        [[NSApp mainMenu] update];
+
+        BOOL isEmbedded = [GlassApplication isEmbedded];
+        BOOL isKeyWindow = [window->nsWindow isKeyWindow];
+
+        if (!isEmbedded || isKeyWindow) {
+            [NSApp setMainMenu:window->menubar->menu];
+            [[NSApp mainMenu] update];
+        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

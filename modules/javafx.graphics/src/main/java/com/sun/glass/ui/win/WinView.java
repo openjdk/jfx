@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui.win;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
@@ -128,14 +129,22 @@ final class WinView extends View {
             return false;
         }
 
-        if (getWindow() instanceof WinWindow window &&
-                window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay) {
+        if (getWindow() instanceof WinWindow window) {
             double wx = x / window.getPlatformScaleX();
             double wy = y / window.getPlatformScaleY();
 
             // Give the header button overlay the first chance to handle the event.
-            if (overlay.handleMouseEvent(type, button, wx, wy)) {
+            if (window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay
+                    && overlay.handleMouseEvent(type, button, wx, wy)) {
                 return true;
+            }
+
+            if (window.isResizable()
+                    && clickCount == 2
+                    && type == MouseEvent.DOWN
+                    && getEventHandler() instanceof View.EventHandler eventHandler
+                    && eventHandler.pickHeaderArea(wx, wy) == HeaderAreaType.DRAGBAR) {
+                window.maximize(!window.isMaximized());
             }
         }
 
