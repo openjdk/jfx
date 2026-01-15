@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.scene.NodeHelper;
@@ -50,6 +51,24 @@ import java.util.Objects;
  */
 public abstract class StyleableStringProperty
     extends StringPropertyBase implements StyleableProperty<String> {
+
+    static {
+        StyleablePropertyHelper.setStringAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+                if (!(value instanceof String stringValue)) {
+                    return false;
+                }
+
+                var stringProperty = (StyleableStringProperty)property;
+                String endValue = stringProperty.mediator != null
+                    ? stringProperty.mediator.endValue
+                    : stringProperty.get();
+
+                return Objects.equals(endValue, stringValue);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableStringProperty}.

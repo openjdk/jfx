@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,13 @@ package test.javafx.scene;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+
 import com.sun.javafx.css.StyleManager;
-import javafx.stage.Stage;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.ColorScheme;
 import javafx.css.CssParser;
 import javafx.css.CssParser.ParseError;
 import javafx.css.CssParser.ParseError.PropertySetError;
@@ -43,6 +46,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -52,6 +56,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 public class CssStyleHelperTest {
 
@@ -456,6 +461,7 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         A.getChildren().add(C);
+        Toolkit.getToolkit().firePulse();
         assertTrue(A.isVisible());
         assertTrue(C.isVisible());
     }
@@ -910,6 +916,53 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         assertEquals(Paint.valueOf("#808080"), pane.getBackground().getFills().get(0).getFill());
+    }
+
+    @Test
+    public void mediaQueryRemovalShouldNotInterruptTransitionsDuringReset() {
+        String css = """
+            .pane {
+                transition: -fx-scale-x 2s linear;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                .pane {
+                    -fx-scale-x: 2;
+                }
+            }
+            """;
+
+        var toolkit = (StubToolkit)Toolkit.getToolkit();
+        toolkit.setCurrentTime(0);
+
+        List<Number> trace = new ArrayList<>();
+        Pane p = new Pane();
+        p.scaleXProperty().subscribe(newValue -> trace.add(newValue));
+        p.getStyleClass().add("pane");
+        root.getChildren().add(p);
+        scene.getStylesheets().add(toDataURL(css));
+        scene.getPreferences().setColorScheme(ColorScheme.DARK);
+        stage.show();
+
+        assertEquals(2, p.getScaleX());
+        assertEquals(List.of(1.0, 2.0), trace);
+
+        // Setting the color scheme to light causes the media query to evaluate to false, which removes
+        // the nested rule from the cascade. We expect -fx-scale-x to smoothly transition from 2 to 1.
+        scene.getPreferences().setColorScheme(ColorScheme.LIGHT);
+        toolkit.firePulse();
+        assertEquals(2, p.getScaleX());
+        assertEquals(List.of(1.0, 2.0), trace);
+
+        toolkit.setCurrentTime(1000);
+        toolkit.handleAnimation();
+        assertEquals(1.5, p.getScaleX());
+        assertEquals(List.of(1.0, 2.0, 1.5), trace);
+
+        toolkit.setCurrentTime(2000);
+        toolkit.handleAnimation();
+        assertEquals(1,  p.getScaleX());
+        assertEquals(List.of(1.0, 2.0, 1.5, 1.0), trace);
     }
 
     private static String toDataURL(String stylesheet) {

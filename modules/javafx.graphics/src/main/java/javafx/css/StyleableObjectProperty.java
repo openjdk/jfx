@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.SubPropertyConverter;
@@ -58,6 +59,20 @@ import java.util.Objects;
  */
 public abstract class StyleableObjectProperty<T>
     extends ObjectPropertyBase<T> implements StyleableProperty<T> {
+
+    static {
+        StyleablePropertyHelper.setObjectAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+                var objectProperty = (StyleableObjectProperty<?>)property;
+                Object endValue = objectProperty.controller != null
+                    ? objectProperty.controller.getTargetValue()
+                    : objectProperty.get();
+
+                return Objects.equals(endValue, value);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableObjectProperty}.
