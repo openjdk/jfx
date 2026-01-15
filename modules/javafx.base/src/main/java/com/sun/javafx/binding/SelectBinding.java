@@ -392,10 +392,8 @@ public class SelectBinding {
             }
 
             Object val = observable.getValue();
-            if (val instanceof String strinVal) {
-                return strinVal;
-            } else if (val != null) {
-                Logging.getLogger().warning("Value of select-binding has wrong type, expected String. Returning default value.");
+            if (val != null) {
+                return val.toString();
             } else {
                 Logging.getLogger().fine("Value of select binding is null, returning default value");
             }
