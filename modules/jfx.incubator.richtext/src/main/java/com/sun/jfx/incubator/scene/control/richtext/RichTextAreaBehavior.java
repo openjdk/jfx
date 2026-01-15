@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -289,7 +289,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     end = start;
                 }
 
-                TextPos p = m.replace(vflow, start, end, typed, true);
+                StyleAttributeMap a = control.getInsertStyles();
+                if (a == null) {
+                    a = m.getStyleAttributeMap(vflow, start);
+                }
+                StyledInput in = StyledInput.of(typed, a);
+                TextPos p = m.replace(vflow, start, end, in);
                 moveCaret(p, false);
 
                 clearPhantomX();
@@ -348,7 +353,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 return;
             }
 
-            TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
+            TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"));
             moveCaret(pos, false);
             clearPhantomX();
         }
@@ -936,7 +941,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                     start = TextPos.ofLeading(ix, off);
                 }
 
-                control.getModel().replace(vflow, start, p, StyledInput.EMPTY, true);
+                control.getModel().replace(vflow, start, p, StyledInput.EMPTY);
                 moveCaret(start, false);
                 clearPhantomX();
             }
@@ -952,7 +957,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 TextPos start = control.getCaretPosition();
                 TextPos end = nextCharacterVisually(start, true);
                 if (end != null) {
-                    control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
+                    control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
                     moveCaret(start, false);
                     clearPhantomX();
                 }
@@ -978,7 +983,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 TextPos p0 = TextPos.ofLeading(ix0, 0);
                 TextPos p1 = clamp(TextPos.ofLeading(ix1 + 1, 0));
                 RichTextArea control = getControl();
-                control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY, true);
+                control.getModel().replace(vflow, p0, p1, StyledInput.EMPTY);
                 clearPhantomX();
                 moveCaret(p0, false);
             }
@@ -995,7 +1000,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             TextPos start = sel.getMin();
             TextPos end = sel.getMax();
             RichTextArea control = getControl();
-            control.getModel().replace(vflow, start, end, StyledInput.EMPTY, true);
+            control.getModel().replace(vflow, start, end, StyledInput.EMPTY);
             clearPhantomX();
             moveCaret(start, false);
         }
@@ -1182,7 +1187,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
             StyleAttributeMap a = control.getActiveStyleAttributeMap();
             try (StyledInput in = h.createStyledInput(text, a)) {
-                TextPos p = m.replace(vflow, start, end, in, true);
+                TextPos p = m.replace(vflow, start, end, in);
                 moveCaret(p, false);
             } catch (IOException e) {
                 control.errorFeedback();
@@ -1584,7 +1589,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 if (p != null) {
                     control.clearSelection();
                     clearPhantomX();
-                    p = control.replaceText(caret, p, "", true);
+                    p = control.replaceText(caret, p, StyledInput.EMPTY);
                     control.select(p);
                 }
             }

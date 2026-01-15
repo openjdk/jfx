@@ -6439,6 +6439,57 @@ public class TreeTableViewTest {
         sl.dispose();
     }
 
+    /**
+     * Reparenting a TreeItem must update its indentation in the TreeTableView.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8356770">JDK-8356770</a>
+     */
+    @Test
+    void testIndentationUpdateAfterReparenting() {
+        TreeItem<String> itemA1 = new TreeItem<>("item A1");
+        TreeItem<String> itemA2 = new TreeItem<>("item A2");
+        TreeItem<String> itemA  = new TreeItem<>("item A");
+        itemA.getChildren().addAll(itemA1, itemA2);
+        itemA.setExpanded(true);
+
+        TreeItem<String> itemB1 = new TreeItem<>("item B1");
+        TreeItem<String> itemB2 = new TreeItem<>("item B2");
+        TreeItem<String> itemB  = new TreeItem<>("item B");
+        itemB.getChildren().addAll(itemB1, itemB2);
+        itemB.setExpanded(true);
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().addAll(itemA, itemB);
+        root.setExpanded(true);
+
+        TreeTableView<String> table = new TreeTableView<>();
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Name");
+        col.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getValue()));
+        table.getColumns().add(col);
+        table.setRoot(root);
+        table.setShowRoot(true);
+
+        stageLoader = new StageLoader(table);
+
+        // Find "item B" row and record its disclosure node indent
+        double xBefore = disclosureIndent(table, 4);
+
+        // Reparenting "item B" under "item A"
+        root.getChildren().remove(itemB);
+        itemA.getChildren().add(itemB);
+        Toolkit.getToolkit().firePulse();
+
+        double xAfter = disclosureIndent(table, 4);
+
+        assertTrue(xAfter > xBefore,
+                "Indentation of item B must increase after reparenting");
+    }
+
+    private double disclosureIndent(TreeTableView<String> table, int index) {
+        TreeTableRow<String> row = (TreeTableRow<String>) VirtualFlowTestUtils.getVirtualFlow(table).getVisibleCell(index);
+        Node disclosureNode = row.getDisclosureNode();
+        return disclosureNode == null ? 0.0 : (disclosureNode.getLayoutX() + disclosureNode.getTranslateX());
+    }
+
     @Test public void test_jdk_8144681_removeColumn() {
         TreeTableView<Book> table = new TreeTableView<>();
 

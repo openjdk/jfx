@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,13 @@ import javafx.scene.text.Font;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import jfx.incubator.scene.control.richtext.CodeArea;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.SyntaxDecorator;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
@@ -219,6 +224,7 @@ public class CodeAreaTest {
     @Test
     public void getText() {
         control.setText("123");
+        control.setLineEnding(LineEnding.LF);
         String s = control.getText();
         assertEquals("123", s);
 
@@ -262,5 +268,107 @@ public class CodeAreaTest {
         CustomCodeTextModel m = new CustomCodeTextModel();
         control.setModel(m);
         assertTrue(control.getModel() == m);
+    }
+
+    @Test
+    public void lineEnding() {
+        control.setText("1\n2\n3");
+        assertEquals(3, control.getParagraphCount());
+        t(LineEnding.CR, "1\r2\r3");
+        t(LineEnding.CRLF, "1\r\n2\r\n3");
+        t(LineEnding.LF, "1\n2\n3");
+    }
+
+    @Test
+    public void lineEndingNull() {
+        assertThrows(NullPointerException.class, () -> {
+            control.setLineEnding(null);
+        });
+    }
+
+    private void t(LineEnding lineEnding, String expected) {
+        control.setLineEnding(lineEnding);
+        assertEquals(lineEnding, control.getLineEnding());
+        assertEquals(expected, control.getText());
+        control.select(TextPos.ZERO, control.getDocumentEnd());
+        control.copy();
+        assertEquals(expected, Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void setText() {
+        String expected = "1\n2\n3\n4";
+        String[] variants = {
+            "1\n2\n3\n4",
+            "1\r2\r3\r4",
+            "1\r\n2\r\n3\r\n4",
+            "1\r2\n3\r\n4"
+        };
+        control.setLineEnding(LineEnding.LF);
+        for (int i = 0; i < variants.length; i++) {
+            String s = variants[i];
+            control.setText(s);
+            String text = control.getText();
+            assertEquals(expected, text, "variant=" + i);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "1",
+        "1\n",
+        "1\n2",
+        "1\n2\n"
+    })
+    public void setTextNewlines(String text) {
+        control.setText(text);
+        control.setLineEnding(LineEnding.LF);
+
+        String s = RichTestUtil.getText(control, TextPos.ZERO, control.getDocumentEnd());
+        assertEquals(text, s);
+    }
+
+    @ParameterizedTest
+    @CsvSource(textBlock =
+        """
+        0, 0, 0, 1, '1'
+        0, 0, 0, 2, '11'
+        0, 0, 0, 3, '11'
+        0, 0, 1, 0, '11\n'
+        0, 0, 1, 1, '11\n2'
+        0, 0, 1, 3, '11\n22'
+        0, 0, 2, 0, '11\n22'
+        0, 0, 2, 222, '11\n22'
+        0, 1, 9, 9, '1\n22'
+        0, 2, 9, 9, '\n22'
+        0, 3, 9, 9, '\n22'
+        1, 0, 9, 9, '22'
+        1, 1, 9, 9, '2'
+        1, 2, 9, 9, ''
+        1, 9, 9, 9, ''
+        """
+    )
+    public void getTextRanges(int startIndex, int startOffset, int endIndex, int endOffset, String expected) {
+        control.setText("11\n22");
+        control.setLineEnding(LineEnding.LF);
+        TextPos start = TextPos.ofLeading(startIndex, startOffset);
+        TextPos end = TextPos.ofLeading(endIndex, endOffset);
+        String s = RichTestUtil.getText(control, start, end);
+        assertEquals(expected, s);
+    }
+
+    @Test
+    public void setTextSelectAll() {
+        String text = "1\n2\n";
+        control.setText(text);
+        control.setLineEnding(LineEnding.LF);
+        assertEquals(3, control.getParagraphCount());
+
+        control.selectAll();
+        SelectionSegment sel = control.getSelection();
+        assertEquals(TextPos.ofLeading(2, 0), sel.getMax());
+
+        String s = RichTestUtil.getText(control, sel);
+        assertEquals(text, s);
     }
 }
