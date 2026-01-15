@@ -62,6 +62,7 @@ import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RTAccessibilityHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
+import com.sun.jfx.incubator.scene.control.richtext.StringBuilderStyledOutput;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.input.FunctionTag;
@@ -1535,38 +1536,14 @@ public class RichTextArea extends Control {
             end = tmp;
         }
 
-        String lineSeparator = m.getLineEnding().getText();
-        int toCopy = limit;
-        int index = start.index();
-        boolean first = true;
-        boolean all = true;
-        while (toCopy > 0) {
-            int beg;
-            if (first) {
-                first = false;
-                beg = start.offset();
-            } else {
-                sb.append(lineSeparator);
-                beg = 0;
-            }
-            String text = getPlainText(index);
-            int len = Math.min(toCopy, text.length() - beg);
-            sb.append(text, beg, beg + len);
-            toCopy -= len;
-            index++;
-
-            // did we copy all?
-            if (toCopy == 0) {
-                if (index < end.index()) {
-                    all = false;
-                } else if (index == end.index()) {
-                    if (beg + len < end.offset()) {
-                        all = false;
-                    }
-                }
-            }
+        LineEnding lineEnding = m.getLineEnding();
+        StringBuilderStyledOutput out = new StringBuilderStyledOutput(sb, lineEnding, limit);
+        try {
+            m.export(start, end, out);
+            return true;
+        } catch(IOException e) {
+            return false;
         }
-        return all;
     }
 
     /**
