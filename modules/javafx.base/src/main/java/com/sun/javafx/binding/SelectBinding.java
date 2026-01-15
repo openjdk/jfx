@@ -92,12 +92,9 @@ public class SelectBinding {
             if (observable == null) {
                 return null;
             }
-            try {
-                return (T)observable.getValue();
-            } catch (ClassCastException ex) {
-                Logging.getLogger().warning("Value of select-binding has wrong type, returning null.", ex);
-            }
-            return null;
+            // The type returned might be wrong, but this would not throw any ClassCastException here
+            // Any casting issue would happen outside this method
+            return (T) observable.getValue();
         }
 
 
@@ -145,7 +142,7 @@ public class SelectBinding {
             if (val instanceof Boolean boolVal) {
                 return boolVal;
             } else if (val != null) {
-                Logging.getLogger().warning("Value of select-binding has wrong type, returning default value.");
+                Logging.getLogger().warning("Value of select-binding has wrong type, expected Boolean. Returning default value.");
             } else {
                 Logging.getLogger().fine("Value of select binding is null, returning default value");
             }
@@ -196,7 +193,7 @@ public class SelectBinding {
             if (val instanceof Number numberVal) {
                 return numberVal.doubleValue();
             } else if (val != null) {
-                Logging.getLogger().warning("Value of select-binding has wrong type, returning default value.");
+                Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
                 Logging.getLogger().fine("Value of select binding is null, returning default value");
             }
@@ -247,7 +244,7 @@ public class SelectBinding {
             if (val instanceof Number numberVal) {
                 return numberVal.floatValue();
             } else if (val != null) {
-                Logging.getLogger().warning("Value of select-binding has wrong type, returning default value.");
+                Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
                 Logging.getLogger().fine("Value of select binding is null, returning default value");
             }
@@ -298,7 +295,7 @@ public class SelectBinding {
             if (val instanceof Number numberVal) {
                 return numberVal.intValue();
             } else if (val != null) {
-                Logging.getLogger().warning("Value of select-binding has wrong type, returning default value.");
+                Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
                 Logging.getLogger().fine("Value of select binding is null, returning default value");
             }
@@ -349,7 +346,7 @@ public class SelectBinding {
             if (val instanceof Number numberVal) {
                 return numberVal.longValue();
             } else if (val != null) {
-                Logging.getLogger().warning("Value of select-binding has wrong type, returning default value.");
+                Logging.getLogger().warning("Value of select-binding has wrong type, expected Number. Returning default value.");
             } else {
                 Logging.getLogger().fine("Value of select binding is null, returning default value");
             }
@@ -393,13 +390,16 @@ public class SelectBinding {
             if (observable == null) {
                 return DEFAULT_VALUE;
             }
-            try {
-                return observable.getValue().toString();
-            } catch (RuntimeException ex) {
-                Logging.getLogger().warning("Exception while evaluating select-binding", ex);
-                // return default
-                return DEFAULT_VALUE;
+
+            Object val = observable.getValue();
+            if (val instanceof String strinVal) {
+                return strinVal;
+            } else if (val != null) {
+                Logging.getLogger().warning("Value of select-binding has wrong type, expected String. Returning default value.");
+            } else {
+                Logging.getLogger().fine("Value of select binding is null, returning default value");
             }
+            return DEFAULT_VALUE;
         }
 
         @Override
