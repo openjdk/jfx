@@ -54,7 +54,7 @@ public abstract class StyleableDoubleProperty
     static {
         StyleablePropertyHelper.setDoubleAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
-            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
                 if (!(value instanceof Double doubleValue)) {
                     return false;
                 }

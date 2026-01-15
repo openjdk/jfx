@@ -1015,7 +1015,7 @@ final class CssStyleHelper {
                 // affecting the property, make sure that we compare the calculated value to the after-change style
                 // value of the property, and not to its current value.
                 if (originOfCurrentValue != originOfCalculatedValue
-                        || !StyleablePropertyHelper.equalsAfterChangeStyleValue(styleableProperty, value)) {
+                        || !StyleablePropertyHelper.equalsEndValue(styleableProperty, value)) {
 
                     if (LOGGER.isLoggable(Level.FINER)) {
                         LOGGER.finer(property + ", call applyStyle: " + styleableProperty + ", value =" +

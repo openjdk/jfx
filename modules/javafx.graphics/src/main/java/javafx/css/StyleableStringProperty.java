@@ -55,7 +55,7 @@ public abstract class StyleableStringProperty
     static {
         StyleablePropertyHelper.setStringAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
-            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
                 if (!(value instanceof String stringValue)) {
                     return false;
                 }

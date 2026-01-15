@@ -86,20 +86,20 @@ public final class StyleablePropertyHelper {
         stringAccessor = accessor;
     }
 
-    public static boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+    public static boolean equalsEndValue(StyleableProperty<?> property, Object value) {
         return switch (property) {
-            case StyleableDoubleProperty p -> doubleAccessor.equalsAfterChangeStyleValue(p, value);
-            case StyleableObjectProperty<?> p -> objectAccessor.equalsAfterChangeStyleValue(p, value);
-            case StyleableBooleanProperty p -> booleanAccessor.equalsAfterChangeStyleValue(p, value);
-            case StyleableStringProperty p -> stringAccessor.equalsAfterChangeStyleValue(p, value);
-            case StyleableIntegerProperty p -> integerAccessor.equalsAfterChangeStyleValue(p, value);
-            case StyleableLongProperty p -> longAccessor.equalsAfterChangeStyleValue(p, value);
-            case StyleableFloatProperty p -> floatAccessor.equalsAfterChangeStyleValue(p, value);
+            case StyleableDoubleProperty p -> doubleAccessor.equalsEndValue(p, value);
+            case StyleableObjectProperty<?> p -> objectAccessor.equalsEndValue(p, value);
+            case StyleableBooleanProperty p -> booleanAccessor.equalsEndValue(p, value);
+            case StyleableStringProperty p -> stringAccessor.equalsEndValue(p, value);
+            case StyleableIntegerProperty p -> integerAccessor.equalsEndValue(p, value);
+            case StyleableLongProperty p -> longAccessor.equalsEndValue(p, value);
+            case StyleableFloatProperty p -> floatAccessor.equalsEndValue(p, value);
             default -> Objects.equals(property.getValue(), value);
         };
     }
 
     public interface Accessor {
-        boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value);
+        boolean equalsEndValue(StyleableProperty<?> property, Object value);
     }
 }

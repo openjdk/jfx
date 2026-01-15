@@ -63,7 +63,7 @@ public abstract class StyleableObjectProperty<T>
     static {
         StyleablePropertyHelper.setObjectAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
-            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
                 var objectProperty = (StyleableObjectProperty<?>)property;
                 Object endValue = objectProperty.controller != null
                     ? objectProperty.controller.getTargetValue()

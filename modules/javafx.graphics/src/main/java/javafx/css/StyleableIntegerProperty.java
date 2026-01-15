@@ -54,7 +54,7 @@ public abstract class StyleableIntegerProperty
     static {
         StyleablePropertyHelper.setIntegerAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
-            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
                 if (!(value instanceof Integer intValue)) {
                     return false;
                 }

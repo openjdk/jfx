@@ -54,7 +54,7 @@ public abstract class StyleableFloatProperty
     static {
         StyleablePropertyHelper.setFloatAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
-            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
                 if (!(value instanceof Float floatValue)) {
                     return false;
                 }

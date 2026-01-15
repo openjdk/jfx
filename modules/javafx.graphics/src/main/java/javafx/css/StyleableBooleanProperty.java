@@ -54,7 +54,7 @@ public abstract class StyleableBooleanProperty
     static {
         StyleablePropertyHelper.setBooleanAccessor(new StyleablePropertyHelper.Accessor() {
             @Override
-            public boolean equalsAfterChangeStyleValue(StyleableProperty<?> property, Object value) {
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
                 if (!(value instanceof Boolean booleanValue)) {
                     return false;
                 }
