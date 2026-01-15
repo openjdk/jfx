@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,7 +98,6 @@ public class LabeledTruncatedTest {
         testTextProperty(fun.get());
     }
 
-
     @Test
     public void testTruncatedSplitMenuButton() {
         Supplier<Labeled> fun = () -> {
@@ -174,7 +173,6 @@ public class LabeledTruncatedTest {
         double h = control.prefHeight(-1);
 
         assertFalse(control.isTextTruncated());
-
 
         control.setText("very long text with a lots of characters");
         control.layout();

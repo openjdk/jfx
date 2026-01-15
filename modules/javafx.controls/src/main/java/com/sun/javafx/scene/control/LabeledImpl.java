@@ -61,7 +61,6 @@ public class LabeledImpl extends Label {
             LabeledHelper.setTextTruncated(labeled, v);
         });
 
-
         labeledImpl.setGraphic(labeled.getGraphic());
         labeled.graphicProperty().addListener(shuttler);
 
