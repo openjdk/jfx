@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -41,6 +41,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.ButtonBase;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DialogPane;
@@ -48,6 +49,8 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToolBar;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
@@ -215,6 +218,8 @@ public class FxSettingsSchema {
                 } else {
                     return "Pane";
                 }
+            } else if (n instanceof ButtonBase) {
+                return null;
             } else if (n instanceof Group) {
                 return "Group";
             } else if (n instanceof Region) {
@@ -240,10 +245,16 @@ public class FxSettingsSchema {
         } else if (n instanceof ScrollPane sp) {
             storeNode(sp.getContent());
             return;
+        } else if (n instanceof ToolBar t) {
+            for (Node ch : t.getItems()) {
+                storeNode(ch);
+            }
+        } else if (n instanceof ToggleButton t) {
+            storeToggleButton(t);
         }
 
         if (n instanceof Parent p) {
-            for (Node ch: p.getChildrenUnmodifiable()) {
+            for (Node ch : p.getChildrenUnmodifiable()) {
                 storeNode(ch);
             }
         }
@@ -264,10 +275,16 @@ public class FxSettingsSchema {
             restoreSplitPane(sp);
         } else if (n instanceof ScrollPane sp) {
             restoreNode(sp.getContent());
+        } else if (n instanceof ToolBar t) {
+            for (Node ch : t.getItems()) {
+                restoreNode(ch);
+            }
+        } else if (n instanceof ToggleButton t) {
+            restoreToggleButton(t);
         }
 
         if (n instanceof Parent p) {
-            for (Node ch: p.getChildrenUnmodifiable()) {
+            for (Node ch : p.getChildrenUnmodifiable()) {
                 restoreNode(ch);
             }
         }
@@ -444,6 +461,28 @@ public class FxSettingsSchema {
         }
 
         n.setSelected(sel);
+    }
+
+    private static void storeToggleButton(ToggleButton n) {
+        String name = computeName(n);
+        if (name != null) {
+            boolean sel = n.isSelected();
+            FxSettings.setBoolean(PREFIX + name, sel);
+        }
+    }
+
+    private static void restoreToggleButton(ToggleButton n) {
+        if (checkNoScene(n)) {
+            return;
+        }
+
+        String name = computeName(n);
+        if (name != null) {
+            Boolean sel = FxSettings.getBoolean(PREFIX + name);
+            if (sel != null) {
+                n.setSelected(sel);
+            }
+        }
     }
 
     /** sets the name for the purposes of storing user preferences */
