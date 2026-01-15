@@ -29,7 +29,7 @@ import java.util.Arrays;
 import com.sun.marlin.stats.Histogram;
 import com.sun.marlin.stats.StatLong;
 
-final class Helpers implements MarlinConst {
+public final class Helpers implements MarlinConst {
 
     private final static double T_ERR = 1e-4;
     private final static double T_A = T_ERR;
@@ -42,7 +42,7 @@ final class Helpers implements MarlinConst {
     }
 
     /** use lower precision like former Pisces and Marlin (float-precision) */
-    static double ulp(final double value) { return Math.ulp((float)value); }
+    public static double ulp(final double value) { return Math.ulp((float)value); }
 
     static boolean within(final double x, final double y) {
         return within(x, y, EPS);
