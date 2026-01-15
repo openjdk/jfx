@@ -119,7 +119,6 @@ public class LabeledTruncatedTest {
         };
         testWithSkin(fun.get());
         testTextProperty(fun.get());
-
     }
 
     @Test
