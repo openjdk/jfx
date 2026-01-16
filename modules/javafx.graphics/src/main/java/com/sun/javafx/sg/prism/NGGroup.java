@@ -200,8 +200,8 @@ public class NGGroup extends NGNode {
     @Override
     public void renderForcedContent(Graphics gOptional) {
         List<NGNode> orderedChildren = getOrderedChildren();
-        for (NGNode orderedChild : orderedChildren) {
-            orderedChild.renderForcedContent(gOptional);
+        for (int i = 0; i < orderedChildren.size(); i++) {
+            orderedChildren.get(i).renderForcedContent(gOptional);
         }
     }
 
@@ -431,8 +431,8 @@ public class NGGroup extends NGNode {
 
             NGNode child;
             List<NGNode> orderedChildren = getOrderedChildren();
-            for (NGNode orderedChild : orderedChildren) {
-                child = orderedChild;
+            for (int chldIdx = 0; chldIdx < orderedChildren.size(); chldIdx++) {
+                child = orderedChildren.get(chldIdx);
                 child.markCullRegions(
                         drc,
                         cullingBits,
@@ -453,7 +453,8 @@ public class NGGroup extends NGNode {
         BaseTransform clone = tx.copy();
         clone = clone.deriveWithConcatenation(getTransform());
         List<NGNode> orderedChildren = getOrderedChildren();
-        for (final NGNode child : orderedChildren) {
+        for (int childIndex = 0; childIndex < orderedChildren.size(); childIndex++) {
+            final NGNode child = orderedChildren.get(childIndex);
             child.drawDirtyOpts(clone, pvTx, clipBounds, countBuffer, dirtyRegionIndex);
         }
     }
