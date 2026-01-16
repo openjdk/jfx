@@ -43,8 +43,6 @@ import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import javafx.scene.Node;
 
-/**
- */
 public class NGGroup extends NGNode {
     /**
      * The blend mode to use with this group.
@@ -55,8 +53,8 @@ public class NGGroup extends NGNode {
     // Actually, if a node is removed, I probably don't have to worry about
     // clearing it because as soon as it is added to another parent it will be set
     // and there is no magic listener foo going on here.
-    private List<NGNode> children = new ArrayList<>(1);
-    private List<NGNode> unmod = Collections.unmodifiableList(children);
+    private final List<NGNode> children = new ArrayList<>(1);
+    private final List<NGNode> unmod = Collections.unmodifiableList(children);
     private List<NGNode> removed;
 
     /**
@@ -73,12 +71,6 @@ public class NGGroup extends NGNode {
      * Which means it looks like this: 00010101010101010101010101010101 (first bit for sign)
      */
     private static final int REGION_INTERSECTS_MASK = 0x15555555;
-
-    /***************************************************************************
-     *                                                                         *
-     * Implementation of the PGGroup interface                                 *
-     *                                                                         *
-     **************************************************************************/
 
     /**
      * Gets an unmodifiable list of the current children on this group
@@ -209,7 +201,7 @@ public class NGGroup extends NGNode {
      * Set by the FX scene graph.
      * @param blendMode cannot be null
      */
-    public void setBlendMode(Object blendMode) {
+    public void setBlendMode(Blend.Mode blendMode) {
         // Verify the arguments
         if (blendMode == null) {
             throw new IllegalArgumentException("Mode must be non-null");
@@ -217,7 +209,7 @@ public class NGGroup extends NGNode {
         // If the blend mode has changed, mark this node as dirty and
         // invalidate its cache
         if (this.blendMode != blendMode) {
-            this.blendMode = (Blend.Mode)blendMode;
+            this.blendMode = blendMode;
             visualsChanged();
         }
     }
@@ -225,20 +217,14 @@ public class NGGroup extends NGNode {
     @Override
     public void renderForcedContent(Graphics gOptional) {
         List<NGNode> orderedChildren = getOrderedChildren();
-        if (orderedChildren == null) {
-            return;
-        }
-        for (int i = 0; i < orderedChildren.size(); i++) {
-            orderedChildren.get(i).renderForcedContent(gOptional);
+        for (NGNode orderedChild : orderedChildren) {
+            orderedChild.renderForcedContent(gOptional);
         }
     }
 
     @Override
     protected void renderContent(Graphics g) {
         List<NGNode> orderedChildren = getOrderedChildren();
-        if (orderedChildren == null) {
-            return;
-        }
 
         NodePath renderRoot = g.getRenderRoot();
         int startPos = 0;
@@ -256,16 +242,8 @@ public class NGGroup extends NGNode {
 
             // Guard against case where renderRoot is not part of orderedChildren
             for (int i = (startPos == -1 ? 0 : startPos); i < orderedChildren.size(); i++) {
-                NGNode child;
-                try {
-                    child = orderedChildren.get(i);
-                } catch (Exception e) {
-                    child = null;
-                }
-                // minimal protection against concurrent update of the list.
-                if (child != null) {
-                    child.render(g);
-                }
+                NGNode child = orderedChildren.get(i);
+                child.render(g);
             }
             return;
         }
@@ -306,9 +284,7 @@ public class NGGroup extends NGNode {
             }
         } while (bot == null || !idValid);
 
-        if (bot != null) {
-            bot.unref();
-        }
+        bot.unref();
     }
 
     @Override
@@ -318,15 +294,15 @@ public class NGGroup extends NGNode {
             return false;
         }
         List<NGNode> orderedChildren = getOrderedChildren();
-        int n = (orderedChildren == null ? 0 : orderedChildren.size());
+        int n =  orderedChildren.size();
         if (n == 1) {
             return orderedChildren.get(0).hasOverlappingContents();
         }
-        return (n != 0);
+        return (n > 0);
     }
 
     public boolean isEmpty() {
-        return children == null || children.isEmpty();
+        return children.isEmpty();
     }
 
     @Override
@@ -405,7 +381,7 @@ public class NGGroup extends NGNode {
 
         // We need to keep a reference to the result of calling computeRenderRoot on each child
         RenderRootResult result = RenderRootResult.NO_RENDER_ROOT;
-        // True if every child _after_ the the found render root is clean
+        // True if every child _after_ the found render root is clean
         boolean followingChildrenClean = true;
         // Iterate over all children, looking for a render root.
         List<NGNode> orderedChildren = getOrderedChildren();
@@ -472,8 +448,8 @@ public class NGGroup extends NGNode {
 
             NGNode child;
             List<NGNode> orderedChildren = getOrderedChildren();
-            for (int chldIdx = 0; chldIdx < orderedChildren.size(); chldIdx++) {
-                child = orderedChildren.get(chldIdx);
+            for (NGNode orderedChild : orderedChildren) {
+                child = orderedChild;
                 child.markCullRegions(
                         drc,
                         cullingBits,
@@ -494,8 +470,7 @@ public class NGGroup extends NGNode {
         BaseTransform clone = tx.copy();
         clone = clone.deriveWithConcatenation(getTransform());
         List<NGNode> orderedChildren = getOrderedChildren();
-        for (int childIndex = 0; childIndex < orderedChildren.size(); childIndex++) {
-            final NGNode child = orderedChildren.get(childIndex);
+        for (final NGNode child : orderedChildren) {
             child.drawDirtyOpts(clone, pvTx, clipBounds, countBuffer, dirtyRegionIndex);
         }
     }
