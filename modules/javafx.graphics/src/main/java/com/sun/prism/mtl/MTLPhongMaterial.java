@@ -82,7 +82,7 @@ class MTLPhongMaterial extends BasePhongMaterial {
         if (texture instanceof MTLTexture mtlTex) {
             hTexture = mtlTex.getNativeHandle();
         }
-        context.setMap(nativeHandle, map.getType().ordinal(), hTexture);
+        context.setMap(nativeHandle, map.getType().ordinal(), hTexture, useMipmap);
         return texture;
     }
 
