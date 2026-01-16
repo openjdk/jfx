@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2022 Sony Interactive Entertainment Inc.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -33,11 +33,12 @@
 #include "TextureMapperBackingStore.h"
 #include "TextureMapperTile.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class TextureMapperSparseBackingStore final : public TextureMapperBackingStore {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextureMapperSparseBackingStore);
 public:
     using TileIndex = WebCore::IntPoint;
 

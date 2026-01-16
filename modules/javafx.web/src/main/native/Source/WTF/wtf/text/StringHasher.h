@@ -24,6 +24,7 @@
 #include <array>
 #include <unicode/utypes.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/LChar.h>
 
 namespace WTF {
@@ -35,7 +36,7 @@ class SuperFastHash;
 class WYHash;
 
 class StringHasher {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(StringHasher);
 public:
     static constexpr unsigned flagCount = 8; // Save 8 bits for StringImpl to use as flags.
     static constexpr unsigned maskHash = (1U << (sizeof(unsigned) * 8 - flagCount)) - 1;
@@ -49,9 +50,9 @@ public:
 
     struct DefaultConverter {
         template<typename CharType>
-        static constexpr UChar convert(CharType character)
+        static constexpr char16_t convert(CharType character)
         {
-            return static_cast<std::make_unsigned_t<CharType>>((character));
+            return unsignedCast(character);
         }
     };
 
@@ -63,7 +64,7 @@ public:
     template<typename T, unsigned characterCount>
     static constexpr unsigned computeLiteralHashAndMaskTop8Bits(const T (&characters)[characterCount]);
 
-    void addCharacter(UChar character);
+    void addCharacter(char16_t character);
 
     // hashWithTop8BitsMasked will reset to initial status.
     unsigned hashWithTop8BitsMasked();
@@ -116,10 +117,10 @@ private:
     uint64_t m_see2 { 0 };
 
     unsigned m_bufferSize { 0 };
-    std::array<UChar, smallStringThreshold> m_buffer;
+    std::array<char16_t, smallStringThreshold> m_buffer;
 #else
     unsigned m_hash { stringHashingStartValue };
-    UChar m_pendingCharacter { 0 };
+    char16_t m_pendingCharacter { 0 };
     bool m_hasPendingCharacter { false };
 #endif
 };

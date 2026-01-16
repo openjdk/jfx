@@ -34,6 +34,7 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Logging.h"
 #include "RTCPeerConnection.h"
 #include <wtf/NeverDestroyed.h>

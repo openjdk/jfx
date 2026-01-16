@@ -26,7 +26,7 @@ namespace JSC {
 
 Structure* StringObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(StringObjectType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(StringObjectType, StructureFlags), info(), MayHaveIndexedAccessors);
 }
 
 } // namespace JSC

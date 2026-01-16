@@ -54,11 +54,11 @@ enum FontFaceSetLoadStatus {
 
     // check and start loads if appropriate
     // and fulfill promise when all loads complete
-    Promise<sequence<FontFace>> load(DOMString font, optional DOMString text = " ");
+    [CallWith=CurrentScriptExecutionContext] Promise<sequence<FontFace>> load(DOMString font, optional DOMString text = " ");
 
     // return whether all fonts in the fontlist are loaded
     // (does not initiate load if not available)
-    boolean check(DOMString font, optional DOMString text = " ");
+    [CallWith=CurrentScriptExecutionContext] boolean check(DOMString font, optional DOMString text = " ");
 
     // async notification that font loading and layout operations are done
     readonly attribute Promise<FontFaceSet> ready;

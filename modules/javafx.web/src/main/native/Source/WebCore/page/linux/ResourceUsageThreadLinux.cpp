@@ -58,10 +58,10 @@ static float cpuPeriod()
         return 0;
 
     static const unsigned statMaxLineLength = 512;
-    char buffer[statMaxLineLength + 1];
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    char* line = fgets(buffer, statMaxLineLength, file);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    std::array<char, statMaxLineLength + 1> buffer;
+    std::span bufferSpan { buffer };
+    char* line = fgets(bufferSpan.data(), statMaxLineLength, file);
+
     if (!line) {
         fclose(file);
         return 0;
@@ -70,7 +70,7 @@ static float cpuPeriod()
     unsigned long long userTime, niceTime, systemTime, idleTime;
     unsigned long long ioWait, irq, softIrq, steal, guest, guestnice;
     ioWait = irq = softIrq = steal = guest = guestnice = 0;
-    int retVal = sscanf(buffer, "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
+    int retVal = sscanf(bufferSpan.data(), "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
         &userTime, &niceTime, &systemTime, &idleTime, &ioWait, &irq, &softIrq, &steal, &guest, &guestnice);
     // We expect 10 values to be matched by sscanf
     if (retVal != 10) {
@@ -82,7 +82,7 @@ static float cpuPeriod()
     // Keep parsing if we still don't know cpuCount.
     static unsigned cpuCount = 0;
     if (!cpuCount) {
-        while ((line = fgets(buffer, statMaxLineLength, file))) {
+        while ((line = fgets(bufferSpan.data(), statMaxLineLength, file))) {
             if (strlen(line) > 4 && line[0] == 'c' && line[1] == 'p' && line[2] == 'u')
                 cpuCount++;
             else
@@ -123,9 +123,9 @@ struct ThreadInfo {
     unsigned long long previousStime { 0 };
 };
 
-static UncheckedKeyHashMap<pid_t, ThreadInfo>& threadInfoMap()
+static HashMap<pid_t, ThreadInfo>& threadInfoMap()
 {
-    static LazyNeverDestroyed<UncheckedKeyHashMap<pid_t, ThreadInfo>> map;
+    static LazyNeverDestroyed<HashMap<pid_t, ThreadInfo>> map;
     static std::once_flag flag;
     std::call_once(flag, [&] {
         map.construct();
@@ -141,14 +141,13 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
         return false;
 
     static const ssize_t maxBufferLength = BUFSIZ - 1;
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-    char buffer[BUFSIZ];
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-    buffer[0] = '\0';
+    std::array<char, BUFSIZ> buffer;
+    std::span bufferSpan { buffer };
+    bufferSpan[0] = '\0';
 
     ssize_t totalBytesRead = 0;
     while (totalBytesRead < maxBufferLength) {
-        ssize_t bytesRead = read(fd, buffer + totalBytesRead, maxBufferLength - totalBytesRead);
+        ssize_t bytesRead = read(fd, bufferSpan.subspan(totalBytesRead).data(), maxBufferLength - totalBytesRead);
         if (bytesRead < 0) {
             if (errno != EINTR) {
                 close(fd);
@@ -168,12 +167,12 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
     // Skip tid and name.
     WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
     // FIXME: Use `find(std::span { buffer }, ')')` instead of `strchr()`.
-    char* position = strchr(buffer, ')');
+    char* position = strchr(bufferSpan.data(), ')');
     if (!position)
         return false;
 
     if (!info.name) {
-        char* name = strchr(buffer, '(');
+        char* name = strchr(bufferSpan.data(), '(');
         if (!name)
             return false;
         name++;
@@ -210,7 +209,7 @@ static void collectCPUUsage(float period)
         return;
     }
 
-    UncheckedKeyHashSet<pid_t> previousTasks;
+    HashSet<pid_t> previousTasks;
     for (const auto& key : threadInfoMap().keys())
         previousTasks.add(key);
 
@@ -246,7 +245,7 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
 
     pid_t resourceUsageThreadID = Thread::currentID();
 
-    UncheckedKeyHashSet<pid_t> knownWebKitThreads;
+    HashSet<pid_t> knownWebKitThreads;
     {
         Locker locker { Thread::allThreadsLock() };
         for (auto* thread : Thread::allThreads()) {
@@ -255,7 +254,7 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
         }
     }
 
-    UncheckedKeyHashMap<pid_t, String> knownWorkerThreads;
+    HashMap<pid_t, String> knownWorkerThreads;
     {
         for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
             // Ignore worker threads that have not been fully started yet.

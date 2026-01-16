@@ -102,7 +102,7 @@ private:
 
     bool m_filledPrimaryPage { false };
     GlyphMetricsPage m_primaryPage; // We optimize for the page that contains glyph indices 0-255.
-    UncheckedKeyHashMap<int, std::unique_ptr<GlyphMetricsPage>> m_pages;
+    HashMap<int, std::unique_ptr<GlyphMetricsPage>> m_pages;
 };
 
 WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<class T>, GlyphMetricsMap<T>);
@@ -118,7 +118,7 @@ template<> inline FloatRect GlyphMetricsMap<FloatRect>::unknownMetrics()
     return FloatRect(0, 0, cGlyphSizeUnknown, cGlyphSizeUnknown);
 }
 
-template<> inline std::optional<Path> GlyphMetricsMap<std::optional<Path>>::unknownMetrics()
+template<> inline std::optional<WebCore::Path> GlyphMetricsMap<std::optional<WebCore::Path>>::unknownMetrics()
 {
     return std::nullopt;
 }

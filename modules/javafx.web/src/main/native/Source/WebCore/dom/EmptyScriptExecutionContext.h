@@ -31,6 +31,8 @@
 #include "ReferrerPolicy.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -52,25 +54,25 @@ public:
     EventLoopTaskGroup& eventLoop() final
     {
         ASSERT_NOT_REACHED();
-        return *m_eventLoopTaskGroup;
+        return m_eventLoopTaskGroup;
     }
     const URL& url() const final { return m_url; }
     const URL& cookieURL() const final { return url(); }
-    URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final { return { }; };
+    URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final { return { }; }
     String userAgent(const URL&) const final { return emptyString(); }
     ReferrerPolicy referrerPolicy() const final { return ReferrerPolicy::EmptyString; }
 
-    void disableEval(const String&) final { };
-    void disableWebAssembly(const String&) final { };
-    void setRequiresTrustedTypes(bool) final { };
+    void disableEval(const String&) final { }
+    void disableWebAssembly(const String&) final { }
+    void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement) final { }
 
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final { return nullptr; }
     SocketProvider* socketProvider() final { return nullptr; }
 
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&) final { }
-    void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long) final { };
+    void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long) final { }
 
-    SecurityOrigin& topOrigin() const final { return m_origin.get(); };
+    SecurityOrigin& topOrigin() const final { return m_origin.get(); }
 
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final { return { }; }
     std::optional<uint64_t> noiseInjectionHashSalt() const { return std::nullopt; }
@@ -79,7 +81,6 @@ public:
     void postTask(Task&&) final { ASSERT_NOT_REACHED(); }
     EventTarget* errorEventTarget() final { return nullptr; };
 #if ENABLE(WEB_CRYPTO)
-    std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
     std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) final { return std::nullopt; }
     std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { return std::nullopt; }
 #endif
@@ -96,7 +97,7 @@ private:
         , m_vm(vm)
         , m_origin(SecurityOrigin::createOpaque())
         , m_eventLoop(EmptyEventLoop::create(vm))
-        , m_eventLoopTaskGroup(makeUnique<EventLoopTaskGroup>(m_eventLoop))
+        , m_eventLoopTaskGroup(makeUniqueRef<EventLoopTaskGroup>(m_eventLoop))
     {
         relaxAdoptionRequirement();
         m_eventLoop->addAssociatedContext(*this);
@@ -105,7 +106,7 @@ private:
     void addMessage(MessageSource, MessageLevel, const String&, const String&, unsigned, unsigned, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject* = nullptr, unsigned long = 0) final { }
     void logExceptionToConsole(const String&, const String&, int, int, RefPtr<Inspector::ScriptCallStack>&&) final { }
 
-    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+    const SettingsValues& settingsValues() const final { return m_settingsValues; }
 
 #if ENABLE(NOTIFICATIONS)
     NotificationClient* notificationClient() final { return nullptr; }
@@ -118,7 +119,7 @@ private:
             return adoptRef(*new EmptyEventLoop(vm));
         }
 
-        MicrotaskQueue& microtaskQueue() final { return m_queue; };
+        MicrotaskQueue& microtaskQueue() final { return m_queue; }
 
     private:
         explicit EmptyEventLoop(JSC::VM& vm)
@@ -132,12 +133,12 @@ private:
         MicrotaskQueue m_queue;
     };
 
-    Ref<JSC::VM> m_vm;
-    Ref<SecurityOrigin> m_origin;
+    const Ref<JSC::VM> m_vm;
+    const Ref<SecurityOrigin> m_origin;
     URL m_url;
-    Ref<EmptyEventLoop> m_eventLoop;
-    std::unique_ptr<EventLoopTaskGroup> m_eventLoopTaskGroup;
-    Settings::Values m_settingsValues;
+    const Ref<EmptyEventLoop> m_eventLoop;
+    const UniqueRef<EventLoopTaskGroup> m_eventLoopTaskGroup;
+    SettingsValues m_settingsValues;
 };
 
 } // namespace WebCore

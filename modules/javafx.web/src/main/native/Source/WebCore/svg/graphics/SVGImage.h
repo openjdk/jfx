@@ -27,6 +27,7 @@
 #pragma once
 
 #include "Image.h"
+#include "Timer.h"
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -44,7 +45,7 @@ class Settings;
 class SVGImage final : public Image {
 public:
     static Ref<SVGImage> create(ImageObserver* observer) { return adoptRef(*new SVGImage(observer)); }
-    WEBCORE_EXPORT static RefPtr<SVGImage> tryCreateFromData(std::span<const uint8_t>);
+    WEBCORE_EXPORT static void tryCreateFromData(std::span<const uint8_t>, CompletionHandler<void(RefPtr<SVGImage>&&)>&&);
     WEBCORE_EXPORT static bool isDataDecodable(const Settings&, std::span<const uint8_t>);
 
     RenderBox* embeddedContentBox() const;
@@ -52,6 +53,9 @@ public:
     RefPtr<LocalFrameView> protectedFrameView() const;
 
     bool isSVGImage() const final { return true; }
+
+    void subresourcesAreFinished(Document*, CompletionHandler<void()>&&) final;
+
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const final { return m_intrinsicSize; }
 
     bool renderingTaintsOrigin() const final;
@@ -95,6 +99,7 @@ private:
     // FIXME: Implement this to be less conservative.
     bool currentFrameKnownToBeOpaque() const final { return false; }
 
+    bool hasHDRContent() const final;
     RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) final;
 
     void startAnimationTimerFired();

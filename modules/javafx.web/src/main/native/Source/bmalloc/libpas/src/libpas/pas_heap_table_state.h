@@ -48,7 +48,7 @@ static inline const char* pas_heap_table_state_get_string(pas_heap_table_state s
     case pas_heap_table_state_has_index:
         return "has_index";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

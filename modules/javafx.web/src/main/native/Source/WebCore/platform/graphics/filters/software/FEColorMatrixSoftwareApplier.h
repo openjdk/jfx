@@ -39,7 +39,7 @@ public:
     FEColorMatrixSoftwareApplier(const FEColorMatrix&);
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     inline void matrix(float& red, float& green, float& blue, float& alpha) const;
     inline void saturateAndHueRotate(float& red, float& green, float& blue) const;

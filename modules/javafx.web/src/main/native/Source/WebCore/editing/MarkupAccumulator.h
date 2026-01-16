@@ -42,7 +42,7 @@ class Node;
 class Range;
 class ShadowRoot;
 
-typedef UncheckedKeyHashMap<AtomString, AtomStringImpl*> Namespaces;
+typedef HashMap<AtomString, AtomStringImpl*> Namespaces;
 
 enum class EntityMask : uint8_t {
     Amp = 1 << 0,
@@ -63,7 +63,8 @@ constexpr OptionSet<EntityMask> EntityMaskInPCDATA = { EntityMask::Amp, EntityMa
 constexpr auto EntityMaskInHTMLPCDATA = EntityMaskInPCDATA | EntityMask::Nbsp;
 constexpr OptionSet<EntityMask> EntityMaskInAttributeValue = { EntityMask::Amp, EntityMask::Lt, EntityMask::Gt,
     EntityMask::Quot, EntityMask::Tab, EntityMask::LineFeed, EntityMask::CarriageReturn };
-constexpr auto EntityMaskInHTMLAttributeValue = { EntityMask::Amp, EntityMask::Quot, EntityMask::Nbsp };
+constexpr auto EntityMaskInHTMLAttributeValue = { EntityMask::Amp, EntityMask::Lt, EntityMask::Gt, EntityMask::Quot, EntityMask::Nbsp };
+constexpr auto EntityMaskInHTMLLegacyAttributeValue = { EntityMask::Amp, EntityMask::Quot, EntityMask::Nbsp };
 
 class MarkupAccumulator {
     WTF_MAKE_NONCOPYABLE(MarkupAccumulator);
@@ -73,8 +74,10 @@ public:
 
     String serializeNodes(Node& targetNode, SerializedNodes);
 
-    static void appendCharactersReplacingEntities(StringBuilder&, const String&, unsigned, unsigned, OptionSet<EntityMask>);
-    void enableURLReplacement(UncheckedKeyHashMap<String, String>&& replacementURLStrings, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet);
+    static void appendCharactersReplacingEntities(StringBuilder&, const String&, OptionSet<EntityMask>);
+    void enableURLReplacement(HashMap<String, String>&& replacementURLStrings, HashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet);
+
+    static SerializationSyntax serializationSyntax(Document&);
 
 protected:
     unsigned length() const { return m_markup.length(); }
@@ -98,7 +101,7 @@ protected:
 
     void appendNonElementNode(StringBuilder&, const Node&, Namespaces*);
 
-    static void appendAttributeValue(StringBuilder&, const String&, bool isSerializingHTML);
+    void appendAttributeValue(StringBuilder&, const String&);
     bool appendAttribute(StringBuilder&, const Element&, const Attribute&, Namespaces*);
 
     OptionSet<EntityMask> entityMaskForText(const Text&) const;

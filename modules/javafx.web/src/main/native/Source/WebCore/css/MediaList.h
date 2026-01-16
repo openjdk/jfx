@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "MediaQuery.h"
 #include "MediaQueryParserContext.h"
 #include <memory>
@@ -35,6 +34,7 @@ namespace WebCore {
 
 class CSSRule;
 class CSSStyleSheet;
+template<typename> class ExceptionOr;
 
 class MediaList final : public RefCounted<MediaList> {
 public:

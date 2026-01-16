@@ -37,16 +37,16 @@ using CoordinatePair = SpaceSeparatedPoint<LengthPercentage<>>;
 // <by-to> = by | to
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-by-to
 // Indicates if a command is relative or absolute.
-using CommandAffinity = std::variant<Keyword::By, Keyword::To>;
+using CommandAffinity = Variant<Keyword::By, Keyword::To>;
 
 // <arc-sweep> = cw | ccw
-using ArcSweep        = std::variant<Keyword::Cw, Keyword::Ccw>;
+using ArcSweep        = Variant<Keyword::Cw, Keyword::Ccw>;
 
 // <arc-size> = large | small
-using ArcSize         = std::variant<Keyword::Large, Keyword::Small>;
+using ArcSize         = Variant<Keyword::Large, Keyword::Small>;
 
 // <control-point-anchor> = start | end | origin
-using ControlPointAnchor = std::variant<Keyword::Start, Keyword::End, Keyword::Origin>;
+using ControlPointAnchor = Variant<Keyword::Start, Keyword::End, Keyword::Origin>;
 
 // <to-position> = to <position>
 struct ToPosition {
@@ -117,7 +117,7 @@ struct MoveCommand {
     static constexpr auto name = CSSValueMove;
     using To = ToPosition;
     using By = ByCoordinatePair;
-    std::variant<To, By> toBy;
+    Variant<To, By> toBy;
 
     bool operator==(const MoveCommand&) const = default;
 };
@@ -132,7 +132,7 @@ struct LineCommand {
     static constexpr auto name = CSSValueLine;
     using To = ToPosition;
     using By = ByCoordinatePair;
-    std::variant<To, By> toBy;
+    Variant<To, By> toBy;
 
     bool operator==(const LineCommand&) const = default;
 };
@@ -160,7 +160,7 @@ struct HLineCommand {
 
         bool operator==(const By&) const = default;
     };
-    std::variant<To, By> toBy;
+    Variant<To, By> toBy;
 
     bool operator==(const HLineCommand&) const = default;
 };
@@ -191,7 +191,7 @@ struct VLineCommand {
 
         bool operator==(const By&) const = default;
     };
-    std::variant<To, By> toBy;
+    Variant<To, By> toBy;
 
     bool operator==(const VLineCommand&) const = default;
 };
@@ -227,7 +227,7 @@ struct CurveCommand {
 
         bool operator==(const By&) const = default;
     };
-    std::variant<To, By> toBy;
+    Variant<To, By> toBy;
 
     bool operator==(const CurveCommand&) const = default;
 };
@@ -277,7 +277,7 @@ struct SmoothCommand {
 
         bool operator==(const By&) const = default;
     };
-    std::variant<To, By> toBy;
+    Variant<To, By> toBy;
 
     bool operator==(const SmoothCommand&) const = default;
 };
@@ -308,9 +308,9 @@ struct ArcCommand {
     static constexpr auto name = CSSValueArc;
     using To = ToPosition;
     using By = ByCoordinatePair;
-    std::variant<To, By> toBy;
+    Variant<To, By> toBy;
 
-    using SizeOfEllipse = SpaceSeparatedSize<LengthPercentage<>>;
+    using SizeOfEllipse = MinimallySerializingSpaceSeparatedSize<LengthPercentage<>>;
     SizeOfEllipse size;
 
     ArcSweep arcSweep;
@@ -340,7 +340,7 @@ using CloseCommand = Keyword::Close;
 
 // <shape-command> = <move-command> | <line-command> | <hv-line-command> | <curve-command> | <smooth-command> | <arc-command> | close
 // https://drafts.csswg.org/css-shapes-2/#typedef-shape-command
-using ShapeCommand = std::variant<MoveCommand, LineCommand, HLineCommand, VLineCommand, CurveCommand, SmoothCommand, ArcCommand, CloseCommand>;
+using ShapeCommand = Variant<MoveCommand, LineCommand, HLineCommand, VLineCommand, CurveCommand, SmoothCommand, ArcCommand, CloseCommand>;
 
 // shape() = shape( <'fill-rule'>? from <coordinate-pair>, <shape-command>#)
 // https://drafts.csswg.org/css-shapes-2/#shape-function

@@ -26,11 +26,16 @@
 #include "config.h"
 #include "SetPrototype.h"
 
+#include "CachedCall.h"
+#include "InterpreterInlines.h"
 #include "BuiltinNames.h"
 #include "GetterSetter.h"
+#include "IteratorOperations.h"
 #include "JSCInlines.h"
 #include "JSSet.h"
 #include "JSSetIterator.h"
+#include "SetPrototypeInlines.h"
+#include "VMEntryScopeInlines.h"
 
 namespace JSC {
 
@@ -42,6 +47,7 @@ static JSC_DECLARE_HOST_FUNCTION(setProtoFuncDelete);
 static JSC_DECLARE_HOST_FUNCTION(setProtoFuncHas);
 static JSC_DECLARE_HOST_FUNCTION(setProtoFuncValues);
 static JSC_DECLARE_HOST_FUNCTION(setProtoFuncEntries);
+static JSC_DECLARE_HOST_FUNCTION(setProtoFuncIntersection);
 
 static JSC_DECLARE_HOST_FUNCTION(setProtoFuncSize);
 
@@ -90,7 +96,7 @@ void SetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().unionPublicName(), setPrototypeUnionCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
-        JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().intersectionPublicName(), setPrototypeIntersectionCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("intersection"_s, setProtoFuncIntersection, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().differencePublicName(), setPrototypeDifferenceCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().symmetricDifferencePublicName(), setPrototypeSymmetricDifferenceCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().isSubsetOfPublicName(), setPrototypeIsSubsetOfCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
@@ -105,12 +111,11 @@ ALWAYS_INLINE static JSSet* getSet(JSGlobalObject* globalObject, JSValue thisVal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!thisValue.isCell())) {
+    if (!thisValue.isCell()) [[unlikely]] {
         throwVMError(globalObject, scope, createNotAnObjectError(globalObject, thisValue));
         return nullptr;
     }
-    auto* set = jsDynamicCast<JSSet*>(thisValue.asCell());
-    if (LIKELY(set))
+    if (auto* set = jsDynamicCast<JSSet*>(thisValue.asCell())) [[likely]]
         return set;
     throwTypeError(globalObject, scope, "Set operation called on non-Set object"_s);
     return nullptr;
@@ -174,6 +179,173 @@ JSC_DEFINE_HOST_FUNCTION(setProtoFuncSize, (JSGlobalObject* globalObject, CallFr
     RETURN_IF_EXCEPTION(scope, JSValue::encode(jsUndefined()));
 
     return JSValue::encode(jsNumber(set->size()));
+}
+
+// https://tc39.es/ecma262/#sec-getsetrecord ( Step 1 ~ Step 7 )
+static uint32_t getSetSizeAsInt(JSGlobalObject* globalObject, JSValue value)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!value.isObject()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Set operation expects first argument to be an object");
+
+    JSObject* obj = asObject(value);
+
+    JSValue rawSize = obj->get(globalObject, vm.propertyNames->size);
+    RETURN_IF_EXCEPTION(scope, 0);
+
+    double numSize = rawSize.toNumber(globalObject);
+    RETURN_IF_EXCEPTION(scope, 0);
+
+    if (std::isnan(numSize)) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Set operation expects first argument to have non-NaN 'size' property"_s);
+
+    double intOrInfSize = jsNumber(numSize).toIntegerOrInfinity(globalObject);
+
+    if (intOrInfSize < 0) [[unlikely]]
+        return throwVMRangeError(globalObject, scope, "Set operation expects first argument to have non-negative 'size' property"_s);
+
+    if (std::isinf(intOrInfSize)) [[unlikely]]
+        return std::numeric_limits<uint32_t>::max();
+    return static_cast<uint32_t>(intOrInfSize);
+}
+
+static EncodedJSValue fastSetIntersection(JSGlobalObject* globalObject, JSSet* thisSet, JSSet* otherSet)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSSet* result = JSSet::create(vm, globalObject->setStructure());
+
+    JSSet* sourceSet = thisSet->size() <= otherSet->size() ? thisSet : otherSet;
+    JSSet* targetSet = thisSet->size() <= otherSet->size() ? otherSet : thisSet;
+
+    JSCell* sourceStorageCell = sourceSet->storageOrSentinel(vm);
+    if (sourceStorageCell == vm.orderedHashTableSentinel())
+        return JSValue::encode(result);
+
+    auto* sourceStorage = jsCast<JSSet::Storage*>(sourceStorageCell);
+    JSSet::Helper::Entry entry = 0;
+
+    while (true) {
+        sourceStorageCell = JSSet::Helper::nextAndUpdateIterationEntry(vm, *sourceStorage, entry);
+        if (sourceStorageCell == vm.orderedHashTableSentinel())
+            break;
+
+        auto* currentStorage = jsCast<JSSet::Storage*>(sourceStorageCell);
+        entry = JSSet::Helper::iterationEntry(*currentStorage) + 1;
+        JSValue entryKey = JSSet::Helper::getIterationEntryKey(*currentStorage);
+
+        bool targetHasEntry = targetSet->has(globalObject, entryKey);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (targetHasEntry) {
+            result->add(globalObject, entryKey);
+            RETURN_IF_EXCEPTION(scope, { });
+        }
+
+        sourceStorage = currentStorage;
+    }
+    return JSValue::encode(result);
+}
+
+JSC_DEFINE_HOST_FUNCTION(setProtoFuncIntersection, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSSet* thisSet = getSet(globalObject, callFrame->thisValue());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    JSValue otherValue = callFrame->argument(0);
+
+    if (otherValue.isCell()) [[likely]] {
+        if (auto* otherSet = jsDynamicCast<JSSet*>(otherValue.asCell())) [[likely]] {
+            if (setPrimordialWatchpointIsValid(vm, otherSet)) [[likely]] {
+                scope.release();
+                return fastSetIntersection(globalObject, thisSet, otherSet);
+            }
+        }
+    }
+
+    uint32_t size = getSetSizeAsInt(globalObject, otherValue);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    ASSERT(otherValue.isObject());
+    JSObject* otherObject = asObject(otherValue);
+
+    JSValue has = otherObject->get(globalObject, vm.propertyNames->has);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!has.isCallable()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Set.prototype.intersection expects other.has to be callable");
+
+    JSValue keys = otherObject->get(globalObject, vm.propertyNames->keys);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (!keys.isCallable()) [[unlikely]]
+        return throwVMTypeError(globalObject, scope, "Set.prototype.intersection expects other.keys to be callable");
+
+    JSSet* result = JSSet::create(vm, globalObject->setStructure());
+    if (thisSet->size() <= size) {
+        JSCell* storageCell = thisSet->storageOrSentinel(vm);
+        if (storageCell == vm.orderedHashTableSentinel())
+            return JSValue::encode(result);
+
+        auto* storage = jsCast<JSSet::Storage*>(storageCell);
+        JSSet::Helper::Entry entry = 0;
+        CallData hasCallData = JSC::getCallData(has);
+
+        std::optional<CachedCall> cachedHasCall;
+        if (hasCallData.type == CallData::Type::JS) [[likely]] {
+            cachedHasCall.emplace(globalObject, jsCast<JSFunction*>(has), 1);
+            RETURN_IF_EXCEPTION(scope, { });
+        }
+
+        while (true) {
+            storageCell = JSSet::Helper::nextAndUpdateIterationEntry(vm, *storage, entry);
+            if (storageCell == vm.orderedHashTableSentinel())
+                break;
+
+            storage = jsCast<JSSet::Storage*>(storageCell);
+            entry = JSSet::Helper::iterationEntry(*storage) + 1;
+            JSValue entryKey = JSSet::Helper::getIterationEntryKey(*storage);
+
+            JSValue hasResult;
+            if (cachedHasCall) [[likely]] {
+                hasResult = cachedHasCall->callWithArguments(globalObject, otherValue, entryKey);
+                RETURN_IF_EXCEPTION(scope, { });
+            } else {
+                MarkedArgumentBuffer args;
+                args.append(entryKey);
+                ASSERT(!args.hasOverflowed());
+                hasResult = call(globalObject, has, hasCallData, otherValue, args);
+                RETURN_IF_EXCEPTION(scope, { });
+            }
+
+            bool hasResultBool = hasResult.toBoolean(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (hasResultBool) {
+                result->add(globalObject, entryKey);
+                RETURN_IF_EXCEPTION(scope, { });
+            }
+        }
+    } else {
+        CallData keysCallData = JSC::getCallData(keys);
+        MarkedArgumentBuffer args;
+        ASSERT(!args.hasOverflowed());
+        JSValue iterator = call(globalObject, keys, keysCallData, otherValue, args);
+        RETURN_IF_EXCEPTION(scope, { });
+        scope.release();
+        forEachInIteratorProtocol(globalObject, iterator, [&](VM&, JSGlobalObject* globalObject, JSValue key) -> void {
+            bool thisSetHasKey = thisSet->has(globalObject, key);
+            RETURN_IF_EXCEPTION(scope, void());
+            if (thisSetHasKey) {
+                result->add(globalObject, key);
+                RETURN_IF_EXCEPTION(scope, void());
+            }
+        });
+    }
+
+    return JSValue::encode(result);
 }
 
 inline JSValue createSetIteratorObject(JSGlobalObject* globalObject, CallFrame* callFrame, IterationKind kind)

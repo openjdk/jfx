@@ -33,7 +33,7 @@ class CustomElementRegistry;
 
 struct ImportNodeOptions {
     bool selfOnly { false };
-    RefPtr<CustomElementRegistry> customElements;
+    RefPtr<CustomElementRegistry> customElementRegistry;
 };
 
 } // namespace WebCore

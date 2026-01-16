@@ -91,7 +91,7 @@ PreciseAllocation* PreciseAllocation::tryCreate(JSC::Heap& heap, size_t size, Su
 
     unsigned adjustment = halfAlignment;
     space = std::bit_cast<void*>(std::bit_cast<uintptr_t>(space) + halfAlignment);
-    if (UNLIKELY(!isAlignedForPreciseAllocation(space))) {
+    if (!isAlignedForPreciseAllocation(space)) [[unlikely]] {
         space = std::bit_cast<void*>(std::bit_cast<uintptr_t>(space) - halfAlignment);
         adjustment -= halfAlignment;
         ASSERT(isAlignedForPreciseAllocation(space));
@@ -104,7 +104,7 @@ PreciseAllocation* PreciseAllocation::tryCreate(JSC::Heap& heap, size_t size, Su
         ASSERT(isAlignedForPreciseAllocation(space));
     }
 
-    if (UNLIKELY(scribbleFreeCells()))
+    if (scribbleFreeCells()) [[unlikely]]
         scribble(space, size);
     return new (NotNull, space) PreciseAllocation(heap, size, subspace, indexInSpace, adjustment);
 }
@@ -128,7 +128,7 @@ PreciseAllocation* PreciseAllocation::tryReallocate(size_t size, Subspace* subsp
     void* newBasePointer = newSpace;
     unsigned newAdjustment = halfAlignment;
     newBasePointer = std::bit_cast<void*>(std::bit_cast<uintptr_t>(newBasePointer) + halfAlignment);
-    if (UNLIKELY(!isAlignedForPreciseAllocation(newBasePointer))) {
+    if (!isAlignedForPreciseAllocation(newBasePointer)) [[unlikely]] {
         newBasePointer = std::bit_cast<void*>(std::bit_cast<uintptr_t>(newBasePointer) - halfAlignment);
         newAdjustment -= halfAlignment;
         ASSERT(isAlignedForPreciseAllocation(newBasePointer));
@@ -169,7 +169,7 @@ PreciseAllocation* PreciseAllocation::tryCreateForLowerTierPrecise(JSC::Heap& he
 
     unsigned adjustment = halfAlignment;
     space = std::bit_cast<void*>(std::bit_cast<uintptr_t>(space) + halfAlignment);
-    if (UNLIKELY(!isAlignedForPreciseAllocation(space))) {
+    if (!isAlignedForPreciseAllocation(space)) [[unlikely]] {
         space = std::bit_cast<void*>(std::bit_cast<uintptr_t>(space) - halfAlignment);
         adjustment -= halfAlignment;
         ASSERT(isAlignedForPreciseAllocation(space));
@@ -182,7 +182,7 @@ PreciseAllocation* PreciseAllocation::tryCreateForLowerTierPrecise(JSC::Heap& he
         ASSERT(isAlignedForPreciseAllocation(space));
     }
 
-    if (UNLIKELY(scribbleFreeCells()))
+    if (scribbleFreeCells()) [[unlikely]]
         scribble(space, size);
     PreciseAllocation* preciseAllocation = new (NotNull, space) PreciseAllocation(heap, size, subspace, 0, adjustment);
     preciseAllocation->m_lowerTierPreciseIndex = lowerTierPreciseIndex;

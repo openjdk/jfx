@@ -299,7 +299,7 @@ void objectAssignGeneric(JSGlobalObject* globalObject, VM& vm, JSObject* target,
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);
@@ -345,12 +345,15 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
             }
         }
         if (willBatch) {
-            Vector<RefPtr<UniquedStringImpl>, 32> properties;
+            Vector<UniquedStringImpl*, 32> properties; // structures ensures the lifetimes of these strings.
             MarkedArgumentBufferWithSize<32> values;
+            MarkedArgumentBuffer structures;
             for (unsigned i = 1; i < argsCount; ++i) {
                 JSValue sourceValue = callFrame->uncheckedArgument(i);
                 JSObject* source = asObject(sourceValue);
-                source->structure()->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
+                auto sourceStructure = source->structure();
+                structures.append(sourceStructure);
+                sourceStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
                     if (entry.attributes() & PropertyAttribute::DontEnum)
                         return true;
 
@@ -367,12 +370,13 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
 
             // Actually, assigning with empty object (option for example) is common. (`Object.assign(defaultOptions, passedOptions)` where `passedOptions` is empty object.)
             if (!properties.isEmpty())
-                target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+                target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
+
             return JSValue::encode(target);
         }
     }
 
-    Vector<RefPtr<UniquedStringImpl>, 8> properties;
+    Vector<UniquedStringImpl*, 8> properties;
     MarkedArgumentBuffer values;
     for (unsigned i = 1; i < argsCount; ++i) {
         JSValue sourceValue = callFrame->uncheckedArgument(i);
@@ -442,14 +446,14 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
         if (canUseFastPath) {
             Structure* arrayStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
             JSArray* entries = JSArray::tryCreate(vm, arrayStructure, properties.size());
-            if (UNLIKELY(!entries)) {
+            if (!entries) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
 
             Structure* targetStructure = target->structure();
             JSImmutableButterfly* cachedButterfly = nullptr;
-            if (LIKELY(!globalObject->isHavingABadTime())) {
+            if (!globalObject->isHavingABadTime()) [[likely]] {
                 auto* butterfly = targetStructure->cachedPropertyNames(CachedPropertyNamesKind::EnumerableStrings);
                 if (butterfly) {
                     ASSERT(butterfly->length() == properties.size());
@@ -488,12 +492,12 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
                 JSArray* entry = nullptr;
                 {
                     ObjectInitializationScope initializationScope(vm);
-                    if (LIKELY(entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) {
+                    if ((entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) [[likely]] {
                         entry->initializeIndex(initializationScope, 0, key);
                         entry->initializeIndex(initializationScope, 1, values.at(i));
                     }
                 }
-                if (UNLIKELY(!entry)) {
+                if (!entry) [[unlikely]] {
                     throwOutOfMemoryError(globalObject, scope);
                     return { };
                 }
@@ -523,7 +527,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
             return;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = target->get(globalObject, propertyName);
@@ -533,12 +537,12 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
         JSArray* entry = nullptr;
         {
             ObjectInitializationScope initializationScope(vm);
-            if (LIKELY(entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) {
+            if ((entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) [[likely]] {
                 entry->initializeIndex(initializationScope, 0, key);
                 entry->initializeIndex(initializationScope, 1, value);
             }
         }
-        if (UNLIKELY(!entry)) {
+        if (!entry) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return;
         }
@@ -603,7 +607,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorValues, (JSGlobalObject* globalObject,
             {
                 ObjectInitializationScope initializationScope(vm);
                 JSArray* result = nullptr;
-                if (LIKELY(result = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, arrayStructure, indexedPropertyValues.size() + namedPropertyValues.size()))) {
+                if ((result = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, arrayStructure, indexedPropertyValues.size() + namedPropertyValues.size()))) [[likely]] {
                     for (unsigned i = 0; i < indexedPropertyValues.size(); ++i)
                         result->initializeIndex(initializationScope, i, indexedPropertyValues.at(i));
                     for (unsigned i = 0; i < namedPropertyValues.size(); ++i)
@@ -634,7 +638,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorValues, (JSGlobalObject* globalObject,
             return;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = target->get(globalObject, propertyName);
@@ -658,7 +662,7 @@ inline bool toPropertyDescriptor(JSGlobalObject* globalObject, JSValue in, Prope
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!in.isObject())) {
+    if (!in.isObject()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Property description must be an object."_s);
         return false;
     }
@@ -820,7 +824,7 @@ static JSValue definePropertiesSlow(JSGlobalObject* globalObject, JSObject* obje
     Vector<PropertyDescriptor> descriptors;
     MarkedArgumentBuffer markBuffer;
 #define RETURN_IF_EXCEPTION_CLEARING_OVERFLOW(value) do { \
-    if (UNLIKELY(scope.exception())) { \
+    if (scope.exception()) [[unlikely]] { \
         markBuffer.overflowCheckNotNeeded(); \
         return value; \
     } \
@@ -881,7 +885,7 @@ static JSValue defineProperties(JSGlobalObject* globalObject, JSObject* object, 
             });
         }
     }
-    if (UNLIKELY(!canUseFastPath))
+    if (!canUseFastPath) [[unlikely]]
         RELEASE_AND_RETURN(scope, definePropertiesSlow(globalObject, object, properties));
 
     unsigned index = 0;
@@ -892,7 +896,7 @@ static JSValue defineProperties(JSGlobalObject* globalObject, JSObject* object, 
     descriptors.reserveInitialCapacity(numProperties);
 
 #define RETURN_IF_EXCEPTION_CLEARING_OVERFLOW(value) do { \
-    if (UNLIKELY(scope.exception())) { \
+    if (scope.exception()) [[unlikely]] { \
         markBuffer.overflowCheckNotNeeded(); \
         return value; \
     } \
@@ -914,14 +918,14 @@ static JSValue defineProperties(JSGlobalObject* globalObject, JSObject* object, 
             if (descriptor.setter())
                 markBuffer.append(descriptor.setter());
         }
-        if (UNLIKELY(!withoutSideEffect)) {
+        if (!withoutSideEffect) [[unlikely]] {
             // Bail out to the slow code.
             ++index;
             break;
         }
     }
 
-    if (UNLIKELY(index < numProperties)) {
+    if (index < numProperties) [[unlikely]] {
         for (; index < numProperties; ++index) {
             JSValue prop = properties->get(globalObject, propertyNames[index].get());
             RETURN_IF_EXCEPTION_CLEARING_OVERFLOW({ });
@@ -963,7 +967,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorDefineProperties, (JSGlobalObject* glo
     JSObject* targetObj = asObject(callFrame->argument(0));
     JSObject* props = callFrame->argument(1).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !props);
-    if (UNLIKELY(!props))
+    if (!props) [[unlikely]]
         return encodedJSValue();
     RELEASE_AND_RETURN(scope, JSValue::encode(defineProperties(globalObject, targetObj, props)));
 }
@@ -1000,7 +1004,7 @@ bool setIntegrityLevel(JSGlobalObject* globalObject, VM& vm, JSObject* object)
 
     bool success = object->methodTable()->preventExtensions(object, globalObject);
     RETURN_IF_EXCEPTION(scope, false);
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return false;
 
     PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
@@ -1095,7 +1099,7 @@ JSObject* objectConstructorSeal(JSGlobalObject* globalObject, JSObject* object)
 
     bool success = setIntegrityLevel<IntegrityLevel::Sealed>(globalObject, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         throwTypeError(globalObject, scope, "Unable to prevent extension in Object.seal"_s);
         return nullptr;
     }
@@ -1128,7 +1132,7 @@ JSObject* objectConstructorFreeze(JSGlobalObject* globalObject, JSObject* object
 
     bool success = setIntegrityLevel<IntegrityLevel::Frozen>(globalObject, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         throwTypeError(globalObject, scope, "Unable to prevent extension in Object.freeze"_s);
         return nullptr;
     }
@@ -1159,7 +1163,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorPreventExtensions, (JSGlobalObject* gl
     JSObject* object = asObject(argument);
     bool status = object->methodTable()->preventExtensions(object, globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(!status))
+    if (!status) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Unable to prevent extension in Object.preventExtensions"_s);
     return JSValue::encode(object);
 }
@@ -1247,7 +1251,7 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
     }
 
     // We attempt to look up own property keys cache in Object.keys / Object.getOwnPropertyNames cases.
-        if (LIKELY(!globalObject->isHavingABadTime())) {
+    if (!globalObject->isHavingABadTime()) [[likely]] {
         if (auto* immutableButterfly = object->structure()->cachedPropertyNames(kind)) {
                 Structure* arrayStructure = globalObject->originalArrayStructureForIndexingType(immutableButterfly->indexingMode());
                 return JSArray::createWithButterfly(vm, nullptr, arrayStructure, immutableButterfly->toButterfly());
@@ -1259,7 +1263,8 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
     RETURN_IF_EXCEPTION(scope, nullptr);
 
                             size_t numProperties = properties.size();
-    if (LIKELY(numProperties < MIN_SPARSE_ARRAY_INDEX) && !globalObject->isHavingABadTime()) {
+    if (numProperties < MIN_SPARSE_ARRAY_INDEX)  [[likely]] {
+        if (!globalObject->isHavingABadTime()) {
         auto copyPropertiesToBuffer = [&](WriteBarrier<Unknown>* buffer, JSCell* owner) {
                             for (size_t i = 0; i < numProperties; i++) {
                                 const auto& identifier = properties[i];
@@ -1276,7 +1281,7 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
             auto* cachedButterfly = structure->cachedPropertyNamesIgnoringSentinel(kind);
             if (cachedButterfly == StructureRareData::cachedPropertyNamesSentinel()) {
                 auto* newButterfly = JSImmutableButterfly::tryCreate(vm, CopyOnWriteArrayWithContiguous, numProperties);
-                if (UNLIKELY(!newButterfly)) {
+                    if (!newButterfly) [[unlikely]] {
                     throwOutOfMemoryError(globalObject, scope);
                     return { };
                 }
@@ -1292,13 +1297,14 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
                 }
 
         JSArray* keys = JSArray::tryCreate(vm, globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous), numProperties);
-        if (UNLIKELY(!keys)) {
+            if (!keys) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
         copyPropertiesToBuffer(keys->butterfly()->contiguous().data(), keys);
 
                 return keys;
+        }
             }
 
     JSArray* keys = constructEmptyArray(globalObject, nullptr);

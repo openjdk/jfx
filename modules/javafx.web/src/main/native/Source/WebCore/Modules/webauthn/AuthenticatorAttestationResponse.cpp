@@ -32,6 +32,7 @@
 #include "CBORReader.h"
 #include "CryptoAlgorithmECDH.h"
 #include "CryptoKeyEC.h"
+#include "ExceptionOr.h"
 #include "WebAuthenticationUtils.h"
 #include <wtf/text/Base64.h>
 

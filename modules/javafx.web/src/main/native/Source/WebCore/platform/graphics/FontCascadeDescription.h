@@ -26,7 +26,6 @@
 
 #include "CSSValueKeywords.h"
 #include "FontDescription.h"
-#include <variant>
 #include <wtf/RefCountedFixedVector.h>
 
 #if PLATFORM(COCOA)
@@ -47,7 +46,7 @@ typedef FontFamilySpecificationCoreText FontFamilyPlatformSpecification;
 typedef FontFamilySpecificationNull FontFamilyPlatformSpecification;
 #endif
 
-typedef std::variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
+typedef Variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
 
 class Font;
 
@@ -171,7 +170,7 @@ private:
 inline bool FontCascadeDescription::operator==(const FontCascadeDescription& other) const
 {
     return static_cast<const FontDescription&>(*this) == static_cast<const FontDescription&>(other)
-        && m_families.get() == other.m_families.get()
+        && arePointingToEqualData(m_families, other.m_families)
         && m_specifiedSize == other.m_specifiedSize
         && m_isAbsoluteSize == other.m_isAbsoluteSize
         && m_kerning == other.m_kerning

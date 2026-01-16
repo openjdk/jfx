@@ -52,6 +52,13 @@ bool shouldRun(const TestConfig* config, const char* testName)
             }
         }
     }
+    // FIXME: rdar://145150735. But note this test is already skipped on ARM64, see above.
+    if (!filter && Options::airUseGreedyRegAlloc()) {
+        if (WTF::findIgnoringASCIICaseWithoutLength(testName, "testPinRegisters") != WTF::notFound) {
+            dataLogLn("*** Warning: Skipping known-bad test: ", testName);
+            return false;
+        }
+    }
 
     if (!filter && isARM_THUMB2()) {
         for (auto& failingTest : {
@@ -345,6 +352,8 @@ void run(const TestConfig* config)
     RUN(testIToF64Arg());
     RUN(testIToD32Arg());
     RUN(testIToF32Arg());
+    RUN(testIToDU32Arg());
+    RUN(testIToFU32Arg());
     RUN(testIToD64Mem());
     RUN(testIToF64Mem());
     RUN(testIToD32Mem());
@@ -922,6 +931,8 @@ void run(const TestConfig* config)
         RUN(testVectorXorSelf());
         RUN(testVectorExtractLane0Float());
         RUN(testVectorExtractLane0Double());
+        RUN(testVectorMulHigh());
+        RUN(testVectorMulLow());
         RUN_UNARY(testVectorXorOrAllOnesConstantToVectorAndXor, v128Operands());
         RUN_UNARY(testVectorXorAndAllOnesConstantToVectorOrXor, v128Operands());
         RUN_BINARY(testVectorOrConstants, v128Operands(), v128Operands());
@@ -932,6 +943,10 @@ void run(const TestConfig* config)
             RUN(testVectorFmulByElementFloat());
             RUN(testVectorFmulByElementDouble());
         }
+        RUN(testMulHigh32());
+        RUN(testMulHigh64());
+        RUN(testUMulHigh32());
+        RUN(testUMulHigh64());
     }
 
     Lock lock;
@@ -1001,7 +1016,7 @@ int main(int argc, char** argv)
     JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInTestB3, &endOfJITOperationsInTestB3);
 #endif
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-    if (UNLIKELY(JSC::Options::needDisassemblySupport()))
+    if (JSC::Options::needDisassemblySupport()) [[unlikely]]
         JSC::JITOperationList::populateDisassemblyLabelsInEmbedder(&startOfJITOperationsInTestB3, &endOfJITOperationsInTestB3);
 #endif
 
