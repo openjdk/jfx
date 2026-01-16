@@ -197,23 +197,6 @@ public class NGGroup extends NGNode {
         visualsChanged();
     }
 
-    /**
-     * Set by the FX scene graph.
-     * @param blendMode cannot be null
-     */
-    public void setBlendMode(Blend.Mode blendMode) {
-        // Verify the arguments
-        if (blendMode == null) {
-            throw new IllegalArgumentException("Mode must be non-null");
-        }
-        // If the blend mode has changed, mark this node as dirty and
-        // invalidate its cache
-        if (this.blendMode != blendMode) {
-            this.blendMode = blendMode;
-            visualsChanged();
-        }
-    }
-
     @Override
     public void renderForcedContent(Graphics gOptional) {
         List<NGNode> orderedChildren = getOrderedChildren();
