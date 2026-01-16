@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -57,6 +57,7 @@
 #include "JSDOMWindowCustom.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "SecurityOrigin.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 #include <JavaScriptCore/HeapInlines.h>
@@ -128,7 +129,7 @@ private:
     OpenDatabaseCallback(ExecutableWithDatabase& executableWithDatabase)
         : EventListener(EventListener::CPPEventListenerType)
         , m_executableWithDatabase(executableWithDatabase) { }
-    Ref<ExecutableWithDatabase> m_executableWithDatabase;
+    const Ref<ExecutableWithDatabase> m_executableWithDatabase;
 };
 
 void ExecutableWithDatabase::start(IDBFactory* idbFactory, SecurityOrigin*, const String& databaseName)
@@ -165,7 +166,7 @@ static Ref<Inspector::Protocol::IndexedDB::KeyPath> keyPathFromIDBKeyPath(const 
         keyPath->setArray(WTFMove(array));
         return keyPath;
     });
-    return std::visit(visitor, idbKeyPath.value());
+    return WTF::visit(visitor, idbKeyPath.value());
 }
 
 static RefPtr<IDBTransaction> transactionForDatabase(IDBDatabase* idbDatabase, const String& objectStoreName, IDBTransactionMode mode = IDBTransactionMode::Readonly)
@@ -248,7 +249,7 @@ private:
     DatabaseLoader(ScriptExecutionContext* context, Ref<IndexedDBBackendDispatcherHandler::RequestDatabaseCallback>&& requestCallback)
         : ExecutableWithDatabase(context)
         , m_requestCallback(WTFMove(requestCallback)) { }
-    Ref<IndexedDBBackendDispatcherHandler::RequestDatabaseCallback> m_requestCallback;
+    const Ref<IndexedDBBackendDispatcherHandler::RequestDatabaseCallback> m_requestCallback;
 };
 
 static RefPtr<IDBKey> idbKeyFromInspectorObject(Ref<JSON::Object>&& key)
@@ -420,7 +421,7 @@ private:
     {
     }
     InjectedScript m_injectedScript;
-    Ref<IndexedDBBackendDispatcherHandler::RequestDataCallback> m_requestCallback;
+    const Ref<IndexedDBBackendDispatcherHandler::RequestDataCallback> m_requestCallback;
     Ref<JSON::ArrayOf<Inspector::Protocol::IndexedDB::DataEntry>> m_result;
     int m_skipCount;
     unsigned m_pageSize;
@@ -489,11 +490,11 @@ public:
         , m_idbKeyRange(WTFMove(idbKeyRange))
         , m_skipCount(skipCount)
         , m_pageSize(pageSize) { }
-    Ref<IndexedDBBackendDispatcherHandler::RequestDataCallback> m_requestCallback;
+    const Ref<IndexedDBBackendDispatcherHandler::RequestDataCallback> m_requestCallback;
     InjectedScript m_injectedScript;
     String m_objectStoreName;
     String m_indexName;
-    RefPtr<IDBKeyRange> m_idbKeyRange;
+    const RefPtr<IDBKeyRange> m_idbKeyRange;
     int m_skipCount;
     unsigned m_pageSize;
 };
@@ -510,7 +511,7 @@ InspectorIndexedDBAgent::InspectorIndexedDBAgent(PageAgentContext& context)
 
 InspectorIndexedDBAgent::~InspectorIndexedDBAgent() = default;
 
-void InspectorIndexedDBAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
+void InspectorIndexedDBAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -540,11 +541,11 @@ static Inspector::Protocol::ErrorStringOr<Document*> documentFromFrame(LocalFram
 
 static Inspector::Protocol::ErrorStringOr<IDBFactory*> IDBFactoryFromDocument(Document* document)
 {
-    RefPtr domWindow = document->domWindow();
-    if (!domWindow)
+    RefPtr window = document->window();
+    if (!window)
         return makeUnexpected("Missing window for given document"_s);
 
-    IDBFactory* idbFactory = WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(*domWindow);
+    IDBFactory* idbFactory = WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(*window);
     if (!idbFactory)
         makeUnexpected("Missing IndexedDB factory of window for given document"_s);
 
@@ -654,7 +655,7 @@ private:
     {
     }
 
-    Ref<IndexedDBBackendDispatcherHandler::ClearObjectStoreCallback> m_requestCallback;
+    const Ref<IndexedDBBackendDispatcherHandler::ClearObjectStoreCallback> m_requestCallback;
 };
 
 class ClearObjectStore final : public ExecutableWithDatabase {
@@ -702,7 +703,7 @@ public:
     BackendDispatcher::CallbackBase& requestCallback() override { return m_requestCallback.get(); }
 private:
     const String m_objectStoreName;
-    Ref<IndexedDBBackendDispatcherHandler::ClearObjectStoreCallback> m_requestCallback;
+    const Ref<IndexedDBBackendDispatcherHandler::ClearObjectStoreCallback> m_requestCallback;
 };
 
 } // anonymous namespace

@@ -51,63 +51,57 @@ void OESDrawBuffersIndexed::enableiOES(GCGLenum target, GCGLuint index)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->enableiOES(target, index);
+    protectedContext()->protectedGraphicsContextGL()->enableiOES(target, index);
 }
 
 void OESDrawBuffersIndexed::disableiOES(GCGLenum target, GCGLuint index)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->disableiOES(target, index);
+    protectedContext()->protectedGraphicsContextGL()->disableiOES(target, index);
 }
 
 void OESDrawBuffersIndexed::blendEquationiOES(GCGLuint buf, GCGLenum mode)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->blendEquationiOES(buf, mode);
+    protectedContext()->protectedGraphicsContextGL()->blendEquationiOES(buf, mode);
 }
 
 void OESDrawBuffersIndexed::blendEquationSeparateiOES(GCGLuint buf, GCGLenum modeRGB, GCGLenum modeAlpha)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->blendEquationSeparateiOES(buf, modeRGB, modeAlpha);
+    protectedContext()->protectedGraphicsContextGL()->blendEquationSeparateiOES(buf, modeRGB, modeAlpha);
 }
 
 void OESDrawBuffersIndexed::blendFunciOES(GCGLuint buf, GCGLenum src, GCGLenum dst)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->blendFunciOES(buf, src, dst);
+    protectedContext()->protectedGraphicsContextGL()->blendFunciOES(buf, src, dst);
 }
 
 void OESDrawBuffersIndexed::blendFuncSeparateiOES(GCGLuint buf, GCGLenum srcRGB, GCGLenum dstRGB, GCGLenum srcAlpha, GCGLenum dstAlpha)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
-    context.protectedGraphicsContextGL()->blendFuncSeparateiOES(buf, srcRGB, dstRGB, srcAlpha, dstAlpha);
+    protectedContext()->protectedGraphicsContextGL()->blendFuncSeparateiOES(buf, srcRGB, dstRGB, srcAlpha, dstAlpha);
 }
 
 void OESDrawBuffersIndexed::colorMaskiOES(GCGLuint buf, GCGLboolean red, GCGLboolean green, GCGLboolean blue, GCGLboolean alpha)
 {
     if (isContextLost())
         return;
-    auto& context = this->context();
+    Ref context = this->context();
     // Used in WebGLRenderingContextBase::clearIfComposited
     if (!buf) {
-        context.m_colorMask[0] = red;
-        context.m_colorMask[1] = green;
-        context.m_colorMask[2] = blue;
-        context.m_colorMask[3] = alpha;
+        context->m_colorMask[0] = red;
+        context->m_colorMask[1] = green;
+        context->m_colorMask[2] = blue;
+        context->m_colorMask[3] = alpha;
     }
-    context.protectedGraphicsContextGL()->colorMaskiOES(buf, red, green, blue, alpha);
+    context->protectedGraphicsContextGL()->colorMaskiOES(buf, red, green, blue, alpha);
 }
 
 } // namespace WebCore

@@ -58,8 +58,7 @@ static void onDeviceDisconnected(ManetteMonitor*, ManetteDevice* device, Manette
 
 ManetteGamepadProvider::ManetteGamepadProvider()
     : m_monitor(adoptGRef(manette_monitor_new()))
-    , m_initialGamepadsConnectedTimer(RunLoop::current(), this, &ManetteGamepadProvider::initialGamepadsConnectedTimerFired)
-    , m_inputNotificationTimer(RunLoop::current(), this, &ManetteGamepadProvider::inputNotificationTimerFired)
+    , m_inputNotificationTimer(RunLoop::currentSingleton(), "ManetteGamepadProvider::InputNotificationTimer"_s, this, &ManetteGamepadProvider::inputNotificationTimerFired)
 {
     g_signal_connect(m_monitor.get(), "device-connected", G_CALLBACK(onDeviceConnected), this);
     g_signal_connect(m_monitor.get(), "device-disconnected", G_CALLBACK(onDeviceDisconnected), this);
@@ -85,16 +84,12 @@ void ManetteGamepadProvider::startMonitoringGamepads(GamepadProviderClient& clie
 
     m_initialGamepadsConnected = false;
 
-    // Any connections we are notified of within the connectionDelayInterval of listening likely represent
-    // devices that were already connected, so we suppress notifying clients of these.
-    m_initialGamepadsConnectedTimer.startOneShot(connectionDelayInterval);
-
-    RunLoop::protectedCurrent()->dispatch([this] {
         ManetteDevice* device;
         GUniquePtr<ManetteMonitorIter> iter(manette_monitor_iterate(m_monitor.get()));
         while (manette_monitor_iter_next(iter.get(), &device))
             deviceConnected(device);
-    });
+
+    m_initialGamepadsConnected = true;
 }
 
 void ManetteGamepadProvider::stopMonitoringGamepads(GamepadProviderClient& client)
@@ -105,7 +100,6 @@ void ManetteGamepadProvider::stopMonitoringGamepads(GamepadProviderClient& clien
     if (shouldCloseAndUnscheduleManager) {
         m_gamepadVector.clear();
         m_gamepadMap.clear();
-        m_initialGamepadsConnectedTimer.stop();
     }
 }
 
@@ -132,16 +126,6 @@ void ManetteGamepadProvider::deviceConnected(ManetteDevice* device)
 
     m_gamepadVector[index] = gamepad.get();
     m_gamepadMap.set(device, WTFMove(gamepad));
-
-    if (!m_initialGamepadsConnected) {
-        // This added device is the result of us starting to monitor gamepads.
-        // We'll get notified of all connected devices during this current spin of the runloop
-        // and the client should be told they were already connected.
-        // The m_initialGamepadsConnectedTimer fires in a subsequent spin of the runloop after which
-        // any connection events are actual new devices and can trigger gamepad visibility.
-        if (!m_initialGamepadsConnectedTimer.isActive())
-            m_initialGamepadsConnectedTimer.startOneShot(0_s);
-    }
 
     auto eventVisibility = m_initialGamepadsConnected ? EventMakesGamepadsVisible::Yes : EventMakesGamepadsVisible::No;
     for (auto& client : m_clients)

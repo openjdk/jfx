@@ -23,9 +23,9 @@ ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharact
 {
     for (; !input.empty(); skip(input, 1)) {
         auto character = input.front();
-        if (LIKELY(character <= 0xFF)) {
+        if (character <= 0xFF) [[likely]] {
             auto escaped = escapedFormsForJSON[character];
-            if (LIKELY(!escaped)) {
+            if (!escaped) [[likely]] {
                 consume(output) = character;
                 continue;
             }
@@ -33,7 +33,7 @@ ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharact
             output[0] = '\\';
             output[1] = escaped;
             skip(output, 2);
-            if (UNLIKELY(escaped == 'u')) {
+            if (escaped == 'u') [[unlikely]] {
                 output[0] = '0';
                 output[1] = '0';
                 output[2] = upperNibbleToLowercaseASCIIHexDigit(character);
@@ -43,7 +43,7 @@ ALWAYS_INLINE static void appendEscapedJSONStringContent(std::span<OutputCharact
             continue;
         }
 
-        if (LIKELY(!U16_IS_SURROGATE(character))) {
+        if (!U16_IS_SURROGATE(character)) [[likely]] {
             consume(output) = character;
             continue;
         }

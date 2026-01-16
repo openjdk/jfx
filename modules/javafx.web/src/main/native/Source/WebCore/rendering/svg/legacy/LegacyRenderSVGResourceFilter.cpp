@@ -54,16 +54,14 @@ bool LegacyRenderSVGResourceFilter::isIdentity() const
     return SVGFilter::isIdentity(protectedFilterElement());
 }
 
-void LegacyRenderSVGResourceFilter::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
+void LegacyRenderSVGResourceFilter::removeAllClientsFromCache()
 {
-    LOG(Filters, "LegacyRenderSVGResourceFilter %p removeAllClientsFromCacheIfNeeded", this);
+    LOG(Filters, "LegacyRenderSVGResourceFilter %p removeAllClientsFromCache", this);
 
     m_rendererFilterDataMap.clear();
-
-    markAllClientsForInvalidationIfNeeded(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
-void LegacyRenderSVGResourceFilter::removeClientFromCache(RenderElement& client, bool markForInvalidation)
+void LegacyRenderSVGResourceFilter::removeClientFromCache(RenderElement& client)
 {
     LOG(Filters, "LegacyRenderSVGResourceFilter %p removing client %p", this, &client);
 
@@ -75,8 +73,6 @@ void LegacyRenderSVGResourceFilter::removeClientFromCache(RenderElement& client,
         else
             m_rendererFilterDataMap.remove(findResult);
     }
-
-    markClientForInvalidation(client, markForInvalidation ? BoundariesInvalidation : ParentOnlyInvalidation);
 }
 
 auto LegacyRenderSVGResourceFilter::applyResource(RenderElement& renderer, const RenderStyle&, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode) -> OptionSet<ApplyResult>
@@ -202,7 +198,7 @@ void LegacyRenderSVGResourceFilter::postApplyResource(RenderElement& renderer, G
 
     case FilterData::PaintingSource:
         if (!filterData.savedContext) {
-            removeClientFromCache(renderer);
+            removeClientFromCacheAndMarkForInvalidation(renderer);
             return;
         }
 
@@ -248,7 +244,7 @@ void LegacyRenderSVGResourceFilter::markFilterForRebuild()
 {
     LOG(Filters, "LegacyRenderSVGResourceFilter %p markFilterForRebuild", this);
 
-    removeAllClientsFromCache();
+    removeAllClientsFromCacheAndMarkForInvalidation();
 }
 
 FloatRect LegacyRenderSVGResourceFilter::drawingRegion(RenderObject& object) const
@@ -261,19 +257,19 @@ TextStream& operator<<(TextStream& ts, FilterData::FilterDataState state)
 {
     switch (state) {
     case FilterData::PaintingSource:
-        ts << "painting source";
+        ts << "painting source"_s;
         break;
     case FilterData::Applying:
-        ts << "applying";
+        ts << "applying"_s;
         break;
     case FilterData::Built:
-        ts << "built";
+        ts << "built"_s;
         break;
     case FilterData::CycleDetected:
-        ts << "cycle detected";
+        ts << "cycle detected"_s;
         break;
     case FilterData::MarkedForRemoval:
-        ts << "marked for removal";
+        ts << "marked for removal"_s;
         break;
     }
     return ts;

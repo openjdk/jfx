@@ -34,6 +34,7 @@
 #include "DFGNodeAbstractValuePair.h"
 #include "DFGStructureClobberState.h"
 #include "Operands.h"
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
@@ -49,7 +50,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BasicBlock);
 
 class BasicBlock {
     WTF_MAKE_NONCOPYABLE(BasicBlock);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BasicBlock);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BasicBlock, BasicBlock);
 public:
 
     BasicBlock(
@@ -163,6 +164,8 @@ public:
         return terminal()->successors();
     }
 
+    bool isJumpPad() { return m_nodes.size() == 1 && m_nodes[0]->isJump(); }
+
     void removePredecessor(BasicBlock* block);
     void replacePredecessor(BasicBlock* from, BasicBlock* to);
 
@@ -238,7 +241,7 @@ public:
     float executionCount;
 
     struct SSAData {
-        WTF_MAKE_TZONE_ALLOCATED(SSAData);
+        WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SSAData);
     public:
         void invalidate()
         {
@@ -260,6 +263,16 @@ public:
         ~SSAData();
     };
     std::unique_ptr<SSAData> ssa;
+
+    // Indicates this block was synthetically generated (e.g., via loop unrolling or
+    // additional jump pad insertion due to loop unrolling) and should not contribute
+    // to FTL inlining code size heuristics.
+    bool isExcludedFromFTLCodeSizeEstimation { false };
+
+#if ASSERT_ENABLED
+    // Points to the original block this one was cloned from during loop unrolling.
+    BasicBlock* cloneSource { nullptr };
+#endif
 
 private:
     friend class InsertionSet;

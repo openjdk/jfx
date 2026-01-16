@@ -32,13 +32,13 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ExceptionOr.h"
 #include "RTCIceCandidateFields.h"
 #include "ScriptWrappable.h"
 
 namespace WebCore {
 
 struct RTCIceCandidateInit;
+template<typename> class ExceptionOr;
 
 class RTCIceCandidate final : public RefCounted<RTCIceCandidate>, public ScriptWrappable {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCIceCandidate);

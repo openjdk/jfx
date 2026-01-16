@@ -60,7 +60,7 @@ private:
     ExceptionOr<void> setValueAsDouble(double, TextFieldEventBehavior) const final;
     ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const final;
     bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const final;
-    float decorationWidth() const final;
+    float decorationWidth(float inputWidth) const final;
     StepRange createStepRange(AnyStepHandling) const final;
     ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) final;
     Decimal parseToNumber(const String&, const Decimal&) const final;
@@ -68,7 +68,7 @@ private:
     String localizeValue(const String&) const final;
     String visibleValue() const final;
     String convertFromVisibleValue(const String&) const final;
-    String sanitizeValue(const String&) const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
     String badInputText() const final;
     bool supportsPlaceholder() const final;
     void attributeChanged(const QualifiedName&) final;

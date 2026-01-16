@@ -112,6 +112,25 @@ inline bool CacheableIdentifier::isCacheableIdentifierCell(JSValue value)
     return isCacheableIdentifierCell(value.asCell());
 }
 
+inline GCOwnedDataScope<const UniquedStringImpl*> CacheableIdentifier::getCacheableIdentifier(JSCell* cell)
+{
+    if (cell->isSymbol())
+        return { cell, &asSymbol(cell)->uid() };
+    if (!cell->isString())
+        return { };
+    JSString* string = jsCast<JSString*>(cell);
+    if (const StringImpl* impl = string->tryGetValueImpl(); impl && impl->isAtom())
+        return { cell, static_cast<const AtomStringImpl*>(impl) };
+    return { };
+}
+
+inline GCOwnedDataScope<const UniquedStringImpl*> CacheableIdentifier::getCacheableIdentifier(JSValue value)
+{
+    if (!value.isCell())
+        return { };
+    return getCacheableIdentifier(value.asCell());
+}
+
 inline bool CacheableIdentifier::isSymbolCell() const
 {
     return isCell() && cell()->isSymbol();

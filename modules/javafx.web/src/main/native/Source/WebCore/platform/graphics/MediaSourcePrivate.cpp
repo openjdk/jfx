@@ -33,6 +33,7 @@
 #include "MediaSourcePrivateClient.h"
 #include "PlatformTimeRanges.h"
 #include "SourceBufferPrivate.h"
+#include <ranges>
 #include <wtf/Threading.h>
 
 namespace WebCore {
@@ -71,7 +72,7 @@ bool MediaSourcePrivate::hasFutureTime(const MediaTime& currentTime, const Media
 }
 
 MediaSourcePrivate::MediaSourcePrivate(MediaSourcePrivateClient& client)
-    : MediaSourcePrivate(client, RunLoop::current())
+    : MediaSourcePrivate(client, RunLoop::currentSingleton())
 {
 }
 
@@ -118,7 +119,7 @@ void MediaSourcePrivate::removeSourceBuffer(SourceBufferPrivate& sourceBuffer)
 
     size_t pos = m_activeSourceBuffers.find(&sourceBuffer);
     if (pos != notFound) {
-        m_activeSourceBuffers.remove(pos);
+        m_activeSourceBuffers.removeAt(pos);
         notifyActiveSourceBuffersChanged();
     }
     m_sourceBuffers.removeFirst(&sourceBuffer);
@@ -138,7 +139,7 @@ void MediaSourcePrivate::sourceBufferPrivateDidChangeActiveState(SourceBufferPri
     if (active || position == notFound)
         return;
 
-    m_activeSourceBuffers.remove(position);
+    m_activeSourceBuffers.removeAt(position);
     notifyActiveSourceBuffersChanged();
 }
 
@@ -146,7 +147,7 @@ bool MediaSourcePrivate::hasAudio() const
 {
     ASSERT(m_dispatcher->isCurrent() || Thread::mayBeGCThread());
 
-    return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), [] (SourceBufferPrivate* sourceBuffer) {
+    return std::ranges::any_of(m_activeSourceBuffers, [](auto* sourceBuffer) {
         return sourceBuffer->hasAudio();
     });
 }
@@ -155,7 +156,7 @@ bool MediaSourcePrivate::hasVideo() const
 {
     assertIsCurrent(m_dispatcher);
 
-    return std::any_of(m_activeSourceBuffers.begin(), m_activeSourceBuffers.end(), [] (SourceBufferPrivate* sourceBuffer) {
+    return std::ranges::any_of(m_activeSourceBuffers, [](auto* sourceBuffer) {
         return sourceBuffer->hasVideo();
     });
 }

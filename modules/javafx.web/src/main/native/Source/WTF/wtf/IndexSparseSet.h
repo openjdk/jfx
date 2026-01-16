@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -76,7 +77,7 @@ struct DefaultIndexSparseSetTraits<KeyValuePair<KeyType, ValueType>> {
 
 template<typename EntryType = unsigned, typename EntryTypeTraits = DefaultIndexSparseSetTraits<EntryType>, typename OverflowHandler = CrashOnOverflow>
 class IndexSparseSet {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(IndexSparseSet);
     typedef Vector<EntryType, 0, OverflowHandler> ValueList;
 public:
     explicit IndexSparseSet(unsigned size);
@@ -95,8 +96,8 @@ public:
     EntryType* get(unsigned);
 
     typedef typename ValueList::const_iterator const_iterator;
-    const_iterator begin() const;
-    const_iterator end() const;
+    const_iterator begin() const LIFETIME_BOUND;
+    const_iterator end() const LIFETIME_BOUND;
 
     void sort();
 
@@ -212,11 +213,7 @@ auto IndexSparseSet<EntryType, EntryTypeTraits, OverflowHandler>::get(unsigned v
 template<typename EntryType, typename EntryTypeTraits, typename OverflowHandler>
 void IndexSparseSet<EntryType, EntryTypeTraits, OverflowHandler>::sort()
 {
-    std::sort(
-        m_values.begin(), m_values.end(),
-        [&] (const EntryType& a, const EntryType& b) {
-            return EntryTypeTraits::key(a) < EntryTypeTraits::key(b);
-        });
+    std::ranges::sort(m_values, { }, EntryTypeTraits::key);
 
     // Bring m_map back in sync with m_values
     for (unsigned index = 0; index < m_values.size(); ++index) {

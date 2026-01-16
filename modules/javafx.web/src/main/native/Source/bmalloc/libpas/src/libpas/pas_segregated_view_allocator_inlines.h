@@ -319,7 +319,7 @@ pas_segregated_view_will_start_allocating(pas_segregated_view view,
         return view;
     }
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return NULL;
     }
 }
@@ -444,7 +444,7 @@ pas_segregated_view_did_stop_allocating(pas_segregated_view view,
         return;
     }
     default:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return;
     }
 }

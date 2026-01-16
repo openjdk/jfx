@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -208,7 +208,7 @@ CachedResource* MemoryCache::resourceForRequestImpl(const ResourceRequest& reque
     ASSERT(isMainThread());
     URL url = removeFragmentIdentifierIfNeeded(request.url());
 
-    auto key = std::make_pair(url, request.cachePartition());
+    auto key = std::make_pair(WTFMove(url), request.cachePartition());
     return resources.get(key).get();
 }
 
@@ -365,7 +365,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
         // destroyDecodedData() can alter the LRUList.
         auto lruList = copyToVector(*m_allResources[i]);
 
-        LOG(ResourceLoading, " lru list (size %lu) - flushing stage", lruList.size());
+        LOG(ResourceLoading, " lru list (size %zu) - flushing stage", lruList.size());
 
         // First flush all the decoded data in this queue.
         // Remove from the head, since this is the least frequently accessed of the objects.
@@ -392,7 +392,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
             }
         }
 
-        LOG(ResourceLoading, " lru list (size %lu) - eviction stage", lruList.size());
+        LOG(ResourceLoading, " lru list (size %zu) - eviction stage", lruList.size());
 
         // Now evict objects from this list.
         // Remove from the head, since this is the least frequently accessed of the objects.
@@ -583,7 +583,7 @@ void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const Has
     if (!resourceMap)
         return;
 
-    UncheckedKeyHashSet<String> originPartitions;
+    HashSet<String> originPartitions;
 
     for (auto& origin : origins)
         originPartitions.add(ResourceRequest::partitionName(origin->host()));
@@ -621,11 +621,11 @@ void MemoryCache::getOriginsWithCache(SecurityOriginSet& origins)
     }
 }
 
-UncheckedKeyHashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID sessionID) const
+HashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID sessionID) const
 {
     RELEASE_ASSERT(isMainThread());
 
-    UncheckedKeyHashSet<RefPtr<SecurityOrigin>> origins;
+    HashSet<RefPtr<SecurityOrigin>> origins;
 
     auto it = m_sessionResources.find(sessionID);
     if (it != m_sessionResources.end()) {

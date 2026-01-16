@@ -57,7 +57,7 @@ StyleMultiImage::~StyleMultiImage() = default;
 
 bool StyleMultiImage::equals(const StyleMultiImage& other) const
 {
-    return (!m_isPending && !other.m_isPending && m_selectedImage.get() == other.m_selectedImage.get());
+    return !m_isPending && !other.m_isPending && arePointingToEqualData(m_selectedImage, other.m_selectedImage);
 }
 
 void StyleMultiImage::load(CachedResourceLoader& loader, const ResourceLoaderOptions& options)

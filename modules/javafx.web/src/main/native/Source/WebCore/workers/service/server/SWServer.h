@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 #include "BackgroundFetchRecordIdentifier.h"
 #include "BackgroundFetchStore.h"
 #include "ClientOrigin.h"
-#include "ExceptionOr.h"
 #include "NotificationPayload.h"
 #include "PageIdentifier.h"
 #include "SWServerDelegate.h"
@@ -82,7 +81,10 @@ struct RetrieveRecordsOptions;
 struct ServiceWorkerClientQueryOptions;
 struct ServiceWorkerContextData;
 struct ServiceWorkerRegistrationData;
+struct ServiceWorkerRoute;
 struct WorkerFetchResult;
+
+template<typename> class ExceptionOr;
 
 class SWServer : public RefCountedAndCanMakeWeakPtr<SWServer> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(SWServer, WEBCORE_EXPORT);
@@ -162,6 +164,8 @@ public:
 
     WEBCORE_EXPORT static Ref<SWServer> create(SWServerDelegate&, UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, bool shouldRunServiceWorkersOnMainThreadForTesting, bool hasServiceWorkerEntitlement, std::optional<unsigned> overrideServiceWorkerRegistrationCountTestingValue, ServiceWorkerIsInspectable);
     WEBCORE_EXPORT ~SWServer();
+
+    WEBCORE_EXPORT void close();
 
     WEBCORE_EXPORT void clearAll(CompletionHandler<void()>&&);
     WEBCORE_EXPORT void clear(const SecurityOriginData&, CompletionHandler<void()>&&);
@@ -304,6 +308,13 @@ public:
 
     unsigned runningOrTerminatingCount() const { return m_runningOrTerminatingWorkers.size(); }
 
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT void reportNetworkUsageToAllWorkerClients(ServiceWorkerIdentifier, size_t bytesTransferredOverNetworkDelta);
+#endif
+
+    WEBCORE_EXPORT void addRoutes(ServiceWorkerRegistrationIdentifier, Vector<ServiceWorkerRoute>&&, CompletionHandler<void(Expected<void, ExceptionData>&&)>&&);
+    WEBCORE_EXPORT bool addHandlerIfHasControlledClients(CompletionHandler<void()>&&);
+
 private:
     SWServer(SWServerDelegate&, UniqueRef<SWOriginStore>&&, bool processTerminationDelayEnabled, String&& registrationDatabaseDirectory, PAL::SessionID, bool shouldRunServiceWorkersOnMainThreadForTesting, bool hasServiceWorkerEntitlement, std::optional<unsigned> overrideServiceWorkerRegistrationCountTestingValue, ServiceWorkerIsInspectable);
 
@@ -341,6 +352,9 @@ private:
 
     ResourceRequest createScriptRequest(const URL&, const ServiceWorkerJobData&, SWServerRegistration&);
 
+    enum class ShouldUpdateRegistrations : bool { No, Yes };
+    void unregisterServiceWorkerClientInternal(const ClientOrigin&, ScriptExecutionContextIdentifier, ShouldUpdateRegistrations);
+
     WeakPtr<SWServerDelegate> m_delegate;
 
     HashMap<SWServerConnectionIdentifier, Ref<Connection>> m_connections;
@@ -362,9 +376,10 @@ private:
     HashMap<ScriptExecutionContextIdentifier, UniqueRef<ServiceWorkerClientData>> m_clientsById;
     HashMap<ScriptExecutionContextIdentifier, Vector<ServiceWorkerClientPendingMessage>> m_clientsToBeCreatedById;
     HashMap<ScriptExecutionContextIdentifier, ServiceWorkerRegistrationIdentifier> m_clientToControllingRegistration;
+    Vector<CompletionHandler<void()>> m_controlledClientsBecomesEmptyHandlers;
     MemoryCompactRobinHoodHashMap<String, ScriptExecutionContextIdentifier> m_visibleClientIdToInternalClientIdMap;
 
-    UniqueRef<SWOriginStore> m_originStore;
+    const UniqueRef<SWOriginStore> m_originStore;
     RefPtr<SWRegistrationStore> m_registrationStore;
     HashMap<RegistrableDomain, Vector<ServiceWorkerContextData>> m_pendingContextDatas;
     HashMap<RegistrableDomain, HashMap<ServiceWorkerIdentifier, Vector<RunServiceWorkerCallback>>> m_serviceWorkerRunRequests;

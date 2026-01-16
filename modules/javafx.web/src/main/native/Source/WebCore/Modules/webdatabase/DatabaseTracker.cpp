@@ -34,6 +34,7 @@
 #include "DatabaseManager.h"
 #include "DatabaseManagerClient.h"
 #include "DatabaseThread.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "OriginLock.h"
 #include "SecurityOrigin.h"
@@ -523,15 +524,13 @@ Vector<Ref<Database>> DatabaseTracker::openDatabases()
     {
         Locker openDatabaseMapLock { m_openDatabaseMapGuard };
 
-        if (m_openDatabaseMap) {
-            for (auto& nameMap : m_openDatabaseMap->values()) {
-                for (auto& set : nameMap->values()) {
-                    for (auto& database : *set)
+        for (auto& nameMap : m_openDatabaseMap.values()) {
+            for (auto& set : nameMap.values()) {
+                for (auto& database : set)
                         openDatabases.append(*database);
                 }
             }
         }
-    }
     return openDatabases;
 }
 
@@ -539,65 +538,43 @@ void DatabaseTracker::addOpenDatabase(Database& database)
 {
     Locker openDatabaseMapLock { m_openDatabaseMapGuard };
 
-    if (!m_openDatabaseMap)
-        m_openDatabaseMap = makeUnique<DatabaseOriginMap>();
+    auto name = database.stringIdentifierIsolatedCopy();
+    m_openDatabaseMap.add(database.securityOrigin().isolatedCopy(), DatabaseNameMap { }).iterator->value
+        .add(name, DatabaseSet { }).iterator->value
+        .add(&database);
 
-    auto origin = database.securityOrigin();
-    auto* nameMap = m_openDatabaseMap->get(origin);
-    if (!nameMap) {
-        nameMap = new DatabaseNameMap;
-        m_openDatabaseMap->add(WTFMove(origin).isolatedCopy(), nameMap);
-    }
-
-    String name = database.stringIdentifierIsolatedCopy();
-    auto* databaseSet = nameMap->get(name);
-    if (!databaseSet) {
-        databaseSet = new DatabaseSet;
-        nameMap->set(WTFMove(name).isolatedCopy(), databaseSet);
-    }
-
-    databaseSet->add(&database);
-
-    LOG(StorageAPI, "Added open Database %s (%p)\n", database.stringIdentifierIsolatedCopy().utf8().data(), &database);
+    LOG(StorageAPI, "Added open Database %s (%p)\n", name.utf8().data(), &database);
 }
 
 void DatabaseTracker::removeOpenDatabase(Database& database)
 {
     Locker openDatabaseMapLock { m_openDatabaseMapGuard };
 
-    if (!m_openDatabaseMap) {
+    auto iterator = m_openDatabaseMap.find(database.securityOrigin());
+    if (iterator == m_openDatabaseMap.end()) {
         ASSERT_NOT_REACHED();
         return;
     }
 
-    DatabaseNameMap* nameMap = m_openDatabaseMap->get(database.securityOrigin());
-    if (!nameMap) {
+    auto name = database.stringIdentifierIsolatedCopy();
+    auto innerIterator = iterator->value.find(name);
+    if (innerIterator == iterator->value.end()) {
         ASSERT_NOT_REACHED();
         return;
     }
 
-    String name = database.stringIdentifierIsolatedCopy();
-    auto* databaseSet = nameMap->get(name);
-    if (!databaseSet) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
+    innerIterator->value.remove(&database);
 
-    databaseSet->remove(&database);
+    LOG(StorageAPI, "Removed open Database %s (%p)\n", name.utf8().data(), &database);
 
-    LOG(StorageAPI, "Removed open Database %s (%p)\n", database.stringIdentifierIsolatedCopy().utf8().data(), &database);
-
-    if (!databaseSet->isEmpty())
+    if (!innerIterator->value.isEmpty())
         return;
 
-    nameMap->remove(name);
-    delete databaseSet;
-
-    if (!nameMap->isEmpty())
+    iterator->value.remove(innerIterator);
+    if (!iterator->value.isEmpty())
         return;
 
-    m_openDatabaseMap->remove(database.securityOrigin());
-    delete nameMap;
+    m_openDatabaseMap.remove(iterator);
 }
 
 Ref<OriginLock> DatabaseTracker::originLockFor(const SecurityOriginData& origin)
@@ -1111,15 +1088,13 @@ bool DatabaseTracker::deleteDatabaseFile(const SecurityOriginData& origin, const
     // during the synchronous DatabaseThread call it triggers.
     {
         Locker openDatabaseMapLock { m_openDatabaseMapGuard };
-        if (m_openDatabaseMap) {
-            if (auto* nameMap = m_openDatabaseMap->get(origin)) {
-                if (auto* databaseSet = nameMap->get(name)) {
-                    for (auto& database : *databaseSet)
+        if (auto iterator = m_openDatabaseMap.find(origin); iterator != m_openDatabaseMap.end()) {
+            if (auto innerIterator = iterator->value.find(name); innerIterator != iterator->value.end()) {
+                for (auto& database : innerIterator->value)
                         deletedDatabases.append(*database);
                 }
             }
         }
-    }
 
     for (auto& database : deletedDatabases)
         database->markAsDeletedAndClose();
@@ -1169,15 +1144,14 @@ void DatabaseTracker::removeDeletedOpenedDatabases() WTF_IGNORES_THREAD_SAFETY_A
     // during the synchronous DatabaseThread call it triggers.
     {
         Locker openDatabaseMapLock { m_openDatabaseMapGuard };
-        if (m_openDatabaseMap) {
-            for (auto& openDatabase : *m_openDatabaseMap) {
+        for (auto& openDatabase : m_openDatabaseMap) {
                 auto& origin = openDatabase.key;
-                DatabaseNameMap* databaseNameMap = openDatabase.value;
                 Vector<String> deletedDatabaseNamesForThisOrigin;
 
-                // Loop through all opened databases in this origin.  Get the current database file path of each database and see if
+            // Loop through all opened databases in this origin.
+            // Get the current database file path of each database and see if
                 // it still matches the path stored in the opened database object.
-                for (auto& databases : *databaseNameMap) {
+            for (auto& databases : openDatabase.value) {
                     String databaseName = databases.key;
                     String databaseFileName;
                     if (auto statement = m_database.prepareStatement("SELECT path FROM Databases WHERE origin=? AND name=?;"_s)) {
@@ -1188,7 +1162,7 @@ void DatabaseTracker::removeDeletedOpenedDatabases() WTF_IGNORES_THREAD_SAFETY_A
                     }
 
                     bool foundDeletedDatabase = false;
-                    for (auto& db : *databases.value) {
+                for (auto& db : databases.value) {
                         // We are done if this database has already been marked as deleted.
                         if (db->deleted())
                             continue;
@@ -1207,7 +1181,6 @@ void DatabaseTracker::removeDeletedOpenedDatabases() WTF_IGNORES_THREAD_SAFETY_A
 
                 if (!deletedDatabaseNamesForThisOrigin.isEmpty())
                     deletedDatabaseNames.append({ origin, WTFMove(deletedDatabaseNamesForThisOrigin) });
-            }
         }
     }
 

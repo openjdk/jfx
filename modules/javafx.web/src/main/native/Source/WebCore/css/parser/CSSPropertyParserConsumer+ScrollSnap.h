@@ -31,17 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
-// MARK: <'scroll-snap-align'> consuming
-// https://drafts.csswg.org/css-scroll-snap-1/#scroll-snap-align
-RefPtr<CSSValue> consumeScrollSnapAlign(CSSParserTokenRange&, const CSSParserContext&);
-
 // MARK: <'scroll-snap-type'> consuming
 // https://drafts.csswg.org/css-scroll-snap-1/#scroll-snap-type
-RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeScrollSnapType(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

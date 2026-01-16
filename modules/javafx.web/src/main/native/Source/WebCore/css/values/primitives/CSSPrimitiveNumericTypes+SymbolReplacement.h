@@ -67,7 +67,7 @@ template<typename T> constexpr auto replaceSymbol(T value, const CSSCalcSymbolTa
 
 template<typename... Ts> using TypesMinusSymbol = VariantOrSingle<MinusSymbol<brigand::list<Ts...>>>;
 
-template<typename... Ts> constexpr auto replaceSymbol(const std::variant<Ts...>& component, const CSSCalcSymbolTable& symbolTable) -> TypesMinusSymbol<Ts...>
+template<typename... Ts> constexpr auto replaceSymbol(const Variant<Ts...>& component, const CSSCalcSymbolTable& symbolTable) -> TypesMinusSymbol<Ts...>
 {
     return WTF::switchOn(component, [&](auto part) -> TypesMinusSymbol<Ts...> { return replaceSymbol(part, symbolTable); });
 }

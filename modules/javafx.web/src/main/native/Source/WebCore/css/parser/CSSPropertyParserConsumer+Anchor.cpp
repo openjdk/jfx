@@ -29,9 +29,12 @@
 
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSValue.h"
+#include "CSSValueList.h"
 #include "CSSValuePair.h"
+#include "RenderStyleConstants.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
@@ -266,7 +269,38 @@ static bool typeIsInlineOrYAxis(KeywordType type)
     }
 }
 
-RefPtr<CSSValue> valueForPositionArea(CSSValueID dim1, CSSValueID dim2)
+static CSSValueID makeAmbiguous(CSSValueID dim)
+{
+    switch (dim) {
+    case CSSValueBlockStart: return CSSValueStart;
+    case CSSValueSpanBlockStart: return CSSValueSpanStart;
+    case CSSValueSelfBlockStart: return CSSValueSelfStart;
+    case CSSValueSpanSelfBlockStart: return CSSValueSpanSelfStart;
+
+    case CSSValueBlockEnd: return CSSValueEnd;
+    case CSSValueSpanBlockEnd: return CSSValueSpanEnd;
+    case CSSValueSelfBlockEnd: return CSSValueSelfEnd;
+    case CSSValueSpanSelfBlockEnd: return CSSValueSpanSelfEnd;
+
+    case CSSValueInlineStart: return CSSValueStart;
+    case CSSValueSpanInlineStart: return CSSValueSpanStart;
+    case CSSValueSelfInlineStart: return CSSValueSelfStart;
+    case CSSValueSpanSelfInlineStart: return CSSValueSpanSelfStart;
+
+    case CSSValueInlineEnd: return CSSValueEnd;
+    case CSSValueSpanInlineEnd: return CSSValueSpanEnd;
+    case CSSValueSelfInlineEnd: return CSSValueSelfEnd;
+    case CSSValueSpanSelfInlineEnd: return CSSValueSpanSelfEnd;
+
+    case CSSValueCenter: return CSSValueCenter;
+
+    default:
+        ASSERT_NOT_REACHED();
+        return dim;
+    }
+}
+
+RefPtr<CSSValue> valueForPositionArea(CSSValueID dim1, CSSValueID dim2, ValueType context)
 {
     auto maybeDim1Type = getKeywordType(dim1);
     if (!maybeDim1Type)
@@ -287,14 +321,32 @@ RefPtr<CSSValue> valueForPositionArea(CSSValueID dim1, CSSValueID dim2)
         return CSSPrimitiveValue::create(dim1);
 
     // Ensure the X/block axis keyword goes first in the pair.
-    if (typeIsInlineOrYAxis(dim1Type) || typeIsBlockOrXAxis(dim2Type))
+    if (typeIsInlineOrYAxis(dim1Type) || typeIsBlockOrXAxis(dim2Type)) {
         std::swap(dim1, dim2);
+        std::swap(dim1Type, dim2Type);
+    }
+
+    if (context == ValueType::Computed) {
+        // If one keyword is on the block axis and the other keyword is on the inline axis,
+        // strip the block-/inline- prefix on the keywords.
+        // e.g "block-start inline-end" is equivalent to "start end".
+        // See https://drafts.csswg.org/css-anchor-position-1/#position-area-computed
+        if ((dim1Type == KeywordType::LogicalBlock && (dim2Type == KeywordType::LogicalInline || dim2Type == KeywordType::Axisless))
+            || (dim1Type == KeywordType::SelfLogicalBlock && (dim2Type == KeywordType::SelfLogicalInline || dim2Type == KeywordType::Axisless))
+            || (dim1Type == KeywordType::Axisless && (dim2Type == KeywordType::LogicalInline || dim2Type == KeywordType::SelfLogicalInline))) {
+            dim1 = makeAmbiguous(dim1);
+            dim2 = makeAmbiguous(dim2);
+        }
+    }
 
     return CSSValuePair::create(CSSPrimitiveValue::create(dim1), CSSPrimitiveValue::create(dim2));
 }
 
-RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
+    // <'position-area'> = none | <position-area>
+    // https://drafts.csswg.org/css-anchor-position-1/#propdef-position-area
+
     auto maybeDim1 = consumeIdentRaw(range);
     if (!maybeDim1)
         return nullptr;
@@ -303,11 +355,14 @@ RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange& range, const CSSParser
         return CSSPrimitiveValue::create(CSSValueNone);
 
     auto maybeDim2 = consumeIdentRaw(range);
-    if (!maybeDim2)
+    if (!maybeDim2) {
+        if (!getKeywordType(dim1))
+            return nullptr;
         return CSSPrimitiveValue::create(dim1);
+    }
     auto dim2 = *maybeDim2;
 
-    return valueForPositionArea(dim1, dim2);
+    return valueForPositionArea(dim1, dim2, ValueType::Specified);
 }
 
 } // namespace CSSPropertyParserHelpers

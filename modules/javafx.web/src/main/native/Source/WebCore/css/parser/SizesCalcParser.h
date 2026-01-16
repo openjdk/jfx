@@ -39,7 +39,7 @@ class Document;
 struct SizesCalcValue {
     double value;
     bool isLength;
-    UChar operation;
+    char16_t operation;
 
     SizesCalcValue()
         : value(0)
@@ -74,7 +74,7 @@ private:
     Vector<SizesCalcValue> m_valueList;
     bool m_isValid;
     float m_result;
-    const Document& m_document;
+    Ref<const Document> m_document;
 };
 
 } // namespace WebCore

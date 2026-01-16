@@ -30,6 +30,7 @@
 
 #include "AudioTrack.h"
 #include "ContextDestructionObserverInlines.h"
+#include "EventTargetInterfaces.h"
 
 namespace WebCore {
 
@@ -46,8 +47,8 @@ void AudioTrackList::append(Ref<AudioTrack>&& track)
     size_t index = track->inbandTrackIndex();
     size_t insertionIndex;
     for (insertionIndex = 0; insertionIndex < m_inbandTracks.size(); ++insertionIndex) {
-        auto& otherTrack = downcast<AudioTrack>(*m_inbandTracks[insertionIndex]);
-        if (otherTrack.inbandTrackIndex() > index)
+        Ref otherTrack = downcast<AudioTrack>(*m_inbandTracks[insertionIndex]);
+        if (otherTrack->inbandTrackIndex() > index)
             break;
     }
     m_inbandTracks.insert(insertionIndex, track.ptr());
@@ -86,9 +87,9 @@ AudioTrack* AudioTrackList::firstEnabled() const
 AudioTrack* AudioTrackList::getTrackById(const AtomString& id) const
 {
     for (auto& inbandTrack : m_inbandTracks) {
-        auto& track = downcast<AudioTrack>(*inbandTrack);
-        if (track.id() == id)
-            return &track;
+        Ref track = downcast<AudioTrack>(*inbandTrack);
+        if (track->id() == id)
+            return track.ptr();
     }
     return nullptr;
 }
@@ -96,9 +97,9 @@ AudioTrack* AudioTrackList::getTrackById(const AtomString& id) const
 AudioTrack* AudioTrackList::getTrackById(TrackID id) const
 {
     for (auto& inbandTrack : m_inbandTracks) {
-        auto& track = downcast<AudioTrack>(*inbandTrack);
-        if (track.trackId() == id)
-            return &track;
+        Ref track = downcast<AudioTrack>(*inbandTrack);
+        if (track->trackId() == id)
+            return track.ptr();
     }
     return nullptr;
 }

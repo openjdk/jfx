@@ -23,6 +23,7 @@
 #include "config.h"
 #include "CachedSVGDocument.h"
 
+#include "DocumentInlines.h"
 #include "ParserContentPolicy.h"
 #include "Settings.h"
 #include "SharedBuffer.h"

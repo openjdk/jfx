@@ -23,6 +23,7 @@
 #pragma once
 
 #include "LightSource.h"
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include <wtf/TZoneMalloc.h>
 

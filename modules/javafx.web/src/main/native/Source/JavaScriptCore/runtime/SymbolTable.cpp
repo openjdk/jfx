@@ -111,7 +111,7 @@ DEFINE_VISIT_CHILDREN(SymbolTable);
 
 const SymbolTable::LocalToEntryVec& SymbolTable::localToEntry(const ConcurrentJSLocker&)
 {
-    if (UNLIKELY(!m_localToEntry)) {
+    if (!m_localToEntry) [[unlikely]] {
         unsigned size = 0;
         for (auto& entry : m_map) {
             VarOffset offset = entry.value.varOffset();

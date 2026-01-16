@@ -33,28 +33,35 @@
 #include "ScrollingConstraints.h"
 #include "ScrollingPlatformLayer.h"
 #include "ScrollingTreeNode.h"
+#include "ScrollingTreeViewportConstrainedNode.h"
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class ScrollingTreeStickyNode : public ScrollingTreeNode {
+class ScrollingTreeStickyNode : public ScrollingTreeViewportConstrainedNode {
     WTF_MAKE_TZONE_ALLOCATED(ScrollingTreeStickyNode);
 public:
     virtual ~ScrollingTreeStickyNode();
 
     FloatSize scrollDeltaSinceLastCommit() const;
-
-    virtual ScrollingPlatformLayer* layer() const = 0;
+    WEBCORE_EXPORT bool isCurrentlySticking() const;
 
 protected:
     ScrollingTreeStickyNode(ScrollingTree&, ScrollingNodeID);
 
     bool commitStateBeforeChildren(const ScrollingStateNode&) override;
-    FloatPoint computeLayerPosition() const;
+
+    FloatPoint computeClippingLayerPosition() const;
+    std::optional<FloatRect> findConstrainingRect() const;
+    std::pair<std::optional<FloatRect>, FloatPoint> computeConstrainingRectAndAnchorLayerPosition() const;
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
     virtual FloatPoint layerTopLeft() const = 0;
+    virtual bool hasViewportClippingLayer() const { return false; }
+    const ViewportConstraints& constraints() const final { return m_constraints; }
+
+    bool isCurrentlySticking(const FloatRect& constrainingRect) const;
 
     StickyPositionViewportConstraints m_constraints;
 };

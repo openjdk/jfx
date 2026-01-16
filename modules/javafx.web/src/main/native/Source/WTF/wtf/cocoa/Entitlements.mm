@@ -88,10 +88,10 @@ bool hasEntitlementValueInArray(audit_token_t token, ASCIILiteral entitlement, A
     RetainPtr<CFArrayRef> array = static_cast<CFArrayRef>(entitlementValue);
 
     for (CFIndex i = 0; i < CFArrayGetCount(array.get()); ++i) {
-        auto element = CFArrayGetValueAtIndex(array.get(), i);
-        if (CFGetTypeID(element) != CFStringGetTypeID())
+        RetainPtr element = dynamic_cf_cast<CFStringRef>(CFArrayGetValueAtIndex(array.get(), i));
+        if (!element)
             continue;
-        CFStringRef stringElement = static_cast<CFStringRef>(element);
+        String stringElement = element.get();
         if (value == stringElement)
             return true;
     }

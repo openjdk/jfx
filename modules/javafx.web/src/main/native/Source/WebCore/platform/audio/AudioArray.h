@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2024 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,17 +71,17 @@ public:
 #endif
     }
 
-    std::span<T> span() { return m_allocation.mutableSpan(); }
-    std::span<const T> span() const { return m_allocation.span(); }
-    T* data() { return span().data(); }
-    const T* data() const { return span().data(); }
+    std::span<T> span() LIFETIME_BOUND { return m_allocation.mutableSpan(); }
+    std::span<const T> span() const LIFETIME_BOUND { return m_allocation.span(); }
+    T* data() LIFETIME_BOUND { return span().data(); }
+    const T* data() const LIFETIME_BOUND { return span().data(); }
     size_t size() const { return span().size(); }
     bool isEmpty() const { return span().empty(); }
 
-    T& at(size_t i) { return m_allocation[i]; }
-    const T& at(size_t i) const { return m_allocation[i]; }
-    T& operator[](size_t i) { return at(i); }
-    const T& operator[](size_t i) const { return at(i); }
+    T& at(size_t i) LIFETIME_BOUND { return m_allocation[i]; }
+    const T& at(size_t i) const LIFETIME_BOUND { return m_allocation[i]; }
+    T& operator[](size_t i) LIFETIME_BOUND { return at(i); }
+    const T& operator[](size_t i) const LIFETIME_BOUND { return at(i); }
 
     void zero() { zeroSpan(span()); }
 

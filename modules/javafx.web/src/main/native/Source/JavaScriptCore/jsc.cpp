@@ -95,6 +95,7 @@
 #include <wtf/CPUTime.h>
 #include <wtf/CommaPrinter.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/MemoryPressureHandler.h>
@@ -198,7 +199,7 @@ namespace {
 
 #define EXIT_EXCEPTION 3
 
-NO_RETURN_WITH_VALUE static void jscExit(int status)
+[[noreturn]] static void jscExit(int status)
 {
     waitForAsynchronousDisassembly();
 
@@ -236,9 +237,9 @@ static void checkException(GlobalObject*, bool isLastFile, bool hasException, JS
 class Message : public ThreadSafeRefCounted<Message> {
 public:
 #if ENABLE(WEBASSEMBLY)
-    using Content = std::variant<ArrayBufferContents, RefPtr<SharedArrayBufferContents>>;
+    using Content = Variant<ArrayBufferContents, RefPtr<SharedArrayBufferContents>>;
 #else
-    using Content = std::variant<ArrayBufferContents>;
+    using Content = Variant<ArrayBufferContents>;
 #endif
     Message(Content&&, int32_t);
     ~Message();
@@ -351,7 +352,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionJSCOptions);
 static JSC_DECLARE_HOST_FUNCTION(functionReoptimizationRetryCount);
 static JSC_DECLARE_HOST_FUNCTION(functionTransferArrayBuffer);
 static JSC_DECLARE_HOST_FUNCTION(functionFailNextNewCodeBlock);
-static NO_RETURN_WITH_VALUE JSC_DECLARE_HOST_FUNCTION(functionQuit);
+[[noreturn]] static JSC_DECLARE_HOST_FUNCTION(functionQuit);
 static JSC_DECLARE_HOST_FUNCTION(functionFalse);
 static JSC_DECLARE_HOST_FUNCTION(functionUndefined1);
 static JSC_DECLARE_HOST_FUNCTION(functionUndefined2);
@@ -427,6 +428,8 @@ static JSC_DECLARE_HOST_FUNCTION(functionAsDoubleNumber);
 static JSC_DECLARE_HOST_FUNCTION(functionDropAllLocks);
 
 static JSC_DECLARE_HOST_FUNCTION(functionPerformanceNow);
+static JSC_DECLARE_HOST_FUNCTION(functionPerformanceMark);
+static JSC_DECLARE_HOST_FUNCTION(functionPerformanceMeasure);
 
 #if ENABLE(FUZZILLI)
 static JSC_DECLARE_HOST_FUNCTION(functionFuzzilli);
@@ -587,7 +590,7 @@ private:
     static constexpr unsigned DontEnum = 0 | PropertyAttribute::DontEnum;
 
     class PropertyFilter : public SideDataRepository::SideData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(PropertyFilter);
     public:
         void add(UniquedStringImpl* uid)
         {
@@ -818,10 +821,11 @@ private:
 
         addFunction(vm, "dropAllLocks"_s, functionDropAllLocks, 1);
 
-        // We'll probably have to make this a real class if we want to add performance.mark in the future.
         JSObject* performance = JSFinalObject::create(vm, plainObjectStructure);
         putDirect(vm, Identifier::fromString(vm, "performance"_s), performance, DontEnum);
         addFunctionToObject(vm, performance, "now"_s, functionPerformanceNow, 0);
+        addFunctionToObject(vm, performance, "mark"_s, functionPerformanceMark, 1);
+        addFunctionToObject(vm, performance, "measure"_s, functionPerformanceMeasure, 2);
 
 #if ENABLE(FUZZILLI)
         addFunction(vm, "fuzzilli"_s, functionFuzzilli, 2);
@@ -1003,7 +1007,7 @@ JSC_DEFINE_CUSTOM_SETTER(testCustomValueSetter, (JSGlobalObject* lexicalGlobalOb
     return GlobalObject::testCustomSetterImpl(lexicalGlobalObject, thisObject, encodedValue, "_testCustomValueSetter"_s);
 }
 
-static UChar pathSeparator()
+static char16_t pathSeparator()
 {
 #if OS(WINDOWS)
     return '\\';
@@ -1031,17 +1035,17 @@ static URL currentWorkingDirectory()
     // https://msdn.microsoft.com/en-us/library/dd374081.aspx
     // https://msdn.microsoft.com/en-us/library/windows/desktop/ff381407.aspx
     Vector<wchar_t> buffer(bufferLength);
-    DWORD lengthNotIncludingNull = ::GetCurrentDirectoryW(bufferLength, buffer.data());
-    String directoryString(buffer.data(), lengthNotIncludingNull);
+    DWORD lengthNotIncludingNull = ::GetCurrentDirectoryW(bufferLength, buffer.mutableSpan().data());
+    String directoryString(buffer.span().data(), lengthNotIncludingNull);
     // We don't support network path like \\host\share\<path name>.
     if (directoryString.startsWith("\\\\"_s))
         return { };
 
 #else
     Vector<char> buffer(PATH_MAX);
-    if (!getcwd(buffer.data(), PATH_MAX))
+    if (!getcwd(buffer.mutableSpan().data(), PATH_MAX))
         return { };
-    String directoryString = String::fromUTF8(buffer.data());
+    String directoryString = String::fromUTF8(buffer.span().data());
 #endif
     if (directoryString.isEmpty())
         return { };
@@ -1239,8 +1243,9 @@ static bool fillBufferWithContentsOfFile(FILE* file, Vector& buffer)
         return false;
     if (fseek(file, 0, SEEK_SET) == -1)
         return false;
-    buffer.resize(bufferCapacity + initialSize);
-    size_t readSize = fread(buffer.data() + initialSize, 1, buffer.size(), file);
+    buffer.grow(bufferCapacity + initialSize);
+    auto span = buffer.mutableSpan().subspan(initialSize);
+    size_t readSize = fread(span.data(), 1, span.size(), file);
     return readSize == buffer.size() - initialSize;
 }
 
@@ -1333,15 +1338,11 @@ public:
         });
 
         String filename = cachePath();
-        auto fd = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::ReadWrite, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
-        if (!FileSystem::isHandleValid(fd))
+        auto handle = FileSystem::openFile(filename, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::All, { FileSystem::FileLockMode::Exclusive, FileSystem::FileLockMode::Nonblocking });
+        if (!handle)
             return;
 
-        auto closeFD = makeScopeExit([&] {
-            FileSystem::unlockAndCloseFile(fd);
-        });
-
-        auto fileSize = FileSystem::fileSize(fd);
+        auto fileSize = handle.size();
         if (!fileSize)
             return;
 
@@ -1351,13 +1352,13 @@ public:
             return;
         }
 
-        if (!FileSystem::truncateFile(fd, m_cachedBytecode->sizeForUpdate()))
+        if (!handle.truncate(m_cachedBytecode->sizeForUpdate()))
             return;
 
         m_cachedBytecode->commitUpdates([&] (off_t offset, std::span<const uint8_t> data) {
-            long long result = FileSystem::seekFile(fd, offset, FileSystem::FileSeekOrigin::Beginning);
-            ASSERT_UNUSED(result, result != -1);
-            size_t bytesWritten = static_cast<size_t>(FileSystem::writeToFile(fd, data));
+            auto result = handle.seek(offset, FileSystem::FileSeekOrigin::Beginning);
+            ASSERT_UNUSED(result, !!result);
+            auto bytesWritten = handle.write(data);
             ASSERT_UNUSED(bytesWritten, bytesWritten == data.size());
         });
     }
@@ -1381,21 +1382,15 @@ private:
         if (filename.isNull())
             return;
 
-        auto fd = FileSystem::openAndLockFile(filename, FileSystem::FileOpenMode::Read, {FileSystem::FileLockMode::Shared, FileSystem::FileLockMode::Nonblocking});
-        if (!FileSystem::isHandleValid(fd))
+        auto handle = FileSystem::openFile(filename, FileSystem::FileOpenMode::Read, FileSystem::FileAccessPermission::All, { FileSystem::FileLockMode::Shared, FileSystem::FileLockMode::Nonblocking });
+        if (!handle)
             return;
 
-        auto closeFD = makeScopeExit([&] {
-            FileSystem::unlockAndCloseFile(fd);
-        });
-
-        bool success;
-        FileSystem::MappedFileData mappedFileData(fd, FileSystem::MappedFileMode::Private, success);
-
-        if (!success)
+        auto mappedFileData = handle.map(FileSystem::MappedFileMode::Private);
+        if (!mappedFileData)
             return;
 
-        m_cachedBytecode = CachedBytecode::create(WTFMove(mappedFileData));
+        m_cachedBytecode = CachedBytecode::create(WTFMove(*mappedFileData));
     }
 
     ShellSourceProvider(const String& source, const SourceOrigin& sourceOrigin, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)
@@ -1439,12 +1434,12 @@ static bool fetchModuleFromLocalFileSystem(const URL& fileURL, Vector& buffer)
     fileName = makeStringByReplacingAll(fileName, '/', '\\');
     auto pathName = makeString("\\\\?\\"_s, fileName).wideCharacters();
     struct _stat status { };
-    if (_wstat(pathName.data(), &status))
+    if (_wstat(pathName.span().data(), &status))
         return false;
     if ((status.st_mode & S_IFMT) != S_IFREG)
         return false;
 
-    FILE* f = _wfopen(pathName.data(), L"rb");
+    FILE* f = _wfopen(pathName.span().data(), L"rb");
 #else
     auto pathName = fileName.utf8();
     struct stat status { };
@@ -1530,6 +1525,9 @@ JSObject* GlobalObject::moduleLoaderCreateImportMetaProperties(JSGlobalObject* g
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     metaProperties->putDirect(vm, Identifier::fromString(vm, "filename"_s), key);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    metaProperties->putDirect(vm, JSC::Identifier::fromString(vm, "url"_s), key);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     return metaProperties;
@@ -1687,7 +1685,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDisassembleBase64, (JSGlobalObject* globalObjec
     if (!decodedVector)
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in base64 string argument."_s)));
 
-    auto code = CodePtr<DisassemblyPtrTag>::fromUntaggedPtr(decodedVector->data());
+    auto code = CodePtr<DisassemblyPtrTag>::fromUntaggedPtr(decodedVector->mutableSpan().data());
     StringPrintStream out;
     // prefix with "\n" so the first line has the same whitespace as the rest when displayed from jsc.
     out.print("\n");
@@ -2073,7 +2071,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     String fileName = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    std::variant<String, std::span<const uint8_t>> data;
+    Variant<String, std::span<const uint8_t>> data;
     JSValue dataValue = callFrame->argument(1);
 
     if (dataValue.isString()) {
@@ -2097,19 +2095,19 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     }
 
     auto handle = FileSystem::openFile(fileName, FileSystem::FileOpenMode::Truncate);
-    if (!FileSystem::isHandleValid(handle))
+    if (!handle)
         return throwVMError(globalObject, scope, "Could not open file."_s);
 
-    int size = std::visit(WTF::makeVisitor([&](const String& string) {
+    auto size = WTF::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
-        return FileSystem::writeToFile(handle, byteCast<uint8_t>(utf8.span()));
+        return handle.write(byteCast<uint8_t>(utf8.span()));
     }, [&] (const std::span<const uint8_t>& data) {
-        return FileSystem::writeToFile(handle, data);
+        return handle.write(data);
     }), data);
 
-    FileSystem::closeFile(handle);
-
-    return JSValue::encode(jsNumber(size));
+    if (!size)
+        return JSValue::encode(jsNumber(-1));
+    return JSValue::encode(jsNumber(*size));
 }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
@@ -2278,8 +2276,7 @@ JSC_DEFINE_HOST_FUNCTION(functionReadline, (JSGlobalObject* globalObject, CallFr
             break;
         line.append(c);
     }
-    line.append('\0');
-    return JSValue::encode(jsString(globalObject->vm(), String::fromLatin1(line.data())));
+    return JSValue::encode(jsString(globalObject->vm(), String(line.span())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionPreciseTime, (JSGlobalObject*, CallFrame*))
@@ -2640,7 +2637,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDollarAgentReceiveBroadcast, (JSGlobalObject* g
     MarkedArgumentBuffer args;
     args.append(result);
     args.append(jsNumber(message->index()));
-    if (UNLIKELY(args.hasOverflowed()))
+    if (args.hasOverflowed()) [[unlikely]]
         return JSValue::encode(throwOutOfMemoryError(globalObject, scope));
     RELEASE_AND_RETURN(scope, JSValue::encode(call(globalObject, callback, callData, jsNull(), args)));
 }
@@ -2968,7 +2965,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetTimeout, (JSGlobalObject* globalObject, Call
     // it will cause setTimeout starvation problem (see stress test settimeout-starvation.js).
     JSValue timeout = callFrame->argument(1);
     Seconds delay = timeout.isNumber() ? Seconds::fromMilliseconds(timeout.asNumber()) : Seconds(0);
-    RunLoop::protectedCurrent()->dispatchAfter(delay, WTFMove(dispatch));
+    RunLoop::currentSingleton().dispatchAfter(delay, WTFMove(dispatch));
 
     return JSValue::encode(jsUndefined());
 }
@@ -3184,9 +3181,7 @@ JSC_DEFINE_HOST_FUNCTION(functionGenerateHeapSnapshot, (JSGlobalObject* globalOb
         return encodedJSUndefined();
     }
 
-    EncodedJSValue result = JSValue::encode(JSONParse(globalObject, jsonString));
-    scope.releaseAssertNoException();
-    return result;
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSONParse(globalObject, jsonString)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionGenerateHeapSnapshotForGCDebugging, (JSGlobalObject* globalObject, CallFrame*))
@@ -3258,7 +3253,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSamplingProfilerStackTraces, (JSGlobalObject* g
 JSC_DEFINE_HOST_FUNCTION(functionMaxArguments, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
-    unsigned result = std::min<unsigned>(JSC::maxArguments, static_cast<unsigned>((std::bit_cast<uint8_t*>(Thread::current().stack().origin()) - std::bit_cast<uint8_t*>(vm.softStackLimit())) / sizeof(EncodedJSValue)));
+    unsigned result = std::min<unsigned>(JSC::maxArguments, static_cast<unsigned>((std::bit_cast<uint8_t*>(Thread::currentSingleton().stack().origin()) - std::bit_cast<uint8_t*>(vm.softStackLimit())) / sizeof(EncodedJSValue)));
     return JSValue::encode(jsNumber(result));
 }
 
@@ -3365,6 +3360,37 @@ JSC_DEFINE_HOST_FUNCTION(functionPerformanceNow, (JSGlobalObject*, CallFrame*))
 {
     static const MonotonicTime timeOrigin = MonotonicTime::now();
     return JSValue::encode(jsNumber((MonotonicTime::now() - timeOrigin).reduceTimeResolution(Seconds::highTimePrecision()).milliseconds()));
+}
+
+static String asSignpostString(JSGlobalObject* globalObject, JSValue v)
+{
+    if (v.isUndefined())
+        return emptyString();
+    return v.toWTFString(globalObject);
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionPerformanceMark, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto message = asSignpostString(globalObject, callFrame->argument(0));
+    RETURN_IF_EXCEPTION(scope, EncodedJSValue());
+
+    globalObject->startSignpost(WTFMove(message));
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionPerformanceMeasure, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto message = asSignpostString(globalObject, callFrame->argument(0));
+    RETURN_IF_EXCEPTION(scope, EncodedJSValue());
+
+    globalObject->stopSignpost(WTFMove(message));
+    return JSValue::encode(jsUndefined());
 }
 
 #if ENABLE(FUZZILLI)
@@ -3955,7 +3981,7 @@ static void runInteractive(GlobalObject* globalObject)
     printf("\n");
 }
 
-static NO_RETURN void printUsageStatement(bool help = false)
+[[noreturn]] static void printUsageStatement(bool help = false)
 {
     fprintf(stderr, "Usage: jsc [options] [files] [-- arguments]\n");
     fprintf(stderr, "  -d         Dumps bytecode\n");
@@ -4014,7 +4040,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 static NEVER_INLINE void crashPGMUAF()
 {
     WTF::forceEnablePGM(1);
-    size_t allocSize = getpagesize() * 10000;
+    size_t allocSize = WTF::pageSize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     fastFree(result);
     *result = 'a';
@@ -4023,7 +4049,7 @@ static NEVER_INLINE void crashPGMUAF()
 static NEVER_INLINE void crashPGMUpperGuardPage()
 {
     WTF::forceEnablePGM(1);
-    size_t allocSize = getpagesize() * 10000;
+    size_t allocSize = WTF::pageSize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result + allocSize;
     *result = 'a';
@@ -4032,7 +4058,7 @@ static NEVER_INLINE void crashPGMUpperGuardPage()
 static NEVER_INLINE void crashPGMLowerGuardPage()
 {
     WTF::forceEnablePGM(1);
-    size_t allocSize = getpagesize() * 10000;
+    size_t allocSize = WTF::pageSize() * 10000;
     char* result = static_cast<char*>(fastMalloc(allocSize));
     result = result - 1;
     *result = 'a';
@@ -4474,7 +4500,7 @@ int jscmain(int argc, char** argv)
     JSC::JITOperationList::populatePointersInEmbedder(&startOfJITOperationsInShell, &endOfJITOperationsInShell);
 #endif
 #if ENABLE(JIT_OPERATION_DISASSEMBLY)
-    if (UNLIKELY(Options::needDisassemblySupport()))
+    if (Options::needDisassemblySupport()) [[unlikely]]
         JSC::JITOperationList::populateDisassemblyLabelsInEmbedder(&startOfJITOperationsInShell, &endOfJITOperationsInShell);
 #endif
 

@@ -28,7 +28,7 @@
 namespace WebCore {
 
 class FEGaussianBlur final : public FilterEffect {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEGaussianBlur);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEGaussianBlur);
 public:
     WEBCORE_EXPORT static Ref<FEGaussianBlur> create(float x, float y, EdgeModeType, DestinationColorSpace = DestinationColorSpace::SRGB());
@@ -57,7 +57,7 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
+    bool resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const override;
 
     OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
 

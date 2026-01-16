@@ -26,10 +26,11 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "XPathValue.h"
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class XPathResult : public RefCounted<XPathResult> {
 public:

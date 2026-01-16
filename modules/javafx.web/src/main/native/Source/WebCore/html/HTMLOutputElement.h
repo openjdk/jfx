@@ -65,7 +65,7 @@ private:
     void reset() final;
 
     String m_defaultValueOverride;
-    std::unique_ptr<DOMTokenList> m_forTokens;
+    const std::unique_ptr<DOMTokenList> m_forTokens;
 };
 
 } // namespace WebCore

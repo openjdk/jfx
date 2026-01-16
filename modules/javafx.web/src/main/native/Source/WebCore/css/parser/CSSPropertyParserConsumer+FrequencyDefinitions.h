@@ -31,7 +31,7 @@ namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
 struct FrequencyValidator {
-    static constexpr std::optional<CSS::FrequencyUnit> validate(CSSUnitType unitType, CSSPropertyParserOptions)
+    static constexpr std::optional<CSS::FrequencyUnit> validate(CSSUnitType unitType, CSS::PropertyParserState&, CSSPropertyParserOptions)
     {
         return CSS::UnitTraits<CSS::FrequencyUnit>::validate(unitType);
     }

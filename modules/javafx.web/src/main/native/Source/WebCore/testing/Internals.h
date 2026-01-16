@@ -70,7 +70,6 @@ namespace WebCore {
 class AccessibilityObject;
 class AbstractRange;
 class AnimationTimeline;
-class ArtworkImageLoader;
 class AudioContext;
 class AudioTrack;
 class BaseAudioContext;
@@ -104,12 +103,14 @@ class HTMLSelectElement;
 class HTMLVideoElement;
 class ImageData;
 class InspectorStubFrontend;
-class InternalsMapLike;
+class EventTargetForTesting;
 class InternalSettings;
+class InternalsMapLike;
 class InternalsSetLike;
 class LocalFrame;
 class Location;
 class MallocStatistics;
+class MediaSessionManagerInterface;
 class MediaStream;
 class MediaStreamTrack;
 class MemoryInfo;
@@ -139,7 +140,6 @@ class TextIterator;
 class TextTrack;
 class TimeRanges;
 class TypeConversions;
-class UnsuspendableActiveDOMObject;
 class VoidCallback;
 class WebAnimation;
 class WebGLRenderingContext;
@@ -175,7 +175,7 @@ class MockMediaSessionCoordinator;
 #endif
 #endif
 
-#if ENABLE(ARKIT_INLINE_PREVIEW_MAC)
+#if ENABLE(ARKIT_INLINE_PREVIEW_MAC) || ENABLE(MODEL_ELEMENT)
 class HTMLModelElement;
 #endif
 
@@ -184,6 +184,8 @@ class PlatformSpeechSynthesizerMock;
 #endif
 
 #if ENABLE(WEB_CODECS)
+class ArtworkImageLoader;
+class WebCodecsVideoFrame;
 class WebCodecsVideoDecoder;
 #endif
 
@@ -241,7 +243,7 @@ public:
     void setStrictRawResourceValidationPolicyDisabled(bool);
     std::optional<ResourceLoadPriority> getResourcePriority(const String& url);
 
-    using FetchObject = std::variant<RefPtr<FetchRequest>, RefPtr<FetchResponse>>;
+    using FetchObject = Variant<RefPtr<FetchRequest>, RefPtr<FetchResponse>>;
     bool isFetchObjectContextStopped(const FetchObject&);
 
     void clearMemoryCache();
@@ -267,7 +269,7 @@ public:
     unsigned remoteImagesCountForTesting() const;
     void setAsyncDecodingEnabledForTesting(HTMLImageElement&, bool enabled);
     void setForceUpdateImageDataEnabledForTesting(HTMLImageElement&, bool enabled);
-    void setHeadroomForTesting(HTMLImageElement&, float headroom);
+    void setHasHDRContentForTesting(HTMLImageElement&);
 
 #if ENABLE(WEB_CODECS)
     bool hasPendingActivity(const WebCodecsVideoDecoder&) const;
@@ -363,6 +365,7 @@ public:
     ExceptionOr<String> markerDescriptionForNode(Node&, const String& markerType, unsigned index);
     ExceptionOr<String> dumpMarkerRects(const String& markerType);
     ExceptionOr<void> setMarkedTextMatchesAreHighlighted(bool);
+    ExceptionOr<RefPtr<ImageData>> snapshotNode(Node&);
 
     void invalidateFontCache();
 
@@ -547,6 +550,9 @@ public:
 
     ExceptionOr<String> horizontalScrollbarState(Node*) const;
     ExceptionOr<String> verticalScrollbarState(Node*) const;
+
+    ExceptionOr<uint64_t> horizontalScrollbarLayerID(Node*) const;
+    ExceptionOr<uint64_t> verticalScrollbarLayerID(Node*) const;
 
     ExceptionOr<String> scrollbarsControllerTypeForNode(Node*) const;
 
@@ -795,6 +801,7 @@ public:
     Vector<String> mediaResponseContentRanges(HTMLMediaElement&);
     void simulateAudioInterruption(HTMLMediaElement&);
     ExceptionOr<bool> mediaElementHasCharacteristic(HTMLMediaElement&, const String&);
+    void enterViewerMode(HTMLVideoElement&);
     void beginSimulatedHDCPError(HTMLMediaElement&);
     void endSimulatedHDCPError(HTMLMediaElement&);
     ExceptionOr<bool> mediaPlayerRenderingCanBeAccelerated(HTMLMediaElement&);
@@ -810,7 +817,12 @@ public:
     ExceptionOr<void> setOverridePreferredDynamicRangeMode(HTMLMediaElement&, const String&);
 
     void enableGStreamerHolePunching(HTMLVideoElement&);
+
+    double effectiveDynamicRangeLimitValue(const HTMLMediaElement&);
 #endif
+    ExceptionOr<double> getContextEffectiveDynamicRangeLimitValue(const HTMLCanvasElement&);
+
+    ExceptionOr<void> setPageShouldSuppressHDR(bool);
 
     ExceptionOr<void> setIsPlayingToBluetoothOverride(std::optional<bool>);
 
@@ -860,6 +872,7 @@ public:
     bool isPlayerVisibleInViewport(const HTMLMediaElement&) const;
     bool isPlayerMuted(const HTMLMediaElement&) const;
     bool isPlayerPaused(const HTMLMediaElement&) const;
+    void forceStereoDecoding(HTMLMediaElement&);
     void beginAudioSessionInterruption();
     void endAudioSessionInterruption();
     void clearAudioSessionInterruptionFlag();
@@ -997,10 +1010,6 @@ public:
     void setPageIsInWindow(bool);
     bool isPageActive() const;
 
-#if ENABLE(WEB_RTC)
-    void setH264HardwareEncoderAllowed(bool allowed);
-#endif
-
 #if ENABLE(MEDIA_STREAM)
     void stopObservingRealtimeMediaSource();
 
@@ -1017,6 +1026,7 @@ public:
     void setMediaStreamTrackIdentifier(MediaStreamTrack&, String&& id);
     void setMediaStreamSourceInterrupted(MediaStreamTrack&, bool);
     const String& mediaStreamTrackPersistentId(const MediaStreamTrack&);
+    size_t audioCaptureSourceCount() const;
     bool isMediaStreamSourceInterrupted(MediaStreamTrack&) const;
     bool isMediaStreamSourceEnded(MediaStreamTrack&) const;
     bool isMockRealtimeMediaSourceCenterEnabled();
@@ -1398,6 +1408,11 @@ public:
     bool hasSandboxIOKitOpenAccessToClass(const String& process, const String& ioKitClass);
     bool hasSandboxUnixSyscallAccess(const String& process, unsigned syscall) const;
 
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+    bool emitWebCoreLogs(unsigned logCount, bool useMainThread) const;
+    bool emitLogs(const String& logString, unsigned logCount, bool useMainThread) const;
+#endif
+
     String highlightPseudoElementColor(const AtomString& highlightName, Element&);
 
     String windowLocationHost(DOMWindow&);
@@ -1444,24 +1459,18 @@ public:
     enum class ContentSizeCategory { L, XXXL };
     void setContentSizeCategory(ContentSizeCategory);
 
-#if ENABLE(ATTACHMENT_ELEMENT)
-    struct AttachmentThumbnailInfo {
-        unsigned width { 0 };
-        unsigned height { 0 };
-    };
-
-    ExceptionOr<AttachmentThumbnailInfo> attachmentThumbnailInfo(const HTMLAttachmentElement&);
-#if ENABLE(SERVICE_CONTROLS)
+#if ENABLE(ATTACHMENT_ELEMENT) && ENABLE(SERVICE_CONTROLS)
     bool hasImageControls(const HTMLImageElement&) const;
-#endif
-#endif // ENABLE(ATTACHMENT_ELEMENT)
+#endif // ENABLE(ATTACHMENT_ELEMENT) && ENABLE(SERVICE_CONTROLS)
 
 #if ENABLE(MEDIA_SESSION)
     ExceptionOr<double> currentMediaSessionPosition(const MediaSession&);
     ExceptionOr<void> sendMediaSessionAction(MediaSession&, const MediaSessionActionDetails&);
 
-        using ArtworkImagePromise = DOMPromiseDeferred<IDLInterface<ImageData>>;
+#if ENABLE(WEB_CODECS)
+    using ArtworkImagePromise = DOMPromiseDeferred<IDLInterface<WebCodecsVideoFrame>>;
     void loadArtworkImage(String&&, ArtworkImagePromise&&);
+#endif
     ExceptionOr<Vector<String>> platformSupportedCommands() const;
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -1542,6 +1551,7 @@ public:
 
 #if ENABLE(VIDEO)
     bool isEffectivelyMuted(const HTMLMediaElement&);
+    Ref<EventTarget> addInternalEventTarget(HTMLMediaElement&);
 #endif
 
     using RenderingMode = WebCore::RenderingMode;
@@ -1552,11 +1562,27 @@ public:
     void getImageBufferResourceLimits(ImageBufferResourceLimitsPromise&&);
 
     void setResourceCachingDisabledByWebInspector(bool);
+    ExceptionOr<void> lowerAllFrameMemoryMonitorLimits();
 
 #if ENABLE(CONTENT_EXTENSIONS)
     void setResourceMonitorNetworkUsageThreshold(size_t threshold, double randomness = ResourceMonitorChecker::defaultNetworkUsageThresholdRandomness);
     bool shouldSkipResourceMonitorThrottling() const;
     void setShouldSkipResourceMonitorThrottling(bool);
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+    struct FrameDamage {
+        unsigned sequenceId { 0 };
+        RefPtr<DOMRectReadOnly> bounds;
+        Vector<Ref<DOMRectReadOnly>> rects;
+    };
+    ExceptionOr<Vector<FrameDamage>> getFrameDamageHistory() const;
+#endif // ENABLE(DAMAGE_TRACKING)
+
+#if ENABLE(MODEL_ELEMENT)
+    void disableModelLoadDelaysForTesting();
+    String modelElementState(HTMLModelElement&);
+    bool isModelElementIntersectingViewport(HTMLModelElement&);
 #endif
 
 private:
@@ -1594,6 +1620,8 @@ private:
 
     bool hasMarkerFor(DocumentMarkerType, int from, int length);
 
+    RefPtr<MediaSessionManagerInterface> sessionManager() const;
+
 #if ENABLE(MEDIA_STREAM)
     // RealtimeMediaSourceObserver API
     void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) final;
@@ -1606,7 +1634,7 @@ private:
     RefPtr<RealtimeMediaSource> m_trackSource;
     int m_trackVideoRotation { 0 };
 #endif
-#if ENABLE(MEDIA_SESSION)
+#if ENABLE(MEDIA_SESSION) && ENABLE(WEB_CODECS)
     std::unique_ptr<ArtworkImageLoader> m_artworkLoader;
     std::unique_ptr<ArtworkImagePromise> m_artworkImagePromise;
 #endif

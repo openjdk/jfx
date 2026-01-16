@@ -159,7 +159,7 @@ private:
 #if PLATFORM(COCOA)
     uint64_t m_currentAudioSampleCount { 0 };
     std::atomic<uint64_t> m_isRenderingIncomingAudioCounter { 0 };
-    std::unique_ptr<IncomingAudioMediaStreamTrackRendererUnit> m_incomingAudioMediaStreamTrackRendererUnit;
+    const std::unique_ptr<IncomingAudioMediaStreamTrackRendererUnit> m_incomingAudioMediaStreamTrackRendererUnit;
 #endif
 };
 

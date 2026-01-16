@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -44,6 +44,7 @@ public:
     void layout() override;
 
     FloatRect objectBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
+    bool isObjectBoundingBoxValid() const { return !m_viewport.isEmpty(); }
     FloatRect strokeBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override { return FloatRect(FloatPoint(), m_viewport.size()); }
 
@@ -61,7 +62,7 @@ private:
     const AffineTransform& localToParentTransform() const override;
     AffineTransform localTransform() const override { return m_localTransform; }
 
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 
     AffineTransform m_localTransform;
     mutable AffineTransform m_localToParentTransform;

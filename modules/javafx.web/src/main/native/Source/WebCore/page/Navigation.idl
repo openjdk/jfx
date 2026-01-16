@@ -1,6 +1,7 @@
 [
   EnabledBySetting=NavigationAPIEnabled,
   GenerateIsReachable=ReachableFromDOMWindow,
+  JSCustomMarkFunction,
   Exposed=Window
 ] interface Navigation : EventTarget {
   sequence<NavigationHistoryEntry> entries();

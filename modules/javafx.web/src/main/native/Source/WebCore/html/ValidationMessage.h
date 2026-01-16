@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -65,7 +66,7 @@ private:
     explicit ValidationMessage(HTMLElement&);
 
     ValidationMessageClient* validationMessageClient() const;
-    void setMessage(const String&);
+    void setMessage(String&&);
     void setMessageDOMAndStartTimer();
     void buildBubbleTree();
     void deleteBubbleTree();

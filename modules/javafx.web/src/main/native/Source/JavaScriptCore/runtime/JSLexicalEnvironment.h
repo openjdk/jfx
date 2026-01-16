@@ -116,6 +116,8 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     inline static Structure* createStructure(VM&, JSGlobalObject*);
 
 protected:
@@ -123,7 +125,6 @@ protected:
 
     DECLARE_DEFAULT_FINISH_CREATION;
 
-    DECLARE_VISIT_CHILDREN;
     static void analyzeHeap(JSCell*, HeapAnalyzer&);
 };
 

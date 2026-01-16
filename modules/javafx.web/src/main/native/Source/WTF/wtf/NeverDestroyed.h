@@ -57,6 +57,13 @@ struct MainThreadAccessTraits {
     }
 };
 
+struct MainRunLoopAccessTraits {
+    static void assertAccess()
+    {
+        ASSERT(isMainRunLoop());
+    }
+};
+
 template<typename T, typename AccessTraits> class NeverDestroyed {
     WTF_MAKE_NONCOPYABLE(NeverDestroyed);
     WTF_FORBID_HEAP_ALLOCATION;
@@ -181,14 +188,18 @@ private:
 template<typename T> NeverDestroyed(T) -> NeverDestroyed<T>;
 
 template<typename T> using MainThreadNeverDestroyed = NeverDestroyed<T, MainThreadAccessTraits>;
-
 template<typename T> using MainThreadLazyNeverDestroyed = LazyNeverDestroyed<T, MainThreadAccessTraits>;
+template<typename T> using MainRunLoopNeverDestroyed = NeverDestroyed<T, MainRunLoopAccessTraits>;
+template<typename T> using MainRunLoopLazyNeverDestroyed = LazyNeverDestroyed<T, MainRunLoopAccessTraits>;
 
 } // namespace WTF;
 
 using WTF::LazyNeverDestroyed;
 using WTF::NeverDestroyed;
+using WTF::MainRunLoopNeverDestroyed;
+using WTF::MainRunLoopLazyNeverDestroyed;
 using WTF::MainThreadNeverDestroyed;
 using WTF::MainThreadLazyNeverDestroyed;
 using WTF::AnyThreadsAccessTraits;
+using WTF::MainRunLoopAccessTraits;
 using WTF::MainThreadAccessTraits;

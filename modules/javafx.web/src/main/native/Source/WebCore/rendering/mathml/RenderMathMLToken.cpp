@@ -504,7 +504,7 @@ static char32_t mathVariant(char32_t codePoint, MathMLElement::MathVariant mathv
 
 void RenderMathMLToken::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     if (m_mathVariantGlyphDirty)
         updateMathVariantGlyph();
@@ -514,7 +514,7 @@ void RenderMathMLToken::computePreferredLogicalWidths()
         if (mathVariantGlyph.font) {
             m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph);
             adjustPreferredLogicalWidthsForBorderAndPadding();
-            setPreferredLogicalWidthsDirty(false);
+            clearNeedsPreferredWidthsUpdate();
             return;
         }
     }
@@ -599,7 +599,7 @@ void RenderMathMLToken::layoutBlock(RelayoutChildren relayoutChildren, LayoutUni
 
     adjustLayoutForBorderAndPadding();
 
-    layoutPositionedObjects(relayoutChildren);
+    layoutOutOfFlowBoxes(relayoutChildren);
 
     updateScrollInfoAfterLayout();
 

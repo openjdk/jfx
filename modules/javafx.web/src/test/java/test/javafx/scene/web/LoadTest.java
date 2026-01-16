@@ -187,6 +187,37 @@ public class LoadTest extends TestBase {
                 "<body><script>invokeAlert('foo');</script></body>\n" +
                 "</html>";
         loadContent(html);
+        // loadContnet without protocol , should not fire js alert
+        // need another test cases for valid alert (testLoadContentWithInlineScript which test in script loadContent)
+        assertEquals("", result.toString(), "Unexpected result");
+        assertEquals(SUCCEEDED, getLoadState(), "Unexpected load state");
+        assertEquals("", webEngine.getLocation(), "Unexpected location");
+        assertNotNull(webEngine.getDocument(), "Document is null");
+    }
+
+    @Test
+    public void testLoadContentWithInlineScript() {
+        WebEngine webEngine = getEngine();
+
+        final StringBuilder result = new StringBuilder();
+        webEngine.setOnAlert(event -> {
+            result.append("ALERT: ").append(event.getData());
+        });
+
+        String html =
+                "<html>\n" +
+                        "<head>\n" +
+                        "  <script>\n" +
+                        "    function invokeAlert(msg) {\n" +
+                        "      alert(msg);\n" +
+                        "    }\n" +
+                        "  </script>\n" +
+                        "</head>\n" +
+                        "<body>\n" +
+                        "  <script>invokeAlert('foo');</script>\n" +
+                        "</body>\n" +
+                        "</html>";
+        loadContent(html);
 
         assertEquals("ALERT: foo", result.toString(), "Unexpected result");
         assertEquals(SUCCEEDED, getLoadState(), "Unexpected load state");

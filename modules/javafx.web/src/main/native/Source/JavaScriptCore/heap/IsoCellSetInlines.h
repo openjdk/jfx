@@ -42,7 +42,7 @@ inline bool IsoCellSet::add(HeapCell* cell)
     AtomIndices atomIndices(cell);
     auto& bitsPtrRef = m_bits[atomIndices.blockIndex];
     auto* bits = bitsPtrRef.get();
-    if (UNLIKELY(!bits))
+    if (!bits) [[unlikely]]
         bits = addSlow(atomIndices.blockIndex);
     return !bits->concurrentTestAndSet(atomIndices.atomNumber);
 }

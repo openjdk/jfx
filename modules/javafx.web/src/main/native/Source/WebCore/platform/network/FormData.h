@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,7 +20,6 @@
 #pragma once
 
 #include "BlobData.h"
-#include <variant>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
@@ -43,7 +42,7 @@ class SharedBuffer;
 struct FormDataElement {
     struct EncodedFileData;
     struct EncodedBlobData;
-    using Data = std::variant<Vector<uint8_t>, EncodedFileData, EncodedBlobData>;
+    using Data = Variant<Vector<uint8_t>, EncodedFileData, EncodedBlobData>;
 
     FormDataElement() = default;
     explicit FormDataElement(Data&& data)
@@ -110,7 +109,7 @@ private:
     friend class FormData;
     FormDataForUpload(FormData&, Vector<String>&&);
 
-    Ref<FormData> m_data;
+    const Ref<FormData> m_data;
     Vector<String> m_temporaryZipFiles;
 };
 

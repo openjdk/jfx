@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/HashSet.h>
 #include <wtf/WeakPtr.h>
 
@@ -33,7 +33,7 @@ namespace WTF {
 
 template<typename T, typename WeakPtrImpl, EnableWeakPtrThreadingAssertions assertionsPolicy>
 class WeakHashSet final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakHashSet);
 public:
     using WeakPtrImplSet = HashSet<Ref<WeakPtrImpl>>;
     using AddResult = typename WeakPtrImplSet::AddResult;
@@ -48,7 +48,7 @@ public:
 
     private:
         WeakHashSetConstIterator(const WeakHashSet& set, typename WeakPtrImplSet::const_iterator position)
-            : m_set(set)
+            : m_set(&set)
             , m_position(position)
             , m_endPosition(set.m_set.end())
         {
@@ -56,6 +56,8 @@ public:
         }
 
     public:
+        WeakHashSetConstIterator() = default;
+
         T* get() const { return static_cast<T*>((*m_position)->template get<T>()); }
         T& operator*() const { return *get(); }
         T* operator->() const { return get(); }
@@ -65,8 +67,15 @@ public:
             ASSERT(m_position != m_endPosition);
             ++m_position;
             skipEmptyBuckets();
-            m_set.increaseOperationCountSinceLastCleanup();
+            m_set->increaseOperationCountSinceLastCleanup();
             return *this;
+        }
+
+        WeakHashSetConstIterator operator++(int)
+        {
+            WeakHashSetConstIterator temp = *this;
+            ++(*this);
+            return temp;
         }
 
         void skipEmptyBuckets()
@@ -83,13 +92,13 @@ public:
     private:
         template <typename, typename, EnableWeakPtrThreadingAssertions> friend class WeakHashSet;
 
-        const WeakHashSet& m_set;
+        const WeakHashSet* m_set { nullptr };
         typename WeakPtrImplSet::const_iterator m_position;
         typename WeakPtrImplSet::const_iterator m_endPosition;
     };
     typedef WeakHashSetConstIterator const_iterator;
 
-    WeakHashSet() { }
+    WeakHashSet() = default;
 
     const_iterator begin() const { return WeakHashSetConstIterator(*this, m_set.begin()); }
     const_iterator end() const { return WeakHashSetConstIterator(*this, m_set.end()); }
@@ -108,6 +117,12 @@ public:
     {
         amortizedCleanupIfNeeded();
         return m_set.add(WeakRef<T, WeakPtrImpl>(static_cast<const T&>(value)).releaseImpl());
+    }
+
+    AddResult add(WeakRef<T, WeakPtrImpl> value)
+    {
+        amortizedCleanupIfNeeded();
+        return m_set.add(value.releaseImpl());
     }
 
     T* takeAny()
@@ -161,7 +176,7 @@ public:
     bool hasNullReferences() const
     {
         unsigned count = 0;
-        auto result = WTF::anyOf(m_set, [&](auto& value) {
+        auto result = std::ranges::any_of(m_set, [&](auto& value) {
             ++count;
             return !value.get();
         });
@@ -238,7 +253,6 @@ inline auto copyToVector(const WeakHashSet<T, WeakMapImpl>& collection) -> Vecto
 {
     return WTF::map(collection, [](auto& v) -> WeakPtr<T, WeakMapImpl> { return WeakPtr<T, WeakMapImpl> { v }; });
 }
-
 
 } // namespace WTF
 

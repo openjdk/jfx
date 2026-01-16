@@ -83,22 +83,10 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormA
     return JavaReturn<String>(env, IMPL->formAction());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setFormActionImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setFormAction(AtomString {String(env, value)});
-}
-
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormEnctypeImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->formEnctype());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setFormEnctypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setFormEnctype(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormMethodImpl(JNIEnv* env, jclass, jlong peer)
@@ -107,22 +95,10 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormM
     return JavaReturn<String>(env, IMPL->formMethod());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setFormMethodImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setFormMethod(AtomString {String(env, value)});
-}
-
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, IMPL->type());
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setTypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setType(AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormNoValidateImpl(JNIEnv*, jclass, jlong peer)

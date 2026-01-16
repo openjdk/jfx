@@ -153,7 +153,7 @@ void CSSImportRule::setMediaQueries(MQ::MediaQueryList&& queries)
     m_importRule->setMediaQueries(WTFMove(queries));
 }
 
-void CSSImportRule::getChildStyleSheets(UncheckedKeyHashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
+void CSSImportRule::getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>& childStyleSheets)
 {
     RefPtr sheet = styleSheet();
     if (!sheet)

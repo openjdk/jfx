@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <atomic>
 #include <functional>
+#include <ranges>
 #include <wtf/Logging.h>
 #include <wtf/MemoryFootprint.h>
 #include <wtf/NeverDestroyed.h>
@@ -68,9 +69,9 @@ static MemoryPressureHandler* memoryPressureHandlerIfExists()
 
 MemoryPressureHandler::MemoryPressureHandler()
 #if OS(LINUX) || OS(FREEBSD) || OS(HAIKU) || OS(QNX)
-    : m_holdOffTimer(RunLoop::main(), this, &MemoryPressureHandler::holdOffTimerFired)
+    : m_holdOffTimer(RunLoop::mainSingleton(), "MemoryPressureHandler::HoldOffTimer"_s, this, &MemoryPressureHandler::holdOffTimerFired)
 #elif OS(WINDOWS)
-    : m_windowsMeasurementTimer(RunLoop::main(), this, &MemoryPressureHandler::windowsMeasurementTimerFired)
+    : m_windowsMeasurementTimer(RunLoop::mainSingleton(), "MemoryPressureHandler::WindowsMeasurementTimer"_s, this, &MemoryPressureHandler::windowsMeasurementTimerFired)
 #endif
 {
 #if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
@@ -86,7 +87,7 @@ void MemoryPressureHandler::setMemoryFootprintPollIntervalForTesting(Seconds pol
 void MemoryPressureHandler::setShouldUsePeriodicMemoryMonitor(bool use)
 {
     if (use) {
-        m_measurementTimer = makeUnique<RunLoop::Timer>(RunLoop::main(), this, &MemoryPressureHandler::measurementTimerFired);
+        m_measurementTimer = makeUnique<RunLoop::Timer>(RunLoop::mainSingleton(), "MemoryPressureHandler::MeasurementTimer"_s, this, &MemoryPressureHandler::measurementTimerFired);
         m_measurementTimer->startRepeating(m_configuration.pollInterval);
     } else
         m_measurementTimer = nullptr;
@@ -210,12 +211,12 @@ void MemoryPressureHandler::setMemoryUsagePolicyBasedOnFootprint(size_t footprin
     memoryPressureStatusChanged();
 }
 
-void MemoryPressureHandler::setMemoryFootprintNotificationThresholds(Vector<size_t>&& thresholds, WTF::Function<void(size_t)>&& handler)
+void MemoryPressureHandler::setMemoryFootprintNotificationThresholds(Vector<uint64_t>&& thresholds, WTF::Function<void(uint64_t)>&& handler)
 {
     if (thresholds.isEmpty() || !handler)
         return;
 
-    std::sort(thresholds.begin(), thresholds.end(), std::greater<>());
+    std::ranges::sort(thresholds, std::greater<>());
     m_memoryFootprintNotificationThresholds = WTFMove(thresholds);
     m_memoryFootprintNotificationHandler = WTFMove(handler);
 }
@@ -374,7 +375,7 @@ MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration()
 {
 }
 
-MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration(size_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
+MemoryPressureHandlerConfiguration::MemoryPressureHandlerConfiguration(uint64_t base, double conservative, double strict, std::optional<double> kill, Seconds interval)
     : baseThreshold(base)
     , conservativeThresholdFraction(conservative)
     , strictThresholdFraction(strict)

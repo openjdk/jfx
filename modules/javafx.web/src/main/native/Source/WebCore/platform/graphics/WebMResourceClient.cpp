@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WebMResourceClient.h"
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
+#if ENABLE(COCOA_WEBM_PLAYER)
 
 #include "ResourceError.h"
 #include "ResourceRequest.h"
@@ -91,4 +91,4 @@ void WebMResourceClient::loadFinished(PlatformMediaResource&, const NetworkLoadM
 
 } // namespace WebCore
 
-#endif // ENABLE(ALTERNATE_WEBM_PLAYER)
+#endif // ENABLE(COCOA_WEBM_PLAYER)

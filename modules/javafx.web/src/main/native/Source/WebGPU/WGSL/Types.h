@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ASTForward.h"
+#include "CompilationMessage.h"
 #include "WGSLEnums.h"
 #include <array>
 #include <functional>
@@ -140,7 +141,7 @@ struct Array {
     // std::monostate represents a runtime-sized array
     // unsigned represents a creation fixed array (constant size)
     // AST::Expression* represents a fixed array (override size)
-    using Size = std::variant<std::monostate, unsigned, AST::Expression*>;
+    using Size = Variant<std::monostate, unsigned, AST::Expression*>;
 
     const Type* element;
     Size size;
@@ -241,15 +242,12 @@ struct Atomic {
 
 struct TypeConstructor {
     ASCIILiteral name;
-    std::function<const Type*(AST::ElaboratedTypeExpression&)> construct;
-};
-
-struct Bottom {
+    std::function<Result<const Type*>(AST::ElaboratedTypeExpression&)> construct;
 };
 
 } // namespace Types
 
-struct Type : public std::variant<
+struct Type : public Variant<
     Types::Primitive,
     Types::Vector,
     Types::Matrix,
@@ -263,10 +261,9 @@ struct Type : public std::variant<
     Types::Reference,
     Types::Pointer,
     Types::Atomic,
-    Types::TypeConstructor,
-    Types::Bottom
+    Types::TypeConstructor
 > {
-    using std::variant<
+    using Variant<
         Types::Primitive,
         Types::Vector,
         Types::Matrix,
@@ -280,12 +277,12 @@ struct Type : public std::variant<
         Types::Reference,
         Types::Pointer,
         Types::Atomic,
-        Types::TypeConstructor,
-        Types::Bottom
+        Types::TypeConstructor
         >::variant;
     void dump(PrintStream&) const;
     String toString() const;
     unsigned size() const;
+    std::optional<unsigned> maybeSize() const;
     unsigned alignment() const;
     Packing packing() const;
     bool isConstructible() const;
@@ -299,7 +296,7 @@ struct Type : public std::variant<
     bool isTexture() const;
 };
 
-using ConversionRank = Markable<unsigned, IntegralMarkableTraits<unsigned, std::numeric_limits<unsigned>::max()>>;
+using ConversionRank = Markable<unsigned>;
 ConversionRank conversionRank(const Type* from, const Type* to);
 
 bool isPrimitive(const Type*, Types::Primitive::Kind);

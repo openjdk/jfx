@@ -101,12 +101,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getDirImpl(JNI
     return JavaReturn<String>(env, IMPL->dir());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setDirImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setDir(AtomString{String(env, value)});
-}
-
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getDraggableImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;

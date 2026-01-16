@@ -28,6 +28,7 @@
 
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "NativeImage.h"
 #include "PixelBuffer.h"
 #include "PixelBufferConversion.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -131,7 +132,7 @@ void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, std::span<con
     convertImagePixels(source, destination, destinationRect.size());
 }
 
-void ImageBufferBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, std::span<uint8_t> destinationData)
+void ImageBufferBackend::putPixelBuffer(const PixelBufferSourceView& sourcePixelBuffer, const IntRect& sourceRect, const IntPoint& destinationPoint, AlphaPremultiplication destinationAlphaFormat, std::span<uint8_t> destinationData)
 {
     IntRect backendRect { { }, size() };
     auto sourceRectClipped = intersection({ IntPoint::zero(), sourcePixelBuffer.size() }, sourceRect);
@@ -184,8 +185,8 @@ AffineTransform ImageBufferBackend::calculateBaseTransform(const Parameters& par
 TextStream& operator<<(TextStream& ts, VolatilityState state)
 {
     switch (state) {
-    case VolatilityState::NonVolatile: ts << "non-volatile"; break;
-    case VolatilityState::Volatile: ts << "volatile"; break;
+    case VolatilityState::NonVolatile: ts << "non-volatile"_s; break;
+    case VolatilityState::Volatile: ts << "volatile"_s; break;
     }
     return ts;
 }

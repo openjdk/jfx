@@ -43,6 +43,7 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
 #include "RenderIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGBlockInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGInlineText.h"
@@ -62,8 +63,10 @@
 #include "SVGTextLayoutEngine.h"
 #include "SVGURIReference.h"
 #include "SVGVisitedRendererTracking.h"
+#include "StyleTextShadow.h"
 #include "TransformState.h"
 #include "VisiblePosition.h"
+#include <tuple>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/ParsingUtilities.h>
@@ -121,35 +124,34 @@ static inline void collectLayoutAttributes(RenderObject* text, Vector<SVGTextLay
     }
 }
 
-static inline bool findPreviousAndNextAttributes(RenderElement& start, RenderSVGInlineText* locateElement, bool& stopAfterNext, SVGTextLayoutAttributes*& previous, SVGTextLayoutAttributes*& next)
+static inline std::tuple<SVGTextLayoutAttributes*, SVGTextLayoutAttributes*> findPreviousAndNextAttributes(RenderElement& root, RenderSVGInlineText& locateElement)
 {
-    ASSERT(locateElement);
-    // FIXME: Make this iterative.
-    for (CheckedRef child : childrenOfType<RenderObject>(start)) {
-        if (auto* text = dynamicDowncast<RenderSVGInlineText>(child.get())) {
-            if (locateElement != text) {
-                if (stopAfterNext) {
-                    next = text->layoutAttributes();
-                    return true;
-                }
+    SVGTextLayoutAttributes* previous = nullptr;
+    bool foundLocateElement = false;
 
-                previous = text->layoutAttributes();
+    for (CheckedPtr current = root.firstChild(); current;) {
+        if (auto* childSVGInline = dynamicDowncast<RenderSVGInline>(*current)) {
+            if (auto* child = childSVGInline->firstChild())
+                current = child;
+            else
+                current = current->nextInPreOrderAfterChildren(&root);
                 continue;
             }
 
-            stopAfterNext = true;
-            continue;
+        if (auto* text = dynamicDowncast<RenderSVGInlineText>(*current)) {
+            if (foundLocateElement)
+                return { previous, text->layoutAttributes() };
+
+            if (&locateElement == text)
+                foundLocateElement = true;
+            else
+                previous = text->layoutAttributes();
         }
 
-        auto* childSVGInline = dynamicDowncast<RenderSVGInline>(child.get());
-        if (!childSVGInline)
-            continue;
-
-        if (findPreviousAndNextAttributes(*childSVGInline, locateElement, stopAfterNext, previous, next))
-            return true;
+        current = current->nextInPreOrderAfterChildren(&root);
     }
 
-    return false;
+    return { previous, nullptr };
 }
 
 inline bool RenderSVGText::shouldHandleSubtreeMutations() const
@@ -190,11 +192,8 @@ void RenderSVGText::subtreeChildWasAdded(RenderObject* child)
         attributes = newLayoutAttributes[i];
         if (m_layoutAttributes.find(attributes) == notFound) {
             // Every time this is invoked, there's only a single new entry in the newLayoutAttributes list, compared to the old in m_layoutAttributes.
-            bool stopAfterNext = false;
-            SVGTextLayoutAttributes* previous = 0;
-            SVGTextLayoutAttributes* next = 0;
             ASSERT_UNUSED(child, &attributes->context() == child);
-            findPreviousAndNextAttributes(*this, &attributes->context(), stopAfterNext, previous, next);
+            auto [previous, next] = findPreviousAndNextAttributes(*this, attributes->context());
 
             if (previous)
                 m_layoutAttributesBuilder.buildLayoutAttributesForTextRenderer(previous->context());
@@ -250,16 +249,13 @@ void RenderSVGText::subtreeChildWillBeRemoved(RenderObject* child, Vector<SVGTex
 
     // This logic requires that the 'text' child is still inserted in the tree.
     auto& text = downcast<RenderSVGInlineText>(*child);
-    bool stopAfterNext = false;
-    SVGTextLayoutAttributes* previous = nullptr;
-    SVGTextLayoutAttributes* next = nullptr;
-    if (!renderTreeBeingDestroyed())
-        findPreviousAndNextAttributes(*this, &text, stopAfterNext, previous, next);
-
+    if (!renderTreeBeingDestroyed()) {
+        auto [previous, next] = findPreviousAndNextAttributes(*this, text);
     if (previous)
         affectedAttributes.append(previous);
     if (next)
         affectedAttributes.append(next);
+    }
 
     bool removed = m_layoutAttributes.removeFirst(text.layoutAttributes());
     ASSERT_UNUSED(removed, removed);
@@ -386,7 +382,7 @@ void RenderSVGText::layout()
     ASSERT(!scrollsOverflow());
     ASSERT(!hasControlClip());
     ASSERT(!multiColumnFlow());
-    ASSERT(!positionedObjects());
+    ASSERT(!outOfFlowBoxes());
     ASSERT(!isAnonymousBlock());
     if (!isLayerBasedSVGEngineEnabled()) {
         ASSERT(!simplifiedLayout());
@@ -939,17 +935,17 @@ FloatRect RenderSVGText::repaintRectInLocalCoordinates(RepaintRectCalculation re
     if (document().settings().layerBasedSVGEngineEnabled()) {
         auto repaintRect = SVGBoundingBoxComputation::computeRepaintBoundingBox(*this);
 
-        if (const auto* textShadow = style().textShadow())
-            textShadow->adjustRectForShadow(repaintRect);
+        if (auto& textShadow = style().textShadow(); !textShadow.isNone())
+            Style::adjustRectForShadow(repaintRect, textShadow);
 
         return repaintRect;
     }
 
-    FloatRect repaintRect = strokeBoundingBox();
+    auto repaintRect = strokeBoundingBox();
     SVGRenderSupport::intersectRepaintRectWithResources(*this, repaintRect, repaintRectCalculation);
 
-    if (const ShadowData* textShadow = style().textShadow())
-        textShadow->adjustRectForShadow(repaintRect);
+    if (auto& textShadow = style().textShadow(); !textShadow.isNone())
+        Style::adjustRectForShadow(repaintRect, textShadow);
 
     return repaintRect;
 }
@@ -966,8 +962,8 @@ void RenderSVGText::updatePositionAndOverflow(const FloatRect& boundaries)
         setSize(boundingRect.size());
 
         auto overflowRect = visualOverflowRectEquivalent();
-        if (const auto* textShadow = style().textShadow())
-            textShadow->adjustRectForShadow(overflowRect);
+        if (auto& textShadow = style().textShadow(); !textShadow.isNone())
+            Style::adjustRectForShadow(overflowRect, textShadow);
 
         addVisualOverflow(overflowRect);
         return;

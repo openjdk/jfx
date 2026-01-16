@@ -33,6 +33,10 @@ namespace WebCore {
 
 class RTCEncodedVideoFrame : public RTCEncodedFrame {
 public:
+    struct Options {
+        std::optional<RTCEncodedVideoFrameMetadata> metadata;
+    };
+    static Ref<RTCEncodedVideoFrame> create(RTCEncodedVideoFrame&, const Options&);
     static Ref<RTCEncodedVideoFrame> create(Ref<RTCRtpTransformableFrame>&& frame) { return adoptRef(*new RTCEncodedVideoFrame(WTFMove(frame))); }
     ~RTCEncodedVideoFrame();
 
@@ -41,8 +45,6 @@ public:
 
     using Metadata = RTCEncodedVideoFrameMetadata;
     const Metadata& getMetadata();
-
-    uint64_t timestamp() const;
 
 private:
     explicit RTCEncodedVideoFrame(Ref<RTCRtpTransformableFrame>&&);

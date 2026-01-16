@@ -281,7 +281,7 @@ private:
 
             case ArrayBounds:
                 ASSERT(node->op() == CheckInBounds);
-                if (UNLIKELY(Options::validateBoundsCheckElimination()))
+                if (Options::validateBoundsCheckElimination()) [[unlikely]]
                     m_insertionSet.insertNode(nodeIndex, SpecNone, AssertInBounds, node->origin, node->child1(), node->child2());
                 node->convertToIdentityOn(m_map.get(data.m_key).m_dependency);
                 m_changed = true;

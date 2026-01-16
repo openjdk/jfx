@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "IceCandidate.h"
 #include "LibWebRTCAudioModule.h"
 #include "LibWebRTCDataChannelHandler.h"
@@ -53,7 +53,7 @@
 
 namespace WebCore {
 
-static std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBackend(RTCPeerConnection& peerConnection)
+static const std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBackend(RTCPeerConnection& peerConnection)
 {
     if (!LibWebRTCProvider::webRTCAvailable()) {
         RELEASE_LOG_ERROR(WebRTC, "LibWebRTC is not available to create a backend");
@@ -67,7 +67,7 @@ static std::unique_ptr<PeerConnectionBackend> createLibWebRTCPeerConnectionBacke
     auto& webRTCProvider = static_cast<LibWebRTCProvider&>(page->webRTCProvider());
     webRTCProvider.setEnableWebRTCEncryption(page->settings().webRTCEncryptionEnabled());
 
-    return makeUniqueWithoutRefCountedCheck<LibWebRTCPeerConnectionBackend>(peerConnection, webRTCProvider);
+    return makeUniqueWithoutRefCountedCheck<LibWebRTCPeerConnectionBackend, PeerConnectionBackend>(peerConnection, webRTCProvider);
 }
 
 CreatePeerConnectionBackend PeerConnectionBackend::create = createLibWebRTCPeerConnectionBackend;
@@ -101,8 +101,7 @@ void LibWebRTCPeerConnectionBackend::resume()
 void LibWebRTCPeerConnectionBackend::disableICECandidateFiltering()
 {
     PeerConnectionBackend::disableICECandidateFiltering();
-    if (auto* factory = m_endpoint->rtcSocketFactory())
-        factory->disableRelay();
+    m_endpoint->disableSocketRelay();
 }
 
 bool LibWebRTCPeerConnectionBackend::isNegotiationNeeded(uint32_t eventId) const
@@ -172,7 +171,7 @@ static webrtc::PeerConnectionInterface::RTCConfiguration configurationFromMediaE
     // rtcConfiguration.ice_candidate_pool_size = configuration.iceCandidatePoolSize;
 
     for (auto& pem : configuration.certificates) {
-        rtcConfiguration.certificates.push_back(rtc::RTCCertificate::FromPEM(rtc::RTCCertificatePEM {
+        rtcConfiguration.certificates.push_back(webrtc::RTCCertificate::FromPEM(webrtc::RTCCertificatePEM {
             pem.privateKey.utf8().data(), pem.certificate.utf8().data()
         }));
     }
@@ -225,7 +224,9 @@ void LibWebRTCPeerConnectionBackend::getStats(RTCRtpSender& sender, Ref<Deferred
 
 void LibWebRTCPeerConnectionBackend::getStats(RTCRtpReceiver& receiver, Ref<DeferredPromise>&& promise)
 {
-    webrtc::RtpReceiverInterface* rtcReceiver = receiver.backend() ? static_cast<LibWebRTCRtpReceiverBackend*>(receiver.backend())->rtcReceiver() : nullptr;
+    RefPtr<webrtc::RtpReceiverInterface> rtcReceiver;
+    if (auto* backend = receiver.backend())
+        rtcReceiver = &static_cast<LibWebRTCRtpReceiverBackend*>(backend)->rtcReceiver();
 
     if (!rtcReceiver) {
         m_endpoint->getStats(WTFMove(promise));

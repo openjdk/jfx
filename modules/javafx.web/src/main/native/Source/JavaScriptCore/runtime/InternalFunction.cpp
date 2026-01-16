@@ -79,9 +79,14 @@ DEFINE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE, InternalFunction);
 
 String InternalFunction::name()
 {
-    const String& name = m_originalName->tryGetValue();
+#if ASSERT_ENABLED
+    auto gcOwnedData = m_originalName->tryGetValue();
+    const String& name = gcOwnedData;
     ASSERT(name); // m_originalName was built from a String, and hence, there is no rope to resolve.
     return name;
+#else
+    return m_originalName->tryGetValue();
+#endif
 }
 
 String InternalFunction::displayName(VM& vm)
@@ -143,11 +148,11 @@ Structure* InternalFunction::createSubclassStructure(JSGlobalObject* globalObjec
     // newTarget may be an InternalFunction if we were called from Reflect.construct.
     JSFunction* targetFunction = jsDynamicCast<JSFunction*>(newTarget);
 
-    if (UNLIKELY(!targetFunction || !targetFunction->canUseAllocationProfiles())) {
+    if (!targetFunction || !targetFunction->canUseAllocationProfiles()) [[unlikely]] {
         JSValue prototypeValue = newTarget->get(globalObject, vm.propertyNames->prototype);
         RETURN_IF_EXCEPTION(scope, nullptr);
         // .prototype getter could have triggered having a bad time so need to recheck array structures.
-        if (UNLIKELY(baseGlobalObject->isHavingABadTime())) {
+        if (baseGlobalObject->isHavingABadTime()) [[unlikely]] {
             if (baseGlobalObject->isOriginalArrayStructure(baseClass))
                 baseClass = baseGlobalObject->arrayStructureForIndexingTypeDuringAllocation(baseClass->indexingType());
         }
@@ -161,7 +166,7 @@ Structure* InternalFunction::createSubclassStructure(JSGlobalObject* globalObjec
 
         FunctionRareData* rareData = targetFunction->ensureRareData(vm);
         Structure* structure = rareData->internalFunctionAllocationStructure();
-        if (LIKELY(structure && structure->classInfoForCells() == baseClass->classInfoForCells() && structure->globalObject() == baseGlobalObject))
+    if (structure && structure->classInfoForCells() == baseClass->classInfoForCells() && structure->globalObject() == baseGlobalObject) [[likely]]
             return structure;
 
     // .prototype can't be a getter if we canUseAllocationProfiles().

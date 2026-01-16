@@ -67,7 +67,7 @@ void ScrollingTreeNode::removeChild(ScrollingTreeNode& node)
     // The index will be notFound if the node to remove is a deeper-than-1-level descendant or
     // if node is the root state node.
     if (index != notFound) {
-        m_children.remove(index);
+        m_children.removeAt(index);
         return;
     }
 
@@ -90,7 +90,7 @@ bool ScrollingTreeNode::isRootNode() const
 void ScrollingTreeNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
-        ts.dumpProperty("nodeID", scrollingNodeID());
+        ts.dumpProperty("nodeID"_s, scrollingNodeID());
 }
 
 RefPtr<ScrollingTreeFrameScrollingNode> ScrollingTreeNode::enclosingFrameNodeIncludingSelf()

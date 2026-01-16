@@ -90,7 +90,7 @@ JSC_DEFINE_HOST_FUNCTION(intlNumberFormatFuncFormat, (JSGlobalObject* globalObje
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto* numberFormat = jsDynamicCast<IntlNumberFormat*>(callFrame->thisValue());
-    if (UNLIKELY(!numberFormat))
+    if (!numberFormat) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.NumberFormat.prototype.format called on value that's not a NumberFormat"_s));
 
     auto value = toIntlMathematicalValue(globalObject, callFrame->argument(0));
@@ -111,7 +111,7 @@ JSC_DEFINE_CUSTOM_GETTER(intlNumberFormatPrototypeGetterFormat, (JSGlobalObject*
     // 1. Let nf be this NumberFormat object.
     auto* nf = IntlNumberFormat::unwrapForOldFunctions(globalObject, JSValue::decode(thisValue));
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(!nf))
+    if (!nf) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.NumberFormat.prototype.format called on value that's not a NumberFormat"_s));
 
     JSBoundFunction* boundFormat = nf->boundFormat();
@@ -122,7 +122,7 @@ JSC_DEFINE_CUSTOM_GETTER(intlNumberFormatPrototypeGetterFormat, (JSGlobalObject*
         // b. The value of F’s length property is 1.
         auto* targetObject = JSFunction::create(vm, globalObject, 1, "format"_s, intlNumberFormatFuncFormat, ImplementationVisibility::Public);
         // c. Let bf be BoundFunctionCreate(F, «this value»).
-        boundFormat = JSBoundFunction::create(vm, globalObject, targetObject, nf, { }, 1, jsEmptyString(vm));
+        boundFormat = JSBoundFunction::create(vm, globalObject, targetObject, nf, { }, 1, jsEmptyString(vm), makeSource("format"_s, SourceOrigin(), SourceTaintedOrigin::Untainted));
         RETURN_IF_EXCEPTION(scope, { });
         boundFormat->reifyLazyPropertyIfNeeded<>(vm, globalObject, vm.propertyNames->name);
         RETURN_IF_EXCEPTION(scope, { });
@@ -141,7 +141,7 @@ JSC_DEFINE_HOST_FUNCTION(intlNumberFormatPrototypeFuncFormatRange, (JSGlobalObje
 
     // Do not use unwrapForOldFunctions.
     auto* numberFormat = jsDynamicCast<IntlNumberFormat*>(callFrame->thisValue());
-    if (UNLIKELY(!numberFormat))
+    if (!numberFormat) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.NumberFormat.prototype.formatRange called on value that's not a NumberFormat"_s));
 
     JSValue startValue = callFrame->argument(0);
@@ -174,7 +174,7 @@ JSC_DEFINE_HOST_FUNCTION(intlNumberFormatPrototypeFuncFormatToParts, (JSGlobalOb
 
     // Do not use unwrapForOldFunctions.
     auto* numberFormat = jsDynamicCast<IntlNumberFormat*>(callFrame->thisValue());
-    if (UNLIKELY(!numberFormat))
+    if (!numberFormat) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.NumberFormat.prototype.formatToParts called on value that's not a NumberFormat"_s));
 
     auto value = toIntlMathematicalValue(globalObject, callFrame->argument(0));
@@ -193,7 +193,7 @@ JSC_DEFINE_HOST_FUNCTION(intlNumberFormatPrototypeFuncFormatRangeToParts, (JSGlo
 
     // Do not use unwrapForOldFunctions.
     auto* numberFormat = jsDynamicCast<IntlNumberFormat*>(callFrame->thisValue());
-    if (UNLIKELY(!numberFormat))
+    if (!numberFormat) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.NumberFormat.prototype.formatRangeToParts called on value that's not a NumberFormat"_s));
 
     JSValue startValue = callFrame->argument(0);
@@ -225,7 +225,7 @@ JSC_DEFINE_HOST_FUNCTION(intlNumberFormatPrototypeFuncResolvedOptions, (JSGlobal
 
     auto* numberFormat = IntlNumberFormat::unwrapForOldFunctions(globalObject, callFrame->thisValue());
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(!numberFormat))
+    if (!numberFormat) [[unlikely]]
         return JSValue::encode(throwTypeError(globalObject, scope, "Intl.NumberFormat.prototype.resolvedOptions called on value that's not a NumberFormat"_s));
 
     RELEASE_AND_RETURN(scope, JSValue::encode(numberFormat->resolvedOptions(globalObject)));

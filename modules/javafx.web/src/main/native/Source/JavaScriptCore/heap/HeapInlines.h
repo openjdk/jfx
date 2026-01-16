@@ -108,7 +108,7 @@ inline void Heap::writeBarrier(const JSCell* from, JSCell* to)
 #endif
     if (!from)
         return;
-    if (LIKELY(!to))
+    if (!to) [[likely]]
         return;
     if (!isWithinThreshold(from->cellState(), barrierThreshold()))
         return;
@@ -120,13 +120,20 @@ inline void Heap::writeBarrier(const JSCell* from)
     ASSERT_GC_OBJECT_LOOKS_VALID(const_cast<JSCell*>(from));
     if (!from)
         return;
-    if (UNLIKELY(isWithinThreshold(from->cellState(), barrierThreshold())))
+    if (isWithinThreshold(from->cellState(), barrierThreshold())) [[unlikely]]
         writeBarrierSlowPath(from);
 }
 
 inline void Heap::mutatorFence()
 {
-    if (isX86() || UNLIKELY(mutatorShouldBeFenced()))
+    // We could push this condition in the lower `if` as on X86 a storeStoreFence is a compilerFence
+    // but this condition makes the logic a bit more explicit.
+    if constexpr (isX86()) {
+        WTF::compilerFence();
+        return;
+    }
+
+    if (mutatorShouldBeFenced()) [[unlikely]]
         WTF::storeStoreFence();
 }
 
@@ -179,7 +186,7 @@ inline void Heap::decrementDeferralDepthAndGCIfNeeded()
     ASSERT(!Thread::mayBeGCThread() || m_worldIsStopped);
     m_deferralDepth--;
 
-    if (UNLIKELY(m_didDeferGCWork) || Options::forceDidDeferGCWork()) {
+    if (m_didDeferGCWork || Options::forceDidDeferGCWork()) [[unlikely]] {
         decrementDeferralDepthAndGCIfNeededSlow();
 
         // Here are the possible relationships between m_deferralDepth and m_didDeferGCWork.

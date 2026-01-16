@@ -30,6 +30,7 @@
 #include "CryptoAlgorithmAesCtrParams.h"
 #include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/FlipBytes.h>
 #include <wtf/StdLibExtras.h>

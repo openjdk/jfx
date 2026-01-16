@@ -23,6 +23,7 @@
 #include "config.h"
 #include "SVGGeometryElement.h"
 
+#include "ContainerNodeInlines.h"
 #include "DOMPoint.h"
 #include "DocumentInlines.h"
 #include "LegacyRenderSVGResource.h"
@@ -31,6 +32,7 @@
 #include "SVGDocumentExtensions.h"
 #include "SVGPathUtilities.h"
 #include "SVGPoint.h"
+#include "SVGPropertyOwnerRegistry.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -48,7 +50,7 @@ SVGGeometryElement::SVGGeometryElement(const QualifiedName& tagName, Document& d
 
 float SVGGeometryElement::getTotalLength() const
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
 
     auto* renderer = this->renderer();
     if (!renderer)
@@ -66,7 +68,7 @@ float SVGGeometryElement::getTotalLength() const
 
 ExceptionOr<Ref<SVGPoint>> SVGGeometryElement::getPointAtLength(float distance) const
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
 
     auto* renderer = this->renderer();
     // Spec: If current element is a non-rendered element, throw an InvalidStateError.
@@ -89,7 +91,7 @@ ExceptionOr<Ref<SVGPoint>> SVGGeometryElement::getPointAtLength(float distance) 
 
 bool SVGGeometryElement::isPointInFill(DOMPointInit&& pointInit)
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
 
     auto* renderer = this->renderer();
     if (!renderer)
@@ -108,7 +110,7 @@ bool SVGGeometryElement::isPointInFill(DOMPointInit&& pointInit)
 
 bool SVGGeometryElement::isPointInStroke(DOMPointInit&& pointInit)
 {
-    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, this);
+    protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, this);
 
     auto* renderer = this->renderer();
     if (!renderer)

@@ -209,6 +209,7 @@ void pas_segregated_heap_construct(pas_segregated_heap* segregated_heap,
     PAS_ASSERT(runtime_config->sharing_mode != pas_invalid_sharing_mode);
 
     segregated_heap->runtime_config = runtime_config;
+    segregated_heap->parent_heap = parent_heap;
 
     pas_compact_atomic_segregated_size_directory_ptr_store(
         &segregated_heap->basic_size_directory_and_head, NULL);
@@ -428,7 +429,7 @@ medium_directory_tuple_for_index_impl(
         return result;
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     result.tuple = NULL;
     return result;
 }
@@ -635,7 +636,7 @@ static inline int size_directory_min_heap_compare(pas_segregated_size_directory*
 static inline size_t size_directory_min_heap_get_index(pas_segregated_size_directory** entry_ptr)
 {
     PAS_UNUSED_PARAM(entry_ptr);
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return 0;
 }
 
@@ -1800,7 +1801,7 @@ pas_segregated_heap_ensure_size_directory_for_size(
             double bytes_dirtied_per_object_by_candidate;
 
             if (verbose) {
-                pas_log("object_size = %lu\n", object_size);
+                pas_log("object_size = %zu\n", object_size);
                 pas_log("candidate->object_size = %u\n", candidate->object_size);
             }
 

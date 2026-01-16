@@ -34,6 +34,7 @@
 #include "CDMInstanceSession.h"
 #include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "MediaKeyMessageType.h"
 #include "MediaKeySessionType.h"
@@ -126,22 +127,22 @@ private:
     WTFLogChannel& logChannel() const;
     uint64_t logIdentifier() const { return m_logIdentifier; }
 
-    Ref<Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 
     WeakPtr<MediaKeys> m_keys;
     String m_sessionId;
     double m_expiration;
-    UniqueRef<ClosedPromise> m_closedPromise;
-    Ref<MediaKeyStatusMap> m_keyStatuses;
+    const UniqueRef<ClosedPromise> m_closedPromise;
+    const Ref<MediaKeyStatusMap> m_keyStatuses;
     bool m_closed { false };
     bool m_uninitialized { true };
     bool m_callable { false };
     bool m_useDistinctiveIdentifier;
     MediaKeySessionType m_sessionType;
-    Ref<CDM> m_implementation;
-    Ref<CDMInstanceSession> m_instanceSession;
+    const Ref<CDM> m_implementation;
+    const Ref<CDMInstanceSession> m_instanceSession;
     Vector<Ref<SharedBuffer>> m_recordOfKeyUsage;
     double m_firstDecryptTime { 0 };
     double m_latestDecryptTime { 0 };

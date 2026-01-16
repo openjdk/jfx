@@ -40,18 +40,18 @@ AbsolutePositionConstraints::AbsolutePositionConstraints(const FloatSize& alignm
 {
 }
 
-FloatPoint FixedPositionViewportConstraints::layerPositionForViewportRect(const FloatRect& viewportRect) const
+FloatPoint ViewportConstraints::viewportRelativeLayerPosition(const FloatRect& viewportRect) const
 {
     FloatSize offset;
 
-    if (hasAnchorEdge(AnchorEdgeLeft))
+    if (hasAnchorEdge(AnchorEdgeLeft) || !hasAnchorEdge(AnchorEdgeRight))
         offset.setWidth(viewportRect.x() - m_viewportRectAtLastLayout.x());
-    else if (hasAnchorEdge(AnchorEdgeRight))
+    else
         offset.setWidth(viewportRect.maxX() - m_viewportRectAtLastLayout.maxX());
 
-    if (hasAnchorEdge(AnchorEdgeTop))
+    if (hasAnchorEdge(AnchorEdgeTop) || !hasAnchorEdge(AnchorEdgeBottom))
         offset.setHeight(viewportRect.y() - m_viewportRectAtLastLayout.y());
-    else if (hasAnchorEdge(AnchorEdgeBottom))
+    else
         offset.setHeight(viewportRect.maxY() - m_viewportRectAtLastLayout.maxY());
 
     return m_layerPositionAtLastLayout + offset;
@@ -104,45 +104,73 @@ FloatSize StickyPositionViewportConstraints::computeStickyOffset(const FloatRect
     return boxRect.location() - m_stickyBoxRect.location();
 }
 
-FloatPoint StickyPositionViewportConstraints::layerPositionForConstrainingRect(const FloatRect& constrainingRect) const
+FloatPoint StickyPositionViewportConstraints::anchorLayerPositionForConstrainingRect(const FloatRect& constrainingRect) const
 {
     FloatSize offset = computeStickyOffset(constrainingRect);
-    return m_layerPositionAtLastLayout + offset - m_stickyOffsetAtLastLayout;
+    return anchorLayerPositionAtLastLayout() + offset - m_stickyOffsetAtLastLayout;
+}
+
+FloatPoint StickyPositionViewportConstraints::anchorLayerPositionAtLastLayout() const
+{
+    return m_layerPositionAtLastLayout + m_anchorLayerOffsetAtLastLayout;
+}
+
+FloatRect StickyPositionViewportConstraints::computeStickyExtent() const
+{
+    float minShiftX = 0;
+    float maxShiftX = 0;
+    float minShiftY = 0;
+    float maxShiftY = 0;
+    if (hasAnchorEdge(AnchorEdgeRight))
+        minShiftX = std::min<float>(0, m_containingBlockRect.x() - m_stickyBoxRect.x());
+    if (hasAnchorEdge(AnchorEdgeLeft))
+        maxShiftX = std::max<float>(0, m_containingBlockRect.maxX() - m_stickyBoxRect.maxX());
+    if (hasAnchorEdge(AnchorEdgeBottom))
+        minShiftY = std::min<float>(0, m_containingBlockRect.y() - m_stickyBoxRect.y());
+    if (hasAnchorEdge(AnchorEdgeTop))
+        maxShiftY = std::max<float>(0, m_containingBlockRect.maxY() - m_stickyBoxRect.maxY());
+    float minX = m_stickyBoxRect.x() + minShiftX;
+    float minY = m_stickyBoxRect.y() + minShiftY;
+    float maxX = m_stickyBoxRect.maxX() + maxShiftX;
+    float maxY = m_stickyBoxRect.maxY() + maxShiftY;
+    return FloatRect(minX, minY, maxX - minX, maxY - minY);
 }
 
 TextStream& operator<<(TextStream& ts, ScrollPositioningBehavior behavior)
 {
     switch (behavior) {
-    case ScrollPositioningBehavior::None: ts << "none"; break;
-    case ScrollPositioningBehavior::Stationary: ts << "stationary"; break;
-    case ScrollPositioningBehavior::Moves: ts << "moves"; break;
+    case ScrollPositioningBehavior::None: ts << "none"_s; break;
+    case ScrollPositioningBehavior::Stationary: ts << "stationary"_s; break;
+    case ScrollPositioningBehavior::Moves: ts << "moves"_s; break;
     }
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, const AbsolutePositionConstraints& constraints)
 {
-    ts.dumpProperty("layer-position-at-last-layout", constraints.layerPositionAtLastLayout());
+    ts.dumpProperty("layer-position-at-last-layout"_s, constraints.layerPositionAtLastLayout());
 
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, const FixedPositionViewportConstraints& constraints)
 {
-    ts.dumpProperty("viewport-rect-at-last-layout", constraints.viewportRectAtLastLayout());
-    ts.dumpProperty("layer-position-at-last-layout", constraints.layerPositionAtLastLayout());
+    ts.dumpProperty("viewport-rect-at-last-layout"_s, constraints.viewportRectAtLastLayout());
+    ts.dumpProperty("layer-position-at-last-layout"_s, constraints.layerPositionAtLastLayout());
 
     return ts;
 }
 
 TextStream& operator<<(TextStream& ts, const StickyPositionViewportConstraints& constraints)
 {
-    ts.dumpProperty("sticky-position-at-last-layout", constraints.stickyOffsetAtLastLayout());
-    ts.dumpProperty("layer-position-at-last-layout", constraints.layerPositionAtLastLayout());
+    ts.dumpProperty("sticky-position-at-last-layout"_s, constraints.stickyOffsetAtLastLayout());
+    ts.dumpProperty("viewport-rect-at-last-layout"_s, constraints.viewportRectAtLastLayout());
+    ts.dumpProperty("layer-position-at-last-layout"_s, constraints.layerPositionAtLastLayout());
+    ts.dumpProperty("anchor-layer-offset-at-last-layout"_s, constraints.anchorLayerOffsetAtLastLayout());
 
-    ts.dumpProperty("sticky-box-rect", constraints.stickyBoxRect());
-    ts.dumpProperty("containing-block-rect", constraints.containingBlockRect());
-    ts.dumpProperty("constraining-rect-at-last-layout", constraints.constrainingRectAtLastLayout());
+    ts.dumpProperty("sticky-box-rect"_s, constraints.stickyBoxRect());
+    ts.dumpProperty("containing-block-rect"_s, constraints.containingBlockRect());
+    ts.dumpProperty("constraining-rect-at-last-layout"_s, constraints.constrainingRectAtLastLayout());
 
     return ts;
 }

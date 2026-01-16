@@ -33,38 +33,48 @@ namespace WebCore {
 class CSSParserTokenRange;
 class CSSValue;
 
-struct CSSParserContext;
-enum class BoxOrient : bool;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // MARK: <position> | <bg-position>
 // https://drafts.csswg.org/css-values/#position
 
-enum class PositionSyntax {
-    Position, // <position>
-    BackgroundPosition // <bg-position>
-};
+// MARK: <position> (CSSValue)
+RefPtr<CSSValue> consumePosition(CSSParserTokenRange&, CSS::PropertyParserState&);
 
-struct PositionCoordinates {
-    Ref<CSSValue> x;
-    Ref<CSSValue> y;
-};
+// MARK: <position-x> (CSSValue)
+RefPtr<CSSValue> consumePositionX(CSSParserTokenRange&, CSS::PropertyParserState&);
 
-RefPtr<CSSValue> consumePosition(CSSParserTokenRange&, const CSSParserContext&, UnitlessQuirk, PositionSyntax);
+// MARK: <position-y> (CSSValue)
+RefPtr<CSSValue> consumePositionY(CSSParserTokenRange&, CSS::PropertyParserState&);
 
-RefPtr<CSSValue> consumePositionX(CSSParserTokenRange&, const CSSParserContext&);
-RefPtr<CSSValue> consumePositionY(CSSParserTokenRange&, const CSSParserContext&);
-
-std::optional<PositionCoordinates> consumePositionCoordinates(CSSParserTokenRange&, const CSSParserContext&, UnitlessQuirk, PositionSyntax);
-std::optional<PositionCoordinates> consumeOneOrTwoValuedPositionCoordinates(CSSParserTokenRange&, const CSSParserContext&, UnitlessQuirk);
 
 // MARK: <position> (unresolved)
-std::optional<CSS::Position> consumePositionUnresolved(CSSParserTokenRange&, const CSSParserContext&);
-std::optional<CSS::Position> consumeOneOrTwoComponentPositionUnresolved(CSSParserTokenRange&, const CSSParserContext&);
+std::optional<CSS::Position> consumePositionUnresolved(CSSParserTokenRange&, CSS::PropertyParserState&);
 
-std::optional<CSS::TwoComponentPositionHorizontal> consumeTwoComponentPositionHorizontalUnresolved(CSSParserTokenRange&, const CSSParserContext&);
-std::optional<CSS::TwoComponentPositionVertical> consumeTwoComponentPositionVerticalUnresolved(CSSParserTokenRange&, const CSSParserContext&);
+// MARK: <bg-position> (unresolved)
+std::optional<CSS::Position> consumeBackgroundPositionUnresolved(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// MARK: <position-x> (unresolved)
+std::optional<CSS::PositionX> consumePositionXUnresolved(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// MARK: <position-y> (unresolved)
+std::optional<CSS::PositionY> consumePositionYUnresolved(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+
+// MARK: Subset / Special case parsers.
+
+// NOTE: This is only used by the `<-webkit-radial-gradient()>` and `<transform-origin>` parsers.
+std::optional<CSS::Position> consumeOneOrTwoComponentPositionUnresolved(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// NOTE: This is only used by the `<horizontal-line-command>` parser
+std::optional<CSS::TwoComponentPositionHorizontal> consumeTwoComponentPositionHorizontalUnresolved(CSSParserTokenRange&, CSS::PropertyParserState&);
+
+// NOTE: This is only used by the `<vertical-line-command>` parser
+std::optional<CSS::TwoComponentPositionVertical> consumeTwoComponentPositionVerticalUnresolved(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

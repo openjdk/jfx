@@ -132,7 +132,7 @@ public:
     sqlite3* sqlite3Handle() const
     {
 #if !PLATFORM(IOS_FAMILY)
-        ASSERT(m_sharable || m_openingThread == &Thread::current() || !m_db);
+        ASSERT(m_sharable || m_openingThread == &Thread::currentSingleton() || !m_db);
 #endif
         return m_db;
     }
@@ -165,8 +165,6 @@ public:
 #endif
 
     WEBCORE_EXPORT static void useFastMalloc();
-
-    WEBCORE_EXPORT static void setIsDatabaseOpeningForbidden(bool);
 
     WEBCORE_EXPORT void releaseMemory();
 

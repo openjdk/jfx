@@ -38,14 +38,8 @@ namespace WebCore {
 
 static const int s_maximumAllowedImageBufferDimension = 256;
 
-std::unique_ptr<TextureMapper> TextureMapper::platformCreateAccelerated()
-{
-    return std::make_unique<TextureMapperJava>();
-}
-
 TextureMapperJava::TextureMapperJava()
 {
-    m_texturePool = std::make_unique<BitmapTexturePool>();
 }
 
 IntSize TextureMapperJava::maxTextureSize() const
@@ -65,16 +59,15 @@ void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const Floa
     context->setCTM(previousTransform);
 }
 
-void TextureMapperJava::drawTexture(const BitmapTexture& texture, const FloatRect& targetRect, const TransformationMatrix& transform, float opacity, unsigned /* exposedEdges */)
+void TextureMapperJava::drawTexture(const BitmapTextureJava& texture, const FloatRect& targetRect, const TransformationMatrix& transform, float opacity, unsigned /* exposedEdges */)
 {
     GraphicsContext* context = currentContext();
     if (!context)
         return;
 
-    const BitmapTextureJava& textureImageBuffer = static_cast<const BitmapTextureJava&>(texture);
+    const BitmapTextureJava& textureImageBuffer = texture;
     ImageBuffer* image = textureImageBuffer.image();
     context->save();
-    context->setCompositeOperation(isInMaskMode() ? CompositeOperator::DestinationIn : CompositeOperator::SourceOver);
     context->setAlpha(opacity);
     context->platformContext()->rq().freeSpace(68)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_PERSPECTIVE_TRANSFORM
@@ -93,7 +86,6 @@ void TextureMapperJava::drawSolidColor(const FloatRect& rect, const Transformati
         return;
 
     context->save();
-    context->setCompositeOperation(isInMaskMode() ? CompositeOperator::DestinationIn : CompositeOperator::SourceOver);
     context->platformContext()->rq().freeSpace(68)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_PERSPECTIVE_TRANSFORM
         << (float)transform.m11() << (float)transform.m12() << (float)transform.m13() << (float)transform.m14()

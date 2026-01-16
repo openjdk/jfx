@@ -57,7 +57,7 @@ static PAS_ALWAYS_INLINE bool pas_has_object(void* ptr,
         return !pas_large_map_entry_is_empty(entry);
     } }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

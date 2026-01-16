@@ -26,6 +26,7 @@
 #pragma once
 
 #include "EnsureStillAliveHere.h"
+#include <wtf/text/StringView.h>
 
 namespace JSC {
 
@@ -66,6 +67,10 @@ class JSCell;
 
 template<typename T>
 struct GCOwnedDataScope {
+    WTF_FORBID_HEAP_ALLOCATION;
+public:
+    GCOwnedDataScope() = default;
+
     GCOwnedDataScope(const JSCell* cell, T value)
         : owner(cell)
         , data(value)
@@ -73,22 +78,22 @@ struct GCOwnedDataScope {
 
     ~GCOwnedDataScope() { ensureStillAliveHere(owner); }
 
-    operator const T() const { return data; }
-    operator T() { return data; }
+    operator const T() const LIFETIME_BOUND { return data; }
+    operator T() LIFETIME_BOUND { return data; }
 
-    std::remove_reference_t<T>* operator->() requires (!std::is_pointer_v<T>) { return &data; }
-    const std::remove_reference_t<T>* operator->() const requires (!std::is_pointer_v<T>) { return &data; }
+    std::remove_reference_t<T>* operator->() LIFETIME_BOUND requires (!std::is_pointer_v<T>) { return &data; }
+    const std::remove_reference_t<T>* operator->() const LIFETIME_BOUND requires (!std::is_pointer_v<T>) { return &data; }
 
-    T operator->() requires (std::is_pointer_v<T>) { return data; }
-    const T operator->() const requires (std::is_pointer_v<T>) { return data; }
+    T operator->() LIFETIME_BOUND requires (std::is_pointer_v<T>) { return data; }
+    const T operator->() const LIFETIME_BOUND requires (std::is_pointer_v<T>) { return data; }
 
-    auto operator[](unsigned index) const { return data[index]; }
+    auto operator[](unsigned index) const LIFETIME_BOUND { return data[index]; }
 
     // Convenience conversion for String -> StringView
-    operator StringView() const requires (std::is_same_v<std::decay_t<T>, String>) { return data; }
+    operator StringView() const LIFETIME_BOUND requires (std::is_same_v<std::decay_t<T>, String>) { return data; }
 
-    const JSCell* owner;
-    T data;
+    const JSCell* owner { nullptr };
+    SUPPRESS_UNCOUNTED_MEMBER T data { };
 };
 
 }

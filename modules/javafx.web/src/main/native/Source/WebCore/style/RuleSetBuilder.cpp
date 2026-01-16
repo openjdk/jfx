@@ -36,15 +36,16 @@
 #include "CSSPositionTryRule.h"
 #include "CSSSelectorParser.h"
 #include "CSSViewTransitionRule.h"
-#include "CustomPropertyRegistry.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "MediaQueryEvaluator.h"
 #include "MutableCSSSelector.h"
+#include "StyleCustomPropertyRegistry.h"
 #include "StyleResolver.h"
 #include "StyleRuleImport.h"
 #include "StyleScope.h"
 #include "StyleSheetContents.h"
+#include <ranges>
 #include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
@@ -344,12 +345,24 @@ void RuleSetBuilder::addStyleRule(StyleRuleNestedDeclarations& rule)
     };
 
     auto selectorList = [&] {
-        ASSERT(m_selectorListStack.size());
         ASSERT(m_ancestorStack.size());
-        if (m_ancestorStack.last() == CSSParserEnum::NestedContextType::Style)
+        auto parentIsStyleRule = [&] {
+            return m_ancestorStack.last() == CSSParserEnum::NestedContextType::Style;
+        };
+        auto parentIsScopeRule = [&] {
+            return m_ancestorStack.last() == CSSParserEnum::NestedContextType::Scope;
+        };
+
+        if (parentIsStyleRule()) {
+            ASSERT(m_selectorListStack.size());
             return *m_selectorListStack.last();
-        ASSERT(m_ancestorStack.last() == CSSParserEnum::NestedContextType::Scope);
+        }
+
+        if (parentIsScopeRule())
         return CSSSelectorList { MutableCSSSelectorList::from(whereScopeSelector()) };
+
+        ASSERT_NOT_REACHED();
+        return CSSSelectorList { };
     };
 
     if (m_shouldResolveNestingForSheet)
@@ -450,7 +463,7 @@ void RuleSetBuilder::updateCascadeLayerPriorities()
         return i + 1;
     });
 
-    std::sort(layersInPriorityOrder.begin(), layersInPriorityOrder.end(), compare);
+    std::ranges::sort(layersInPriorityOrder, compare);
 
     // Priorities matter only relative to each other, so assign them enforcing these constraints:
     // - Layers must get a priority greater than RuleSet::cascadeLayerPriorityForPresentationalHints.
@@ -480,7 +493,7 @@ void RuleSetBuilder::addMutatingRulesToResolver()
     rulesToAdd.appendVector(WTFMove(m_collectedResolverMutatingRules));
 
     if (!m_cascadeLayerIdentifierMap.isEmpty())
-        std::stable_sort(rulesToAdd.begin(), rulesToAdd.end(), compareLayers);
+        std::ranges::stable_sort(rulesToAdd, compareLayers);
 
     for (auto& collectedRule : rulesToAdd) {
         if (collectedRule.layerIdentifier)
@@ -522,10 +535,15 @@ void RuleSetBuilder::addMutatingRulesToResolver()
             registry.registerFromStylesheet(styleRuleProperty->descriptor());
             continue;
         }
-        if (auto* styleRuleViewTransition = dynamicDowncast<StyleRuleViewTransition>(rule.get())) {
-            if (m_ruleSet)
+        if (auto* styleRuleViewTransition = dynamicDowncast<StyleRuleViewTransition>(rule.get()))
                 m_ruleSet->setViewTransitionRule(*styleRuleViewTransition);
+
+        if (auto* positionTryRule = dynamicDowncast<StyleRulePositionTry>(rule.get())) {
+            // "If multiple @position-try rules are declared with the same name, the last one in document order wins."
+            // https://drafts.csswg.org/css-anchor-position-1/#fallback-rule
+            m_ruleSet->m_positionTryRules.set(positionTryRule->name(), positionTryRule);
         }
+
     }
 }
 

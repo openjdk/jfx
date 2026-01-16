@@ -231,10 +231,6 @@ inline bool operator==(Edge edge, Node* node)
 {
     return edge.node() == node;
 }
-inline bool operator==(Node* node, Edge edge)
-{
-    return edge.node() == node;
-}
 
 } } // namespace JSC::DFG
 

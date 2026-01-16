@@ -1,4 +1,9 @@
-set(CMAKE_CXX_STANDARD 20)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    message(STATUS "Building on macOS with Apple Clang")
+    set(CMAKE_CXX_STANDARD 20)
+else()
+    set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP OFF)
@@ -20,7 +25,7 @@ if (WTF_CPU_ARM)
     int main() {}
    ")
 
-    if (COMPILER_IS_CLANG AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
+    if (COMPILER_IS_GCC_OR_CLANG AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
         set(CLANG_EXTRA_ARM_ARGS " -mthumb")
     endif ()
 

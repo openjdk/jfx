@@ -44,7 +44,7 @@ class Document;
 class Element;
 class VisiblePosition;
 
-using NodeSet = UncheckedKeyHashSet<Ref<Node>>;
+using NodeSet = HashSet<Ref<Node>>;
 
 class TextManipulationController final : public CanMakeWeakPtr<TextManipulationController>, public CanMakeCheckedPtr<TextManipulationController> {
     WTF_MAKE_TZONE_ALLOCATED(TextManipulationController);
@@ -62,7 +62,8 @@ public:
     void didAddOrCreateRendererForNode(Node&);
     void removeNode(Node&);
 
-    WEBCORE_EXPORT Vector<ManipulationFailure> completeManipulation(const Vector<TextManipulationItem>&);
+    using ManipulationResult = TextManipulationControllerManipulationResult;
+    WEBCORE_EXPORT ManipulationResult completeManipulation(const Vector<TextManipulationItem>&);
 
 private:
     void observeParagraphs(const Position& start, const Position& end);
@@ -110,7 +111,7 @@ private:
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_manipulatedNodesWithNewContent;
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_addedOrNewlyRenderedNodes;
 
-    UncheckedKeyHashMap<String, bool> m_cachedFontFamilyExclusionResults;
+    HashMap<String, bool> m_cachedFontFamilyExclusionResults;
 
     bool m_didScheduleObservationUpdate { false };
 
@@ -118,7 +119,7 @@ private:
     Vector<TextManipulationItem> m_pendingItemsForCallback;
 
     Vector<ExclusionRule> m_exclusionRules;
-    UncheckedKeyHashMap<TextManipulationItemIdentifier, ManipulationItemData> m_items;
+    HashMap<TextManipulationItemIdentifier, ManipulationItemData> m_items;
 };
 
 } // namespace WebCore

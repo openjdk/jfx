@@ -142,6 +142,7 @@ public:
     virtual void pauseAllErrorReporting(bool pause) = 0;
 
     virtual bool isRemoteDeviceProxy() const { return false; }
+    virtual Ref<BindGroupLayout> emptyBindGroupLayout() const = 0;
 
 protected:
     Device(Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits)
@@ -159,8 +160,8 @@ private:
     virtual void setLabelInternal(const String&) = 0;
 
     String m_label;
-    Ref<SupportedFeatures> m_features;
-    Ref<SupportedLimits> m_limits;
+    const Ref<SupportedFeatures> m_features;
+    const Ref<SupportedLimits> m_limits;
 };
 
 } // namespace WebCore::WebGPU

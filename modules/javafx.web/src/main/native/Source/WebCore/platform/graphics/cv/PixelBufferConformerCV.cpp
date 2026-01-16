@@ -62,12 +62,17 @@ static void logStackTrace(WTFLogChannel* channel)
 #define RELEASE_LOG_STACKTRACE(channel) logStackTrace(&LOG_CHANNEL(channel))
 #endif
 
-PixelBufferConformerCV::PixelBufferConformerCV(CFDictionaryRef attributes)
+RetainPtr<VTPixelBufferConformerRef> PixelBufferConformerCV::createPixelConformer(CFDictionaryRef attributes)
 {
     VTPixelBufferConformerRef conformer = nullptr;
     VTPixelBufferConformerCreateWithAttributes(kCFAllocatorDefault, attributes, &conformer);
     ASSERT(conformer);
-    m_pixelConformer = adoptCF(conformer);
+    return adoptCF(conformer);
+}
+
+PixelBufferConformerCV::PixelBufferConformerCV(CFDictionaryRef attributes)
+    : m_pixelConformer(createPixelConformer(attributes))
+{
 }
 
 struct CVPixelBufferInfo {

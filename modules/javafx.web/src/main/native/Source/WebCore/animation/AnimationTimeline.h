@@ -53,7 +53,7 @@ public:
     virtual void animationTimingDidChange(WebAnimation&);
     virtual void removeAnimation(WebAnimation&);
 
-    virtual std::optional<WebAnimationTime> currentTime() { return m_currentTime; }
+    virtual std::optional<WebAnimationTime> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes) { return m_currentTime; }
     virtual std::optional<WebAnimationTime> duration() const { return m_duration; }
 
     virtual void detachFromDocument();

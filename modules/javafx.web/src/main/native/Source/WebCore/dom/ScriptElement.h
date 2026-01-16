@@ -39,6 +39,7 @@ class CachedScript;
 class ContainerNode;
 class Element;
 class LoadableModuleScript;
+class Node;
 class PendingScript;
 class ScriptSourceCode;
 
@@ -123,7 +124,7 @@ private:
     void dispatchLoadEventRespectingUserGestureIndicator();
 
     bool requestClassicScript(const String& sourceURL);
-    bool requestModuleScript(const TextPosition& scriptStartPosition);
+    bool requestModuleScript(const String& sourceText, const TextPosition& scriptStartPosition);
 
     void updateTaintedOriginFromSourceURL();
 
@@ -166,7 +167,7 @@ private:
 };
 
 // FIXME: replace with is/downcast<ScriptElement>.
-bool isScriptElement(Element&);
+bool isScriptElement(Node&);
 ScriptElement* dynamicDowncastScriptElement(Element&);
 
 }

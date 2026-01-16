@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010. Adam Barth. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,7 +73,7 @@ static inline bool canReferToParentFrameEncoding(const LocalFrame* frame, const 
 void DocumentWriter::replaceDocumentWithResultOfExecutingJavascriptURL(const String& source, Document* ownerDocument)
 {
     Ref frame = *m_frame;
-    frame->protectedLoader()->stopAllLoaders();
+    frame->loader().stopAllLoaders();
 
     // If we are in the midst of changing the frame's document, don't execute script
     // that modifies the document further:

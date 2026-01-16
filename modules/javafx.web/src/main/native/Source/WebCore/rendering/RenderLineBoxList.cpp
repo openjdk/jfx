@@ -36,6 +36,7 @@
 #include "RenderBlockFlow.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"

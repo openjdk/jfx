@@ -21,13 +21,15 @@
 
 #pragma once
 
-#include "CalculationRandomKeyMap.h"
+#include "CSSCalcRandomCachingKeyMap.h"
 #include "CustomElementDefaultARIA.h"
 #include "CustomElementReactionQueue.h"
 #include "CustomStateSet.h"
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
+#include "Element.h"
 #include "ElementAnimationRareData.h"
+#include "EventTarget.h"
 #include "FormAssociatedCustomElement.h"
 #include "IntersectionObserver.h"
 #include "KeyframeEffectStack.h"
@@ -47,18 +49,6 @@
 #include <wtf/Markable.h>
 
 namespace WebCore {
-
-struct LayoutUnitMarkableTraits {
-    static bool isEmptyValue(LayoutUnit value)
-    {
-        return value == LayoutUnit(-1);
-    }
-
-    static LayoutUnit emptyValue()
-    {
-        return LayoutUnit(-1);
-    }
-};
 
 class ElementRareData : public NodeRareData {
 public:
@@ -91,10 +81,10 @@ public:
     void setCustomElementDefaultARIA(std::unique_ptr<CustomElementDefaultARIA>&& defaultARIA) { m_customElementDefaultARIA = WTFMove(defaultARIA); }
 
     FormAssociatedCustomElement* formAssociatedCustomElement() { return m_formAssociatedCustomElement.get(); }
-    void setFormAssociatedCustomElement(std::unique_ptr<FormAssociatedCustomElement>&& element) { m_formAssociatedCustomElement = WTFMove(element); }
+    void setFormAssociatedCustomElement(const std::unique_ptr<FormAssociatedCustomElement>&& element) { lazyInitialize(m_formAssociatedCustomElement, std::move(element)); }
 
     NamedNodeMap* attributeMap() const { return m_attributeMap.get(); }
-    void setAttributeMap(std::unique_ptr<NamedNodeMap>&& attributeMap) { m_attributeMap = WTFMove(attributeMap); }
+    void setAttributeMap(const std::unique_ptr<NamedNodeMap>&& attributeMap) { lazyInitialize(m_attributeMap, std::move(attributeMap)); }
 
     String userInfo() const { return m_userInfo; }
     void setUserInfo(String&& userInfo) { m_userInfo = WTFMove(userInfo); }
@@ -109,14 +99,15 @@ public:
     void setEffectiveLang(const AtomString& lang) { m_effectiveLang = lang; }
 
     DOMTokenList* classList() const { return m_classList.get(); }
-    void setClassList(std::unique_ptr<DOMTokenList>&& classList) { m_classList = WTFMove(classList); }
+    void setClassList(const std::unique_ptr<DOMTokenList>&& classList) { lazyInitialize(m_classList, std::move(classList)); }
 
     DatasetDOMStringMap* dataset() const { return m_dataset.get(); }
-    void setDataset(std::unique_ptr<DatasetDOMStringMap>&& dataset) { m_dataset = WTFMove(dataset); }
+    void setDataset(const std::unique_ptr<DatasetDOMStringMap>&& dataset) { lazyInitialize(m_dataset, std::move(dataset)); }
 
     ScrollPosition savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
     void setSavedLayerScrollPosition(ScrollPosition position) { m_savedLayerScrollPosition = position; }
 
+    bool hasAnimationRareData() const { return !m_animationRareData.isEmpty(); }
     ElementAnimationRareData* animationRareData(const std::optional<Style::PseudoElementIdentifier>&) const;
     ElementAnimationRareData& ensureAnimationRareData(const std::optional<Style::PseudoElementIdentifier>&);
 
@@ -124,7 +115,7 @@ public:
     void setViewTransitionCapturedName(const std::optional<Style::PseudoElementIdentifier>&, AtomString);
 
     DOMTokenList* partList() const { return m_partList.get(); }
-    void setPartList(std::unique_ptr<DOMTokenList>&& partList) { m_partList = WTFMove(partList); }
+    void setPartList(const std::unique_ptr<DOMTokenList>&& partList) { lazyInitialize(m_partList, std::move(partList)); }
 
     const SpaceSplitString& partNames() const { return m_partNames; }
     void setPartNames(SpaceSplitString&& partNames) { m_partNames = WTFMove(partNames); }
@@ -156,6 +147,9 @@ public:
     PopoverData* popoverData() { return m_popoverData.get(); }
     void setPopoverData(std::unique_ptr<PopoverData>&& popoverData) { m_popoverData = WTFMove(popoverData); }
 
+    Element* invokedPopover() const { return m_invokedPopover.get(); }
+    void setInvokedPopover(RefPtr<Element>&& element) { m_invokedPopover = WTFMove(element); }
+
     const std::optional<OptionSet<ContentRelevancy>>& contentRelevancy() const { return m_contentRelevancy; }
     void setContentRelevancy(OptionSet<ContentRelevancy>& contentRelevancy) { m_contentRelevancy = contentRelevancy; }
 
@@ -165,8 +159,8 @@ public:
     OptionSet<VisibilityAdjustment> visibilityAdjustment() const { return m_visibilityAdjustment; }
     void setVisibilityAdjustment(OptionSet<VisibilityAdjustment> adjustment) { m_visibilityAdjustment = adjustment; }
 
-    Ref<Calculation::RandomKeyMap> ensureRandomKeyMap(const std::optional<Style::PseudoElementIdentifier>&);
-    bool hasRandomKeyMap() const;
+    Ref<CSSCalc::RandomCachingKeyMap> ensureRandomCachingKeyMap(const std::optional<Style::PseudoElementIdentifier>&);
+    bool hasRandomCachingKeyMap() const;
 
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
@@ -224,6 +218,8 @@ public:
             result.add(UseType::CustomStateSet);
         if (m_userInfo)
             result.add(UseType::UserInfo);
+        if (m_invokedPopover)
+            result.add(UseType::InvokedPopover);
         return result;
     }
 #endif
@@ -241,20 +237,20 @@ private:
     std::unique_ptr<RenderStyle> m_displayContentsOrNoneStyle;
 
     AtomString m_effectiveLang;
-    std::unique_ptr<DatasetDOMStringMap> m_dataset;
-    std::unique_ptr<DOMTokenList> m_classList;
+    const std::unique_ptr<DatasetDOMStringMap> m_dataset;
+    const std::unique_ptr<DOMTokenList> m_classList;
     RefPtr<ShadowRoot> m_shadowRoot;
     std::unique_ptr<CustomElementReactionQueue> m_customElementReactionQueue;
     std::unique_ptr<CustomElementDefaultARIA> m_customElementDefaultARIA;
-    std::unique_ptr<FormAssociatedCustomElement> m_formAssociatedCustomElement;
-    std::unique_ptr<NamedNodeMap> m_attributeMap;
+    const std::unique_ptr<FormAssociatedCustomElement> m_formAssociatedCustomElement;
+    const std::unique_ptr<NamedNodeMap> m_attributeMap;
 
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
 
     std::unique_ptr<ResizeObserverData> m_resizeObserverData;
 
-    Markable<LayoutUnit, LayoutUnitMarkableTraits> m_lastRememberedLogicalWidth;
-    Markable<LayoutUnit, LayoutUnitMarkableTraits> m_lastRememberedLogicalHeight;
+    Markable<LayoutUnit> m_lastRememberedLogicalWidth;
+    Markable<LayoutUnit> m_lastRememberedLogicalHeight;
 
     HashMap<std::optional<Style::PseudoElementIdentifier>, std::unique_ptr<ElementAnimationRareData>> m_animationRareData;
 
@@ -266,7 +262,7 @@ private:
     RefPtr<StylePropertyMap> m_attributeStyleMap;
     RefPtr<StylePropertyMapReadOnly> m_computedStyleMap;
 
-    std::unique_ptr<DOMTokenList> m_partList;
+    const std::unique_ptr<DOMTokenList> m_partList;
     SpaceSplitString m_partNames;
 
     AtomString m_nonce;
@@ -275,11 +271,13 @@ private:
 
     std::unique_ptr<PopoverData> m_popoverData;
 
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_invokedPopover;
+
     RefPtr<CustomStateSet> m_customStateSet;
 
     OptionSet<VisibilityAdjustment> m_visibilityAdjustment;
 
-    HashMap<std::optional<Style::PseudoElementIdentifier>, Ref<Calculation::RandomKeyMap>> m_randomKeyMaps;
+    HashMap<std::optional<Style::PseudoElementIdentifier>, Ref<CSSCalc::RandomCachingKeyMap>> m_randomCachingKeyMaps;
 };
 
 inline ElementRareData::ElementRareData()
@@ -348,16 +346,16 @@ inline void ElementRareData::setViewTransitionCapturedName(const std::optional<S
     m_viewTransitionCapturedName.set(pseudoElementIdentifier, captureName);
 }
 
-inline Ref<Calculation::RandomKeyMap> ElementRareData::ensureRandomKeyMap(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
+inline Ref<CSSCalc::RandomCachingKeyMap> ElementRareData::ensureRandomCachingKeyMap(const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
 {
-    return m_randomKeyMaps.ensure(pseudoElementIdentifier, [] -> Ref<Calculation::RandomKeyMap> {
-        return Calculation::RandomKeyMap::create();
+    return m_randomCachingKeyMaps.ensure(pseudoElementIdentifier, [] {
+        return CSSCalc::RandomCachingKeyMap::create();
     }).iterator->value;
 }
 
-inline bool ElementRareData::hasRandomKeyMap() const
+inline bool ElementRareData::hasRandomCachingKeyMap() const
 {
-    return !m_randomKeyMaps.isEmpty();
+    return !m_randomCachingKeyMaps.isEmpty();
 }
 
 inline ElementRareData* Element::elementRareData() const
@@ -378,10 +376,15 @@ inline ShadowRoot* Element::shadowRoot() const
     return hasRareData() ? elementRareData()->shadowRoot() : nullptr;
 }
 
+inline RefPtr<ShadowRoot> Node::protectedShadowRoot() const
+{
+    return shadowRoot();
+}
+
 inline void Element::removeShadowRoot()
 {
     RefPtr shadowRoot = this->shadowRoot();
-    if (LIKELY(!shadowRoot))
+    if (!shadowRoot) [[likely]]
         return;
     removeShadowRootSlow(*shadowRoot);
 }

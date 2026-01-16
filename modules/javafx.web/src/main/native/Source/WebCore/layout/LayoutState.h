@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,9 +60,10 @@ class FormattingState;
 class InlineContentCache;
 class TableFormattingState;
 
-class LayoutState : public CanMakeWeakPtr<LayoutState> {
+class LayoutState : public CanMakeWeakPtr<LayoutState>, public CanMakeThreadSafeCheckedPtr<LayoutState> {
     WTF_MAKE_NONCOPYABLE(LayoutState);
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LayoutState);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LayoutState);
 public:
     // Primary layout state has a direct geometry cache in layout boxes.
     enum class Type { Primary, Secondary };
@@ -122,19 +123,19 @@ private:
 
     const Type m_type;
 
-    UncheckedKeyHashMap<const ElementBox*, std::unique_ptr<InlineContentCache>> m_inlineContentCaches;
+    HashMap<const ElementBox*, std::unique_ptr<InlineContentCache>> m_inlineContentCaches;
 
-    UncheckedKeyHashMap<const ElementBox*, std::unique_ptr<BlockFormattingState>> m_blockFormattingStates;
-    UncheckedKeyHashMap<const ElementBox*, std::unique_ptr<TableFormattingState>> m_tableFormattingStates;
+    HashMap<const ElementBox*, std::unique_ptr<BlockFormattingState>> m_blockFormattingStates;
+    HashMap<const ElementBox*, std::unique_ptr<TableFormattingState>> m_tableFormattingStates;
 
 #ifndef NDEBUG
-    UncheckedKeyHashSet<const FormattingContext*> m_formattingContextList;
+    HashSet<const FormattingContext*> m_formattingContextList;
 #endif
-    UncheckedKeyHashMap<const Box*, std::unique_ptr<BoxGeometry>> m_layoutBoxToBoxGeometry;
+    HashMap<const Box*, std::unique_ptr<BoxGeometry>> m_layoutBoxToBoxGeometry;
     QuirksMode m_quirksMode { QuirksMode::No };
 
-    CheckedRef<const ElementBox> m_rootContainer;
-    Ref<SecurityOrigin> m_securityOrigin;
+    const CheckedRef<const ElementBox> m_rootContainer;
+    const Ref<SecurityOrigin> m_securityOrigin;
 
     FormattingContextLayoutFunction m_formattingContextLayoutFunction;
     FormattingContextLogicalWidthFunction m_formattingContextLogicalWidthFunction;
@@ -143,7 +144,7 @@ private:
 
 inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary))
+    if (m_type == Type::Primary) [[likely]]
         return !!layoutBox.m_cachedGeometryForPrimaryLayoutState;
 
     return m_layoutBoxToBoxGeometry.contains(&layoutBox);
@@ -151,7 +152,7 @@ inline bool LayoutState::hasBoxGeometry(const Box& layoutBox) const
 
 inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         if (auto* boxGeometry = layoutBox.m_cachedGeometryForPrimaryLayoutState.get()) {
             ASSERT(layoutBox.m_primaryLayoutState == this);
         return *boxGeometry;
@@ -162,7 +163,7 @@ inline BoxGeometry& LayoutState::ensureGeometryForBox(const Box& layoutBox)
 
 inline const BoxGeometry& LayoutState::geometryForBox(const Box& layoutBox) const
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
         ASSERT(layoutBox.m_primaryLayoutState == this);
         return *layoutBox.m_cachedGeometryForPrimaryLayoutState;
     }

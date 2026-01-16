@@ -28,7 +28,7 @@
 #if ENABLE(CONTENT_EXTENSIONS)
 
 #include "ImmutableNFA.h"
-#include <wtf/FileSystem.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {

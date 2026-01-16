@@ -47,10 +47,7 @@ public:
     static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename CellType, SubspaceAccess mode>
-    static GCClient::IsoSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.regExpSpace();
-    }
+    static GCClient::IsoSubspace* subspaceFor(VM&); // Defined in RegExpInlines.h
 
     JS_EXPORT_PRIVATE static RegExp* create(VM&, const String& pattern, OptionSet<Yarr::Flags>);
     static void destroy(JSCell*);
@@ -172,7 +169,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     bool hasValidAtom() const { return !m_atom.isNull(); }
     const String& atom() const { return m_atom; }
-    void setAtom(String&& atom) { m_atom = WTFMove(atom); }
+    Yarr::SpecificPattern specificPattern() const { return m_specificPattern; }
 
 private:
     friend class RegExpCache;
@@ -210,7 +207,7 @@ private:
 #endif
 
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(RareData);
         unsigned m_numDuplicateNamedCaptureGroups;
         Vector<String> m_captureGroupNames;
 
@@ -223,6 +220,7 @@ private:
     String m_patternString;
     String m_atom;
     RegExpState m_state { NotCompiled };
+    Yarr::SpecificPattern m_specificPattern { Yarr::SpecificPattern::None };
     OptionSet<Yarr::Flags> m_flags;
     Yarr::ErrorCode m_constructionErrorCode { Yarr::ErrorCode::NoError };
     unsigned m_numSubpatterns { 0 };

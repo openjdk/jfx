@@ -112,7 +112,7 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
     bool crossOrigin = !protocolHostAndPortAreEqual(request.url(), newURL);
 
     ResourceRequest newRequest = request;
-    newRequest.setURL(newURL);
+    newRequest.setURL(std::move(newURL));
 
     if (shouldRedirectAsGET(newRequest, response, crossOrigin)) {
         newRequest.setHTTPMethod("GET"_s);

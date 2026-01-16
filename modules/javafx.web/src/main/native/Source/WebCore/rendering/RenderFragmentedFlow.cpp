@@ -41,6 +41,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerCompositor.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTableSection.h"
@@ -77,8 +78,6 @@ void RenderFragmentedFlow::styleDidChange(StyleDifference diff, const RenderStyl
 
 void RenderFragmentedFlow::removeFlowChildInfo(RenderElement& child)
 {
-    if (CheckedPtr blockFlow = dynamicDowncast<RenderBlockFlow>(child))
-        removeLineFragmentInfo(*blockFlow);
     if (CheckedPtr box = dynamicDowncast<RenderBox>(child))
         removeRenderBoxFragmentInfo(*box);
 }
@@ -96,10 +95,6 @@ void RenderFragmentedFlow::invalidateFragments(MarkingBehavior markingParents)
     }
 
     m_fragmentRangeMap.clear();
-    m_breakBeforeToFragmentMap.clear();
-    m_breakAfterToFragmentMap.clear();
-    if (m_lineToFragmentMap)
-        m_lineToFragmentMap->clear();
     setNeedsLayout(markingParents);
 
     m_fragmentsInvalidated = true;
@@ -250,6 +245,25 @@ bool RenderFragmentedFlow::absoluteQuadsForBox(Vector<FloatQuad>& quads, bool* w
     return true;
 }
 
+bool RenderFragmentedFlow::boxIsFragmented(const RenderBox& box) const
+{
+    ASSERT(hasValidFragmentInfo());
+
+    auto boxRect = FloatRect { { }, box.size() };
+    auto boxRectInFlowCoordinates = LayoutRect { box.localToContainerQuad(boxRect, this).boundingBox() };
+
+    RenderFragmentContainer* startFragment = nullptr;
+    RenderFragmentContainer* endFragment = nullptr;
+    computedFragmentRangeForBox(box, startFragment, endFragment);
+    if (startFragment != endFragment)
+        return true;
+
+    if (startFragment->contentRectSpansFragments(boxRectInFlowCoordinates))
+        return true;
+
+    return false;
+}
+
 class RenderFragmentedFlow::FragmentSearchAdapter {
 public:
     explicit FragmentSearchAdapter(LayoutUnit offset)
@@ -374,7 +388,7 @@ RenderFragmentContainer* RenderFragmentedFlow::mapFromFlowToFragment(TransformSt
     return RenderFragmentContainer;
 }
 
-void RenderFragmentedFlow::removeRenderBoxFragmentInfo(RenderBox& box)
+void RenderFragmentedFlow::removeRenderBoxFragmentInfo(const RenderBox& box)
 {
     if (!hasFragments())
         return;
@@ -402,18 +416,7 @@ void RenderFragmentedFlow::removeRenderBoxFragmentInfo(RenderBox& box)
         ASSERT_UNUSED(fragment, !fragment.renderBoxFragmentInfo(box));
 #endif
 
-    m_fragmentRangeMap.remove(&box);
-}
-
-void RenderFragmentedFlow::removeLineFragmentInfo(const RenderBlockFlow& blockFlow)
-{
-    if (!m_lineToFragmentMap)
-        return;
-
-    if (auto* rootBox = blockFlow.legacyRootBox())
-        m_lineToFragmentMap->remove(rootBox);
-
-    ASSERT_WITH_SECURITY_IMPLICATION(checkLinesConsistency(blockFlow));
+    m_fragmentRangeMap.remove(box);
 }
 
 void RenderFragmentedFlow::logicalWidthChangedInFragmentsForBlock(const RenderBlock& block, RelayoutChildren& relayoutChildren)
@@ -421,7 +424,7 @@ void RenderFragmentedFlow::logicalWidthChangedInFragmentsForBlock(const RenderBl
     if (!hasValidFragmentInfo())
         return;
 
-    auto it = m_fragmentRangeMap.find(&block);
+    auto it = m_fragmentRangeMap.find(block);
     if (it == m_fragmentRangeMap.end())
         return;
 
@@ -451,7 +454,7 @@ void RenderFragmentedFlow::logicalWidthChangedInFragmentsForBlock(const RenderBl
         ASSERT(!fragment.needsLayout() || fragment.isRenderFragmentContainerSet());
 
         // We have no information computed for this fragment so we need to do it.
-        std::unique_ptr<RenderBoxFragmentInfo> oldInfo = fragment.takeRenderBoxFragmentInfo(&block);
+        std::unique_ptr<RenderBoxFragmentInfo> oldInfo = fragment.takeRenderBoxFragmentInfo(block);
         if (!oldInfo) {
             relayoutChildren = rangeInvalidated ? RelayoutChildren::Yes : RelayoutChildren::No;
             return;
@@ -537,7 +540,7 @@ void RenderFragmentedFlow::setFragmentRangeForBox(const RenderBox& box, RenderFr
 {
     ASSERT(hasFragments());
     ASSERT(startFragment && endFragment && startFragment->fragmentedFlow() == this && endFragment->fragmentedFlow() == this);
-    auto result = m_fragmentRangeMap.set(box, RenderFragmentContainerRange(startFragment, endFragment));
+    auto result = m_fragmentRangeMap.add(box, RenderFragmentContainerRange(startFragment, endFragment));
     if (result.isNewEntry)
         return;
 
@@ -550,7 +553,7 @@ void RenderFragmentedFlow::setFragmentRangeForBox(const RenderBox& box, RenderFr
 
 bool RenderFragmentedFlow::hasCachedFragmentRangeForBox(const RenderBox& box) const
 {
-    return m_fragmentRangeMap.contains(&box);
+    return m_fragmentRangeMap.contains(box);
 }
 
 bool RenderFragmentedFlow::getFragmentRangeForBoxFromCachedInfo(const RenderBox& box, RenderFragmentContainer*& startFragment, RenderFragmentContainer*& endFragment) const
@@ -558,7 +561,7 @@ bool RenderFragmentedFlow::getFragmentRangeForBoxFromCachedInfo(const RenderBox&
     ASSERT(hasValidFragmentInfo());
     ASSERT((startFragment == nullptr) && (endFragment == nullptr));
 
-    auto it = m_fragmentRangeMap.find(&box);
+    auto it = m_fragmentRangeMap.find(box);
     if (it != m_fragmentRangeMap.end()) {
         const RenderFragmentContainerRange& range = it->value;
         startFragment = range.startFragment();
@@ -702,45 +705,6 @@ bool RenderFragmentedFlow::objectInFlowFragment(const RenderObject* object, cons
     return false;
 }
 
-#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
-bool RenderFragmentedFlow::checkLinesConsistency(const RenderBlockFlow& removedBlock) const
-{
-    if (!m_lineToFragmentMap)
-        return true;
-
-    for (auto& linePair : *m_lineToFragmentMap.get()) {
-        const LegacyRootInlineBox* line = linePair.key;
-        RenderFragmentContainer& fragment = *linePair.value;
-        if (&line->blockFlow() == &removedBlock)
-            return false;
-        if (line->blockFlow().fragmentedFlowState() == FragmentedFlowState::NotInsideFlow)
-            return false;
-        if (!m_fragmentList.contains(fragment))
-            return false;
-    }
-
-    return true;
-}
-#endif
-
-void RenderFragmentedFlow::clearLinesToFragmentMap()
-{
-    if (m_lineToFragmentMap)
-        m_lineToFragmentMap->clear();
-}
-
-void RenderFragmentedFlow::deleteLines()
-{
-    clearLinesToFragmentMap();
-    RenderBlockFlow::deleteLines();
-}
-
-void RenderFragmentedFlow::willBeDestroyed()
-{
-    clearLinesToFragmentMap();
-    RenderBlockFlow::willBeDestroyed();
-}
-
 void RenderFragmentedFlow::updateFragmentsFragmentedFlowPortionRect()
 {
     LayoutUnit logicalHeight;
@@ -786,7 +750,7 @@ bool RenderFragmentedFlow::addForcedFragmentBreak(const RenderBlock* block, Layo
     return false;
 }
 
-void RenderFragmentedFlow::collectLayerFragments(LayerFragments& layerFragments, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect)
+void RenderFragmentedFlow::collectLayerFragments(LayerFragments& layerFragments, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) const
 {
     ASSERT(!m_fragmentsInvalidated || isSkippedContent());
 
@@ -794,7 +758,7 @@ void RenderFragmentedFlow::collectLayerFragments(LayerFragments& layerFragments,
         fragment.collectLayerFragments(layerFragments, layerBoundingBox, dirtyRect);
 }
 
-LayoutRect RenderFragmentedFlow::fragmentsBoundingBox(const LayoutRect& layerBoundingBox)
+LayoutRect RenderFragmentedFlow::fragmentsBoundingBox(const LayoutRect& layerBoundingBox) const
 {
     ASSERT(!m_fragmentsInvalidated);
 
@@ -1067,14 +1031,5 @@ RenderFragmentContainer* RenderFragmentedFlow::currentFragment() const
 {
     return m_currentFragmentMaintainer ? &m_currentFragmentMaintainer->fragment() : nullptr;
 }
-
-ContainingFragmentMap& RenderFragmentedFlow::containingFragmentMap()
-{
-    if (!m_lineToFragmentMap)
-        m_lineToFragmentMap = makeUnique<ContainingFragmentMap>();
-
-    return *m_lineToFragmentMap.get();
-}
-
 
 } // namespace WebCore

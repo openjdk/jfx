@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,7 +66,7 @@ class ResourceMonitor;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
 class ResourceLoader : public RefCountedAndCanMakeWeakPtr<ResourceLoader>, protected ResourceHandleClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader, ResourceLoader);
 public:
     virtual ~ResourceLoader() = 0;
 
@@ -74,7 +74,7 @@ public:
 
     virtual void init(ResourceRequest&&, CompletionHandler<void(bool)>&&);
 
-    void deliverResponseAndData(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>&&);
+    void deliverResponseAndData(ResourceResponse&&, RefPtr<FragmentedSharedBuffer>&&);
 
 #if PLATFORM(IOS_FAMILY)
     virtual void startLoading()
@@ -117,7 +117,7 @@ public:
 
     virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& callback);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
-    virtual void didReceiveResponse(const ResourceResponse&, CompletionHandler<void()>&& policyCompletionHandler);
+    virtual void didReceiveResponse(ResourceResponse&&, CompletionHandler<void()>&& policyCompletionHandler);
     virtual void didReceiveData(const SharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didReceiveBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didFinishLoading(const NetworkLoadMetrics&);
@@ -133,7 +133,7 @@ public:
 
 #if USE(QUICK_LOOK)
     bool isQuickLookResource() const;
-    virtual void didReceivePreviewResponse(const ResourceResponse&) { };
+    virtual void didReceivePreviewResponse(ResourceResponse&&) { };
 #endif
 
     const URL& url() const { return m_request.url(); }

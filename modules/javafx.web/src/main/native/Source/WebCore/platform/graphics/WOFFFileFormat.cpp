@@ -121,7 +121,7 @@ public:
             return false;
         if (offset + n > m_vector.size())
             m_vector.grow(offset + n);
-        m_vector.remove(offset, n);
+        m_vector.removeAt(offset, n);
         m_vector.insertSpan(offset, unsafeMakeSpan(static_cast<const uint8_t*>(data), n));
         return true;
     }
@@ -262,7 +262,7 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
 
         // Write an sfnt table directory entry.
         WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
-        uint32_t* sfntTableDirectoryPtr = reinterpret_cast_ptr<uint32_t*>(sfnt.data() + sfntTableDirectoryCursor);
+        uint32_t* sfntTableDirectoryPtr = reinterpret_cast_ptr<uint32_t*>(sfnt.mutableSpan().subspan(sfntTableDirectoryCursor).data());
         WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         *sfntTableDirectoryPtr++ = htonl(tableTag);
         *sfntTableDirectoryPtr++ = htonl(tableOrigChecksum);

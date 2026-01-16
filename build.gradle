@@ -4033,6 +4033,8 @@ project(":web") {
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_COMPILER=${clangCompiler} -DCMAKE_CXX_COMPILER=${clangCompiler}"
                         // pass the MSVC bin dir for icu Third party lib
                         cmakeArgs = "$cmakeArgs -DCMAKE_LINKER=${msvcLinker} -DMSVC_BIN_DIR='${WIN.MSVC_BIN_DIR}'"
+                        // Pass in the rt/build dir and WebKit output dir
+                        cmakeArgs = "$cmakeArgs -DRT_BUILD_ROOT='${rootProject.buildDir}' -DWEBKIT_OUTPUTDIR=${webkitOutputDir}"
 
 
                     } else if (t.name == "mac") {

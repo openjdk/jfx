@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMPointReadOnly.h"
 #include "Document.h"
 #include "WebXRRigidTransform.h"
@@ -64,6 +65,11 @@ std::optional<bool> WebXRSpace::isPositionEmulated() const
         return std::nullopt;
 
     return xrSession->isPositionEmulated();
+}
+
+ScriptExecutionContext* WebXRSpace::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebXRViewerSpace);

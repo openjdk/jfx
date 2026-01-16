@@ -67,7 +67,7 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
 
         ASSERT(!functionName.isNull());
         function = callback->get(lexicalGlobalObject, functionName);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             returnedException = scope.exception();
             scope.clearException();
             return JSValue();

@@ -28,6 +28,10 @@
 
 namespace WebCore {
 
+namespace Style {
+struct URL;
+}
+
 class SVGElement;
 
 class SVGURIReference {
@@ -39,12 +43,14 @@ public:
     void parseAttribute(const QualifiedName&, const AtomString&);
 
     static AtomString fragmentIdentifierFromIRIString(const String&, const Document&);
+    static AtomString fragmentIdentifierFromIRIString(const Style::URL&, const Document&);
 
     struct TargetElementResult {
         RefPtr<Element> element;
         AtomString identifier;
     };
     static TargetElementResult targetElementFromIRIString(const String&, const TreeScope&, RefPtr<Document> externalDocument = nullptr);
+    static TargetElementResult targetElementFromIRIString(const Style::URL&, const TreeScope&, RefPtr<Document> externalDocument = nullptr);
 
     static bool isExternalURIReference(const String& uri, const Document& document)
     {

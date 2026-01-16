@@ -30,7 +30,7 @@
 #include <wtf/TZoneMalloc.h>
 
 typedef struct OpaqueVTImageRotationSession* VTImageRotationSessionRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef struct __CVPixelBufferPool* CVPixelBufferPoolRef;
 
 namespace WebCore {
@@ -54,7 +54,7 @@ public:
 
     ImageRotationSessionVT(AffineTransform&&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
     ImageRotationSessionVT(const RotationProperties&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
-    ImageRotationSessionVT() = default;
+    WEBCORE_EXPORT explicit ImageRotationSessionVT(ShouldUseIOSurface = ShouldUseIOSurface::Yes);
 
     const std::optional<AffineTransform>& transform() const { return m_transform; }
     const RotationProperties& rotationProperties() const { return m_rotationProperties; }
@@ -62,6 +62,7 @@ public:
     const FloatSize& rotatedSize() { return m_rotatedSize; }
 
     RetainPtr<CVPixelBufferRef> rotate(CVPixelBufferRef);
+    RefPtr<VideoFrame> applyRotation(VideoFrame&, IsCGImageCompatible = IsCGImageCompatible::No);
     WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> rotate(VideoFrame&, const RotationProperties&, IsCGImageCompatible);
 
 private:

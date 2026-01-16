@@ -381,7 +381,7 @@ namespace JSC {
         static ParserError generate(VM& vm, Node* node, const SourceCode& sourceCode, UnlinkedCodeBlock* unlinkedCodeBlock, OptionSet<CodeGenerationMode> codeGenerationMode, const RefPtr<TDZEnvironmentLink>& parentScopeTDZVariables, const FixedVector<Identifier>* generatorOrAsyncWrapperFunctionParameterNames, const PrivateNameEnvironment* privateNameEnvironment)
         {
             MonotonicTime before;
-            if (UNLIKELY(Options::reportBytecodeCompileTimes()))
+            if (Options::reportBytecodeCompileTimes()) [[unlikely]]
                 before = MonotonicTime::now();
 
             DeferGC deferGC(vm);
@@ -389,9 +389,9 @@ namespace JSC {
             unsigned size;
             auto result = bytecodeGenerator->generate(size);
 
-            if (UNLIKELY(Options::reportBytecodeCompileTimes())) {
+            if (Options::reportBytecodeCompileTimes()) [[unlikely]] {
                 MonotonicTime after = MonotonicTime::now();
-                dataLogLn(result.isValid() ? "Failed to compile #" : "Compiled #", CodeBlockHash(sourceCode, unlinkedCodeBlock->isConstructor() ? CodeForConstruct : CodeForCall), " into bytecode ", size, " instructions in ", (after - before).milliseconds(), " ms.");
+                dataLogLn(result.isValid() ? "Failed to compile #" : "Compiled #", CodeBlockHash(sourceCode, unlinkedCodeBlock->isConstructor() ? CodeSpecializationKind::CodeForConstruct : CodeSpecializationKind::CodeForCall), " into bytecode ", size, " instructions in ", (after - before).milliseconds(), " ms.");
             }
             return result;
         }
@@ -486,11 +486,11 @@ namespace JSC {
         {
             // Node::emitCode assumes that dst, if provided, is either a local or a referenced temporary.
             ASSERT(!dst || dst == ignoredResult() || !dst->isTemporary() || dst->refCount());
-            if (UNLIKELY(!m_vm.isSafeToRecurse())) {
+            if (!m_vm.isSafeToRecurse()) [[unlikely]] {
                 emitThrowExpressionTooDeepException();
                 return;
             }
-            if (UNLIKELY(n->needsDebugHook()))
+            if (n->needsDebugHook()) [[unlikely]]
                 emitDebugHook(n);
             n->emitBytecode(*this, dst);
         }
@@ -545,9 +545,9 @@ namespace JSC {
         {
             // Node::emitCode assumes that dst, if provided, is either a local or a referenced temporary.
             ASSERT(!dst || dst == ignoredResult() || !dst->isTemporary() || dst->refCount());
-            if (UNLIKELY(!m_vm.isSafeToRecurse()))
+            if (!m_vm.isSafeToRecurse()) [[unlikely]]
                 return emitThrowExpressionTooDeepException();
-            if (UNLIKELY(n->needsDebugHook()))
+            if (n->needsDebugHook()) [[unlikely]]
                 emitDebugHook(n);
             return n->emitBytecode(*this, dst);
         }
@@ -565,9 +565,9 @@ namespace JSC {
         RegisterID* emitDefineClassElements(PropertyListNode* n, RegisterID* constructor, RegisterID* prototype, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>& instanceElementDefinitions, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>& staticElementDefinitions)
         {
             ASSERT(constructor->refCount() && prototype->refCount());
-            if (UNLIKELY(!m_vm.isSafeToRecurse()))
+            if (!m_vm.isSafeToRecurse()) [[unlikely]]
                 return emitThrowExpressionTooDeepException();
-            if (UNLIKELY(n->needsDebugHook()))
+            if (n->needsDebugHook()) [[unlikely]]
                 emitDebugHook(n);
             return n->emitBytecode(*this, constructor, prototype, &instanceElementDefinitions, &staticElementDefinitions);
         }
@@ -588,7 +588,7 @@ namespace JSC {
 
         void emitNodeInConditionContext(ExpressionNode* n, Label& trueTarget, Label& falseTarget, FallThroughMode fallThroughMode)
         {
-            if (UNLIKELY(!m_vm.isSafeToRecurse())) {
+            if (!m_vm.isSafeToRecurse()) [[unlikely]] {
                 emitThrowExpressionTooDeepException();
                 return;
             }
@@ -944,6 +944,8 @@ namespace JSC {
         RegisterID* emitIsEmpty(RegisterID* dst, RegisterID* src);
         RegisterID* emitIsDerivedArray(RegisterID* dst, RegisterID* src) { return emitIsCellWithType(dst, src, DerivedArrayType); }
         RegisterID* emitIsAsyncFromSyncIterator(RegisterID* dst, RegisterID* src) { return emitIsCellWithType(dst, src, JSAsyncFromSyncIteratorType); }
+        RegisterID* emitIsDisposableStack(RegisterID* dst, RegisterID* src) { return emitIsCellWithType(dst, src, DisposableStackType); }
+        RegisterID* emitIsAsyncDisposableStack(RegisterID* dst, RegisterID* src) { return emitIsCellWithType(dst, src, AsyncDisposableStackType); }
         void emitRequireObjectCoercible(RegisterID* value, ASCIILiteral error);
 
         void emitIteratorOpen(RegisterID* iterator, RegisterID* nextOrIndex, RegisterID* symbolIterator, CallArguments& iterable, const ThrowableExpressionData*);
@@ -1014,7 +1016,6 @@ namespace JSC {
         void emitPushCatchScope(VariableEnvironment&, ScopeType);
         void emitPopCatchScope(VariableEnvironment&);
 
-        void emitGetScope();
         RegisterID* emitPushWithScope(RegisterID* objectScope);
         void emitPopWithScope();
         void emitPutThisToArrowFunctionContextScope();
@@ -1023,10 +1024,9 @@ namespace JSC {
         RegisterID* emitLoadDerivedConstructorFromArrowFunctionLexicalEnvironment();
         RegisterID* emitLoadDerivedConstructor();
 
-        void emitDebugHook(DebugHookType, const JSTextPosition&);
-        void emitDebugHook(DebugHookType, unsigned line, unsigned charOffset, unsigned lineStart);
-        void emitDebugHook(StatementNode*);
-        void emitDebugHook(ExpressionNode*);
+        void emitDebugHook(DebugHookType, const JSTextPosition&, RegisterID* data = nullptr);
+        void emitDebugHook(StatementNode*, RegisterID* data = nullptr);
+        void emitDebugHook(ExpressionNode*, RegisterID* data = nullptr);
         void emitWillLeaveCallFrameDebugHook();
 
         RegisterID* emitLoad(RegisterID* dst, CompletionType type) { return emitLoad(dst, jsNumber(static_cast<int32_t>(type))); }
@@ -1052,15 +1052,14 @@ namespace JSC {
         LabelScope* continueTarget(const Identifier&);
 
         void beginSwitch(RegisterID*, SwitchInfo::SwitchType);
-        void endSwitch(uint32_t clauseCount, const Vector<Ref<Label>, 8>&, ExpressionNode**, Label& defaultLabel, int32_t min, int32_t range);
+        void endSwitch(const Vector<Ref<Label>, 8>&, ExpressionNode**, Label& defaultLabel, int32_t min, int32_t range);
 
         void emitYieldPoint(RegisterID*, JSAsyncGenerator::AsyncGeneratorSuspendReason);
 
         void emitGeneratorStateLabel();
         void emitGeneratorStateChange(int32_t state);
         RegisterID* emitYield(RegisterID* argument);
-        RegisterID* emitAwait(RegisterID* dst, RegisterID* src);
-        RegisterID* emitAwait(RegisterID* srcDst) { return emitAwait(srcDst, srcDst); }
+        RegisterID* emitAwait(RegisterID* dst, RegisterID* src, const JSTextPosition&);
         RegisterID* emitDelegateYield(RegisterID* argument, ThrowableExpressionData*);
         RegisterID* generatorStateRegister() { return &m_parameters[static_cast<int32_t>(JSGenerator::Argument::State)]; }
         RegisterID* generatorValueRegister() { return &m_parameters[static_cast<int32_t>(JSGenerator::Argument::Value)]; }
@@ -1321,6 +1320,7 @@ namespace JSC {
         RegisterID m_thisRegister;
         RegisterID m_calleeRegister;
         RegisterID* m_scopeRegister { nullptr };
+        RegisterID* m_topLevelScopeRegister { nullptr }; // This may not be set. Only Eval and Module will configure this register.
         RegisterID* m_argumentsRegister { nullptr };
         RegisterID* m_lexicalEnvironmentRegister { nullptr };
         RegisterID* m_generatorRegister { nullptr };

@@ -47,7 +47,7 @@ pas_large_sharing_pool_epoch_update_mode_get_string(
     case pas_large_sharing_pool_combined_use_epoch:
         return "combined_use_epoch";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

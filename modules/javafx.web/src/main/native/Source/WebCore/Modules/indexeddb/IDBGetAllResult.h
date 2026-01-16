@@ -29,7 +29,6 @@
 #include "IDBKeyPath.h"
 #include "IDBValue.h"
 #include "IndexedDB.h"
-#include <variant>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/TZoneMalloc.h>
 

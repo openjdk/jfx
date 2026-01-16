@@ -97,7 +97,7 @@ public:
     friend class JITStubRoutine;
     friend class GCAwareJITStubRoutine;
 
-    using Watchpoints = Bag<std::variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>>;
+    using Watchpoints = Bag<Variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>>;
 
     PolymorphicAccessJITStubRoutine(Type, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<Ref<AccessCase>>&&, FixedVector<StructureID>&&, JSCell* owner, bool isCodeImmutable);
     ~PolymorphicAccessJITStubRoutine();
@@ -146,6 +146,8 @@ public:
         if (m_isInSharedJITStubSet)
             m_owners.remove(codeBlock);
     }
+
+    bool visitWeakImpl(VM&);
 
 protected:
     void observeZeroRefCountImpl();

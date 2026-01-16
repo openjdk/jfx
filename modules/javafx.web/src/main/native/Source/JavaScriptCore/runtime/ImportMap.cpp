@@ -166,7 +166,7 @@ static String normalizeSpecifierKey(const String& specifierKey, const URL& baseU
 {
     // https://html.spec.whatwg.org/C#normalizing-a-specifier-key
 
-    if (UNLIKELY(specifierKey.isEmpty())) {
+    if (specifierKey.isEmpty()) [[unlikely]] {
         reporter.reportWarning("specifier key is empty"_s);
         return nullString();
     }
@@ -185,14 +185,14 @@ static ImportMap::SpecifierMap sortAndNormalizeSpecifierMap(Ref<JSON::Object> im
         AtomString normalizedSpecifierKey = AtomString(normalizeSpecifierKey(key, baseURL, reporter));
         if (normalizedSpecifierKey.isNull())
             continue;
-        if (auto valueAsString = value->asString(); LIKELY(!valueAsString.isNull())) {
+        if (auto valueAsString = value->asString(); !valueAsString.isNull()) [[likely]] {
             URL addressURL = parseURLLikeModuleSpecifier(valueAsString, baseURL);
-            if (UNLIKELY(!addressURL.isValid())) {
+            if (!addressURL.isValid()) [[unlikely]] {
                 reporter.reportWarning(makeString("value in specifier map cannot be parsed as URL "_s, valueAsString));
                 normalized.add(normalizedSpecifierKey, URL { });
                 continue;
             }
-            if (UNLIKELY(key.endsWith('/') && !addressURL.string().endsWith('/'))) {
+            if (key.endsWith('/') && !addressURL.string().endsWith('/')) [[unlikely]] {
                 reporter.reportWarning(makeString("address "_s, addressURL.string(), " does not end with '/' while key "_s, key, " ends with '/'"_s));
                 normalized.add(normalizedSpecifierKey, URL { });
                 continue;
@@ -251,7 +251,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
             }
             URL scopePrefixURL { baseURL, key }; // Do not use parseURLLikeModuleSpecifier since we should accept non relative path.
             dataLogLnIf(ImportMapInternal::verbose, "scope key ", key, " and URL ", scopePrefixURL);
-            if (UNLIKELY(!scopePrefixURL.isValid())) {
+            if (!scopePrefixURL.isValid()) [[unlikely]] {
                 reporter.reportWarning(makeString("scope key"_s, key, " was not parsable"_s));
                 continue;
             }
@@ -272,7 +272,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
         // https://html.spec.whatwg.org/C#normalizing-a-module-integrity-map
         for (auto& [key, value] : *integrityMap) {
             URL integrityURL = parseURLLikeModuleSpecifier(key, baseURL);
-            if (UNLIKELY(integrityURL.isNull())) {
+            if (integrityURL.isNull()) [[unlikely]] {
                 errorMessage.append("Integrity URL "_s);
                 errorMessage.append(key);
                 errorMessage.append(" is not a valid absolute URL nor a relative URL starting with '/', './' or '../'\n"_s);
@@ -280,7 +280,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
             }
 
             auto valueAsString = value->asString();
-            if (UNLIKELY(valueAsString.isNull())) {
+            if (valueAsString.isNull()) [[unlikely]] {
                 errorMessage.append("Integrity value of "_s);
                 errorMessage.append(key);
                 errorMessage.append(" is not a string\n"_s);

@@ -185,7 +185,7 @@ std::optional<Vector<Ref<SharedBuffer>>> InitDataRegistry::extractKeyIDsCenc(con
 #endif
 
         for (auto& value : psshBox->keyIDs())
-            keyIDs.append(SharedBuffer::create(WTFMove(value)));
+            keyIDs.append(SharedBuffer::create(Vector<uint8_t> { value }));
     }
 
     return keyIDs;

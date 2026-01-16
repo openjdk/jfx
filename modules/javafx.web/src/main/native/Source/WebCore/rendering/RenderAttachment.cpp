@@ -28,12 +28,15 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
+#include "ContainerNodeInlines.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
 #include "FrameSelection.h"
 #include "HTMLAttachmentElement.h"
+#include "NodeInlines.h"
 #include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -100,20 +103,6 @@ void RenderAttachment::layout()
         layoutShadowContent(newIntrinsicSize);
 }
 
-LayoutUnit RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const
-{
-    if (auto* baselineElement = attachmentElement().wideLayoutImageElement()) {
-        if (auto* baselineElementRenderBox = baselineElement->renderBox()) {
-            // This is the bottom of the image assuming it is vertically centered.
-            return (height() + baselineElementRenderBox->height()) / 2;
-        }
-        // Fallback to the bottom of the attachment if there is no image.
-        return height();
-    }
-
-    return theme().attachmentBaseline(*this);
-}
-
 bool RenderAttachment::shouldDrawBorder() const
 {
     if (style().usedAppearance() == StyleAppearance::BorderlessAttachment)
@@ -123,6 +112,8 @@ bool RenderAttachment::shouldDrawBorder() const
 
 void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& offset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     if (paintInfo.phase != PaintPhase::Selection || !hasVisibleBoxDecorations() || !style().hasUsedAppearance())
         return;
 
@@ -135,8 +126,8 @@ void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& of
 void RenderAttachment::layoutShadowContent(const LayoutSize& size)
 {
     for (auto& renderBox : childrenOfType<RenderBox>(*this)) {
-        renderBox.mutableStyle().setHeight(Length(size.height(), LengthType::Fixed));
-        renderBox.mutableStyle().setWidth(Length(size.width(), LengthType::Fixed));
+        renderBox.mutableStyle().setHeight(Style::PreferredSize::Fixed { size.height() });
+        renderBox.mutableStyle().setWidth(Style::PreferredSize::Fixed { size.width() });
         renderBox.setNeedsLayout(MarkOnlyThis);
         renderBox.layout();
     }

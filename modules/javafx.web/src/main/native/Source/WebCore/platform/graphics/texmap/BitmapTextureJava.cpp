@@ -30,7 +30,7 @@
 #include "NotImplemented.h"
 #include "PlatformContextJava.h"
 #include "TextureMapperJava.h"
-
+#include <stdio.h>
 namespace WebCore {
 
 
@@ -43,18 +43,12 @@ void BitmapTextureJava::didReset()
 {
     float devicePixelRatio = 1.0;
     m_image = ImageBuffer::create(contentSize(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, devicePixelRatio,
-                     DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+                         DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
 }
 
 void BitmapTextureJava::updateContents(NativeImage* image, const IntRect& targetRect, const IntPoint& offset)
 {
     //m_image->context().drawImage(*image, targetRect, IntRect(offset, targetRect.size()));
-}
-
-RefPtr<BitmapTexture> BitmapTextureJava::applyFilters(TextureMapper&, const FilterOperations&, bool)
-{
-    notImplemented();
-    return this;
 }
 
 } // namespace WebCore

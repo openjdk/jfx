@@ -3830,6 +3830,38 @@ void testMoveDoubleConditionallyFloatSameArg(MacroAssembler::DoubleCondition con
     testMoveConditionallyFloatingPointSameArg(condition, testCode, arg1, floatOperands(), selectionA, selectionB);
 }
 
+void testSignExtend8To32()
+{
+    auto code = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.signExtend8To32(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    for (auto a : int8Operands()) {
+        // Ensuring the upper 32bit is zero cleared.
+        int64_t expectedResult = static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(static_cast<int32_t>(a))));
+        CHECK_EQ(invoke<int64_t>(code, a), expectedResult);
+    }
+}
+
+void testSignExtend16To32()
+{
+    auto code = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.signExtend16To32(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    for (auto a : int16Operands()) {
+        // Ensuring the upper 32bit is zero cleared.
+        int64_t expectedResult = static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(static_cast<int32_t>(a))));
+        CHECK_EQ(invoke<int64_t>(code, a), expectedResult);
+    }
+}
+
 void testSignExtend8To64()
 {
     auto code = compile([&] (CCallHelpers& jit) {
@@ -5397,8 +5429,11 @@ void testLoadBaseIndex()
             emitFunctionEpilogue(jit);
             jit.ret();
         });
-        uint16_t array[] = { 1, 2, 0x7ff3, 4, 5, };
+        uint16_t array[] = { 1, 2, 0x7ff3, 0x8000, 5, };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), 0x7ff3);
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(4)), 0xffff8000);
+#endif
     }
     {
         auto test = compile([=](CCallHelpers& jit) {
@@ -5409,6 +5444,9 @@ void testLoadBaseIndex()
         });
         uint16_t array[] = { UINT16_MAX - 1, UINT16_MAX - 2, UINT16_MAX - 3, UINT16_MAX - 4, static_cast<uint16_t>(-1), };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#endif
     }
 
     // load8
@@ -5441,8 +5479,11 @@ void testLoadBaseIndex()
             emitFunctionEpilogue(jit);
             jit.ret();
         });
-        uint8_t array[] = { 1, 2, 0x73, 4, 5, };
+        uint8_t array[] = { 1, 2, 0x73, 0x80, 5, };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), 0x73);
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(4)), 0xffffff80);
+#endif
     }
     {
         auto test = compile([=](CCallHelpers& jit) {
@@ -5453,6 +5494,9 @@ void testLoadBaseIndex()
         });
         uint8_t array[] = { UINT8_MAX - 1, UINT8_MAX - 2, UINT8_MAX - 3, UINT8_MAX - 4, static_cast<uint8_t>(-1), };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#endif
     }
 
     // loadDouble
@@ -5944,8 +5988,9 @@ static void testBranchConvertDoubleToInt52()
 {
     auto toInt52 = compile([](CCallHelpers& jit) {
         emitFunctionPrologue(jit);
+        constexpr bool canIgnoreNegativeZero = false;
         CCallHelpers::JumpList failureCases;
-        jit.branchConvertDoubleToInt52(FPRInfo::argumentFPR0, GPRInfo::returnValueGPR, failureCases, GPRInfo::returnValueGPR2, FPRInfo::argumentFPR1);
+        jit.branchConvertDoubleToInt52(FPRInfo::argumentFPR0, GPRInfo::returnValueGPR, failureCases, GPRInfo::returnValueGPR2, FPRInfo::argumentFPR1, canIgnoreNegativeZero);
         auto done = jit.jump();
         failureCases.link(&jit);
         jit.move(CCallHelpers::TrustedImm64(1ULL << 52), GPRInfo::returnValueGPR);
@@ -5979,6 +6024,61 @@ static void testBranchConvertDoubleToInt52()
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(42.195))), (1LL << 52));
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(0.3))), (1LL << 52));
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(-0.1))), (1LL << 52));
+}
+#endif
+
+#if CPU(X86_64)
+#define CHECK_CODE_WAS_EMITTED(_jit, _emitter) do {                      \
+        size_t _beforeCodeSize = _jit.m_assembler.buffer().codeSize();   \
+        _emitter;                                                        \
+        size_t _afterCodeSize = _jit.m_assembler.buffer().codeSize();    \
+        if (_afterCodeSize > _beforeCodeSize)                            \
+            break;                                                       \
+        crashLock.lock();                                                \
+        dataLog("FAILED while testing " #_emitter ": expected it to emit code\n"); \
+        WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "CHECK_CODE_WAS_EMITTED("#_jit ", " #_emitter ")"); \
+        CRASH();                                                         \
+    } while (false)
+
+static void testAtomicAndEmitsCode()
+{
+    // On x86, atomic (seqcst) RMW operations must emit a seqcst store (so a
+    // LOCK-prefixed store or a fence or something).
+    //
+    // This tests that the optimization to elide and'ing -1 must not be
+    // applied when the and is atomic.
+
+    auto test32 = compile([] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+
+        GPRReg scratch = GPRInfo::argumentGPR2;
+        jit.move(CCallHelpers::TrustedImm32(0), scratch);
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd32(CCallHelpers::TrustedImm32(-1), CCallHelpers::Address(GPRInfo::argumentGPR0)));
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd32(CCallHelpers::TrustedImm32(-1), CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, scratch, CCallHelpers::TimesEight, 0)));
+
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto test64 = compile([] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+
+        GPRReg scratch = GPRInfo::argumentGPR2;
+        jit.move(CCallHelpers::TrustedImm32(0), scratch);
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd64(CCallHelpers::TrustedImm32(-1), CCallHelpers::Address(GPRInfo::argumentGPR0)));
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd64(CCallHelpers::TrustedImm32(-1), CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, scratch, CCallHelpers::TimesEight, 0)));
+
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    uint64_t value = 42;
+
+    invoke<void>(test32, &value);
+    CHECK_EQ(value, 42);
+
+    invoke<void>(test64, &value);
+    CHECK_EQ(value, 42);
 }
 #endif
 
@@ -6217,6 +6317,8 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     FOR_EACH_DOUBLE_CONDITION_RUN(testMoveDoubleConditionallyDoubleSameArg);
     FOR_EACH_DOUBLE_CONDITION_RUN(testMoveDoubleConditionallyFloatSameArg);
 
+    RUN(testSignExtend8To32());
+    RUN(testSignExtend16To32());
     RUN(testSignExtend8To64());
     RUN(testSignExtend16To64());
 #endif
@@ -6241,6 +6343,10 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RUN(testBranchIfNotType());
 #if CPU(X86_64) || CPU(ARM64)
     RUN(testBranchConvertDoubleToInt52());
+#endif
+
+#if CPU(X86_64)
+    RUN(testAtomicAndEmitsCode());
 #endif
 
     RUN(testOrImmMem());

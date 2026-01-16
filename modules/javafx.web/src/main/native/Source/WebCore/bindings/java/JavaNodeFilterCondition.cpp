@@ -44,7 +44,7 @@ public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector&, FilterImage&) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>>, FilterImage&) const final;
 };
 
 } // namespace WebCore

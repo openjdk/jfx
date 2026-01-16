@@ -90,10 +90,10 @@ public:
     void resetScope() { m_scope = GestureScope::All; }
 
     // Expand the following methods if more propagation sources are added later.
-    enum class IsPropagatedFromFetch : bool { No, Yes };
-    void setIsPropagatedFromFetch(IsPropagatedFromFetch is) { m_isPropagatedFromFetch = is; }
-    void resetIsPropagatedFromFetch() { m_isPropagatedFromFetch = IsPropagatedFromFetch::No; }
-    bool isPropagatedFromFetch() const { return m_isPropagatedFromFetch == IsPropagatedFromFetch::Yes; }
+    enum class ShouldPropagateToMicroTask : bool { No, Yes };
+    void setShouldPropagateToMicroTask(ShouldPropagateToMicroTask is) { m_shouldPropagateToMicroTask = is; }
+    void resetShouldPropagateToMicroTask() { m_shouldPropagateToMicroTask = ShouldPropagateToMicroTask::No; }
+    bool shouldPropagateToMicroTask() const { return m_shouldPropagateToMicroTask == ShouldPropagateToMicroTask::Yes; }
 
     bool hasExpired(Seconds expirationInterval) const
     {
@@ -121,7 +121,7 @@ private:
     DOMPasteAccessPolicy m_domPasteAccessPolicy { DOMPasteAccessPolicy::NotRequestedYet };
     GestureScope m_scope { GestureScope::All };
     MonotonicTime m_startTime { MonotonicTime::now() };
-    IsPropagatedFromFetch m_isPropagatedFromFetch { IsPropagatedFromFetch::No };
+    ShouldPropagateToMicroTask m_shouldPropagateToMicroTask { ShouldPropagateToMicroTask::No };
     std::optional<WTF::UUID> m_authorizationToken;
 };
 
@@ -137,7 +137,7 @@ public:
     // If a document is provided, its last known user gesture timestamp is updated.
     enum class ProcessInteractionStyle { Immediate, Delayed, Never };
     WEBCORE_EXPORT explicit UserGestureIndicator(std::optional<IsProcessingUserGesture>, Document* = nullptr, UserGestureType = UserGestureType::ActivationTriggering, ProcessInteractionStyle = ProcessInteractionStyle::Immediate, std::optional<WTF::UUID> authorizationToken = std::nullopt, CanRequestDOMPaste = CanRequestDOMPaste::Yes);
-    WEBCORE_EXPORT explicit UserGestureIndicator(RefPtr<UserGestureToken>, UserGestureToken::GestureScope = UserGestureToken::GestureScope::All, UserGestureToken::IsPropagatedFromFetch = UserGestureToken::IsPropagatedFromFetch::No);
+    WEBCORE_EXPORT explicit UserGestureIndicator(RefPtr<UserGestureToken>, UserGestureToken::GestureScope = UserGestureToken::GestureScope::All, UserGestureToken::ShouldPropagateToMicroTask = UserGestureToken::ShouldPropagateToMicroTask::No);
     WEBCORE_EXPORT ~UserGestureIndicator();
 
     WEBCORE_EXPORT std::optional<WTF::UUID> authorizationToken() const;

@@ -72,10 +72,10 @@ public:
     virtual void drawIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) = 0;
     virtual void drawIndexedIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets) = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) = 0;

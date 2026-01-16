@@ -210,7 +210,7 @@ struct ComputedContentRun {
 
 Path InspectorOverlayLabel::draw(GraphicsContext& context, float maximumLineWidth)
 {
-    constexpr UChar ellipsis = 0x2026;
+    constexpr char16_t ellipsis = 0x2026;
 
     auto font = systemFont();
     float lineHeight = font.metricsOfPrimaryFont().height();
@@ -397,7 +397,7 @@ FloatSize InspectorOverlayLabel::expectedSize(const Vector<Content>& contents, A
             if (text.isEmpty())
                 continue;
 
-            currentLineWidth += font.width(TextRun(text));
+            currentLineWidth += font.width(text);
             if (currentLineWidth > longestLineWidth)
                 longestLineWidth = currentLineWidth;
         }

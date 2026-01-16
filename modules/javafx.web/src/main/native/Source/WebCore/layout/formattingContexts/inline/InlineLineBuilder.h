@@ -35,7 +35,7 @@ struct LineContent;
 struct LineCandidate;
 
 class LineBuilder final : public AbstractLineBuilder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LineBuilder);
 public:
     LineBuilder(InlineFormattingContext&, HorizontalConstraints rootHorizontalConstraints, const InlineItemList&, TextSpacingContext = { });
     virtual ~LineBuilder() { };
@@ -69,7 +69,7 @@ private:
     size_t rebuildLineWithInlineContent(const InlineItemRange& needsLayoutRange, const InlineItem& lastInlineItemToAdd);
     size_t rebuildLineForTrailingSoftHyphen(const InlineItemRange& layoutRange);
     void commitPartialContent(const InlineContentBreaker::ContinuousContent::RunList&, const InlineContentBreaker::Result::PartialTrailingContent&);
-    void initialize(const InlineRect& initialLineLogicalRect, const InlineItemRange& needsLayoutRange, const std::optional<PreviousLine>&,  std::optional<bool> previousLineEndsWithLineBreak);
+    void initialize(const InlineRect& initialLineLogicalRect, const InlineItemRange& needsLayoutRange, const std::optional<PreviousLine>&,  PreviousLineState);
     UniqueRef<LineContent> placeInlineAndFloatContent(const InlineItemRange&);
     struct InitialLetterOffsets {
         LayoutUnit capHeightOffset;
@@ -77,6 +77,9 @@ private:
     };
     std::optional<InitialLetterOffsets> adjustLineRectForInitialLetterIfApplicable(const Box& floatBox);
     bool isLastLineWithInlineContent(const LineContent&, size_t needsLayoutEnd, const Line::RunList&) const;
+    InlineContentBreaker::Result handleInlineContentWithClonedDecoration(const LineCandidate&, InlineContentBreaker::LineStatus);
+    InlineLayoutUnit clonedDecorationAtBreakingPosition(const InlineContentBreaker::ContinuousContent::RunList&, const InlineContentBreaker::Result::PartialTrailingContent&) const;
+    InlineLayoutUnit placedClonedDecorationWidth(const InlineContentBreaker::ContinuousContent::RunList&) const;
 
     bool isFloatLayoutSuspended() const { return !m_suspendedFloats.isEmpty(); }
     bool shouldTryToPlaceFloatBox(const Box& floatBox, LayoutUnit floatBoxMarginBoxWidth, MayOverConstrainLine) const;

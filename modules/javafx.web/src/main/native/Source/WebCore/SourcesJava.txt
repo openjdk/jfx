@@ -68,7 +68,6 @@ platform/java/WebKitLogging.cpp
 platform/java/WheelEventJava.cpp
 platform/java/WidgetJava.cpp
 
-platform/graphics/DrawGlyphsRecorderJava.cpp
 platform/graphics/java/BitmapImageJava.cpp
 platform/graphics/java/BufferImageJava.cpp
 platform/graphics/java/ChromiumBridge.cpp

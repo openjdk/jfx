@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,12 +31,14 @@
 #include "Element.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "EventTarget.h"
 #include "HitTestResult.h"
 #include "MouseEventTypes.h"
 #include "Page.h"
 #include "PointerEvent.h"
 #include "Quirks.h"
+#include <algorithm>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -182,7 +184,7 @@ void PointerCaptureController::reset()
 
 void PointerCaptureController::updateHaveAnyCapturingElement()
 {
-    m_haveAnyCapturingElement = WTF::anyOf(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
+    m_haveAnyCapturingElement = std::ranges::any_of(m_activePointerIdsToCapturingData.values(), [&](auto& capturingData) {
         return capturingData->hasAnyElement();
     });
 }
@@ -223,7 +225,7 @@ void PointerCaptureController::dispatchOverOrOutEvent(const AtomString& type, Ev
 void PointerCaptureController::dispatchEnterOrLeaveEvent(const AtomString& type, Element& targetElement, const PlatformTouchEvent& event, unsigned index, bool isPrimary, WindowProxy& view, IntPoint touchDelta)
 {
         bool hasCapturingListenerInHierarchy = false;
-        for (RefPtr<ContainerNode> currentNode = &targetElement; currentNode; currentNode = currentNode->parentInComposedTree()) {
+    for (RefPtr<ContainerNode> currentNode = targetElement; currentNode; currentNode = currentNode->parentInComposedTree()) {
             if (currentNode->hasCapturingEventListeners(type)) {
                 hasCapturingListenerInHierarchy = true;
                 break;
@@ -231,7 +233,7 @@ void PointerCaptureController::dispatchEnterOrLeaveEvent(const AtomString& type,
         }
 
         Vector<Ref<Element>, 32> targetChain;
-        for (RefPtr element = &targetElement; element; element = element->parentElementInComposedTree()) {
+    for (RefPtr element = targetElement; element; element = element->parentElementInComposedTree()) {
             if (hasCapturingListenerInHierarchy || element->hasEventListeners(type))
                 targetChain.append(*element);
         }
@@ -463,7 +465,7 @@ void PointerCaptureController::pointerEventWillBeDispatched(const PointerEvent& 
     // Let targetDocument be target's node document.
     // If the event is pointerdown, pointermove, or pointerup set active document for the event's pointerId to targetDocument.
     auto capturingData = ensureCapturingDataForPointerEvent(event);
-    capturingData->activeDocument = &element.document();
+    capturingData->activeDocument = element.document();
 
     if (isPointermove)
         return;
@@ -566,7 +568,7 @@ void PointerCaptureController::cancelPointer(PointerID pointerId, const IntPoint
         RefPtr localMainFrame = page->localMainFrame();
         if (!localMainFrame)
             return nullptr;
-        return localMainFrame->checkedEventHandler()->hitTestResultAtPoint(documentPoint, hitType).innerNonSharedElement();
+        return localMainFrame->eventHandler().hitTestResultAtPoint(documentPoint, hitType).innerNonSharedElement();
     }();
 
     if (!target)

@@ -26,8 +26,10 @@
 #include "config.h"
 #include "URLPatternParser.h"
 
+#include "ExceptionOr.h"
 #include "URLPatternCanonical.h"
 #include "URLPatternTokenizer.h"
+#include <ranges>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -314,7 +316,7 @@ static String escapeRegexStringForCharacters(std::span<const CharacterType> char
     result.reserveCapacity(characters.size());
 
     for (auto character : characters) {
-        if (std::find(regexEscapeCharacters.begin(), regexEscapeCharacters.end(), character) != regexEscapeCharacters.end())
+        if (std::ranges::find(regexEscapeCharacters, character) != regexEscapeCharacters.end())
             result.append('\\');
 
         result.append(character);
@@ -512,7 +514,7 @@ static String escapePatternStringForCharacters(std::span<const CharacterType> ch
     result.reserveCapacity(characters.size());
 
     for (auto character : characters) {
-        if (std::find(escapeCharacters.begin(), escapeCharacters.end(), character) != escapeCharacters.end())
+        if (std::ranges::find(escapeCharacters, character) != escapeCharacters.end())
             result.append('\\');
 
         result.append(character);
@@ -533,7 +535,7 @@ String escapePatternString(StringView input)
 }
 
 // https://urlpattern.spec.whatwg.org/#is-a-valid-name-code-point
-bool isValidNameCodepoint(UChar codepoint, URLPatternUtilities::IsFirst first)
+bool isValidNameCodepoint(char16_t codepoint, URLPatternUtilities::IsFirst first)
 {
     if (first == URLPatternUtilities::IsFirst::Yes)
         return u_hasBinaryProperty(codepoint, UCHAR_ID_START) || codepoint == '_' || codepoint == '$';

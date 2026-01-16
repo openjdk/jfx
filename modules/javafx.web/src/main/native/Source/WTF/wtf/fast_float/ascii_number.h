@@ -1,6 +1,7 @@
 #ifndef FASTFLOAT_ASCII_NUMBER_H
 #define FASTFLOAT_ASCII_NUMBER_H
 
+#include <bit>
 #include <cctype>
 #include <cstdint>
 #include <cstring>
@@ -37,17 +38,6 @@ fastfloat_really_inline constexpr bool is_integer(UC c) noexcept {
   return !(c > UC('9') || c < UC('0'));
 }
 
-fastfloat_really_inline constexpr uint64_t byteswap(uint64_t val) {
-  return (val & 0xFF00000000000000) >> 56
-    | (val & 0x00FF000000000000) >> 40
-    | (val & 0x0000FF0000000000) >> 24
-    | (val & 0x000000FF00000000) >> 8
-    | (val & 0x00000000FF000000) << 8
-    | (val & 0x0000000000FF0000) << 24
-    | (val & 0x000000000000FF00) << 40
-    | (val & 0x00000000000000FF) << 56;
-}
-
 // Read 8 UC into a u64. Truncates UC if not char.
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
@@ -64,7 +54,7 @@ uint64_t read8_to_u64(const UC *chars) {
   ::memcpy(&val, chars, sizeof(uint64_t));
 #if FASTFLOAT_IS_BIG_ENDIAN == 1
   // Need to read as-if the number was in little-endian order.
-  val = byteswap(val);
+  val = std::byteswap(val);
 #endif
   return val;
 }
@@ -133,7 +123,7 @@ void write_u64(uint8_t *chars, uint64_t val) {
   }
 #if FASTFLOAT_IS_BIG_ENDIAN == 1
   // Need to read as-if the number was in little-endian order.
-  val = byteswap(val);
+  val = std::byteswap(val);
 #endif
   ::memcpy(chars, &val, sizeof(uint64_t));
 }

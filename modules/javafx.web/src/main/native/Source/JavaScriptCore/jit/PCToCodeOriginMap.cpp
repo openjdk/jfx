@@ -114,7 +114,7 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, const B3::PCTo
         return;
 
     for (const B3::PCToOriginMap::OriginRange& originRange : b3PCToOriginMap.ranges()) {
-        DFG::Node* node = std::bit_cast<DFG::Node*>(originRange.origin.data());
+        DFG::Node* node = originRange.origin.dfgOrigin();
         if (node)
             appendItem(originRange.label, node->origin.semantic);
         else

@@ -90,7 +90,7 @@ Bank ShufflePair::bank() const
 
 Vector<Inst, 2> ShufflePair::insts(Code& code, Value* origin) const
 {
-    if (UNLIKELY(src().isMemory() && dst().isMemory()))
+    if (src().isMemory() && dst().isMemory()) [[unlikely]]
         return { Inst(moveFor(bank(), width()), origin, src(), dst(), code.newTmp(bank())) };
 
     if (isValidForm(moveFor(bank(), width()), src().kind(), dst().kind()))

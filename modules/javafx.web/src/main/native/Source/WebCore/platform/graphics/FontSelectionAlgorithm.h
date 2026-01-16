@@ -66,6 +66,8 @@ public:
     friend constexpr FontSelectionValue operator/(FontSelectionValue, FontSelectionValue);
     friend constexpr FontSelectionValue operator-(FontSelectionValue);
 
+    friend auto operator<=>(FontSelectionValue, FontSelectionValue) = default;
+
     constexpr BackingType rawValue() const { return m_backing; }
 
 private:
@@ -141,26 +143,6 @@ constexpr FontSelectionValue operator/(FontSelectionValue a, FontSelectionValue 
 constexpr FontSelectionValue operator-(FontSelectionValue value)
 {
     return { -value.m_backing, FontSelectionValue::RawTag::RawTag };
-}
-
-constexpr bool operator<(FontSelectionValue a, FontSelectionValue b)
-{
-    return a.rawValue() < b.rawValue();
-}
-
-constexpr bool operator<=(FontSelectionValue a, FontSelectionValue b)
-{
-    return a.rawValue() <= b.rawValue();
-}
-
-constexpr bool operator>(FontSelectionValue a, FontSelectionValue b)
-{
-    return a.rawValue() > b.rawValue();
-}
-
-constexpr bool operator>=(FontSelectionValue a, FontSelectionValue b)
-{
-    return a.rawValue() >= b.rawValue();
 }
 
 constexpr FontSelectionValue italicThreshold()

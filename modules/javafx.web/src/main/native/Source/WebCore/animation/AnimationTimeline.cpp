@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Canon Inc. 2016
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,12 +47,17 @@ void AnimationTimeline::animationTimingDidChange(WebAnimation& animation)
 {
     updateGlobalPosition(animation);
 
+    if (animation.pending()) {
+        if (CheckedPtr controller = this->controller())
+            controller->addPendingAnimation(animation);
+    }
+
     if (m_animations.add(animation)) {
-        auto* timeline = animation.timeline();
-        if (timeline && timeline != this)
+        RefPtr timeline = animation.timeline();
+        if (timeline && timeline.get() != this)
             timeline->removeAnimation(animation);
-        else if (timeline == this) {
-            if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect())) {
+        else if (timeline.get() == this) {
+            if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect())) {
                 if (auto styleable = keyframeEffect->targetStyleable())
                 styleable->animationWasAdded(animation);
             }

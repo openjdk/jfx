@@ -48,13 +48,14 @@ public:
 
     WEBCORE_EXPORT std::optional<Vector<ServiceWorkerContextData>> importRegistrations();
     WEBCORE_EXPORT std::optional<Vector<ServiceWorkerScripts>> updateRegistrations(const Vector<ServiceWorkerContextData>&, const Vector<ServiceWorkerRegistrationKey>&);
-    WEBCORE_EXPORT void clearAllRegistrations();
+    WEBCORE_EXPORT void deleteAllFiles();
 
 private:
     void close();
     SWScriptStorage& scriptStorage();
     enum class StatementType : uint8_t {
         GetAllRecords,
+        CountAllRecords,
         InsertRecord,
         DeleteRecord,
         Invalid
@@ -64,6 +65,9 @@ private:
     enum class ShouldCreateIfNotExists : bool { No, Yes };
     bool prepareDatabase(ShouldCreateIfNotExists);
     bool ensureValidRecordsTable();
+    std::optional<uint64_t> recordsCount();
+    std::optional<Vector<ServiceWorkerContextData>> importRegistrationsImpl();
+    std::optional<Vector<ServiceWorkerScripts>> updateRegistrationsImpl(const Vector<ServiceWorkerContextData>&, const Vector<ServiceWorkerRegistrationKey>&);
 
     String m_directory;
     std::unique_ptr<SQLiteDatabase> m_database;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,10 +89,10 @@ private:
 
     Module(LLIntPlan&);
     Module(IPIntPlan&);
-    Ref<ModuleInformation> m_moduleInformation;
+    const Ref<ModuleInformation> m_moduleInformation;
     RefPtr<CalleeGroup> m_calleeGroups[numberOfMemoryModes];
-    Ref<LLIntCallees> m_llintCallees;
-    Ref<IPIntCallees> m_ipintCallees;
+    const Ref<LLIntCallees> m_llintCallees;
+    const Ref<IPIntCallees> m_ipintCallees;
     FixedVector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToJSExitStubs;
     Lock m_lock;
 };

@@ -73,7 +73,7 @@ class RegionContext;
 class ScrollView;
 class WidgetPrivate;
 
-enum WidgetNotification { WillPaintFlattened, DidPaintFlattened };
+enum class WidgetNotification : uint8_t { WillPaintFlattened, DidPaintFlattened };
 
 // The Widget class serves as a base class for three kinds of objects:
 // (1) Scrollable areas (ScrollView)
@@ -150,27 +150,29 @@ public:
 
     virtual void notifyWidget(WidgetNotification) { }
 
+    IntPoint convertToRootView(IntPoint) const;
+    FloatPoint convertToRootView(FloatPoint) const;
     WEBCORE_EXPORT IntRect convertToRootView(const IntRect&) const;
-    IntRect convertFromRootView(const IntRect&) const;
-
     FloatRect convertToRootView(const FloatRect&) const;
+
+    IntPoint convertFromRootView(IntPoint) const;
+    FloatPoint convertFromRootView(FloatPoint) const;
+    IntRect convertFromRootView(const IntRect&) const;
     FloatRect convertFromRootView(const FloatRect&) const;
-
-    IntPoint convertToRootView(const IntPoint&) const;
-    IntPoint convertFromRootView(const IntPoint&) const;
-
-    FloatPoint convertToRootView(const FloatPoint&) const;
-    FloatPoint convertFromRootView(const FloatPoint&) const;
 
     // It is important for cross-platform code to realize that Mac has flipped coordinates.  Therefore any code
     // that tries to convert the location of a rect using the point-based convertFromContainingWindow will end
     // up with an inaccurate rect.  Always make sure to use the rect-based convertFromContainingWindow method
     // when converting window rects.
+    WEBCORE_EXPORT IntPoint convertToContainingWindow(IntPoint) const;
+    FloatPoint convertToContainingWindow(FloatPoint) const;
     WEBCORE_EXPORT IntRect convertToContainingWindow(const IntRect&) const;
-    IntRect convertFromContainingWindow(const IntRect&) const;
+    FloatRect convertToContainingWindow(const FloatRect&) const;
 
-    WEBCORE_EXPORT IntPoint convertToContainingWindow(const IntPoint&) const;
-    IntPoint convertFromContainingWindow(const IntPoint&) const;
+    IntPoint convertFromContainingWindow(IntPoint) const;
+    FloatPoint convertFromContainingWindow(FloatPoint) const;
+    IntRect convertFromContainingWindow(const IntRect&) const;
+    FloatRect convertFromContainingWindow(const FloatRect&) const;
 
     virtual void frameRectsChanged() { }
 
@@ -195,14 +197,15 @@ public:
 #endif
 
     // Virtual methods to convert points to/from the containing ScrollView
+    WEBCORE_EXPORT virtual IntPoint convertToContainingView(IntPoint) const;
+    WEBCORE_EXPORT virtual FloatPoint convertToContainingView(FloatPoint) const;
     WEBCORE_EXPORT virtual IntRect convertToContainingView(const IntRect&) const;
-    WEBCORE_EXPORT virtual IntRect convertFromContainingView(const IntRect&) const;
     WEBCORE_EXPORT virtual FloatRect convertToContainingView(const FloatRect&) const;
+
+    WEBCORE_EXPORT virtual IntPoint convertFromContainingView(IntPoint) const;
+    WEBCORE_EXPORT virtual FloatPoint convertFromContainingView(FloatPoint) const;
+    WEBCORE_EXPORT virtual IntRect convertFromContainingView(const IntRect&) const;
     WEBCORE_EXPORT virtual FloatRect convertFromContainingView(const FloatRect&) const;
-    WEBCORE_EXPORT virtual IntPoint convertToContainingView(const IntPoint&) const;
-    WEBCORE_EXPORT virtual IntPoint convertFromContainingView(const IntPoint&) const;
-    WEBCORE_EXPORT virtual FloatPoint convertToContainingView(const FloatPoint&) const;
-    WEBCORE_EXPORT virtual FloatPoint convertFromContainingView(const FloatPoint&) const;
 
     virtual bool isPluginView() const { return false; }
 
@@ -211,11 +214,15 @@ private:
 
     // These methods are used to convert from the root widget to the containing window,
     // which has behavior that may differ between platforms (e.g. Mac uses flipped window coordinates).
+    static IntPoint convertFromRootToContainingWindow(const Widget* rootWidget, IntPoint);
+    static FloatPoint convertFromRootToContainingWindow(const Widget* rootWidget, FloatPoint);
     static IntRect convertFromRootToContainingWindow(const Widget* rootWidget, const IntRect&);
-    static IntRect convertFromContainingWindowToRoot(const Widget* rootWidget, const IntRect&);
+    static FloatRect convertFromRootToContainingWindow(const Widget* rootWidget, const FloatRect&);
 
-    static IntPoint convertFromRootToContainingWindow(const Widget* rootWidget, const IntPoint&);
-    static IntPoint convertFromContainingWindowToRoot(const Widget* rootWidget, const IntPoint&);
+    static IntPoint convertFromContainingWindowToRoot(const Widget* rootWidget, IntPoint);
+    static FloatPoint convertFromContainingWindowToRoot(const Widget* rootWidget, FloatPoint);
+    static IntRect convertFromContainingWindowToRoot(const Widget* rootWidget, const IntRect&);
+    static FloatRect convertFromContainingWindowToRoot(const Widget* rootWidget, const FloatRect&);
 
 private:
     bool m_selfVisible { false };

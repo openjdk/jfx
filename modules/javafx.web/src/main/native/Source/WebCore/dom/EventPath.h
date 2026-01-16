@@ -44,7 +44,7 @@ class Touch;
 class EventPath : public CanMakeSingleThreadWeakPtr<EventPath> {
 public:
     EventPath(Node& origin, Event&);
-    explicit EventPath(const Vector<EventTarget*>&);
+    explicit EventPath(std::span<EventTarget* const>);
     explicit EventPath(EventTarget&);
 
     bool isEmpty() const { return m_path.isEmpty(); }
@@ -55,6 +55,7 @@ public:
     void adjustForDisabledFormControl();
 
     Vector<Ref<EventTarget>> computePathUnclosedToTarget(const EventTarget&) const;
+    Vector<Ref<EventTarget>> computePathTreatingAllShadowRootsAsOpen() const;
 
     static Node* eventTargetRespectingTargetRules(Node&);
 

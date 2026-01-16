@@ -124,13 +124,11 @@ static bool canOptimizeSingleAttributeExactMatch(const CSSSelector& selector)
 
 SelectorDataList::SelectorDataList(const CSSSelectorList& selectorList)
 {
-    unsigned selectorCount = 0;
-    for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector))
-        selectorCount++;
+    unsigned selectorCount = std::ranges::distance(selectorList);
 
     m_selectors.reserveInitialCapacity(selectorCount);
-    for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector))
-        m_selectors.append({ selector });
+    for (auto& selector : selectorList)
+        m_selectors.append({ &selector });
 
     if (selectorCount == 1) {
         const CSSSelector& selector = *m_selectors.first().selector;
@@ -258,7 +256,7 @@ ALWAYS_INLINE void SelectorDataList::executeFastPathForIdSelector(const Containe
     ASSERT(idSelector);
 
     const AtomString& idToMatch = idSelector->value();
-    if (UNLIKELY(rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
+    if (rootNode.treeScope().containsMultipleElementsWithId(idToMatch)) [[unlikely]] {
         auto* elements = rootNode.treeScope().getAllElementsById(idToMatch);
         ASSERT(elements);
         bool rootNodeIsTreeScopeRoot = rootNode.isTreeScope();
@@ -301,10 +299,10 @@ static ContainerNode& filterRootById(ContainerNode& rootNode, const CSSSelector&
         if (canBeUsedForIdFastPath(*selector)) {
             const AtomString& idToMatch = selector->value();
             if (RefPtr<ContainerNode> searchRoot = rootNode.treeScope().getElementById(idToMatch)) {
-                if (LIKELY(!rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
+                if (!rootNode.treeScope().containsMultipleElementsWithId(idToMatch)) [[likely]] {
                     if (inAdjacentChain)
                         searchRoot = searchRoot->parentNode();
-                    if (searchRoot && (rootNode.isTreeScope() || searchRoot == &rootNode || searchRoot->isDescendantOf(rootNode)))
+                    if (searchRoot && (rootNode.isTreeScope() || searchRoot->isInclusiveDescendantOf(rootNode)))
                         return *searchRoot;
                 }
             }
@@ -437,8 +435,16 @@ ALWAYS_INLINE void SelectorDataList::executeSingleAttributeExactSelectorData(con
     const auto& prefix = selectorAttribute.prefix();
     const auto& namespaceURI = selectorAttribute.namespaceURI();
 
+    bool foundFirstMatch = false;
+    CheckedPtr<Element> cachedContainer;
+    if (rootNode.isDocumentNode())
+        cachedContainer = rootNode.document().cachedFirstElementWithAttribute(selectorAttribute);
+
     bool documentIsHTML = rootNode.document().isHTMLDocument();
-    for (Ref element : descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode))) {
+
+    auto elementDescendants = descendantsOfType<Element>(const_cast<ContainerNode&>(rootNode));
+    for (auto it = cachedContainer ? elementDescendants.beginAt(*cachedContainer) : elementDescendants.begin(); it; ++it) {
+        Ref element = *it;
         if (!element->hasAttributesWithoutUpdate())
             continue;
 
@@ -447,6 +453,11 @@ ALWAYS_INLINE void SelectorDataList::executeSingleAttributeExactSelectorData(con
         for (auto& attribute : element->attributes()) {
             if (!attribute.matches(prefix, localNameToMatch, namespaceURI))
                 continue;
+
+            if (!foundFirstMatch && rootNode.isDocumentNode()) {
+                foundFirstMatch = true;
+                rootNode.document().setCachedFirstElementWithAttribute(selectorAttribute, element);
+            }
 
             if (selectorValue == attribute.value()) {
                 appendOutputForElement(output, element);
@@ -612,7 +623,7 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, OutputType
     case CompiledSingleWithRootFilter:
         CompiledSingleWithRootFilterCase:
         searchRootNode = &filterRootById(*searchRootNode, *m_selectors.first().selector);
-        FALLTHROUGH;
+        [[fallthrough]];
     case CompiledSingle:
         {
         CompiledSingleCase:
@@ -634,14 +645,14 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, OutputType
     case CompiledSingle:
         ASSERT_NOT_REACHED();
 #if !ASSERT_ENABLED
-        FALLTHROUGH;
+        [[fallthrough]];
 #endif
 #endif // ENABLE(CSS_SELECTOR_JIT)
 
     case SingleSelectorWithRootFilter:
         SingleSelectorWithRootFilterCase:
         searchRootNode = &filterRootById(*searchRootNode, *m_selectors.first().selector);
-        FALLTHROUGH;
+        [[fallthrough]];
     case SingleSelector:
         SingleSelectorCase:
         executeSingleSelectorData(rootNode, *searchRootNode, m_selectors.first(), output);
@@ -669,7 +680,7 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, OutputType
         goto CompiledMultipleSelectorMatch;
         }
 #else
-        FALLTHROUGH;
+        [[fallthrough]];
 #endif // ENABLE(CSS_SELECTOR_JIT)
     case CompiledMultipleSelectorMatch:
 #if ENABLE(CSS_SELECTOR_JIT)
@@ -677,7 +688,7 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, OutputType
         executeCompiledSingleMultiSelectorData(*searchRootNode, output);
         break;
 #else
-        FALLTHROUGH;
+        [[fallthrough]];
 #endif // ENABLE(CSS_SELECTOR_JIT)
     case MultipleSelectorMatch:
 #if ENABLE(CSS_SELECTOR_JIT)

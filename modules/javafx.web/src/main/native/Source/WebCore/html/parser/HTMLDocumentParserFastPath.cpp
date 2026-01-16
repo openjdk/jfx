@@ -125,15 +125,6 @@ template<typename CharacterType> static inline bool isCharAfterUnquotedAttribute
     return character == ' ' || character == '>' || isASCIIWhitespace(character);
 }
 
-template<typename T> static bool insertInUniquedSortedVector(Vector<T>& vector, const T& value)
-{
-    auto it = std::lower_bound(vector.begin(), vector.end(), value);
-    if (UNLIKELY(it != vector.end() && *it == value))
-        return false;
-    vector.insert(it - vector.begin(), value);
-    return true;
-}
-
 #define FOR_EACH_SUPPORTED_TAG(APPLY) \
     APPLY(a, A)                       \
     APPLY(b, B)                       \
@@ -192,7 +183,7 @@ template<typename T> static bool insertInUniquedSortedVector(Vector<T>& vector, 
 template<typename CharacterType>
 class HTMLFastPathParser {
     using CharacterSpan = std::span<const CharacterType>;
-    static_assert(std::is_same_v<CharacterType, UChar> || std::is_same_v<CharacterType, LChar>);
+    static_assert(std::is_same_v<CharacterType, char16_t> || std::is_same_v<CharacterType, LChar>);
 
 public:
     HTMLFastPathParser(CharacterSpan source, Document& document, ContainerNode& destinationParent)
@@ -243,7 +234,7 @@ private:
     unsigned m_elementDepth { 0 };
     // 32 matches that used by HTMLToken::Attribute.
     Vector<CharacterType, 32> m_charBuffer;
-    Vector<UChar> m_ucharBuffer;
+    Vector<char16_t> m_ucharBuffer;
     // The inline capacity matches HTMLToken::AttributeList.
     Vector<Attribute, 10> m_attributeBuffer;
     Vector<AtomStringImpl*> m_attributeNames;
@@ -466,7 +457,7 @@ private:
     template<typename ParentTag> void parseCompleteInput()
     {
         parseChildren<ParentTag>(m_destinationParent.get());
-        if (UNLIKELY(m_parsingBuffer.hasCharactersRemaining()))
+        if (m_parsingBuffer.hasCharactersRemaining()) [[unlikely]]
             didFail(HTMLFastPathResult::FailedDidntReachEndOfInput);
     }
 
@@ -514,7 +505,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         m_parsingBuffer.setPosition(cursor);
 
         if (!cursor.empty()) {
-            if (UNLIKELY(cursor[0] == '\0'))
+            if (cursor[0] == '\0') [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedContainsNull, String());
 
             if (cursor[0] == '&' || cursor[0] == '\r') {
@@ -524,7 +515,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
 
         unsigned length = cursor.data() - start.data();
-        if (UNLIKELY(length >= Text::defaultLengthLimit))
+        if (length >= Text::defaultLengthLimit) [[unlikely]]
             return didFail(HTMLFastPathResult::FailedBigText, String());
 
         return length ? String(start.first(length)) : String();
@@ -546,12 +537,12 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                 if (m_parsingBuffer.hasCharactersRemaining() && *m_parsingBuffer == '\n')
                     m_parsingBuffer.advance();
                 m_ucharBuffer.append('\n');
-            } else if (UNLIKELY(*m_parsingBuffer == '\0'))
+            } else if (*m_parsingBuffer == '\0') [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedContainsNull, String());
             else
                 m_ucharBuffer.append(m_parsingBuffer.consume());
         }
-        if (UNLIKELY(m_ucharBuffer.size() >= Text::defaultLengthLimit))
+        if (m_ucharBuffer.size() >= Text::defaultLengthLimit) [[unlikely]]
             return didFail(HTMLFastPathResult::FailedBigText, String());
         return m_ucharBuffer.isEmpty() ? String() : String(std::exchange(m_ucharBuffer, { }));
     }
@@ -575,7 +566,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                 m_parsingBuffer.advance();
                 m_charBuffer.append(c);
             }
-            if (UNLIKELY(m_parsingBuffer.atEnd() || !isCharAfterTagNameOrAttribute(*m_parsingBuffer)))
+            if (m_parsingBuffer.atEnd() || !isCharAfterTagNameOrAttribute(*m_parsingBuffer)) [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedParsingTagName, ElementName::Unknown);
             skipWhile<isASCIIWhitespace>(m_parsingBuffer);
             return findHTMLElementName(m_charBuffer.span());
@@ -592,11 +583,11 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         // are not as common, so it only looks for lowercase.
         auto start = m_parsingBuffer.span();
         skipWhile<isASCIILower>(m_parsingBuffer);
-        if (UNLIKELY(m_parsingBuffer.atEnd()))
+        if (m_parsingBuffer.atEnd()) [[unlikely]]
             return didFail(HTMLFastPathResult::FailedEndOfInputReached, nullQName());
 
         CharacterSpan attributeName;
-        if (UNLIKELY(isValidAttributeNameChar(*m_parsingBuffer))) {
+        if (isValidAttributeNameChar(*m_parsingBuffer)) [[unlikely]] {
         // At this point name does not contain lowercase. It may contain upper-case,
         // which requires mapping. Assume it does.
         m_parsingBuffer.setPosition(start);
@@ -676,12 +667,12 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
             start = m_parsingBuffer.span();
             const auto cursor = quoteChar == '\'' ? find.template operator()<'\''>(start) : find.template operator()<'"'>(start);
-            if (UNLIKELY(cursor.empty()))
+            if (cursor.empty()) [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedParsingQuotedAttributeValue, emptyAtom());
 
             length = cursor.data() - start.data();
-            if (UNLIKELY(cursor[0] != quoteChar)) {
-                if (LIKELY(cursor[0] == '&' || cursor[0] == '\r')) {
+            if (cursor[0] != quoteChar) [[unlikely]] {
+                if (cursor[0] == '&' || cursor[0] == '\r') [[likely]] {
                     m_parsingBuffer.setPosition(quoteStart);
                     return scanEscapedAttributeValue();
                 }
@@ -691,7 +682,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         } else {
             skipWhile<isValidUnquotedAttributeValueChar>(m_parsingBuffer);
             length = m_parsingBuffer.position() - start.data();
-            if (UNLIKELY(m_parsingBuffer.atEnd() || !isCharAfterUnquotedAttribute(*m_parsingBuffer)))
+            if (m_parsingBuffer.atEnd() || !isCharAfterUnquotedAttribute(*m_parsingBuffer)) [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedParsingUnquotedAttributeValue, emptyAtom());
         }
         return HTMLNameCache::makeAttributeValue(start.first(length));
@@ -703,7 +694,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     {
         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
         m_ucharBuffer.shrink(0);
-        if (UNLIKELY(!m_parsingBuffer.hasCharactersRemaining() || !isQuoteCharacter(*m_parsingBuffer)))
+        if (!m_parsingBuffer.hasCharactersRemaining() || !isQuoteCharacter(*m_parsingBuffer)) [[unlikely]]
             return didFail(HTMLFastPathResult::FailedParsingUnquotedEscapedAttributeValue, emptyAtom());
 
         auto quoteChar = m_parsingBuffer.consume();
@@ -724,18 +715,18 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                     m_parsingBuffer.advance();
                 }
             }
-        if (UNLIKELY(m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != quoteChar))
+        if (m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != quoteChar) [[unlikely]]
             return didFail(HTMLFastPathResult::FailedParsingQuotedEscapedAttributeValue, emptyAtom());
 
         return HTMLNameCache::makeAttributeValue(m_ucharBuffer.span());
     }
 
-    void scanHTMLCharacterReference(Vector<UChar>& out)
+    void scanHTMLCharacterReference(Vector<char16_t>& out)
     {
         ASSERT(*m_parsingBuffer == '&');
         m_parsingBuffer.advance();
 
-        if (LIKELY(m_parsingBuffer.lengthRemaining() >= 2)) {
+        if (m_parsingBuffer.lengthRemaining() >= 2) [[likely]] {
             if (auto entity = consumeHTMLEntity(m_parsingBuffer); !entity.failed()) {
                 out.append(entity.span());
                 return;
@@ -780,7 +771,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                 // We assume that we found the closing tag. The tagName will be checked by the caller `parseContainerElement()`.
                 return;
             }
-            if (UNLIKELY(++m_elementDepth == Settings::defaultMaximumHTMLParserDOMTreeDepth))
+            if (++m_elementDepth == Settings::defaultMaximumHTMLParserDOMTreeDepth) [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedMaxDepth);
             auto child = ParentTag::parseChild(parent, *this);
             --m_elementDepth;
@@ -799,7 +790,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         while (true) {
             auto attributeName = scanAttributeName();
             if (attributeName == nullQName()) {
-                if (LIKELY(m_parsingBuffer.hasCharactersRemaining())) {
+                if (m_parsingBuffer.hasCharactersRemaining()) [[likely]] {
                     if (*m_parsingBuffer == '>') {
                         m_parsingBuffer.advance();
                         break;
@@ -807,7 +798,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                     if (*m_parsingBuffer == '/') {
                         m_parsingBuffer.advance();
                         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
-                        if (UNLIKELY(m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>'))
+                        if (m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>') [[unlikely]]
                             return didFail(HTMLFastPathResult::FailedParsingAttributes);
                         break;
                     }
@@ -815,19 +806,20 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
                 return didFail(HTMLFastPathResult::FailedParsingAttributes);
             }
             skipWhile<isASCIIWhitespace>(m_parsingBuffer);
-            AtomString attributeValue { emptyAtom() };
+            AtomString attributeValue;
             if (skipExactly(m_parsingBuffer, '=')) {
                 attributeValue = scanAttributeValue();
                 skipWhile<isASCIIWhitespace>(m_parsingBuffer);
-            }
-            if (UNLIKELY(!insertInUniquedSortedVector(m_attributeNames, attributeName.localName().impl()))) {
+            } else
+                attributeValue = emptyAtom();
+            if (!insertInUniquedSortedVector(m_attributeNames, attributeName.localName().impl())) [[unlikely]] {
                 hasDuplicateAttributes = true;
                 continue;
         }
             m_attributeBuffer.append(Attribute { WTFMove(attributeName), WTFMove(attributeValue) });
         }
         parent.parserSetAttributes(m_attributeBuffer);
-        if (UNLIKELY(hasDuplicateAttributes))
+        if (hasDuplicateAttributes) [[unlikely]]
             parent.setHasDuplicateAttribute(true);
     }
 
@@ -927,7 +919,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             parent.parserAppendChild(element);
         element->beginParsingChildren();
         parseChildren<Tag>(element);
-        if (UNLIKELY(parsingFailed() || m_parsingBuffer.atEnd()))
+        if (parsingFailed() || m_parsingBuffer.atEnd()) [[unlikely]]
             return didFail(HTMLFastPathResult::FailedEndOfInputReachedForContainer, element);
 
         // parseChildren<Tag>(element) stops after the (hopefully) closing tag's `<`
@@ -935,13 +927,13 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         ASSERT(*m_parsingBuffer == '/');
         m_parsingBuffer.advance();
 
-        if (UNLIKELY(!skipCharactersExactly(m_parsingBuffer, std::span { Tag::tagNameCharacters }))) {
-            if (UNLIKELY(!skipLettersExactlyIgnoringASCIICase(m_parsingBuffer, std::span { Tag::tagNameCharacters })))
+        if (!skipCharactersExactly(m_parsingBuffer, std::span { Tag::tagNameCharacters })) [[unlikely]] {
+            if (!skipLettersExactlyIgnoringASCIICase(m_parsingBuffer, std::span { Tag::tagNameCharacters })) [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedEndTagNameMismatch, element);
         }
         skipWhile<isASCIIWhitespace>(m_parsingBuffer);
 
-        if (UNLIKELY(m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>'))
+        if (m_parsingBuffer.atEnd() || m_parsingBuffer.consume() != '>') [[unlikely]]
                 return didFail(HTMLFastPathResult::FailedUnexpectedTagNameCloseState, element);
 
         element->finishParsingChildren();

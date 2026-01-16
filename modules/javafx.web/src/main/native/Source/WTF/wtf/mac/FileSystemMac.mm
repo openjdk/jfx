@@ -37,8 +37,8 @@ namespace WTF {
 void FileSystem::setMetadataURL(const String& path, const String& metadataURLString, const String& referrer)
 {
     String urlString;
-    if (NSURL *url = URLWithUserTypedString(metadataURLString))
-        urlString = userVisibleString(URLByRemovingUserInfo(url));
+    if (RetainPtr url = URLWithUserTypedString(metadataURLString.createNSString().get()))
+        urlString = userVisibleString(URLByRemovingUserInfo(url.get()));
     else
         urlString = metadataURLString;
 
@@ -48,9 +48,9 @@ void FileSystem::setMetadataURL(const String& path, const String& metadataURLStr
         if (!item)
             return;
 
-        auto whereFromAttribute = adoptNS([[NSMutableArray alloc] initWithObjects:urlString, nil]);
+        RetainPtr whereFromAttribute = adoptNS([[NSMutableArray alloc] initWithObjects:urlString.createNSString().get(), nil]);
         if (!referrer.isNull())
-            [whereFromAttribute addObject:referrer];
+            [whereFromAttribute addObject:referrer.createNSString().get()];
 
         MDItemSetAttribute(item.get(), kMDItemWhereFroms, (__bridge CFArrayRef)whereFromAttribute.get());
         MDItemSetAttribute(item.get(), kMDItemDownloadedDate, (__bridge CFArrayRef)@[ [NSDate date] ]);
