@@ -277,7 +277,7 @@ public class NGGroup extends NGNode {
             return false;
         }
         List<NGNode> orderedChildren = getOrderedChildren();
-        int n =  orderedChildren.size();
+        int n = orderedChildren.size();
         if (n == 1) {
             return orderedChildren.get(0).hasOverlappingContents();
         }
