@@ -2375,7 +2375,7 @@ bool RenderLayerCompositor::updateExplicitBacking(RenderLayer& layer, RequiresCo
         if (!layer.backing())
             repaintOnCompositingChange(layer, layer.repaintContainer());
     }
-    
+
     updateBacking(layer, queryData, nullptr, backingRequired);
 
     if (hadBacking != layer.isComposited())

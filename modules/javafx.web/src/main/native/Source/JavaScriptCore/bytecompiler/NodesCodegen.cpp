@@ -5049,7 +5049,7 @@ SwitchInfo::SwitchType CaseBlockNode::tryTableSwitch(Vector<ExpressionNode*, 8>&
 
     if (literalVector.size() < s_tableSwitchMinimum)
         return SwitchInfo::SwitchType::None;
-    
+
     if (typeForTable == SwitchUnset || typeForTable == SwitchNeither)
         return SwitchInfo::SwitchType::None;
 
@@ -5061,7 +5061,7 @@ SwitchInfo::SwitchType CaseBlockNode::tryTableSwitch(Vector<ExpressionNode*, 8>&
             return SwitchInfo::SwitchType::ImmediateList;
     }
         return SwitchInfo::SwitchType::None;
-    } 
+    }
 
     ASSERT(typeForTable == SwitchString);
 

@@ -1528,7 +1528,7 @@ void LocalDOMWindow::setDefaultStatus(const String& string)
         return;
 
     ASSERT(frame->document()); // Client calls shouldn't be made when the frame is in inconsistent state.
-	if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.get()))
+        if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.get()))
         page->chrome().setStatusbarText(*localFrame, m_defaultStatus);
 }
 #endif

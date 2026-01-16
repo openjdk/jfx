@@ -117,7 +117,7 @@ static const char* vertexTemplateCommon =
                     float newDistance = distance(v_nonProjectedPosition.xyz, centerInViewportCoordinates.xyz);
                     // Move v_texCoord based on 3D distance inflation ratio.
                     v_texCoord += normalize(position - center) * (newDistance - oldDistance) / oldDistance;
-                } 
+                }
                 v_antialias = 0.;
             }
         }

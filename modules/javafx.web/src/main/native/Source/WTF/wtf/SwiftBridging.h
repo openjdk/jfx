@@ -198,15 +198,15 @@
 #define SWIFT_MUTATING \
   __attribute__((swift_attr("mutating")))
 
-/// Specifies that a specific c++ type such class or struct should be imported as type marked 
+/// Specifies that a specific c++ type such class or struct should be imported as type marked
 /// as `@unchecked Sendable` type in swift. If this annotation is used, the type is therefore allowed to
 /// use safely across async contexts.
 ///
-/// For example 
+/// For example
 /// ```
 ///   class SWIFT_UNCHECKED_SENDABLE CustomUserType
-///   { ... } 
-/// ``` 
+///   { ... }
+/// ```
 /// Will be imported as `struct CustomUserType: @unchecked Sendable`
 #define SWIFT_UNCHECKED_SENDABLE \
   __attribute__((swift_attr("@Sendable")))
@@ -306,7 +306,7 @@
 #define SWIFT_NAME(_name)
 #define SWIFT_CONFORMS_TO_PROTOCOL(_moduleName_protocolName)
 #define SWIFT_COMPUTED_PROPERTY
-#define SWIFT_MUTATING 
+#define SWIFT_MUTATING
 #define SWIFT_UNCHECKED_SENDABLE
 #define SWIFT_NONCOPYABLE
 #define SWIFT_NONESCAPABLE

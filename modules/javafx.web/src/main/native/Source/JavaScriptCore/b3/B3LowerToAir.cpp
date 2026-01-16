@@ -2607,7 +2607,7 @@ private:
         append(opcode, tmp(m_value->child(0)), m_eax, m_edx);
         append(Move, m_edx, tmp(m_value));
     }
-    
+
     Air::Opcode loadLinkOpcode(Width width, bool fence)
     {
         return fence ? OPCODE_FOR_WIDTH(LoadLinkAcq, width) : OPCODE_FOR_WIDTH(LoadLink, width);

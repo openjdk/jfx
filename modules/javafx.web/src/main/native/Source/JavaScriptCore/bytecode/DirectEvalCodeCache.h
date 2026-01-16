@@ -141,7 +141,7 @@ namespace JSC {
         {
             return m_cacheMap.inlineGet<CacheLookupKeyHashTranslator>(cacheKey).get();
         }
-        
+
         void set(JSGlobalObject* globalObject, JSCell* owner, const CacheLookupKey& cacheKey, DirectEvalExecutable* evalExecutable)
         {
             if (m_cacheMap.size() < maxCacheEntries)

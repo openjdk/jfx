@@ -3067,7 +3067,7 @@ public:
     {
         return isInt32OrOtherSpeculation(prediction());
     }
-    
+
     bool shouldSpeculateInt32ForArithmetic()
     {
         return isInt32SpeculationForArithmetic(prediction());

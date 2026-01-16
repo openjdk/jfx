@@ -24,7 +24,7 @@
  */
 
 /*
- * This is a C++ port of the xsum implementation, 
+ * This is a C++ port of the xsum implementation,
  * originally invented by Radford M. Neal, and ported by Keita Nonaka.
  *
  * The original C implementation is from https://gitlab.com/radfordneal/xsum
@@ -137,7 +137,7 @@ void SmallAccumulator::addInfNan(int64_t ivalue)
 /*
 PROPAGATE CARRIES TO NEXT CHUNK IN A SMALL ACCUMULATOR. Needs to
 be called often enough that accumulated carries don't overflow out
-the top, as indicated by addsUntilPropagate.  
+the top, as indicated by addsUntilPropagate.
 Returns the index of the uppermost non-zero chunk (0 if number is zero).
 
 After carry propagation, the uppermost non-zero chunk will indicate

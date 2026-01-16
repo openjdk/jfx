@@ -1098,7 +1098,7 @@ void LocalFrameView::obscuredContentInsetsDidChange(const FloatBoxExtent& newObs
 
     if (RefPtr document = m_frame->document())
         document->updateViewportUnitsOnResize();
-    
+
     renderView->setNeedsLayout();
     layoutContext().layout();
     // Every scroll that happens as the result of content inset change is programmatic.

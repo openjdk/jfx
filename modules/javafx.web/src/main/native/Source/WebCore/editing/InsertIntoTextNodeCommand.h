@@ -53,7 +53,7 @@ private:
 #endif
 
     bool shouldEnablePasswordEcho() const;
-    
+
     const Ref<Text> m_node;
     unsigned m_offset;
     String m_text;

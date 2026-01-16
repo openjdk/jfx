@@ -4437,10 +4437,10 @@ void BytecodeGenerator::endSwitch(const Vector<Ref<Label>, 8>& labels, Expressio
     auto handleStringSwitch = [&](auto bytecode) {
         UnlinkedStringJumpTable& jumpTable = m_codeBlock->unlinkedStringSwitchJumpTable(bytecode.m_tableIndex);
         for (uint32_t i = 0; i < labels.size(); ++i) {
-        // We're emitting this after the clause labels should have been fixed, so 
+        // We're emitting this after the clause labels should have been fixed, so
         // the labels should not be "forward" references
         ASSERT(!labels[i]->isForward());
-        
+
         ASSERT(nodes[i]->isString());
         UniquedStringImpl* clause = static_cast<StringNode*>(nodes[i])->value().impl();
         ASSERT(clause->isAtom());
@@ -4459,7 +4459,7 @@ void BytecodeGenerator::endSwitch(const Vector<Ref<Label>, 8>& labels, Expressio
         jumpTable.m_maxLength = 0;
     }
     };
-    
+
     auto ref = m_writer.ref(switchInfo.bytecodeOffset);
     switch (switchInfo.switchType) {
     case SwitchInfo::SwitchType::Immediate: {
@@ -4476,12 +4476,12 @@ void BytecodeGenerator::endSwitch(const Vector<Ref<Label>, 8>& labels, Expressio
         handleSwitch(ref->as<OpSwitchChar>());
         break;
     }
-        
+
     case SwitchInfo::SwitchType::CharacterList: {
         handleSwitchList(ref->as<OpSwitchChar>());
         break;
     }
-        
+
     case SwitchInfo::SwitchType::String: {
         handleStringSwitch(ref->as<OpSwitchString>());
         break;

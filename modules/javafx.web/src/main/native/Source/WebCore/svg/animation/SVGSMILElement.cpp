@@ -1073,7 +1073,7 @@ float SVGSMILElement::calculateAnimationPercentAndRepeat(SMILTime elapsed, unsig
 
     return narrowPrecisionToFloat(percent);
 }
-    
+
 SMILTime SVGSMILElement::calculateNextProgressTime(SMILTime elapsed) const
 {
     if (m_timeContainer && m_activeState == Active) {

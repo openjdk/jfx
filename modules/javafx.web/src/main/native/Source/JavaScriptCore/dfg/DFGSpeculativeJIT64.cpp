@@ -3536,7 +3536,7 @@ void SpeculativeJIT::compile(Node* node)
 
             ASSERT(bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()));
             convertAnyInt(node->child1(), resultGPR, true);
-    
+
             strictInt52Result(resultGPR, node);
             break;
         }
@@ -4402,7 +4402,7 @@ void SpeculativeJIT::compile(Node* node)
 
             GPRReg valueGPR = value.gpr();
             GPRReg resultGPR = result.gpr();
-    
+
             if (!m_interpreter.needsTypeCheck(node->child1(), SpecBoolInt32 | SpecBoolean)) {
                 and32(TrustedImm32(1), valueGPR, resultGPR);
                 strictInt32Result(resultGPR, node);
@@ -5228,7 +5228,7 @@ void SpeculativeJIT::compile(Node* node)
 
         GPRReg valueGPR = value.gpr();
         GPRReg resultGPR = result.gpr();
-    
+
         xor64(TrustedImm32(JSValue::ValueFalse), valueGPR, resultGPR);
         test64(Zero, resultGPR, TrustedImm32(static_cast<int32_t>(~1)), resultGPR);
         or32(TrustedImm32(JSValue::ValueFalse), resultGPR);

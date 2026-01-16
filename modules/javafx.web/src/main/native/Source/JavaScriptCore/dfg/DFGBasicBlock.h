@@ -165,7 +165,7 @@ public:
     }
 
     bool isJumpPad() { return m_nodes.size() == 1 && m_nodes[0]->isJump(); }
-    
+
     void removePredecessor(BasicBlock* block);
     void replacePredecessor(BasicBlock* from, BasicBlock* to);
 

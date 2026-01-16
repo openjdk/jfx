@@ -119,7 +119,7 @@ void PresentationContextImpl::unconfigure()
         return;
 
     m_swapChain = nullptr;
-    
+
     m_format = TextureFormat::Bgra8unorm;
     m_width = 0;
     m_height = 0;

@@ -19104,8 +19104,8 @@ convert_utf8_1_to_2_byte_to_utf16(uint8x16_t in, size_t shufutf8_idx) {
  */
 simdutf_really_inline int veq_non_zero(uint8x16_t v) {
   // might compile to two instructions:
-  //	umaxv   s0, v0.4s
-  //	fmov	w0, s0
+  //    umaxv   s0, v0.4s
+  //    fmov    w0, s0
   // On Apple hardware, they both have a latency of 3 cycles, with a throughput
   // of four instructions per cycle. So that's 6 cycles of latency (!!!) for the
   // two instructions. A narrowing shift has the same latency and throughput.

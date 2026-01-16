@@ -188,7 +188,7 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     virtualalloc_res = VirtualAlloc((void*) upper_guard, upper_guard_size, MEM_COMMIT, PAGE_NOACCESS);
     PAS_ASSERT(virtualalloc_res);
 
-    /* 
+    /*
      * ensure physical addresses are released
      * loop using meminfo here if the upper guard free is failing
      */

@@ -39,7 +39,7 @@ namespace Style {
 
 auto CSSValueConversion<SVGPaint>::operator()(BuilderState& state, const CSSValue& value, ForVisitedLink forVisitedLink) -> SVGPaint
 {
-    // <paint> = none | <color> | <url> [none | <color>]? 
+    // <paint> = none | <color> | <url> [none | <color>]?
 
     if (RefPtr list = dynamicDowncast<CSSValueList>(value)) {
         RefPtr firstValue = list->item(0);

@@ -65,7 +65,7 @@ MappedFileData::MappedFileData(std::span<uint8_t> fileData, Win32Handle&& fileMa
 
 MappedFileData::~MappedFileData()
 {
-    
+
 }
 #endif
 
@@ -126,10 +126,6 @@ std::optional<uint64_t> fileSize(const String& path)
 std::optional<FileMetadata> fileMetadata(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
-    if(isMainThread())
-       fprintf(stderr,"in main thread env is %p\n",env);
-    else
-       fprintf(stderr,"not in mainthread\n");
 
     static jmethodID mid = env->GetStaticMethodID(
             comSunWebkitFileSystem,

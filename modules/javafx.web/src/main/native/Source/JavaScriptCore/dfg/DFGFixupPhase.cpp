@@ -2441,7 +2441,7 @@ private:
             attemptToMakeDoubleResultForGet(node);
             break;
         }
-    
+
         case MultiGetByOffset: {
             fixEdge<CellUse>(node->child1());
             break;

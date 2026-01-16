@@ -47,7 +47,7 @@ public:
     virtual void setChildItem(BackForwardFrameItemIdentifier, Ref<HistoryItem>&&) = 0;
 
     virtual void goToItem(HistoryItem&) = 0;
-#if PLATFORM(JAVA)	
+#if PLATFORM(JAVA)
     virtual void goToProvisionalItem(const HistoryItem&) = 0;
     virtual void clearProvisionalItem(const HistoryItem&) = 0;
 #endif

@@ -142,7 +142,7 @@ struct pas_segregated_page_config {
     /* Padding to insert between partial views in the page, in bytes.
      * Aligned to PAS_PARTIAL_VIEW_PADDING_ALIGN bytes. */
     uint8_t partial_view_padding;
-    
+
     /* Number of bits needed for alloc bits. This ends up impacting the size of the page header,
        so this value needs to be set in a way that is compatible with page_size, payload_size,
        and where you place the header. */

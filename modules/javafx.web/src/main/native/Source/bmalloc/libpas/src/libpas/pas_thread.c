@@ -128,11 +128,11 @@ int pthread_once(pthread_once_t* once_control, void (*init_routine)(void))
    on each thread's exit:
    https://web.archive.org/web/20070921204540/https://www.codeproject.com/threads/tls.asp
    https://source.chromium.org/chromium/chromium/src/+/main:base/threading/thread_local_storage_win.cc;l=38-48
-  
+
    However the fiber-local storage APIs do let you register a per-thread destructor. Even
    though we don't care about fibers, the API is strictly better and avoids the magic:
    https://devblogs.microsoft.com/oldnewthing/20191011-00/?p=102989
-  
+
    TODO: FlsGetValue is around 2x slower than TlsGetValue on single threaded access, so we should
    switch to Thread Local Storage and deal with the extra complexity. */
 int pthread_key_create(pthread_key_t* key, void (*destructor)(void*))

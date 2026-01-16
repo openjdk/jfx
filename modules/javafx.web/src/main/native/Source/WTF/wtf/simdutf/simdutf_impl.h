@@ -2280,7 +2280,7 @@ simdutf_really_inline simdutf_warn_unused size_t convert_utf16_to_utf8(
  *
  * @param input         the UTF-16 string to convert
  * @param length        the length of the string in 16-bit code units (char16_t)
- * @param utf8_output  	the pointer to buffer that can hold conversion result
+ * @param utf8_output   the pointer to buffer that can hold conversion result
  * @param utf8_len      the maximum output length
  * @return the number of written char; 0 if conversion is not possible
  */

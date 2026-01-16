@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "SystemHeap.h"
@@ -39,7 +39,7 @@
 namespace bmalloc {
 
 SystemHeap* systemHeapCache { nullptr };
-    
+
 DEFINE_STATIC_PER_PROCESS_STORAGE(SystemHeap);
 
 #if BOS(DARWIN)
@@ -226,7 +226,7 @@ void SystemHeap::freeLarge(void* base)
 {
     if (!base)
         return;
-    
+
     size_t size;
     {
         LockHolder locker(mutex());
@@ -234,7 +234,7 @@ void SystemHeap::freeLarge(void* base)
         size_t numErased = m_sizeMap.erase(base);
         RELEASE_BASSERT(numErased == 1);
     }
-    
+
     vmDeallocate(base, size);
 }
 

@@ -5263,7 +5263,7 @@ void SpeculativeJIT::compileArithSub(Node* node)
 
             GPRReg op2GPR = op2.gpr();
             GPRReg resultGPR = result.gpr();
-    
+
             move(Imm32(imm1), resultGPR);
             if (!shouldCheckOverflow(node->arithMode()))
                 sub32(op2GPR, resultGPR);

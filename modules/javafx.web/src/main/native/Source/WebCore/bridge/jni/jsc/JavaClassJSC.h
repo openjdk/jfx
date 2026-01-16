@@ -55,13 +55,13 @@ private:
     Type type() const override { return PlatformDisplay::Type::WPE; }
 
     struct wpe_renderer_backend_egl* m_backend { nullptr };
-#endif	
+#endif
 #if PLATFORM(JAVA)
     jobject createDummyObject();
     const char* m_name;
-	mutable FieldMap m_fields;
-	mutable MethodListMap m_methods;
-#endif		
+        mutable FieldMap m_fields;
+        mutable MethodListMap m_methods;
+#endif
 };
 
 } // namespace Bindings

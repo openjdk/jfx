@@ -174,15 +174,15 @@ PAS_API void* pas_enumerator_read_compact(pas_enumerator* enumerator,
 
    Only one such mapping can be pinned at a time, see the specification of
    memory_reader_t in malloc.h:
-   
+
    "validity of local_memory is assumed to be limited (until next call)"
 
    pas_enumerator_copy_remote cannot be called while this mapping is pinned
    since that also needs to call into the memory reader. The returned pointer
    must not be stashed away since the mapping can be invalidated.
 
-   Prefer pas_enumerator_copy_remote instead. This interface is provided for 
-   convenience in cases where the structure is variable size and it's known 
+   Prefer pas_enumerator_copy_remote instead. This interface is provided for
+   convenience in cases where the structure is variable size and it's known
    that no other mappings will be needed while this one is live. */
 PAS_API void* pas_enumerator_pin_remote(pas_enumerator* enumerator,
                                         void* remote_address,

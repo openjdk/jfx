@@ -33,7 +33,7 @@ public:
     static Ref<HTMLBaseElement> create(const QualifiedName&, Document&);
 
     WEBCORE_EXPORT String href() const;
-#if PLATFORM(JAVA)	
+#if PLATFORM(JAVA)
     WEBCORE_EXPORT void setHref(const AtomString&);
 #endif
 private:
