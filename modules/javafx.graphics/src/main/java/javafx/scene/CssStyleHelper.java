@@ -498,7 +498,7 @@ final class CssStyleHelper {
                 Entry<CssMetaData, CalculatedValue> entry = it.next();
                 CssMetaData key = entry.getKey();
 
-                if (!newCascadingStyles.containsKey(key.getProperty())) {
+                if (!containsProperty(newCascadingStyles, key)) {
                     if (key != TransitionDefinitionCssMetaData.getInstance()) {
                         if (resetList == null) {
                             resetList = new ArrayList<>(cssSetProperties.size() - idx);
@@ -531,6 +531,29 @@ final class CssStyleHelper {
         } finally {
             resetInProgress = false;
         }
+    }
+
+    /**
+     * Returns whether the cascading style map contains the specified property or any of its sub-properties.
+     */
+    private boolean containsProperty(Map<String, List<CascadingStyle>> cascadingStyles,
+                                     CssMetaData<? extends Styleable, ?> propertyMetadata) {
+        if (cascadingStyles.containsKey(propertyMetadata.getProperty())) {
+            return true;
+        }
+
+        List<CssMetaData<? extends Styleable, ?>> subProperties = propertyMetadata.getSubProperties();
+        if (subProperties == null) {
+            return false;
+        }
+
+        for (int i = 0, max = subProperties.size(); i < max; ++i) {
+            if (containsProperty(cascadingStyles, subProperties.get(i))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
