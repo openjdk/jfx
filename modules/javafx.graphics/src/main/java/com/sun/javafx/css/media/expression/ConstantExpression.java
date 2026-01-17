@@ -29,6 +29,7 @@ import com.sun.javafx.css.media.ContextAwareness;
 import com.sun.javafx.css.media.MediaQuery;
 import com.sun.javafx.css.media.MediaQueryCache;
 import com.sun.javafx.css.media.MediaQueryContext;
+import com.sun.javafx.css.media.TriState;
 import java.util.Objects;
 
 /**
@@ -53,6 +54,11 @@ public final class ConstantExpression implements MediaQuery {
     @Override
     public int getContextAwareness() {
         return ContextAwareness.NONE.value();
+    }
+
+    @Override
+    public TriState evaluate() {
+        return value ?  TriState.TRUE : TriState.FALSE;
     }
 
     @Override
