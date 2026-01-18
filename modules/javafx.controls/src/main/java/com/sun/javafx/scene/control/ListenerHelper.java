@@ -43,6 +43,7 @@ import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.control.SkinBase;
@@ -396,7 +397,7 @@ public class ListenerHelper implements IDisconnectable {
 
         items.add(h);
 
-        x.addEventHandler(t, h);
+        x.addEventHandler(t, EventHandlerPriority.DEFAULT, h);
 
         return h;
     }
@@ -413,7 +414,7 @@ public class ListenerHelper implements IDisconnectable {
 
         items.add(h);
 
-        x.addEventFilter(t, h);
+        x.addEventFilter(t, EventHandlerPriority.DEFAULT, h);
 
         return h;
     }
