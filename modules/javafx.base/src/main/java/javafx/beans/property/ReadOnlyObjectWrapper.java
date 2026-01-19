@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,6 +81,31 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
     }
 
     /**
+     * The constructor of {@code ReadOnlyObjectWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public ReadOnlyObjectWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyObjectWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public ReadOnlyObjectWrapper(Object bean, Class<?> declaringClass, String name, T initialValue) {
+        super(bean, declaringClass, name, initialValue);
+    }
+
+    /**
      * Returns the readonly property, that is synchronized with this
      * {@code ReadOnlyObjectWrapper}.
      *
@@ -88,7 +113,9 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
      */
     public ReadOnlyObjectProperty<T> getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -119,6 +146,19 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
         @Override
         public String getName() {
             return ReadOnlyObjectWrapper.this.getName();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlyObjectWrapper.this.getDeclaringClass();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyObjectWrapper.this).getTargetClass();
         }
     }
 }

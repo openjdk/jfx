@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,6 +81,31 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
     }
 
     /**
+     * The constructor of {@code ReadOnlyDoubleWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public ReadOnlyDoubleWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyDoubleWrapper}
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public ReadOnlyDoubleWrapper(Object bean, Class<?> declaringClass, String name, double initialValue) {
+        super(bean, declaringClass, name, initialValue);
+    }
+
+    /**
      * Returns the read-only property, that is synchronized with this
      * {@code ReadOnlyDoubleWrapper}.
      *
@@ -88,7 +113,9 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
      */
     public ReadOnlyDoubleProperty getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -119,6 +146,19 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
         @Override
         public String getName() {
             return ReadOnlyDoubleWrapper.this.getName();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlyDoubleWrapper.this.getDeclaringClass();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyDoubleWrapper.this).getTargetClass();
         }
     }
 }

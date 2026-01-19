@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
 
     private final Object bean;
     private final String name;
+    private Class<?> declaringClass;
 
     /**
      * {@inheritDoc}
@@ -58,6 +59,20 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
     @Override
     public String getName() {
         return name;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 27
+     */
+    @Override
+    public Class<?> getDeclaringClass() {
+        if (declaringClass != null) {
+            return declaringClass;
+        }
+
+        return declaringClass = super.getDeclaringClass();
     }
 
     /**
@@ -106,4 +121,33 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
         this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
+    /**
+     * The constructor of {@code SimpleSetProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public SimpleSetProperty(Object bean, Class<?> declaringClass, String name) {
+        this.bean = bean;
+        this.declaringClass = declaringClass;
+        this.name = (name == null) ? DEFAULT_NAME : name;
+    }
+
+    /**
+     * The constructor of {@code SimpleSetProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public SimpleSetProperty(Object bean, Class<?> declaringClass, String name, ObservableSet<E> initialValue) {
+        super(initialValue);
+        this.bean = bean;
+        this.declaringClass = declaringClass;
+        this.name = (name == null) ? DEFAULT_NAME : name;
+    }
 }
