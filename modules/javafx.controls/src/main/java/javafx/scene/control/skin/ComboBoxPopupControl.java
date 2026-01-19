@@ -479,18 +479,18 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             double maxWidth = snapSizeX(r.maxWidth(h));
             double w = snapSizeX(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
 
-            double heightDiff = h - r.getHeight();
+            double incrementalHeightChange = r.getHeight() != 0.0 ? h - r.getHeight() : 0.0;
             popupContent.resize(w, h);
 
             // Take into account whether the popup was autofixed for JDK-8338145
-            // If it was, adjust the position as well
-            if (heightDiff != 0.0) {
+            // If it was and the height changed, we need to adjust the position as well
+            if (incrementalHeightChange != 0.0) {
                 Point2D p = getPrefPopupPosition();
                 // The popup does not directly store information on whether it was autofixed
                 // We can determine this by looking whether it was moved upward
                 boolean wasAutofixed = getPopup().getAnchorY() < p.getY();
                 if (wasAutofixed) {
-                    popup.setY(popup.getY() - heightDiff);
+                    popup.setY(popup.getY() - incrementalHeightChange);
                 }
             }
         } else {
