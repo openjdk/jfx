@@ -443,7 +443,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
 
         final Node popupContent = getPopupContent();
-        sizePopup();
+        sizePopup(true);
 
         Point2D p = getPrefPopupPosition();
 
@@ -458,10 +458,10 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         // second call to sizePopup here to enable proper sizing _after_ the popup
         // has been displayed. See JDK-8095352 for more detail.
-        sizePopup();
+        sizePopup(false);
     }
 
-    private void sizePopup() {
+    private void sizePopup(boolean first) {
         final Node popupContent = getPopupContent();
 
         if (popupContent instanceof Region) {
@@ -479,18 +479,17 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             double maxWidth = snapSizeX(r.maxWidth(h));
             double w = snapSizeX(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
 
-            double incrementalHeightChange = r.getHeight() != 0.0 ? h - r.getHeight() : 0.0;
+            double heightChange = h - r.getHeight();
             popupContent.resize(w, h);
 
             // Take into account whether the popup was autofixed for JDK-8338145
             // If it was and the height changed, we need to adjust the position as well
-            if (incrementalHeightChange != 0.0) {
-                Point2D p = getPrefPopupPosition();
+            if (!first && heightChange != 0.0) {
                 // The popup does not directly store information on whether it was autofixed
                 // We can determine this by looking whether it was moved upward
-                boolean wasAutofixed = getPopup().getAnchorY() < p.getY();
+                boolean wasAutofixed = popup.getY() < getSkinnable().localToScreen(0, 0).getY();
                 if (wasAutofixed) {
-                    popup.setY(popup.getY() - incrementalHeightChange);
+                    popup.setY(popup.getY() - heightChange);
                 }
             }
         } else {
