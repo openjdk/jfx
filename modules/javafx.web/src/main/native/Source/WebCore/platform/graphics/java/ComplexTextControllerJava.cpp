@@ -166,11 +166,22 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font&
     , m_stringLocation(stringLocation)
     , m_isLTR(jIsLTR(jobject(jRun)))
 {
-    if (!m_glyphCount) {
-        // There won't be any glyph when TextRun contains a line break or a soft break.
-        // However WebCore expects us to return a empty value for all of it's query,
-        // Setting m_glyphCount to 1 does the job.
-        m_glyphCount = 1;
+    // Handle empty string runs (line breaks, etc.)
+    if (m_stringLength == 0) {
+        m_glyphCount = 0;
+        return;
+    }
+   // Fallback run if no glyphs were generated
+   if (m_glyphCount == 0) {
+       m_glyphCount = 1;
+       m_glyphs.grow(m_glyphCount);
+       m_baseAdvances.grow(m_glyphCount);
+       m_coreTextIndices.grow(m_glyphCount);
+
+       m_glyphs[0] = 0;
+       m_baseAdvances[0] = m_initialAdvance;
+       m_coreTextIndices[0] = m_stringLocation;
+       return;
     }
 
     m_glyphs.grow(m_glyphCount);
