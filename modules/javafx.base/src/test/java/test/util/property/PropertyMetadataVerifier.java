@@ -52,7 +52,7 @@ public final class PropertyMetadataVerifier {
      *     <li>{@link ReadOnlyProperty#getDeclaringClass()} returns the enclosing class of the property getter
      *     <li>The declaring class of a {@code Simple<*>Property} or {@code ReadOnly<*>Wrapper} must be
      *         specified in the constructor, not resolved at runtime
-     *     <li>{@code getBean}, {@code getName}, and {@code getDeclaringClass} must not be overridden
+     *     <li>{@code getBean()}, {@code getName()}, and {@code getDeclaringClass()} must not be overridden
      *         in subclasses of {@code Simple<*>Property} or {@code ReadOnly<*>Wrapper}
      *     <li>An instance property does not implement {@link AttachedProperty}
      *     <li>An instance property has a parameterless property getter
@@ -60,8 +60,8 @@ public final class PropertyMetadataVerifier {
      *     <li>An attached property has a static single-argument property getter that accepts the target object
      *     <li>{@link AttachedProperty#getTargetClass()} returns the class of the single parameter of the
      *         static property getter
-     *     <li>A property getter does not return an instance of {@code ReadOnly*Wrapper}, it returns
-     *         the result of calling {@code ReadOnly*Wrapper.getReadOnlyProperty()}
+     *     <li>A property getter does not return an instance of {@code ReadOnly<*>Wrapper}, it returns
+     *         the result of calling {@code ReadOnly<*>Wrapper.getReadOnlyProperty()}
      * </ul>
      *
      * @param bean an object of the specified class
