@@ -33,6 +33,7 @@ import com.sun.javafx.stage.StageHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.property.AttachedProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
@@ -230,7 +231,18 @@ public class HeaderBar extends Region {
             return (ObjectProperty<HeaderDragType>)property;
         }
 
-        var property = new SimpleObjectProperty<HeaderDragType>(child, "dragType");
+        class PropertyImpl extends SimpleObjectProperty<HeaderDragType> implements AttachedProperty {
+            PropertyImpl(Node child) {
+                super(child, HeaderBar.class, "dragType");
+            }
+
+            @Override
+            public Class<?> getTargetClass() {
+                return Node.class;
+            }
+        }
+
+        var property = new PropertyImpl(child);
         child.getProperties().put(HeaderDragType.class, property);
         return property;
     }
@@ -282,8 +294,17 @@ public class HeaderBar extends Region {
             return (ObjectProperty<HeaderButtonType>)property;
         }
 
-        var property = new SimpleObjectProperty<HeaderButtonType>(child, "buttonType") {
+        class PropertyImpl extends SimpleObjectProperty<HeaderButtonType> implements AttachedProperty {
             HeaderButtonBehavior behavior;
+
+            PropertyImpl(Node child) {
+                super(child, HeaderBar.class, "buttonType");
+            }
+
+            @Override
+            public Class<?> getTargetClass() {
+                return Node.class;
+            }
 
             @Override
             protected void invalidated() {
@@ -297,8 +318,9 @@ public class HeaderBar extends Region {
                     behavior = new HeaderButtonBehavior((Node)getBean(), type);
                 }
             }
-        };
+        }
 
+        var property = new PropertyImpl(child);
         child.getProperties().put(HeaderButtonType.class, property);
         return property;
     }
@@ -588,6 +610,11 @@ public class HeaderBar extends Region {
         }
 
         @Override
+        public Class<?> getDeclaringClass() {
+            return HeaderBar.class;
+        }
+
+        @Override
         public String getName() {
             return "leftSystemPadding";
         }
@@ -628,6 +655,11 @@ public class HeaderBar extends Region {
         @Override
         public Object getBean() {
             return HeaderBar.this;
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return HeaderBar.class;
         }
 
         @Override
@@ -935,6 +967,11 @@ public class HeaderBar extends Region {
         }
 
         @Override
+        public Class<?> getDeclaringClass() {
+            return HeaderBar.class;
+        }
+
+        @Override
         public String getName() {
             return name;
         }
@@ -973,16 +1010,10 @@ public class HeaderBar extends Region {
 
         AttachedProperties(Stage stage) {
             this.stage = stage;
-            this.leftSystemInset = new ReadOnlyObjectWrapper<>(stage, "leftSystemInset", EMPTY);
-            this.rightSystemInset = new ReadOnlyObjectWrapper<>(stage, "rightSystemInset", EMPTY);
-            this.minSystemHeight = new ReadOnlyDoubleWrapper(stage, "minSystemHeight");
-            this.prefButtonHeight = new SimpleDoubleProperty(
-                    stage, "prefButtonHeight", StageHelper.getPrefHeaderButtonHeight(stage)) {
-                @Override
-                protected void invalidated() {
-                    StageHelper.setPrefHeaderButtonHeight(stage, get());
-                }
-            };
+            this.leftSystemInset = new AttachedReadOnlyObjectWrapperImpl<>(stage, "leftSystemInset", EMPTY);
+            this.rightSystemInset = new AttachedReadOnlyObjectWrapperImpl<>(stage, "rightSystemInset", EMPTY);
+            this.minSystemHeight = new AttachedReadOnlyDoubleWrapperImpl(stage, "minSystemHeight");
+            this.prefButtonHeight = new AttachedPrefButtonHeightPropertyImpl(stage, StageHelper.getPrefHeaderButtonHeight(stage));
 
             StageHelper.getHeaderButtonMetrics(stage).subscribe(this::onMetricsChanged);
             stage.fullScreenProperty().subscribe(this::onFullScreenChanged);
@@ -1039,6 +1070,47 @@ public class HeaderBar extends Region {
             }
 
             layoutInvalidatedListeners.forEach(Runnable::run);
+        }
+
+        private static final class AttachedReadOnlyObjectWrapperImpl<T> extends ReadOnlyObjectWrapper<T>
+                                                                        implements AttachedProperty {
+            AttachedReadOnlyObjectWrapperImpl(Stage stage, String name, T initialValue) {
+                super(stage, HeaderBar.class, name, initialValue);
+            }
+
+            @Override
+            public Class<?> getTargetClass() {
+                return Stage.class;
+            }
+        }
+
+        private static final class AttachedReadOnlyDoubleWrapperImpl extends ReadOnlyDoubleWrapper
+                                                                     implements AttachedProperty {
+            AttachedReadOnlyDoubleWrapperImpl(Stage stage, String name) {
+                super(stage, HeaderBar.class, name);
+            }
+
+            @Override
+            public Class<?> getTargetClass() {
+                return Stage.class;
+            }
+        }
+
+        private static final class AttachedPrefButtonHeightPropertyImpl extends SimpleDoubleProperty
+                                                                        implements AttachedProperty {
+            AttachedPrefButtonHeightPropertyImpl(Stage stage, double initialValue) {
+                super(stage, HeaderBar.class, "prefButtonHeight", initialValue);
+            }
+
+            @Override
+            public Class<?> getTargetClass() {
+                return Stage.class;
+            }
+
+            @Override
+            protected void invalidated() {
+                StageHelper.setPrefHeaderButtonHeight((Stage)getBean(), get());
+            }
         }
     }
 }
