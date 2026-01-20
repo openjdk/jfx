@@ -44,7 +44,6 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.layout.Region;
 
-
 public class LabeledImpl extends Label {
 
     public LabeledImpl(final Labeled labeled) {
@@ -102,13 +101,8 @@ public class LabeledImpl extends Label {
 
         @Override public void invalidated(Observable valueModel) {
 
-            //System.out.println("Shuttler invalidated");
-
             if (valueModel == labeled.textProperty()) {
-                //System.out.println("Text Model");
                 labeledImpl.setText(labeled.getText());
-                //System.out.println(" is truncated: " + labeled.isTextTruncated());
-                //LabeledHelper.setTextTruncated(labeledImpl, labeled.isTextTruncated());
             } else if (valueModel == labeled.graphicProperty()) {
                 // If the user set the graphic, then mirror that.
                 // Otherwise, the graphic was set via the imageUrlProperty which

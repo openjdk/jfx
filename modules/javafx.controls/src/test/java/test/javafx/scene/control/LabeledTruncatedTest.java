@@ -44,9 +44,8 @@ import javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.scene.control.skin.MenuButtonSkin;
 import javafx.scene.control.skin.SplitMenuButtonSkin;
 import javafx.scene.layout.RegionShim;
-import java.util.function.Supplier;
-
 import javafx.stage.Stage;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
 
