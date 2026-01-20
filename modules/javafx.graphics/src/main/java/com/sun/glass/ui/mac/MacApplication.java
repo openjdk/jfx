@@ -58,6 +58,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private static final CountDownLatch keepAliveLatch = new CountDownLatch(1);
 
+    private static native int _openURI(String uri);
+
     /**
      * Starts a non-daemon KeepAlive thread to ensure that the
      * JavaFX toolkit keeps running until the toolkit exits. On
@@ -534,5 +536,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         }
 
         checkSystemAppearance = false;
+    }
+
+    @Override
+    protected void _showDocument(String uri) {
+        _openURI(uri);
     }
 }
