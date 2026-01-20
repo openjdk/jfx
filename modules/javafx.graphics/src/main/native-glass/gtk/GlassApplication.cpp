@@ -574,3 +574,31 @@ static void process_events(GdkEvent* event, gpointer data)
         }
     }
 }
+
+/*
+ * Class:       com_sun_glass_ui_gtk_GtkApplication
+ * Method:      _openURI
+ * Signature:   (java/lang/String;)I;
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1openURI
+        (JNIEnv *env, jclass jClass, jstring uri)
+{
+    gboolean success = FALSE;
+    GError *error = NULL;
+    const char *uri_c;
+    uri_c = env->GetStringUTFChars(uri, NULL);
+    if (uri_c != NULL) {
+        success = gtk_show_uri(NULL, uri_c, 0L, &error);
+        if (!success) {
+            fprintf(stderr, "Error opening URI %s : %s\n", uri_c,
+                    error == NULL ? "Unspecified error." : error->message);
+            if (error != NULL) {
+                g_error_free(error);
+            }
+        }
+        env->ReleaseStringUTFChars(uri, uri_c);
+    } else {
+        fprintf(stderr, "Error: Converted URI string is null\n");
+    }
+    return success ? 0 : -1;
+}
