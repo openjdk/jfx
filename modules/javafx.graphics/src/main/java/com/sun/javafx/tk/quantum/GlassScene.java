@@ -317,7 +317,8 @@ abstract class GlassScene implements TKScene {
                 return Color.WHITE;
             } else if (fillPaint.isOpaque() ||
                     (windowStage != null && windowStage.getPlatformWindow() != null &&
-                    windowStage.getPlatformWindow().isUnifiedWindow())) {
+                            (windowStage.getPlatformWindow().isUnifiedWindow() ||
+                                    windowStage.getPlatformWindow().isExtendedWindow()))) {
                 //For bare windows the transparent fill is allowed
                 if (fillPaint.getType() == Paint.Type.COLOR) {
                     return (Color)fillPaint;
