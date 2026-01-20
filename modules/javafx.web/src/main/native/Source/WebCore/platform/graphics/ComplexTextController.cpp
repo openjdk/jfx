@@ -469,6 +469,12 @@ void ComplexTextController::collectComplexTextRuns()
 
 unsigned ComplexTextController::ComplexTextRun::indexAt(unsigned i) const
 {
+ #if PLATFORM(JAVA)
+     // Prevent out-of-bounds access
+     if (i >= m_glyphCount) {
+         return m_stringLength ? m_stringLength - 1 : 0; // clamp safely
+     }
+ #endif
     ASSERT(i < m_glyphCount);
 
     return m_coreTextIndices[i];
@@ -480,8 +486,21 @@ void ComplexTextController::ComplexTextRun::setIsNonMonotonic()
     m_isMonotonic = false;
 
     Vector<bool, 64> mappedIndices(stringLength(), false);
+#if !PLATFORM(JAVA)
     for (unsigned i = 0; i < m_glyphCount; ++i)
         mappedIndices[indexAt(i)] = true;
+#else
+    for (unsigned i = 0; i < m_glyphCount; ++i) {
+        // Skip zero-width glyphs if needed
+        if (m_font.isZeroWidthSpaceGlyph(m_glyphs[i]))
+            continue;
+        // Handle out of bound case
+        unsigned charIndex = indexAt(i);
+        if (charIndex >= m_stringLength)
+            charIndex = m_stringLength - 1; // clamp
+        mappedIndices[charIndex] = true;
+    }
+#endif
 
     m_glyphEndOffsets.grow(m_glyphCount);
     for (unsigned i = 0; i < m_glyphCount; ++i) {

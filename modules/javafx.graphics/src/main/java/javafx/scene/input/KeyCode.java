@@ -30,6 +30,21 @@ import java.util.Map;
 
 /**
  * Set of key codes for {@link KeyEvent} objects.
+ *
+ * <p>
+ *
+ * For a given keyboard layout each key is assigned a code which does not vary
+ * and is not affected by the state of the modifier keys. For keys that
+ * generate printable characters the code will usually be based on the
+ * character generated when no modifier key is held down. The exceptions are
+ * {@link KeyCode#A} through {@link KeyCode#Z} which are assigned to keys
+ * even on layouts which don't generate those letters (such as Greek). This
+ * ensures that common letter-based shortcuts are accessible on all layouts.
+ *
+ * <p>
+ *
+ * Keys that generate characters with accents or other diacritic marks are
+ * usually assigned a code of {@link KeyCode#UNDEFINED}.
  * @since JavaFX 2.0
  */
 public enum KeyCode {
