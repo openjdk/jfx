@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,19 +33,26 @@
 package com.oracle.demo.richtext.editor;
 
 import java.io.File;
-import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import com.oracle.demo.richtext.rta.RichTextAreaWindow;
 import com.oracle.demo.richtext.util.FX;
+import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Rich Editor Demo window.
@@ -53,18 +60,35 @@ import jfx.incubator.scene.control.richtext.TextPos;
  * @author Andy Goryachev
  */
 public class RichEditorDemoWindow extends Stage {
-    public final RichEditorDemoPane pane;
+    public final RichEditorToolbar toolbar;
+    private final Ruler ruler; // TODO allow to toggle visibility
+    public final RichTextArea editor;
+    public final Actions actions;
     public final Label status;
+    private TabStopPolicy tabPolicy; // TODO move somewhere
 
     public RichEditorDemoWindow() {
-        pane = new RichEditorDemoPane();
+        editor = new RichTextArea();
+        ruler = new Ruler(editor);
+        toolbar = new RichEditorToolbar(ruler);
+
+        // example of a custom function
+        editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
+            System.out.println("Custom function: W key is pressed");
+        });
 
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));
 
+        actions = new Actions(toolbar, editor);
+
+        BorderPane cp = new BorderPane();
+        cp.setTop(new VBox(toolbar, ruler));
+        cp.setCenter(editor);
+
         BorderPane bp = new BorderPane();
         bp.setTop(createMenu());
-        bp.setCenter(pane);
+        bp.setCenter(cp);
         bp.setBottom(status);
 
         Scene scene = new Scene(bp);
@@ -73,27 +97,37 @@ public class RichEditorDemoWindow extends Stage {
         setWidth(1200);
         setHeight(600);
 
-        pane.editor.caretPositionProperty().addListener((x) -> {
-            updateStatus();
-        });
-        pane.actions.modifiedProperty().addListener((x) -> {
-            updateTitle();
-        });
-        pane.actions.fileNameProperty().addListener((x) -> {
-            updateTitle();
-        });
         addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, (ev) -> {
-            if (pane.actions.askToSave()) {
+            if (actions.askToSave()) {
                 ev.consume();
             }
         });
 
-        updateStatus();
-        updateTitle();
+        status.textProperty().bind(Bindings.createStringBinding(
+            () -> {
+                return statusString(editor.getCaretPosition());
+            },
+            editor.caretPositionProperty()
+        ));
+        titleProperty().bind(Bindings.createStringBinding(
+            () -> {
+                return titleString(actions.getFile(), actions.isModified());
+            },
+            actions.modifiedProperty(),
+            actions.fileNameProperty()
+        ));
+
+        ruler.setOnChange(this::handleTabStopChange);
+        tabPolicy = new TabStopPolicy();
+        ruler.setTabStopPolicy(tabPolicy);
+        FX.setPopupMenu(ruler, this::createRulerPopupMenu);
+
+        editor.setContextMenu(createContextMenu());
+        editor.requestFocus();
+        editor.select(TextPos.ZERO);
     }
 
     private MenuBar createMenu() {
-        Actions actions = pane.actions;
         MenuBar m = new MenuBar();
         // file
         FX.menu(m, "File");
@@ -120,6 +154,8 @@ public class RichEditorDemoWindow extends Stage {
         FX.item(m, "Italic", actions.italic).setAccelerator(KeyCombination.keyCombination("shortcut+I"));
         FX.item(m, "Strike Through", actions.strikeThrough);
         FX.item(m, "Underline", actions.underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
+        FX.separator(m);
+        FX.item(m, "Paragraph...", actions.paragraphStyle);
 
         // view
         FX.menu(m, "View");
@@ -139,24 +175,59 @@ public class RichEditorDemoWindow extends Stage {
         return m;
     }
 
-    private void updateStatus() {
-        RichTextArea ed = pane.editor;
-        TextPos p = ed.getCaretPosition();
-
-        StringBuilder sb = new StringBuilder();
-
-        if (p != null) {
-            sb.append(" Line: ").append(p.index() + 1);
-            sb.append("  Column: ").append(p.offset() + 1);
-        }
-
-        status.setText(sb.toString());
+    private ContextMenu createContextMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Undo", actions.undo);
+        FX.item(m, "Redo", actions.redo);
+        FX.separator(m);
+        FX.item(m, "Cut", actions.cut);
+        FX.item(m, "Copy", actions.copy);
+        FX.item(m, "Paste", actions.paste);
+        FX.item(m, "Paste and Retain Style", actions.pasteUnformatted);
+        FX.separator(m);
+        FX.item(m, "Select All", actions.selectAll);
+        FX.separator(m);
+        // TODO Font...
+        FX.item(m, "Paragraph...", actions.paragraphStyle);
+        return m;
     }
 
-    private void updateTitle() {
-        File f = pane.actions.getFile();
-        boolean modified = pane.actions.isModified();
+    private ContextMenu createRulerPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Tab Options...", this::showTabOptions);
+        return m;
+    }
 
+    private void showTabOptions() {
+        // TODO
+    }
+
+    private void handleTabStopChange() {
+        // TODO update default tabs if changed
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
+            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+            int min = sel.getMin().index();
+            int max = sel.getMax().index();
+            for (int ix = min; ix <= max; ix++) {
+                TextPos p = TextPos.ofLeading(ix, 0);
+                editor.applyStyle(p, p, a);
+            }
+        }
+    }
+
+    private String statusString(TextPos p) {
+        if (p == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(" Line: ").append(p.index() + 1);
+        sb.append("  Column: ").append(p.offset() + 1);
+        return sb.toString();
+    }
+
+    private String titleString(File f, boolean modified) {
         StringBuilder sb = new StringBuilder();
         sb.append("Rich Text Editor Demo");
         if (f != null) {
@@ -166,10 +237,10 @@ public class RichEditorDemoWindow extends Stage {
         if (modified) {
             sb.append(" *");
         }
-        setTitle(sb.toString());
+        return sb.toString();
     }
 
-    void openSettings() {
+    private void openSettings() {
         new SettingsWindow(this).show();
     }
 }
