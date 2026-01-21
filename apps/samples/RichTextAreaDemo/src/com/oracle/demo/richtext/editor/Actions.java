@@ -43,12 +43,18 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.MenuBar;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import com.oracle.demo.richtext.common.Styles;
@@ -104,13 +110,15 @@ public class Actions {
     public final FxAction lineNumbers = new FxAction();
     public final FxAction wrapText = new FxAction();
 
-    private final RichEditorToolbar toolbar;
-    private final RichTextArea editor;
-
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
+    private final SimpleBooleanProperty rulerVisible = new SimpleBooleanProperty(true);
+
+    private final RichEditorToolbar toolbar;
+    private final RichTextArea editor;
+    private final TabStopPolicy tabPolicy = new TabStopPolicy();
 
     public Actions(RichEditorToolbar tb, RichTextArea ed) {
         this.toolbar = tb;
@@ -209,6 +217,8 @@ public class Actions {
             toolbar.setTextStyle(c);
         });
 
+        rulerVisible.subscribe(this::updateRuler);
+
         // settings
         Settings.endKey.subscribe(this::setEndKey);
         Settings.contentPadding.bindBidirectional(editor.contentPaddingProperty());
@@ -220,6 +230,81 @@ public class Actions {
         handleEdit();
         handleSelection();
         setModified(false);
+    }
+
+    public MenuBar createMenu() {
+        MenuBar m = new MenuBar();
+        // file
+        FX.menu(m, "File");
+        FX.item(m, "New", newDocument).setAccelerator(KeyCombination.keyCombination("shortcut+N"));
+        FX.item(m, "Open...", open);
+        FX.separator(m);
+        FX.item(m, "Save", save).setAccelerator(KeyCombination.keyCombination("shortcut+S"));
+        FX.item(m, "Save As...", saveAs).setAccelerator(KeyCombination.keyCombination("shortcut+A"));
+        FX.item(m, "Quit", this::quit);
+
+        // edit
+        FX.menu(m, "Edit");
+        FX.item(m, "Undo", undo);
+        FX.item(m, "Redo", redo);
+        FX.separator(m);
+        FX.item(m, "Cut", cut);
+        FX.item(m, "Copy", copy);
+        FX.item(m, "Paste", paste);
+        FX.item(m, "Paste and Retain Style", pasteUnformatted);
+
+        // format
+        FX.menu(m, "Format");
+        FX.item(m, "Bold", bold).setAccelerator(KeyCombination.keyCombination("shortcut+B"));
+        FX.item(m, "Italic", italic).setAccelerator(KeyCombination.keyCombination("shortcut+I"));
+        FX.item(m, "Strike Through", strikeThrough);
+        FX.item(m, "Underline", underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
+        FX.separator(m);
+        FX.item(m, "Paragraph...", paragraphStyle);
+
+        // view
+        FX.menu(m, "View");
+        FX.checkItem(m, "Highlight Current Paragraph", highlightCurrentLine);
+        FX.checkItem(m, "Show Line Numbers", lineNumbers);
+        FX.checkItem(m, "Show Ruler", rulerVisible);
+        FX.checkItem(m, "Wrap Text", wrapText);
+        // TODO line spacing
+
+        // tools
+        FX.menu(m, "Tools");
+        FX.item(m, "Settings", this::openSettings);
+
+        // help
+        FX.menu(m, "Help");
+        FX.item(m, "About"); // TODO
+
+        return m;
+    }
+
+    public ContextMenu createContextMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Undo", undo);
+        FX.item(m, "Redo", redo);
+        FX.separator(m);
+        FX.item(m, "Cut", cut);
+        FX.item(m, "Copy", copy);
+        FX.item(m, "Paste", paste);
+        FX.item(m, "Paste and Retain Style", pasteUnformatted);
+        FX.separator(m);
+        FX.item(m, "Select All", selectAll);
+        FX.separator(m);
+        // TODO Font...
+        FX.item(m, "Paragraph...", paragraphStyle);
+        FX.item(m, "Tabs...", this::showTabOptions);
+        return m;
+    }
+
+    private ContextMenu createRulerPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Tabs...", this::showTabOptions);
+        FX.separator(m);
+        FX.item(m, "Hide Ruler", this::hideRuler);
+        return m;
     }
 
     private boolean hasStyle(StyleAttributeMap attrs, StyleAttribute<Boolean> a) {
@@ -645,5 +730,42 @@ public class Actions {
 
     private void showParagraphDialog() {
         new ParagraphDialog(editor).show();
+    }
+
+    private void openSettings() {
+        Window w = FX.getParentWindow(editor);
+        new SettingsWindow(w).show();
+    }
+
+    private void updateRuler(boolean on) {
+        Ruler r = toolbar.setRulerFor(on ? editor : null);
+        if (r != null) {
+            r.setOnChange(this::handleTabStopChange);
+            r.setTabStopPolicy(tabPolicy);
+            FX.setPopupMenu(r, this::createRulerPopupMenu);
+        }
+    }
+
+    private void handleTabStopChange() {
+        // TODO update default tabs if changed
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
+            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+            int min = sel.getMin().index();
+            int max = sel.getMax().index();
+            for (int ix = min; ix <= max; ix++) {
+                TextPos p = TextPos.ofLeading(ix, 0);
+                editor.applyStyle(p, p, a);
+            }
+        }
+    }
+
+    private void hideRuler() {
+        rulerVisible.set(false);
+    }
+
+    private void showTabOptions() {
+        // TODO
     }
 }

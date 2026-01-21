@@ -36,23 +36,14 @@ import java.io.File;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuBar;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.text.TabStop;
-import javafx.scene.text.TabStopPolicy;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import com.oracle.demo.richtext.util.FX;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
-import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
-import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Rich Editor Demo window.
@@ -61,16 +52,13 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
  */
 public class RichEditorDemoWindow extends Stage {
     public final RichEditorToolbar toolbar;
-    private final Ruler ruler; // TODO allow to toggle visibility
     public final RichTextArea editor;
     public final Actions actions;
     public final Label status;
-    private TabStopPolicy tabPolicy; // TODO move somewhere
 
     public RichEditorDemoWindow() {
         editor = new RichTextArea();
-        ruler = new Ruler(editor);
-        toolbar = new RichEditorToolbar(ruler);
+        toolbar = new RichEditorToolbar();
 
         // example of a custom function
         editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
@@ -83,11 +71,11 @@ public class RichEditorDemoWindow extends Stage {
         actions = new Actions(toolbar, editor);
 
         BorderPane cp = new BorderPane();
-        cp.setTop(new VBox(toolbar, ruler));
+        cp.setTop(toolbar);
         cp.setCenter(editor);
 
         BorderPane bp = new BorderPane();
-        bp.setTop(createMenu());
+        bp.setTop(actions.createMenu());
         bp.setCenter(cp);
         bp.setBottom(status);
 
@@ -117,104 +105,9 @@ public class RichEditorDemoWindow extends Stage {
             actions.fileNameProperty()
         ));
 
-        ruler.setOnChange(this::handleTabStopChange);
-        tabPolicy = new TabStopPolicy();
-        ruler.setTabStopPolicy(tabPolicy);
-        FX.setPopupMenu(ruler, this::createRulerPopupMenu);
-
-        editor.setContextMenu(createContextMenu());
+        editor.setContextMenu(actions.createContextMenu());
         editor.requestFocus();
         editor.select(TextPos.ZERO);
-    }
-
-    private MenuBar createMenu() {
-        MenuBar m = new MenuBar();
-        // file
-        FX.menu(m, "File");
-        FX.item(m, "New", actions.newDocument).setAccelerator(KeyCombination.keyCombination("shortcut+N"));
-        FX.item(m, "Open...", actions.open);
-        FX.separator(m);
-        FX.item(m, "Save", actions.save).setAccelerator(KeyCombination.keyCombination("shortcut+S"));
-        FX.item(m, "Save As...", actions.saveAs).setAccelerator(KeyCombination.keyCombination("shortcut+A"));
-        FX.item(m, "Quit", actions::quit);
-
-        // edit
-        FX.menu(m, "Edit");
-        FX.item(m, "Undo", actions.undo);
-        FX.item(m, "Redo", actions.redo);
-        FX.separator(m);
-        FX.item(m, "Cut", actions.cut);
-        FX.item(m, "Copy", actions.copy);
-        FX.item(m, "Paste", actions.paste);
-        FX.item(m, "Paste and Retain Style", actions.pasteUnformatted);
-
-        // format
-        FX.menu(m, "Format");
-        FX.item(m, "Bold", actions.bold).setAccelerator(KeyCombination.keyCombination("shortcut+B"));
-        FX.item(m, "Italic", actions.italic).setAccelerator(KeyCombination.keyCombination("shortcut+I"));
-        FX.item(m, "Strike Through", actions.strikeThrough);
-        FX.item(m, "Underline", actions.underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
-        FX.separator(m);
-        FX.item(m, "Paragraph...", actions.paragraphStyle);
-
-        // view
-        FX.menu(m, "View");
-        FX.checkItem(m, "Highlight Current Paragraph", actions.highlightCurrentLine);
-        FX.checkItem(m, "Show Line Numbers", actions.lineNumbers);
-        FX.checkItem(m, "Wrap Text", actions.wrapText);
-        // TODO line spacing
-
-        // view
-        FX.menu(m, "Tools");
-        FX.item(m, "Settings", this::openSettings);
-
-        // help
-        FX.menu(m, "Help");
-        FX.item(m, "About"); // TODO
-
-        return m;
-    }
-
-    private ContextMenu createContextMenu() {
-        ContextMenu m = new ContextMenu();
-        FX.item(m, "Undo", actions.undo);
-        FX.item(m, "Redo", actions.redo);
-        FX.separator(m);
-        FX.item(m, "Cut", actions.cut);
-        FX.item(m, "Copy", actions.copy);
-        FX.item(m, "Paste", actions.paste);
-        FX.item(m, "Paste and Retain Style", actions.pasteUnformatted);
-        FX.separator(m);
-        FX.item(m, "Select All", actions.selectAll);
-        FX.separator(m);
-        // TODO Font...
-        FX.item(m, "Paragraph...", actions.paragraphStyle);
-        return m;
-    }
-
-    private ContextMenu createRulerPopupMenu() {
-        ContextMenu m = new ContextMenu();
-        FX.item(m, "Tab Options...", this::showTabOptions);
-        return m;
-    }
-
-    private void showTabOptions() {
-        // TODO
-    }
-
-    private void handleTabStopChange() {
-        // TODO update default tabs if changed
-        SelectionSegment sel = editor.getSelection();
-        if (sel != null) {
-            TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
-            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
-            int min = sel.getMin().index();
-            int max = sel.getMax().index();
-            for (int ix = min; ix <= max; ix++) {
-                TextPos p = TextPos.ofLeading(ix, 0);
-                editor.applyStyle(p, p, a);
-            }
-        }
     }
 
     private String statusString(TextPos p) {
@@ -238,9 +131,5 @@ public class RichEditorDemoWindow extends Stage {
             sb.append(" *");
         }
         return sb.toString();
-    }
-
-    private void openSettings() {
-        new SettingsWindow(this).show();
     }
 }
