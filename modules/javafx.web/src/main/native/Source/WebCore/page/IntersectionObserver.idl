@@ -34,6 +34,7 @@
 
     readonly attribute Node? root;
     readonly attribute DOMString rootMargin;
+    readonly attribute DOMString scrollMargin;
     readonly attribute FrozenArray<double> thresholds;
 
     undefined observe(Element target);
@@ -45,5 +46,6 @@
 dictionary IntersectionObserverInit {
     (Element or Document)? root = null;
     DOMString rootMargin = "0px";
+    DOMString scrollMargin = "0px";
     (double or sequence<double>) threshold = 0.0;
 };

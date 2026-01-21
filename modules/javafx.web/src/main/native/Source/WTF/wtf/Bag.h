@@ -132,14 +132,14 @@ public:
         Node* m_node;
     };
 
-    iterator begin()
+    iterator begin() LIFETIME_BOUND
     {
         iterator result;
         result.m_node = unwrappedHead();
         return result;
     }
 
-    const iterator begin() const
+    const iterator begin() const LIFETIME_BOUND
     {
         iterator result;
         result.m_node = unwrappedHead();
@@ -147,7 +147,7 @@ public:
     }
 
 
-    iterator end() const { return iterator(); }
+    iterator end() const LIFETIME_BOUND { return iterator(); }
 
     bool isEmpty() const { return !m_head; }
 
@@ -157,10 +157,6 @@ private:
     typename PtrTraits::StorageType m_head { nullptr };
 };
 
-template<typename T>
-using PackedBag = Bag<T, PackedPtrTraits<T>>;
-
 } // namespace WTF
 
 using WTF::Bag;
-using WTF::PackedBag;

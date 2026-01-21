@@ -31,6 +31,7 @@
 
 #include "RenderStyleInlines.h"
 #include "StyleInheritedData.h"
+#include <numbers>
 #include <wtf/StdLibExtras.h>
 
 static const unsigned kRadicalOperator = 0x221A;
@@ -63,10 +64,10 @@ static inline float advanceWidthForGlyph(const GlyphData& data)
 // FIXME: This hardcoded data can be removed when OpenType MATH font are widely available (http://wkbug/156837).
 struct StretchyCharacter {
     char32_t character;
-    UChar topChar;
-    UChar extensionChar;
-    UChar bottomChar;
-    UChar middleChar;
+    char16_t topChar;
+    char16_t extensionChar;
+    char16_t bottomChar;
+    char16_t middleChar;
 };
 
 static constexpr std::array stretchyCharacters {
@@ -242,7 +243,7 @@ void MathOperator::calculateDisplayStyleLargeOperator(const RenderStyle& style)
         return;
 
     // The value of displayOperatorMinHeight is sometimes too small, so we ensure that it is at least \sqrt{2} times the size of the base glyph.
-    float displayOperatorMinHeight = std::max(heightForGlyph(baseGlyph) * sqrtOfTwoFloat, baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight));
+    float displayOperatorMinHeight = std::max(heightForGlyph(baseGlyph) * std::numbers::sqrt2_v<float>, baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight));
 
     Vector<Glyph> sizeVariants;
     Vector<OpenTypeMathData::AssemblyPart> assemblyParts;

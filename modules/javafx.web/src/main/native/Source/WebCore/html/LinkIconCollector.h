@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,15 +35,15 @@ enum class LinkIconType : uint8_t;
 
 class LinkIconCollector {
 public:
-    explicit LinkIconCollector(Document& document)
-        : m_document(document)
+    explicit LinkIconCollector(Ref<Document>&& document)
+        : m_document(WTFMove(document))
     {
     }
 
     WEBCORE_EXPORT Vector<LinkIcon> iconsOfTypes(OptionSet<LinkIconType>);
 
 private:
-    Document& m_document;
+    const Ref<Document> m_document;
 };
 
 }

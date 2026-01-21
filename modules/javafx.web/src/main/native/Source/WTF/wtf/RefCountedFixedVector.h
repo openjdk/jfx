@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,35 +50,45 @@ public:
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, first, last));
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    static Ref<RefCountedFixedVectorBase> createFromVector(const Vector<T, inlineCapacity, OverflowHandler>& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    static Ref<RefCountedFixedVectorBase> createFromVector(const Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>& other)
     {
         unsigned size = Checked<uint32_t> { other.size() }.value();
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, std::begin(other), std::end(other)));
     }
 
-    template<size_t inlineCapacity, typename OverflowHandler>
-    static Ref<RefCountedFixedVectorBase> createFromVector(Vector<T, inlineCapacity, OverflowHandler>&& other)
+    template<size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename VectorMalloc>
+    static Ref<RefCountedFixedVectorBase> createFromVector(Vector<T, inlineCapacity, OverflowHandler, minCapacity, VectorMalloc>&& other)
     {
-        Vector<T, inlineCapacity, OverflowHandler> container = WTFMove(other);
+        auto container = WTFMove(other);
         unsigned size = Checked<uint32_t> { container.size() }.value();
         return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, std::move_iterator { container.begin() }, std::move_iterator { container.end() }));
+    }
+
+    template<std::invocable<size_t> Generator>
+    static Ref<RefCountedFixedVectorBase> createWithSizeFromGenerator(unsigned size, NOESCAPE Generator&& generator)
+    {
+        return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, std::forward<Generator>(generator)));
+    }
+
+    template<std::invocable<size_t> FailableGenerator>
+    static RefPtr<RefCountedFixedVectorBase> createWithSizeFromFailableGenerator(unsigned size, NOESCAPE FailableGenerator&& generator)
+    {
+        auto result = adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(typename Base::Failable { }, size, std::forward<FailableGenerator>(generator)));
+        if (result->size() != size)
+            return nullptr;
+        return result;
+        }
+
+    template<typename SizedRange, typename Mapper>
+    static Ref<RefCountedFixedVectorBase> map(unsigned size, SizedRange&& range, NOESCAPE Mapper&& mapper)
+    {
+        return adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(size))) RefCountedFixedVectorBase(size, std::forward<SizedRange>(range), std::forward<Mapper>(mapper)));
     }
 
     Ref<RefCountedFixedVectorBase> clone() const
     {
         return create(Base::begin(), Base::end());
-    }
-
-    bool operator==(const RefCountedFixedVectorBase& other) const
-    {
-        if (Base::size() != other.size())
-            return false;
-        for (unsigned i = 0; i < Base::size(); ++i) {
-            if (Base::at(i) != other.at(i))
-                return false;
-        }
-        return true;
     }
 
 private:
@@ -92,7 +102,37 @@ private:
         : Base(size, first, last)
     {
     }
+
+    template<std::invocable<size_t> Generator>
+    RefCountedFixedVectorBase(unsigned size, NOESCAPE Generator&& generator)
+        : Base(size, std::forward<Generator>(generator))
+    {
+    }
+
+    template<std::invocable<size_t> FailableGenerator>
+    RefCountedFixedVectorBase(typename Base::Failable failable, unsigned size, NOESCAPE FailableGenerator&& generator)
+        : Base(failable, size, std::forward<FailableGenerator>(generator))
+    {
+    }
+
+    template<typename SizedRange, typename Mapper>
+    RefCountedFixedVectorBase(unsigned size, SizedRange&& range, NOESCAPE Mapper&& mapper)
+        : Base(size, std::forward<SizedRange>(range), std::forward<Mapper>(mapper))
+    {
+    }
 };
+
+template<typename T, bool isThreadSafe, typename U>
+inline bool operator==(const RefCountedFixedVectorBase<T, isThreadSafe>& a, const U& b)
+{
+    if (a.size() != b.size())
+        return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a.at(i) != b.at(i))
+            return false;
+    }
+    return true;
+}
 
 template<typename T>
 using RefCountedFixedVector = RefCountedFixedVectorBase<T, false>;

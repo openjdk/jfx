@@ -31,9 +31,11 @@
 #include "FloatConversion.h"
 #include "FloatQuad.h"
 #include "FloatRect.h"
+#include "GeometryUtilities.h"
 #include "IntRect.h"
 #include "Region.h"
 #include "TransformationMatrix.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -103,21 +105,21 @@ bool AffineTransform::isInvertible() const
 {
     double determinant = det(m_transform);
 
-    return std::isfinite(determinant) && determinant != 0;
+    return std::isnormal(determinant);
 }
 
 std::optional<AffineTransform> AffineTransform::inverse() const
 {
-    double determinant = det(m_transform);
-    if (!std::isfinite(determinant) || determinant == 0)
-        return std::nullopt;
-
     AffineTransform result;
     if (isIdentityOrTranslation()) {
         result.m_transform[4] = -m_transform[4];
         result.m_transform[5] = -m_transform[5];
         return result;
     }
+
+    double determinant = det(m_transform);
+    if (!std::isnormal(determinant))
+        return std::nullopt;
 
     result.m_transform[0] = m_transform[3] / determinant;
     result.m_transform[1] = -m_transform[1] / determinant;
@@ -316,12 +318,53 @@ FloatRect AffineTransform::mapRect(const FloatRect& rect) const
         return mappedRect;
     }
 
-    FloatQuad result;
-    result.setP1(mapPoint(rect.location()));
-    result.setP2(mapPoint(FloatPoint(rect.maxX(), rect.y())));
-    result.setP3(mapPoint(FloatPoint(rect.maxX(), rect.maxY())));
-    result.setP4(mapPoint(FloatPoint(rect.x(), rect.maxY())));
-    return result.boundingBox();
+    // This is equivalent to mapPoint() on each corner, then finding the bounds of the resulting quad.
+    // Map point is:
+    // x2 = a * x + c * y + tx;
+    // y2 = b * x + d * y + ty;
+    // and since x and y are the same for points sharing a side, we can save some computation.
+
+    auto a = this->a();
+    auto b = this->b();
+    auto c = this->c();
+    auto d = this->d();
+
+    auto tx = e();
+    auto ty = f();
+
+    double left = rect.x();
+    double top = rect.y();
+
+    double right = rect.maxX();
+    double bottom = rect.maxY();
+
+    double aLeft = a * left;
+    double aRight = a * right;
+
+    double bLeft = b * left;
+    double bRight = b * right;
+
+    double cTop = c * top;
+    double cBottom = c * bottom;
+
+    double dTop = d * top;
+    double dBottom = d * bottom;
+
+    auto x1 = narrowPrecisionToFloat(aLeft + cTop + tx);
+    auto y1 = narrowPrecisionToFloat(bLeft + dTop + ty);
+    auto x2 = narrowPrecisionToFloat(aRight + cTop + tx);
+    auto y2 = narrowPrecisionToFloat(bRight + dTop + ty);
+    auto x3 = narrowPrecisionToFloat(aRight + cBottom + tx);
+    auto y3 = narrowPrecisionToFloat(bRight + dBottom + ty);
+    auto x4 = narrowPrecisionToFloat(aLeft + cBottom + tx);
+    auto y4 = narrowPrecisionToFloat(bLeft + dBottom + ty);
+
+    auto minX = min4(x1, x2, x3, x4);
+    auto minY = min4(y1, y2, y3, y4);
+    auto maxX = max4(x1, x2, x3, x4);
+    auto maxY = max4(y1, y2, y3, y4);
+
+    return FloatRect { minX, minY, maxX - minX, maxY - minY };
 }
 
 FloatQuad AffineTransform::mapQuad(const FloatQuad& q) const
@@ -366,18 +409,18 @@ void AffineTransform::blend(const AffineTransform& from, double progress, Compos
     if ((srA.scaleX < 0 && srB.scaleY < 0) || (srA.scaleY < 0 &&  srB.scaleX < 0)) {
         srA.scaleX = -srA.scaleX;
         srA.scaleY = -srA.scaleY;
-        srA.angle += srA.angle < 0 ? piDouble : -piDouble;
+        srA.angle += srA.angle < 0 ? std::numbers::pi : -std::numbers::pi;
     }
 
     // Don't rotate the long way around.
-    srA.angle = fmod(srA.angle, 2 * piDouble);
-    srB.angle = fmod(srB.angle, 2 * piDouble);
+    srA.angle = fmod(srA.angle, 2 * std::numbers::pi);
+    srB.angle = fmod(srB.angle, 2 * std::numbers::pi);
 
-    if (std::abs(srA.angle - srB.angle) > piDouble) {
+    if (std::abs(srA.angle - srB.angle) > std::numbers::pi) {
         if (srA.angle > srB.angle)
-            srA.angle -= piDouble * 2;
+            srA.angle -= std::numbers::pi * 2;
         else
-            srB.angle -= piDouble * 2;
+            srB.angle -= std::numbers::pi * 2;
     }
 
     srA.scaleX += progress * (srB.scaleX - srA.scaleX);
@@ -467,9 +510,9 @@ void AffineTransform::recompose(const DecomposedType& decomp)
 TextStream& operator<<(TextStream& ts, const AffineTransform& transform)
 {
     if (transform.isIdentity())
-        ts << "identity";
+        ts << "identity"_s;
     else
-        ts << "{m=(("
+        ts << "{m=(("_s
         << transform.a() << "," << transform.b()
         << ")("
         << transform.c() << "," << transform.d()

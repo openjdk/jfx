@@ -136,6 +136,11 @@ if (DEVELOPER_MODE AND DEVELOPER_MODE_FATAL_WARNINGS)
     endif ()
 endif ()
 
+if (DEVELOPER_MODE OR ARM)
+    # This lets us get good backtraces, in particular when using JSC_useGdbJITInfo=1.
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fno-omit-frame-pointer)
+endif ()
+
 if (COMPILER_IS_GCC_OR_CLANG)
     if (COMPILER_IS_CLANG OR (DEVELOPER_MODE AND NOT ARM))
         # Split debug information in ".debug_types" / ".debug_info" sections - this leads
@@ -381,6 +386,8 @@ endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG)
     set(ATOMIC_TEST_SOURCE "
+#include <atomic>
+#include <optional>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -447,6 +454,8 @@ static inline bool compare_and_swap_uint64_weak(uint64_t* ptr, uint64_t old_valu
 }
 
 int main() {
+    std::atomic<std::optional<double>> d;
+    d = 0.0;
     bool y = false;
     bool expected = true;
     bool j = compare_and_swap_bool_weak(&y, expected, false);
@@ -461,13 +470,13 @@ int main() {
                   k ||
 #endif
                   l) ? 0 : 1;
-    return result;
+    return static_cast<int>(result + d.load().value());
 }
     ")
-    check_c_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_ARE_BUILTIN)
+    check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_ARE_BUILTIN)
     if (NOT ATOMICS_ARE_BUILTIN)
         set(CMAKE_REQUIRED_LIBRARIES atomic)
-        check_c_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_REQUIRE_LIBATOMIC)
+        check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_REQUIRE_LIBATOMIC)
         unset(CMAKE_REQUIRED_LIBRARIES)
     endif ()
 

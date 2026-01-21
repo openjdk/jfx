@@ -33,7 +33,10 @@
 #include "PerProcess.h"
 #include <algorithm>
 #include <cstdlib>
+
+#if !BOS(WINDOWS)
 #include <sys/mman.h>
+#endif
 
 #if !BUSE(LIBPAS)
 
@@ -42,7 +45,7 @@ namespace bmalloc {
 Deallocator::Deallocator(Heap& heap)
     : m_heap(heap)
 {
-    BASSERT(!Environment::get()->isDebugHeapEnabled());
+    BASSERT(!Environment::get()->isSystemHeapEnabled());
 }
 
 Deallocator::~Deallocator()

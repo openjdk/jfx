@@ -30,7 +30,7 @@ class SVGTextPositioningElement : public SVGTextContentElement {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTextPositioningElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTextPositioningElement);
 public:
-    static SVGTextPositioningElement* elementFromRenderer(RenderBoxModelObject&);
+    static RefPtr<SVGTextPositioningElement> elementFromRenderer(RenderBoxModelObject&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGTextPositioningElement, SVGTextContentElement>;
 
@@ -56,6 +56,8 @@ private:
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
+    bool isSVGTextPositioningElement() const override { return true; }
+
     Ref<SVGAnimatedLengthList> m_x { SVGAnimatedLengthList::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLengthList> m_y { SVGAnimatedLengthList::create(this, SVGLengthMode::Height) };
     Ref<SVGAnimatedLengthList> m_dx { SVGAnimatedLengthList::create(this, SVGLengthMode::Width) };
@@ -64,3 +66,12 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGTextPositioningElement)
+    static bool isType(const WebCore::SVGElement& element) { return element.isSVGTextPositioningElement(); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+        return svgElement && isType(*svgElement);
+    }
+SPECIALIZE_TYPE_TRAITS_END()

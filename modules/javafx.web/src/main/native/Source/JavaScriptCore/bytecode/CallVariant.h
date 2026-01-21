@@ -147,27 +147,7 @@ public:
         return m_callee == deletedToken();
     }
 
-    friend bool operator==(const CallVariant&, const CallVariant&) = default;
-
-    bool operator<(const CallVariant& other) const
-    {
-        return m_callee < other.m_callee;
-    }
-
-    bool operator>(const CallVariant& other) const
-    {
-        return other < *this;
-    }
-
-    bool operator<=(const CallVariant& other) const
-    {
-        return !(*this < other);
-    }
-
-    bool operator>=(const CallVariant& other) const
-    {
-        return other <= *this;
-    }
+    friend auto operator<=>(const CallVariant&, const CallVariant&) = default;
 
     unsigned hash() const
     {

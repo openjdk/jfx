@@ -34,15 +34,9 @@ TransformState& TransformState::operator=(const TransformState& other)
 {
     m_accumulatedOffset = other.m_accumulatedOffset;
     m_tracking = other.m_tracking;
-    m_mapPoint = other.m_mapPoint;
-    m_mapQuad = other.m_mapQuad;
-    if (m_mapPoint)
-        m_lastPlanarPoint = other.m_lastPlanarPoint;
-    if (m_mapQuad) {
-        m_lastPlanarQuad = other.m_lastPlanarQuad;
-        m_lastPlanarSecondaryQuad = other.m_lastPlanarSecondaryQuad;
-    }
-    m_accumulatingTransform = other.m_accumulatingTransform;
+    m_inputPoint = other.m_inputPoint;
+    m_inputQuad = other.m_inputQuad;
+    m_inputSecondaryQuad = other.m_inputSecondaryQuad;
     m_direction = other.m_direction;
 
     m_accumulatedTransform = nullptr;
@@ -50,43 +44,15 @@ TransformState& TransformState::operator=(const TransformState& other)
     if (other.m_accumulatedTransform)
         m_accumulatedTransform = makeUnique<TransformationMatrix>(*other.m_accumulatedTransform);
 
-    m_trackedTransform = nullptr;
-    if (other.m_trackedTransform)
-        m_trackedTransform = makeUnique<TransformationMatrix>(*other.m_trackedTransform);
-
     return *this;
 }
 
-void TransformState::translateTransform(const LayoutSize& offset)
+void TransformState::translateTransform(const LayoutSize& offset, TransformDirection direction)
 {
-    if (m_direction == ApplyTransformDirection)
+    if (direction == ApplyTransformDirection)
         m_accumulatedTransform->translateRight(offset.width(), offset.height());
     else
         m_accumulatedTransform->translate(offset.width(), offset.height());
-}
-
-void TransformState::translateMappedCoordinates(const LayoutSize& offset)
-{
-    LayoutSize adjustedOffset = (m_direction == ApplyTransformDirection) ? offset : -offset;
-    if (m_mapPoint)
-        m_lastPlanarPoint.move(adjustedOffset);
-    if (m_mapQuad) {
-        m_lastPlanarQuad.move(adjustedOffset);
-        if (m_lastPlanarSecondaryQuad)
-            m_lastPlanarSecondaryQuad->move(adjustedOffset);
-    }
-    if (m_tracking != DoNotTrackTransformMatrix) {
-        if (!m_trackedTransform)
-            m_trackedTransform = makeUnique<TransformationMatrix>();
-        if (shouldFlattenBefore())
-            m_trackedTransform->flatten();
-        if (m_direction == ApplyTransformDirection)
-            m_trackedTransform->translateRight(offset.width(), offset.height());
-        else
-            m_trackedTransform->translate(offset.width(), offset.height());
-        if (shouldFlattenAfter())
-            m_trackedTransform->flatten();
-    }
 }
 
 void TransformState::move(const LayoutSize& offset, TransformAccumulation accumulate)
@@ -94,34 +60,14 @@ void TransformState::move(const LayoutSize& offset, TransformAccumulation accumu
     if (shouldFlattenBefore(accumulate))
         flatten();
 
-    if (accumulate == FlattenTransform && !m_accumulatedTransform && m_tracking == DoNotTrackTransformMatrix)
-        m_accumulatedOffset += offset;
-    else {
-        applyAccumulatedOffset();
-        if (m_accumulatingTransform && m_accumulatedTransform) {
+    if (m_accumulatedTransform) {
             // If we're accumulating into an existing transform, apply the translation.
-            translateTransform(offset);
+        translateTransform(offset, m_direction);
+    } else
+        m_accumulatedOffset += offset;
 
-            // Then flatten if necessary.
             if (shouldFlattenAfter(accumulate))
                 flatten();
-        } else
-            // Just move the point and/or quad.
-            translateMappedCoordinates(offset);
-    }
-}
-
-void TransformState::applyAccumulatedOffset()
-{
-    LayoutSize offset = m_accumulatedOffset;
-    m_accumulatedOffset = LayoutSize();
-    if (!offset.isZero()) {
-        if (m_accumulatedTransform) {
-            translateTransform(offset);
-            flatten();
-        } else
-            translateMappedCoordinates(offset);
-    }
 }
 
 bool TransformState::shouldFlattenBefore(TransformAccumulation accumulate)
@@ -150,49 +96,34 @@ void TransformState::applyTransform(const TransformationMatrix& transformFromCon
         return;
     }
 
-    applyAccumulatedOffset();
-
     if (shouldFlattenBefore(accumulate))
         flatten();
 
-    // If we have an accumulated transform from last time, multiply in this transform
-    if (m_accumulatedTransform) {
-        if (m_direction == ApplyTransformDirection)
-            m_accumulatedTransform = makeUnique<TransformationMatrix>(transformFromContainer * *m_accumulatedTransform);
-        else
-            m_accumulatedTransform->multiply(transformFromContainer);
-    }
-
-    if (shouldFlattenAfter(accumulate)) {
-        const TransformationMatrix* finalTransform = m_accumulatedTransform ? m_accumulatedTransform.get() : &transformFromContainer;
-        flattenWithTransform(*finalTransform, wasClamped);
-    } else if (!m_accumulatedTransform) {
-        m_accumulatedTransform = makeUnique<TransformationMatrix>(transformFromContainer);
-        m_accumulatingTransform = true;
-    }
-}
-
-void TransformState::flatten(bool* wasClamped)
-{
-    if (wasClamped)
-        *wasClamped = false;
-
-    applyAccumulatedOffset();
-
     if (!m_accumulatedTransform) {
-        m_accumulatingTransform = false;
-        return;
+        m_accumulatedTransform = makeUnique<TransformationMatrix>(m_accumulatedOffset.width(), m_accumulatedOffset.height());
+        m_accumulatedOffset = { };
     }
+    ASSERT(m_accumulatedOffset.isZero());
 
-    flattenWithTransform(*m_accumulatedTransform, wasClamped);
+        if (m_direction == ApplyTransformDirection)
+        *m_accumulatedTransform = transformFromContainer * *m_accumulatedTransform;
+        else
+        *m_accumulatedTransform *= transformFromContainer;
+
+
+    if (shouldFlattenAfter(accumulate))
+        flatten();
 }
 
-FloatPoint TransformState::mappedPoint(bool* wasClamped) const
+void TransformState::flatten()
 {
-    if (wasClamped)
-        *wasClamped = false;
+    if (m_accumulatedTransform)
+        m_accumulatedTransform->flatten();
+}
 
-    FloatPoint point = m_lastPlanarPoint;
+FloatPoint TransformState::mappedPoint() const
+{
+    FloatPoint point = m_inputPoint;
     point.move((m_direction == ApplyTransformDirection) ? m_accumulatedOffset : -m_accumulatedOffset);
     if (!m_accumulatedTransform)
         return point;
@@ -200,7 +131,7 @@ FloatPoint TransformState::mappedPoint(bool* wasClamped) const
     if (m_direction == ApplyTransformDirection)
         return m_accumulatedTransform->mapPoint(point);
 
-    return valueOrDefault(m_accumulatedTransform->inverse()).projectPoint(point, wasClamped);
+    return valueOrDefault(m_accumulatedTransform->inverse()).projectPoint(point);
 }
 
 FloatQuad TransformState::mappedQuad(bool* wasClamped) const
@@ -208,7 +139,7 @@ FloatQuad TransformState::mappedQuad(bool* wasClamped) const
     if (wasClamped)
         *wasClamped = false;
 
-    FloatQuad quad = m_lastPlanarQuad;
+    FloatQuad quad = m_inputQuad;
     mapQuad(quad, m_direction, wasClamped);
     return quad;
 }
@@ -218,25 +149,34 @@ std::optional<FloatQuad> TransformState::mappedSecondaryQuad(bool* wasClamped) c
     if (wasClamped)
         *wasClamped = false;
 
-    if (!m_lastPlanarSecondaryQuad)
+    if (!m_inputSecondaryQuad)
         return std::nullopt;
 
-    FloatQuad quad = *m_lastPlanarSecondaryQuad;
+    FloatQuad quad = *m_inputSecondaryQuad;
     mapQuad(quad, m_direction, wasClamped);
     return quad;
 }
 
-void TransformState::setLastPlanarSecondaryQuad(const std::optional<FloatQuad>& quad)
+void TransformState::reset(const FloatQuad& quad, const std::optional<FloatQuad>& secondaryQuad)
+{
+    m_inputQuad = quad;
+    m_inputSecondaryQuad = secondaryQuad;
+    m_accumulatedTransform = nullptr;
+    m_accumulatedOffset = { };
+
+}
+
+void TransformState::setSecondaryQuadInMappedSpace(const std::optional<FloatQuad>& quad)
 {
     if (!quad) {
-        m_lastPlanarSecondaryQuad = std::nullopt;
+        m_inputSecondaryQuad = std::nullopt;
         return;
     }
 
     // Map the quad back through any transform or offset back into the last flattening coordinate space.
     FloatQuad backMappedQuad(*quad);
     mapQuad(backMappedQuad, inverseDirection());
-    m_lastPlanarSecondaryQuad = backMappedQuad;
+    m_inputSecondaryQuad = backMappedQuad;
 }
 
 void TransformState::mapQuad(FloatQuad& quad, TransformDirection direction, bool* wasClamped) const
@@ -253,43 +193,12 @@ void TransformState::mapQuad(FloatQuad& quad, TransformDirection direction, bool
     quad = valueOrDefault(m_accumulatedTransform->inverse()).projectQuad(quad, wasClamped);
 }
 
-void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* wasClamped)
+std::unique_ptr<TransformationMatrix> TransformState::releaseTrackedTransform()
 {
-    if (m_direction == ApplyTransformDirection) {
-        if (m_mapPoint)
-            m_lastPlanarPoint = t.mapPoint(m_lastPlanarPoint);
-        if (m_mapQuad) {
-            m_lastPlanarQuad = t.mapQuad(m_lastPlanarQuad);
-            if (m_lastPlanarSecondaryQuad)
-                m_lastPlanarSecondaryQuad = t.mapQuad(*m_lastPlanarSecondaryQuad);
-        }
-    } else {
-        TransformationMatrix inverseTransform = valueOrDefault(t.inverse());
-        if (m_mapPoint)
-            m_lastPlanarPoint = inverseTransform.projectPoint(m_lastPlanarPoint);
-        if (m_mapQuad) {
-            m_lastPlanarQuad = inverseTransform.projectQuad(m_lastPlanarQuad, wasClamped);
-            if (m_lastPlanarSecondaryQuad)
-                m_lastPlanarSecondaryQuad = inverseTransform.projectQuad(*m_lastPlanarSecondaryQuad, wasClamped);
-        }
-    }
-
-    if (m_trackedTransform) {
-        if (shouldFlattenBefore())
-            m_trackedTransform->flatten();
-        *m_trackedTransform = (m_direction == ApplyTransformDirection) ? (t * *m_trackedTransform) : (*m_trackedTransform * t);
-    } else if (m_tracking != DoNotTrackTransformMatrix)
-        m_trackedTransform = makeUnique<TransformationMatrix>(t);
-
-    if (m_trackedTransform && shouldFlattenAfter())
-        m_trackedTransform->flatten();
-
-    // We could throw away m_accumulatedTransform if we wanted to here, but that
-    // would cause thrash when traversing hierarchies with alternating
-    // preserve-3d and flat elements.
     if (m_accumulatedTransform)
-        m_accumulatedTransform->makeIdentity();
-    m_accumulatingTransform = false;
+        return makeUnique<TransformationMatrix>(*m_accumulatedTransform);
+    else
+        return makeUnique<TransformationMatrix>(m_accumulatedOffset.width(), m_accumulatedOffset.height());
 }
 
 TextStream& operator<<(TextStream& ts, const TransformState& state)
@@ -297,18 +206,20 @@ TextStream& operator<<(TextStream& ts, const TransformState& state)
     TextStream multilineStream;
     multilineStream.setIndent(ts.indent() + 2);
 
-    multilineStream.dumpProperty("last planar point", state.lastPlanarPoint());
-    multilineStream.dumpProperty("last planar quad", state.lastPlanarQuad());
+    multilineStream.dumpProperty("mapped point"_s, state.mappedPoint());
+    multilineStream.dumpProperty("mapped quad"_s, state.mappedQuad());
 
-    if (state.lastPlanarSecondaryQuad())
-        multilineStream.dumpProperty("last planar secondary quad", *state.lastPlanarSecondaryQuad());
+    if (state.mappedSecondaryQuad())
+        multilineStream.dumpProperty("mapped secondary quad"_s, *state.mappedSecondaryQuad());
 
     if (state.accumulatedTransform())
-        multilineStream.dumpProperty("accumulated transform", ValueOrNull(state.accumulatedTransform()));
+        multilineStream.dumpProperty("accumulated transform"_s, ValueOrNull(state.accumulatedTransform()));
+    else
+        multilineStream.dumpProperty("accumulated offset"_s, state.accumulatedOffset());
 
     {
         TextStream::GroupScope scope(ts);
-        ts << "TransformState " << multilineStream.release();
+        ts << "TransformState "_s << multilineStream.release();
     }
     return ts;
 }

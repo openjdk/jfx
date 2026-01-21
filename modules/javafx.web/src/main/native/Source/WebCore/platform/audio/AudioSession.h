@@ -89,6 +89,8 @@ enum class AudioSessionSoundStageSize : uint8_t {
     Large,
 };
 
+enum class AudioSessionMayResume : bool { No, Yes };
+
 class AudioSession;
 class AudioSessionRoutingArbitrationClient;
 class AudioSessionInterruptionObserver;
@@ -108,8 +110,7 @@ class WEBCORE_EXPORT AudioSession : public ThreadSafeRefCountedAndCanMakeThreadS
 public:
     static Ref<AudioSession> create();
     static void setSharedSession(Ref<AudioSession>&&);
-    static AudioSession& sharedSession();
-    static Ref<AudioSession> protectedSharedSession() { return sharedSession(); }
+    static AudioSession& singleton();
 
     static bool enableMediaPlayback();
 
@@ -152,7 +153,7 @@ public:
     virtual void handleMutedStateChange() { }
 
     virtual void beginInterruption();
-    enum class MayResume : bool { No, Yes };
+    using MayResume = WebCore::AudioSessionMayResume;
     virtual void endInterruption(MayResume);
 
     virtual void beginInterruptionForTesting() { beginInterruption(); }

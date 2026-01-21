@@ -39,7 +39,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace DFG {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(Disassembler);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(Disassembler);
 
 Disassembler::Disassembler(Graph& graph)
     : m_graph(graph)
@@ -162,7 +162,7 @@ void Disassembler::dumpDisassembly(PrintStream& out, const char* prefix, LinkBuf
     else
         amountOfNodeWhiteSpace = Graph::amountOfNodeWhiteSpace(context);
     Vector<char> prefixBuffer(prefixLength + amountOfNodeWhiteSpace + 1);
-    memcpy(prefixBuffer.data(), prefix, prefixLength);
+    memcpy(prefixBuffer.mutableSpan().data(), prefix, prefixLength);
     for (int i = 0; i < amountOfNodeWhiteSpace; ++i)
         prefixBuffer[i + prefixLength] = ' ';
     prefixBuffer[prefixLength + amountOfNodeWhiteSpace] = 0;
@@ -174,7 +174,7 @@ void Disassembler::dumpDisassembly(PrintStream& out, const char* prefix, LinkBuf
     CodeLocationLabel<DisassemblyPtrTag> end = linkBuffer.locationOf<DisassemblyPtrTag>(currentLabel);
     previousLabel = currentLabel;
     ASSERT(end.dataLocation<uintptr_t>() >= start.dataLocation<uintptr_t>());
-    disassemble(start, end.dataLocation<uintptr_t>() - start.dataLocation<uintptr_t>(), codeStart, codeEnd, prefixBuffer.data(), out);
+    disassemble(start, end.dataLocation<uintptr_t>() - start.dataLocation<uintptr_t>(), codeStart, codeEnd, prefixBuffer.span().data(), out);
 }
 
 } } // namespace JSC::DFG

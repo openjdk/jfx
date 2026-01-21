@@ -27,7 +27,6 @@
 
 #include "WebGPUOrigin2D.h"
 #include <optional>
-#include <variant>
 
 namespace WebCore::WebGPU {
 

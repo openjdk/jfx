@@ -208,7 +208,7 @@ RefPtr<Memory> Memory::tryCreate(VM& vm, PageCount initial, PageCount maximum, M
     if (desiredMemoryMode == MemoryMode::Signaling)
         return nullptr;
 
-    if (UNLIKELY(Options::crashIfWasmCantFastMemory()))
+    if (Options::crashIfWasmCantFastMemory()) [[unlikely]]
         webAssemblyCouldntGetFastMemory();
 
     switch (sharingMode) {

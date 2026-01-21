@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER) && CPU(ARM64)
 
 #include "ARM64Registers.h"
@@ -1420,30 +1422,39 @@ public:
         insn(loadStoreRegisterPreIndex(MemOpSize_16, false, (datasize == 64) ? MemOp_LOAD_signed64 : MemOp_LOAD_signed32, simm, rn, rt));
     }
 
+    template<int datasize>
     ALWAYS_INLINE void ldrsw(RegisterID rt, RegisterID rn, RegisterID rm)
     {
-        ldrsw(rt, rn, rm, UXTX, 0);
+        CHECK_DATASIZE();
+        ldrsw<datasize>(rt, rn, rm, UXTX, 0);
     }
 
+    template<int datasize>
     ALWAYS_INLINE void ldrsw(RegisterID rt, RegisterID rn, RegisterID rm, ExtendType extend, int amount)
     {
+        CHECK_DATASIZE();
         ASSERT(!amount || amount == 2);
-        insn(loadStoreRegisterRegisterOffset(MemOpSize_32, false, MemOp_LOAD_signed64, rm, extend, amount == 2, rn, rt));
+        insn(loadStoreRegisterRegisterOffset(MemOpSize_32, false, (datasize == 64) ? MemOp_LOAD_signed64 : MemOp_LOAD_signed32, rm, extend, amount == 2, rn, rt));
     }
 
+    template<int datasize>
     ALWAYS_INLINE void ldrsw(RegisterID rt, RegisterID rn, unsigned pimm)
     {
-        insn(loadStoreRegisterUnsignedImmediate(MemOpSize_32, false, MemOp_LOAD_signed64, encodePositiveImmediate<32>(pimm), rn, rt));
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterUnsignedImmediate(MemOpSize_32, false, (datasize == 64) ? MemOp_LOAD_signed64 : MemOp_LOAD_signed32, encodePositiveImmediate<32>(pimm), rn, rt));
     }
 
+    template<int datasize>
     ALWAYS_INLINE void ldrsw(RegisterID rt, RegisterID rn, PostIndex simm)
     {
-        insn(loadStoreRegisterPostIndex(MemOpSize_32, false, MemOp_LOAD_signed64, simm, rn, rt));
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPostIndex(MemOpSize_32, false, (datasize == 64) ? MemOp_LOAD_signed64 : MemOp_LOAD_signed32, simm, rn, rt));
     }
 
+    template<int datasize>
     ALWAYS_INLINE void ldrsw(RegisterID rt, RegisterID rn, PreIndex simm)
     {
-        insn(loadStoreRegisterPreIndex(MemOpSize_32, false, MemOp_LOAD_signed64, simm, rn, rt));
+        insn(loadStoreRegisterPreIndex(MemOpSize_32, false, (datasize == 64) ? MemOp_LOAD_signed64 : MemOp_LOAD_signed32, simm, rn, rt));
     }
 
     ALWAYS_INLINE void ldrsw_literal(RegisterID rt, int offset = 0)
@@ -1483,9 +1494,11 @@ public:
         insn(loadStoreRegisterUnscaledImmediate(MemOpSize_16, false, (datasize == 64) ? MemOp_LOAD_signed64 : MemOp_LOAD_signed32, simm, rn, rt));
     }
 
+    template<int datasize>
     ALWAYS_INLINE void ldursw(RegisterID rt, RegisterID rn, int simm)
     {
-        insn(loadStoreRegisterUnscaledImmediate(MemOpSize_32, false, MemOp_LOAD_signed64, simm, rn, rt));
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterUnscaledImmediate(MemOpSize_32, false, (datasize == 64) ? MemOp_LOAD_signed64 : MemOp_LOAD_signed32, simm, rn, rt));
     }
 
     template<int datasize>
@@ -3478,7 +3491,7 @@ public:
     AssemblerLabel label()
     {
         AssemblerLabel result = m_buffer.label();
-        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
+        while (static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint) [[unlikely]] {
             nop();
             result = m_buffer.label();
         }

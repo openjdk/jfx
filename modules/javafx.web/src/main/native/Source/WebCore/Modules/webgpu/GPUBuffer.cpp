@@ -92,17 +92,17 @@ void GPUBuffer::mapAsync(GPUMapModeFlags mode, std::optional<GPUSize64> offset, 
     });
 }
 
-static auto makeArrayBuffer(std::variant<std::span<const uint8_t>, size_t> source, size_t offset, auto& cachedArrayBuffers, auto& device, auto& buffer)
+static auto makeArrayBuffer(Variant<std::span<const uint8_t>, size_t> source, size_t offset, auto& cachedArrayBuffers, auto& device, auto& buffer)
 {
     RefPtr<ArrayBuffer> arrayBuffer;
-    std::visit(WTF::makeVisitor([&](std::span<const uint8_t> source) {
+    WTF::visit(WTF::makeVisitor([&](std::span<const uint8_t> source) {
         arrayBuffer = ArrayBuffer::create(source);
     }, [&](size_t numberOfElements) {
         arrayBuffer = ArrayBuffer::create(numberOfElements, 1);
     }), source);
 
     cachedArrayBuffers.append({ arrayBuffer.get(), offset });
-    cachedArrayBuffers.last().buffer->pin();
+    arrayBuffer->pin();
     if (device)
         device->addBufferToUnmap(buffer);
     return arrayBuffer;
@@ -194,8 +194,8 @@ ExceptionOr<Ref<JSC::ArrayBuffer>> GPUBuffer::getMappedRange(std::optional<GPUSi
 void GPUBuffer::unmap(ScriptExecutionContext& scriptExecutionContext)
 {
     internalUnmap(scriptExecutionContext);
-    if (m_device)
-        m_device->removeBufferToUnmap(*this);
+    if (RefPtr device = m_device.get())
+        device->removeBufferToUnmap(*this);
 }
 
 void GPUBuffer::internalUnmap(ScriptExecutionContext& scriptExecutionContext)

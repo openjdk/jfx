@@ -27,7 +27,6 @@
 
 #include "FontTaggedSettings.h"
 #include <optional>
-#include <variant>
 #include <vector>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>
@@ -177,24 +176,34 @@ struct FontVariantAlternatesValues {
 
     friend void add(Hasher&, const FontVariantAlternatesValues&);
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const FontVariantAlternatesValues& value)
+private:
+    friend struct MarkableTraits<FontVariantAlternatesValues>;
+
+    bool m_isEmpty { false };
+};
+
+} // namespace WebCore
+
+namespace WTF {
+
+template<>
+struct MarkableTraits<WebCore::FontVariantAlternatesValues> {
+    static bool isEmptyValue(const WebCore::FontVariantAlternatesValues& value)
         {
             return value.m_isEmpty;
         }
 
-        static FontVariantAlternatesValues emptyValue()
+    static WebCore::FontVariantAlternatesValues emptyValue()
         {
-            FontVariantAlternatesValues emptyValue;
+        WebCore::FontVariantAlternatesValues emptyValue;
             emptyValue.m_isEmpty = true;
             return emptyValue;
         }
-    };
-
-private:
-    friend MarkableTraits;
-    bool m_isEmpty { false };
 };
+
+} // namespace WTF
+
+namespace WebCore {
 
 class FontVariantAlternates {
     using Values = FontVariantAlternatesValues;
@@ -463,7 +472,7 @@ enum class FontStyleAxis : uint8_t {
 
 enum class AllowUserInstalledFonts : bool { No, Yes };
 
-using FeaturesMap = UncheckedKeyHashMap<FontTag, int, FourCharacterTagHash, FourCharacterTagHashTraits>;
+using FeaturesMap = HashMap<FontTag, int, FourCharacterTagHash, FourCharacterTagHashTraits>;
 FeaturesMap computeFeatureSettingsFromVariants(const FontVariantSettings&, RefPtr<FontFeatureValues>);
 
 enum class ResolvedEmojiPolicy : uint8_t {

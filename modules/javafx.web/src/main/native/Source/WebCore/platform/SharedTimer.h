@@ -26,6 +26,7 @@
 #ifndef SharedTimer_h
 #define SharedTimer_h
 
+#include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Seconds.h>
@@ -36,9 +37,10 @@ namespace WebCore {
 // Each thread has its own single instance of shared timer, which implements this interface.
 // This instance is shared by all timers in the thread.
 // Not intended to be used directly; use the Timer class instead.
-class SharedTimer {
+class SharedTimer : public CanMakeCheckedPtr<SharedTimer> {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(SharedTimer);
     WTF_MAKE_NONCOPYABLE(SharedTimer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SharedTimer);
 public:
     SharedTimer() = default;
     virtual ~SharedTimer() = default;

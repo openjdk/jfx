@@ -64,6 +64,8 @@ public:
     const Vector<RefPtr<CSSStyleSheet>>& injectedAuthorStyleSheets() const;
     const Vector<RefPtr<CSSStyleSheet>>& authorStyleSheetsForTesting() const { return m_authorStyleSheetsForTesting; }
 
+    bool hasCachedInjectedStyleSheets() const;
+
     void clearPageUserSheet();
     void updatePageUserSheet();
     void invalidateInjectedStyleSheetCache();
@@ -94,7 +96,7 @@ private:
 
     mutable Vector<RefPtr<CSSStyleSheet>> m_injectedUserStyleSheets;
     mutable Vector<RefPtr<CSSStyleSheet>> m_injectedAuthorStyleSheets;
-    mutable UncheckedKeyHashMap<Ref<CSSStyleSheet>, String> m_injectedStyleSheetToSource;
+    mutable HashMap<Ref<CSSStyleSheet>, String> m_injectedStyleSheetToSource;
     mutable bool m_injectedStyleSheetCacheValid { false };
 
     Vector<RefPtr<CSSStyleSheet>> m_userStyleSheets;

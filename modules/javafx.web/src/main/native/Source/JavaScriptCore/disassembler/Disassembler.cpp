@@ -27,7 +27,6 @@
 #include "Disassembler.h"
 
 #include "MacroAssemblerCodeRef.h"
-#include <variant>
 #include <wtf/Condition.h>
 #include <wtf/DataLog.h>
 #include <wtf/Deque.h>
@@ -44,7 +43,7 @@ namespace Disassembler {
 
 Lock labelMapLock;
 
-using LabelMap = UncheckedKeyHashMap<void*, std::variant<CString, const char*>>;
+using LabelMap = UncheckedKeyHashMap<void*, Variant<CString, const char*>>;
 LazyNeverDestroyed<LabelMap> labelMap;
 
 static LabelMap& ensureLabelMap() WTF_REQUIRES_LOCK(labelMapLock)
@@ -114,7 +113,7 @@ public:
     }
 
 private:
-    NO_RETURN void run()
+    [[noreturn]] void run()
     {
         for (;;) {
             std::unique_ptr<DisassemblyTask> task;

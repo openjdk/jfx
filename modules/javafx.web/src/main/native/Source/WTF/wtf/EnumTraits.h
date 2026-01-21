@@ -170,11 +170,11 @@ constexpr std::span<const char> enumTypeNameImpl()
 #if COMPILER(CLANG)
     const size_t prefix = sizeof("std::span<const char> WTF::enumTypeNameImpl() [E = ") - 1;
     const size_t suffix = sizeof("]") - 1;
-    std::span<const char> name { __PRETTY_FUNCTION__ + prefix, sizeof(__PRETTY_FUNCTION__) - prefix - suffix - 1 };
+    std::span<const char> name = std::span { __PRETTY_FUNCTION__ }.subspan(prefix, sizeof(__PRETTY_FUNCTION__) - prefix - suffix - 1);
 #elif COMPILER(GCC)
     const size_t prefix = sizeof("constexpr std::span<const char> WTF::enumTypeNameImpl() [with auto V = ") - 1;
     const size_t suffix = sizeof("]") - 1;
-    std::span<const char> name { __PRETTY_FUNCTION__ + prefix, sizeof(__PRETTY_FUNCTION__) - prefix - suffix - 1 };
+    std::span<const char> name = std::span { __PRETTY_FUNCTION__ }.subspan(prefix, sizeof(__PRETTY_FUNCTION__) - prefix - suffix - 1);
 #else
 #error "Unsupported compiler"
 #endif
@@ -269,13 +269,10 @@ constexpr std::underlying_type_t<E> enumNamesMax()
 template<typename E>
 constexpr size_t enumNamesSize()
 {
-    using Underlying = std::underlying_type_t<E>;
-    using Unsigned = std::make_unsigned_t<Underlying>;
-
-    constexpr Underlying min = enumNamesMin<E>();
-    constexpr Underlying max = enumNamesMax<E>();
+    constexpr auto min = enumNamesMin<E>();
+    constexpr auto max = enumNamesMax<E>();
     static_assert(min <= max, "Invalid enum range: min must be <= max.");
-    return static_cast<size_t>(static_cast<Unsigned>(max - min)) + 1;
+    return static_cast<size_t>(max - min) + 1;
 }
 
 template<typename E, size_t... Is>

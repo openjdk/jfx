@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +27,18 @@ namespace WebCore {
 class CSSValue;
 class CSSValueList;
 
-Ref<CSSValueList> createBorderImageValue(RefPtr<CSSValue>&& image, RefPtr<CSSValue>&& imageSlice, RefPtr<CSSValue>&& borderSlice, RefPtr<CSSValue>&& outset, RefPtr<CSSValue>&& repeat);
+namespace CSS {
+
+struct BorderImageComponents {
+    RefPtr<CSSValue> source;
+    RefPtr<CSSValue> slice;
+    RefPtr<CSSValue> width;
+    RefPtr<CSSValue> outset;
+    RefPtr<CSSValue> repeat;
+};
+
+} // namespace CSS
+
+Ref<CSSValueList> createBorderImageValue(CSS::BorderImageComponents&&);
 
 } // namespace WebCore

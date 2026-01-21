@@ -147,7 +147,7 @@ void HeapVerifier::printVerificationHeader()
     RELEASE_ASSERT(m_heap->collectionScope());
     CollectionScope scope = currentCycle().scope;
     MonotonicTime gcCycleTimestamp = currentCycle().timestamp;
-    dataLog("Verifying heap in [p", getCurrentProcessID(), ", ", Thread::current(), "] vm ",
+    dataLog("Verifying heap in [p", getCurrentProcessID(), ", ", Thread::currentSingleton(), "] vm ",
         RawPointer(&m_heap->vm()), " on ", scope, " GC @ ", gcCycleTimestamp, "\n");
 }
 
@@ -327,7 +327,7 @@ bool HeapVerifier::validateJSCell(VM* expectedVM, JSCell* cell, CellProfile* pro
         }
 
         CodeBlock* codeBlock = jsDynamicCast<CodeBlock*>(cell);
-        if (UNLIKELY(codeBlock)) {
+        if (codeBlock) [[unlikely]] {
             bool success = true;
             codeBlock->forEachValueProfile([&](auto& valueProfile, bool) {
                 for (unsigned i = 0; i < std::remove_reference_t<decltype(valueProfile)>::totalNumberOfBuckets; ++i) {

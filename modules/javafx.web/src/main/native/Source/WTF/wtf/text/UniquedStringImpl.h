@@ -31,12 +31,12 @@ namespace WTF {
 
 // It represents that the string impl is uniqued in some ways.
 // When the given 2 string impls are both uniqued string impls, we can compare it just using pointer comparison.
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR UniquedStringImpl : public StringImpl {
+class UniquedStringImpl : public StringImpl {
 private:
     UniquedStringImpl() = delete;
 protected:
     inline UniquedStringImpl(CreateSymbolTag, std::span<const LChar>);
-    inline UniquedStringImpl(CreateSymbolTag, std::span<const UChar>);
+    inline UniquedStringImpl(CreateSymbolTag, std::span<const char16_t>);
     inline UniquedStringImpl(CreateSymbolTag);
 };
 
@@ -44,7 +44,7 @@ inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const LCh
     : StringImpl(CreateSymbol, characters)
 { }
 
-inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const UChar> characters)
+inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const char16_t> characters)
     : StringImpl(CreateSymbol, characters)
 { }
 

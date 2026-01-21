@@ -19,15 +19,18 @@
 
 #pragma once
 
-#if USE(GSTREAMER_TRANSCODER)
+#if USE(GSTREAMER) && ENABLE(MEDIA_RECORDER)
 
 #include "GRefPtrGStreamer.h"
 #include "MediaRecorderPrivate.h"
 #include "SharedBuffer.h"
+#include "Timer.h"
+#include <gst/app/gstappsink.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Condition.h>
 #include <wtf/Forward.h>
 #include <wtf/Lock.h>
+#include <wtf/MediaTime.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -70,14 +73,12 @@ private:
     GRefPtr<GstEncodingContainerProfile> containerProfile();
     MediaStreamPrivate& stream() const { return m_stream; }
     void processSample(GRefPtr<GstSample>&&);
-    void notifyPosition(GstClockTime);
+    GstFlowReturn handleSample(GstAppSink*, GRefPtr<GstSample>&&);
     void notifyEOS();
+    void positionUpdated();
 
     GRefPtr<GstEncodingProfile> m_audioEncodingProfile;
-    GRefPtr<GstEncodingProfile> m_videoEncodingProfile;
     String m_videoCodec;
-    GRefPtr<GstTranscoder> m_transcoder;
-    GRefPtr<GstTranscoderSignalAdapter> m_signalAdapter;
     GRefPtr<GstElement> m_pipeline;
     GRefPtr<GstElement> m_src;
     GRefPtr<GstElement> m_sink;
@@ -94,6 +95,7 @@ private:
     const MediaRecorderPrivateOptions& m_options;
     String m_mimeType;
     std::optional<SelectTracksCallback> m_selectTracksCallback;
+    Timer m_positionTimer;
 };
 
 class MediaRecorderPrivateGStreamer final : public MediaRecorderPrivate {
@@ -122,4 +124,4 @@ private:
 
 } // namespace WebCore
 
-#endif // USE(GSTREAMER_TRANSCODER)
+#endif // USE(GSTREAMER) && ENABLE(MEDIA_RECORDER)

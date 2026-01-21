@@ -24,6 +24,7 @@
 #include "RenderLayerModelObject.h"
 #include "RenderSVGViewportContainer.h"
 #include "TransformState.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -86,8 +87,6 @@ public:
             }
         }
 
-        transformState.flatten();
-
         auto transform = transformState.releaseTrackedTransform();
         if (!transform)
             return { };
@@ -123,7 +122,7 @@ public:
         ctm.scale(m_renderer->document().deviceScaleFactor());
         if (!m_renderer->document().isSVGDocument())
             ctm.scale(m_renderer->style().usedZoom());
-        return narrowPrecisionToFloat(std::hypot(ctm.xScale(), ctm.yScale()) / sqrtOfTwoDouble);
+        return narrowPrecisionToFloat(std::hypot(ctm.xScale(), ctm.yScale()) / std::numbers::sqrt2);
     }
 
 private:

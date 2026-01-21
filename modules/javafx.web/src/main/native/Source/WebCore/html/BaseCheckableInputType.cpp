@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,7 +39,7 @@
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include <wtf/NeverDestroyed.h>
-#include <wtf/TZoneMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -56,15 +56,16 @@ FormControlState BaseCheckableInputType::saveFormControlState() const
 void BaseCheckableInputType::restoreFormControlState(const FormControlState& state)
 {
     ASSERT(element());
-    element()->setChecked(state[0] == onAtom());
+    protectedElement()->setChecked(state[0] == onAtom());
 }
 
 bool BaseCheckableInputType::appendFormData(DOMFormData& formData) const
 {
     ASSERT(element());
-    if (!element()->checked())
+    Ref element = *this->element();
+    if (!element->checked())
         return false;
-    formData.append(element()->name(), element()->value());
+    formData.append(element->name(), element->value());
     return true;
 }
 
@@ -73,7 +74,7 @@ auto BaseCheckableInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldC
     const String& key = event.keyIdentifier();
     if (key == "U+0020"_s) {
         ASSERT(element());
-        element()->setActive(true);
+        protectedElement()->setActive(true);
         // No setDefaultHandled(), because IE dispatches a keypress in this case
         // and the caller will only dispatch a keypress if we don't call setDefaultHandled().
         return ShouldCallBaseEventHandler::No;
@@ -101,9 +102,9 @@ bool BaseCheckableInputType::accessKeyAction(bool sendMouseEvents)
     return InputType::accessKeyAction(sendMouseEvents) || protectedElement()->dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
-String BaseCheckableInputType::fallbackValue() const
+ValueOrReference<String> BaseCheckableInputType::fallbackValue() const
 {
-    return onAtom();
+    return onAtom().string();
 }
 
 bool BaseCheckableInputType::storesValueSeparateFromAttribute()
@@ -114,21 +115,22 @@ bool BaseCheckableInputType::storesValueSeparateFromAttribute()
 void BaseCheckableInputType::setValue(const String& sanitizedValue, bool, TextFieldEventBehavior, TextControlSetValueSelection)
 {
     ASSERT(element());
-    element()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
+    protectedElement()->setAttributeWithoutSynchronization(valueAttr, AtomString { sanitizedValue });
 }
 
 void BaseCheckableInputType::fireInputAndChangeEvents()
 {
-    if (!element()->isConnected())
+    Ref element = *this->element();
+    if (!element->isConnected())
         return;
 
     if (!shouldSendChangeEventAfterCheckedChanged())
         return;
 
     Ref protectedThis { *this };
-    element()->setTextAsOfLastFormControlChangeEvent(String());
-    element()->dispatchInputEvent();
-    if (auto* element = this->element())
+    element->setTextAsOfLastFormControlChangeEvent(String());
+    element->dispatchInputEvent();
+    if (RefPtr element = this->element())
         element->dispatchFormControlChangeEvent();
 }
 
