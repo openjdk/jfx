@@ -73,29 +73,26 @@ public class SimpleLongProperty extends LongPropertyBase {
     }
 
     /**
-     * The constructor of {@code LongProperty}
+     * The constructor of {@code SimpleLongProperty}.
      */
     public SimpleLongProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code LongProperty}
+     * The constructor of {@code SimpleLongProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleLongProperty(long initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code LongProperty}
+     * The constructor of {@code SimpleLongProperty}.
      *
-     * @param bean
-     *            the bean of this {@code LongProperty}
-     * @param name
-     *            the name of this {@code LongProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleLongProperty(Object bean, String name) {
         this.bean = bean;
@@ -103,14 +100,11 @@ public class SimpleLongProperty extends LongPropertyBase {
     }
 
     /**
-     * The constructor of {@code LongProperty}
+     * The constructor of {@code SimpleLongProperty}.
      *
-     * @param bean
-     *            the bean of this {@code LongProperty}
-     * @param name
-     *            the name of this {@code LongProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleLongProperty(Object bean, String name, long initialValue) {
         super(initialValue);
@@ -127,9 +121,8 @@ public class SimpleLongProperty extends LongPropertyBase {
      * @since 27
      */
     public SimpleLongProperty(Object bean, Class<?> declaringClass, String name) {
-        this.bean = bean;
+        this(bean, name);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
     /**
@@ -142,9 +135,7 @@ public class SimpleLongProperty extends LongPropertyBase {
      * @since 27
      */
     public SimpleLongProperty(Object bean, Class<?> declaringClass, String name, long initialValue) {
-        super(initialValue);
-        this.bean = bean;
+        this(bean, name, initialValue);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 }

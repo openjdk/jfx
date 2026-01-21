@@ -38,42 +38,36 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyStringWrapper}
+     * The constructor of {@code ReadOnlyStringWrapper}.
      */
     public ReadOnlyStringWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyStringWrapper}
+     * The constructor of {@code ReadOnlyStringWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyStringWrapper(String initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyStringWrapper}
+     * The constructor of {@code ReadOnlyStringWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyStringProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyStringProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyStringWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyStringWrapper}
+     * The constructor of {@code ReadOnlyStringWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyStringProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyStringProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyStringWrapper(Object bean, String name,
             String initialValue) {
@@ -81,7 +75,7 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyStringWrapper}
+     * The constructor of {@code ReadOnlyStringWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -93,7 +87,7 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyStringWrapper}
+     * The constructor of {@code ReadOnlyStringWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared

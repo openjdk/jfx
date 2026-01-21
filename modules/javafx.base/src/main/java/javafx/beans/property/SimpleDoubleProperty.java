@@ -73,29 +73,26 @@ public class SimpleDoubleProperty extends DoublePropertyBase {
     }
 
     /**
-     * The constructor of {@code DoubleProperty}
+     * The constructor of {@code SimpleDoubleProperty}.
      */
     public SimpleDoubleProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code DoubleProperty}
+     * The constructor of {@code SimpleDoubleProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleDoubleProperty(double initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code DoubleProperty}
+     * The constructor of {@code SimpleDoubleProperty}.
      *
-     * @param bean
-     *            the bean of this {@code DoubleProperty}
-     * @param name
-     *            the name of this {@code DoubleProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleDoubleProperty(Object bean, String name) {
         this.bean = bean;
@@ -103,14 +100,11 @@ public class SimpleDoubleProperty extends DoublePropertyBase {
     }
 
     /**
-     * The constructor of {@code DoubleProperty}
+     * The constructor of {@code SimpleDoubleProperty}.
      *
-     * @param bean
-     *            the bean of this {@code DoubleProperty}
-     * @param name
-     *            the name of this {@code DoubleProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleDoubleProperty(Object bean, String name, double initialValue) {
         super(initialValue);
@@ -127,9 +121,8 @@ public class SimpleDoubleProperty extends DoublePropertyBase {
      * @since 27
      */
     public SimpleDoubleProperty(Object bean, Class<?> declaringClass, String name) {
-        this.bean = bean;
+        this(bean, name);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
     /**
@@ -142,9 +135,7 @@ public class SimpleDoubleProperty extends DoublePropertyBase {
      * @since 27
      */
     public SimpleDoubleProperty(Object bean, Class<?> declaringClass, String name, double initialValue) {
-        super(initialValue);
-        this.bean = bean;
+        this(bean, name, initialValue);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 }

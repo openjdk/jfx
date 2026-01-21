@@ -44,43 +44,37 @@ public class ReadOnlyFloatWrapper extends SimpleFloatProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyFloatWrapper(float initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyFloatProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyFloatProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyFloatWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyFloatProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyFloatProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyFloatWrapper(Object bean, String name, float initialValue) {
         super(bean, name, initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -92,7 +86,7 @@ public class ReadOnlyFloatWrapper extends SimpleFloatProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyFloatWrapper}
+     * The constructor of {@code ReadOnlyFloatWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared

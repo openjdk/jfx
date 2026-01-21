@@ -73,29 +73,26 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * The constructor of {@code SimpleBooleanProperty}.
      */
     public SimpleBooleanProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * The constructor of {@code SimpleBooleanProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleBooleanProperty(boolean initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * The constructor of {@code SimpleBooleanProperty}.
      *
-     * @param bean
-     *            the bean of this {@code BooleanProperty}
-     * @param name
-     *            the name of this {@code BooleanProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleBooleanProperty(Object bean, String name) {
         this.bean = bean;
@@ -103,14 +100,11 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
     }
 
     /**
-     * The constructor of {@code BooleanProperty}
+     * The constructor of {@code SimpleBooleanProperty}.
      *
-     * @param bean
-     *            the bean of this {@code BooleanProperty}
-     * @param name
-     *            the name of this {@code BooleanProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleBooleanProperty(Object bean, String name, boolean initialValue) {
         super(initialValue);
@@ -127,9 +121,8 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
      * @since 27
      */
     public SimpleBooleanProperty(Object bean, Class<?> declaringClass, String name) {
-        this.bean = bean;
+        this(bean, name);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
     /**
@@ -142,9 +135,7 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
      * @since 27
      */
     public SimpleBooleanProperty(Object bean, Class<?> declaringClass, String name, boolean initialValue) {
-        super(initialValue);
-        this.bean = bean;
+        this(bean, name, initialValue);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 }

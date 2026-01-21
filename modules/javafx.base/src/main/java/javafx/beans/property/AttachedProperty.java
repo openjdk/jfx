@@ -33,6 +33,26 @@ package javafx.beans.property;
  * aspect about the target <em>as it relates to</em> the declaring class. Property implementations that represent
  * attached properties must implement this interface to expose the class of objects the property can be attached to.
  * <p>
+ * Attached properties are typically exposed via a set of static methods on the declaring class. By convention,
+ * the property accessor is named {@code <propertyName>Property} and takes a single parameter with an instance
+ * of the target class. In addition, a convenience getter and setter is added:
+ * <pre>{@code
+ * class MyContainer {
+ *     // Property accessor
+ *     public static ObjectProperty<Insets> marginProperty(Node target);
+ *
+ *     // Convenience getter, may elide property instantiation
+ *     public static Insets getMargin(Node target);
+ *
+ *     // Convenience setter, may elide property instantiation
+ *     public static void setMargin(Node target, Insets value);
+ * }
+ * }</pre>
+ * Calling the property accessor must instantiate the property for the target object and store it in the target
+ * object for future retrieval. Implementations may use lazy instantiation mechanisms for the getter/setter
+ * methods; in particular, they might elide the instantiation of the property instance if the property accessor
+ * was not called before.
+ * <p>
  * Note that the {@code AttachedProperty} interface might not be visible in the static type of the property, so
  * a dynamic test via {@code instanceof AttachedProperty} might be required at runtime to detect its presence.
  *

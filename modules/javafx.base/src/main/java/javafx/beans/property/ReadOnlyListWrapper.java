@@ -42,42 +42,36 @@ public class ReadOnlyListWrapper<E> extends SimpleListProperty<E> {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyListWrapper}
+     * The constructor of {@code ReadOnlyListWrapper}.
      */
     public ReadOnlyListWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyListWrapper}
+     * The constructor of {@code ReadOnlyListWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyListWrapper(ObservableList<E> initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyListWrapper}
+     * The constructor of {@code ReadOnlyListWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyListWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlyListWrapper}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyListWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyListWrapper}
+     * The constructor of {@code ReadOnlyListWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyListWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlyListWrapper}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyListWrapper(Object bean, String name,
             ObservableList<E> initialValue) {
@@ -85,7 +79,7 @@ public class ReadOnlyListWrapper<E> extends SimpleListProperty<E> {
     }
 
     /**
-     * The constructor of {@code ReadOnlyListWrapper}
+     * The constructor of {@code ReadOnlyListWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -97,7 +91,7 @@ public class ReadOnlyListWrapper<E> extends SimpleListProperty<E> {
     }
 
     /**
-     * The constructor of {@code ReadOnlyListWrapper}
+     * The constructor of {@code ReadOnlyListWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared

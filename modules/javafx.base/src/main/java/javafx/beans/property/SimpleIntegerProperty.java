@@ -73,29 +73,26 @@ public class SimpleIntegerProperty extends IntegerPropertyBase {
     }
 
     /**
-     * The constructor of {@code IntegerProperty}
+     * The constructor of {@code SimpleIntegerProperty}.
      */
     public SimpleIntegerProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code IntegerProperty}
+     * The constructor of {@code SimpleIntegerProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleIntegerProperty(int initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code IntegerProperty}
+     * The constructor of {@code SimpleIntegerProperty}.
      *
-     * @param bean
-     *            the bean of this {@code IntegerProperty}
-     * @param name
-     *            the name of this {@code IntegerProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleIntegerProperty(Object bean, String name) {
         this.bean = bean;
@@ -103,14 +100,11 @@ public class SimpleIntegerProperty extends IntegerPropertyBase {
     }
 
     /**
-     * The constructor of {@code IntegerProperty}
+     * The constructor of {@code SimpleIntegerProperty}.
      *
-     * @param bean
-     *            the bean of this {@code IntegerProperty}
-     * @param name
-     *            the name of this {@code IntegerProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleIntegerProperty(Object bean, String name, int initialValue) {
         super(initialValue);
@@ -127,9 +121,8 @@ public class SimpleIntegerProperty extends IntegerPropertyBase {
      * @since 27
      */
     public SimpleIntegerProperty(Object bean, Class<?> declaringClass, String name) {
-        this.bean = bean;
+        this(bean, name);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
     /**
@@ -142,9 +135,7 @@ public class SimpleIntegerProperty extends IntegerPropertyBase {
      * @since 27
      */
     public SimpleIntegerProperty(Object bean, Class<?> declaringClass, String name, int initialValue) {
-        super(initialValue);
-        this.bean = bean;
+        this(bean, name, initialValue);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 }

@@ -76,29 +76,26 @@ public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
     }
 
     /**
-     * The constructor of {@code ObjectProperty}
+     * The constructor of {@code SimpleObjectProperty}.
      */
     public SimpleObjectProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code ObjectProperty}
+     * The constructor of {@code SimpleObjectProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleObjectProperty(T initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code ObjectProperty}
+     * The constructor of {@code SimpleObjectProperty}.
      *
-     * @param bean
-     *            the bean of this {@code ObjectProperty}
-     * @param name
-     *            the name of this {@code ObjectProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleObjectProperty(Object bean, String name) {
         this.bean = bean;
@@ -106,14 +103,11 @@ public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
     }
 
     /**
-     * The constructor of {@code ObjectProperty}
+     * The constructor of {@code SimpleObjectProperty}.
      *
-     * @param bean
-     *            the bean of this {@code ObjectProperty}
-     * @param name
-     *            the name of this {@code ObjectProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleObjectProperty(Object bean, String name, T initialValue) {
         super(initialValue);
@@ -130,9 +124,8 @@ public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
      * @since 27
      */
     public SimpleObjectProperty(Object bean, Class<?> declaringClass, String name) {
-        this.bean = bean;
+        this(bean, name);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
     /**
@@ -145,9 +138,7 @@ public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
      * @since 27
      */
     public SimpleObjectProperty(Object bean, Class<?> declaringClass, String name, T initialValue) {
-        super(initialValue);
-        this.bean = bean;
+        this(bean, name, initialValue);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 }

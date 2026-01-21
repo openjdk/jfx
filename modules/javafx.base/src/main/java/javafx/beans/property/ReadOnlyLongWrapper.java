@@ -38,49 +38,43 @@ public class ReadOnlyLongWrapper extends SimpleLongProperty {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      */
     public ReadOnlyLongWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyLongWrapper(long initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyLongProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyLongProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyLongWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyLongProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyLongProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyLongWrapper(Object bean, String name, long initialValue) {
         super(bean, name, initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -92,7 +86,7 @@ public class ReadOnlyLongWrapper extends SimpleLongProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared

@@ -38,42 +38,36 @@ public class ReadOnlyBooleanWrapper extends SimpleBooleanProperty {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyBooleanWrapper}
+     * The constructor of {@code ReadOnlyBooleanWrapper}.
      */
     public ReadOnlyBooleanWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyBooleanWrapper}
+     * The constructor of {@code ReadOnlyBooleanWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyBooleanWrapper(boolean initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyBooleanWrapper}
+     * The constructor of {@code ReadOnlyBooleanWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyBooleanProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyBooleanProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyBooleanWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyBooleanWrapper}
+     * The constructor of {@code ReadOnlyBooleanWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyBooleanProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyBooleanProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyBooleanWrapper(Object bean, String name,
             boolean initialValue) {
@@ -81,7 +75,7 @@ public class ReadOnlyBooleanWrapper extends SimpleBooleanProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyBooleanWrapper}
+     * The constructor of {@code ReadOnlyBooleanWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -93,7 +87,7 @@ public class ReadOnlyBooleanWrapper extends SimpleBooleanProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyBooleanWrapper}
+     * The constructor of {@code ReadOnlyBooleanWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared

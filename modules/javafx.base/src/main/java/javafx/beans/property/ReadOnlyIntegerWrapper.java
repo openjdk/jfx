@@ -44,43 +44,37 @@ public class ReadOnlyIntegerWrapper extends SimpleIntegerProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyIntegerWrapper}
+     * The constructor of {@code ReadOnlyIntegerWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyIntegerWrapper(int initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyIntegerWrapper}
+     * The constructor of {@code ReadOnlyIntegerWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyIntegerProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyIntegerProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyIntegerWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyIntegerWrapper}
+     * The constructor of {@code ReadOnlyIntegerWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyIntegerProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyIntegerProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyIntegerWrapper(Object bean, String name, int initialValue) {
         super(bean, name, initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyIntegerWrapper}
+     * The constructor of {@code ReadOnlyIntegerWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -92,7 +86,7 @@ public class ReadOnlyIntegerWrapper extends SimpleIntegerProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyIntegerWrapper}
+     * The constructor of {@code ReadOnlyIntegerWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared

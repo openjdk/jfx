@@ -41,10 +41,13 @@ import javafx.beans.value.ObservableValue;
 public interface ReadOnlyProperty<T> extends ObservableValue<T> {
 
     /**
-     * Returns the {@code Object} that contains this property. If this property
-     * is not contained in an {@code Object}, {@code null} is returned.
+     * Returns the {@code Object} that is associated with this property.
+     * <p>
+     * For instance properties, this is the object that contains the property.
+     * For {@linkplain AttachedProperty attached properties}, it is the object to which the property is attached.
+     * Is this property is not associated with an object, {@code null} is returned.
      *
-     * @return the containing {@code Object} or {@code null}
+     * @return the associated {@code Object} or {@code null}
      */
     Object getBean();
 
@@ -58,7 +61,8 @@ public interface ReadOnlyProperty<T> extends ObservableValue<T> {
 
     /**
      * Returns the {@code Class} in which this property was declared.
-     * If this property is not contained in an object, {@code null} is returned.
+     * <p>
+     * If this property is not associated with an object, {@code null} is returned.
      *
      * @return   the declaring class of this property, or {@code null}
      * @implSpec Implementations of {@linkplain AttachedProperty attached properties} must override this method

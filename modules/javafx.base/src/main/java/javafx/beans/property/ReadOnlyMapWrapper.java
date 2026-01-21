@@ -43,42 +43,36 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      */
     public ReadOnlyMapWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyMapWrapper(ObservableMap<K, V> initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyMapWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlyMapWrapper}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyMapWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyMapWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlyMapWrapper}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyMapWrapper(Object bean, String name,
                               ObservableMap<K, V> initialValue) {
@@ -86,7 +80,7 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -98,7 +92,7 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared

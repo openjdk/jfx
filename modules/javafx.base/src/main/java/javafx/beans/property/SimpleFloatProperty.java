@@ -73,29 +73,26 @@ public class SimpleFloatProperty extends FloatPropertyBase {
     }
 
     /**
-     * The constructor of {@code FloatProperty}
+     * The constructor of {@code SimpleFloatProperty}.
      */
     public SimpleFloatProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code FloatProperty}
+     * The constructor of {@code SimpleFloatProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleFloatProperty(float initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code FloatProperty}
+     * The constructor of {@code SimpleFloatProperty}.
      *
-     * @param bean
-     *            the bean of this {@code FloatProperty}
-     * @param name
-     *            the name of this {@code FloatProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleFloatProperty(Object bean, String name) {
         this.bean = bean;
@@ -103,14 +100,11 @@ public class SimpleFloatProperty extends FloatPropertyBase {
     }
 
     /**
-     * The constructor of {@code FloatProperty}
+     * The constructor of {@code SimpleFloatProperty}.
      *
-     * @param bean
-     *            the bean of this {@code FloatProperty}
-     * @param name
-     *            the name of this {@code FloatProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleFloatProperty(Object bean, String name, float initialValue) {
         super(initialValue);
@@ -127,9 +121,8 @@ public class SimpleFloatProperty extends FloatPropertyBase {
      * @since 27
      */
     public SimpleFloatProperty(Object bean, Class<?> declaringClass, String name) {
-        this.bean = bean;
+        this(bean, name);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
     /**
@@ -142,9 +135,7 @@ public class SimpleFloatProperty extends FloatPropertyBase {
      * @since 27
      */
     public SimpleFloatProperty(Object bean, Class<?> declaringClass, String name, float initialValue) {
-        super(initialValue);
-        this.bean = bean;
+        this(bean, name, initialValue);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 }

@@ -233,9 +233,9 @@ public final class PropertyMetadataVerifier {
 
                     if (isSimplePropertyClass(propertyClass)) {
                         return;
-                    } else {
-                        break;
                     }
+
+                    break;
                 } catch (NoSuchMethodException ex) {
                     propertyClass = propertyClass.getSuperclass();
                 }

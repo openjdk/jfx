@@ -76,29 +76,26 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * The constructor of {@code SimpleSetProperty}.
      */
     public SimpleSetProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * The constructor of {@code SimpleSetProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleSetProperty(ObservableSet<E> initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * The constructor of {@code SimpleSetProperty}.
      *
-     * @param bean
-     *            the bean of this {@code SetProperty}
-     * @param name
-     *            the name of this {@code SetProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleSetProperty(Object bean, String name) {
         this.bean = bean;
@@ -106,14 +103,11 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * The constructor of {@code SimpleSetProperty}.
      *
-     * @param bean
-     *            the bean of this {@code SetProperty}
-     * @param name
-     *            the name of this {@code SetProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleSetProperty(Object bean, String name, ObservableSet<E> initialValue) {
         super(initialValue);
@@ -130,9 +124,8 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
      * @since 27
      */
     public SimpleSetProperty(Object bean, Class<?> declaringClass, String name) {
-        this.bean = bean;
+        this(bean, name);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
     /**
@@ -145,9 +138,7 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
      * @since 27
      */
     public SimpleSetProperty(Object bean, Class<?> declaringClass, String name, ObservableSet<E> initialValue) {
-        super(initialValue);
-        this.bean = bean;
+        this(bean, name, initialValue);
         this.declaringClass = declaringClass;
-        this.name = (name == null) ? DEFAULT_NAME : name;
     }
 }

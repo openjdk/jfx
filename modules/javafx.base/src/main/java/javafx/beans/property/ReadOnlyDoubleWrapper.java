@@ -38,42 +38,36 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyDoubleWrapper}
+     * The constructor of {@code ReadOnlyDoubleWrapper}.
      */
     public ReadOnlyDoubleWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyDoubleWrapper}
+     * The constructor of {@code ReadOnlyDoubleWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyDoubleWrapper(double initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyDoubleWrapper}
+     * The constructor of {@code ReadOnlyDoubleWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyDoubleProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyDoubleProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyDoubleWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyDoubleWrapper}
+     * The constructor of {@code ReadOnlyDoubleWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyDoubleProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyDoubleProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyDoubleWrapper(Object bean, String name,
             double initialValue) {
@@ -81,7 +75,7 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyDoubleWrapper}
+     * The constructor of {@code ReadOnlyDoubleWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
@@ -93,7 +87,7 @@ public class ReadOnlyDoubleWrapper extends SimpleDoubleProperty {
     }
 
     /**
-     * The constructor of {@code ReadOnlyDoubleWrapper}
+     * The constructor of {@code ReadOnlyDoubleWrapper}.
      *
      * @param bean the bean of this property
      * @param declaringClass the class in which this property is declared
