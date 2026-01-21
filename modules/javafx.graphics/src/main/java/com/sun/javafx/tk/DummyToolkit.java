@@ -44,6 +44,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import javafx.stage.StageBackdrop;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
@@ -102,7 +103,8 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
-                                 Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
+                                 Modality modality, TKStage owner, boolean rtl, boolean darkFrame,
+                                 StageBackdrop backdrop) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

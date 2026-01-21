@@ -183,9 +183,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     [self->lastEvent release];
     self->lastEvent = nil;
 
-    [self->parentHost release];
-    self->parentHost = nil;
-
     [self->parentWindow release];
     self->parentWindow = nil;
 
@@ -216,10 +213,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     GET_MAIN_JENV;
     if ([self->nsView window] != nil)
     {
-        if (self->parentHost == nil)
-        {
-            self->parentHost = (GlassHostView*)[[self->nsView superview] retain];
-        }
         if (self->parentWindow == nil)
         {
             self->parentWindow = [[self->nsView window] retain];
@@ -1248,18 +1241,6 @@ static jstring convertNSStringToJString(id aString, int length)
     [window setStyleMask: mask];
 }
 
-/*
- The hierarchy for our view is view -> superview (host) -> window
-
- 1. create superview (new host) for our view
- 2. create fullscreen window with the new superview
- 3. create the background window (for fading out the desktop)
- 4. remove our view from the window superview and insert it into the fullscreen window superview
- 5. show our fullscreen window (and hide the original window)
- 6. attach to it our background window (which will show it as well)
- 7. zoom out our fullscreen window and at the same time animate the background window transparency
- 8. enter fullscreen
- */
 - (void)enterFullscreenWithAnimate:(BOOL)animate withKeepRatio:(BOOL)keepRatio withHideCursor:(BOOL)hideCursor
 {
     LOG("GlassViewDelegate enterFullscreenWithAnimate:%d withKeepRatio:%d withHideCursor:%d", animate, keepRatio, hideCursor);

@@ -508,6 +508,18 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinApplication__1supportsUn
 
 /*
  * Class:     com_sun_glass_ui_Application
+ * Method:    _supportsWindowBackdrops
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinApplication__1supportsWindowBackdrops
+    (JNIEnv * env, jobject japplication)
+{
+    static bool supported = BaseWnd::BackdropsSupported();
+    return supported;
+}
+
+/*
+ * Class:     com_sun_glass_ui_Application
  * Method:    staticScreen_getScreens
  * Signature: ()[Lcom/sun/glass/ui/Screen;
  */

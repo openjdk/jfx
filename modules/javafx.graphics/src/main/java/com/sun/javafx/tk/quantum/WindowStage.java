@@ -35,6 +35,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.StageBackdrop;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
@@ -62,6 +63,7 @@ public class WindowStage extends GlassStage {
     private StageStyle style;
     private GlassStage owner = null;
     private Modality modality = Modality.NONE;
+    private StageBackdrop backdrop = StageBackdrop.DEFAULT;
 
     private OverlayWarning warning = null;
     private boolean rtl = false;
@@ -87,11 +89,12 @@ public class WindowStage extends GlassStage {
                                  ".QuantumMessagesBundle", LOCALE);
 
     public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality,
-                       TKStage owner, boolean darkFrame) {
+                       TKStage owner, boolean darkFrame, final StageBackdrop backdrop) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
         this.darkFrame = darkFrame;
+        this.backdrop = backdrop;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
@@ -181,6 +184,20 @@ public class WindowStage extends GlassStage {
 
             if (darkFrame) {
                 windowMask |= Window.DARK_FRAME;
+            }
+
+            switch (backdrop) {
+                case DEFAULT:
+                    break;
+                case WINDOW:
+                    windowMask |= Window.WINDOW_BACKDROP;
+                    break;
+                case TABBED:
+                    windowMask |= Window.TABBED_BACKDROP;
+                    break;
+                case TRANSIENT:
+                    windowMask |= Window.TRANSIENT_BACKDROP;
+                    break;
             }
 
             platformWindow = app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
@@ -918,5 +935,9 @@ public class WindowStage extends GlassStage {
         if (platformWindow != null) {
             platformWindow.setDarkFrame(value);
         }
+    }
+
+    public boolean allowsTransparentFill() {
+        return transparent || platformWindow.isUnifiedWindow() || platformWindow.hasBackdrop();
     }
 }
