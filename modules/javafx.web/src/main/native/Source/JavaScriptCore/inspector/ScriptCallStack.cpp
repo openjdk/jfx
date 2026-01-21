@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Apple Inc. All rights reserved.
- * Copyright (c) 2008, Google Inc. All rights reserved.
+ * Copyright (c) 2008 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -128,8 +128,10 @@ Ref<Protocol::Console::StackTrace> ScriptCallStack::buildInspectorObject() const
     if (m_truncated)
         stackTrace->setTruncated(true);
 
-    if (m_parentStackTrace)
-        stackTrace->setParentStackTrace(m_parentStackTrace->buildInspectorObject());
+    if (m_parentStackTrace) {
+        if (auto parentStackTrace = m_parentStackTrace->buildInspectorObject())
+            stackTrace->setParentStackTrace(parentStackTrace.releaseNonNull());
+    }
 
     return stackTrace;
 }

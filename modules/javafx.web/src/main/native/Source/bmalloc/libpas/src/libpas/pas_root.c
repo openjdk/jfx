@@ -396,14 +396,6 @@ pas_root* pas_root_ensure_for_libmalloc_enumeration(void)
 
 #define PAS_SYSTEM_COMPACT_POINTER_SIZE 4
 
-#if PAS_CPU(ADDRESS64)
-#if PAS_ARM64 && PAS_OS(DARWIN) && !PAS_PLATFORM(IOS_FAMILY_SIMULATOR)
-#if MACH_VM_MAX_ADDRESS_RAW < (1ULL << 36)
-#define PAS_HAVE_36BIT_ADDRESS 1
-#endif
-#endif
-#endif // PAS_CPU(ADDRESS64)
-
 static inline vm_address_t decode_system_compact_pointer(pas_root* root, uint32_t value)
 {
     PAS_UNUSED_PARAM(root);

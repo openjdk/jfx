@@ -67,7 +67,7 @@ void JSGlobalObjectConsoleClient::messageWithTypeAndLevel(MessageType type, Mess
     if (JSGlobalObjectConsoleClient::logToSystemConsole())
         ConsoleClient::printConsoleMessageWithArguments(MessageSource::ConsoleAPI, type, level, globalObject, arguments.copyRef());
 
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     String message;
@@ -82,7 +82,7 @@ void JSGlobalObjectConsoleClient::messageWithTypeAndLevel(MessageType type, Mess
 
 void JSGlobalObjectConsoleClient::count(JSGlobalObject* globalObject, const String& label)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     m_consoleAgent->count(globalObject, label);
@@ -90,7 +90,7 @@ void JSGlobalObjectConsoleClient::count(JSGlobalObject* globalObject, const Stri
 
 void JSGlobalObjectConsoleClient::countReset(JSGlobalObject* globalObject, const String& label)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     m_consoleAgent->countReset(globalObject, label);
@@ -98,7 +98,7 @@ void JSGlobalObjectConsoleClient::countReset(JSGlobalObject* globalObject, const
 
 void JSGlobalObjectConsoleClient::profile(JSC::JSGlobalObject*, const String& title)
 {
-    if (LIKELY(!m_consoleAgent->enabled()))
+    if (!m_consoleAgent->enabled()) [[likely]]
         return;
 
     // Allow duplicate unnamed profiles. Disallow duplicate named profiles.
@@ -119,14 +119,14 @@ void JSGlobalObjectConsoleClient::profile(JSC::JSGlobalObject*, const String& ti
 
 void JSGlobalObjectConsoleClient::profileEnd(JSC::JSGlobalObject*, const String& title)
 {
-    if (LIKELY(!m_consoleAgent->enabled()))
+    if (!m_consoleAgent->enabled()) [[likely]]
         return;
 
     // Stop profiles in reverse order. If the title is empty, then stop the last profile.
     // Otherwise, match the title of the profile to stop.
     for (ptrdiff_t i = m_profiles.size() - 1; i >= 0; --i) {
         if (title.isEmpty() || m_profiles[i] == title) {
-            m_profiles.remove(i);
+            m_profiles.removeAt(i);
             if (m_profiles.isEmpty())
                 stopConsoleProfile();
             return;
@@ -160,7 +160,7 @@ void JSGlobalObjectConsoleClient::stopConsoleProfile()
 
 void JSGlobalObjectConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const String& title)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     m_consoleAgent->takeHeapSnapshot(title);
@@ -168,7 +168,7 @@ void JSGlobalObjectConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const S
 
 void JSGlobalObjectConsoleClient::time(JSGlobalObject* globalObject, const String& label)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     m_consoleAgent->startTiming(globalObject, label);
@@ -176,7 +176,7 @@ void JSGlobalObjectConsoleClient::time(JSGlobalObject* globalObject, const Strin
 
 void JSGlobalObjectConsoleClient::timeLog(JSGlobalObject* globalObject, const String& label, Ref<ScriptArguments>&& arguments)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     m_consoleAgent->logTiming(globalObject, label, WTFMove(arguments));
@@ -184,7 +184,7 @@ void JSGlobalObjectConsoleClient::timeLog(JSGlobalObject* globalObject, const St
 
 void JSGlobalObjectConsoleClient::timeEnd(JSGlobalObject* globalObject, const String& label)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     m_consoleAgent->stopTiming(globalObject, label);
@@ -192,7 +192,7 @@ void JSGlobalObjectConsoleClient::timeEnd(JSGlobalObject* globalObject, const St
 
 void JSGlobalObjectConsoleClient::timeStamp(JSGlobalObject*, Ref<ScriptArguments>&&)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     warnUnimplemented("console.timeStamp"_s);
@@ -200,7 +200,7 @@ void JSGlobalObjectConsoleClient::timeStamp(JSGlobalObject*, Ref<ScriptArguments
 
 void JSGlobalObjectConsoleClient::record(JSGlobalObject*, Ref<ScriptArguments>&&)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     warnUnimplemented("console.record"_s);
@@ -208,7 +208,7 @@ void JSGlobalObjectConsoleClient::record(JSGlobalObject*, Ref<ScriptArguments>&&
 
 void JSGlobalObjectConsoleClient::recordEnd(JSGlobalObject*, Ref<ScriptArguments>&&)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     warnUnimplemented("console.recordEnd"_s);
@@ -216,7 +216,7 @@ void JSGlobalObjectConsoleClient::recordEnd(JSGlobalObject*, Ref<ScriptArguments
 
 void JSGlobalObjectConsoleClient::screenshot(JSGlobalObject*, Ref<ScriptArguments>&&)
 {
-    if (LIKELY(!m_consoleAgent->developerExtrasEnabled()))
+    if (!m_consoleAgent->developerExtrasEnabled()) [[likely]]
         return;
 
     warnUnimplemented("console.screenshot"_s);

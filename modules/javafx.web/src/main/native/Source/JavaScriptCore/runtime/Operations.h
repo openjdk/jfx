@@ -25,6 +25,7 @@
 #include "ExceptionHelpers.h"
 #include "JSBigInt.h"
 #include "JSGlobalObject.h"
+#include "JSString.h"
 #include <wtf/text/MakeString.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -553,7 +554,7 @@ ALWAYS_INLINE JSValue jsAddNonNumber(JSGlobalObject* globalObject, JSValue v1, J
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(!v1.isNumber() || !v2.isNumber());
 
-    if (LIKELY(v1.isString() && !v2.isObject())) {
+    if (v1.isString() && !v2.isObject()) [[likely]] {
         if (v2.isString())
             RELEASE_AND_RETURN(scope, jsString(globalObject, asString(v1), asString(v2)));
         String s2 = v2.toWTFString(globalObject);
@@ -807,7 +808,7 @@ ALWAYS_INLINE JSValue jsURShift(JSGlobalObject* globalObject, JSValue left, JSVa
     std::optional<uint32_t> rightUint32 = right.toUInt32AfterToNumeric(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(!leftUint32 || !rightUint32)) {
+    if (!leftUint32 || !rightUint32) [[unlikely]] {
         throwTypeError(globalObject, scope, "BigInt does not support >>> operator"_s);
         return { };
     }

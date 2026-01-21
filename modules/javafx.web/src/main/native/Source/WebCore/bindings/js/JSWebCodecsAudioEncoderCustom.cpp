@@ -30,7 +30,7 @@
 
 #include "WebCodecsEncodedAudioChunkOutputCallback.h"
 #include "WebCodecsErrorCallback.h"
-
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {

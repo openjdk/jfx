@@ -42,16 +42,16 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityListBox::AccessibilityListBox(AXID axID, RenderObject& renderer)
-    : AccessibilityRenderObject(axID, renderer)
+AccessibilityListBox::AccessibilityListBox(AXID axID, RenderObject& renderer, AXObjectCache& cache)
+    : AccessibilityRenderObject(axID, renderer, cache)
 {
 }
 
 AccessibilityListBox::~AccessibilityListBox() = default;
 
-Ref<AccessibilityListBox> AccessibilityListBox::create(AXID axID, RenderObject& renderer)
+Ref<AccessibilityListBox> AccessibilityListBox::create(AXID axID, RenderObject& renderer, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityListBox(axID, renderer));
+    return adoptRef(*new AccessibilityListBox(axID, renderer, cache));
 }
 
 void AccessibilityListBox::addChildren()
@@ -61,12 +61,16 @@ void AccessibilityListBox::addChildren()
         m_subtreeDirty = false;
     });
 
-    auto* selectElement = dynamicDowncast<HTMLSelectElement>(node());
+    RefPtr selectElement = dynamicDowncast<HTMLSelectElement>(node());
     if (!selectElement)
         return;
 
     for (const auto& listItem : selectElement->listItems())
         addChild(listBoxOptionAccessibilityObject(listItem.get()), DescendIfIgnored::No);
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 void AccessibilityListBox::setSelectedChildren(const AccessibilityChildrenVector& children)
@@ -109,8 +113,9 @@ AXCoreObject::AccessibilityChildrenVector AccessibilityListBox::visibleChildren(
 AccessibilityObject* AccessibilityListBox::listBoxOptionAccessibilityObject(HTMLElement* element) const
 {
     // FIXME: Why does AccessibilityMenuListPopup::menuListOptionAccessibilityObject check inRenderedDocument, but this does not?
-    if (auto* document = this->document())
-        return document->axObjectCache()->getOrCreate(element);
+    RefPtr document = this->document();
+    if (CheckedPtr cache = document ? document->axObjectCache() : nullptr)
+        return cache->getOrCreate(element);
     return nullptr;
 }
 
@@ -121,13 +126,12 @@ AccessibilityObject* AccessibilityListBox::elementAccessibilityHitTest(const Int
     if (!m_renderer)
         return nullptr;
 
-    Node* node = m_renderer->node();
-    if (!node)
+    if (!m_renderer->node())
         return nullptr;
 
     LayoutRect parentRect = boundingBoxRect();
 
-    AccessibilityObject* listBoxOption = nullptr;
+    RefPtr<AccessibilityObject> listBoxOption;
     const auto& children = const_cast<AccessibilityListBox*>(this)->unignoredChildren();
     unsigned length = children.size();
     for (unsigned i = 0; i < length; ++i) {
@@ -135,13 +139,13 @@ AccessibilityObject* AccessibilityListBox::elementAccessibilityHitTest(const Int
         // The cast to HTMLElement below is safe because the only other possible listItem type
         // would be a WMLElement, but WML builds don't use accessibility features at all.
         if (rect.contains(point)) {
-            listBoxOption = &downcast<AccessibilityObject>(children[i].get());
+            listBoxOption = downcast<AccessibilityObject>(children[i].get());
             break;
         }
     }
 
     if (listBoxOption && !listBoxOption->isIgnored())
-        return listBoxOption;
+        return listBoxOption.get();
 
     return axObjectCache()->getOrCreate(renderer());
 }

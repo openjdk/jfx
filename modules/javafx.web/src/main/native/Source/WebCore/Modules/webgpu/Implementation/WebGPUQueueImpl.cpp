@@ -54,7 +54,7 @@ void QueueImpl::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commandBuffers)
         return Ref { m_convertToBackingContext }->convertToBacking(commandBuffer);
     });
 
-    wgpuQueueSubmit(m_backing.get(), backingCommandBuffers.size(), backingCommandBuffers.data());
+    wgpuQueueSubmit(m_backing.get(), backingCommandBuffers.size(), backingCommandBuffers.span().data());
 }
 
 static void onSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus status, void* userdata)

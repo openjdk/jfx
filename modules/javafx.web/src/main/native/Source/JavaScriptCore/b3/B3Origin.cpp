@@ -32,7 +32,7 @@ namespace JSC { namespace B3 {
 
 void Origin::dump(PrintStream& out) const
 {
-    out.print("Origin(", RawPointer(m_data), ")");
+    out.print("Origin(", RawHex(m_data.bits()), ")");
 }
 
 } } // namespace JSC::B3

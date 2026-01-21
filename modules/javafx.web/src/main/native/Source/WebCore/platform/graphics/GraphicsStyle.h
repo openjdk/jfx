@@ -66,12 +66,12 @@ struct GraphicsGaussianBlur {
 };
 
 struct GraphicsColorMatrix {
-    std::array<float, 20> values;
+    std::array<float, 20> values; // Really a ColorMatrix<5, 4>.
 
     friend bool operator==(const GraphicsColorMatrix&, const GraphicsColorMatrix&) = default;
 };
 
-using GraphicsStyle = std::variant<
+using GraphicsStyle = Variant<
     GraphicsDropShadow,
     GraphicsGaussianBlur,
     GraphicsColorMatrix

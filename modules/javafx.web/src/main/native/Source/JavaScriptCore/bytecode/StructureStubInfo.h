@@ -139,7 +139,7 @@ public:
 
     // Check if the stub has weak references that are dead. If it does, then it resets itself,
     // either entirely or just enough to ensure that those dead pointers don't get used anymore.
-    void visitWeakReferences(const ConcurrentJSLockerBase&, CodeBlock*);
+    void visitWeak(const ConcurrentJSLockerBase&, CodeBlock*);
 
     // This returns true if it has marked everything that it will ever mark.
     template<typename Visitor> void propagateTransitions(Visitor&);
@@ -423,7 +423,7 @@ private:
     // Note that it's always safe to clear this. If we clear it prematurely, then if we see the same
     // structure again during this buffering countdown, we will create an AccessCase object for it.
     // That's not so bad - we'll get rid of the redundant ones once we regenerate.
-    std::variant<std::monostate, Vector<StructureID>, Vector<std::tuple<StructureID, CacheableIdentifier>>> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
+    Variant<std::monostate, Vector<StructureID>, Vector<std::tuple<StructureID, CacheableIdentifier>>> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
 public:
 
     ScalarRegisterSet usedRegisters;

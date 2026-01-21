@@ -38,10 +38,10 @@
 
 namespace WebCore {
 
+class DocumentLoader;
 class FormState;
 class HistoryItem;
 class SerializedScriptValue;
-class NavigateEvent;
 class NavigationActivation;
 class NavigationDestination;
 
@@ -52,7 +52,7 @@ using NavigationAPIMethodTrackerIdentifier = ObjectIdentifier<NavigationAPIMetho
 
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#navigation-api-method-tracker
 struct NavigationAPIMethodTracker : public RefCounted<NavigationAPIMethodTracker> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED(NavigationAPIMethodTracker);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(NavigationAPIMethodTracker);
 
     static Ref<NavigationAPIMethodTracker> create(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue&& info, RefPtr<SerializedScriptValue>&& serializedState)
     {
@@ -124,6 +124,7 @@ public:
 
     const Vector<Ref<NavigationHistoryEntry>>& entries() const;
     NavigationHistoryEntry* currentEntry() const;
+    RefPtr<NavigationHistoryEntry> protectedCurrentEntry() const { return currentEntry(); }
     NavigationTransition* transition() { return m_transition.get(); };
     NavigationActivation* activation() { return m_activation.get(); };
 
@@ -144,8 +145,8 @@ public:
 
     enum class DispatchResult : uint8_t { Completed, Aborted, Intercepted };
     DispatchResult dispatchTraversalNavigateEvent(HistoryItem&);
-    bool dispatchPushReplaceReloadNavigateEvent(const URL&, NavigationNavigationType, bool isSameDocument, FormState*, SerializedScriptValue* classicHistoryAPIState = nullptr);
-    bool dispatchDownloadNavigateEvent(const URL&, const String& downloadFilename);
+    bool dispatchPushReplaceReloadNavigateEvent(const URL&, NavigationNavigationType, bool isSameDocument, FormState*, SerializedScriptValue* classicHistoryAPIState = nullptr, Element* sourceElement = nullptr);
+    bool dispatchDownloadNavigateEvent(const URL&, const String& downloadFilename, Element* sourceElement = nullptr);
 
     void updateForNavigation(Ref<HistoryItem>&&, NavigationNavigationType, ShouldCopyStateObjectFromCurrentEntry = ShouldCopyStateObjectFromCurrentEntry::No);
     void updateForReactivation(Vector<Ref<HistoryItem>>& newHistoryItems, HistoryItem& reactivatedItem);
@@ -181,6 +182,11 @@ public:
     };
     Ref<AbortHandler> registerAbortHandler();
 
+    NavigateEvent* ongoingNavigateEvent() { return m_ongoingNavigateEvent.get(); } // This may get called on the GC thread.
+    RefPtr<NavigateEvent> protectedOngoingNavigateEvent() { return m_ongoingNavigateEvent; }
+
+    void updateNavigationEntry(Ref<HistoryItem>&&, ShouldCopyStateObjectFromCurrentEntry);
+
 private:
     explicit Navigation(LocalDOMWindow&);
 
@@ -192,7 +198,7 @@ private:
     bool hasEntriesAndEventsDisabled() const;
     Result performTraversal(const String& key, Navigation::Options, Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished);
     ExceptionOr<RefPtr<SerializedScriptValue>> serializeState(JSC::JSValue state);
-    DispatchResult innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr);
+    DispatchResult innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr, Element* sourceElement = nullptr);
 
     RefPtr<NavigationAPIMethodTracker> maybeSetUpcomingNonTraversalTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue info, RefPtr<SerializedScriptValue>&&);
     RefPtr<NavigationAPIMethodTracker> addUpcomingTraverseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Page.h"
 #include "ScriptSourceCode.h"
@@ -61,7 +62,7 @@ Document* Worklet::document()
 // https://www.w3.org/TR/worklets-1/#dom-worklet-addmodule
 void Worklet::addModule(const String& moduleURLString, WorkletOptions&& options, DOMPromiseDeferred<void>&& promise)
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->page()) {
         promise.reject(Exception { ExceptionCode::InvalidStateError, "This frame is detached"_s });
         return;

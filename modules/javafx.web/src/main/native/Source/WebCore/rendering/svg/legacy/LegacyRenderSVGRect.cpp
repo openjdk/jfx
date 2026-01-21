@@ -162,7 +162,9 @@ bool LegacyRenderSVGRect::definitelyHasSimpleStroke() const
     // miterlimits, the join style used might not be correct (e.g. a miterlimit
     // of 1.4142135 should result in bevel joins, but may be drawn using miter
     // joins).
-    return style().svgStyle().strokeDashArray().isEmpty() && style().joinStyle() == LineJoin::Miter && style().strokeMiterLimit() >= 1.5;
+    return style().svgStyle().strokeDashArray().isNone()
+        && style().joinStyle() == LineJoin::Miter
+        && style().strokeMiterLimit() >= 1.5;
 }
 
 bool LegacyRenderSVGRect::shapeDependentStrokeContains(const FloatPoint& point, PointCoordinateSpace pointCoordinateSpace)

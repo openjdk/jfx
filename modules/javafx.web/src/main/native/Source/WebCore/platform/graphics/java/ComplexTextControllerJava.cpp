@@ -198,7 +198,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font&
         m_coreTextIndices[i] = m_indexBegin + jGetCharOffset(jRun, i);
 
         m_glyphs[i]= jGetGlyph(jRun, i);
-        if (m_font.isZeroWidthSpaceGlyph(m_glyphs[i])) {
+        if (m_font->isZeroWidthSpaceGlyph(m_glyphs[i])) {
             m_baseAdvances[i] = { };
             continue;
         }
@@ -213,7 +213,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
     auto jFont = font ? font->platformData().nativeFontData() : nullptr;
     if (!font) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run->ltr()));
         return;
     }
 
@@ -232,7 +232,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const 
 
     if (!jRuns) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run->ltr()));
         return;
     }
 

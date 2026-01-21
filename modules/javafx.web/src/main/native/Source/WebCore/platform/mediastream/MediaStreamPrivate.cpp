@@ -2,7 +2,7 @@
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,7 +39,7 @@
 #include "GraphicsContext.h"
 #include "IntRect.h"
 #include "Logging.h"
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/MainThread.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -75,7 +75,7 @@ MediaStreamPrivate::MediaStreamPrivate(Ref<const Logger>&& logger, const MediaSt
     UNUSED_PARAM(logger);
     ASSERT(!m_id.isEmpty());
 
-    for (auto& track : tracks) {
+    for (Ref track : tracks) {
         track->addObserver(*this);
         m_trackSet.add(track->id(), track);
     }
@@ -85,7 +85,7 @@ MediaStreamPrivate::MediaStreamPrivate(Ref<const Logger>&& logger, const MediaSt
 
 MediaStreamPrivate::~MediaStreamPrivate()
 {
-    for (auto& track : m_trackSet.values())
+    for (Ref track : m_trackSet.values())
         track->removeObserver(*this);
 }
 
@@ -115,19 +115,19 @@ MediaStreamTrackPrivateVector MediaStreamPrivate::tracks() const
 
 void MediaStreamPrivate::forEachTrack(NOESCAPE const Function<void(const MediaStreamTrackPrivate&)>& callback) const
 {
-    for (auto& track : m_trackSet.values())
+    for (Ref track : m_trackSet.values())
         callback(track.get());
 }
 
 void MediaStreamPrivate::forEachTrack(NOESCAPE const Function<void(MediaStreamTrackPrivate&)>& callback)
 {
-    for (auto& track : m_trackSet.values())
+    for (Ref track : m_trackSet.values())
         callback(track.get());
 }
 
 bool MediaStreamPrivate::computeActiveState()
 {
-    return WTF::anyOf(m_trackSet, [](auto& track) { return !track.value->ended(); });
+    return std::ranges::any_of(m_trackSet, [](auto& track) { return !track.value->ended(); });
 }
 
 void MediaStreamPrivate::updateActiveState()
@@ -154,7 +154,7 @@ void MediaStreamPrivate::addTrack(Ref<MediaStreamTrackPrivate>&& track)
 
     ALWAYS_LOG(LOGIDENTIFIER, track->logIdentifier());
 
-    auto& trackRef = track.get();
+    Ref trackRef = track.get();
     track->addObserver(*this);
     m_trackSet.add(track->id(), WTFMove(track));
 
@@ -185,20 +185,20 @@ void MediaStreamPrivate::removeTrack(MediaStreamTrackPrivate& track)
 void MediaStreamPrivate::startProducingData()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    for (auto& track : m_trackSet.values())
+    for (Ref track : m_trackSet.values())
         track->startProducingData();
 }
 
 void MediaStreamPrivate::stopProducingData()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
-    for (auto& track : m_trackSet.values())
+    for (Ref track : m_trackSet.values())
         track->stopProducingData();
 }
 
 bool MediaStreamPrivate::isProducingData() const
 {
-    for (auto& track : m_trackSet.values()) {
+    for (Ref track : m_trackSet.values()) {
         if (track->isProducingData())
             return true;
     }
@@ -207,7 +207,7 @@ bool MediaStreamPrivate::isProducingData() const
 
 bool MediaStreamPrivate::hasVideo() const
 {
-    for (auto& track : m_trackSet.values()) {
+    for (Ref track : m_trackSet.values()) {
         if (track->isVideo() && track->isActive())
             return true;
     }
@@ -216,7 +216,7 @@ bool MediaStreamPrivate::hasVideo() const
 
 bool MediaStreamPrivate::hasAudio() const
 {
-    for (auto& track : m_trackSet.values()) {
+    for (Ref track : m_trackSet.values()) {
         if (track->isAudio() && track->isActive())
             return true;
     }
@@ -225,7 +225,7 @@ bool MediaStreamPrivate::hasAudio() const
 
 bool MediaStreamPrivate::muted() const
 {
-    for (auto& track : m_trackSet.values()) {
+    for (Ref track : m_trackSet.values()) {
         if (!track->muted() && !track->ended())
             return false;
     }
@@ -235,8 +235,8 @@ bool MediaStreamPrivate::muted() const
 IntSize MediaStreamPrivate::intrinsicSize() const
 {
     IntSize size;
-    if (m_activeVideoTrack) {
-        const RealtimeMediaSourceSettings& setting = m_activeVideoTrack->settings();
+    if (RefPtr videoTrack = m_activeVideoTrack.get()) {
+        const RealtimeMediaSourceSettings& setting = videoTrack->settings();
         size.setWidth(setting.width());
         size.setHeight(setting.height());
     }
@@ -247,7 +247,7 @@ IntSize MediaStreamPrivate::intrinsicSize() const
 void MediaStreamPrivate::updateActiveVideoTrack()
 {
     m_activeVideoTrack = nullptr;
-    for (auto& track : m_trackSet.values()) {
+    for (Ref track : m_trackSet.values()) {
         if (!track->ended() && track->isVideo()) {
             m_activeVideoTrack = track.ptr();
             break;
@@ -312,9 +312,9 @@ void MediaStreamPrivate::trackEnded(MediaStreamTrackPrivate& track)
 
 void MediaStreamPrivate::monitorOrientation(OrientationNotifier& notifier)
 {
-    for (auto& track : m_trackSet.values()) {
+    for (Ref track : m_trackSet.values()) {
         if (track->isCaptureTrack() && track->deviceType() == CaptureDevice::DeviceType::Camera)
-            track->source().monitorOrientation(notifier);
+            track->protectedSource()->monitorOrientation(notifier);
     }
 }
 

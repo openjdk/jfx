@@ -27,6 +27,7 @@
 
 #import "ASTInterpolateAttribute.h"
 #import "WGSL.h"
+#import <variant>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
@@ -53,9 +54,9 @@ class PipelineLayout;
 class ShaderModule : public WGPUShaderModuleImpl, public RefCounted<ShaderModule> {
     WTF_MAKE_TZONE_ALLOCATED(ShaderModule);
 
-    using CheckResult = std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck, std::monostate>;
+    using CheckResult = Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck, std::monostate>;
 public:
-    static Ref<ShaderModule> create(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, HashMap<String, Ref<PipelineLayout>>&& pipelineLayoutHints, HashMap<String, WGSL::Reflection::EntryPointInformation>&& entryPointInformation, id<MTLLibrary> library, Device& device)
+    static Ref<ShaderModule> create(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&& checkResult, HashMap<String, Ref<PipelineLayout>>&& pipelineLayoutHints, HashMap<String, WGSL::Reflection::EntryPointInformation>&& entryPointInformation, id<MTLLibrary> library, Device& device)
     {
         return adoptRef(*new ShaderModule(WTFMove(checkResult), WTFMove(pipelineLayoutHints), WTFMove(entryPointInformation), library, device));
     }
@@ -72,7 +73,7 @@ public:
     bool isValid() const { return std::holds_alternative<WGSL::SuccessfulCheck>(m_checkResult); }
 
     static WGSL::PipelineLayout convertPipelineLayout(const PipelineLayout&);
-    static id<MTLLibrary> createLibrary(id<MTLDevice>, const String& msl, String&& label, NSError **);
+    static id<MTLLibrary> createLibrary(id<MTLDevice>, const String& msl, String&& label, NSError **, WGSL::DeviceState&&);
 
     WGSL::ShaderModule* ast() const;
 
@@ -104,10 +105,10 @@ public:
     bool usesFragDepth(const String&) const;
 
 private:
-    ShaderModule(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&, HashMap<String, Ref<PipelineLayout>>&&, HashMap<String, WGSL::Reflection::EntryPointInformation>&&, id<MTLLibrary>, Device&);
+    ShaderModule(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&, HashMap<String, Ref<PipelineLayout>>&&, HashMap<String, WGSL::Reflection::EntryPointInformation>&&, id<MTLLibrary>, Device&);
     ShaderModule(Device&, CheckResult&&);
 
-    CheckResult convertCheckResult(std::variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&);
+    CheckResult convertCheckResult(Variant<WGSL::SuccessfulCheck, WGSL::FailedCheck>&&);
 
     const CheckResult m_checkResult;
     const HashMap<String, Ref<PipelineLayout>> m_pipelineLayoutHints;

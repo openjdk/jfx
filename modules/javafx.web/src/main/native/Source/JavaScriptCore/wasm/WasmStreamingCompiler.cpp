@@ -43,11 +43,12 @@
 
 namespace JSC { namespace Wasm {
 
-StreamingCompiler::StreamingCompiler(VM& vm, CompilerMode compilerMode, JSGlobalObject* globalObject, JSPromise* promise, JSObject* importObject)
+StreamingCompiler::StreamingCompiler(VM& vm, CompilerMode compilerMode, JSGlobalObject* globalObject, JSPromise* promise, JSObject* importObject, const SourceCode& source)
     : m_vm(vm)
     , m_compilerMode(compilerMode)
     , m_info(Wasm::ModuleInformation::create())
     , m_parser(m_info.get(), *this)
+    , m_source(source)
 {
     Vector<JSCell*> dependencies;
     dependencies.append(globalObject);
@@ -67,9 +68,9 @@ StreamingCompiler::~StreamingCompiler()
     }
 }
 
-Ref<StreamingCompiler> StreamingCompiler::create(VM& vm, CompilerMode compilerMode, JSGlobalObject* globalObject, JSPromise* promise, JSObject* importObject)
+Ref<StreamingCompiler> StreamingCompiler::create(VM& vm, CompilerMode compilerMode, JSGlobalObject* globalObject, JSPromise* promise, JSObject* importObject, const SourceCode& source)
 {
-    return adoptRef(*new StreamingCompiler(vm, compilerMode, globalObject, promise, importObject));
+    return adoptRef(*new StreamingCompiler(vm, compilerMode, globalObject, promise, importObject, source));
 }
 
 bool StreamingCompiler::didReceiveFunctionData(FunctionCodeIndex functionIndex, const Wasm::FunctionData&)
@@ -157,7 +158,7 @@ void StreamingCompiler::didComplete()
             VM& vm = globalObject->vm();
             auto scope = DECLARE_THROW_SCOPE(vm);
 
-            if (UNLIKELY(!result.has_value())) {
+            if (!result.has_value()) [[unlikely]] {
                 throwException(globalObject, scope, createJSWebAssemblyCompileError(globalObject, vm, result.error()));
                 promise->rejectWithCaughtException(globalObject, scope);
                 return;
@@ -172,22 +173,23 @@ void StreamingCompiler::didComplete()
     }
 
     case CompilerMode::FullCompile: {
-        m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [result = WTFMove(result)](DeferredWorkTimer::Ticket ticket) mutable {
+        RefPtr<SourceProvider> provider = m_source.provider();
+        m_vm.deferredWorkTimer->scheduleWorkSoon(ticket, [result = WTFMove(result), provider = WTFMove(provider)](DeferredWorkTimer::Ticket ticket) mutable {
             JSPromise* promise = jsCast<JSPromise*>(ticket->target());
             JSGlobalObject* globalObject = jsCast<JSGlobalObject*>(ticket->dependencies()[0]);
             JSObject* importObject = jsCast<JSObject*>(ticket->dependencies()[1]);
             VM& vm = globalObject->vm();
             auto scope = DECLARE_THROW_SCOPE(vm);
 
-            if (UNLIKELY(!result.has_value())) {
+            if (!result.has_value()) [[unlikely]] {
                 throwException(globalObject, scope, createJSWebAssemblyCompileError(globalObject, vm, result.error()));
                 promise->rejectWithCaughtException(globalObject, scope);
                 return;
             }
 
             JSWebAssemblyModule* module = JSWebAssemblyModule::create(vm, globalObject->webAssemblyModuleStructure(), WTFMove(result.value()));
-            JSWebAssembly::instantiateForStreaming(vm, globalObject, promise, module, importObject);
-            if (UNLIKELY(scope.exception())) {
+            JSWebAssembly::instantiateForStreaming(vm, globalObject, promise, module, importObject, WTFMove(provider));
+            if (scope.exception()) [[unlikely]] {
                 promise->rejectWithCaughtException(globalObject, scope);
                 return;
             }

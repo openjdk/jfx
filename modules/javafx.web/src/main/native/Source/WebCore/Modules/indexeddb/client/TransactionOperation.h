@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -111,23 +111,19 @@ public:
     Thread& originThread() const { return m_originThread.get(); }
 
     IDBRequest* idbRequest() { return m_idbRequest.get(); }
+    IDBTransaction& transaction() const { return m_transaction.get(); }
 
     bool nextRequestCanGoToServer() const { return m_nextRequestCanGoToServer && m_idbRequest; }
     void setNextRequestCanGoToServer(bool nextRequestCanGoToServer) { m_nextRequestCanGoToServer = nextRequestCanGoToServer; }
 
     uint64_t operationID() const { return m_operationID; }
+    std::optional<ScriptExecutionContextIdentifier> scriptExecutionContextIdentifier() const { return m_scriptExecutionContextIdentifier; }
 
 protected:
-    TransactionOperation(IDBTransaction& transaction)
-        : m_transaction(transaction)
-        , m_identifier(transaction.connectionProxy())
-        , m_operationID(transaction.generateOperationID())
-    {
-    }
-
+    TransactionOperation(IDBTransaction&);
     TransactionOperation(IDBTransaction&, IDBRequest&);
 
-    Ref<IDBTransaction> m_transaction;
+    const Ref<IDBTransaction> m_transaction;
     IDBResourceIdentifier m_identifier;
     Markable<IDBObjectStoreIdentifier> m_objectStoreIdentifier;
     Markable<IDBIndexIdentifier> m_indexIdentifier;
@@ -141,15 +137,15 @@ private:
     std::optional<IDBObjectStoreIdentifier> objectStoreIdentifier() const { return m_objectStoreIdentifier; }
     std::optional<IDBIndexIdentifier> indexIdentifier() const { return m_indexIdentifier; }
     std::optional<IDBResourceIdentifier> cursorIdentifier() const { return m_cursorIdentifier; }
-    IDBTransaction& transaction() { return m_transaction.get(); }
     IndexedDB::IndexRecordType indexRecordType() const { return m_indexRecordType; }
 
-    Ref<Thread> m_originThread { Thread::current() };
+    const Ref<Thread> m_originThread { Thread::currentSingleton() };
     RefPtr<IDBRequest> m_idbRequest;
     bool m_nextRequestCanGoToServer { true };
     bool m_didComplete { false };
 
     uint64_t m_operationID { 0 };
+    std::optional<ScriptExecutionContextIdentifier> m_scriptExecutionContextIdentifier;
 };
 
 class TransactionOperationImpl final : public TransactionOperation {

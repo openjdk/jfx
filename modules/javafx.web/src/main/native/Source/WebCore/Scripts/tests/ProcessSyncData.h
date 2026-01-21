@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 
 #include "DOMAudioSession.h"
 #include <wtf/URL.h>
-#include <variant>
+#include "StringifyThis"
 
 namespace WebCore {
 
@@ -37,6 +37,7 @@ enum class ProcessSyncDataType : uint8_t {
     MainFrameURLChange = 1,
     IsAutofocusProcessed = 2,
     UserDidInteractWithPage = 3,
+    AnotherOne = 4,
 };
 
 static const ProcessSyncDataType allDocumentSyncDataTypes[] = {
@@ -47,15 +48,20 @@ static const ProcessSyncDataType allDocumentSyncDataTypes[] = {
     , ProcessSyncDataType::UserDidInteractWithPage
 };
 
+static const ProcessSyncDataType allFrameTreeSyncDataTypes[] = {
+    ProcessSyncDataType::AnotherOne
+};
+
 #if !ENABLE(DOM_AUDIO_SESSION)
 using DOMAudioSessionType = bool;
 #endif
 
-using ProcessSyncDataVariant = std::variant<
+using ProcessSyncDataVariant = Variant<
     WebCore::DOMAudioSessionType,
     URL,
     bool,
-    bool
+    bool,
+    StringifyThis
 >;
 
 struct ProcessSyncData {

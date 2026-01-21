@@ -30,6 +30,7 @@
 #include "StringAdaptors.h"
 #include "TrustedType.h"
 #include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSString.h>
 
 namespace WebCore {
 
@@ -271,7 +272,7 @@ template<typename T> struct Converter<IDLAtomStringAdaptor<T>> : DefaultConverte
 
         RETURN_IF_EXCEPTION(scope, Result::exception());
 
-        return Result { WTFMove(string) };
+        return Result { string.data };
     }
 };
 
@@ -348,7 +349,7 @@ template<typename IDL> struct Converter<IDLRequiresExistingAtomStringAdaptor<IDL
     {
         static_assert(std::is_same<IDL, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 
-        return value.toString(&lexicalGlobalObject)->toExistingAtomString(&lexicalGlobalObject);
+        return value.toString(&lexicalGlobalObject)->toExistingAtomString(&lexicalGlobalObject).data;
     }
 };
 

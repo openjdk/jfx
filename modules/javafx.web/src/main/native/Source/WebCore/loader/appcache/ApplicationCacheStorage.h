@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -87,7 +87,7 @@ public:
 
     WEBCORE_EXPORT void empty();
 
-    WEBCORE_EXPORT UncheckedKeyHashSet<SecurityOriginData> originsWithCache();
+    WEBCORE_EXPORT HashSet<SecurityOriginData> originsWithCache();
     WEBCORE_EXPORT void deleteAllEntries();
 
     // FIXME: This should be consolidated with deleteAllEntries().

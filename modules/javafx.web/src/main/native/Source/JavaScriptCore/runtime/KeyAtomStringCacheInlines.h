@@ -53,7 +53,7 @@ ALWAYS_INLINE JSString* KeyAtomStringCache::make(VM& vm, Buffer& buffer, const F
     }
 
     JSString* result = func(vm, buffer);
-    if (LIKELY(result))
+    if (result) [[likely]]
         slot = result;
     return result;
 }

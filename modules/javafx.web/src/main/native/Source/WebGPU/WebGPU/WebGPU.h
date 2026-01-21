@@ -30,6 +30,16 @@
 #ifndef WEBGPU_H_
 #define WEBGPU_H_
 
+#include <array>
+#include <optional>
+#include <wtf/Forward.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/SwiftBridging.h>
+
+#if __has_include(<swift/bridging>)
+#include <swift/bridging>
+#endif
+
 #ifdef __cplusplus
 
 #if defined(WGPU_SHARED_LIBRARY)
@@ -72,6 +82,7 @@
 #include <span>
 #include <wtf/text/WTFString.h>
 #include <wtf/Platform.h>
+#include <wtf/Vector.h>
 
 #define WGPU_ARRAY_LAYER_COUNT_UNDEFINED (0xffffffffUL)
 #define WGPU_COPY_STRIDE_UNDEFINED (0xffffffffUL)
@@ -374,6 +385,7 @@ typedef enum WGPUFeatureName {
     WGPUFeatureName_DualSourceBlending = 0x00000010,
     WGPUFeatureName_Float16Renderable = 0x00000011,
     WGPUFeatureName_Float32Renderable = 0x00000012,
+    WGPUFeatureName_CoreFeaturesAndLimits = 0x00000013,
     WGPUFeatureName_Force32 = 0x7FFFFFFF
 } WGPUFeatureName WGPU_ENUM_ATTRIBUTE;
 
@@ -898,6 +910,8 @@ typedef struct WGPULimits {
     uint32_t maxComputeWorkgroupsPerDimension;
     uint32_t maxStorageBuffersInFragmentStage;
     uint32_t maxStorageTexturesInFragmentStage;
+    uint32_t maxStorageBuffersInVertexStage;
+    uint32_t maxStorageTexturesInVertexStage;
 } WGPULimits WGPU_STRUCTURE_ATTRIBUTE;
 
 typedef struct WGPUMultisampleState {
@@ -976,7 +990,7 @@ typedef struct WGPURenderPassDepthStencilAttachment {
     WGPUStoreOp stencilStoreOp;
     uint32_t stencilClearValue;
     WGPUBool stencilReadOnly;
-} WGPURenderPassDepthStencilAttachment WGPU_STRUCTURE_ATTRIBUTE;
+} SWIFT_ESCAPABLE WGPURenderPassDepthStencilAttachment WGPU_STRUCTURE_ATTRIBUTE;
 
 // Can be chained in WGPURenderPassDescriptor
 typedef struct WGPURenderPassDescriptorMaxDrawCount {
@@ -1130,7 +1144,7 @@ typedef struct WGPUTextureDataLayout {
     uint64_t offset;
     uint32_t bytesPerRow;
     uint32_t rowsPerImage;
-} WGPUTextureDataLayout WGPU_STRUCTURE_ATTRIBUTE;
+} SWIFT_ESCAPABLE WGPUTextureDataLayout WGPU_STRUCTURE_ATTRIBUTE;
 
 typedef struct WGPUTextureViewDescriptor {
     WGPUChainedStruct const * nextInChain;
@@ -1182,11 +1196,16 @@ typedef struct WGPUCompilationInfo {
     WGPUCompilationMessage const * messages;
 } WGPUCompilationInfo WGPU_STRUCTURE_ATTRIBUTE;
 
+inline std::span<const WGPUCompilationMessage> messagesSpan(const WGPUCompilationInfo& compilationInfo)
+{
+    return unsafeMakeSpan(compilationInfo.messages, compilationInfo.messageCount);
+}
+
 typedef struct WGPUComputePassDescriptor {
     WGPUChainedStruct const * nextInChain;
     WGPU_NULLABLE char const * label;
     WGPU_NULLABLE WGPUComputePassTimestampWrites const * timestampWrites;
-} WGPUComputePassDescriptor WGPU_STRUCTURE_ATTRIBUTE;
+} SWIFT_ESCAPABLE WGPUComputePassDescriptor WGPU_STRUCTURE_ATTRIBUTE;
 
 typedef struct WGPUDepthStencilState {
     WGPUChainedStruct const * nextInChain;
@@ -1206,7 +1225,7 @@ typedef struct WGPUImageCopyBuffer {
     WGPUChainedStruct const * nextInChain;
     WGPUTextureDataLayout layout;
     WGPUBuffer buffer;
-} WGPUImageCopyBuffer WGPU_STRUCTURE_ATTRIBUTE;
+} SWIFT_ESCAPABLE WGPUImageCopyBuffer WGPU_STRUCTURE_ATTRIBUTE;
 
 typedef struct WGPUImageCopyTexture {
     WGPUChainedStruct const * nextInChain;
@@ -1214,7 +1233,7 @@ typedef struct WGPUImageCopyTexture {
     uint32_t mipLevel;
     WGPUOrigin3D origin;
     WGPUTextureAspect aspect;
-} WGPUImageCopyTexture WGPU_STRUCTURE_ATTRIBUTE;
+} SWIFT_ESCAPABLE WGPUImageCopyTexture WGPU_STRUCTURE_ATTRIBUTE;
 
 typedef struct WGPUProgrammableStageDescriptor {
     WGPUChainedStruct const * nextInChain;
@@ -1234,7 +1253,7 @@ typedef struct WGPURenderPassColorAttachment {
     WGPULoadOp loadOp;
     WGPUStoreOp storeOp;
     WGPUColor clearValue;
-} WGPURenderPassColorAttachment WGPU_STRUCTURE_ATTRIBUTE;
+} SWIFT_ESCAPABLE WGPURenderPassColorAttachment WGPU_STRUCTURE_ATTRIBUTE;
 
 typedef struct WGPURequiredLimits {
     WGPUChainedStruct const * nextInChain;
@@ -1325,7 +1344,7 @@ typedef struct WGPURenderPassDescriptor {
     WGPU_NULLABLE WGPURenderPassTimestampWrites const * timestampWrites;
 
     auto colorAttachmentsSpan() const { return unsafeMakeSpan(colorAttachments, colorAttachmentCount); }
-} WGPURenderPassDescriptor WGPU_STRUCTURE_ATTRIBUTE;
+} SWIFT_ESCAPABLE WGPURenderPassDescriptor WGPU_STRUCTURE_ATTRIBUTE;
 
 typedef struct WGPUVertexState {
     WGPUChainedStruct const * nextInChain;
@@ -1663,7 +1682,7 @@ WGPU_EXPORT void wgpuComputePassEncoderEnd(WGPUComputePassEncoder computePassEnc
 WGPU_EXPORT void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, char const * markerLabel) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuComputePassEncoderPopDebugGroup(WGPUComputePassEncoder computePassEncoder) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, char const * groupLabel) WGPU_FUNCTION_ATTRIBUTE;
-WGPU_EXPORT void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPU_NULLABLE WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets) WGPU_FUNCTION_ATTRIBUTE;
+WGPU_EXPORT void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPU_NULLABLE WGPUBindGroup group, std::optional<Vector<uint32_t>>&& dynamicOffsets) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuComputePassEncoderSetLabel(WGPUComputePassEncoder computePassEncoder, char const * label) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuComputePassEncoderReference(WGPUComputePassEncoder computePassEncoder) WGPU_FUNCTION_ATTRIBUTE;
@@ -1766,7 +1785,7 @@ WGPU_EXPORT void wgpuRenderPassEncoderExecuteBundles(WGPURenderPassEncoder rende
 WGPU_EXPORT void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, char const * markerLabel) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuRenderPassEncoderPopDebugGroup(WGPURenderPassEncoder renderPassEncoder) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, char const * groupLabel) WGPU_FUNCTION_ATTRIBUTE;
-WGPU_EXPORT void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPU_NULLABLE WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets) WGPU_FUNCTION_ATTRIBUTE;
+WGPU_EXPORT void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPU_NULLABLE WGPUBindGroup group, std::optional<Vector<uint32_t>>&& dynamicOffsets) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuRenderPassEncoderSetBlendConstant(WGPURenderPassEncoder renderPassEncoder, WGPUColor const * color) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size) WGPU_FUNCTION_ATTRIBUTE;
 WGPU_EXPORT void wgpuRenderPassEncoderSetLabel(WGPURenderPassEncoder renderPassEncoder, char const * label) WGPU_FUNCTION_ATTRIBUTE;

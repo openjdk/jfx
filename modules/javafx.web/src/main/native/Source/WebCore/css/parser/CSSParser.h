@@ -1,50 +1,79 @@
-/*
- * Copyright (C) 2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
- * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2009 - 2010  Torch Mobile (Beijing) Co. Ltd. All rights reserved.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public License
- * along with this library; see the file COPYING.LIB.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
- */
+// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
+// Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+//
+//    * Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above
+// copyright notice, this list of conditions and the following disclaimer
+// in the documentation and/or other materials provided with the
+// distribution.
+//    * Neither the name of Google Inc. nor the names of its
+// contributors may be used to endorse or promote products derived from
+// this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "CSSParserContext.h"
 #include "CSSParserEnum.h"
+#include "CSSParserTokenRange.h"
 #include "CSSProperty.h"
-#include "CSSSelectorParser.h"
-#include "CSSValue.h"
-#include "ColorTypes.h"
-#include "WritingMode.h"
+#include "CSSPropertyNames.h"
+#include "StyleRule.h"
+#include <memory>
+#include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CSSParserObserver;
+class CSSParserObserverWrapper;
 class CSSSelectorList;
-class Color;
-class Element;
-class ImmutableStyleProperties;
-class MutableStyleProperties;
-class StyleRuleBase;
-class StyleRuleNestedDeclarations;
+class CSSTokenizer;
+class StyleRuleCounterStyle;
 class StyleRuleKeyframe;
+class StyleRule;
+class StyleRuleBase;
+class StyleRuleCharset;
+class StyleRuleContainer;
+class StyleRuleFontFace;
+class StyleRuleFontFeatureValues;
+class StyleRuleFontFeatureValuesBlock;
+class StyleRuleFontPaletteValues;
+class StyleRuleImport;
+class StyleRuleKeyframes;
+class StyleRuleLayer;
+class StyleRuleMedia;
+class StyleRuleNamespace;
+class StyleRulePage;
+class StyleRulePositionTry;
+class StyleRuleSupports;
+class StyleRuleViewport;
+class StyleRuleViewTransition;
 class StyleSheetContents;
+class ImmutableStyleProperties;
+class Element;
+class MutableStyleProperties;
+
+enum CSSAtRuleID : uint8_t;
 
 class CSSParser {
+    WTF_MAKE_NONCOPYABLE(CSSParser);
 public:
     enum class ParseResult {
         Changed,
@@ -52,42 +81,154 @@ public:
         Error
     };
 
-    WEBCORE_EXPORT explicit CSSParser(const CSSParserContext&);
-    WEBCORE_EXPORT ~CSSParser();
+    CSSParser(const CSSParserContext&, const String&, StyleSheetContents* = nullptr, CSSParserObserverWrapper* = nullptr, CSSParserEnum::NestedContext = { });
+    ~CSSParser();
 
-    void parseSheet(StyleSheetContents&, const String&);
-
-    static RefPtr<StyleRuleBase> parseRule(const CSSParserContext&, StyleSheetContents*, const String&, CSSParserEnum::NestedContext = { });
-
-    RefPtr<StyleRuleKeyframe> parseKeyframeRule(const String&);
-    static Vector<std::pair<CSSValueID, double>> parseKeyframeKeyList(const String&, const CSSParserContext&);
-
-    bool parseSupportsCondition(const String&);
-
-    static void parseSheetForInspector(const CSSParserContext&, StyleSheetContents&, const String&, CSSParserObserver&);
-    static void parseDeclarationForInspector(const CSSParserContext&, const String&, CSSParserObserver&);
+    enum class AllowedRules : uint8_t {
+        // As per css-syntax, css-cascade and css-namespaces, @charset rules
+        // must come first, followed by @import then @namespace.
+        // AllowImportRules actually means we allow @import and any rules that
+        // may follow it, i.e. @namespace rules and regular rules.
+        // AllowCharsetRules and AllowNamespaceRules behave similarly.
+        CharsetRules,
+        LayerStatementRules,
+        ImportRules,
+        NamespaceRules,
+        RegularRules,
+        KeyframeRules,
+        FontFeatureValuesRules,
+        NoRules, // For parsing at-rules inside declaration lists (without nesting support)
+    };
 
     static ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, IsImportant, const CSSParserContext&);
     static ParseResult parseCustomPropertyValue(MutableStyleProperties&, const AtomString& propertyName, const String&, IsImportant, const CSSParserContext&);
-
-    static RefPtr<CSSValue> parseSingleValue(CSSPropertyID, const String&, const CSSParserContext& = strictCSSParserContext());
-
-    WEBCORE_EXPORT bool parseDeclaration(MutableStyleProperties&, const String&);
     static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element&);
+    WEBCORE_EXPORT static bool parseDeclarationList(MutableStyleProperties&, const String&, const CSSParserContext&);
+    static RefPtr<StyleRuleBase> parseRule(const String&, const CSSParserContext&, StyleSheetContents*, AllowedRules, CSSParserEnum::NestedContext = { });
+    static RefPtr<StyleRuleKeyframe> parseKeyframeRule(const String&, const CSSParserContext&);
+    static void parseStyleSheet(const String&, const CSSParserContext&, StyleSheetContents&);
+    static CSSSelectorList parsePageSelector(CSSParserTokenRange, StyleSheetContents*);
 
-    WEBCORE_EXPORT std::optional<CSSSelectorList> parseSelectorList(const String&, StyleSheetContents* = nullptr, CSSParserEnum::NestedContext = { });
+    bool supportsDeclaration(CSSParserTokenRange&);
+    const CSSParserContext& context() const { return m_context; }
 
-    // FIXME: All callers are not getting the right Settings, keyword resolution and calc resolution when using this
-    // function and should switch to the parseColorRaw() function in CSSPropertyParserConsumer+Color.h.
-    WEBCORE_EXPORT static Color parseColorWithoutContext(const String&, bool strict = false);
+    // This function updates the range it's given.
+    RefPtr<StyleRuleBase> consumeAtRule(CSSParserTokenRange&, AllowedRules);
 
-    static std::optional<SRGBA<uint8_t>> parseNamedColor(StringView);
-    static std::optional<SRGBA<uint8_t>> parseHexColor(StringView);
+    static void parseDeclarationListForInspector(const String&, const CSSParserContext&, CSSParserObserver&);
+    static void parseStyleSheetForInspector(const String&, const CSSParserContext&, StyleSheetContents&, CSSParserObserver&);
+
+    static IsImportant consumeTrailingImportantAndWhitespace(CSSParserTokenRange&);
+
+    static RefPtr<StyleRuleNestedDeclarations> parseNestedDeclarations(const CSSParserContext&, const String&);
+
+    CSSTokenizer* tokenizer() const { return m_tokenizer.get(); }
 
 private:
-    ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, IsImportant);
+    struct NestingContext {
+        // FIXME: Can we build StylePropertySets directly?
+        // FIXME: Investigate using a smaller inline buffer
+        ParsedPropertyVector m_parsedProperties;
+        Vector<Ref<StyleRuleBase>> m_parsedRules;
+    };
+    CSSParser(const CSSParserContext&, StyleSheetContents*);
 
-    CSSParserContext m_context;
+    enum class RuleList : uint8_t {
+        TopLevel,
+        Regular,
+        Keyframes,
+        FontFeatureValues,
+    };
+
+    // Returns whether the first encountered rule was valid
+    template<typename T>
+    bool consumeRuleList(CSSParserTokenRange, RuleList, NOESCAPE const T& callback);
+
+    // This function updates the range it's given.
+    RefPtr<StyleRuleBase> consumeQualifiedRule(CSSParserTokenRange&, AllowedRules);
+
+    // This function is used for all the nested group rules (@media, @layer, @supports, @scope, @container,..etc)
+    // It handles potentially orphaned declarations (in the context of style nesting)
+    // https://drafts.csswg.org/css-nesting/#conditionals
+    Vector<Ref<StyleRuleBase>> consumeNestedGroupRules(CSSParserTokenRange block);
+
+    static RefPtr<StyleRuleCharset> consumeCharsetRule(CSSParserTokenRange prelude);
+    RefPtr<StyleRuleImport> consumeImportRule(CSSParserTokenRange prelude);
+    RefPtr<StyleRuleNamespace> consumeNamespaceRule(CSSParserTokenRange prelude);
+    RefPtr<StyleRuleMedia> consumeMediaRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleSupports> consumeSupportsRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleViewport> consumeViewportRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleFontFace> consumeFontFaceRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleFontFeatureValuesBlock> consumeFontFeatureValuesRuleBlock(CSSAtRuleID, CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleFontFeatureValues> consumeFontFeatureValuesRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleFontPaletteValues> consumeFontPaletteValuesRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleKeyframes> consumeKeyframesRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRulePage> consumePageRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleCounterStyle> consumeCounterStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleLayer> consumeLayerRule(CSSParserTokenRange prelude, std::optional<CSSParserTokenRange> block);
+    RefPtr<StyleRuleContainer> consumeContainerRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleProperty> consumePropertyRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleScope> consumeScopeRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleStartingStyle> consumeStartingStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleViewTransition> consumeViewTransitionRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRulePositionTry> consumePositionTryRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+
+    RefPtr<StyleRuleKeyframe> consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    RefPtr<StyleRuleBase> consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
+    ParsedPropertyVector consumeDeclarationListInNewNestingContext(CSSParserTokenRange, StyleRuleType);
+
+    enum class OnlyDeclarations : bool { No, Yes };
+
+    enum class ParsingStyleDeclarationsInRuleList : bool { No, Yes };
+
+    // FIXME: We should return value for all those functions instead of using class member attributes.
+    void consumeBlockContent(CSSParserTokenRange, StyleRuleType, OnlyDeclarations, ParsingStyleDeclarationsInRuleList = ParsingStyleDeclarationsInRuleList::No);
+    void consumeDeclarationList(CSSParserTokenRange, StyleRuleType);
+    void consumeStyleBlock(CSSParserTokenRange, StyleRuleType, ParsingStyleDeclarationsInRuleList = ParsingStyleDeclarationsInRuleList::No);
+    bool consumeDeclaration(CSSParserTokenRange, StyleRuleType);
+    void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, IsImportant, StyleRuleType);
+    void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, IsImportant);
+
+    RefPtr<StyleSheetContents> protectedStyleSheet() const;
+
+    Ref<StyleRuleBase> createNestedDeclarationsRule();
+    void runInNewNestingContext(auto&& run);
+    NestingContext& topContext()
+    {
+        ASSERT(!m_nestingContextStack.isEmpty());
+        return m_nestingContextStack.last();
+    }
+
+    bool isStyleNestedContext() const
+    {
+        return !m_ancestorRuleTypeStack.isEmpty();
+    }
+
+    bool hasStyleRuleAncestor() const
+    {
+        return m_ancestorRuleTypeStack.contains(CSSParserEnum::NestedContextType::Style);
+    }
+
+    // FIXME: we could unify all those into a single stack data structure.
+    // https://bugs.webkit.org/show_bug.cgi?id=265566
+    unsigned m_ruleListNestingLevel { 0 };
+    Vector<CSSParserEnum::NestedContextType, 16> m_ancestorRuleTypeStack;
+    Vector<NestingContext, 16> m_nestingContextStack { NestingContext { } };
+
+    std::optional<CSSParserEnum::NestedContextType> lastAncestorRuleType() const
+    {
+        if (!m_ancestorRuleTypeStack.isEmpty())
+            return m_ancestorRuleTypeStack.last();
+        return { };
+    }
+
+    const CSSParserContext& m_context;
+
+    RefPtr<StyleSheetContents> m_styleSheet;
+    std::unique_ptr<CSSTokenizer> m_tokenizer;
+
+    // For the inspector
+    WeakPtr<CSSParserObserverWrapper> m_observerWrapper;
 };
 
 } // namespace WebCore

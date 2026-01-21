@@ -28,6 +28,7 @@
 #pragma once
 
 #include <JavaScriptCore/BuiltinUtils.h>
+#include <JavaScriptCore/CommonIdentifiers.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/WebCoreBuiltinNamesAdditions.h>
@@ -107,6 +108,7 @@ namespace WebCore {
     macro(BufferedChangeEvent) \
     macro(Cache) \
     macro(CacheStorage) \
+    macro(CaretPosition) \
     macro(ChannelMergerNode) \
     macro(ChannelSplitterNode) \
     macro(Client) \
@@ -153,6 +155,7 @@ namespace WebCore {
     macro(CSSOKLab) \
     macro(CSSPaintSize) \
     macro(CSSPerspective) \
+    macro(CSSPositionTryDescriptors) \
     macro(CSSPositionTryRule) \
     macro(CSSRGB) \
     macro(CSSRotate) \
@@ -192,6 +195,7 @@ namespace WebCore {
     macro(ElementInternals) \
     macro(EncodedAudioChunk) \
     macro(EncodedVideoChunk) \
+    macro(EventCounts) \
     macro(ExtendableCookieChangeEvent) \
     macro(ExtendableEvent) \
     macro(ExtendableMessageEvent) \
@@ -319,6 +323,7 @@ namespace WebCore {
     macro(MediaStreamTrackProcessor) \
     macro(MerchantValidationEvent) \
     macro(MockRTCRtpTransform) \
+    macro(MutationEvent) \
     macro(NavigateEvent) \
     macro(Navigation) \
     macro(NavigationCurrentEntryChangeEvent) \
@@ -327,6 +332,8 @@ namespace WebCore {
     macro(NavigationPreloadManager) \
     macro(NavigationTransition) \
     macro(NavigatorCredentials) \
+    macro(NavigatorUA) \
+    macro(NavigatorUAData) \
     macro(NavigatorMediaDevices) \
     macro(NavigatorPermissions) \
     macro(NavigatorUserMedia) \
@@ -351,6 +358,7 @@ namespace WebCore {
     macro(PaintWorkletGlobalScope) \
     macro(PerformanceEntry) \
     macro(PerformanceEntryList) \
+    macro(PerformanceEventTiming) \
     macro(PerformanceMark) \
     macro(PerformanceMeasure) \
     macro(PerformanceObserver) \
@@ -440,7 +448,7 @@ namespace WebCore {
     macro(StylePropertyMapReadOnly) \
     macro(StylePropertyMap) \
     macro(StorageManager) \
-    macro(StorageManagerFileSystemAccess) \
+    macro(StorageManagerFileSystem) \
     macro(Subscriber) \
     macro(SubtleCrypto) \
     macro(TestReportBody) \
@@ -496,6 +504,8 @@ namespace WebCore {
     macro(WebKitMediaKeyNeededEvent) \
     macro(WebKitMediaKeySession) \
     macro(WebKitMediaKeys) \
+    macro(WebKitNodeInfo) \
+    macro(WebKitSerializedNode) \
     macro(WebSocket) \
     macro(WebTransport) \
     macro(WebTransportBidirectionalStream) \
@@ -548,6 +558,7 @@ namespace WebCore {
     macro(XRWebGLBinding) \
     macro(XRWebGLLayer) \
     macro(XRWebGLSubImage) \
+    macro(XSLTProcessor) \
     macro(VideoTrackGenerator) \
     macro(abortAlgorithm) \
     macro(abortSteps) \
@@ -644,6 +655,7 @@ namespace WebCore {
     macro(onbackgroundfetchfail) \
     macro(onbackgroundfetchabort) \
     macro(onbackgroundfetchclick) \
+    macro(onbeforematch) \
     macro(oncommand) \
     macro(oncookiechange) \
     macro(onnotificationclick) \
@@ -651,6 +663,7 @@ namespace WebCore {
     macro(onpush) \
     macro(onpushsubscriptionchange) \
     macro(onrtctransform) \
+    macro(onscrollend) \
     macro(ontouchcancel) \
     macro(ontouchend) \
     macro(ontouchmove) \
@@ -704,6 +717,7 @@ namespace WebCore {
     macro(showModalDialog) \
     macro(signal) \
     macro(signalAbort) \
+    macro(speechSynthesis) \
     macro(SpeechSynthesis) \
     macro(SpeechSynthesisErrorEvent) \
     macro(SpeechSynthesisEvent) \

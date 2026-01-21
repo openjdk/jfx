@@ -29,40 +29,21 @@
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+LengthPercentage.h"
-#include "CSSPropertyParserConsumer+Number.h"
+#include "CSSPropertyParserConsumer+LengthPercentageDefinitions.h"
+#include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserState.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-RefPtr<CSSValue> consumePaint(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <paint> = none | <color> | <url> [none | <color>]? | context-fill | context-stroke
-    // https://svgwg.org/svg2-draft/painting.html#SpecifyingStrokePaint
-
-    if (range.peek().id() == CSSValueNone)
-        return consumeIdent(range);
-    auto url = consumeURL(range);
-    if (url) {
-        RefPtr<CSSValue> parsedValue;
-        if (range.peek().id() == CSSValueNone)
-            parsedValue = consumeIdent(range);
-        else
-            parsedValue = consumeColor(range, context);
-        if (parsedValue)
-            return CSSValueList::createSpaceSeparated(url.releaseNonNull(), parsedValue.releaseNonNull());
-        return url;
-    }
-    return consumeColor(range, context);
-}
-
-RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'paint-order'> = normal | [ fill || stroke || markers ]
     // https://svgwg.org/svg2-draft/painting.html#PaintOrderProperty
@@ -116,7 +97,7 @@ RefPtr<CSSValue> consumePaintOrder(CSSParserTokenRange& range, const CSSParserCo
     return CSSValueList::createSpaceSeparated(WTFMove(paintOrderList));
 }
 
-RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'stroke-dasharray'> = none | [ [ <length-percentage> | <number> ]+ ]#
     // https://svgwg.org/svg2-draft/painting.html#StrokeDashing
@@ -126,9 +107,10 @@ RefPtr<CSSValue> consumeStrokeDasharray(CSSParserTokenRange& range, const CSSPar
         return consumeIdent(range);
     CSSValueListBuilder dashes;
     do {
-        RefPtr<CSSPrimitiveValue> dash = consumeLengthPercentage(range, context, HTMLStandardMode, ValueRange::NonNegative, UnitlessQuirk::Forbid, UnitlessZeroQuirk::Forbid);
+        // FIXME: Figure out and document why overrideParserMode is explicitly set to HTMLStandardMode here or remove the special case.
+        auto dash = CSSPrimitiveValueResolver<CSS::LengthPercentage<CSS::Nonnegative>>::consumeAndResolve(range, state, { .overrideParserMode = HTMLStandardMode, .unitlessZeroLength = UnitlessZeroQuirk::Forbid });
         if (!dash)
-            dash = consumeNumber(range, context, ValueRange::NonNegative);
+            dash = CSSPrimitiveValueResolver<CSS::Number<CSS::Nonnegative>>::consumeAndResolve(range, state);
         if (!dash || (consumeCommaIncludingWhitespace(range) && range.atEnd()))
             return nullptr;
         dashes.append(dash.releaseNonNull());

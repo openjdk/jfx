@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -92,6 +92,8 @@ public:
     ElementRecord* furthestBlockForFormattingElement(Element&) const;
     ElementRecord* topmost(ElementName) const;
 
+    bool containsTemplateElement() const { return m_templateElementCount; }
+
     void insertAbove(HTMLStackItem&&, ElementRecord&);
 
     void push(HTMLStackItem&&);
@@ -161,6 +163,7 @@ private:
     CheckedPtr<Element> m_headElement;
     CheckedPtr<Element> m_bodyElement;
     unsigned m_stackDepth { 0 };
+    unsigned m_templateElementCount { 0 };
 };
 
 } // namespace WebCore

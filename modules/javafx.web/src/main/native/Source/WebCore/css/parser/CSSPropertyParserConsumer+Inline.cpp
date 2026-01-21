@@ -26,12 +26,10 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+Inline.h"
 
-#include "CSSLineBoxContainValue.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Number.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePair.h"
 
@@ -65,7 +63,7 @@ static RefPtr<CSSValue> consumeTextEdge(CSSParserTokenRange& range)
     return CSSValuePair::create(firstValue.releaseNonNull(), secondValue.releaseNonNull());
 }
 
-RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'line-fit-edge'> = leading | <text-edge>
     // https://drafts.csswg.org/css-inline-3/#propdef-line-fit-edge
@@ -75,7 +73,7 @@ RefPtr<CSSValue> consumeLineFitEdge(CSSParserTokenRange& range, const CSSParserC
     return consumeTextEdge(range);
 }
 
-RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange& range, const CSSParserContext&)
+RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
     // <'text-box-edge'> = auto | <text-edge>
     // https://drafts.csswg.org/css-inline-3/#propdef-text-box-edge
@@ -83,68 +81,6 @@ RefPtr<CSSValue> consumeTextBoxEdge(CSSParserTokenRange& range, const CSSParserC
     if (range.peek().id() == CSSValueAuto)
         return consumeIdent(range);
     return consumeTextEdge(range);
-}
-
-RefPtr<CSSValue> consumeWebkitInitialLetter(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // Standard says this should be:
-    //
-    // <'initial-letter'> = normal | <number [1,∞]> <integer [1,∞]> | <number [1,∞]> && [ drop | raise ]?
-    // https://drafts.csswg.org/css-inline-3/#sizing-drop-initials
-
-    if (auto ident = consumeIdent<CSSValueNormal>(range))
-        return ident;
-    auto height = consumeNumber(range, context, ValueRange::NonNegative);
-    if (!height)
-        return nullptr;
-    RefPtr<CSSPrimitiveValue> position;
-    if (!range.atEnd()) {
-        position = consumeNumber(range, context, ValueRange::NonNegative);
-        if (!position || !range.atEnd())
-            return nullptr;
-    } else
-        position = height.copyRef();
-    return CSSValuePair::create(position.releaseNonNull(), height.releaseNonNull());
-}
-
-RefPtr<CSSValue> consumeWebkitLineBoxContain(CSSParserTokenRange& range, const CSSParserContext&)
-{
-    // <'-webkit-line-box-contain'> = none | [ block || inline || font || glyphs || replaced || inline-box || initial-letter ]
-    // NOTE: This is a non-standard property with no standard equivalent.
-
-    if (range.peek().id() == CSSValueNone)
-        return consumeIdent(range);
-
-    OptionSet<LineBoxContain> value;
-    while (range.peek().type() == IdentToken) {
-        auto flag = [&]() -> std::optional<LineBoxContain> {
-            switch (range.peek().id()) {
-            case CSSValueBlock:
-                return LineBoxContain::Block;
-            case CSSValueInline:
-                return LineBoxContain::Inline;
-            case CSSValueFont:
-                return LineBoxContain::Font;
-            case CSSValueGlyphs:
-                return LineBoxContain::Glyphs;
-            case CSSValueReplaced:
-                return LineBoxContain::Replaced;
-            case CSSValueInlineBox:
-                return LineBoxContain::InlineBox;
-            case CSSValueInitialLetter:
-                return LineBoxContain::InitialLetter;
-            default:
-                return std::nullopt;
-            }
-        }();
-        if (!flag || value.contains(*flag))
-            return nullptr;
-        value.add(flag);
-        range.consumeIncludingWhitespace();
-    }
-    if (!value)
-        return nullptr;
-    return CSSLineBoxContainValue::create(value);
 }
 
 } // namespace CSSPropertyParserHelpers

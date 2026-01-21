@@ -238,7 +238,7 @@ RefPtr<SecurityOrigin> ThreadableBlobRegistry::getCachedOrigin(const URL& url)
 
     bool wasOnMainThread = isMainThread();
     callOnMainThreadAndWait([url = url.isolatedCopy(), wasOnMainThread, &cachedOrigin] {
-        if (auto* origin = originMap().get<StringViewHashTranslator>(url.viewWithoutFragmentIdentifier()))
+        if (RefPtr origin = originMap().get<StringViewHashTranslator>(url.viewWithoutFragmentIdentifier()))
             cachedOrigin = wasOnMainThread ? Ref { *origin } : origin->isolatedCopy();
     });
     if (cachedOrigin)

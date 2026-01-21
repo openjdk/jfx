@@ -29,14 +29,15 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeOrigin.h"
-#include "DFGBasicBlockInlines.h"
 #include "DFGBlockInsertionSet.h"
 #include "DFGCFAPhase.h"
+#include "DFGCloneHelper.h"
 #include "DFGGraph.h"
 #include "DFGNaturalLoops.h"
 #include "DFGNodeOrigin.h"
 #include "DFGNodeType.h"
 #include "DFGPhase.h"
+#include "FunctionAllowlist.h"
 #include <wtf/IndexMap.h>
 
 namespace JSC {
@@ -50,9 +51,20 @@ public:
     using UpdateFunction = CheckedInt32 (*)(CheckedInt32, CheckedInt32);
 
     struct LoopData {
+        explicit LoopData(const NaturalLoop* naturalLoop)
+            : loop(naturalLoop)
+        {
+            for (uint32_t i = 0; i < loopSize(); ++i) {
+                if (!loopBody(i)->isJumpPad())
+                    ++nonJumpPadBlockCount;
+            }
+        }
+
         uint32_t loopSize() { return loop->size(); }
         BasicBlock* loopBody(uint32_t i) { return loop->at(i).node(); }
         BasicBlock* header() const { return loop->header().node(); }
+        // If operand is a constant, it indicates that we can do fully unrolling.
+        bool shouldFullyUnroll() const { return std::holds_alternative<CheckedInt32>(operand) && std::holds_alternative<CheckedInt32>(initialValue); }
 
         Node* condition() const
         {
@@ -61,8 +73,34 @@ public:
             return nullptr;
         }
 
+        bool shouldInvertCondition() const
+        {
+            ASSERT(invertCondition.has_value());
+            return *invertCondition;
+        }
+        BasicBlock*& loopTarget(BasicBlock* tail) const { return tail->successor(shouldInvertCondition()); }
+        BasicBlock*& exitTarget(BasicBlock* tail) const { return tail->successor(!shouldInvertCondition()); }
+
         bool isInductionVariable(Node* node) { return node->operand() == inductionVariable->operand(); }
         void dump(PrintStream& out) const;
+
+        bool isProfitableToUnroll();
+
+        void analyzeLoopNode(Graph&, Node*);
+
+        // Returns true if the node would emit code when lowered to B3.
+        // Used to estimate unrolling cost more precisely, skipping Phantom-like ops.
+        bool isMaterialNode(Graph&, Node*);
+        bool isNumericComputationNode(Node*);
+        bool isLocalAccessNode(Node*);
+
+        // Ratio of this count to total material node count
+        double ratio(uint32_t count) { return materialNodeCount ? static_cast<double>(count) / materialNodeCount : 0.0; }
+
+        uint32_t generalUnrollSizeLimit() { return shouldFullyUnroll() ? Options::maxLoopUnrollingBodyNodeSize() : Options::maxPartialLoopUnrollingBodyNodeSize(); }
+
+        // Used for early bailout during loop node scanning; combines general and special-case size limits.
+        uint32_t maxAllowedUnrollSize() { return std::max(generalUnrollSizeLimit(), Options::maxNumericHotLoopSize()); }
 
         const NaturalLoop* loop { nullptr };
         BasicBlock* preHeader { nullptr };
@@ -71,23 +109,35 @@ public:
 
         // for (i = initialValue; condition(i, operand); i = update(i, updateValue)) { ... }
         Node* inductionVariable { nullptr };
-        CheckedInt32 initialValue { INT_MIN };
-        CheckedInt32 operand { INT_MIN };
+        Variant<std::monostate, Node*, CheckedInt32> initialValue { };
+        Variant<std::monostate, Node*, CheckedInt32> operand { };
         Node* update { nullptr };
         CheckedInt32 updateValue { INT_MIN };
         CheckedUint32 iterationCount { 0 };
 
-        std::optional<bool> inverseCondition { };
+        std::optional<bool> invertCondition { };
+
+        uint32_t nonJumpPadBlockCount { 0 };
+        uint32_t materialNodeCount { 0 };
+        uint32_t putByValCount { 0 };
+        uint32_t getByValCount { 0 };
+        uint32_t numericComputationCount { 0 };
+        uint32_t localAccessCount { 0 };
     };
 
     LoopUnrollingPhase(Graph& graph)
         : Phase(graph, "Loop Unrolling"_s)
-        , m_blockInsertionSet(graph)
+        , m_cloneHelper(graph)
     {
     }
 
     bool run()
     {
+        ASSERT(m_graph.m_form == ThreadedCPS);
+
+        if (!functionAllowlist().contains(m_graph.m_codeBlock)) [[unlikely]]
+            return false;
+
         dataLogIf(Options::verboseLoopUnrolling(), "Graph before Loop Unrolling Phase:\n", m_graph);
 
         uint32_t unrolledCount = 0;
@@ -100,6 +150,11 @@ public:
             for (auto [loop, depth] : loops) {
                 if (!loop)
                     break;
+                BasicBlock* header = loop->header().node();
+                if (m_unrolledLoopHeaders.contains(header)) {
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping the loop with header ", header, " since it's already unrolled. Looking for anther candidate.");
+                    continue;
+                }
                 if (tryUnroll(loop)) {
                     unrolled = true;
                     ++unrolledCount;
@@ -145,14 +200,14 @@ public:
 
     bool tryUnroll(const NaturalLoop* loop)
     {
-        if (UNLIKELY(Options::verboseLoopUnrolling())) {
+        if (Options::verboseLoopUnrolling()) [[unlikely]] {
             const NaturalLoop* outerLoop = m_graph.m_cpsNaturalLoops->innerMostOuterLoop(*loop);
             dataLogLnIf(Options::verboseLoopUnrolling(), "\nTry unroll innerMostLoop=", *loop, " with innerMostOuterLoop=", outerLoop ? *outerLoop : NaturalLoop());
         }
 
-        LoopData data = { loop };
+        LoopData data(loop);
 
-        if (!shouldUnrollLoop(data))
+        if (Options::disallowLoopUnrollingForNonInnermost() && !data.loop->isInnerMostLoop())
             return false;
 
         // PreHeader                          PreHeader
@@ -182,15 +237,51 @@ public:
             return false;
         dataLogLnIf(Options::verboseLoopUnrolling(), "\tFound InductionVariable with LoopData=", data);
 
-        if (!canCloneLoop(data))
+        if (!isLoopBodyUnrollable(data))
             return false;
+        dataLogLnIf(Options::verboseLoopUnrolling(), "\tFound LoopBody is within threshold and clonable");
 
-        BasicBlock* header = data.header();
+        if (!Options::usePartialLoopUnrolling()) {
+            if (!data.shouldFullyUnroll()) {
+                dataLogLnIf(Options::verboseLoopUnrolling(), "\tPartial Unrolling is disabled");
+                return false;
+            }
+        }
+
+        dataLogLnIf(Options::printEachUnrolledLoop(), "[UnrollLoop][", m_graph.m_plan.jitType(), "][", data.shouldFullyUnroll() ?  "Full" : "Partial", "] function: ", m_graph.m_codeBlock->inferredNameWithHash(), " data: ", data);
         unrollLoop(data);
 
         dataLogIf(Options::verboseLoopUnrolling(), "\tGraph after Loop Unrolling for loop\n", m_graph);
-        dataLogLnIf(Options::printEachUnrolledLoop(), "\tIn function ", m_graph.m_codeBlock->inferredName(), ", successfully unrolled the loop header=", *header);
         return true;
+    }
+
+    // Returns the semantically meaningful predecessors of a block before edge-breaking,
+    // skipping through synthetic jump pads inserted during critical edge breaking.
+    PredecessorList loopAnalysisPredecessors(PredecessorList& predecessors)
+    {
+        PredecessorList result;
+        Deque<BasicBlock*> queue;
+        for (BasicBlock* predecessor : predecessors)
+            queue.append(predecessor);
+
+        while (!queue.isEmpty()) {
+            BasicBlock* current = queue.takeFirst();
+            if (current->isJumpPad()) {
+                for (BasicBlock* predecessor : current->predecessors)
+                    queue.append(predecessor);
+            } else
+                result.append(current);
+        }
+        return result;
+    }
+
+    // Returns the true successor of a block prior to edge-breaking by skipping through
+    // intermediate jump pads inserted on critical edges.
+    BasicBlock* loopAnalysisSuccessor(BasicBlock* successor)
+    {
+        while (successor->isJumpPad())
+            successor = successor->successor(0);
+        return successor;
     }
 
     bool locatePreHeader(LoopData& data)
@@ -198,14 +289,16 @@ public:
         BasicBlock* preHeader = nullptr;
         BasicBlock* header = data.header();
 
+        PredecessorList predecessors = loopAnalysisPredecessors(header->predecessors);
+
         // This is guaranteed because we expect the CFG not to have unreachable code. Therefore, a
         // loop header must have a predecessor. (Also, we don't allow the root block to be a loop,
         // which cuts out the one other way of having a loop header with only one predecessor.)
-        DFG_ASSERT(m_graph, header->at(0), header->predecessors.size() > 1, header->predecessors.size());
+        DFG_ASSERT(m_graph, header->at(0), predecessors.size() > 1, predecessors.size());
 
         uint32_t preHeaderCount = 0;
-        for (uint32_t i = header->predecessors.size(); i--;) {
-            BasicBlock* predecessor = header->predecessors[i];
+        for (uint32_t i = predecessors.size(); i--;) {
+            BasicBlock* predecessor = predecessors[i];
             if (m_graph.m_cpsDominators->dominates(header, predecessor))
                 continue;
 
@@ -223,51 +316,52 @@ public:
     bool locateTail(LoopData& data)
     {
         BasicBlock* header = data.header();
-        BasicBlock* tail = nullptr;
 
-        for (BasicBlock* predecessor : header->predecessors) {
+        // TailBlock: A block that branches back to the header (i.e., loop back edge)
+        BasicBlock* tail = nullptr;
+        for (BasicBlock* predecessor : loopAnalysisPredecessors(header->predecessors)) {
             if (!m_graph.m_cpsDominators->dominates(header, predecessor))
                 continue;
-
             if (tail) {
                 dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it contains two tails: ", *predecessor, " and ", *tail);
                 return false;
             }
-
             tail = predecessor;
         }
-
         if (!tail) {
             dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it has no tail");
             return false;
         }
 
-        // PreHeader                          PreHeader
-        //  |                                  |
-        // Header <---                        Header_0
-        //  |        |       unrolled to       |
-        //  |       Tail  =================>  Branch_0
-        //  |        |                         |
-        // Branch ----                        Tail_0
-        //  |                                  |
-        // Next                               ...
-        //                                     |
-        //                                    Header_n
-        //                                     |
-        //                                    Branch_n
-        //                                     |
-        //                                    Next
-        //
-        // FIXME: This is not supported yet. We should do it only if it's profitable.
+        // ExitBlock: A block that exits the loop.
+        BasicBlock* exit = nullptr;
+        for (uint32_t i = 0; i < data.loopSize(); ++i) {
+            BasicBlock* body = data.loopBody(i);
+            for (BasicBlock* successor : body->successors()) {
+                if (data.loop->contains(successor))
+                    continue;
+                if (exit) {
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it contains two exit blocks: ", *body, " and ", *exit);
+            return false;
+        }
+                exit = body;
+            }
+        }
+
+        if (tail != exit) {
+            dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since the exit ", *exit, " and tail ", *tail, " are not the same one");
+            return false;
+        }
+
         if (!tail->terminal()->isBranch()) {
-            dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since it has a non-branch tail");
+            dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header, " since the tail ", *tail, " has a non-branch terminal");
             return false;
         }
 
         for (BasicBlock* successor : tail->successors()) {
             if (data.loop->contains(successor))
                 continue;
-            data.next = successor;
+            data.next = loopAnalysisSuccessor(successor);
         }
         data.tail = tail;
 
@@ -282,24 +376,17 @@ public:
         // Next
         //
         // Determine if the condition should be inverted based on whether the "not taken" branch points into the loop.
-        Node* terminal = tail->terminal();
-        ASSERT(terminal->op() == Branch);
-        if (data.loop->contains(terminal->branchData()->notTaken.block)) {
-            // If tail's branch is both jumping into the loop, then it is not a tail.
-            // This happens when we already unrolled this loop before.
-            if (data.loop->contains(terminal->branchData()->taken.block))
-                return false;
-            data.inverseCondition = true;
-        } else
-            data.inverseCondition = false;
+        data.invertCondition = data.loop->contains(tail->successor(1));
+        ASSERT(data.loop->contains(tail->successor(0)) == !data.shouldInvertCondition());
 
+        ASSERT(tail->terminal()->op() == Branch && data.loopTarget(tail)->isJumpPad());
         return true;
     }
 
     bool isSupportedConditionOp(NodeType op);
     bool isSupportedUpdateOp(NodeType op);
 
-    ComparisonFunction comparisonFunction(Node* condition, bool inverseCondition);
+    ComparisonFunction comparisonFunction(Node* condition, bool inverse);
     UpdateFunction updateFunction(Node* update);
 
     bool identifyInductionVariable(LoopData& data)
@@ -322,10 +409,10 @@ public:
 
             // Condition right
             Edge operand = condition->child2();
-            if (!operand->isInt32Constant() || operand.useKind() != Int32Use)
-                return false;
-
-            data.operand = condition->child2()->asInt32();
+            if (operand->isInt32Constant() && operand.useKind() == Int32Use)
+                data.operand.emplace<CheckedInt32>(operand->asInt32());
+            else
+                data.operand.emplace<Node*>(operand.node());
             data.update = condition->child1().node();
             data.updateValue = update->child2()->asInt32();
             data.inductionVariable = condition->child1()->child1().node();
@@ -338,14 +425,18 @@ public:
 
         auto isInitialValueValid = [&]() ALWAYS_INLINE_LAMBDA {
             Node* initialization = nullptr;
-            for (Node* n : *data.preHeader) {
-                if (n->op() != SetLocal || !data.isInductionVariable(n))
+            for (Node* node : *data.preHeader) {
+                if (node->op() != SetLocal || !data.isInductionVariable(node))
                     continue;
-                initialization = n;
+                initialization = node;
             }
-            if (!initialization || !initialization->child1()->isInt32Constant())
+            if (!initialization)
                 return false;
-            data.initialValue = initialization->child1()->asInt32();
+            Node* initialValue = initialization->child1().node();
+            if (initialValue->isInt32Constant())
+                data.initialValue.emplace<CheckedInt32>(initialValue->asInt32());
+            else
+                data.initialValue.emplace<Node*>(initialValue);
             return true;
         };
         if (!isInitialValueValid()) {
@@ -376,12 +467,12 @@ public:
             return false;
         }
 
-        // Compute the number of iterations in the loop.
-        {
+        // Compute the number of iterations in the loop, if it has a constant iteration count.
+        if (data.shouldFullyUnroll()) {
             CheckedUint32 iterationCount = 0;
-            auto compare = comparisonFunction(condition, data.inverseCondition.value());
+            auto compare = comparisonFunction(condition, data.shouldInvertCondition());
             auto update = updateFunction(data.update);
-            for (CheckedInt32 i = data.initialValue; compare(i, data.operand);) {
+            for (CheckedInt32 i = std::get<CheckedInt32>(data.initialValue); compare(i, std::get<CheckedInt32>(data.operand));) {
                 if (iterationCount > Options::maxLoopUnrollingIterationCount()) {
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since maxLoopUnrollingIterationCount =", Options::maxLoopUnrollingIterationCount());
                     return false;
@@ -406,9 +497,8 @@ public:
         return true;
     }
 
-    bool shouldUnrollLoop(LoopData& data)
+    bool isLoopBodyUnrollable(LoopData& data)
     {
-        uint32_t totalNodeCount = 0;
         for (uint32_t i = 0; i < data.loopSize(); ++i) {
             BasicBlock* body = data.loopBody(i);
             if (!body->isReachable) {
@@ -420,156 +510,197 @@ public:
             // If the block is unreachable or invalid in the CFG, we can directly
             // ignore the loop, avoiding unnecessary cloneability checks for nodes in invalid blocks.
 
-            totalNodeCount += body->size();
-            if (totalNodeCount > Options::maxLoopUnrollingBodyNodeSize()) {
-                dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " and loop node count=", totalNodeCount, " since maxLoopUnrollingBodyNodeSize =", Options::maxLoopUnrollingBodyNodeSize());
+            UncheckedKeyHashSet<Node*> cloneableCache;
+            uint32_t exitEarlyLimit = data.maxAllowedUnrollSize();
+            for (Node* node : *body) {
+                if (data.materialNodeCount > exitEarlyLimit) {
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " and loop node count=", data.materialNodeCount, " since exitEarlyLimit=", exitEarlyLimit);
                 return false;
             }
-        }
-        return true;
-    }
 
-    bool canCloneLoop(LoopData& data)
-    {
-        HashSet<Node*> cloneableCache;
-        for (uint32_t i = 0; i < data.loopSize(); ++i) {
-            BasicBlock* body = data.loopBody(i);
-            for (Node* node : *body) {
-                if (!isNodeCloneable(cloneableCache, node)) {
+                if (node->op() == StringFromCharCode) {
+                    // Not supported due to performance regression rdar://150526635
+                    dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since ", node, "<", node->op(), "> is not supported");
+                    return false;
+        }
+
+                bool isCloneable = CloneHelper::isNodeCloneable(m_graph, cloneableCache, node);
+#if ASSERT_ENABLED
+                ASSERT(CloneHelper::debugVisitingSet().isEmpty());
+#endif
+                if (!isCloneable) {
                     dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *data.header(), " since D@", node->index(), " with op ", node->op(), " is not cloneable");
                     return false;
                 }
+
+                data.analyzeLoopNode(m_graph, node);
             }
         }
-        return true;
-    }
 
-    BasicBlock* makeBlock(uint32_t executionCount = 0)
-    {
-        auto* block = m_blockInsertionSet.insert(m_graph.numBlocks(), executionCount);
-        block->cfaHasVisited = false;
-        block->cfaDidFinish = false;
-        return block;
+        if (Options::verboseLoopUnrolling()) [[unlikely]]
+            dumpLoopNodeTypeStats(data);
+
+        return data.isProfitableToUnroll();
     }
 
     void unrollLoop(LoopData& data)
     {
+        dataLogLnIf(Options::verboseLoopUnrolling(), data.shouldFullyUnroll() ?  "Fully" : "Partially", " unrolling...");
+
         BasicBlock* const header = data.header();
         BasicBlock* const tail = data.tail;
+        BasicBlock* const next = data.next;
 
-        dataLogLnIf(Options::verboseLoopUnrolling(), "tailTerminalOriginSemantic ", tail->terminal()->origin.semantic);
-
-        // Mapping from the origin to the clones.
-        UncheckedKeyHashMap<BasicBlock*, BasicBlock*> blockClones;
-        UncheckedKeyHashMap<Node*, Node*> nodeClones;
-
-        auto replaceOperands = [&](auto& nodes) ALWAYS_INLINE_LAMBDA {
-            for (uint32_t i = 0; i < nodes.size(); ++i) {
-                if (auto& node = nodes.at(i)) {
-                    auto itr = nodeClones.find(node);
-                    if (itr != nodeClones.end())
-                        node = itr->value;
+        NodeOrigin tailTerminalOriginSemantic = data.tail->terminal()->origin;
+        //  ### Constant ###         ### Partial ###
+        //
+        //  PreHeader                 PreHeader
+        //   |                          |
+        //  BodyGraph_0             -> BodyGraph_0 --
+        //   |                      |   |           |
+        //   |                      |T  |T          |F
+        //   |                      |   |           |
+        //  BodyGraph_1             -- BodyGraph_1  |
+        //   |                          |F          |
+        //  Next                       Next <--------
+        auto updateTailBranch = [&](BasicBlock* tail, BasicBlock* taken) {
+            if (data.shouldFullyUnroll()) {
+                // We can directly use jump here as CPSRethreading phase (re)computes variablesAtHead/Tail for basic blocks.
+                tail->terminal()->removeWithoutChecks();
+                tail->appendNode(m_graph, SpecNone, Jump, tailTerminalOriginSemantic, OpInfo(taken));
+            } else {
+                // Since loop bodies are copied and appended in bottom-up order, the first cloned body should branch to the original header.
+                bool firstLoopBodyClone = taken == next;
+                data.loopTarget(tail) = firstLoopBodyClone ? header : taken;
+                data.exitTarget(tail) = next;
                 }
-            }
-        };
-
-        auto convertTailBranchToNextJump = [&](BasicBlock* tail, BasicBlock* next) {
-            // Why don't we use Jump instead of Branch? The reason is tail's original terminal was Branch.
-            // If we change this from Branch to Jump, we need to preserve how variables are used (via GetLocal, MovHint, SetLocal)
-            // not to confuse these variables liveness, it involves what blocks are used for successors of this tail block.
-            // Here, we can simplify the problem by using Branch and using the original "header" successors as never-taken branch.
-            // FTL's subsequent pass will optimize this and convert this Branch to Jump and/or eliminate this Branch and merge
-            // multiple blocks easily since its condition is constant boolean True. But we do not need to do the complicated analysis
-            // here. So let's just use Branch.
-            ASSERT(tail->terminal()->isBranch());
-            auto* constant = m_graph.addNode(SpecBoolean, JSConstant, tail->terminal()->origin, OpInfo(m_graph.freezeStrong(jsBoolean(true))));
-            tail->insertBeforeTerminal(constant);
-            auto* terminal = tail->terminal();
-            terminal->child1() = Edge(constant, KnownBooleanUse);
-            terminal->branchData()->taken = BranchTarget(next);
-            terminal->branchData()->notTaken = BranchTarget(header);
         };
 
 #if ASSERT_ENABLED
         m_graph.initializeNodeOwners(); // This is only used for the debug assertion in cloneNodeImpl.
 #endif
 
-        BasicBlock* next = data.next;
+        BasicBlock* taken = next;
+        uint32_t cloneCount = 0;
+        if (data.shouldFullyUnroll()) {
         ASSERT(!data.iterationCount.hasOverflowed() && data.iterationCount);
-        for (uint32_t cloneCount = data.iterationCount - 1; cloneCount--;) {
-            blockClones.clear();
-            nodeClones.clear();
+            cloneCount = data.iterationCount - 1;
+        } else
+            cloneCount = Options::maxPartialLoopUnrollingIterationCount() - 1;
 
-            // 1. Initialize all block clones.
+        while (cloneCount--) {
+            m_cloneHelper.clear();
+            taken = m_cloneHelper.cloneBlock(header, [&](BasicBlock* block, BasicBlock* clone) {
+                ASSERT(clone == m_cloneHelper.blockClone(block));
+                if (block != tail)
+                    return false;
+                ASSERT(tail->terminal()->isBranch());
+                updateTailBranch(clone, taken);
+                return true;
+            });
+
+#if ASSERT_ENABLED
             for (uint32_t i = 0; i < data.loopSize(); ++i) {
                 BasicBlock* body = data.loopBody(i);
-                blockClones.add(body, makeBlock(body->executionCount));
+                // After breaking critical edge, a jump pad is inserted between the edge from
+                // tail to the header. However, we don't explicitly copy the jump pad in this phase
+                // since it can be handled in the later DFGCriticalEdgeBreakingPhase.
+                if (body == data.loopTarget(tail) && body->isJumpPad())
+                    continue;
+                ASSERT(m_cloneHelper.blockClone(body));
             }
-
-            for (uint32_t i = 0; i < data.loopSize(); ++i) {
-                BasicBlock* const body = data.loopBody(i);
-                BasicBlock* const clone = blockClones.get(body);
-
-                // 2. Clone Phis.
-                clone->phis.resize(body->phis.size());
-                for (size_t i = 0; i < body->phis.size(); ++i) {
-                    Node* bodyPhi = body->phis[i];
-                    Node* phiClone = m_graph.addNode(bodyPhi->prediction(), bodyPhi->op(), bodyPhi->origin, OpInfo(bodyPhi->variableAccessData()));
-                    nodeClones.add(bodyPhi, phiClone);
-                    clone->phis[i] = phiClone;
-                }
-
-                // 3. Clone nodes.
-                for (Node* node : *body)
-                    cloneNode(nodeClones, clone, node);
-
-                // 4. Clone variables and tail and head.
-                clone->variablesAtTail = body->variablesAtTail;
-                replaceOperands(clone->variablesAtTail);
-                clone->variablesAtHead = body->variablesAtHead;
-                replaceOperands(clone->variablesAtHead);
-
-                // 5. Clone successors. (predecessors will be fixed in resetReachability below)
-                if (body == tail) {
-                    ASSERT(tail->terminal()->isBranch());
-                    convertTailBranchToNextJump(clone, next);
-                } else {
-                    for (uint32_t i = 0; i < body->numSuccessors(); ++i) {
-                        auto& successor = clone->successor(i);
-                        ASSERT(successor == body->successor(i));
-                        if (data.loop->contains(successor))
-                            successor = blockClones.get(successor);
-                    }
-                }
-            }
-
-            next = blockClones.get(header);
+#endif
         }
+        updateTailBranch(tail, taken);
 
-        // 6. Replace the original loop tail branch with a jump to the last header clone.
-        convertTailBranchToNextJump(tail, next);
-
-        // Done clone.
-        if (!m_blockInsertionSet.execute()) {
-            m_graph.invalidateCFG();
-            m_graph.dethread();
-        }
-        m_graph.resetReachability();
-        m_graph.killUnreachableBlocks();
+        m_cloneHelper.finalize();
         ASSERT(m_graph.m_form == LoadStore);
-    }
 
-    bool isNodeCloneable(HashSet<Node*>& cloneableCache, Node*);
-    Node* cloneNode(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node*);
-    Node* cloneNodeImpl(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node*);
+        m_unrolledLoopHeaders.add(header);
+                }
+
+    FunctionAllowlist& functionAllowlist();
+
+    void dumpLoopNodeTypeStats(LoopData&);
 
 private:
-    BlockInsertionSet m_blockInsertionSet;
+    CloneHelper m_cloneHelper;
+    UncheckedKeyHashSet<BasicBlock*> m_unrolledLoopHeaders;
 };
 
 bool performLoopUnrolling(Graph& graph)
 {
     return runPhase<LoopUnrollingPhase>(graph);
+}
+
+bool LoopUnrollingPhase::LoopData::isProfitableToUnroll()
+{
+    auto isNumericHotLoop = [&]() {
+        // Unroll hot loops dominated by numeric computations and local access
+        return nonJumpPadBlockCount == 1
+            && ratio(numericComputationCount) > 0.3
+            && ratio(localAccessCount) > 0.4
+            && materialNodeCount > 160 // FIXME: Remove this threshold rdar://150955614.
+            && materialNodeCount < Options::maxNumericHotLoopSize();
+    };
+
+    if (isNumericHotLoop())
+        return true;
+
+    if (materialNodeCount > generalUnrollSizeLimit()) {
+        dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header(), " and loop node count=", materialNodeCount, " since generalUnrollSizeLimit=", generalUnrollSizeLimit());
+        return false;
+        }
+
+    if (putByValCount && !getByValCount) {
+        // Avoid unrolling loops that only perform stores. These tend to increase code size
+        // without improving performance, since they are often memory-bound and unrolling
+        // doesn't expose additional optimization opportunities. (e.g., rdar://150524264)
+        dataLogLnIf(Options::verboseLoopUnrolling(), "Skipping loop with header ", *header(), " since putByValCount=", putByValCount, " getByValCount=", getByValCount);
+        return false;
+    }
+
+    return true;
+}
+
+// This can be extended to count other categories, such as arithmetic operations,
+// and get/set operations for locals.
+void LoopUnrollingPhase::LoopData::analyzeLoopNode(Graph& graph, Node* node)
+{
+    // Count only nodes that would generate real code. Helps avoid overestimating
+    // loop body size due to Phantom or ExitOK, etc.
+    if (isMaterialNode(graph, node))
+        ++materialNodeCount;
+
+    if (node->op() == PutByVal)
+        ++putByValCount;
+    if (node->op() == GetByVal)
+        ++getByValCount;
+
+    if (isNumericComputationNode(node))
+        ++numericComputationCount;
+    if (isLocalAccessNode(node))
+        ++localAccessCount;
+}
+
+void LoopUnrollingPhase::dumpLoopNodeTypeStats(LoopData& data)
+{
+    dataLogLn("Loop unrolling candidate of function ", m_graph.m_codeBlock->inferredNameWithHash(), " with data=", data);
+    Vector<uint32_t> counter(numberOfNodeTypes + 1, 0);
+    for (uint32_t i = 0; i < data.loopSize(); ++i) {
+        BasicBlock* body = data.loopBody(i);
+        for (Node* node : *body)
+            if (data.isMaterialNode(m_graph, node))
+                ++counter[static_cast<uint32_t>(node->op())];
+    }
+
+    for (uint32_t i = 0; i < counter.size(); i++) {
+        uint32_t count = counter[i];
+        if (count)
+            dataLogLn("  ", static_cast<NodeType>(i), ": count = ", count, ", ratio = ", data.ratio(count));
+    }
+    dataLogLn("  numericComputationCount=", data.numericComputationCount, ", ratio=", data.ratio(data.numericComputationCount));
+    dataLogLn("  localAccessCount=", data.localAccessCount, ", ratio=", data.ratio(data.localAccessCount));
 }
 
 void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
@@ -609,8 +740,15 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
         out.print("<null>");
     out.print(", ");
 
-    out.print("initValue=", initialValue, ", ");
-    out.print("operand=", operand, ", ");
+    if (auto* value = std::get_if<CheckedInt32>(&initialValue))
+        out.print("initValue=", *value, ", ");
+    else if (auto* value = std::get_if<Node*>(&initialValue))
+        out.print("initValue=", *value, ", ");
+
+    if (auto* value = std::get_if<CheckedInt32>(&operand))
+        out.print("operand=", *value, ", ");
+    else if (auto* value = std::get_if<Node*>(&operand))
+        out.print("operand=", *value, ", ");
 
     out.print("update=");
     if (update)
@@ -623,196 +761,14 @@ void LoopUnrollingPhase::LoopData::dump(PrintStream& out) const
 
     out.print("iterationCount=", iterationCount, ", ");
 
-    out.print("inverseCondition=", inverseCondition);
-}
+    if (invertCondition.has_value())
+        out.print("inverseCondition=", shouldInvertCondition(), ", ");
+    else
+        out.print("inverseCondition=<NULL>, ");
 
-bool LoopUnrollingPhase::isNodeCloneable(HashSet<Node*>& cloneableCache, Node* node)
-{
-    if (cloneableCache.contains(node))
-        return true;
+    out.print("nonJumpPadBlockCount=", nonJumpPadBlockCount, ", ");
 
-    bool result = true;
-    switch (node->op()) {
-    case Phi:
-        break;
-    case ValueRep:
-    case DoubleRep:
-    case PurifyNaN:
-    case JSConstant:
-    case LoopHint:
-    case PhantomLocal:
-    case SetArgumentDefinitely:
-    case Jump:
-    case Branch:
-    case MovHint:
-    case ExitOK:
-    case ZombieHint:
-    case InvalidationPoint:
-    case Check:
-    case CheckVarargs:
-    case Flush:
-    case GetLocal:
-    case SetLocal:
-    case GetButterfly:
-    case CheckArray:
-    case AssertNotEmpty:
-    case CheckStructure:
-    case FilterCallLinkStatus:
-    case ArrayifyToStructure:
-    case NewArrayWithConstantSize:
-    case NewArrayWithSize:
-    case ValueToInt32:
-    case ArithAdd:
-    case ArithSub:
-    case ArithMul:
-    case ArithDiv:
-    case ArithMod:
-    case ArithBitAnd:
-    case ArithBitOr:
-    case ArithBitNot:
-    case ArithBitRShift:
-    case ArithBitLShift:
-    case ArithBitXor:
-    case BitURShift:
-    case CompareLess:
-    case CompareLessEq:
-    case CompareGreater:
-    case CompareGreaterEq:
-    case CompareEq:
-    case CompareStrictEq:
-    case PutByVal:
-    case PutByValAlias:
-    case GetByVal: {
-        m_graph.doToChildrenWithCheck(node, [&](Edge& edge) {
-            if (isNodeCloneable(cloneableCache, edge.node()))
-                return IterationStatus::Continue;
-            result = false;
-            return IterationStatus::Done;
-        });
-        break;
-    }
-    default:
-        result = false;
-    }
-
-    if (result)
-        cloneableCache.add(node);
-    return result;
-}
-
-Node* LoopUnrollingPhase::cloneNode(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node* node)
-{
-    ASSERT(node);
-    auto itr = nodeClones.find(node);
-    if (itr != nodeClones.end())
-        return itr->value;
-    Node* result = cloneNodeImpl(nodeClones, into, node);
-    ASSERT(result);
-    nodeClones.add(node, result);
-    return result;
-}
-
-Node* LoopUnrollingPhase::cloneNodeImpl(UncheckedKeyHashMap<Node*, Node*>& nodeClones, BasicBlock* into, Node* node)
-{
-#if ASSERT_ENABLED
-    m_graph.doToChildren(node, [&](Edge& e) {
-        ASSERT(e.node()->owner == node->owner);
-    });
-#endif
-
-    auto cloneEdge = [&](Edge& edge) ALWAYS_INLINE_LAMBDA {
-        return edge ? Edge(cloneNode(nodeClones, into, edge.node()), edge.useKind()) : Edge();
-    };
-
-    switch (node->op()) {
-    case Phi: {
-        // Phi nodes should already be cloned in the step 2 of unrollLoop.
-        RELEASE_ASSERT_NOT_REACHED();
-        return nullptr;
-    }
-    case Branch: {
-        Node* clone = into->cloneAndAppend(m_graph, node);
-        clone->setOpInfo(OpInfo(m_graph.m_branchData.add(WTFMove(*node->branchData()))));
-        clone->child1() = cloneEdge(node->child1());
-        return clone;
-    }
-    case PutByVal:
-    case GetByVal:
-    case PutByValAlias:
-    case CheckVarargs: {
-        if (node->hasVarArgs()) {
-            size_t firstChild = m_graph.m_varArgChildren.size();
-
-            uint32_t validChildrenCount = 0;
-            m_graph.doToChildren(node, [&](Edge& edge) {
-                m_graph.m_varArgChildren.append(cloneEdge(edge));
-                ++validChildrenCount;
-            });
-
-            uint32_t expectedCount = m_graph.numChildren(node);
-            for (uint32_t i = validChildrenCount; i < expectedCount; ++i)
-                m_graph.m_varArgChildren.append(Edge());
-
-            Node* clone = into->cloneAndAppend(m_graph, node);
-            clone->children.setFirstChild(firstChild);
-            return clone;
-        }
-        FALLTHROUGH;
-    }
-    case ValueRep:
-    case DoubleRep:
-    case PurifyNaN:
-    case ExitOK:
-    case LoopHint:
-    case GetButterfly:
-    case JSConstant:
-    case Jump:
-    case CompareLess:
-    case CompareLessEq:
-    case CompareGreater:
-    case CompareGreaterEq:
-    case CompareEq:
-    case CompareStrictEq:
-    case CheckStructure:
-    case ArithBitNot:
-    case ArrayifyToStructure:
-    case ArithBitAnd:
-    case ArithBitOr:
-    case ArithBitRShift:
-    case ArithBitLShift:
-    case ArithBitXor:
-    case BitURShift:
-    case ArithAdd:
-    case ArithSub:
-    case ArithMul:
-    case ArithDiv:
-    case ArithMod:
-    case CheckArray:
-    case FilterCallLinkStatus:
-    case GetLocal:
-    case MovHint:
-    case Flush:
-    case ZombieHint:
-    case SetLocal:
-    case PhantomLocal:
-    case Check:
-    case AssertNotEmpty:
-    case SetArgumentDefinitely:
-    case NewArrayWithSize:
-    case NewArrayWithConstantSize:
-    case ValueToInt32:
-    case InvalidationPoint: {
-        Node* clone = into->cloneAndAppend(m_graph, node);
-        clone->child1() = cloneEdge(node->child1());
-        clone->child2() = cloneEdge(node->child2());
-        clone->child3() = cloneEdge(node->child3());
-        return clone;
-    }
-    default:
-        dataLogLnIf(Options::verboseLoopUnrolling(), "Could not clone node: ", node, " into ", into);
-        RELEASE_ASSERT_NOT_REACHED();
-        return nullptr;
-    }
+    out.print("materialNodeCount=", materialNodeCount);
 }
 
 // FIXME: Add more condition and update operations if they are profitable.
@@ -844,7 +800,7 @@ bool LoopUnrollingPhase::isSupportedUpdateOp(NodeType op)
     }
 }
 
-LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(Node* condition, bool inverseCondition)
+LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(Node* condition, bool inverse)
 {
     static const ComparisonFunction less = [](auto a, auto b) { return a < b; };
     static const ComparisonFunction lessEq = [](auto a, auto b) { return a <= b; };
@@ -855,16 +811,16 @@ LoopUnrollingPhase::ComparisonFunction LoopUnrollingPhase::comparisonFunction(No
 
     switch (condition->op()) {
     case CompareLess:
-        return inverseCondition ? greaterEq : less;
+        return inverse ? greaterEq : less;
     case CompareLessEq:
-        return inverseCondition ? greater : lessEq;
+        return inverse ? greater : lessEq;
     case CompareGreater:
-        return inverseCondition ? lessEq : greater;
+        return inverse ? lessEq : greater;
     case CompareGreaterEq:
-        return inverseCondition ? less : greaterEq;
+        return inverse ? less : greaterEq;
     case CompareEq:
     case CompareStrictEq:
-        return inverseCondition ? notEqual : equal;
+        return inverse ? notEqual : equal;
     default:
         RELEASE_ASSERT_NOT_REACHED();
         return [](auto, auto) { return false; };
@@ -886,6 +842,127 @@ LoopUnrollingPhase::UpdateFunction LoopUnrollingPhase::updateFunction(Node* upda
         RELEASE_ASSERT_NOT_REACHED();
         return [](auto, auto) { return CheckedInt32(); };
     }
+}
+
+bool LoopUnrollingPhase::LoopData::isMaterialNode(Graph& graph, Node* node)
+{
+    switch (node->op()) {
+    // This aligns with DFGDCEPhase.
+    case Check:
+    case Phantom:
+        if (node->children.isEmpty())
+            return false;
+        break;
+    case CheckVarargs: {
+        bool isEmpty = true;
+        graph.doToChildren(node, [&] (Edge edge) {
+            isEmpty &= !edge;
+        });
+        if (isEmpty)
+            return false;
+        break;
+    }
+    // This aligns with LowerDFGToB3::compileNode.
+    case PhantomLocal:
+    case MovHint:
+    case ZombieHint:
+    case ExitOK:
+    case PhantomNewObject:
+    case PhantomNewArrayWithConstantSize:
+    case PhantomNewFunction:
+    case PhantomNewGeneratorFunction:
+    case PhantomNewAsyncGeneratorFunction:
+    case PhantomNewAsyncFunction:
+    case PhantomNewInternalFieldObject:
+    case PhantomCreateActivation:
+    case PhantomDirectArguments:
+    case PhantomCreateRest:
+    case PhantomSpread:
+    case PhantomNewArrayWithSpread:
+    case PhantomNewArrayBuffer:
+    case PhantomClonedArguments:
+    case PhantomNewRegExp:
+    case PutHint:
+    case BottomValue:
+    case KillStack:
+    case InitializeEntrypointArguments:
+        return false;
+    default:
+        break;
+    }
+    return true;
+}
+
+bool LoopUnrollingPhase::LoopData::isNumericComputationNode(Node* node)
+{
+    switch (node->op()) {
+    // Arithmetic operations
+    case ArithBitNot:
+    case ArithBitAnd:
+    case ArithBitOr:
+    case ArithBitXor:
+    case ArithBitLShift:
+    case ArithBitRShift:
+    case ArithAdd:
+    case ArithClz32:
+    case ArithSub:
+    case ArithNegate:
+    case ArithMul:
+    case ArithIMul:
+    case ArithDiv:
+    case ArithMod:
+    case ArithAbs:
+    case ArithMin:
+    case ArithMax:
+    case ArithFRound:
+    case ArithF16Round:
+    case ArithPow:
+    case ArithRandom:
+    case ArithRound:
+    case ArithFloor:
+    case ArithCeil:
+    case ArithTrunc:
+    case ArithSqrt:
+    case ArithUnary:
+
+    // Representations
+    case DoubleRep:
+    case Int52Rep:
+    case ValueRep:
+
+    // Numeric constants
+    case DoubleConstant:
+    case Int52Constant:
+        return true;
+    case JSConstant:
+        if (node->isNumberConstant())
+            return true;
+        [[fallthrough]];
+    default:
+        return false;
+    }
+}
+
+bool LoopUnrollingPhase::LoopData::isLocalAccessNode(Node* node)
+{
+    switch (node->op()) {
+    case GetLocal:
+    case SetLocal:
+        return true;
+    default:
+        return false;
+    }
+}
+
+FunctionAllowlist& LoopUnrollingPhase::functionAllowlist()
+{
+    static LazyNeverDestroyed<FunctionAllowlist> allowList;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::loopUnrollingAllowlist();
+        allowList.construct(functionAllowlistFile);
+    });
+    return allowList;
 }
 
 }

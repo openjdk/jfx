@@ -59,7 +59,7 @@ public:
     void draw(GraphicsContext&, const FloatRect&) const final;
 
     Image* image() const { return m_image.get(); }
-    void setImage(Image& image) { m_image = &image; }
+    void setImage(Image& image) { m_image = image; }
 
     RenderingResourceIdentifier imageIdentifier() const;
 
@@ -67,7 +67,7 @@ private:
     friend struct IPC::ArgumentCoder<ARKitBadgeSystemImage, void>;
     ARKitBadgeSystemImage(Image& image)
         : SystemImage(SystemImageType::ARKitBadge)
-        , m_image(&image)
+        , m_image(image)
         , m_imageSize(image.size())
     {
     }

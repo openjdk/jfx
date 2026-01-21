@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER)
 
 #define DUMP_LINK_STATISTICS 0
@@ -385,7 +387,7 @@ private:
     static void dumpCode(void* code, size_t);
 #endif
 
-    void logJITCodeForPerf(CodeRef<LinkBufferPtrTag>&, ASCIILiteral);
+    void logJITCodeForJITDump(CodeRef<LinkBufferPtrTag>&, ASCIILiteral);
 
     RefPtr<ExecutableMemoryHandle> m_executableMemory;
     size_t m_size { 0 };
@@ -417,9 +419,11 @@ private:
 };
 
 #define FINALIZE_CODE_IF(condition, linkBufferReference, resultPtrTag, simpleName, ...) \
-    (UNLIKELY((condition) || JSC::Options::logJIT()) \
-        ? (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>((condition), simpleName, __VA_ARGS__) \
-        : (linkBufferReference).finalizeCodeWithoutDisassembly<resultPtrTag>(simpleName))
+    ([&]() { \
+        if ((condition) || JSC::Options::logJIT()) [[unlikely]] \
+            return (linkBufferReference).finalizeCodeWithDisassembly<resultPtrTag>((condition), simpleName, __VA_ARGS__); \
+        return (linkBufferReference).finalizeCodeWithoutDisassembly<resultPtrTag>(simpleName); \
+    }())
 
 #define FINALIZE_CODE_FOR(codeBlock, linkBufferReference, resultPtrTag, simpleName, ...)  \
     FINALIZE_CODE_IF((shouldDumpDisassemblyFor(codeBlock) || Options::asyncDisassembly()), linkBufferReference, resultPtrTag, simpleName, __VA_ARGS__)

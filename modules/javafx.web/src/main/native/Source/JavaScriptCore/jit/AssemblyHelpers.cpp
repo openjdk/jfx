@@ -277,7 +277,7 @@ void AssemblyHelpers::jitAssertCodeBlockMatchesCurrentCalleeCodeBlockOnCallFrame
         return;
     if (block.codeType() != FunctionCode)
         return;
-    auto kind = block.isConstructor() ? CodeForConstruct : CodeForCall;
+    auto kind = block.isConstructor() ? CodeSpecializationKind::CodeForConstruct : CodeSpecializationKind::CodeForCall;
     JIT_COMMENT(*this, "jitAssertCodeBlockMatchesCurrentCalleeCodeBlockOnCallFrame with code block type: ", kind, " | ", scratchGPR, " = callFrame->callee->executableOrRareData");
 
     emitGetFromCallFrameHeaderPtr(CallFrameSlot::callee, scratchGPR);
@@ -370,7 +370,7 @@ AssemblyHelpers::Jump AssemblyHelpers::emitJumpIfException(VM& vm)
 
 AssemblyHelpers::Jump AssemblyHelpers::emitExceptionCheck(VM& vm, ExceptionCheckKind kind, ExceptionJumpWidth width, GPRReg exceptionReg)
 {
-    if (UNLIKELY(Options::useExceptionFuzz()))
+    if (Options::useExceptionFuzz()) [[unlikely]]
         callExceptionFuzz(vm, exceptionReg);
 
     if (width == FarJumpWidth)
@@ -801,9 +801,15 @@ void AssemblyHelpers::emitEncodeStructureID(RegisterID source, RegisterID dest)
 #if ENABLE(STRUCTURE_ID_WITH_SHIFT)
     urshift64(source, TrustedImm32(StructureID::encodeShiftAmount), dest);
 #elif CPU(ADDRESS64)
-    move(source, dest);
     static_assert(StructureID::structureIDMask <= UINT32_MAX);
-    and64(TrustedImm32(static_cast<uint32_t>(StructureID::structureIDMask)), dest);
+    // We don't guarantee the upper bits are cleared, since generally only
+    // the bottom 32 bits of the register are observed as the structure ID.
+    // So, we don't want to bother masking the register unless it's
+    // observable within those 32 bits.
+    if (StructureID::structureIDMask < UINT32_MAX)
+        and64(TrustedImm32(static_cast<uint32_t>(StructureID::structureIDMask)), source, dest);
+    else
+        move(source, dest);
 #else
     move(source, dest);
 #endif
@@ -849,18 +855,15 @@ void emitRandomThunkImpl(AssemblyHelpers& jit, GPRReg scratch0, GPRReg scratch1,
     storeToLow(scratch1);
 
     // x ^= x << 23;
-    jit.move(scratch0, scratch2);
-    jit.lshift64(AssemblyHelpers::TrustedImm32(23), scratch2);
+    jit.lshift64(scratch0, AssemblyHelpers::TrustedImm32(23), scratch2);
     jit.xor64(scratch2, scratch0);
 
     // x ^= x >> 17;
-    jit.move(scratch0, scratch2);
-    jit.rshift64(AssemblyHelpers::TrustedImm32(17), scratch2);
+    jit.urshift64(scratch0, AssemblyHelpers::TrustedImm32(17), scratch2);
     jit.xor64(scratch2, scratch0);
 
     // x ^= y ^ (y >> 26);
-    jit.move(scratch1, scratch2);
-    jit.rshift64(AssemblyHelpers::TrustedImm32(26), scratch2);
+    jit.urshift64(scratch1, AssemblyHelpers::TrustedImm32(26), scratch2);
     jit.xor64(scratch1, scratch2);
     jit.xor64(scratch2, scratch0);
 
@@ -871,8 +874,7 @@ void emitRandomThunkImpl(AssemblyHelpers& jit, GPRReg scratch0, GPRReg scratch1,
     jit.add64(scratch1, scratch0);
 
     // Extract random 53bit. [0, 53] bit is safe integer number ranges in double representation.
-    jit.move(AssemblyHelpers::TrustedImm64((1ULL << 53) - 1), scratch1);
-    jit.and64(scratch1, scratch0);
+    jit.and64(AssemblyHelpers::TrustedImm64((1ULL << 53) - 1), scratch0);
     // Now, scratch0 is always in range of int64_t. Safe to convert it to double with cvtsi2sdq.
     jit.convertInt64ToDouble(scratch0, result);
 
@@ -965,7 +967,7 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
     static_assert(FreeList::offsetOfNextInterval() - FreeList::offsetOfIntervalEnd() == sizeof(uintptr_t));
     static_assert(FreeList::offsetOfSecret() - FreeList::offsetOfNextInterval() == sizeof(uintptr_t));
 
-    // Bump allocation (fast path)
+    JIT_COMMENT(*this, "Bump allocation (fast path)");
     loadPairPtr(allocatorGPR, TrustedImm32(LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()), resultGPR, scratchGPR);
     popPath = branchPtr(RelationalCondition::AboveOrEqual, resultGPR, scratchGPR);
     auto bumpLabel = label();
@@ -978,7 +980,7 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
     storePtr(scratchGPR, Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()));
     done = jump();
 
-    // Get next interval (slower path)
+    JIT_COMMENT(*this, "Get next interval (slower path)");
     popPath.link(this);
     loadPairPtr(allocatorGPR, TrustedImm32(LocalAllocator::offsetOfFreeList() + FreeList::offsetOfNextInterval()), resultGPR, scratchGPR);
     zeroPath = branchTestPtr(ResultCondition::NonZero, resultGPR, TrustedImm32(1));
@@ -991,7 +993,7 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
     // On x86_64, we can leverage better support for memory operands to directly interact with the free
     // list instead of relying on registers as much.
 
-    // Bump allocation (fast path)
+    JIT_COMMENT(*this, "Bump allocation (fast path)");
     loadPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalStart()), resultGPR);
     popPath = branchPtr(RelationalCondition::AboveOrEqual, resultGPR, Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfIntervalEnd()));
     auto bumpLabel = label();
@@ -1003,7 +1005,7 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
     }
     done = jump();
 
-    // Get next interval (slower path)
+    JIT_COMMENT(*this, "Get next interval (slower path)");
     popPath.link(this);
     loadPtr(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfNextInterval()), resultGPR);
     zeroPath = branchTestPtr(ResultCondition::NonZero, resultGPR, TrustedImm32(1));
@@ -1062,29 +1064,43 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
 
 void AssemblyHelpers::emitAllocate(GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, GPRReg scratchGPR, JumpList& slowPath, SlowAllocationResult slowAllocationResult)
 {
-    if (allocator.isConstant()) {
+    switch (allocator.kind()) {
+    case JITAllocator::Constant:
         if (!allocator.allocator()) {
             slowPath.append(jump());
             return;
         }
-    } else
+        break;
+    case JITAllocator::Variable:
         slowPath.append(branchTestPtr(Zero, allocatorGPR));
+        break;
+    case JITAllocator::VariableNonNull:
+        break;
+    }
+
     emitAllocateWithNonNullAllocator(resultGPR, allocator, allocatorGPR, scratchGPR, slowPath, slowAllocationResult);
 }
 
-void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, CompleteSubspace& subspace, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult)
+void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, const JITAllocator& allocator, Address subspaceAllocatorsBase, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult)
 {
     static_assert(!(MarkedSpace::sizeStep & (MarkedSpace::sizeStep - 1)), "MarkedSpace::sizeStep must be a power of two.");
 
     unsigned stepShift = getLSBSet(MarkedSpace::sizeStep);
 
-    add32(TrustedImm32(MarkedSpace::sizeStep - 1), allocationSize, scratchGPR1);
-    urshift32(TrustedImm32(stepShift), scratchGPR1);
-    slowPath.append(branch32(Above, scratchGPR1, TrustedImm32(MarkedSpace::largeCutoff >> stepShift)));
-    move(TrustedImmPtr(subspace.allocatorForSizeStep()), scratchGPR2);
-    loadPtr(BaseIndex(scratchGPR2, scratchGPR1, ScalePtr), scratchGPR1);
+    addPtr(TrustedImm32(MarkedSpace::sizeStep - 1), allocationSize, scratchGPR1);
+    urshiftPtr(TrustedImm32(stepShift), scratchGPR1);
+    slowPath.append(branchPtr(Above, scratchGPR1, TrustedImmPtr(MarkedSpace::largeCutoff >> stepShift)));
+    JIT_COMMENT(*this, "Load the Allocator from the CompleteSubspace's buffer");
+    loadPtr(subspaceAllocatorsBase.indexedBy(scratchGPR1, ScalePtr), scratchGPR1);
 
-    emitAllocate(resultGPR, JITAllocator::variable(), scratchGPR1, scratchGPR2, slowPath, slowAllocationResult);
+    emitAllocate(resultGPR, allocator, scratchGPR1, scratchGPR2, slowPath, slowAllocationResult);
+}
+
+void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, CompleteSubspace& subspace, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult)
+{
+    JIT_COMMENT(*this, "Materialize Allocator buffer base");
+    move(TrustedImmPtr(subspace.allocatorsForSizeSteps().data()), scratchGPR2);
+    emitAllocateVariableSized(resultGPR, JITAllocator::variable(), Address(scratchGPR2, 0), allocationSize, scratchGPR1, scratchGPR2, slowPath, slowAllocationResult);
 }
 
 void AssemblyHelpers::restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFrame*& topEntryFrame)
@@ -1234,39 +1250,31 @@ void AssemblyHelpers::wangsInt64Hash(GPRReg inputAndResult, GPRReg scratch)
 {
     GPRReg input = inputAndResult;
     // key += ~(key << 32);
-    move(input, scratch);
-    lshift64(TrustedImm32(32), scratch);
+    lshift64(input, TrustedImm32(32), scratch);
     not64(scratch);
     add64(scratch, input);
     // key ^= (key >> 22);
-    move(input, scratch);
-    urshift64(TrustedImm32(22), scratch);
+    urshift64(input, TrustedImm32(22), scratch);
     xor64(scratch, input);
     // key += ~(key << 13);
-    move(input, scratch);
-    lshift64(TrustedImm32(13), scratch);
+    lshift64(input, TrustedImm32(13), scratch);
     not64(scratch);
     add64(scratch, input);
     // key ^= (key >> 8);
-    move(input, scratch);
-    urshift64(TrustedImm32(8), scratch);
+    urshift64(input, TrustedImm32(8), scratch);
     xor64(scratch, input);
     // key += (key << 3);
-    move(input, scratch);
-    lshift64(TrustedImm32(3), scratch);
+    lshift64(input, TrustedImm32(3), scratch);
     add64(scratch, input);
     // key ^= (key >> 15);
-    move(input, scratch);
-    urshift64(TrustedImm32(15), scratch);
+    urshift64(input, TrustedImm32(15), scratch);
     xor64(scratch, input);
     // key += ~(key << 27);
-    move(input, scratch);
-    lshift64(TrustedImm32(27), scratch);
+    lshift64(input, TrustedImm32(27), scratch);
     not64(scratch);
     add64(scratch, input);
     // key ^= (key >> 31);
-    move(input, scratch);
-    urshift64(TrustedImm32(31), scratch);
+    urshift64(input, TrustedImm32(31), scratch);
     xor64(scratch, input);
 
     // return static_cast<unsigned>(result)
@@ -1365,7 +1373,7 @@ void AssemblyHelpers::emitConvertValueToBoolean(VM& vm, JSValueRegs value, GPRRe
     done.link(this);
 }
 
-AssemblyHelpers::JumpList AssemblyHelpers::branchIfValue(VM& vm, JSValueRegs value, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg valueAsFPR, FPRReg tempFPR, bool shouldCheckMasqueradesAsUndefined, std::variant<JSGlobalObject*, GPRReg, LazyGlobalObjectLoadTag> globalObject, bool invert)
+AssemblyHelpers::JumpList AssemblyHelpers::branchIfValue(VM& vm, JSValueRegs value, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg valueAsFPR, FPRReg tempFPR, bool shouldCheckMasqueradesAsUndefined, Variant<JSGlobalObject*, GPRReg, LazyGlobalObjectLoadTag> globalObject, bool invert)
 {
     // Implements the following control flow structure:
     // if (value is cell) {
@@ -1868,7 +1876,7 @@ AssemblyHelpers::JumpList AssemblyHelpers::branchIfResizableOrGrowableSharedType
     return outOfBounds;
 }
 
-void AssemblyHelpers::loadTypedArrayByteLengthImpl(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, std::optional<TypedArrayType> typedArrayType, TypedArrayField field)
+std::tuple<AssemblyHelpers::Jump, AssemblyHelpers::JumpList> AssemblyHelpers::loadTypedArrayByteLengthImpl(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, std::optional<TypedArrayType> typedArrayType, TypedArrayField field)
 {
     ASSERT(scratchGPR != scratch2GPR);
     ASSERT(scratchGPR != valueGPR);
@@ -1983,10 +1991,6 @@ void AssemblyHelpers::loadTypedArrayByteLengthImpl(GPRReg baseGPR, GPRReg valueG
 #endif
     doneCases.append(jump());
 
-    outOfBounds.link(this);
-    move(TrustedImm32(0), valueGPR);
-    doneCases.append(jump());
-
     nonAutoLength.link(this);
     canUseRawFieldsDirectly.link(this);
 #if USE(LARGE_TYPED_ARRAYS)
@@ -2004,17 +2008,32 @@ void AssemblyHelpers::loadTypedArrayByteLengthImpl(GPRReg baseGPR, GPRReg valueG
             lshift32(TrustedImm32(logElementSize(typedArrayType.value())), valueGPR);
     }
 #endif
+    doneCases.append(jump());
+
+    return { outOfBounds, doneCases };
+}
+
+void AssemblyHelpers::loadTypedArrayByteLengthCommonImpl(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, std::optional<TypedArrayType> typedArrayType, TypedArrayField field)
+{
+    auto [outOfBounds, doneCases] = loadTypedArrayByteLengthImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, field);
+    outOfBounds.link(this);
+    move(TrustedImm32(0), valueGPR);
     doneCases.link(this);
 }
 
 void AssemblyHelpers::loadTypedArrayByteLength(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, TypedArrayType typedArrayType)
 {
-    loadTypedArrayByteLengthImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, TypedArrayField::ByteLength);
+    loadTypedArrayByteLengthCommonImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, TypedArrayField::ByteLength);
+}
+
+std::tuple<AssemblyHelpers::Jump, AssemblyHelpers::JumpList> AssemblyHelpers::loadDataViewByteLength(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, TypedArrayType typedArrayType)
+{
+    return loadTypedArrayByteLengthImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, TypedArrayField::ByteLength);
 }
 
 void AssemblyHelpers::loadTypedArrayLength(GPRReg baseGPR, GPRReg valueGPR, GPRReg scratchGPR, GPRReg scratch2GPR, std::optional<TypedArrayType> typedArrayType)
 {
-    loadTypedArrayByteLengthImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, TypedArrayField::Length);
+    loadTypedArrayByteLengthCommonImpl(baseGPR, valueGPR, scratchGPR, scratch2GPR, typedArrayType, TypedArrayField::Length);
 }
 
 #endif // ENABLE(JSVALUE64)

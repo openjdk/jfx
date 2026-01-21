@@ -38,6 +38,7 @@ namespace WebCore {
 
 class MainThreadSharedTimer final : public SharedTimer {
     WTF_MAKE_TZONE_ALLOCATED(MainThreadSharedTimer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MainThreadSharedTimer);
     friend class NeverDestroyed<MainThreadSharedTimer>;
 public:
     static MainThreadSharedTimer& singleton();

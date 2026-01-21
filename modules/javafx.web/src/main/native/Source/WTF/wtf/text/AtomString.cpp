@@ -24,7 +24,6 @@
 #include <wtf/text/AtomString.h>
 
 #include <mutex>
-#include <wtf/Algorithms.h>
 #include <wtf/dtoa.h>
 #include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringBuilder.h>
@@ -39,7 +38,7 @@ template<AtomString::CaseConvertType type>
 ALWAYS_INLINE AtomString AtomString::convertASCIICase() const
 {
     StringImpl* impl = this->impl();
-    if (UNLIKELY(!impl))
+    if (!impl) [[unlikely]]
         return nullAtom();
 
     // Convert short strings without allocating a new StringImpl, since
@@ -51,9 +50,16 @@ ALWAYS_INLINE AtomString AtomString::convertASCIICase() const
         auto characters = impl->span8();
         unsigned failingIndex;
         for (unsigned i = 0; i < length; ++i) {
-            if (type == CaseConvertType::Lower ? UNLIKELY(isASCIIUpper(characters[i])) : LIKELY(isASCIILower(characters[i]))) {
+            if constexpr (type == CaseConvertType::Lower) {
+                if (isASCIIUpper(characters[i])) [[unlikely]] {
                 failingIndex = i;
                 goto SlowPath;
+            }
+            } else {
+                if (isASCIILower(characters[i])) [[likely]] {
+                    failingIndex = i;
+                    goto SlowPath;
+        }
             }
         }
         return *this;
@@ -67,7 +73,7 @@ SlowPath:
     }
 
     Ref<StringImpl> convertedString = type == CaseConvertType::Lower ? impl->convertToASCIILowercase() : impl->convertToASCIIUppercase();
-    if (LIKELY(convertedString.ptr() == impl))
+    if (convertedString.ptr() == impl) [[likely]]
         return *this;
 
     AtomString result;
@@ -152,7 +158,7 @@ static inline StringBuilder replaceUnpairedSurrogatesWithReplacementCharacterInt
 AtomString replaceUnpairedSurrogatesWithReplacementCharacter(AtomString&& string)
 {
     // Fast path for the case where there are no unpaired surrogates.
-    if (LIKELY(!hasUnpairedSurrogate(string)))
+    if (!hasUnpairedSurrogate(string)) [[likely]]
         return WTFMove(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toAtomString();
 }
@@ -160,7 +166,7 @@ AtomString replaceUnpairedSurrogatesWithReplacementCharacter(AtomString&& string
 String replaceUnpairedSurrogatesWithReplacementCharacter(String&& string)
 {
     // Fast path for the case where there are no unpaired surrogates.
-    if (LIKELY(!hasUnpairedSurrogate(string)))
+    if (!hasUnpairedSurrogate(string)) [[likely]]
         return WTFMove(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toString();
 }
