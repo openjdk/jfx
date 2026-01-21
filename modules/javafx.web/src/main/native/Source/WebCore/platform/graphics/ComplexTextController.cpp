@@ -499,7 +499,7 @@ void ComplexTextController::ComplexTextRun::setIsNonMonotonic()
 #else
     for (unsigned i = 0; i < m_glyphCount; ++i) {
         // Skip zero-width glyphs if needed
-        if (m_font.isZeroWidthSpaceGlyph(m_glyphs[i]))
+        if (m_font->isZeroWidthSpaceGlyph(m_glyphs[i]))
             continue;
         // Handle out of bound case
         unsigned charIndex = indexAt(i);
