@@ -27,9 +27,9 @@
 
 #if ENABLE(WEBXR_LAYERS)
 
+#include "ExceptionOr.h"
 #include "XREye.h"
 
-#include <ExceptionOr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -60,7 +60,7 @@ class XRWebGLBinding : public RefCounted<XRWebGLBinding> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRWebGLBinding);
 public:
 
-    using WebXRWebGLRenderingContext = std::variant<
+    using WebXRWebGLRenderingContext = Variant<
         RefPtr<WebGLRenderingContext>,
         RefPtr<WebGL2RenderingContext>
     >;

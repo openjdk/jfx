@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "ClientOrigin.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "StorageEstimate.h"
 #include "WorkerFileSystemStorageConnection.h"
 #include "WorkerGlobalScope.h"
@@ -175,8 +176,8 @@ void WorkerStorageConnection::didGetDirectory(uint64_t callbackIdentifier, Excep
         return callback(Exception { ExceptionCode::InvalidStateError });
     releaseConnectionScope.release();
 
-    auto& workerFileSystemStorageConnection = m_scope->getFileSystemStorageConnection(Ref { *mainThreadFileSystemStorageConnection });
-    callback(StorageConnection::DirectoryInfo { result.returnValue().first, Ref { workerFileSystemStorageConnection } });
+    Ref workerFileSystemStorageConnection = m_scope->getFileSystemStorageConnection(Ref { *mainThreadFileSystemStorageConnection });
+    callback(StorageConnection::DirectoryInfo { result.returnValue().first, workerFileSystemStorageConnection });
 }
 
 } // namespace WebCore

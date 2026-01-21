@@ -32,7 +32,7 @@
 namespace WebCore {
 
 class ProgressTrackerClientJava final : public ProgressTrackerClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ProgressTrackerClientJava);
 public:
     ProgressTrackerClientJava(const JLObject &webPage);
 

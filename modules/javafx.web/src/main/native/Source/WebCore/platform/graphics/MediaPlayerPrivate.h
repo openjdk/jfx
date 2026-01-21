@@ -27,6 +27,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "HostingContext.h"
 #include "MediaPlayer.h"
 #include "MediaPlayerIdentifier.h"
 #include "NativeImage.h"
@@ -42,6 +43,7 @@
 
 namespace WebCore {
 
+class MessageClientForTesting;
 class VideoFrame;
 
 // MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
@@ -90,11 +92,11 @@ public:
     virtual void videoFullscreenStandbyChanged() { }
 #endif
 
-    using LayerHostingContextIDCallback = CompletionHandler<void(LayerHostingContextID)>;
-    virtual void requestHostingContextID(LayerHostingContextIDCallback&& completionHandler) { completionHandler({ }); }
-    virtual LayerHostingContextID hostingContextID() const { return 0; }
+    using LayerHostingContextCallback = CompletionHandler<void(HostingContext)>;
+    virtual void requestHostingContext(LayerHostingContextCallback&& completionHandler) { completionHandler({ }); }
+    virtual HostingContext hostingContext() const { return { }; }
     virtual FloatSize videoLayerSize() const { return { }; }
-    virtual void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRight&&) { }
+    virtual void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRightAnnotated&&) { }
 
 #if PLATFORM(IOS_FAMILY)
     virtual NSArray *timedMetadata() const { return nil; }
@@ -243,9 +245,9 @@ public:
     virtual unsigned audioDecodedByteCount() const { return 0; }
     virtual unsigned videoDecodedByteCount() const { return 0; }
 
-    UncheckedKeyHashSet<SecurityOriginData> originsInMediaCache(const String&) { return { }; }
+    HashSet<SecurityOriginData> originsInMediaCache(const String&) { return { }; }
     void clearMediaCache(const String&, WallTime) { }
-    void clearMediaCacheForOrigins(const String&, const UncheckedKeyHashSet<SecurityOriginData>&) { }
+    void clearMediaCacheForOrigins(const String&, const HashSet<SecurityOriginData>&) { }
 
     virtual void setPrivateBrowsingMode(bool) { }
 
@@ -315,7 +317,6 @@ public:
 
 #if USE(AVFOUNDATION)
     virtual AVPlayer *objCAVFoundationAVPlayer() const { return nullptr; }
-    virtual void setDecompressionSessionPreferences(bool, bool) { }
 #endif
 
     virtual bool performTaskAtTime(Function<void()>&&, const MediaTime&) { return false; }
@@ -323,6 +324,7 @@ public:
     virtual bool shouldIgnoreIntrinsicSize() { return false; }
 
     virtual void setPreferredDynamicRangeMode(DynamicRangeMode) { }
+    virtual void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit) { }
 
     virtual void audioOutputDeviceChanged() { }
 
@@ -361,11 +363,23 @@ public:
     virtual void setSpatialTrackingLabel(const String&) { }
 #endif
 
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    virtual void prefersSpatialAudioExperienceChanged() { }
+#endif
+
     virtual void isInFullscreenOrPictureInPictureChanged(bool) { }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     virtual bool supportsLinearMediaPlayer() const { return false; }
 #endif
+
+#if PLATFORM(IOS_FAMILY)
+    virtual void sceneIdentifierDidChange() { }
+#endif
+
+    virtual void soundStageSizeDidChange() { }
+
+    virtual void setMessageClientForTesting(WeakPtr<MessageClientForTesting>) { }
 
 protected:
     mutable PlatformTimeRanges m_seekable;

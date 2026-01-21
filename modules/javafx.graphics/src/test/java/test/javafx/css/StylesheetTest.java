@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -813,7 +813,7 @@ public class StylesheetTest {
 
         var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
         assertEquals(
-            new FunctionExpression<>("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+            FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
             mediaRule.getQueries().getFirst());
     }
 }

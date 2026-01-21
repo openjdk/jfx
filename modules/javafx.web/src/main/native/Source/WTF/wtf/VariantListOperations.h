@@ -39,10 +39,10 @@ struct VariantListItemMetadata {
     size_t alignment; // alignof(T)
 };
 
-// Utility concepts for constraining VariantList based on the underlying std::variant.
+// Utility concepts for constraining VariantList based on the underlying Variant.
 
 template<typename> struct VariantListItemMetadataTable;
-template<typename... Ts> struct VariantListItemMetadataTable<std::variant<Ts...>> {
+template<typename... Ts> struct VariantListItemMetadataTable<Variant<Ts...>> {
     static constexpr auto table = std::array { VariantListItemMetadata { sizeof(Ts), alignof(Ts) }... };
 };
 
@@ -341,9 +341,9 @@ template<typename V> void VariantListOperations<V>::move(std::span<std::byte> ne
     }
 }
 
-// `VariantListProxy` acts as a replacement for a real `std::variant`, for use when
+// `VariantListProxy` acts as a replacement for a real `Variant`, for use when
 // iterating a `VariantList`, allowing access to elements without incurring the cost of
-// copying into a `std::variant`. If a `std::variant` is needed, the `asVariant` function
+// copying into a `Variant`. If a `Variant` is needed, the `asVariant` function
 // will perform the conversion.
 template<typename V> struct VariantListProxy {
     using Variant = V;
@@ -361,7 +361,7 @@ template<typename V> struct VariantListProxy {
 
     template<size_t I> bool holds_alternative() const
     {
-        static_assert(I <= std::variant_size_v<Variant>);
+        static_assert(I <= VariantSizeV<Variant>);
         return Operations::readIndex(buffer) == I;
     }
 

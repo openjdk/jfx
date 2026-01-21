@@ -42,7 +42,7 @@ using namespace std;
 namespace {
 
 static const bmalloc_type theType = BMALLOC_TYPE_INITIALIZER(42, 2, "foo");
-pas_heap_ref theHeap = BMALLOC_HEAP_REF_INITIALIZER(&theType);
+pas_heap_ref theHeap = BMALLOC_HEAP_REF_INITIALIZER(&theType, pas_bmalloc_heap_ref_kind_non_compact);
 
 void testPayloadImpl(pas_heap_ref& heap, bool firstRun)
 {
@@ -197,7 +197,7 @@ void testSoManyHeaps()
     pas_scavenger_suspend();
 
     for (unsigned i = numHeaps; i--;)
-        heaps[i] = BMALLOC_HEAP_REF_INITIALIZER(&theType);
+        heaps[i] = BMALLOC_HEAP_REF_INITIALIZER(&theType, pas_bmalloc_heap_ref_kind_non_compact);
 
     for (unsigned i = 0; i < numHeaps; ++i)
         testPayloadImpl(heaps[i], !i);
@@ -222,7 +222,7 @@ void testRage(unsigned numHeaps, function<unsigned(unsigned)> allocationSize, un
     pas_primitive_heap_ref* heaps = new pas_primitive_heap_ref[numHeaps];
 
     for (unsigned i = numHeaps; i--;)
-        heaps[i] = BMALLOC_FLEX_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")));
+        heaps[i] = BMALLOC_FLEX_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")), pas_bmalloc_heap_ref_kind_non_compact);
 
     mutex lock;
     unsigned numThreadsDone = 0;
@@ -257,7 +257,8 @@ void testRematerializeAfterSearchOfDecommitted()
     static constexpr unsigned someOtherSize = 5000;
 
     pas_primitive_heap_ref heapRef = BMALLOC_FLEX_HEAP_REF_INITIALIZER(
-        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")));
+        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")),
+        pas_bmalloc_heap_ref_kind_non_compact);
     pas_heap* heap = bmalloc_flex_heap_ref_get_heap(&heapRef);
 
     void* ptr = bmalloc_allocate_flex(&heapRef, initialSize, pas_non_compact_allocation_mode);
@@ -310,7 +311,8 @@ void testBasicSizeClass(unsigned firstSize, unsigned secondSize)
     static constexpr bool verbose = false;
 
     pas_primitive_heap_ref heapRef = BMALLOC_FLEX_HEAP_REF_INITIALIZER(
-        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")));
+        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")),
+        pas_bmalloc_heap_ref_kind_non_compact);
 
     if (verbose)
         cout << "Allocating " << firstSize << "\n";

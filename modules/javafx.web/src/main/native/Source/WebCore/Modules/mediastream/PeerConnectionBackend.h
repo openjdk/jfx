@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,6 +52,7 @@ namespace WebCore {
 
 class DeferredPromise;
 class Document;
+class Exception;
 class MediaStream;
 class MediaStreamTrack;
 class PeerConnectionBackend;
@@ -77,13 +78,14 @@ struct RTCOfferOptions;
 struct RTCRtpTransceiverInit;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename> class ExceptionOr;
 
 namespace PeerConnection {
 using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDescriptionInit>>;
 using StatsPromise = DOMPromiseDeferred<IDLInterface<RTCStatsReport>>;
 }
 
-using CreatePeerConnectionBackend = std::unique_ptr<PeerConnectionBackend> (*)(RTCPeerConnection&);
+using CreatePeerConnectionBackend = const std::unique_ptr<PeerConnectionBackend> (*)(RTCPeerConnection&);
 
 class PeerConnectionBackend
     : public CanMakeWeakPtr<PeerConnectionBackend>
@@ -256,7 +258,7 @@ protected:
     };
     using StatsLogEvent = String;
 
-    using LogEvent = std::variant<MessageLogEvent, StatsLogEvent>;
+    using LogEvent = Variant<MessageLogEvent, StatsLogEvent>;
     String generateJSONLogEvent(LogEvent&&, bool isForGatherLogs);
     void emitJSONLogEvent(String&&);
 
@@ -279,7 +281,7 @@ private:
     bool m_shouldFilterICECandidates { true };
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
     String m_logIdentifierString;

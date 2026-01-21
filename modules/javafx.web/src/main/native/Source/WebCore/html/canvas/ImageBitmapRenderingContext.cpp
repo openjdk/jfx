@@ -56,12 +56,12 @@ ImageBitmapRenderingContext::~ImageBitmapRenderingContext() = default;
 
 ImageBitmapCanvas ImageBitmapRenderingContext::canvas()
 {
-    auto& base = canvasBase();
+    WeakRef base = canvasBase();
 #if ENABLE(OFFSCREEN_CANVAS)
-    if (auto* offscreenCanvas = dynamicDowncast<OffscreenCanvas>(base))
+    if (RefPtr offscreenCanvas = dynamicDowncast<OffscreenCanvas>(base.get()))
         return offscreenCanvas;
 #endif
-    return &downcast<HTMLCanvasElement>(base);
+    return &downcast<HTMLCanvasElement>(base.get());
 }
 
 void ImageBitmapRenderingContext::setOutputBitmap(RefPtr<ImageBitmap> imageBitmap)

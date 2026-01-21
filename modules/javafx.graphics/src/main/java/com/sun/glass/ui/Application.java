@@ -670,6 +670,8 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
+    protected abstract void _showDocument(final String uri);
+
     protected boolean _supportsInputMethods() {
         // Overridden in subclasses
         return false;
@@ -835,5 +837,9 @@ public abstract class Application {
     public static void overrideNativeWindowHandle(Class lwFrameWrapperClass, Object frame,
                                                   long handle, Runnable closeWindow) {
         _overrideNativeWindowHandle(lwFrameWrapperClass, frame, handle, closeWindow);
+    }
+
+    public void showDocument(String uri) {
+        _showDocument(uri);
     }
 }

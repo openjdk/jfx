@@ -27,8 +27,11 @@
 #pragma once
 
 #include "MatchResult.h"
+#include "SlotVisitorMacros.h"
 #include <array>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
+#include <wtf/text/AtomString.h>
 
 namespace JSC {
 

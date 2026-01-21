@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,9 +62,9 @@ private:
         runCompletionTasks();
     }
 
-    Ref<Module> m_module;
-    Ref<CalleeGroup> m_calleeGroup;
-    Ref<Callee> m_callee;
+    const Ref<Module> m_module;
+    const Ref<CalleeGroup> m_calleeGroup;
+    const Ref<Callee> m_callee;
     bool m_completed { false };
     std::optional<bool> m_hasExceptionHandlers;
     FunctionCodeIndex m_functionIndex;

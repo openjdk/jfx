@@ -50,7 +50,7 @@ unsigned workPerCriticalSection;
 unsigned workBetweenCriticalSections;
 double secondsPerTest;
 
-NO_RETURN void usage()
+[[noreturn]] void usage()
 {
     printf("Usage: LockSpeedTest yieldspinlock|pausespinlock|wordlock|lock|barginglock|bargingwordlock|thunderlock|thunderwordlock|cascadelock|cascadewordlock|handofflock|unfairlock|mutex|all <num thread groups> <num threads per group> <work per critical section> <work between critical sections> <spin limit> <seconds per test>\n");
     exit(1);
@@ -78,7 +78,7 @@ struct Benchmark {
         std::unique_ptr<WithPadding<double>[]> words = makeUniqueWithoutFastMallocCheck<WithPadding<double>[]>(numThreadGroups);
         std::unique_ptr<RefPtr<Thread>[]> threads = makeUniqueWithoutFastMallocCheck<RefPtr<Thread>[]>(numThreadGroups * numThreadsPerGroup);
 
-        volatile bool keepGoing = true;
+        std::atomic<bool> keepGoing = true;
 
         MonotonicTime before = MonotonicTime::now();
 

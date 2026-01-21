@@ -33,6 +33,7 @@
 #include "JSCInlines.h"
 #include "PropertyNameArray.h"
 #include "PropertyTable.h"
+#include "WebAssemblyGCStructure.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
@@ -81,7 +82,7 @@ void StructureTransitionTable::add(VM& vm, JSCell* owner, Structure* structure)
     }
 
     // Add the structure to the map.
-    map()->set(StructureTransitionTable::Hash::createFromStructure(structure), structure);
+    map()->set(StructureTransitionTable::Hash::createKeyFromStructure(structure), structure);
 }
 
 void Structure::dumpStatistics()
@@ -186,6 +187,13 @@ void Structure::validateFlags()
 inline void Structure::validateFlags() { }
 #endif
 
+Structure::Structure(VM& vm, StructureVariant variant, JSGlobalObject* globalObject, const TypeInfo& typeInfo, const ClassInfo* classInfo)
+    : Structure(vm, globalObject, jsNull(), typeInfo, classInfo, NonArray, 0)
+{
+    m_structureVariant = variant;
+    ASSERT(this->variant() == StructureVariant::WebAssemblyGC);
+}
+
 Structure::Structure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, const TypeInfo& typeInfo, const ClassInfo* classInfo, IndexingType indexingType, unsigned inlineCapacity)
     : JSCell(vm, vm.structureStructure.get())
     , m_blob(indexingType, typeInfo)
@@ -283,10 +291,11 @@ Structure::Structure(VM& vm, CreatingEarlyCellTag)
 #endif
 }
 
-Structure::Structure(VM& vm, Structure* previous)
+Structure::Structure(VM& vm, StructureVariant variant, Structure* previous)
     : JSCell(vm, vm.structureStructure.get())
     , m_inlineCapacity(previous->m_inlineCapacity)
     , m_bitField(0)
+    , m_structureVariant(variant)
     , m_propertyHash(previous->m_propertyHash)
     , m_seenProperties(previous->m_seenProperties)
     , m_prototype(previous->m_prototype.get(), WriteBarrierEarlyInit)
@@ -339,18 +348,27 @@ Structure::Structure(VM& vm, Structure* previous)
 #endif
 }
 
-Structure::~Structure()
-{
-    if (typeInfo().structureIsImmortal())
-        return;
-
-    if (isBrandedStructure())
-        static_cast<BrandedStructure*>(this)->destruct();
-}
+Structure::~Structure() = default;
 
 void Structure::destroy(JSCell* cell)
 {
-    static_cast<Structure*>(cell)->Structure::~Structure();
+    auto* structure = static_cast<Structure*>(cell);
+    switch (structure->variant()) {
+    case StructureVariant::Normal:
+        structure->Structure::~Structure();
+        break;
+    case StructureVariant::Branded:
+        static_cast<BrandedStructure*>(structure)->BrandedStructure::~BrandedStructure();
+        break;
+    case StructureVariant::WebAssemblyGC:
+#if ENABLE(WEBASSEMBLY)
+        static_cast<WebAssemblyGCStructure*>(structure)->WebAssemblyGCStructure::~WebAssemblyGCStructure();
+#endif
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
 }
 
 Structure* Structure::create(PolyProtoTag, VM& vm, JSGlobalObject* globalObject, JSObject* prototype, const TypeInfo& typeInfo, const ClassInfo* classInfo, IndexingType indexingType, unsigned inlineCapacity)

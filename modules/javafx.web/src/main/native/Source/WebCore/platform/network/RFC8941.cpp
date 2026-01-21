@@ -46,7 +46,7 @@ template<typename CharacterType> constexpr bool isEndOfKey(CharacterType charact
 }
 
 // Parsing a key (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3.3).
-template<typename CharType> static StringView parseKey(StringParsingBuffer<CharType>& buffer)
+template<typename CharType> static StringView parseKey(StringParsingBuffer<CharType>& buffer LIFETIME_BOUND)
 {
     if (buffer.atEnd() || !isASCIILower(*buffer))
         return { };

@@ -50,11 +50,7 @@ public:
     void getSize(const String& path, std::optional<WallTime> expectedModificationTime);
     void openForRead(const String& path, long long offset, long long length);
     void close();
-#if PLATFORM(JAVA)
-    void read(void* buffer, int length);
-#else
     void read(std::span<uint8_t> buffer);
-#endif
 
 private:
     void start();

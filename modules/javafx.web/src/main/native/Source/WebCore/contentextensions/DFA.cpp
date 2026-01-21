@@ -29,6 +29,7 @@
 #if ENABLE(CONTENT_EXTENSIONS)
 
 #include "DFAMinimizer.h"
+#include <ranges>
 #include <wtf/DataLog.h>
 
 namespace WebCore {
@@ -90,7 +91,7 @@ static void printTransitions(const DFA& dfa, unsigned sourceNodeId)
     if (transitions.begin() == transitions.end())
         return;
 
-    UncheckedKeyHashMap<unsigned, Vector<uint16_t>, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> transitionsPerTarget;
+    HashMap<unsigned, Vector<uint16_t>, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> transitionsPerTarget;
 
     // First, we build the list of transitions coming to each target node.
     for (const auto& transition : transitions) {
@@ -106,7 +107,7 @@ static void printTransitions(const DFA& dfa, unsigned sourceNodeId)
         dataLogF("        %d -> %d [label=\"", sourceNodeId, transitionPerTarget.key);
 
         Vector<uint16_t> incomingCharacters = transitionPerTarget.value;
-        std::sort(incomingCharacters.begin(), incomingCharacters.end());
+        std::ranges::sort(incomingCharacters);
 
         char rangeStart = incomingCharacters.first();
         char rangeEnd = rangeStart;

@@ -274,35 +274,42 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
 {
     switch (matchElement) {
     case MatchElement::Subject: {
+        // .changed
         invalidateIfNeeded(element, nullptr);
         break;
     }
     case MatchElement::Parent: {
+        // .changed > .subject
         auto children = childrenOfType<Element>(element);
         for (auto& child : children)
             invalidateIfNeeded(child, nullptr);
         break;
     }
     case MatchElement::Ancestor: {
+        // .changed .subject
         SelectorMatchingState selectorMatchingState;
         invalidateStyleForDescendants(element, &selectorMatchingState);
         break;
     }
     case MatchElement::DirectSibling:
+        // .changed + .subject
         if (auto* sibling = element.nextElementSibling())
             invalidateIfNeeded(*sibling, nullptr);
         break;
     case MatchElement::IndirectSibling:
+        // .changed ~ .subject
         for (auto* sibling = element.nextElementSibling(); sibling; sibling = sibling->nextElementSibling())
             invalidateIfNeeded(*sibling, nullptr);
         break;
     case MatchElement::AnySibling:
+        // :nth-last-child(even of .changed)
         if (CheckedPtr parentNode = element.parentNode()) {
         for (auto& parentChild : childrenOfType<Element>(*element.parentNode()))
             invalidateIfNeeded(parentChild, nullptr);
         }
         break;
     case MatchElement::ParentSibling:
+        // .changed ~ .a > .subject
         for (auto* sibling = element.nextElementSibling(); sibling; sibling = sibling->nextElementSibling()) {
             auto siblingChildren = childrenOfType<Element>(*sibling);
             for (auto& siblingChild : siblingChildren)
@@ -310,6 +317,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     case MatchElement::AncestorSibling: {
+        // .changed ~ .a .subject
         SelectorMatchingState selectorMatchingState;
         for (auto* sibling = element.nextElementSibling(); sibling; sibling = sibling->nextElementSibling()) {
             selectorMatchingState.selectorFilter.popParentsUntil(element.parentElement());
@@ -318,6 +326,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::ParentAnySibling:
+        // :nth-last-child(even of .changed) > .subject
         for (auto& sibling : childrenOfType<Element>(*element.parentNode())) {
             auto siblingChildren = childrenOfType<Element>(sibling);
             for (auto& siblingChild : siblingChildren)
@@ -325,6 +334,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     case MatchElement::AncestorAnySibling: {
+        // :nth-last-child(even of .changed) .subject
         SelectorMatchingState selectorMatchingState;
         for (auto& sibling : childrenOfType<Element>(*element.parentNode())) {
             selectorMatchingState.selectorFilter.popParentsUntil(element.parentElement());
@@ -333,11 +343,13 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::HasChild: {
+        // :has(> .changed)
         if (auto* parent = element.parentElement())
             invalidateIfNeeded(*parent, nullptr);
         break;
     }
     case MatchElement::HasDescendant: {
+        // :has(.changed)
         Vector<Element*, 16> ancestors;
         for (auto* parent = element.parentElement(); parent; parent = parent->parentElement())
             ancestors.append(parent);
@@ -351,6 +363,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::HasSibling:
+        // :has(~ .changed)
         if (auto* sibling = element.previousElementSibling()) {
             SelectorMatchingState selectorMatchingState;
             if (RefPtr parent = element.parentElement())
@@ -360,7 +373,11 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
                 invalidateIfNeeded(*sibling, &selectorMatchingState);
         }
         break;
+
+    case MatchElement::HasChildParent:
+        // :has(> .changed) > .subject
     case MatchElement::HasAnySibling: {
+        // :has(~ :is(.changed ~ .x))
         SelectorMatchingState selectorMatchingState;
         if (auto* parent = element.parentElement())
             selectorMatchingState.selectorFilter.pushParentInitializingIfNeeded(*parent);
@@ -369,6 +386,7 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         break;
     }
     case MatchElement::HasSiblingDescendant: {
+        // :has(~ .a .changed)
         Vector<Element*, 16> elementAndAncestors;
         elementAndAncestors.append(&element);
         for (auto* parent = element.parentElement(); parent; parent = parent->parentElement())
@@ -384,16 +402,28 @@ void Invalidator::invalidateStyleWithMatchElement(Element& element, MatchElement
         }
         break;
     }
+    case MatchElement::HasChildAncestor: {
+        // :has(> .changed) .subject
+        if (CheckedPtr parent = element.parentElement()) {
+            SelectorMatchingState selectorMatchingState;
+            invalidateStyleForDescendants(*parent, &selectorMatchingState);
+        }
+        break;
+    }
     case MatchElement::HasNonSubject:
+        // :has(.changed) .subject
     case MatchElement::HasScopeBreaking: {
+        // :has(:is(.changed .a))
         SelectorMatchingState selectorMatchingState;
         invalidateStyleForDescendants(*element.document().documentElement(), &selectorMatchingState);
         break;
     }
     case MatchElement::Host:
+        // :host(.changed) .subject
         invalidateInShadowTreeIfNeeded(element);
         break;
     case MatchElement::HostChild:
+        // ::slotted(.changed)
         if (auto* host = element.shadowHost()) {
             for (auto& hostChild : childrenOfType<Element>(*host))
                 invalidateIfNeeded(hostChild, nullptr);

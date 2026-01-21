@@ -34,7 +34,7 @@ namespace WebCore {
 
 class IndexKey {
 public:
-    using Data = std::variant<std::nullptr_t, IDBKeyData, Vector<IDBKeyData>>;
+    using Data = Variant<std::nullptr_t, IDBKeyData, Vector<IDBKeyData>>;
     WEBCORE_EXPORT IndexKey();
     WEBCORE_EXPORT IndexKey(Data&&);
 

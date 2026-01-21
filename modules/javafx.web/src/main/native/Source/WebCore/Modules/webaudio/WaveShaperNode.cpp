@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "AudioContext.h"
+#include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <JavaScriptCore/TypedArrays.h>
@@ -42,7 +44,7 @@ ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& contex
 {
     RefPtr<Float32Array> curve;
     if (options.curve) {
-        curve = Float32Array::tryCreate(options.curve->data(), options.curve->size());
+        curve = Float32Array::tryCreate(options.curve->span());
         if (!curve)
             return Exception { ExceptionCode::InvalidStateError, "Invalid curve parameter"_s };
     }
@@ -147,7 +149,7 @@ bool WaveShaperNode::propagatesSilence() const
         return false;
 
     Locker locker { AdoptLock, waveShaperProcessor()->processLock() };
-    auto curve = waveShaperProcessor()->curve();
+    RefPtr curve = waveShaperProcessor()->curve();
     return !curve || !curve->length();
 }
 

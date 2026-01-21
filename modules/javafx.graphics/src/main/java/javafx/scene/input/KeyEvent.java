@@ -73,6 +73,10 @@ import javafx.event.EventType;
  * a virtual key code.
  *
  * <p>
+ * On Mac and Linux dead key sequences are handled using input method events
+ * instead of key events. See {@link InputMethodEvent}.
+ *
+ * <p>
  * For triggering context menus see the {@link ContextMenuEvent}.
  * @since JavaFX 2.0
  */

@@ -38,6 +38,7 @@ class CachedFrame;
 class CachedFramePlatformData;
 class Document;
 class DocumentLoader;
+class FrameView;
 class LocalFrameView;
 class Node;
 enum class HasInsecureContent : bool;

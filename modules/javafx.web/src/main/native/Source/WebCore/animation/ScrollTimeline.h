@@ -44,8 +44,6 @@ class ScrollableArea;
 
 struct TimelineRange;
 
-TextStream& operator<<(TextStream&, Scroller);
-
 class ScrollTimeline : public AnimationTimeline {
 public:
     static Ref<ScrollTimeline> create(Document&, ScrollTimelineOptions&& = { });
@@ -54,6 +52,7 @@ public:
     static Ref<ScrollTimeline> createInactiveStyleOriginatedTimeline(const AtomString& name);
 
     const WeakStyleable& sourceStyleable() const { return m_source; }
+    virtual Element* bindingsSource() const;
     virtual Element* source() const;
     void setSource(Element*);
     void setSource(const Styleable&);
@@ -67,10 +66,11 @@ public:
     bool isInactiveStyleOriginatedTimeline() const { return m_isInactiveStyleOriginatedTimeline; }
 
     AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
+    void updateCurrentTimeIfStale();
 
     AnimationTimelinesController* controller() const override;
 
-    std::optional<WebAnimationTime> currentTime() override;
+    std::optional<WebAnimationTime> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes) override;
     TimelineRange defaultRange() const override;
     WeakPtr<Element, WeakPtrImplWithEventTargetData> timelineScopeDeclaredElement() const { return m_timelineScopeElement; }
     void setTimelineScopeElement(const Element&);
@@ -98,7 +98,7 @@ protected:
 
     static ScrollableArea* scrollableAreaForSourceRenderer(const RenderElement*, Document&);
 
-    std::optional<ResolvedScrollDirection> resolvedScrollDirection() const;
+    ResolvedScrollDirection resolvedScrollDirection() const;
 
 private:
     explicit ScrollTimeline();
@@ -123,6 +123,8 @@ private:
     CurrentTimeData m_cachedCurrentTimeData { };
     bool m_isInactiveStyleOriginatedTimeline { false };
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const ScrollTimeline&);
 
 } // namespace WebCore
 

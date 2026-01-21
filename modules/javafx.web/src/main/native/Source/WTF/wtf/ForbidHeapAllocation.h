@@ -40,5 +40,19 @@ private: \
     void* operator new[](size_t, void*) = delete; \
     void* operator new(size_t) = delete; \
     void* operator new[](size_t size) = delete; \
-    void* operator new(size_t, NotNullTag, void* location) = delete; \
+    void* operator new(size_t, NotNullTag, void*) = delete; \
     typedef int __thisIsHereToForceASemicolonAfterThisForbidHeapAllocationMacro
+
+#define WTF_FORBID_HEAP_ALLOCATION_ALLOWING_PLACEMENT_NEW \
+public: \
+    void* operator new(size_t, NotNullTag, void* location) \
+    { \
+        ASSERT(location); \
+        return location; \
+    } \
+    void* operator new(size_t, void* location) { return location; } \
+    void* operator new[](size_t, void* location)  { return location; } \
+private: \
+    void* operator new(size_t) = delete; \
+    void* operator new[](size_t size) = delete; \
+    typedef int __thisIsHereToForceASemicolonAfterThisForbidHeapAllocationAllowingPlacementNewMacro

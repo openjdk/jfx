@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,7 +73,7 @@ static ALWAYS_INLINE void forEachInFastArray(JSGlobalObject* globalObject, JSVal
             JSValue nextValue = array->getIndex(globalObject, index);
             RETURN_IF_EXCEPTION(scope, void());
             callback(vm, globalObject, nextValue);
-            if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
                 scope.release();
                 JSArrayIterator* iterator = JSArrayIterator::create(vm, globalObject->arrayIteratorStructure(), array, IterationKind::Values);
                 iterator->internalField(JSArrayIterator::Field::Index).setWithoutWriteBarrier(jsNumber(index + 1));
@@ -91,14 +91,16 @@ static ALWAYS_INLINE void forEachInIterationRecord(JSGlobalObject* globalObject,
 
     while (true) {
         JSValue next = iteratorStep(globalObject, iterationRecord);
-        if (UNLIKELY(scope.exception()) || next.isFalse())
+        if (scope.exception()) [[unlikely]]
+            return;
+        if (next.isFalse())
             return;
 
         JSValue nextValue = iteratorValue(globalObject, next);
         RETURN_IF_EXCEPTION(scope, void());
 
         callback(vm, globalObject, nextValue);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.release();
             iteratorClose(globalObject, iterationRecord.iterator);
             return;
@@ -137,7 +139,7 @@ void forEachInIterable(JSGlobalObject& globalObject, JSObject* iterable, JSValue
             JSValue nextValue = array->getIndex(&globalObject, index);
             RETURN_IF_EXCEPTION(scope, void());
             callback(vm, globalObject, nextValue);
-            if (UNLIKELY(scope.exception())) {
+            if (scope.exception()) [[unlikely]] {
                 scope.release();
                 JSArrayIterator* iterator = JSArrayIterator::create(vm, globalObject.arrayIteratorStructure(), array, IterationKind::Values);
                 iterator->internalField(JSArrayIterator::Field::Index).setWithoutWriteBarrier(jsNumber(index + 1));
@@ -152,14 +154,16 @@ void forEachInIterable(JSGlobalObject& globalObject, JSObject* iterable, JSValue
     RETURN_IF_EXCEPTION(scope, void());
     while (true) {
         JSValue next = iteratorStep(&globalObject, iterationRecord);
-        if (UNLIKELY(scope.exception()) || next.isFalse())
+        if (scope.exception()) [[unlikely]]
+            return;
+        if (next.isFalse())
             return;
 
         JSValue nextValue = iteratorValue(&globalObject, next);
         RETURN_IF_EXCEPTION(scope, void());
 
         callback(vm, globalObject, nextValue);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             scope.release();
             iteratorClose(&globalObject, iterationRecord.iterator);
             return;

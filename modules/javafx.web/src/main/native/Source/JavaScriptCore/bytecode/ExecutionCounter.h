@@ -100,6 +100,9 @@ public:
     int32_t m_activeThreshold;
 };
 
+extern template class ExecutionCounter<CountingForBaseline>;
+extern template class ExecutionCounter<CountingForUpperTiers>;
+
 WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<CountingVariant countingVariant>, ExecutionCounter<countingVariant>);
 
 typedef ExecutionCounter<CountingForBaseline> BaselineExecutionCounter;

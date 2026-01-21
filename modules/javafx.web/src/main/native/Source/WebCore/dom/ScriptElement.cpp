@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nikolas Zimmermann <zimmermann@kde.org>
  *
  * This library is free software; you can redistribute it and/or
@@ -253,7 +253,7 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition)
         break;
     }
     case ScriptType::Module: {
-        if (!requestModuleScript(scriptStartPosition))
+        if (!requestModuleScript(sourceText, scriptStartPosition))
             return false;
         potentiallyBlockRendering();
         break;
@@ -318,7 +318,7 @@ void ScriptElement::updateTaintedOriginFromSourceURL()
     if (!page)
         return;
 
-    if (!page->requiresScriptTelemetryForURL(hasSourceAttribute() ? document->completeURL(sourceAttributeValue()) : document->url()))
+    if (!page->requiresScriptTrackingPrivacyProtections(hasSourceAttribute() ? document->completeURL(sourceAttributeValue()) : document->url()))
         return;
 
     m_taintedOrigin = JSC::SourceTaintedOrigin::KnownTainted;
@@ -326,11 +326,11 @@ void ScriptElement::updateTaintedOriginFromSourceURL()
 
 bool ScriptElement::requestClassicScript(const String& sourceURL)
 {
-    auto element = protectedElement();
+    Ref element = this->element();
     ASSERT(element->isConnected());
     ASSERT(!m_loadableScript);
     Ref document = element->document();
-    if (!StringView(sourceURL).containsOnly<isASCIIWhitespace<UChar>>()) {
+    if (!StringView(sourceURL).containsOnly<isASCIIWhitespace<char16_t>>()) {
         auto script = LoadableClassicScript::create(element->nonce(), element->attributeWithoutSynchronization(HTMLNames::integrityAttr), referrerPolicy(), fetchPriority(),
             element->attributeWithoutSynchronization(HTMLNames::crossoriginAttr), scriptCharset(), element->localName(), element->isInUserAgentShadowTree(), hasAsyncAttribute());
 
@@ -355,7 +355,7 @@ bool ScriptElement::requestClassicScript(const String& sourceURL)
     return false;
 }
 
-bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
+bool ScriptElement::requestModuleScript(const String& sourceText, const TextPosition& scriptStartPosition)
 {
     // https://html.spec.whatwg.org/multipage/urls-and-fetching.html#cors-settings-attributes
     // Module is always CORS request. If attribute is not given, it should be same-origin credential.
@@ -370,7 +370,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
         ASSERT(element->isConnected());
 
         String sourceURL = sourceAttributeValue();
-        if (StringView(sourceURL).containsOnly<isASCIIWhitespace<UChar>>()) {
+        if (StringView(sourceURL).containsOnly<isASCIIWhitespace<char16_t>>()) {
             dispatchErrorEvent();
             return false;
         }
@@ -396,7 +396,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
     Ref script = LoadableModuleScript::create(nonce, emptyAtom(), referrerPolicy(), fetchPriority(), crossOriginMode, scriptCharset(), element->localName(), element->isInUserAgentShadowTree());
 
     TextPosition position = document->isInDocumentWrite() ? TextPosition() : scriptStartPosition;
-    ScriptSourceCode sourceCode(scriptContent(), m_taintedOrigin, URL(document->url()), position, JSC::SourceProviderSourceType::Module, script.copyRef());
+    ScriptSourceCode sourceCode(sourceText, m_taintedOrigin, URL(document->url()), position, JSC::SourceProviderSourceType::Module, script.copyRef());
 
     ASSERT(document->contentSecurityPolicy());
     {
@@ -606,9 +606,9 @@ void ScriptElement::deref() const
     element().deref();
 }
 
-bool isScriptElement(Element& element)
+bool isScriptElement(Node& node)
 {
-    return is<HTMLScriptElement>(element) || is<SVGScriptElement>(element);
+    return is<HTMLScriptElement>(node) || is<SVGScriptElement>(node);
 }
 
 ScriptElement* dynamicDowncastScriptElement(Element& element)

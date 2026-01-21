@@ -50,7 +50,7 @@ public:
     { }
 
     template<size_t inlineBuffer>
-    CSSParserTokenRange(const Vector<CSSParserToken, inlineBuffer>& vector)
+    CSSParserTokenRange(const Vector<CSSParserToken, inlineBuffer>& vector LIFETIME_BOUND)
         : CSSParserTokenRange(vector.span())
     { }
 

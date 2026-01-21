@@ -32,7 +32,7 @@
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
-#if !PLATFORM(JAVA)
+
 class TextureMapperGPUBuffer final : public ThreadSafeRefCounted<TextureMapperGPUBuffer> {
     WTF_MAKE_NONCOPYABLE(TextureMapperGPUBuffer);
 public:
@@ -66,5 +66,5 @@ private:
 
     GLuint m_id { 0 };
 };
-#endif
+
 } // namespace WebCore

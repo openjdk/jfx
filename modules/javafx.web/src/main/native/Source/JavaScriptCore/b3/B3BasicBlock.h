@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(B3_JIT)
 
 #include "B3FrequentedBlock.h"
@@ -32,6 +34,7 @@
 #include "B3Origin.h"
 #include "B3SuccessorCollection.h"
 #include "B3Type.h"
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
@@ -45,7 +48,7 @@ template<typename> class GenericBlockInsertionSet;
 
 class BasicBlock {
     WTF_MAKE_NONCOPYABLE(BasicBlock);
-    WTF_MAKE_TZONE_ALLOCATED(BasicBlock);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(BasicBlock);
 public:
     typedef Vector<Value*> ValueList;
     typedef Vector<BasicBlock*, 2> PredecessorList;
@@ -59,27 +62,27 @@ public:
     unsigned index() const { return m_index; }
     bool isInserted() const { return m_index != uninsertedIndex; }
 
-    ValueList::iterator begin() { return m_values.begin(); }
-    ValueList::iterator end() { return m_values.end(); }
-    ValueList::const_iterator begin() const { return m_values.begin(); }
-    ValueList::const_iterator end() const { return m_values.end(); }
+    ValueList::iterator begin() LIFETIME_BOUND { return m_values.begin(); }
+    ValueList::iterator end() LIFETIME_BOUND { return m_values.end(); }
+    ValueList::const_iterator begin() const LIFETIME_BOUND { return m_values.begin(); }
+    ValueList::const_iterator end() const LIFETIME_BOUND { return m_values.end(); }
 
     size_t size() const { return m_values.size(); }
-    Value* at(size_t index) const { return m_values[index]; }
-    Value*& at(size_t index) { return m_values[index]; }
+    Value* at(size_t index) const LIFETIME_BOUND { return m_values[index]; }
+    Value*& at(size_t index) LIFETIME_BOUND { return m_values[index]; }
 
-    Value* get(size_t index) const
+    Value* get(size_t index) const LIFETIME_BOUND
     {
         if (index >= size())
             return nullptr;
         return at(index);
     }
 
-    Value* last() const { return m_values.last(); }
-    Value*& last() { return m_values.last(); }
+    Value* last() const LIFETIME_BOUND { return m_values.last(); }
+    Value*& last() LIFETIME_BOUND { return m_values.last(); }
 
-    const ValueList& values() const { return m_values; }
-    ValueList& values() { return m_values; }
+    const ValueList& values() const LIFETIME_BOUND { return m_values; }
+    ValueList& values() LIFETIME_BOUND { return m_values; }
 
     JS_EXPORT_PRIVATE void append(Value*);
     JS_EXPORT_PRIVATE void appendNonTerminal(Value*);

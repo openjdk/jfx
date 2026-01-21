@@ -34,6 +34,8 @@
  * the local crash report logs generated on the device. */
 
 #ifdef __APPLE__
+
+#include "pas_probabilistic_guard_malloc_allocator.h"
 #include <mach/mach_types.h>
 #include <mach/vm_types.h>
 
@@ -45,16 +47,19 @@ extern "C" {
 typedef void *(*crash_reporter_memory_reader_t)(task_t task, vm_address_t address, size_t size);
 
 /* Crash Report Version number. This must be in sync between ReportCrash and libpas to generate a report. */
-const unsigned pas_crash_report_version = 2;
+const unsigned pas_crash_report_version = 3;
 
 /* Report sent back to the ReportCrash process. */
-typedef struct {
-    const char *error_type;
-    const char *confidence;
-    const char *alignment;
+typedef struct pas_report_crash_pgm_report pas_report_crash_pgm_report;
+struct pas_report_crash_pgm_report {
+    const char* error_type;
+    const char* confidence;
+    const char* alignment;
     vm_address_t fault_address;
     size_t allocation_size;
-} pas_report_crash_pgm_report;
+    pas_backtrace_metadata* alloc_backtrace;
+    pas_backtrace_metadata* dealloc_backtrace;
+};
 #endif /* __APPLE__ */
 
 #ifdef __cplusplus

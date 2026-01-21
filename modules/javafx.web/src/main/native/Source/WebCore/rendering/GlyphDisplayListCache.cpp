@@ -93,7 +93,7 @@ unsigned GlyphDisplayListCache::size() const
 }
 
 template<typename LayoutRun>
-DisplayList::DisplayList* GlyphDisplayListCache::getDisplayList(const LayoutRun& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getDisplayList(const LayoutRun& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
 {
     if (MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
         if (!m_entries.isEmpty()) {
@@ -106,7 +106,7 @@ DisplayList::DisplayList* GlyphDisplayListCache::getDisplayList(const LayoutRun&
     if (font.isLoadingCustomFonts() || !font.fonts())
         return nullptr;
 
-    if (auto* result = getIfExists(run))
+    if (RefPtr result = getIfExists(run))
         return result;
 
     bool isFrequentlyPainted = paintInfo.enclosingSelfPaintingLayer()->paintingFrequently();
@@ -125,10 +125,10 @@ DisplayList::DisplayList* GlyphDisplayListCache::getDisplayList(const LayoutRun&
         return result;
     }
 
-    if (auto displayList = font.displayListForTextRun(context, textRun)) {
-        Ref entry = GlyphDisplayListCacheEntry::create(WTFMove(displayList), textRun, font, context);
-        auto* result = &entry->displayList();
-        if (canShareDisplayList(*result))
+    if (RefPtr displayList = font.displayListForTextRun(context, textRun)) {
+        Ref entry = GlyphDisplayListCacheEntry::create(displayList.releaseNonNull(), textRun, font, context);
+        Ref result = entry->displayList();
+        if (canShareDisplayList(result))
             m_entries.add(entry.get());
         const_cast<LayoutRun&>(run).setIsInGlyphDisplayListCache();
         m_entriesForLayoutRun.add(&run, WTFMove(entry));
@@ -138,18 +138,18 @@ DisplayList::DisplayList* GlyphDisplayListCache::getDisplayList(const LayoutRun&
     return nullptr;
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::get(const LegacyInlineTextBox& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::get(const LegacyInlineTextBox& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
 {
     return getDisplayList(run, font, context, textRun, paintInfo);
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::get(const InlineDisplay::Box& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::get(const InlineDisplay::Box& run, const FontCascade& font, GraphicsContext& context, const TextRun& textRun, const PaintInfo& paintInfo)
 {
     return getDisplayList(run, font, context, textRun, paintInfo);
 }
 
 template<typename LayoutRun>
-DisplayList::DisplayList* GlyphDisplayListCache::getIfExistsImpl(const LayoutRun& run)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExistsImpl(const LayoutRun& run)
 {
     if (!run.isInGlyphDisplayListCache())
         return nullptr;
@@ -158,12 +158,12 @@ DisplayList::DisplayList* GlyphDisplayListCache::getIfExistsImpl(const LayoutRun
     return nullptr;
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::getIfExists(const LegacyInlineTextBox& run)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExists(const LegacyInlineTextBox& run)
 {
     return getIfExistsImpl(run);
 }
 
-DisplayList::DisplayList* GlyphDisplayListCache::getIfExists(const InlineDisplay::Box& run)
+RefPtr<const DisplayList::DisplayList> GlyphDisplayListCache::getIfExists(const InlineDisplay::Box& run)
 {
     return getIfExistsImpl(run);
 }

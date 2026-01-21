@@ -29,9 +29,9 @@
 #include <concepts>
 #include <functional>
 #include <type_traits>
-#include <variant>
 #include <wtf/GetPtr.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/VariantExtras.h>
 
 namespace WTF {
@@ -59,17 +59,25 @@ template<typename T> concept  CompactVariantAlternative =
     || CompactVariantAlternativeSmallEnough<T>
     || CompactVariantTraits<T>::hasAlternativeRepresentation;
 
+// A CompactVariant stores data by bit-packing the variant index
+// and data into a storage of type Storage (uint64_t):
+// * Bit 63-56: if pointer/smart pointer, bit 63-56 of the pointer. Useful
+//              if the architecture supports top-byte ignore, and information
+//              is stored there. Otherwise zeroes.
+// * Bit 55-48: variant index (indicates the data type of the variant)
+// * Bit 47-0 : if pointer/smart pointer, bit 48-0 of the pointer. If other
+//              types of data, the encoded data.
+// This struct provides operations on the packed storage in a CompactVariant.
 template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
-    using StdVariant = std::variant<Ts...>;
+    using StdVariant = Variant<Ts...>;
     using Index = uint8_t;
     using Storage = uint64_t;
     static constexpr Storage movedFromDataValue = std::numeric_limits<Storage>::max();
-    static constexpr Storage totalSize = sizeof(Storage) * 8;
-    static constexpr Storage indexSize = sizeof(Index) * 8;
-    static constexpr Storage indexShift = totalSize - indexSize;
-    static constexpr Storage payloadSize = totalSize - indexSize;
-    static constexpr Storage payloadMask = (1ULL << payloadSize) - 1;
-    static_assert(payloadSize + indexSize <= totalSize);
+    static constexpr Storage indexShift = 48;
+    static constexpr Storage indexMask = 0xFFULL << indexShift;
+    static constexpr Storage payloadMask = ~indexMask;
+    static constexpr Storage topByteShift = 64 - 8;
+    static constexpr Storage topByteMask = 0xFFULL << topByteShift;
 
     static constexpr Storage encodedIndex(Index index)
     {
@@ -78,7 +86,7 @@ template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
 
     static constexpr Index decodedIndex(Storage value)
     {
-        return static_cast<Index>(static_cast<uint8_t>(value >> indexShift));
+        return static_cast<Index>(static_cast<uint8_t>((value & indexMask) >> indexShift));
     }
 
     template<typename T, typename U> static constexpr Storage encodedPayload(U&& payload)
@@ -89,6 +97,17 @@ template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
             data = CompactVariantTraits<T>::encode(std::forward<U>(payload));
         else
             new (NotNull, &data) T(std::forward<U>(payload));
+
+        // For data other than pointers, ensure the data doesn't overwrite the top byte.
+        // (i.e top byte should be zero)
+        // (pointers may store arbitrary data in the top byte, and that's okay due to TBI)
+        if constexpr (!CompactVariantAlternativePointer<T>)
+            RELEASE_ASSERT(!(data & topByteMask));
+
+        // Ensure the bits in the index area are zeroes.
+        // Sanity check to make sure the data doesn't overwrite the index.
+        RELEASE_ASSERT(!(data & indexMask));
+        data &= payloadMask;
 
         return data;
     }
@@ -101,6 +120,17 @@ template<CompactVariantAlternative... Ts> struct CompactVariantOperations {
             data = CompactVariantTraits<T>::encodeFromArguments(std::forward<Args>(arguments)...);
         else
             new (NotNull, &data) T(std::forward<Args>(arguments)...);
+
+        // For data other than pointers, ensure the data doesn't overwrite the top byte.
+        // (i.e top byte should be zero)
+        // (pointers may store arbitrary data in the top byte, and that's okay due to TBI)
+        if constexpr (!CompactVariantAlternativePointer<T>)
+            RELEASE_ASSERT(!(data & topByteMask));
+
+        // Ensure the bits in the index area are zeroes.
+        // Sanity check to make sure the data doesn't overwrite the index.
+        RELEASE_ASSERT(!(data & indexMask));
+        data &= payloadMask;
 
         return data;
     }
