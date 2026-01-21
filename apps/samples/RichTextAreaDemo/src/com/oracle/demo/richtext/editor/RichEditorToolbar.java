@@ -39,6 +39,7 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.util.FX;
@@ -50,7 +51,7 @@ import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
  *
  * @author Andy Goryachev
  */
-public class RichEditorToolbar extends ToolBar {
+public class RichEditorToolbar extends BorderPane {
     public final ComboBox<String> fontFamily = new ComboBox<>();
     public final ComboBox<Double> fontSize = new ComboBox<>();
     public final ColorPicker textColor = new ColorPicker();
@@ -102,27 +103,30 @@ public class RichEditorToolbar extends ToolBar {
         textStyle.getItems().setAll(TextStyle.values());
         textStyle.setConverter(TextStyle.converter());
 
-        FX.add(this, fontFamily);
-        FX.add(this, fontSize);
-        FX.add(this, textColor);
-        FX.space(this);
+        ToolBar toolbar = new ToolBar();
+        FX.add(toolbar, fontFamily);
+        FX.add(toolbar, fontSize);
+        FX.add(toolbar, textColor);
+        FX.space(toolbar);
         // TODO background
         // TODO alignment
         // TODO bullet
         // TODO space left (indent left, indent right)
         // TODO line spacing
-        bold = FX.toggleButton(this, "𝐁", "Bold text");
-        italic = FX.toggleButton(this, "𝐼", "Bold text");
-        strikeThrough = FX.toggleButton(this, "S\u0336", "Strike through text");
-        underline = FX.toggleButton(this, "U\u0332", "Underline text");
-        FX.add(this, textStyle);
-        paragraphButton = FX.button(this, "P", "Paragraph Styles", null);
-        FX.space(this);
-        lineNumbers = FX.toggleButton(this, "N", "Line Numbers");
-        wrapText = FX.toggleButton(this, "W", "Wrap Text");
+        bold = FX.toggleButton(toolbar, "𝐁", "Bold text");
+        italic = FX.toggleButton(toolbar, "𝐼", "Bold text");
+        strikeThrough = FX.toggleButton(toolbar, "S\u0336", "Strike through text");
+        underline = FX.toggleButton(toolbar, "U\u0332", "Underline text");
+        FX.add(toolbar, textStyle);
+        paragraphButton = FX.button(toolbar, "P", "Paragraph Styles", null);
+        FX.space(toolbar);
+        lineNumbers = FX.toggleButton(toolbar, "N", "Line Numbers");
+        wrapText = FX.toggleButton(toolbar, "W", "Wrap Text");
 
         FX.name(lineNumbers, "lineNumbers");
         FX.name(wrapText, "wrapText");
+
+        setCenter(toolbar);
     }
 
     private static List<String> collectFonts() {

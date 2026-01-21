@@ -61,9 +61,8 @@ public class RichEditorDemoWindow extends Stage {
     public final Label status;
 
     public RichEditorDemoWindow() {
-        toolbar = new RichEditorToolbar();
-
         editor = new RichTextArea();
+        toolbar = new RichEditorToolbar();
 
         // example of a custom function
         editor.getInputMap().register(KeyBinding.shortcut(KeyCode.W), () -> {
@@ -80,7 +79,7 @@ public class RichEditorDemoWindow extends Stage {
         cp.setCenter(editor);
 
         BorderPane bp = new BorderPane();
-        bp.setTop(createMenu());
+        bp.setTop(actions.createMenu());
         bp.setCenter(cp);
         bp.setBottom(status);
 
@@ -109,74 +108,10 @@ public class RichEditorDemoWindow extends Stage {
             actions.modifiedProperty(),
             actions.fileNameProperty()
         ));
-        editor.setContextMenu(createContextMenu());
+
+        editor.setContextMenu(actions.createContextMenu());
         editor.requestFocus();
         editor.select(TextPos.ZERO);
-    }
-
-    private MenuBar createMenu() {
-        MenuBar m = new MenuBar();
-        // file
-        FX.menu(m, "File");
-        FX.item(m, "New", actions.newDocument).setAccelerator(KeyCombination.keyCombination("shortcut+N"));
-        FX.item(m, "Open...", actions.open);
-        FX.separator(m);
-        FX.item(m, "Save", actions.save).setAccelerator(KeyCombination.keyCombination("shortcut+S"));
-        FX.item(m, "Save As...", actions.saveAs).setAccelerator(KeyCombination.keyCombination("shortcut+A"));
-        FX.item(m, "Quit", actions::quit);
-
-        // edit
-        FX.menu(m, "Edit");
-        FX.item(m, "Undo", actions.undo);
-        FX.item(m, "Redo", actions.redo);
-        FX.separator(m);
-        FX.item(m, "Cut", actions.cut);
-        FX.item(m, "Copy", actions.copy);
-        FX.item(m, "Paste", actions.paste);
-        FX.item(m, "Paste and Retain Style", actions.pasteUnformatted);
-
-        // format
-        FX.menu(m, "Format");
-        FX.item(m, "Bold", actions.bold).setAccelerator(KeyCombination.keyCombination("shortcut+B"));
-        FX.item(m, "Italic", actions.italic).setAccelerator(KeyCombination.keyCombination("shortcut+I"));
-        FX.item(m, "Strike Through", actions.strikeThrough);
-        FX.item(m, "Underline", actions.underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
-        FX.separator(m);
-        FX.item(m, "Paragraph...", actions.paragraphStyle);
-
-        // view
-        FX.menu(m, "View");
-        FX.checkItem(m, "Highlight Current Paragraph", actions.highlightCurrentLine);
-        FX.checkItem(m, "Show Line Numbers", actions.lineNumbers);
-        FX.checkItem(m, "Wrap Text", actions.wrapText);
-        // TODO line spacing
-
-        // view
-        FX.menu(m, "Tools");
-        FX.item(m, "Settings", this::openSettings);
-
-        // help
-        FX.menu(m, "Help");
-        FX.item(m, "About"); // TODO
-
-        return m;
-    }
-
-    private ContextMenu createContextMenu() {
-        ContextMenu m = new ContextMenu();
-        FX.item(m, "Undo", actions.undo);
-        FX.item(m, "Redo", actions.redo);
-        FX.separator(m);
-        FX.item(m, "Cut", actions.cut);
-        FX.item(m, "Copy", actions.copy);
-        FX.item(m, "Paste", actions.paste);
-        FX.item(m, "Paste and Retain Style", actions.pasteUnformatted);
-        FX.separator(m);
-        FX.item(m, "Select All", actions.selectAll);
-        FX.separator(m);
-        // TODO Font...
-        FX.item(m, "Paragraph...", actions.paragraphStyle);
-        return m;
     }
 
     private String statusString(TextPos p) {
@@ -200,9 +135,5 @@ public class RichEditorDemoWindow extends Stage {
             sb.append(" *");
         }
         return sb.toString();
-    }
-
-    private void openSettings() {
-        new SettingsWindow(this).show();
     }
 }

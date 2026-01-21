@@ -46,8 +46,11 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.MenuBar;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
@@ -104,12 +107,13 @@ public class Actions {
     public final FxAction lineNumbers = new FxAction();
     public final FxAction wrapText = new FxAction();
 
-    private final RichEditorToolbar toolbar;
-    private final RichTextArea editor;
     private final ReadOnlyBooleanWrapper modified = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
+
+    private final RichEditorToolbar toolbar;
+    private final RichTextArea editor;
 
     public Actions(RichEditorToolbar tb, RichTextArea ed) {
         this.toolbar = tb;
@@ -209,7 +213,6 @@ public class Actions {
         });
 
         // settings
-
         Settings.endKey.subscribe(this::setEndKey);
 
         // defaults
@@ -219,6 +222,71 @@ public class Actions {
         handleEdit();
         handleSelection();
         setModified(false);
+    }
+
+    public MenuBar createMenu() {
+        MenuBar m = new MenuBar();
+        // file
+        FX.menu(m, "File");
+        FX.item(m, "New", newDocument).setAccelerator(KeyCombination.keyCombination("shortcut+N"));
+        FX.item(m, "Open...", open);
+        FX.separator(m);
+        FX.item(m, "Save", save).setAccelerator(KeyCombination.keyCombination("shortcut+S"));
+        FX.item(m, "Save As...", saveAs).setAccelerator(KeyCombination.keyCombination("shortcut+A"));
+        FX.item(m, "Quit", this::quit);
+
+        // edit
+        FX.menu(m, "Edit");
+        FX.item(m, "Undo", undo);
+        FX.item(m, "Redo", redo);
+        FX.separator(m);
+        FX.item(m, "Cut", cut);
+        FX.item(m, "Copy", copy);
+        FX.item(m, "Paste", paste);
+        FX.item(m, "Paste and Retain Style", pasteUnformatted);
+
+        // format
+        FX.menu(m, "Format");
+        FX.item(m, "Bold", bold).setAccelerator(KeyCombination.keyCombination("shortcut+B"));
+        FX.item(m, "Italic", italic).setAccelerator(KeyCombination.keyCombination("shortcut+I"));
+        FX.item(m, "Strike Through", strikeThrough);
+        FX.item(m, "Underline", underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
+        FX.separator(m);
+        FX.item(m, "Paragraph...", paragraphStyle);
+
+        // view
+        FX.menu(m, "View");
+        FX.checkItem(m, "Highlight Current Paragraph", highlightCurrentLine);
+        FX.checkItem(m, "Show Line Numbers", lineNumbers);
+        FX.checkItem(m, "Wrap Text", wrapText);
+        // TODO line spacing
+
+        // tools
+        FX.menu(m, "Tools");
+        FX.item(m, "Settings", this::openSettings);
+
+        // help
+        FX.menu(m, "Help");
+        FX.item(m, "About"); // TODO
+
+        return m;
+    }
+
+    public ContextMenu createContextMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Undo", undo);
+        FX.item(m, "Redo", redo);
+        FX.separator(m);
+        FX.item(m, "Cut", cut);
+        FX.item(m, "Copy", copy);
+        FX.item(m, "Paste", paste);
+        FX.item(m, "Paste and Retain Style", pasteUnformatted);
+        FX.separator(m);
+        FX.item(m, "Select All", selectAll);
+        FX.separator(m);
+        // TODO Font...
+        FX.item(m, "Paragraph...", paragraphStyle);
+        return m;
     }
 
     private boolean hasStyle(StyleAttributeMap attrs, StyleAttribute<Boolean> a) {
@@ -644,5 +712,10 @@ public class Actions {
 
     private void showParagraphDialog() {
         new ParagraphDialog(editor).show();
+    }
+
+    private void openSettings() {
+        Window w = FX.getParentWindow(editor);
+        new SettingsWindow(w).show();
     }
 }
