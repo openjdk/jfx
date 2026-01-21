@@ -295,13 +295,12 @@ public class Actions {
         FX.separator(m);
         // TODO Font...
         FX.item(m, "Paragraph...", paragraphStyle);
-        FX.item(m, "Tabs...", this::showTabOptions);
         return m;
     }
 
     private ContextMenu createRulerPopupMenu() {
         ContextMenu m = new ContextMenu();
-        FX.item(m, "Tabs...", this::showTabOptions);
+        FX.item(m, "Clear Tabs", this::clearTabs);
         FX.separator(m);
         FX.item(m, "Hide Ruler", this::hideRuler);
         return m;
@@ -761,11 +760,12 @@ public class Actions {
         }
     }
 
-    private void hideRuler() {
-        rulerVisible.set(false);
+    private void clearTabs() {
+        tabPolicy.tabStops().clear();
+        handleTabStopChange();
     }
 
-    private void showTabOptions() {
-        // TODO
+    private void hideRuler() {
+        rulerVisible.set(false);
     }
 }
