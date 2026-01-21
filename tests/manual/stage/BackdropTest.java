@@ -44,7 +44,6 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.StageBackdrop;
 import javafx.stage.Window;
-import java.util.List;
 
 public class BackdropTest extends Application {
     public static void main(String[] args) {
