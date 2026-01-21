@@ -482,12 +482,12 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             popupContent.resize(w, h);
 
             // Take into account whether the popup was autofixed for JDK-8338145
-            // If it was and the height changed, we need to adjust the position as well
-            // to retain the original position relative to the combo box itself
+            // If it was, we might need to adjust the position
+            // to retain the relative position to the combo box itself
             if (!first) {
+                double topY = getSkinnable().localToScreen(0, 0).getY();
                 // The popup does not directly store information on whether it was autofixed
                 // We can determine this by looking whether it was moved upward
-                double topY = getSkinnable().localToScreen(0, 0).getY();
                 boolean wasAutofixed = popup.getY() < topY;
                 if (wasAutofixed) {
                     popup.setY(topY - h);
