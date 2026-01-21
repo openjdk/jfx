@@ -218,7 +218,7 @@ public:
                 if (nodeRef->op() == ForceOSRExit)
                     break;
                 for (unsigned stackIndex = loopStack.size(); stackIndex--;) {
-                    if (UNLIKELY(Options::useLICMFuzzing())) {
+                    if (Options::useLICMFuzzing()) [[unlikely]] {
                         bool shouldAttemptHoist = random.returnTrueWithProbability(Options::allowHoistingLICMProbability());
                         if (!shouldAttemptHoist && !nodeRef->isCheckNode())
                             continue;

@@ -78,4 +78,34 @@ void DebugHeap::free(void* object)
 
 } // namespace WTF
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/DebugHeapAdditions.cpp>
+#else
+
+namespace WTF {
+
+void* DebugHeap::mallocCompact(size_t size)
+{
+    return malloc(size);
+}
+
+void* DebugHeap::callocCompact(size_t numElements, size_t elementSize)
+{
+    return calloc(numElements, elementSize);
+}
+
+void* DebugHeap::memalignCompact(size_t alignment, size_t size, bool crashOnFailure)
+{
+    return memalign(alignment, size, crashOnFailure);
+}
+
+void* DebugHeap::reallocCompact(void* object, size_t size)
+{
+    return realloc(object, size);
+}
+
+} // namespace WTF
+
+#endif
+
 #endif // ENABLE(MALLOC_HEAP_BREAKDOWN)

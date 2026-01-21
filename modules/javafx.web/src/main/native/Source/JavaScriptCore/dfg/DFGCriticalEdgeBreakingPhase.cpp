@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,6 +46,7 @@ public:
 
     bool run()
     {
+        Vector<BasicBlock*> newJumpPads;
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
             BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
@@ -76,6 +77,7 @@ public:
                     pad->predecessors.append(block);
                     (*successor)->replacePredecessor(block, pad);
                     successorPads.set(*successor, pad);
+                    newJumpPads.append(pad);
                 } else
                     pad = iter->value;
 
@@ -83,9 +85,52 @@ public:
             }
         }
 
-        return m_insertionSet.execute();
+        bool changed = m_insertionSet.execute();
+        if (changed && m_graph.m_shouldFixAvailability)
+            performFixJumpPadAvailability(newJumpPads);
+        return changed;
     }
 
+    // This finalizes variable availability and Phi placement for newly inserted jump pads.
+    // It is necessary after loop unrolling and critical edge breaking to ensure SSA and OSR correctness.
+    void performFixJumpPadAvailability(Vector<BasicBlock*>& pads)
+    {
+        for (BasicBlock* pad : pads) {
+            ASSERT(pad->isJumpPad());
+            BasicBlock* successor = pad->successor(0);
+            for (unsigned i = successor->variablesAtHead.size(); i--;) {
+                Node* node = successor->variablesAtHead[i];
+                if (!node)
+                    continue;
+
+                VariableAccessData* variable = node->variableAccessData();
+                Node* phi = m_graph.addNode(Phi, node->origin, OpInfo(variable));
+                pad->phis.append(phi);
+                switch (variable->operand().kind()) {
+                case OperandKind::Argument: {
+                    size_t index = variable->operand().toArgument();
+                    pad->variablesAtHead.atFor<OperandKind::Argument>(index) = phi;
+                    pad->variablesAtTail.atFor<OperandKind::Argument>(index) = phi;
+                    break;
+                }
+                case OperandKind::Local: {
+                    size_t index = variable->operand().toLocal();
+                    pad->variablesAtHead.atFor<OperandKind::Local>(index) = phi;
+                    pad->variablesAtTail.atFor<OperandKind::Local>(index) = phi;
+                    break;
+                }
+                case OperandKind::Tmp: {
+                    size_t index = variable->operand().value();
+                    pad->variablesAtHead.atFor<OperandKind::Tmp>(index) = phi;
+                    pad->variablesAtTail.atFor<OperandKind::Tmp>(index) = phi;
+                    break;
+                }
+                }
+            }
+
+            pad->isExcludedFromFTLCodeSizeEstimation = true;
+        }
+    }
 private:
     BlockInsertionSet m_insertionSet;
 };

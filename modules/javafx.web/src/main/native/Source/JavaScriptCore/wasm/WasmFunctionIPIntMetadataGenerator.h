@@ -90,10 +90,8 @@ public:
     void setTailCall(uint32_t, bool);
     void setTailCallClobbersInstance() { m_tailCallClobbersInstance = true; }
 
-    FixedBitVector&& takeCallees() { return WTFMove(m_callees); }
-
     const uint8_t* getBytecode() const { return m_bytecode.data(); }
-    const uint8_t* getMetadata() const { return m_metadata.data(); }
+    const uint8_t* getMetadata() const { return m_metadata.span().data(); }
 
     UncheckedKeyHashMap<IPIntPC, IPIntTierUpCounter::OSREntryData>& tierUpCounter() { return m_tierUpCounter; }
 
@@ -109,7 +107,7 @@ private:
     {
         auto size = m_metadata.size();
         addBlankSpace<T>();
-        WRITE_TO_METADATA(m_metadata.data() + size, t, T);
+        WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, t, T);
     };
 
     void addLength(size_t length);
@@ -121,7 +119,6 @@ private:
     FunctionCodeIndex m_functionIndex;
     bool m_hasTailCallSuccessors { false };
     bool m_tailCallClobbersInstance { false };
-    FixedBitVector m_callees;
     BitVector m_tailCallSuccessors;
 
     std::span<const uint8_t> m_bytecode;

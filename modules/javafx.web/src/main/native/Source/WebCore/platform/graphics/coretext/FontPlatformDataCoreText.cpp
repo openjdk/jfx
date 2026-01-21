@@ -57,10 +57,10 @@ FontPlatformData::FontPlatformData(RetainPtr<CTFontRef>&& font, float size, bool
     : FontPlatformData(size, syntheticBold, syntheticOblique, orientation, widthVariant, textRenderingMode, customPlatformData)
 {
     ASSERT_ARG(font, font);
-    m_font = font;
-    m_isColorBitmapFont = CTFontGetSymbolicTraits(font.get()) & kCTFontColorGlyphsTrait;
-    m_isSystemFont = WebCore::isSystemFont(font.get());
-    auto variations = adoptCF(static_cast<CFDictionaryRef>(CTFontCopyAttribute(font.get(), kCTFontVariationAttribute)));
+    m_font = WTFMove(font);
+    m_isColorBitmapFont = CTFontGetSymbolicTraits(m_font.get()) & kCTFontColorGlyphsTrait;
+    m_isSystemFont = WebCore::isSystemFont(m_font.get());
+    auto variations = adoptCF(static_cast<CFDictionaryRef>(CTFontCopyAttribute(m_font.get(), kCTFontVariationAttribute)));
     m_hasVariations = variations && CFDictionaryGetCount(variations.get());
 
 #if PLATFORM(IOS_FAMILY)
@@ -78,7 +78,7 @@ FontPlatformData::FontPlatformData(RetainPtr<CTFontRef>&& font, float size, bool
         RetainPtr<CTFontRef> newFont = adoptCF(CTFontCreateWithFontDescriptor(newDescriptor.get(), m_size, 0));
 
         if (newFont)
-            m_font = newFont;
+            m_font = WTFMove(newFont);
     }
 }
 
@@ -293,9 +293,9 @@ FontPlatformData::IPCData FontPlatformData::toIPCData() const
 
     auto options = CTFontDescriptorGetOptions(fontDescriptor.get());
     auto referenceURL = adoptCF(static_cast<CFURLRef>(CTFontCopyAttribute(font, kCTFontReferenceURLAttribute)));
-    auto urlString = CFURLGetString(referenceURL.get());
+    auto urlString = retainPtr(CFURLGetString(referenceURL.get()));
     auto postScriptName = adoptCF(CTFontCopyPostScriptName(font)).get();
-    return FontPlatformSerializedData { options, urlString, postScriptName, FontPlatformSerializedAttributes::fromCF(attributes.get()) };
+    return FontPlatformSerializedData { options, WTFMove(urlString), WTFMove(postScriptName), FontPlatformSerializedAttributes::fromCF(attributes.get()) };
 }
 
 #define EXTRACT_TYPED_VALUE(key, cfType, target) { \
@@ -345,7 +345,7 @@ std::optional<FontPlatformSerializedAttributes> FontPlatformSerializedAttributes
         CFIndex count = CFDictionaryGetCount(dictionary);
         Vector<void*> keys(count);
         Vector<void*> values(count);
-        CFDictionaryGetKeysAndValues(dictionary, const_cast<const void**>(keys.data()), const_cast<const void**>(values.data()));
+        CFDictionaryGetKeysAndValues(dictionary, const_cast<const void**>(keys.span().data()), const_cast<const void**>(values.span().data()));
 
         for (CFIndex i = 0; i < count; ++i) {
             auto key = static_cast<CFNumberRef>(keys[i]);

@@ -41,7 +41,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSString* jsString = jsDynamicCast<JSString*>(callFrame->argument(0));
-    if (UNLIKELY(!jsString))
+    if (!jsString) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Uint8Array.fromBase64 requires a string"_s);
 
     auto alphabet = WTF::Alphabet::Base64;
@@ -50,17 +50,17 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
     JSValue optionsValue = callFrame->argument(1);
     if (!optionsValue.isUndefined()) {
         JSObject* optionsObject = jsDynamicCast<JSObject*>(optionsValue);
-        if (UNLIKELY(!optionsValue.isObject()))
+        if (!optionsValue.isObject()) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "Uint8Array.fromBase64 requires that options be an object"_s);
 
         JSValue alphabetValue = optionsObject->get(globalObject, vm.propertyNames->alphabet);
         RETURN_IF_EXCEPTION(scope, { });
         if (!alphabetValue.isUndefined()) {
             JSString* alphabetString = jsDynamicCast<JSString*>(alphabetValue);
-            if (UNLIKELY(!alphabetString))
+            if (!alphabetString) [[unlikely]]
                 return throwVMTypeError(globalObject, scope, "Uint8Array.fromBase64 requires that alphabet be \"base64\" or \"base64url\""_s);
 
-            StringView alphabetStringView = alphabetString->view(globalObject);
+            auto alphabetStringView = alphabetString->view(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
             if (alphabetStringView == "base64url"_s)
                 alphabet = WTF::Alphabet::Base64URL;
@@ -72,10 +72,10 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
         RETURN_IF_EXCEPTION(scope, { });
         if (!lastChunkHandlingValue.isUndefined()) {
             JSString* lastChunkHandlingString = jsDynamicCast<JSString*>(lastChunkHandlingValue);
-            if (UNLIKELY(!lastChunkHandlingString))
+            if (!lastChunkHandlingString) [[unlikely]]
                 return throwVMTypeError(globalObject, scope, "Uint8Array.fromBase64 requires that lastChunkHandling be \"loose\", \"strict\", or \"stop-before-partial\""_s);
 
-            StringView lastChunkHandlingStringView = lastChunkHandlingString->view(globalObject);
+            auto lastChunkHandlingStringView = lastChunkHandlingString->view(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
             if (lastChunkHandlingStringView == "strict"_s)
                 lastChunkHandling = WTF::LastChunkHandling::Strict;
@@ -86,13 +86,14 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromBase64, (JSGlobalObject* globa
         }
     }
 
-    StringView view = jsString->view(globalObject);
+    auto gcOwnedData = jsString->view(globalObject);
+    StringView view = gcOwnedData;
     RETURN_IF_EXCEPTION(scope, { });
 
     Vector<uint8_t, 128> output;
     output.grow(maxLengthFromBase64(view));
     auto [shouldThrowError, readLength, writeLength] = fromBase64(view, output.mutableSpan(), alphabet, lastChunkHandling);
-    if (UNLIKELY(shouldThrowError == WTF::FromBase64ShouldThrowError::Yes))
+    if (shouldThrowError == WTF::FromBase64ShouldThrowError::Yes) [[unlikely]]
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.fromBase64 requires a valid base64 string"_s));
 
     ASSERT(readLength <= view.length());
@@ -131,7 +132,7 @@ inline static WARN_UNUSED_RETURN size_t decodeHexImpl(std::span<CharacterType> s
         };
 
         auto [nibbles, flags] = decodeNibbles(input);
-        if (UNLIKELY(SIMD::isNonZero(flags)))
+        if (SIMD::isNonZero(flags)) [[unlikely]]
             return false;
 
         auto converted = simde_vreinterpretq_u16_u8(nibbles);
@@ -164,7 +165,7 @@ inline static WARN_UNUSED_RETURN size_t decodeHexImpl(std::span<CharacterType> s
                 return true;
             } else {
                 auto vectorDecode16 = [&](simde_uint8x16x2_t input, uint8_t* output) ALWAYS_INLINE_LAMBDA {
-                    if (UNLIKELY(SIMD::isNonZero(input.val[1])))
+                    if (SIMD::isNonZero(input.val[1])) [[unlikely]]
                         return false;
                     return vectorDecode8(input.val[0], output);
                 };
@@ -189,10 +190,10 @@ inline static WARN_UNUSED_RETURN size_t decodeHexImpl(std::span<CharacterType> s
     // 2. Vector decoding failed due to incorrect character. Now, we do decoding character by character to decode up to the incorrect character position.
     for (; cursor < end; cursor += 2, output += 1) {
         int tens = parseDigit(*cursor, 16);
-        if (UNLIKELY(tens == -1))
+        if (tens == -1) [[unlikely]]
             return cursor - begin;
         int ones = parseDigit(*(cursor + 1), 16);
-        if (UNLIKELY(ones == -1))
+        if (ones == -1) [[unlikely]]
             return (cursor + 1) - begin;
         *output = (tens * 16) + ones;
     }
@@ -204,7 +205,7 @@ WARN_UNUSED_RETURN size_t decodeHex(std::span<const LChar> span, std::span<uint8
     return decodeHexImpl(span, result);
 }
 
-WARN_UNUSED_RETURN size_t decodeHex(std::span<const UChar> span, std::span<uint8_t> result)
+WARN_UNUSED_RETURN size_t decodeHex(std::span<const char16_t> span, std::span<uint8_t> result)
 {
     return decodeHexImpl(span, result);
 }
@@ -215,12 +216,13 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromHex, (JSGlobalObject* globalOb
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSString* jsString = jsDynamicCast<JSString*>(callFrame->argument(0));
-    if (UNLIKELY(!jsString))
+    if (!jsString) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Uint8Array.fromHex requires a string"_s);
-    if (UNLIKELY(jsString->length() % 2))
+    if (jsString->length() % 2) [[unlikely]]
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.fromHex requires a string of even length"_s));
 
-    StringView view = jsString->view(globalObject);
+    auto gcOwnedData = jsString->view(globalObject);
+    StringView view = gcOwnedData;
     RETURN_IF_EXCEPTION(scope, { });
 
     size_t count = static_cast<size_t>(view.length() / 2);
@@ -236,7 +238,7 @@ JSC_DEFINE_HOST_FUNCTION(uint8ArrayConstructorFromHex, (JSGlobalObject* globalOb
     else
         success = decodeHex(view.span16(), result) == WTF::notFound;
 
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return JSValue::encode(throwSyntaxError(globalObject, scope, "Uint8Array.prototype.fromHex requires a string containing only \"0123456789abcdefABCDEF\""_s));
 
     return JSValue::encode(uint8Array);

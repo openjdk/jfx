@@ -32,6 +32,7 @@ enum RTCEncodedVideoFrameType { "empty", "key", "delta" };
 [
     Conditional=WEB_RTC,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
 ]
 dictionary RTCEncodedVideoFrameMetadata {
     long long frameId;
@@ -41,8 +42,22 @@ dictionary RTCEncodedVideoFrameMetadata {
     long spatialIndex;
     long temporalIndex;
     unsigned long synchronizationSource;
-    // FIXME: http://webkit.org/b/224443
-    // sequence<unsigned long> contributingSources;
+    octet payloadType;
+    sequence<unsigned long> contributingSources;
+    long long timestamp;
+    unsigned long rtpTimestamp;
+    // FIXME: add additional time metadata
+    // DOMHighResTimeStamp receiveTime;
+    // DOMHighResTimeStamp captureTime;
+    // DOMHighResTimeStamp senderCaptureTimeOffset;
+    DOMString mimeType;
+};
+
+[
+    Conditional=WEB_RTC,
+]
+dictionary RTCEncodedVideoFrameOptions {
+    RTCEncodedVideoFrameMetadata metadata;
 };
 
 // https://w3c.github.io/webrtc-encoded-transform/#RTCEncodedVideoFrame-interface
@@ -52,6 +67,8 @@ dictionary RTCEncodedVideoFrameMetadata {
     EnabledBySetting=WebRTCEncodedTransformEnabled,
     Exposed=(Window,DedicatedWorker),
 ] interface RTCEncodedVideoFrame {
+    constructor(RTCEncodedVideoFrame originalFrame, optional RTCEncodedVideoFrameOptions options = {});
+
     readonly attribute RTCEncodedVideoFrameType type;
     readonly attribute unsigned long long timestamp;
     attribute ArrayBuffer data;

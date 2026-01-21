@@ -58,7 +58,7 @@ protected:
     void setRadioSize(RenderStyle& style) const override;
 
     void adjustButtonStyle(RenderStyle&, const Element*) const override;
-    bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintButton(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustTextFieldStyle(RenderStyle&, const Element*) const override;
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
@@ -83,7 +83,6 @@ protected:
 
 #if ENABLE(VIDEO)
     virtual Vector<String, 2> mediaControlsScripts() override;
-    String extraMediaControlsStyleSheet() override;
 
     bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
     bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
@@ -93,10 +92,10 @@ protected:
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;
     Seconds animationDurationForProgressBar() const override;
     void adjustProgressBarStyle(RenderStyle&, const Element*) const override;
-    bool paintProgressBar(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintProgressBar(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     bool supportsMeter(StyleAppearance) const override;
-    bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintMeter(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
 #if ENABLE(DATALIST_ELEMENT)
     // Returns size of one slider tick mark for a horizontal track.
@@ -107,12 +106,12 @@ protected:
 #endif
 
     void adjustSliderThumbSize(RenderStyle&, const Element*) const override;
-    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    bool paintSliderThumb(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
-    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    String mediaControlsBase64StringForIconNameAndType(const String&, const String&);
-    String mediaControlsStyleSheet();
+    bool paintSliderTrack(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    String mediaControlsBase64StringForIconNameAndType(const String&, const String&) override;
+    Vector<String, 2> mediaControlsStyleSheets(const HTMLMediaElement&) override;
 
 private:
     int createWidgetState(const RenderObject& o);
@@ -122,6 +121,7 @@ private:
                      const PaintInfo& i, const FloatRect& rect);
     Color getSelectionColor(int index) const;
     std::unique_ptr<MediaControlResource> mediaResource;
+    String m_mediaControlsStyleSheet;
 #if ENABLE(VIDEO)
     bool paintMediaControl(jint type, const RenderObject&, const PaintInfo&, const IntRect&);
 #endif

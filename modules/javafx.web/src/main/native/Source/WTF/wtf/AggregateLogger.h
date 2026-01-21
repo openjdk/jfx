@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <wtf/Algorithms.h>
 #include <wtf/HashSet.h>
 #include <wtf/Logger.h>
 #include <wtf/Ref.h>
@@ -117,7 +116,7 @@ private:
         }
     }
 
-    UncheckedKeyHashSet<RefPtr<const Logger>> m_loggers;
+    HashSet<RefPtr<const Logger>> m_loggers;
 };
 
 } // namespace WTF

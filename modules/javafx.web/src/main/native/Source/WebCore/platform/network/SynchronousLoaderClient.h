@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,6 +79,6 @@ private:
     ResourceResponse m_response;
     Vector<uint8_t> m_data;
     ResourceError m_error;
-    Ref<SynchronousLoaderMessageQueue> m_messageQueue;
+    const Ref<SynchronousLoaderMessageQueue> m_messageQueue;
 };
 }

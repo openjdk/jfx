@@ -33,7 +33,6 @@ namespace WebCore {
 
 bool isValidVideoFrameBufferInit(const WebCodecsVideoFrame::BufferInit&);
 bool verifyRectOffsetAlignment(VideoPixelFormat, const DOMRectInit&);
-bool verifyRectSizeAlignment(VideoPixelFormat, const DOMRectInit&);
 ExceptionOr<DOMRectInit> parseVisibleRect(const DOMRectInit&, const std::optional<DOMRectInit>&, size_t codedWidth, size_t codedHeight, VideoPixelFormat);
 size_t videoPixelFormatToPlaneCount(VideoPixelFormat);
 size_t videoPixelFormatToSampleByteSizePerPlane();

@@ -28,9 +28,9 @@
 namespace WTF {
 
 // Expect exit call on UNIX platforms.
-WTF_EXPORT_PRIVATE NO_RETURN void exitProcess(int status);
+[[noreturn]] WTF_EXPORT_PRIVATE void exitProcess(int status);
 // Expect _exit call on UNIX platforms.
-WTF_EXPORT_PRIVATE NO_RETURN void terminateProcess(int status);
+[[noreturn]] WTF_EXPORT_PRIVATE void terminateProcess(int status);
 
 } // namespace WTF
 

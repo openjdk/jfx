@@ -103,7 +103,7 @@ struct pas_root {
     pas_ptr_hash_map_in_flux_stash* pas_pgm_hash_map_instance_in_flux_stash;
 };
 
-#define PAS_ROOT_MAGIC 0xbeeeeeeeeflu
+#define PAS_ROOT_MAGIC 0xbeeeeeeeefllu
 
 PAS_API void pas_root_construct(pas_root* root);
 PAS_API pas_root* pas_root_create(void);

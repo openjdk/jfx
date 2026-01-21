@@ -26,6 +26,7 @@
 #pragma once
 
 #include "SVGAnimationAdditiveListFunction.h"
+#include "SVGElement.h"
 #include "SVGLengthList.h"
 #include "SVGNumberList.h"
 #include "SVGPointList.h"

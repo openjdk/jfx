@@ -30,7 +30,6 @@
 
 #include "ContextMenu.h"
 #include "ContextMenuProvider.h"
-#include "ExceptionOr.h"
 #include "InspectorFrontendClient.h"
 #include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/RefCounted.h>
@@ -50,6 +49,7 @@ class HTMLIFrameElement;
 class OffscreenCanvasRenderingContext2D;
 class Page;
 class Path2D;
+template<typename> class ExceptionOr;
 
 class InspectorFrontendHost : public RefCounted<InspectorFrontendHost> {
 public:

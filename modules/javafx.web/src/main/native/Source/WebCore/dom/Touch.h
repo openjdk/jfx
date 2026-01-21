@@ -48,6 +48,8 @@ public:
                 screenY, pageX, pageY, radiusX, radiusY, rotationAngle, force));
     }
 
+    ~Touch();
+
     EventTarget* target() const { return m_target.get(); }
     int identifier() const { return m_identifier; }
     int clientX() const { return m_clientX; }

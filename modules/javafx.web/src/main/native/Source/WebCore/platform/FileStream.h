@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -56,16 +57,12 @@ public:
     // Reads a file into the provided data buffer.
     // Returns number of bytes being read on success. -1 otherwise.
     // If 0 is returned, it means that the reading is completed.
-#if !PLATFORM(JAVA)
     int read(std::span<uint8_t> buffer);
-#else
-    int read(void* buffer, int length);
-#endif
 
 private:
-    FileSystem::PlatformFileHandle m_handle;
-    long long m_bytesProcessed;
-    long long m_totalBytesToRead;
+    FileSystem::FileHandle m_handle;
+    long long m_bytesProcessed { 0 };
+    long long m_totalBytesToRead { 0 };
 };
 
 } // namespace WebCore

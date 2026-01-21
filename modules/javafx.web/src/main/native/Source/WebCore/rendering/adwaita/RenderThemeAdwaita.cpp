@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014, 2020 Igalia S.L.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,6 +42,7 @@
 #include "RenderObject.h"
 #include "RenderProgress.h"
 #include "RenderStyleSetters.h"
+#include "StylePadding.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
 #include "UserAgentScripts.h"
@@ -61,6 +63,7 @@
 #endif
 
 namespace WebCore {
+using namespace CSS::Literals;
 using namespace WebCore::Adwaita;
 
 RenderTheme& RenderTheme::singleton()
@@ -206,11 +209,11 @@ Vector<String, 2> RenderThemeAdwaita::mediaControlsScripts()
     return { StringImpl::createWithoutCopying(ModernMediaControlsJavaScript) };
 }
 
-String RenderThemeAdwaita::mediaControlsStyleSheet()
+Vector<String, 2> RenderThemeAdwaita::mediaControlsStyleSheets(const HTMLMediaElement&)
 {
     if (m_mediaControlsStyleSheet.isEmpty())
         m_mediaControlsStyleSheet = StringImpl::createWithoutCopying(ModernMediaControlsUserAgentStyleSheet);
-    return m_mediaControlsStyleSheet;
+    return { m_mediaControlsStyleSheet };
 }
 
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
@@ -287,19 +290,19 @@ Color RenderThemeAdwaita::systemColor(CSSValueID cssValueID, OptionSet<StyleColo
     }
 }
 
-bool RenderThemeAdwaita::isControlStyled(const RenderStyle& style, const RenderStyle& userAgentStyle) const
+bool RenderThemeAdwaita::isControlStyled(const RenderStyle& style) const
 {
     auto appearance = style.usedAppearance();
     if (appearance == StyleAppearance::TextField || appearance == StyleAppearance::TextArea || appearance == StyleAppearance::SearchField || appearance == StyleAppearance::Listbox)
-        return style.border() != userAgentStyle.border();
+        return style.nativeAppearanceDisabled();
 
-    return RenderTheme::isControlStyled(style, userAgentStyle);
+    return RenderTheme::isControlStyled(style);
 }
 
 void RenderThemeAdwaita::adjustTextFieldStyle(RenderStyle& style, const Element*) const
 {
     if (!style.hasExplicitlySetBorderRadius())
-        style.setBorderRadius(IntSize(5, 5));
+        style.setBorderRadius({ 5_css_px, 5_css_px });
 }
 
 void RenderThemeAdwaita::adjustTextAreaStyle(RenderStyle& style, const Element* element) const
@@ -323,16 +326,21 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
     adjustMenuListStyle(style, element);
 }
 
-LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
+Style::PaddingBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style) const
 {
     if (style.usedAppearance() == StyleAppearance::None)
-        return { };
+        return { 0_css_px };
 
     auto zoomedArrowSize = menuListButtonArrowSize * style.usedZoom();
     int leftPadding = menuListButtonPadding + (style.writingMode().isBidiRTL() ? zoomedArrowSize : 0);
     int rightPadding = menuListButtonPadding + (style.writingMode().isBidiLTR() ? zoomedArrowSize : 0);
 
-    return { menuListButtonPadding, rightPadding, menuListButtonPadding, leftPadding };
+    return {
+        Style::PaddingEdge::Fixed { static_cast<float>(menuListButtonPadding) },
+        Style::PaddingEdge::Fixed { static_cast<float>(rightPadding) },
+        Style::PaddingEdge::Fixed { static_cast<float>(menuListButtonPadding) },
+        Style::PaddingEdge::Fixed { static_cast<float>(leftPadding) },
+    };
 }
 
 Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderProgress& renderer) const
@@ -340,9 +348,10 @@ Seconds RenderThemeAdwaita::animationRepeatIntervalForProgressBar(const RenderPr
     return renderer.page().preferredRenderingUpdateInterval();
 }
 
-IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress&, const IntRect& bounds) const
+IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress& renderer, const IntRect& bounds) const
 {
-    return { bounds.x(), bounds.y(), bounds.width(), progressBarSize };
+    bool isHorizontal = renderer.isHorizontalWritingMode();
+    return { bounds.x(), bounds.y(), isHorizontal ? bounds.width() : progressBarSize, isHorizontal ? progressBarSize : bounds.height() };
 }
 
 void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element*) const
@@ -351,8 +360,8 @@ void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element
     if (appearance != StyleAppearance::SliderThumbHorizontal && appearance != StyleAppearance::SliderThumbVertical)
         return;
 
-    style.setWidth(Length(sliderThumbSize, LengthType::Fixed));
-    style.setHeight(Length(sliderThumbSize, LengthType::Fixed));
+    style.setWidth(Style::PreferredSize::Fixed { static_cast<float>(sliderThumbSize) });
+    style.setHeight(Style::PreferredSize::Fixed { static_cast<float>(sliderThumbSize) });
 }
 
 IntSize RenderThemeAdwaita::sliderTickSize() const
@@ -369,9 +378,72 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
 {
     // Add a margin to place the button at end of the input field.
     if (style.isLeftToRightDirection())
-        style.setMarginRight(Length(-2, LengthType::Fixed));
+        style.setMarginRight(-2_css_px);
     else
-        style.setMarginLeft(Length(-2, LengthType::Fixed));
+        style.setMarginLeft(-2_css_px);
+}
+
+Style::PreferredSizePair RenderThemeAdwaita::controlSize(StyleAppearance appearance, const FontCascade& fontCascade, const Style::PreferredSizePair& zoomedSize, float zoomFactor) const
+{
+    if (!zoomedSize.width().isIntrinsicOrLegacyIntrinsicOrAuto() && !zoomedSize.height().isIntrinsicOrLegacyIntrinsicOrAuto())
+        return RenderTheme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
+
+    switch (appearance) {
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio: {
+        auto buttonSizeWidth = zoomedSize.width();
+        auto buttonSizeHeight = zoomedSize.height();
+        if (buttonSizeWidth.isIntrinsicOrLegacyIntrinsicOrAuto())
+            buttonSizeWidth = 12_css_px * zoomFactor;
+        if (buttonSizeHeight.isIntrinsicOrLegacyIntrinsicOrAuto())
+            buttonSizeHeight = 12_css_px * zoomFactor;
+        return { WTFMove(buttonSizeWidth), WTFMove(buttonSizeHeight) };
+    }
+    case StyleAppearance::InnerSpinButton: {
+        auto spinButtonSizeWidth = zoomedSize.width();
+        auto spinButtonSizeHeight = zoomedSize.height();
+        if (spinButtonSizeWidth.isIntrinsicOrLegacyIntrinsicOrAuto())
+            spinButtonSizeWidth = Style::PreferredSize::Fixed { static_cast<float>(static_cast<int>(arrowSize * zoomFactor)) };
+        if (spinButtonSizeHeight.isIntrinsicOrLegacyIntrinsicOrAuto() || fontCascade.size() > arrowSize)
+            spinButtonSizeHeight = Style::PreferredSize::Fixed { fontCascade.size() };
+        return { WTFMove(spinButtonSizeWidth), WTFMove(spinButtonSizeHeight) };
+    }
+    default:
+        break;
+    }
+
+    return RenderTheme::controlSize(appearance, fontCascade, zoomedSize, zoomFactor);
+}
+
+Style::MinimumSizePair RenderThemeAdwaita::minimumControlSize(StyleAppearance, const FontCascade&, const Style::MinimumSizePair& zoomedSize, float) const
+{
+    if (!zoomedSize.width().isIntrinsicOrLegacyIntrinsicOrAuto() && !zoomedSize.height().isIntrinsicOrLegacyIntrinsicOrAuto())
+        return zoomedSize;
+
+    auto resultWidth = zoomedSize.width();
+    auto resultHeight = zoomedSize.height();
+
+    if (resultWidth.isIntrinsicOrLegacyIntrinsicOrAuto())
+        resultWidth = 0_css_px;
+    if (resultHeight.isIntrinsicOrLegacyIntrinsicOrAuto())
+        resultHeight = 0_css_px;
+
+    return { WTFMove(resultWidth), WTFMove(resultHeight) };
+}
+
+Style::LineWidthBox RenderThemeAdwaita::controlBorder(StyleAppearance appearance, const FontCascade& font, const Style::LineWidthBox& zoomedBox, float zoomFactor, const Element* element) const
+{
+    switch (appearance) {
+    case StyleAppearance::PushButton:
+    case StyleAppearance::DefaultButton:
+    case StyleAppearance::Button:
+    case StyleAppearance::SquareButton:
+        return zoomedBox;
+    default:
+        break;
+    }
+
+    return RenderTheme::controlBorder(appearance, font, zoomedBox, zoomFactor, element);
 }
 
 #if PLATFORM(GTK) || PLATFORM(WPE)

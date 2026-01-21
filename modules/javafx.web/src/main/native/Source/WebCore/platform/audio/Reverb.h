@@ -45,16 +45,16 @@ public:
     enum { MaxFrameSize = 256 };
 
     // renderSliceSize is a rendering hint, so the FFTs can be optimized to not all occur at the same time (very bad when rendering on a real-time thread).
-    Reverb(AudioBus* impulseResponseBuffer, size_t renderSliceSize, size_t maxFFTSize, bool useBackgroundThreads, bool normalize);
+    Reverb(AudioBus& impulseResponseBuffer, size_t renderSliceSize, size_t maxFFTSize, bool useBackgroundThreads, bool normalize);
 
-    void process(const AudioBus* sourceBus, AudioBus* destinationBus, size_t framesToProcess);
+    void process(const AudioBus& sourceBus, AudioBus& destinationBus, size_t framesToProcess);
     void reset();
 
     size_t impulseResponseLength() const { return m_impulseResponseLength; }
     size_t latencyFrames() const;
 
 private:
-    void initialize(AudioBus* impulseResponseBuffer, size_t renderSliceSize, size_t maxFFTSize, bool useBackgroundThreads, float scale);
+    void initialize(AudioBus& impulseResponseBuffer, size_t renderSliceSize, size_t maxFFTSize, bool useBackgroundThreads, float scale);
 
     size_t m_impulseResponseLength;
 

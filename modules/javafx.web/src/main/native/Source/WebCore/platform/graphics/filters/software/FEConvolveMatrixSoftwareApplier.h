@@ -44,11 +44,11 @@ public:
     FEConvolveMatrixSoftwareApplier(const FEConvolveMatrix& effect);
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     struct PaintingData {
-        const Ref<const PixelBuffer> sourcePixelBuffer;
-        const Ref<PixelBuffer> destinationPixelBuffer;
+        const PixelBuffer& sourcePixelBuffer;
+        PixelBuffer& destinationPixelBuffer;
         int width;
         int height;
 

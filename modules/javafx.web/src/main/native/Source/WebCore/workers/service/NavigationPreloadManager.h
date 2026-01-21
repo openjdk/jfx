@@ -28,8 +28,11 @@
 #include "NavigationPreloadState.h"
 #include "ServiceWorkerRegistration.h"
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
+
+class WeakPtrImplWithEventTargetData;
 
 class NavigationPreloadManager {
     WTF_MAKE_TZONE_ALLOCATED(NavigationPreloadManager);
@@ -44,13 +47,13 @@ public:
     using StatePromise = DOMPromiseDeferred<IDLDictionary<NavigationPreloadState>>;
     void getState(StatePromise&&);
 
-    void ref() { m_registration.ref(); }
-    void deref() { m_registration.deref(); }
+    void ref() { m_registration->ref(); }
+    void deref() { m_registration->deref(); }
 
 private:
     explicit NavigationPreloadManager(ServiceWorkerRegistration&);
 
-    ServiceWorkerRegistration& m_registration;
+    const WeakRef<ServiceWorkerRegistration, WeakPtrImplWithEventTargetData> m_registration;
 };
 
 inline NavigationPreloadManager::NavigationPreloadManager(ServiceWorkerRegistration& registration)

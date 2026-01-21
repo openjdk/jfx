@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/Atomics.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Nonmovable.h>
@@ -117,7 +118,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
 class Watchpoint : public BasicRawSentinelNode<Watchpoint> {
     WTF_MAKE_NONCOPYABLE(Watchpoint);
     WTF_MAKE_NONMOVABLE(Watchpoint);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Watchpoint);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Watchpoint, Watchpoint);
 public:
 #define JSC_DEFINE_WATCHPOINT_TYPES(type, _) type,
     enum class Type : uint8_t {
@@ -159,7 +160,7 @@ class VM;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WatchpointSet);
 
 class WatchpointSet : public ThreadSafeRefCounted<WatchpointSet> {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(WatchpointSet);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(WatchpointSet, WatchpointSet);
     friend class LLIntOffsetsExtractor;
     friend class DeferredWatchpointFire;
 public:
@@ -222,7 +223,7 @@ public:
     template <typename T>
     void fireAll(VM& vm, T& fireDetails)
     {
-        if (LIKELY(m_state != IsWatched))
+        if (m_state != IsWatched) [[likely]]
             return;
         fireAllSlow(vm, fireDetails);
     }
@@ -257,9 +258,7 @@ public:
         return m_setIsNotEmpty;
     }
 
-    int8_t* addressOfState() { return &m_state; }
     static constexpr ptrdiff_t offsetOfState() { return OBJECT_OFFSETOF(WatchpointSet, m_state); }
-    int8_t* addressOfSetIsNotEmpty() { return &m_setIsNotEmpty; }
 
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const FireDetail&); // Call only if you've checked isWatched.
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, DeferredWatchpointFire* deferredWatchpoints); // Ditto.
@@ -439,7 +438,7 @@ public:
     // if they collect a Vector of WatchpointSet*.
     WatchpointSet* inflate()
     {
-        if (LIKELY(isFat()))
+        if (isFat()) [[likely]]
             return fat();
         return inflateSlow();
     }

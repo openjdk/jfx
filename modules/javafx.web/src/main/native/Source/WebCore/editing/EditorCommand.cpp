@@ -29,6 +29,7 @@
 #include "config.h"
 #include "Editor.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSValueList.h"
 #include "Chrome.h"
@@ -83,7 +84,7 @@ public:
     bool (*allowExecutionWhenDisabled)(LocalFrame&, EditorCommandSource);
 };
 
-typedef UncheckedKeyHashMap<String, const EditorInternalCommand*, ASCIICaseInsensitiveHash> CommandMap;
+typedef HashMap<String, const EditorInternalCommand*, ASCIICaseInsensitiveHash> CommandMap;
 
 static const bool notTextInsertion = false;
 static const bool isTextInsertion = true;
@@ -479,9 +480,9 @@ static bool executeInsertHTML(LocalFrame& frame, Event*, EditorCommandSource, co
 static bool executeInsertImage(LocalFrame& frame, Event*, EditorCommandSource, const String& value)
 {
     // FIXME: If userInterface is true, we should display a dialog box and let the user choose a local image.
-    Ref<HTMLImageElement> image = HTMLImageElement::create(*frame.document());
+    Ref image = HTMLImageElement::create(*frame.document());
     if (!value.isEmpty())
-        image->setSrc(AtomString { value });
+        image->setAttributeWithoutSynchronization(srcAttr, AtomString { value });
     return executeInsertNode(frame, WTFMove(image));
 }
 

@@ -29,6 +29,7 @@
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FormState.h>
 #include <WebCore/Frame.h>
+#include "FrameInlines.h"
 #include <WebCore/FrameLoader.h>
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/FrameView.h>
@@ -129,7 +130,7 @@ public:
     void updateSandboxFlags(SandboxFlags) override;
     void updateOpener(const Frame&) override;
 
-    WebCore::ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, WebCore::IsSameDocumentNavigation) const override;
+    WebCore::ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, WebCore::IsSameDocumentNavigation,ProcessSwapDisposition processSwapDisposition) const override;
     void shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const override;
 
     // This frame has displayed inactive content (such as an image) from an
@@ -160,7 +161,7 @@ public:
     void didFinishLoad() override;
     void prepareForDataSourceReplacement() override;
 
-    Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
+    Ref<DocumentLoader> createDocumentLoader(ResourceRequest&&, SubstituteData&&) override;
     void setTitle(const StringWithDirection& title, const URL&) override;
 
     void willReplaceMultipartContent() override;

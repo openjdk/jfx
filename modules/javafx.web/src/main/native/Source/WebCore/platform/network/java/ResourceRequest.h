@@ -36,13 +36,13 @@ public:
     {
     }
 
-    ResourceRequest(const URL& url)
-        : ResourceRequestBase(url, ResourceRequestCachePolicy::UseProtocolCachePolicy)
+    ResourceRequest(URL&& url)
+        : ResourceRequestBase(WTFMove(url), ResourceRequestCachePolicy::UseProtocolCachePolicy)
     {
     }
 
-    ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
-        : ResourceRequestBase(url, policy)
+    ResourceRequest(URL&& url, const String& referrer, ResourceRequestCachePolicy policy = ResourceRequestCachePolicy::UseProtocolCachePolicy)
+        : ResourceRequestBase(WTFMove(url), policy)
     {
         setHTTPReferrer(referrer);
     }

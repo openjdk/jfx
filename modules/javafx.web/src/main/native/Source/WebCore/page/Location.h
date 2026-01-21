@@ -30,7 +30,6 @@
 
 #include "DOMStringList.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/WeakPtr.h>
 
@@ -39,6 +38,7 @@ namespace WebCore {
 class DOMWindow;
 class Frame;
 class LocalDOMWindow;
+template<typename> class ExceptionOr;
 
 class Location final : public ScriptWrappable, public RefCounted<Location> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Location);

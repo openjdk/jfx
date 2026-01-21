@@ -29,7 +29,6 @@
 #include "WebGPUTextureFormat.h"
 #include "WebGPUTextureUsage.h"
 #include "WebGPUXREye.h"
-#include "WebGPUXRProjectionLayer.h"
 #include "WebGPUXRSubImage.h"
 
 #include <wtf/Ref.h>

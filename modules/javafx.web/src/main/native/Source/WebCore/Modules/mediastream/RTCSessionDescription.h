@@ -33,7 +33,6 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ExceptionOr.h"
 #include "RTCSdpType.h"
 #include "ScriptWrappable.h"
 

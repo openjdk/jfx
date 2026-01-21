@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <limits.h>
+#include <wtf/MathExtras.h>
 
 namespace WTF {
 class PrintStream;
@@ -94,10 +95,8 @@ public:
         return m_pageCount != UINT_MAX;
     }
 
-    bool operator<(const PageCount& other) const { return m_pageCount < other.m_pageCount; }
-    bool operator>(const PageCount& other) const { return m_pageCount > other.m_pageCount; }
-    bool operator>=(const PageCount& other) const { return m_pageCount >= other.m_pageCount; }
-    friend bool operator==(const PageCount&, const PageCount&) = default;
+    friend auto operator<=>(const PageCount&, const PageCount&) = default;
+
     PageCount operator+(const PageCount& other) const
     {
         if (sumOverflows<uint32_t>(m_pageCount, other.m_pageCount))

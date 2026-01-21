@@ -42,8 +42,8 @@ void addWeightedLimitTo(DynamicRangeLimitMixFunction& addingTo, const DynamicRan
         [&](const CSS::Keyword::Standard&) {
             addingTo->standard.value            += mixPercentage.value; /* implicit multiplication by (100 / 100) elided */
         },
-        [&](const CSS::Keyword::ConstrainedHigh&) {
-            addingTo->constrainedHigh.value     += mixPercentage.value; /* implicit multiplication by (100 / 100) elided */
+        [&](const CSS::Keyword::Constrained&) {
+            addingTo->constrained.value     += mixPercentage.value; /* implicit multiplication by (100 / 100) elided */
         },
         [&](const CSS::Keyword::NoLimit&) {
             addingTo->noLimit.value             += mixPercentage.value; /* implicit multiplication by (100 / 100) elided */
@@ -51,8 +51,8 @@ void addWeightedLimitTo(DynamicRangeLimitMixFunction& addingTo, const DynamicRan
         [&](const DynamicRangeLimitMixFunction& innerMix) {
             if (!Style::isZero(innerMix->standard))
                 addingTo->standard.value        += mixPercentage.value * (innerMix->standard.value        / 100.0);
-            if (!Style::isZero(innerMix->constrainedHigh))
-                addingTo->constrainedHigh.value += mixPercentage.value * (innerMix->constrainedHigh.value / 100.0);
+            if (!Style::isZero(innerMix->constrained))
+                addingTo->constrained.value += mixPercentage.value * (innerMix->constrained.value / 100.0);
             if (!Style::isZero(innerMix->noLimit))
                 addingTo->noLimit.value         += mixPercentage.value * (innerMix->noLimit.value         / 100.0);
         }
@@ -67,8 +67,8 @@ auto ToCSS<DynamicRangeLimitMixFunction>::operator()(const DynamicRangeLimitMixF
 
     if (!Style::isZero(mix.parameters.standard))
         result->parameters.value.append({ { CSS::Keyword::Standard { } },        toCSS(mix.parameters.standard, style) });
-    if (!Style::isZero(mix.parameters.constrainedHigh))
-        result->parameters.value.append({ { CSS::Keyword::ConstrainedHigh { } }, toCSS(mix.parameters.constrainedHigh, style) });
+    if (!Style::isZero(mix.parameters.constrained))
+        result->parameters.value.append({ { CSS::Keyword::Constrained { } }, toCSS(mix.parameters.constrained, style) });
     if (!Style::isZero(mix.parameters.noLimit))
         result->parameters.value.append({ { CSS::Keyword::NoLimit { } },         toCSS(mix.parameters.noLimit, style) });
 
@@ -106,12 +106,12 @@ auto ToStyle<CSS::DynamicRangeLimitMixFunction>::operator()(const CSS::DynamicRa
 
     // 3. Define the contributing percentages as:
     //   - Let p1_standard,...,pN_standard be the percentages for standard in v1,...,vN
-    //   - Let p1_constrained_high,...,pN_constrained_high be the percentages for constrained-high in v1,...,vN
+    //   - Let p1_constrained,...,pN_constrained be the percentages for constrained in v1,...,vN
     //   - Let p1_no_limit,...,pN_no_limit be the percentages for no-limit in v1,...,vN
 
     // 4. Compute the weighted sums as:
     //   - p_standard=(p1_standard*p1+...+pN_standard*pN)/100.
-    //   - p_constrained_high=(p1_constrained_high*p1+...+pN_constrained_high*pN)/100.
+    //   - p_constrained=(p1_constrained*p1+...+pN_constrained*pN)/100.
     //   - p_no_limit=(p1_no_limit*p1+...+pN_no_limit*pN)/100.
 
     DynamicRangeLimitMixFunction function { .parameters = { 0_css_percentage, 0_css_percentage, 0_css_percentage } };
@@ -121,8 +121,8 @@ auto ToStyle<CSS::DynamicRangeLimitMixFunction>::operator()(const CSS::DynamicRa
 
     // NOTE: These last two steps are performed by `ToStyle<CSS::DynamicRangeLimit>`.
 
-    // 5. If p_standard, p_constrained_high, or p_no_limit equals 100%, then the computed value is standard, constrained-high, or no-limit, respectively.
-    // 6. Otherwise, the computed value is dynamic-range-limit-mix(), with parameters standard, constrained-high, and no-limit, in that order, and percentages p_standard, p_constrained_high, and p_no_limit, omitting parameters with a percentage equal to 0%.
+    // 5. If p_standard, p_constrained, or p_no_limit equals 100%, then the computed value is standard, constrained, or no-limit, respectively.
+    // 6. Otherwise, the computed value is dynamic-range-limit-mix(), with parameters standard, constrained, and no-limit, in that order, and percentages p_standard, p_constrained, and p_no_limit, omitting parameters with a percentage equal to 0%.
 
     return function;
 }
@@ -133,19 +133,19 @@ TextStream& operator<<(TextStream& ts, const DynamicRangeLimitMixParameters& mix
 {
     bool needsComma = false;
     if (!Style::isZero(mix.standard)) {
-        ts << "standard " << mix.standard;
+        ts << "standard "_s << mix.standard;
         needsComma = true;
     }
-    if (!Style::isZero(mix.constrainedHigh)) {
+    if (!Style::isZero(mix.constrained)) {
         if (needsComma)
-            ts << ", ";
-        ts << "constrained-high " << mix.constrainedHigh;
+            ts << ", "_s;
+        ts << "constrained "_s << mix.constrained;
         needsComma = true;
     }
     if (!Style::isZero(mix.noLimit)) {
         if (needsComma)
-            ts << ", ";
-        ts << "no-limit " << mix.noLimit;
+            ts << ", "_s;
+        ts << "no-limit "_s << mix.noLimit;
     }
 
     return ts;

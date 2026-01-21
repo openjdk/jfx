@@ -77,7 +77,7 @@ BoxGeometry& LayoutState::geometryForRootBox()
 
 BoxGeometry& LayoutState::ensureGeometryForBoxSlow(const Box& layoutBox)
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
 #if ASSERT_ENABLED
         ASSERT(!layoutBox.m_cachedGeometryForPrimaryLayoutState);
         ASSERT(!layoutBox.m_primaryLayoutState);

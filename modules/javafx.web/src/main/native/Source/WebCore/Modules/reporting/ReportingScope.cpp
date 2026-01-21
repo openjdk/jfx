@@ -27,6 +27,7 @@
 #include "ReportingScope.h"
 
 #include "ContextDestructionObserver.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "FormData.h"
 #include "HeaderFieldTokenizer.h"
@@ -181,7 +182,7 @@ void ReportingScope::generateTestReport(String&& message, String&& group)
         if (group.isNull())
             group = "default"_s;
 
-        document->sendReportToEndpoints(testReportURL, { }, { group }, WTFMove(reportFormData), ViolationReportType::Test);
+        document->sendReportToEndpoints(testReportURL, { }, singleElementSpan(group), WTFMove(reportFormData), ViolationReportType::Test);
     }
 
     auto bodyType = testReportBody->type();

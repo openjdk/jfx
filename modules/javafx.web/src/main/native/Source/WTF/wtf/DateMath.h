@@ -23,7 +23,7 @@
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
- * the Initial Developer. All Rights Reserved.
+ * the Initial Developer. All rights reserved.
  *
  * Contributor(s):
  *
@@ -52,13 +52,13 @@
 
 namespace WTF {
 
-enum TimeType {
+enum class TimeType : uint8_t {
     UTCTime = 0,
     LocalTime
 };
 
 struct LocalTimeOffset {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(LocalTimeOffset);
 
     LocalTimeOffset() = default;
     constexpr LocalTimeOffset(bool isDST, int offset)
@@ -496,10 +496,10 @@ inline int64_t equivalentTime(int64_t ms)
 
 WTF_EXPORT_PRIVATE bool isTimeZoneValid(StringView);
 WTF_EXPORT_PRIVATE bool setTimeZoneOverride(StringView);
-WTF_EXPORT_PRIVATE void getTimeZoneOverride(Vector<UChar, 32>& timeZoneID);
+WTF_EXPORT_PRIVATE void getTimeZoneOverride(Vector<char16_t, 32>& timeZoneID);
 
 // Returns combined offset in millisecond (UTC + DST).
-WTF_EXPORT_PRIVATE LocalTimeOffset calculateLocalTimeOffset(double utcInMilliseconds, TimeType = UTCTime);
+WTF_EXPORT_PRIVATE LocalTimeOffset calculateLocalTimeOffset(double utcInMilliseconds, TimeType = TimeType::UTCTime);
 
 } // namespace WTF
 
@@ -531,3 +531,4 @@ using WTF::secondsPerMinute;
 using WTF::setTimeZoneOverride;
 using WTF::timeClip;
 using WTF::timeToMS;
+using WTF::TimeType;

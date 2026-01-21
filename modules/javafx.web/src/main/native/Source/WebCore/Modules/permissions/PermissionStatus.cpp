@@ -27,9 +27,11 @@
 #include "PermissionStatus.h"
 
 #include "ClientOrigin.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "MainThreadPermissionObserver.h"
 #include "PermissionController.h"
 #include "PermissionState.h"
@@ -110,6 +112,11 @@ bool PermissionStatus::virtualHasPendingActivity() const
         return document->hasBrowsingContext();
 
     return true;
+}
+
+ScriptExecutionContext* PermissionStatus::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void PermissionStatus::eventListenersDidChange()

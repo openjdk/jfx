@@ -22,7 +22,7 @@
 
 #include "ArrayConventions.h"
 #include "PrivateName.h"
-#include "VM.h"
+#include "SmallStrings.h"
 #include <wtf/text/CString.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/UniquedStringImpl.h>
@@ -79,7 +79,7 @@ ALWAYS_INLINE std::optional<uint32_t> parseIndex(std::span<const CharType> chara
     return value;
 }
 
-ALWAYS_INLINE std::optional<uint32_t> parseIndex(StringImpl& impl)
+ALWAYS_INLINE std::optional<uint32_t> parseIndex(const StringImpl& impl)
 {
     return impl.is8Bit() ? parseIndex(impl.span8()) : parseIndex(impl.span16());
 }
@@ -93,7 +93,8 @@ public:
 
     const AtomString& string() const { return m_string; }
 
-    UniquedStringImpl* impl() const { return static_cast<UniquedStringImpl*>(m_string.impl()); }
+    UniquedStringImpl* impl() const { return m_string.impl(); }
+    RefPtr<AtomStringImpl> releaseImpl() { return m_string.releaseImpl(); }
 
     int length() const { return m_string.length(); }
 
@@ -113,7 +114,7 @@ public:
 
     static Identifier fromString(VM&, ASCIILiteral);
     static Identifier fromString(VM&, std::span<const LChar>);
-    static Identifier fromString(VM&, std::span<const UChar>);
+    static Identifier fromString(VM&, std::span<const char16_t>);
     static Identifier fromString(VM&, const String&);
     static Identifier fromString(VM&, AtomStringImpl*);
     static Identifier fromString(VM&, Ref<AtomStringImpl>&&);
@@ -124,7 +125,7 @@ public:
     static Identifier fromUid(const PrivateName&);
     static Identifier fromUid(SymbolImpl&);
 
-    static Identifier createLCharFromUChar(VM& vm, std::span<const UChar> string) { return Identifier(vm, add8(vm, string)); }
+    static Identifier createLCharFromUChar(VM& vm, std::span<const char16_t> string) { return Identifier(vm, add8(vm, string)); }
 
     JS_EXPORT_PRIVATE static Identifier from(VM&, unsigned y);
     JS_EXPORT_PRIVATE static Identifier from(VM&, int y);
@@ -149,7 +150,7 @@ public:
     static bool equal(const StringImpl*, const LChar*);
     static inline bool equal(const StringImpl* a, const char* b) { return Identifier::equal(a, byteCast<LChar>(b)); };
     static bool equal(const StringImpl*, std::span<const LChar>);
-    static bool equal(const StringImpl*, std::span<const UChar>);
+    static bool equal(const StringImpl*, std::span<const char16_t>);
     static bool equal(const StringImpl* a, const StringImpl* b) { return ::equal(a, b); }
 
     void dump(PrintStream&) const;
@@ -157,13 +158,13 @@ public:
 private:
     AtomString m_string;
 
-    Identifier(VM& vm, std::span<const LChar> string) : m_string(add(vm, string)) { ASSERT(m_string.impl()->isAtom()); }
-    Identifier(VM& vm, std::span<const UChar> string) : m_string(add(vm, string)) { ASSERT(m_string.impl()->isAtom()); }
-    ALWAYS_INLINE Identifier(VM& vm, ASCIILiteral literal) : m_string(add(vm, literal)) { ASSERT(m_string.impl()->isAtom()); }
-    Identifier(VM&, AtomStringImpl*);
-    Identifier(VM&, const AtomString&);
-    Identifier(VM& vm, const String& string) : m_string(add(vm, string.impl())) { ASSERT(m_string.impl()->isAtom()); }
-    Identifier(VM& vm, StringImpl* rep) : m_string(add(vm, rep)) { ASSERT(m_string.impl()->isAtom()); }
+    inline Identifier(VM&, std::span<const LChar>); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, std::span<const char16_t>); // Defined in IdentifierInlines.h
+    ALWAYS_INLINE Identifier(VM&, ASCIILiteral); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, AtomStringImpl*); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, const AtomString&); // Defined in IdentifierInlines.h
+    inline Identifier(VM&, const String&);
+    inline Identifier(VM&, StringImpl*);
 
     Identifier(VM&, Ref<AtomStringImpl>&& impl)
         : m_string(WTFMove(impl))
@@ -176,12 +177,12 @@ private:
     static bool equal(const Identifier& a, const Identifier& b) { return a.m_string.impl() == b.m_string.impl(); }
     static bool equal(const Identifier& a, const LChar* b) { return equal(a.m_string.impl(), b); }
 
-    template <typename T> static Ref<AtomStringImpl> add(VM&, std::span<const T>);
-    static Ref<AtomStringImpl> add8(VM&, std::span<const UChar>);
+    template <typename T> inline static Ref<AtomStringImpl> add(VM&, std::span<const T>); // Defined in IdentifierInlines.h
+    static Ref<AtomStringImpl> add8(VM&, std::span<const char16_t>);
     template <typename T> ALWAYS_INLINE static constexpr bool canUseSingleCharacterString(T);
 
     static Ref<AtomStringImpl> add(VM&, StringImpl*);
-    static Ref<AtomStringImpl> add(VM&, ASCIILiteral);
+    inline static Ref<AtomStringImpl> add(VM&, ASCIILiteral); // Defined in IdentifierInlines.h
 
 #ifndef NDEBUG
     JS_EXPORT_PRIVATE static void checkCurrentAtomStringTable(VM&);
@@ -196,30 +197,9 @@ template <> ALWAYS_INLINE constexpr bool Identifier::canUseSingleCharacterString
     return true;
 }
 
-template <> ALWAYS_INLINE constexpr bool Identifier::canUseSingleCharacterString(UChar c)
+template <> ALWAYS_INLINE constexpr bool Identifier::canUseSingleCharacterString(char16_t c)
 {
     return (c <= maxSingleCharacterString);
-}
-
-template <typename T>
-Ref<AtomStringImpl> Identifier::add(VM& vm, std::span<const T> string)
-{
-    if (string.size() == 1) {
-        T c = string.front();
-        if (canUseSingleCharacterString(c))
-            return vm.smallStrings.singleCharacterStringRep(c);
-    }
-    if (string.empty())
-        return *static_cast<AtomStringImpl*>(StringImpl::empty());
-
-    return *AtomStringImpl::add(string);
-}
-
-inline Ref<AtomStringImpl> Identifier::add(VM& vm, ASCIILiteral literal)
-{
-    if (literal.length() == 1)
-        return vm.smallStrings.singleCharacterStringRep(literal.characterAt(0));
-    return AtomStringImpl::add(literal);
 }
 
 inline bool operator==(const Identifier& a, const Identifier& b)
@@ -247,7 +227,7 @@ inline bool Identifier::equal(const StringImpl* r, std::span<const LChar> s)
     return WTF::equal(r, s);
 }
 
-inline bool Identifier::equal(const StringImpl* r, std::span<const UChar> s)
+inline bool Identifier::equal(const StringImpl* r, std::span<const char16_t> s)
 {
     return WTF::equal(r, s);
 }

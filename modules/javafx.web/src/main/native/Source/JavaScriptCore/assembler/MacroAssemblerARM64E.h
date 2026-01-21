@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER) && CPU(ARM64E)
 
 #include "DisallowMacroScratchRegisterUsage.h"

@@ -56,7 +56,7 @@ class WebCodecsVideoFrame : public RefCounted<WebCodecsVideoFrame>, public Conte
 public:
     ~WebCodecsVideoFrame();
 
-    using CanvasImageSource = std::variant<RefPtr<HTMLImageElement>
+    using CanvasImageSource = Variant<RefPtr<HTMLImageElement>
         , RefPtr<SVGImageElement>
         , RefPtr<HTMLCanvasElement>
         , RefPtr<ImageBitmap>
@@ -81,26 +81,27 @@ public:
         std::optional<size_t> displayHeight;
     };
     struct BufferInit {
-        VideoPixelFormat format { VideoPixelFormat::I420 };
+        std::optional<VideoPixelFormat> format;
         size_t codedWidth { 0 };
         size_t codedHeight { 0 };
         int64_t timestamp { 0 };
-        std::optional<uint64_t> duration;
+        std::optional<uint64_t> duration { };
 
-        std::optional<Vector<PlaneLayout>> layout;
+        std::optional<Vector<PlaneLayout>> layout { };
 
-        std::optional<DOMRectInit> visibleRect;
+        std::optional<DOMRectInit> visibleRect { };
 
-        std::optional<size_t> displayWidth;
-        std::optional<size_t> displayHeight;
+        std::optional<size_t> displayWidth { };
+        std::optional<size_t> displayHeight { };
 
-        std::optional<VideoColorSpaceInit> colorSpace;
+        std::optional<VideoColorSpaceInit> colorSpace { };
     };
 
     static ExceptionOr<Ref<WebCodecsVideoFrame>> create(ScriptExecutionContext&, CanvasImageSource&&, Init&&);
     static ExceptionOr<Ref<WebCodecsVideoFrame>> create(ScriptExecutionContext&, Ref<WebCodecsVideoFrame>&&, Init&&);
     static ExceptionOr<Ref<WebCodecsVideoFrame>> create(ScriptExecutionContext&, BufferSource&&, BufferInit&&);
     static ExceptionOr<Ref<WebCodecsVideoFrame>> create(ScriptExecutionContext&, ImageBuffer&, IntSize, Init&&);
+    WEBCORE_EXPORT static ExceptionOr<Ref<WebCodecsVideoFrame>> create(ScriptExecutionContext&, Ref<NativeImage>&&);
     static Ref<WebCodecsVideoFrame> create(ScriptExecutionContext&, Ref<VideoFrame>&&, BufferInit&&);
     static Ref<WebCodecsVideoFrame> create(ScriptExecutionContext& context, WebCodecsVideoFrameData&& data) { return adoptRef(*new WebCodecsVideoFrame(context, WTFMove(data))); }
 

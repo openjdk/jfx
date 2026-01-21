@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +53,6 @@ CSSTransition::CSSTransition(const Styleable& styleable, const AnimatableCSSProp
     : StyleOriginatedAnimation(styleable, backingAnimation)
     , m_property(property)
     , m_generationTime(generationTime)
-    , m_timelineTimeAtCreation(styleable.element.document().timeline().currentTime())
     , m_targetStyle(RenderStyle::clonePtr(targetStyle))
     , m_currentStyle(RenderStyle::clonePtr(oldStyle))
     , m_reversingAdjustedStartStyle(RenderStyle::clonePtr(reversingAdjustedStartStyle))
@@ -63,9 +62,9 @@ CSSTransition::CSSTransition(const Styleable& styleable, const AnimatableCSSProp
 
 CSSTransition::~CSSTransition() = default;
 
-OptionSet<AnimationImpact> CSSTransition::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext, std::optional<Seconds> startTime)
+OptionSet<AnimationImpact> CSSTransition::resolve(RenderStyle& targetStyle, const Style::ResolutionContext& resolutionContext)
 {
-    auto impact = StyleOriginatedAnimation::resolve(targetStyle, resolutionContext, startTime);
+    auto impact = StyleOriginatedAnimation::resolve(targetStyle, resolutionContext);
     m_currentStyle = RenderStyle::clonePtr(targetStyle);
     return impact;
 }
@@ -83,8 +82,7 @@ void CSSTransition::setTimingProperties(Seconds delay, Seconds duration)
     suspendEffectInvalidation();
 
     // This method is only called from CSSTransition::create() where we're guaranteed to have an effect.
-    auto* animationEffect = effect();
-    ASSERT(animationEffect);
+    Ref animationEffect = *effect();
 
     // In order for CSS Transitions to be seeked backwards, they need to have their fill mode set to backwards
     // such that the original CSS value applied prior to the transition is used for a negative current time.

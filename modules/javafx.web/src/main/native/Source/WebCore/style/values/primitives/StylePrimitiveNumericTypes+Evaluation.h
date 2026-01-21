@@ -27,6 +27,8 @@
 #include "FloatConversion.h"
 #include "FloatPoint.h"
 #include "FloatSize.h"
+#include "LayoutPoint.h"
+#include "LayoutSize.h"
 #include "LayoutUnit.h"
 #include "StylePrimitiveNumericTypes+Calculation.h"
 #include "StylePrimitiveNumericTypes.h"
@@ -40,18 +42,17 @@ using namespace CSS::Literals;
 // MARK: - Percentage
 
 template<auto R, typename V> struct Evaluation<Percentage<R, V>> {
-    constexpr double operator()(const Percentage<R, V>& percentage)
+    constexpr typename Percentage<R, V>::ResolvedValueType operator()(const Percentage<R, V>& percentage)
     {
-        return static_cast<double>(percentage.value) / 100.0;
+        return percentage.value / static_cast<typename Percentage<R, V>::ResolvedValueType>(100.0);
     }
-
     template<typename Reference> constexpr auto operator()(const Percentage<R, V>& percentage, Reference referenceLength) -> Reference
     {
         return static_cast<Reference>(percentage.value) / 100.0 * referenceLength;
     }
 };
 
-template<auto R> constexpr LayoutUnit evaluate(const Percentage<R>& percentage, LayoutUnit referenceLength)
+template<auto R, typename V> constexpr LayoutUnit evaluate(const Percentage<R, V>& percentage, LayoutUnit referenceLength)
 {
     // Don't remove the extra cast to float. It is needed for rounding on 32-bit Intel machines that use the FPU stack.
     return LayoutUnit(static_cast<float>(percentage.value / 100.0 * referenceLength));
@@ -60,11 +61,10 @@ template<auto R> constexpr LayoutUnit evaluate(const Percentage<R>& percentage, 
 // MARK: - Numeric
 
 template<NonCompositeNumeric StyleType> struct Evaluation<StyleType> {
-    constexpr double operator()(const StyleType& value)
+    constexpr typename StyleType::ResolvedValueType operator()(const StyleType& value)
     {
-        return static_cast<double>(value.value);
+        return value.value;
     }
-
     template<typename Reference> constexpr auto operator()(const StyleType& value, Reference) -> Reference
     {
         return static_cast<Reference>(value.value);
@@ -97,12 +97,45 @@ template<typename T> struct Evaluation<SpaceSeparatedPoint<T>> {
             evaluate(value.y(), referenceBox.height())
         };
     }
+    LayoutPoint operator()(const SpaceSeparatedPoint<T>& value, LayoutSize referenceBox)
+    {
+        return {
+            evaluate(value.x(), referenceBox.width()),
+            evaluate(value.y(), referenceBox.height())
+        };
+    }
 };
 
 // MARK: - SpaceSeparatedSize
 
 template<typename T> struct Evaluation<SpaceSeparatedSize<T>> {
     FloatSize operator()(const SpaceSeparatedSize<T>& value, FloatSize referenceBox)
+    {
+        return {
+            evaluate(value.width(), referenceBox.width()),
+            evaluate(value.height(), referenceBox.height())
+        };
+    }
+    LayoutSize operator()(const SpaceSeparatedSize<T>& value, LayoutSize referenceBox)
+    {
+        return {
+            evaluate(value.width(), referenceBox.width()),
+            evaluate(value.height(), referenceBox.height())
+        };
+    }
+};
+
+// MARK: - MinimallySerializingSpaceSeparatedSize
+
+template<typename T> struct Evaluation<MinimallySerializingSpaceSeparatedSize<T>> {
+    FloatSize operator()(const MinimallySerializingSpaceSeparatedSize<T>& value, FloatSize referenceBox)
+    {
+        return {
+            evaluate(value.width(), referenceBox.width()),
+            evaluate(value.height(), referenceBox.height())
+        };
+    }
+    LayoutSize operator()(const MinimallySerializingSpaceSeparatedSize<T>& value, LayoutSize referenceBox)
     {
         return {
             evaluate(value.width(), referenceBox.width()),

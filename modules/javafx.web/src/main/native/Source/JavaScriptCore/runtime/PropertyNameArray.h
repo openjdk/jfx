@@ -141,7 +141,7 @@ ALWAYS_INLINE bool PropertyNameArray::isUidMatchedToTypeMode(UniquedStringImpl* 
     if (identifier->isSymbol()) {
         if (!includeSymbolProperties())
             return false;
-        if (UNLIKELY(m_privateSymbolMode == PrivateSymbolMode::Include))
+        if (m_privateSymbolMode == PrivateSymbolMode::Include) [[unlikely]]
             return true;
         return !static_cast<SymbolImpl*>(identifier)->isPrivate();
     }

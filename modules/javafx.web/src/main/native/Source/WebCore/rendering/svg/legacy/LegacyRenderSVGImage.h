@@ -45,12 +45,13 @@ public:
     void setNeedsBoundariesUpdate() override { m_needsBoundariesUpdate = true; }
     void setNeedsTransformUpdate() override { m_needsTransformUpdate = true; }
 
-    RenderImageResource& imageResource() { return *m_imageResource; }
-    const RenderImageResource& imageResource() const { return *m_imageResource; }
-    CheckedRef<RenderImageResource> checkedImageResource() const;
+    RenderImageResource& imageResource() { return m_imageResource; }
+    const RenderImageResource& imageResource() const { return m_imageResource; }
 
     // Note: Assumes the PaintInfo context has had all local transforms applied.
     void paintForeground(PaintInfo&);
+
+    bool isObjectBoundingBoxValid() const { return !m_objectBoundingBox.isEmpty(); }
 
 private:
     void willBeDestroyed() override;
@@ -61,6 +62,8 @@ private:
     bool canHaveChildren() const override { return false; }
 
     const AffineTransform& localToParentTransform() const override { return m_localTransform; }
+
+    void notifyFinished(CachedResource& newImage, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
 
     FloatRect calculateObjectBoundingBox() const;
     FloatRect objectBoundingBox() const override { return m_objectBoundingBox; }
@@ -85,7 +88,7 @@ private:
     AffineTransform m_localTransform;
     FloatRect m_objectBoundingBox;
     FloatRect m_repaintBoundingBox;
-    std::unique_ptr<RenderImageResource> m_imageResource;
+    const UniqueRef<RenderImageResource> m_imageResource;
     RefPtr<ImageBuffer> m_bufferedForeground;
 };
 

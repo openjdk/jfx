@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,10 +30,10 @@
 
 namespace WebCore {
 
-class CSSStyleDeclaration;
+class CSSStyleProperties;
 class CSSKeyframesRule;
 class StyleProperties;
-class StyleRuleCSSStyleDeclaration;
+class StyleRuleCSSStyleProperties;
 
 class StyleRuleKeyframe final : public StyleRuleBase {
 public:
@@ -85,15 +85,15 @@ public:
     String keyText() const { return m_keyframe->keyText(); }
     void setKeyText(const String& text) { m_keyframe->setKeyText(text); }
 
-    CSSStyleDeclaration& style();
+    CSSStyleProperties& style();
 
 private:
     CSSKeyframeRule(StyleRuleKeyframe&, CSSKeyframesRule* parent);
 
     StyleRuleType styleRuleType() const final { return StyleRuleType::Keyframe; }
 
-    Ref<StyleRuleKeyframe> m_keyframe;
-    mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
+    const Ref<StyleRuleKeyframe> m_keyframe;
+    mutable RefPtr<StyleRuleCSSStyleProperties> m_propertiesCSSOMWrapper;
 
     friend class CSSKeyframesRule;
 };

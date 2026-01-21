@@ -349,16 +349,7 @@ static inline std::optional<size_t> lastValidBreakingPosition(const InlineConten
     ASSERT(inlineTextItem.length());
     auto lineBreak = textRun.style.lineBreak();
 
-    auto adjacentTextRunIndex = nextTextRunIndex(runs, textRunIndex);
-    if (!adjacentTextRunIndex)
-        return inlineTextItem.end();
-
-    auto& nextInlineTextItem = downcast<InlineTextItem>(runs[*adjacentTextRunIndex].inlineItem);
-    auto canBreakAtRunBoundary = nextInlineTextItem.isWhitespace() ? nextInlineTextItem.style().whiteSpaceCollapse() != WhiteSpaceCollapse::BreakSpaces :
-        canBreakBefore(nextInlineTextItem.inlineTextBox().content()[nextInlineTextItem.start()], lineBreak);
-    if (canBreakAtRunBoundary)
-        return inlineTextItem.end();
-
+    auto lastValidBreakingPositionInsideTextRun = [&]() -> std::optional<size_t> {
     // Find out if the candidate position for arbitrary breaking is valid. We can't always break between any characters.
     auto text = inlineTextItem.inlineTextBox().content();
     auto left = inlineTextItem.start();
@@ -370,6 +361,26 @@ static inline std::optional<size_t> lastValidBreakingPosition(const InlineConten
             return index == inlineTextItem.start() ? std::nullopt : std::make_optional(index);
     }
     return { };
+    };
+
+    if (auto nextTextRunCandidateIndex = nextTextRunIndex(runs, textRunIndex)) {
+        auto& nextInlineTextItem = downcast<InlineTextItem>(runs[*nextTextRunCandidateIndex].inlineItem);
+        auto canBreakAtRunBoundary = nextInlineTextItem.isWhitespace() ? nextInlineTextItem.style().whiteSpaceCollapse() != WhiteSpaceCollapse::BreakSpaces :
+            canBreakBefore(nextInlineTextItem.inlineTextBox().content()[nextInlineTextItem.start()], lineBreak);
+        if (canBreakAtRunBoundary)
+            return inlineTextItem.end();
+        return lastValidBreakingPositionInsideTextRun();
+    }
+
+    if (textRunIndex == runs.size() - 1)
+        return inlineTextItem.end();
+
+    if (!runs[textRunIndex + 1].inlineItem.isInlineBoxStartOrEnd()) {
+        ASSERT_NOT_REACHED();
+        return inlineTextItem.end();
+    }
+
+    return lastValidBreakingPositionInsideTextRun();
 }
 
 static std::optional<TextUtil::WordBreakLeft> midWordBreak(const InlineContentBreaker::ContinuousContent::Run& textRun, InlineLayoutUnit runLogicalLeft, InlineLayoutUnit availableWidth)
@@ -401,12 +412,12 @@ static std::optional<TextUtil::WordBreakLeft> midWordBreak(const InlineContentBr
 
 static size_t limitBeforeValue(const RenderStyle& style)
 {
-    return style.hyphenationLimitBefore() == RenderStyle::initialHyphenationLimitBefore() ? 0 : style.hyphenationLimitBefore();
+    return style.hyphenateLimitBefore().tryValue().value_or(0).value;
 }
 
 static size_t limitAfterValue(const RenderStyle& style)
 {
-    return style.hyphenationLimitAfter() == RenderStyle::initialHyphenationLimitAfter() ? 0 : style.hyphenationLimitAfter();
+    return style.hyphenateLimitAfter().tryValue().value_or(0).value;
 }
 
 static inline bool hasEnoughContentForHyphenation(size_t contentLength, const RenderStyle& style)
@@ -416,7 +427,7 @@ static inline bool hasEnoughContentForHyphenation(size_t contentLength, const Re
 
 static std::optional<size_t> firstHyphenPosition(StringView content, const RenderStyle& style)
 {
-    // FIXME: We may produce slighly incorrect (less fine-grained) hyphenation here as the incoming content may just be a partial word.
+    // FIXME: We may produce slightly incorrect (less fine-grained) hyphenation here as the incoming content may just be a partial word.
     // (same applies to hyphenPosition below)
     size_t contentLength = content.length();
     if (!hasEnoughContentForHyphenation(contentLength, style))

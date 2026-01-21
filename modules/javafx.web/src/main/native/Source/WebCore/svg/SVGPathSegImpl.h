@@ -26,6 +26,7 @@
 #pragma once
 
 #include "SVGPathSeg.h"
+#include "SVGPathSegList.h"
 #include "SVGPathSegValue.h"
 
 namespace WebCore {
