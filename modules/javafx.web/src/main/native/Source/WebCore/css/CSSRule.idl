@@ -45,7 +45,7 @@
     [ImplementedAs=Keyframe] const unsigned short KEYFRAME_RULE = 8;
     [ImplementedAs=Margin] const unsigned short MARGIN_RULE = 9;
     [ImplementedAs=Namespace] const unsigned short NAMESPACE_RULE = 10;
-    [ImplementedAs=CounterStyle, EnabledBySetting=CSSCounterStyleAtRulesEnabled] const unsigned short COUNTER_STYLE_RULE = 11;
+    [ImplementedAs=CounterStyle] const unsigned short COUNTER_STYLE_RULE = 11;
     [ImplementedAs=Supports] const unsigned short SUPPORTS_RULE = 12;
     [ImplementedAs=FontFeatureValues] const unsigned short FONT_FEATURE_VALUES_RULE = 14;
 };

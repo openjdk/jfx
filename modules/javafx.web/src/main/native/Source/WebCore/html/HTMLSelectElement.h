@@ -56,8 +56,8 @@ public:
 
     bool usesMenuList() const;
 
-    using OptionOrOptGroupElement = std::variant<RefPtr<HTMLOptionElement>, RefPtr<HTMLOptGroupElement>>;
-    using HTMLElementOrInt = std::variant<RefPtr<HTMLElement>, int>;
+    using OptionOrOptGroupElement = Variant<RefPtr<HTMLOptionElement>, RefPtr<HTMLOptGroupElement>>;
+    using HTMLElementOrInt = Variant<RefPtr<HTMLElement>, int>;
     WEBCORE_EXPORT ExceptionOr<void> add(const OptionOrOptGroupElement&, const std::optional<HTMLElementOrInt>& before);
 
     using Node::remove;
@@ -126,7 +126,7 @@ private:
     const AtomString& formControlType() const final;
 
     int defaultTabIndex() const final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
 
     void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, const FocusOptions&) final;
@@ -157,7 +157,7 @@ private:
 
     void dispatchChangeEventForMenuList();
 
-    void didRecalcStyle(Style::Change) final;
+    void didRecalcStyle(OptionSet<Style::Change>) final;
 
     void recalcListItems(bool updateSelectedStates = true, AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
 

@@ -128,6 +128,7 @@ class CppFrontendDispatcherImplementationGenerator(CppGenerator):
 
         event_args = {
             'domainName': domain.domain_name,
+            'domainExposedAs': domain.domain_exposed_as,
             'eventName': event.event_name,
             'formalParameters': ", ".join(formal_parameters)
         }
@@ -135,7 +136,7 @@ class CppFrontendDispatcherImplementationGenerator(CppGenerator):
         lines.append('void %(domainName)sFrontendDispatcher::%(eventName)s(%(formalParameters)s)' % event_args)
         lines.append('{')
         lines.append('    auto protocol_jsonMessage = JSON::Object::create();')
-        lines.append('    protocol_jsonMessage->setString("method"_s, "%(domainName)s.%(eventName)s"_s);' % event_args)
+        lines.append('    protocol_jsonMessage->setString("method"_s, "%(domainExposedAs)s.%(eventName)s"_s);' % event_args)
 
         if len(parameter_assignments) > 0:
             lines.append('    auto protocol_paramsObject = JSON::Object::create();')

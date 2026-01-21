@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,7 +82,7 @@ public:
     using AttributeChangedPayload = std::tuple<QualifiedName, AtomString, AtomString>;
     using FormDisabledPayload = bool;
     using FormStateRestorePayload = CustomElementFormValue;
-    using Payload = std::optional<std::variant<AdoptedPayload, AttributeChangedPayload, FormAssociatedPayload, FormDisabledPayload, FormStateRestorePayload>>;
+    using Payload = std::optional<Variant<AdoptedPayload, AttributeChangedPayload, FormAssociatedPayload, FormDisabledPayload, FormStateRestorePayload>>;
 
     CustomElementReactionQueueItem();
     CustomElementReactionQueueItem(CustomElementReactionQueueItem&&);
@@ -160,7 +160,7 @@ private:
 
     using Item = CustomElementReactionQueueItem;
 
-    Ref<JSCustomElementInterface> m_interface;
+    const Ref<JSCustomElementInterface> m_interface;
     Vector<Item, 1> m_items;
     bool m_elementInternalsAttached { false };
 };
@@ -228,7 +228,7 @@ public:
 
     ALWAYS_INLINE ~CustomElementReactionStack()
     {
-        if (UNLIKELY(!m_queue.isEmpty()))
+        if (!m_queue.isEmpty()) [[unlikely]]
             m_queue.processQueue(m_state);
         s_currentProcessingStack = m_previousProcessingStack;
     }

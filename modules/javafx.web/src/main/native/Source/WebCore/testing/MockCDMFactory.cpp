@@ -31,7 +31,7 @@
 #include "InitDataRegistry.h"
 #include "SharedBuffer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <wtf/Algorithms.h>
+#include <algorithm>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
@@ -149,10 +149,10 @@ bool MockCDM::supportsConfiguration(const MediaKeySystemConfiguration& configura
         return true;
     };
 
-    if (!configuration.audioCapabilities.isEmpty() && !anyOf(configuration.audioCapabilities, capabilityHasSupportedEncryptionScheme))
+    if (!configuration.audioCapabilities.isEmpty() && !std::ranges::any_of(configuration.audioCapabilities, capabilityHasSupportedEncryptionScheme))
         return false;
 
-    if (!configuration.videoCapabilities.isEmpty() && !anyOf(configuration.videoCapabilities, capabilityHasSupportedEncryptionScheme))
+    if (!configuration.videoCapabilities.isEmpty() && !std::ranges::any_of(configuration.videoCapabilities, capabilityHasSupportedEncryptionScheme))
         return false;
 
     return true;
@@ -255,17 +255,17 @@ void MockCDMInstance::initializeWithConfiguration(const MediaKeySystemConfigurat
 {
     auto initialize = [&] {
         if (!m_cdm || !m_cdm->supportsConfiguration(configuration))
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         MockCDMFactory* factory = m_cdm ? m_cdm->factory() : nullptr;
         if (!factory)
-            return Failed;
+            return CDMInstanceSuccessValue::Failed;
 
         bool distinctiveIdentifiersAllowed = (distinctiveIdentifiers == AllowDistinctiveIdentifiers::Yes);
 
         if (m_distinctiveIdentifiersAllowed != distinctiveIdentifiersAllowed) {
             if (!distinctiveIdentifiersAllowed && factory->distinctiveIdentifiersRequirement() == MediaKeysRequirement::Required)
-                return Failed;
+                return CDMInstanceSuccessValue::Failed;
 
             m_distinctiveIdentifiersAllowed = distinctiveIdentifiersAllowed;
         }
@@ -274,11 +274,11 @@ void MockCDMInstance::initializeWithConfiguration(const MediaKeySystemConfigurat
 
         if (m_persistentStateAllowed != persistentStateAllowed) {
             if (!persistentStateAllowed && factory->persistentStateRequirement() == MediaKeysRequirement::Required)
-                return Failed;
+                return CDMInstanceSuccessValue::Failed;
 
             m_persistentStateAllowed = persistentStateAllowed;
         }
-        return Succeeded;
+        return CDMInstanceSuccessValue::Succeeded;
     };
 
     callback(initialize());
@@ -287,7 +287,7 @@ void MockCDMInstance::initializeWithConfiguration(const MediaKeySystemConfigurat
 void MockCDMInstance::setServerCertificate(Ref<SharedBuffer>&& certificate, SuccessCallback&& callback)
 {
     Ref contiguousData = certificate->makeContiguous();
-    callback(equalLettersIgnoringASCIICase(StringView { contiguousData->span() }, "valid"_s) ? Succeeded : Failed);
+    callback(equalLettersIgnoringASCIICase(StringView { contiguousData->span() }, "valid"_s) ? CDMInstanceSuccessValue::Succeeded : CDMInstanceSuccessValue::Failed);
 }
 
 void MockCDMInstance::setStorageDirectory(const String&)

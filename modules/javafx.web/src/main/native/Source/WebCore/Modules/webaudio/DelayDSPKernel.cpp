@@ -105,7 +105,7 @@ void DelayDSPKernel::process(std::span<const float> source, std::span<float> des
 {
     ASSERT(m_buffer.size());
     ASSERT(source.data() && destination.data());
-    if (UNLIKELY(m_buffer.isEmpty() || !source.data() || !destination.data()))
+    if (m_buffer.isEmpty() || !source.data() || !destination.data()) [[unlikely]]
         return;
 
     bool sampleAccurate = delayProcessor() && delayProcessor()->delayTime().hasSampleAccurateValues();

@@ -157,9 +157,7 @@ bool operator<(const CString& a, const CString& b)
         return !b.isNull();
     if (b.isNull())
         return false;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    return strcmp(a.data(), b.data()) < 0;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    return is_lt(compareSpans(a.span(), b.span()));
 }
 
 bool CStringHash::equal(const CString& a, const CString& b)

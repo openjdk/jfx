@@ -47,7 +47,7 @@ bool TransformOperations::operator==(const TransformOperations& o) const
 {
     static_assert(std::ranges::sized_range<decltype(m_operations)>);
 
-    return std::ranges::equal(m_operations, o.m_operations, [](auto& a, auto& b) { return a.get() == b.get(); });
+    return std::ranges::equal(m_operations, o.m_operations, [](auto& a, auto& b) { return arePointingToEqualData(a, b); });
 }
 
 TransformOperations TransformOperations::clone() const

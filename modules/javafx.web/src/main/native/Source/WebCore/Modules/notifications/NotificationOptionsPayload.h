@@ -25,6 +25,7 @@
 #pragma once
 
 #include "NotificationDirection.h"
+#include <wtf/text/WTFString.h>
 
 OBJC_CLASS NSDictionary;
 

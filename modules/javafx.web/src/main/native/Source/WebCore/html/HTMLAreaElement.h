@@ -44,8 +44,8 @@ public:
     bool mapMouseEvent(LayoutPoint location, const LayoutSize&, HitTestResult&);
 
     // FIXME: Use RenderElement& instead of RenderObject*.
-    WEBCORE_EXPORT LayoutRect computeRect(RenderObject*) const;
-    Path computePath(RenderObject*) const;
+    WEBCORE_EXPORT LayoutRect computeRect(const RenderObject*) const;
+    Path computePath(const RenderElement&) const;
     Path computePathForFocusRing(const LayoutSize& elementSize) const;
 
     // The parent map's image.
@@ -57,7 +57,7 @@ private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool supportsFocus() const final;
     AtomString target() const final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
     bool isFocusable() const final;
     RefPtr<Element> focusAppearanceUpdateTarget() final;

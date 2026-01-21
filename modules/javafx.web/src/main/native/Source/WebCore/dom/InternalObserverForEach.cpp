@@ -63,10 +63,10 @@ private:
             // abort signal and promise rejection.
             auto scope = DECLARE_CATCH_SCOPE(vm);
 
-            protectedCallback()->handleEventRethrowingException(value, m_idx++);
+            protectedCallback()->invokeRethrowingException(value, m_idx++);
 
             JSC::Exception* exception = scope.exception();
-            if (UNLIKELY(exception)) {
+            if (exception) [[unlikely]] {
                 scope.clearException();
                 auto value = exception->value();
                 protectedPromise()->reject<IDLAny>(value);

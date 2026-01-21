@@ -51,6 +51,7 @@ PAS_BEGIN_EXTERN_C;
     .check_deallocation = true, \
     .small_segregated_min_align_shift = THINGY_MIN_ALIGN_SHIFT, \
     .small_segregated_sharing_shift = PAS_SMALL_SHARING_SHIFT, \
+    .small_segregated_partial_view_padding = PAS_SMALL_PARTIAL_VIEW_PADDING, \
     .small_segregated_page_size = PAS_SMALL_PAGE_DEFAULT_SIZE, \
     .small_segregated_wasteage_handicap = PAS_SMALL_PAGE_HANDICAP, \
     .small_exclusive_segregated_logging_mode = \
@@ -68,6 +69,7 @@ PAS_BEGIN_EXTERN_C;
     .use_medium_segregated = true, \
     .medium_segregated_min_align_shift = PAS_MIN_MEDIUM_ALIGN_SHIFT, \
     .medium_segregated_sharing_shift = PAS_MEDIUM_SHARING_SHIFT, \
+    .medium_segregated_partial_view_padding = PAS_MEDIUM_PARTIAL_VIEW_PADDING, \
     .medium_segregated_wasteage_handicap = PAS_MEDIUM_PAGE_HANDICAP, \
     .medium_exclusive_segregated_logging_mode = pas_segregated_deallocation_checked_size_aware_logging_mode, \
     .medium_shared_segregated_logging_mode = pas_segregated_deallocation_no_logging_mode, \

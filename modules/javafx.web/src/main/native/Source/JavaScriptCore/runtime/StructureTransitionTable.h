@@ -231,7 +231,7 @@ class StructureTransitionTable {
             return a == b;
         }
 
-        static Key createFromStructure(Structure*);
+        static Key createKeyFromStructure(Structure*);
         static Key createKey(PointerKey impl, unsigned attributes, TransitionKind transitionKind)
         {
             return Key { impl, attributes, transitionKind };
@@ -254,7 +254,7 @@ class StructureTransitionTable {
             return a == b;
         }
 
-        static Key createFromStructure(Structure*);
+        static Key createKeyFromStructure(Structure*);
         static Key createKey(PointerKey impl, unsigned attributes, TransitionKind transitionKind)
         {
             return Key { impl.pointer(), attributes, transitionKind };

@@ -33,7 +33,7 @@ namespace CSS {
 SerializationContext::SerializationContext() = default;
 SerializationContext::~SerializationContext() = default;
 
-SerializationContext::SerializationContext(UncheckedKeyHashMap<String, String>&& replacementURLStrings, UncheckedKeyHashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet, bool shouldUseResolvedURLInCSSText)
+SerializationContext::SerializationContext(HashMap<String, String>&& replacementURLStrings, HashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet, bool shouldUseResolvedURLInCSSText)
     : replacementURLStrings { WTFMove(replacementURLStrings) }
     , replacementURLStringsForCSSStyleSheet { WTFMove(replacementURLStringsForCSSStyleSheet) }
     , shouldUseResolvedURLInCSSText { shouldUseResolvedURLInCSSText }

@@ -139,17 +139,18 @@ PresentationOrderSampleMap::iterator PresentationOrderSampleMap::findSampleWithP
 
 PresentationOrderSampleMap::iterator PresentationOrderSampleMap::findSampleContainingPresentationTime(const MediaTime& time)
 {
+    if (m_samples.empty())
+        return end();
+
     // upper_bound will return the first sample whose presentation start time is greater than the search time.
     // If this is the first sample, that means no sample in the map contains the requested time.
     auto iter = m_samples.upper_bound(time);
     if (iter == begin())
         return end();
-
     // Look at the previous sample; does it contain the requested time?
-    --iter;
-    const auto& sample = iter->second;
+    Ref sample = std::prev(iter)->second;
     if (sample->presentationTime() + sample->duration() > time)
-        return iter;
+        return std::prev(iter);
     return end();
 }
 
@@ -165,11 +166,10 @@ PresentationOrderSampleMap::iterator PresentationOrderSampleMap::findSampleConta
         return iter;
 
     // Look at the previous sample; does it contain the requested time?
-    --iter;
-    const auto& sample = iter->second;
+    Ref sample = std::prev(iter)->second;
     if (sample->presentationTime() + sample->duration() > time)
+        return std::prev(iter);
         return iter;
-    return ++iter;
 }
 
 PresentationOrderSampleMap::iterator PresentationOrderSampleMap::findSampleStartingOnOrAfterPresentationTime(const MediaTime& time)
@@ -217,7 +217,7 @@ PresentationOrderSampleMap::reverse_iterator PresentationOrderSampleMap::reverse
         return rend();
 
     // Otherwise, return the sample immediately previous to the one found.
-    return --reverse_iterator(--found);
+    return std::prev(reverse_iterator(std::prev(found)));
 }
 
 DecodeOrderSampleMap::reverse_iterator DecodeOrderSampleMap::reverseFindSampleWithDecodeKey(const KeyType& key)
@@ -225,7 +225,7 @@ DecodeOrderSampleMap::reverse_iterator DecodeOrderSampleMap::reverseFindSampleWi
     DecodeOrderSampleMap::iterator found = findSampleWithDecodeKey(key);
     if (found == end())
         return rend();
-    return --reverse_iterator(found);
+    return std::prev(reverse_iterator(found));
 }
 
 DecodeOrderSampleMap::reverse_iterator DecodeOrderSampleMap::findSyncSamplePriorToPresentationTime(const MediaTime& time, const MediaTime& threshold)
@@ -234,7 +234,7 @@ DecodeOrderSampleMap::reverse_iterator DecodeOrderSampleMap::findSyncSamplePrior
     if (reverseCurrentSamplePTS == m_presentationOrder.rend())
         return rend();
 
-    const auto& sample = reverseCurrentSamplePTS->second;
+    Ref sample = reverseCurrentSamplePTS->second;
     reverse_iterator reverseCurrentSampleDTS = reverseFindSampleWithDecodeKey(KeyType(sample->decodeTime(), sample->presentationTime()));
 
     reverse_iterator foundSample = findSyncSamplePriorToDecodeIterator(reverseCurrentSampleDTS);
@@ -256,7 +256,7 @@ DecodeOrderSampleMap::iterator DecodeOrderSampleMap::findSyncSampleAfterPresenta
     if (currentSamplePTS == m_presentationOrder.end())
         return end();
 
-    const auto& sample = currentSamplePTS->second;
+    Ref sample = currentSamplePTS->second;
     iterator currentSampleDTS = findSampleWithDecodeKey(KeyType(sample->decodeTime(), sample->presentationTime()));
 
     MediaTime upperBound = time + threshold;
@@ -310,21 +310,22 @@ DecodeOrderSampleMap::reverse_iterator_range DecodeOrderSampleMap::findDependent
     return reverse_iterator_range(currentDecodeIter, nextSyncSample);
 }
 
-DecodeOrderSampleMap::iterator_range DecodeOrderSampleMap::findSamplesBetweenDecodeKeys(const KeyType& beginKey, const KeyType& endKey)
+Vector<DecodeOrderSampleMap::value_type> DecodeOrderSampleMap::findSamplesBetweenDecodeKeys(const KeyType& beginKey, const KeyType& endKey)
 {
-    if (beginKey > endKey)
-        return { end(), end() };
+    if (beginKey >= endKey)
+        return { };
 
     // beginKey is inclusive, so use lower_bound to include samples wich start exactly at beginKey.
     // endKey is not inclusive, so use lower_bound to exclude samples which start exactly at endKey.
     auto lower_bound = m_samples.lower_bound(beginKey);
+    if (lower_bound == m_samples.end())
+        return { };
+
+    Vector<value_type> samples;
     auto upper_bound = m_samples.lower_bound(endKey);
-    if (lower_bound == upper_bound)
-        return { end(), end() };
-    ASSERT(lower_bound != end());
-    if (lower_bound == end())
-        return { begin(), upper_bound };
-    return { lower_bound, upper_bound };
+    for (auto iterator = lower_bound; iterator != upper_bound; ++iterator)
+        samples.append(*iterator);
+    return samples;
 }
 
 }

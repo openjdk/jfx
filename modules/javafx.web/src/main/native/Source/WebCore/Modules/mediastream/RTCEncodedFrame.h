@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 
 namespace JSC {
 class ArrayBuffer;
+class VM;
 }
 
 namespace WebCore {
@@ -45,13 +46,20 @@ public:
     RefPtr<JSC::ArrayBuffer> data() const;
     void setData(JSC::ArrayBuffer&);
 
-    Ref<RTCRtpTransformableFrame> rtcFrame();
+    enum class ShouldNeuter : bool { No, Yes };
+    Ref<RTCRtpTransformableFrame> rtcFrame(JSC::VM&, ShouldNeuter = ShouldNeuter::Yes);
+
+    uint64_t timestamp() const;
+
+    Ref<RTCRtpTransformableFrame> serialize();
 
 protected:
     explicit RTCEncodedFrame(Ref<RTCRtpTransformableFrame>&&);
 
-    Ref<RTCRtpTransformableFrame> m_frame;
+    const Ref<RTCRtpTransformableFrame> m_frame;
     mutable RefPtr<JSC::ArrayBuffer> m_data;
+    bool m_isNeutered { false };
+    mutable std::optional<uint64_t> m_timestamp;
 };
 
 } // namespace WebCore

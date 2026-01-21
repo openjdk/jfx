@@ -58,6 +58,7 @@ enum AbortReason {
     DFGSlowPathGeneratorFellThrough                   = 210,
     DFGUnreachableBasicBlock                          = 220,
     DFGUnreachableNode                                = 225,
+    DFGUnreachableBottomValue                         = 226,
     DFGUnreasonableOSREntryJumpDestination            = 230,
     DFGVarargsThrowingPathDidNotThrow                 = 235,
     FTLCrash                                          = 236,

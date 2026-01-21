@@ -25,6 +25,7 @@
 
 [
     EnabledBySetting=SpeechRecognitionEnabled,
+    SecureContext,
     Exposed=Window
 ] interface SpeechRecognitionEvent : Event {
     constructor([AtomString] DOMString type, SpeechRecognitionEventInit eventInitDict);

@@ -165,7 +165,7 @@ SelectorSpecificity simpleSelectorSpecificity(const CSSSelector& simpleSelector,
 {
     ASSERT_WITH_MESSAGE(!simpleSelector.isForPage(), "At the time of this writing, page selectors are not treated as real selectors that are matched. The value computed here only account for real selectors.");
 
-    if (UNLIKELY(simpleSelector.isImplicit()))
+    if (simpleSelector.isImplicit()) [[unlikely]]
         return 0;
 
     switch (simpleSelector.match()) {
@@ -834,12 +834,9 @@ bool CSSSelector::visitAllSimpleSelectors(auto& apply) const
 
     // Visit the selector list member (if any) recursively (such as: :has(<list>), :is(<list>),...)
         if (auto selectorList = current->selectorList()) {
-        auto next = selectorList->first();
-        while (next) {
-                worklist.push(next);
-            next = CSSSelectorList::next(next);
+            for (auto& selector : *selectorList)
+                worklist.push(&selector);
         }
-    }
 
         // Visit the next simple selector
         if (auto next = current->tagHistory())
@@ -910,6 +907,11 @@ bool CSSSelector::hasExplicitPseudoClassScope() const
 bool CSSSelector::isHostPseudoClass() const
 {
     return match() == Match::PseudoClass && pseudoClass() == PseudoClass::Host;
+}
+
+bool CSSSelector::isScopePseudoClass() const
+{
+    return match() == Match::PseudoClass && pseudoClass() == PseudoClass::Scope;
 }
 
 } // namespace WebCore

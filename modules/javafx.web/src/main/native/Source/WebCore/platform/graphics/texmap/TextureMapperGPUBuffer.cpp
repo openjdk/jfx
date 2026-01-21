@@ -29,7 +29,7 @@
 #include "TextureMapperGPUBuffer.h"
 
 namespace WebCore {
-#if !PLATFORM(JAVA)
+
 TextureMapperGPUBuffer::TextureMapperGPUBuffer(size_t size, Type type, Usage usage)
     : m_size(size)
     , m_target((type == Type::Vertex) ? GL_ARRAY_BUFFER : GL_ELEMENT_ARRAY_BUFFER)
@@ -37,7 +37,7 @@ TextureMapperGPUBuffer::TextureMapperGPUBuffer(size_t size, Type type, Usage usa
 {
     if (!size)
         return;
-
+    #if !PLATFORM(JAVA)
     glGenBuffers(1, &m_id);
     if (m_id) {
         glBindBuffer(m_target, m_id);
@@ -47,18 +47,22 @@ TextureMapperGPUBuffer::TextureMapperGPUBuffer(size_t size, Type type, Usage usa
             m_id = 0;
         }
     }
+     #endif
 }
 
 TextureMapperGPUBuffer::~TextureMapperGPUBuffer()
 {
     if (m_id) {
+    #if !PLATFORM(JAVA)
         glDeleteBuffers(1, &m_id);
+    #endif
         m_id = 0;
     }
 }
 
 bool TextureMapperGPUBuffer::updateData(const void* data, size_t offset, size_t size)
 {
+#if !PLATFORM(JAVA)
     if (m_id) {
         glBindBuffer(m_target, m_id);
         glBufferData(m_target, m_size, nullptr, m_usage); // Invalidate. No need to preserve previous content
@@ -67,7 +71,8 @@ bool TextureMapperGPUBuffer::updateData(const void* data, size_t offset, size_t 
         glBufferSubData(m_target, offset, size, data);
         return true;
     }
+#endif
     return false;
 }
-#endif
+
 } // namespace WebCore

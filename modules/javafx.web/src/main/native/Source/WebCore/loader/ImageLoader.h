@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +26,7 @@
 #include "CachedResourceHandle.h"
 #include "Element.h"
 #include "LoaderMalloc.h"
+#include "NodeInlines.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
@@ -46,7 +47,7 @@ enum class RelevantMutation : bool { No, Yes };
 enum class LazyImageLoadState : uint8_t { None, Deferred, LoadImmediately, FullImage };
 
 class ImageLoader : public CachedImageClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ImageLoader, Loader);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ImageLoader);
 public:
     virtual ~ImageLoader();
@@ -126,6 +127,8 @@ private:
     void decode();
 
     void timerFired();
+
+    void setImageCompleteAndMaybeUpdateRenderer();
 
     VisibleInViewportState imageVisibleInViewport(const Document&) const override;
 

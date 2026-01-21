@@ -50,6 +50,7 @@
 #include <wtf/text/StringHash.h>
 
 #if PLATFORM(COCOA)
+#include "ImageRotationSessionVT.h"
 #include "ImageTransferSessionVT.h"
 #include "VideoFrameCV.h"
 #endif
@@ -61,7 +62,7 @@
 namespace WebCore {
 
 struct VideoFrameAdaptor {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(VideoFrameAdaptor);
 
     VideoFrameAdaptor(IntSize size, double frameRate)
         : size(size)
@@ -338,6 +339,27 @@ void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrame
     updateHasStartedProducingData();
 
     Locker locker { m_videoFrameObserversLock };
+
+    bool shouldSwapAdaptorSize = false;
+    Ref currentVideoFrame = [&] -> Ref<VideoFrame> {
+#if PLATFORM(COCOA)
+        if (!m_shouldApplyRotation || videoFrame.hasNoTransformation())
+            return videoFrame;
+
+        if (!m_rotationSession)
+            m_rotationSession = makeUnique<ImageRotationSessionVT>(m_canUseIOSurface ? ImageRotationSessionVT::ShouldUseIOSurface::Yes : ImageRotationSessionVT::ShouldUseIOSurface::No);
+
+        RefPtr rotatedVideoFrame = m_rotationSession->applyRotation(videoFrame);
+        if (!rotatedVideoFrame)
+            return videoFrame;
+
+        shouldSwapAdaptorSize = videoFrame.has90DegreeRotation();
+        return rotatedVideoFrame.releaseNonNull();
+#else
+        return videoFrame;
+#endif
+    }();
+
     for (auto& [key, value] : m_videoFrameObservers) {
         if (auto* adaptor = value.get()) {
             if (adaptor->frameDecimation > 1 && ++adaptor->frameDecimationCounter % adaptor->frameDecimation)
@@ -348,18 +370,21 @@ void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrame
                 adaptor->frameDecimation = 1;
 
             if (!adaptor->size.isZero()) {
-                auto actualSize = expandedIntSize(videoFrame.presentationSize());
-                auto desiredSize = computeResizedVideoFrameSize(adaptor->size, actualSize);
+                auto actualSize = expandedIntSize(currentVideoFrame->presentationSize());
+                auto adaptorSize = adaptor->size;
+                if (shouldSwapAdaptorSize)
+                    adaptorSize = adaptorSize.transposedSize();
+                auto desiredSize = computeResizedVideoFrameSize(adaptorSize, actualSize);
 
                 if (desiredSize != actualSize) {
-                    if (auto newVideoFrame = adaptVideoFrame(*adaptor, videoFrame, desiredSize)) {
+                    if (auto newVideoFrame = adaptVideoFrame(*adaptor, currentVideoFrame, desiredSize)) {
                         key->videoFrameAvailable(*newVideoFrame, metadata);
                         continue;
                     }
                 }
             }
         }
-        key->videoFrameAvailable(videoFrame, metadata);
+        key->videoFrameAvailable(currentVideoFrame, metadata);
     }
 }
 
@@ -1505,10 +1530,29 @@ std::pair<GstClockTime, GstClockTime> RealtimeMediaSource::queryCaptureLatency()
 }
 #endif
 
+void RealtimeMediaSource::configurationChanged()
+{
+    forEachObserver([](auto& observer) {
+        observer.sourceConfigurationChanged();
+    });
+}
+
+bool RealtimeMediaSource::setShouldApplyRotation()
+{
+    ASSERT(isMainThread());
+
+#if PLATFORM(COCOA)
+    m_shouldApplyRotation = true;
+    return true;
+#else
+    return false;
+#endif
+}
+
 #if !RELEASE_LOG_DISABLED
 void RealtimeMediaSource::setLogger(const Logger& newLogger, uint64_t newLogIdentifier)
 {
-    m_logger = &newLogger;
+    m_logger = newLogger;
     m_logIdentifier = newLogIdentifier;
     ALWAYS_LOG(LOGIDENTIFIER, m_type, ", ", name(), ", ", m_hashedID, ", ", m_ephemeralHashedID);
 }

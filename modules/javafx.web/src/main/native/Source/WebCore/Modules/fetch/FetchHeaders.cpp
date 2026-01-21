@@ -29,7 +29,9 @@
 #include "config.h"
 #include "FetchHeaders.h"
 
+#include "ExceptionOr.h"
 #include "HTTPParsers.h"
+#include <ranges>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -73,7 +75,7 @@ static ExceptionOr<void> appendSetCookie(const String& value, Vector<String>& se
 
 static ExceptionOr<void> appendToHeaderMap(const String& name, const String& value, HTTPHeaderMap& headers, Vector<String>& setCookieValues, FetchHeaders::Guard guard)
 {
-    String normalizedValue = value.trim(isASCIIWhitespaceWithoutFF<UChar>);
+    String normalizedValue = value.trim(isASCIIWhitespaceWithoutFF<char16_t>);
     if (equalIgnoringASCIICase(name, "set-cookie"_s))
         return appendSetCookie(normalizedValue, setCookieValues, guard);
 
@@ -96,7 +98,7 @@ static ExceptionOr<void> appendToHeaderMap(const String& name, const String& val
 static ExceptionOr<void> appendToHeaderMap(const HTTPHeaderMap::HTTPHeaderMapConstIterator::KeyValue& header, HTTPHeaderMap& headers, FetchHeaders::Guard guard)
 {
     ASSERT(!equalIgnoringASCIICase(header.key, "set-cookie"_s));
-    String normalizedValue = header.value.trim(isASCIIWhitespaceWithoutFF<UChar>);
+    String normalizedValue = header.value.trim(isASCIIWhitespaceWithoutFF<char16_t>);
     auto canWriteResult = canWriteHeader(header.key, normalizedValue, header.value, guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
@@ -234,7 +236,7 @@ ExceptionOr<bool> FetchHeaders::has(const String& name) const
 
 ExceptionOr<void> FetchHeaders::set(const String& name, const String& value)
 {
-    String normalizedValue = value.trim(isASCIIWhitespaceWithoutFF<UChar>);
+    String normalizedValue = value.trim(isASCIIWhitespaceWithoutFF<char16_t>);
     auto canWriteResult = canWriteHeader(name, normalizedValue, normalizedValue, m_guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
@@ -257,7 +259,7 @@ ExceptionOr<void> FetchHeaders::set(const String& name, const String& value)
 void FetchHeaders::filterAndFill(const HTTPHeaderMap& headers, Guard guard)
 {
     for (auto& header : headers) {
-        String normalizedValue = header.value.trim(isASCIIWhitespaceWithoutFF<UChar>);
+        String normalizedValue = header.value.trim(isASCIIWhitespaceWithoutFF<char16_t>);
         auto canWriteResult = canWriteHeader(header.key, normalizedValue, header.value, guard);
         if (canWriteResult.hasException())
             continue;
@@ -290,14 +292,14 @@ std::optional<KeyValuePair<String, String>> FetchHeaders::Iterator::next()
         });
         if (hasSetCookie)
             m_keys.append(String());
-        std::sort(m_keys.begin(), m_keys.end(), compareIteratorKeys);
+        std::ranges::sort(m_keys, compareIteratorKeys);
 
         // We adjust the current index to work with Set-Cookie headers.
         // This relies on the fact that `m_currentIndex + m_setCookieIndex`
         // gives you the current total index into the iteration.
         m_currentIndex += m_setCookieIndex;
         if (hasSetCookie) {
-            size_t setCookieKeyIndex = std::lower_bound(m_keys.begin(), m_keys.end(), String(), compareIteratorKeys) - m_keys.begin();
+            size_t setCookieKeyIndex = std::ranges::lower_bound(m_keys, String(), compareIteratorKeys) - m_keys.begin();
             if (m_currentIndex < setCookieKeyIndex)
                 m_setCookieIndex = 0;
             else {

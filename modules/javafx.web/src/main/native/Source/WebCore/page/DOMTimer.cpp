@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@
 #include "OpportunisticTaskScheduler.h"
 #include "Page.h"
 #include "ScheduledAction.h"
-#include "ScriptExecutionContext.h"
+#include "ScriptExecutionContextInlines.h"
 #include "Settings.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
@@ -97,7 +97,7 @@ public:
     static DOMTimerFireState* current;
 
 private:
-    Ref<ScriptExecutionContext> m_context;
+    const Ref<ScriptExecutionContext> m_context;
     bool m_contextIsDocument;
     bool m_scriptMadeNonUserObservableChanges { false };
     bool m_scriptMadeUserObservableChanges { false };
@@ -108,7 +108,7 @@ private:
 DOMTimerFireState* DOMTimerFireState::current = nullptr;
 
 struct NestedTimersMap {
-    typedef UncheckedKeyHashMap<int, Ref<DOMTimer>>::const_iterator const_iterator;
+    typedef HashMap<int, Ref<DOMTimer>>::const_iterator const_iterator;
 
     static NestedTimersMap* instanceForContext(ScriptExecutionContext& context)
     {
@@ -121,7 +121,7 @@ struct NestedTimersMap {
 
     void startTracking()
     {
-        // Make sure we start with an empty UncheckedKeyHashMap. In theory, it is possible the UncheckedKeyHashMap is not
+        // Make sure we start with an empty HashMap. In theory, it is possible the HashMap is not
         // empty if a timer fires during the execution of another timer (may happen with the
         // in-process Web Inspector).
         nestedTimers.clear();
@@ -157,7 +157,7 @@ private:
     }
 
     static bool isTrackingNestedTimers;
-    UncheckedKeyHashMap<int /* timeoutId */, Ref<DOMTimer>> nestedTimers;
+    HashMap<int /* timeoutId */, Ref<DOMTimer>> nestedTimers;
 };
 
 bool NestedTimersMap::isTrackingNestedTimers = false;
@@ -267,7 +267,7 @@ void DOMTimer::updateThrottlingStateIfNecessary(const DOMTimerFireState& fireSta
     if (!contextDocument)
         return;
 
-    if (UNLIKELY(!isDOMTimersThrottlingEnabled(*contextDocument))) {
+    if (!isDOMTimersThrottlingEnabled(*contextDocument)) [[unlikely]] {
         if (m_throttleState == ShouldThrottle) {
             // Unthrottle the timer in case it was throttled before the setting was updated.
             LOG(DOMTimers, "%p - Unthrottling DOM timer because throttling was disabled via settings.", this);

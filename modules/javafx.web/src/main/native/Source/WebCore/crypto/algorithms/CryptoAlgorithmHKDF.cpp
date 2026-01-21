@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CRYPTO)
 #include "CryptoAlgorithmHkdfParams.h"
 #include "CryptoKeyRaw.h"
+#include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/CrossThreadCopier.h>

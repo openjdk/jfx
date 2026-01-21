@@ -33,7 +33,6 @@
 #include "CryptoKeyData.h"
 #include "CryptoRsaHashedKeyAlgorithm.h"
 #include "CryptoRsaKeyAlgorithm.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
@@ -48,7 +47,7 @@ class CryptoKey : public ThreadSafeRefCounted<CryptoKey> {
 public:
     using Type = CryptoKeyType;
     using Data = CryptoKeyData;
-    using KeyAlgorithm = std::variant<CryptoKeyAlgorithm, CryptoAesKeyAlgorithm, CryptoEcKeyAlgorithm, CryptoHmacKeyAlgorithm, CryptoRsaHashedKeyAlgorithm, CryptoRsaKeyAlgorithm>;
+    using KeyAlgorithm = Variant<CryptoKeyAlgorithm, CryptoAesKeyAlgorithm, CryptoEcKeyAlgorithm, CryptoHmacKeyAlgorithm, CryptoRsaHashedKeyAlgorithm, CryptoRsaKeyAlgorithm>;
 
     CryptoKey(CryptoAlgorithmIdentifier, Type, bool extractable, CryptoKeyUsageBitmap);
     virtual ~CryptoKey();

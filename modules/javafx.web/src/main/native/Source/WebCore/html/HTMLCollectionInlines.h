@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "HTMLCollection.h"
 #include "LiveNodeListInlines.h"
+#include "TreeScopeInlines.h"
 
 namespace WebCore {
 
@@ -100,17 +101,22 @@ inline Document& HTMLCollection::document() const
     return m_ownerNode->document();
 }
 
+inline Ref<Document> HTMLCollection::protectedDocument() const
+{
+    return document();
+}
+
 inline void HTMLCollection::invalidateCacheForAttribute(const QualifiedName& attributeName)
 {
     if (shouldInvalidateTypeOnAttributeChange(invalidationType(), attributeName))
         invalidateCache();
     else if (hasNamedElementCache() && (attributeName == HTMLNames::idAttr || attributeName == HTMLNames::nameAttr))
-        invalidateNamedElementCache(document());
+        invalidateNamedElementCache(protectedDocument().get());
 }
 
 inline void HTMLCollection::invalidateCache()
 {
-    invalidateCacheForDocument(document());
+    invalidateCacheForDocument(protectedDocument().get());
 }
 
 inline bool HTMLCollection::hasNamedElementCache() const
@@ -127,7 +133,7 @@ inline void HTMLCollection::setNamedItemCache(std::unique_ptr<CollectionNamedEle
         Locker locker { m_namedElementCacheAssignmentLock };
         m_namedElementCache = WTFMove(cache);
     }
-    document().collectionCachedIdNameMap(*this);
+    protectedDocument()->collectionCachedIdNameMap(*this);
 }
 
 inline const CollectionNamedElementCache& HTMLCollection::namedItemCaches() const

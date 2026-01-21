@@ -28,7 +28,6 @@
 #include "config.h"
 #include "PseudoElement.h"
 
-#include "ContentData.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeEffectStack.h"
 #include "RenderElement.h"
@@ -49,7 +48,7 @@ const QualifiedName& pseudoElementTagName()
 }
 
 PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
-    : Element(pseudoElementTagName(), host.document(), TypeFlag::HasCustomStyleResolveCallbacks)
+    : Element(pseudoElementTagName(), host.document(), { TypeFlag::IsPseudoElementOrSpecialInternalNode })
     , m_hostElement(host)
     , m_pseudoId(pseudoId)
 {

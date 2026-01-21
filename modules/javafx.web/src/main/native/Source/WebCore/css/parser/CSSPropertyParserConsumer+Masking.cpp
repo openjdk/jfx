@@ -26,13 +26,16 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+Masking.h"
 
+#include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
 #include "CSSPropertyParserConsumer+Ident.h"
-#include "CSSPropertyParserConsumer+Length.h"
+#include "CSSPropertyParserConsumer+LengthDefinitions.h"
 #include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+Shapes.h"
 #include "CSSPropertyParserConsumer+URL.h"
+#include "CSSPropertyParserState.h"
 #include "CSSPropertyParsing.h"
 #include "CSSRectValue.h"
 #include "CSSValueKeywords.h"
@@ -41,7 +44,7 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-static RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // rect() = rect( <top>, <right>, <bottom>, <left> )
     // "<top>, <right>, <bottom>, and <left> may either have a <length> value or auto."
@@ -55,7 +58,7 @@ static RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, cons
     auto consumeClipComponent = [&] -> RefPtr<CSSPrimitiveValue> {
         if (args.peek().id() == CSSValueAuto)
             return consumeIdent(args);
-        return consumeLength(args, context, ValueRange::All, UnitlessQuirk::Allow);
+        return CSSPrimitiveValueResolver<CSS::Length<>>::consumeAndResolve(args, state);
     };
 
     // Support both rect(t, r, b, l) and rect(t r b l).
@@ -91,17 +94,7 @@ static RefPtr<CSSValue> consumeClipRectFunction(CSSParserTokenRange& range, cons
     );
 }
 
-RefPtr<CSSValue> consumeClip(CSSParserTokenRange& range, const CSSParserContext& context)
-{
-    // <'clip'> = <rect()> | auto
-    // https://drafts.fxtf.org/css-masking/#propdef-clip
-
-    if (range.peek().id() == CSSValueAuto)
-        return consumeIdent(range);
-    return consumeClipRectFunction(range, context);
-}
-
-RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, const CSSParserContext& context)
+RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'clip-path'> = none | <clip-source> | [ <basic-shape> || <geometry-box> ]
     // <clip-source> = <url>
@@ -110,7 +103,7 @@ RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, const CSSParserCont
     if (range.peek().id() == CSSValueNone)
         return consumeIdent(range);
 
-    if (auto url = consumeURL(range))
+    if (auto url = consumeURL(range, state, { }))
         return url;
 
     RefPtr<CSSValue> shape;
@@ -119,7 +112,7 @@ RefPtr<CSSValue> consumeClipPath(CSSParserTokenRange& range, const CSSParserCont
     auto consumeShape = [&]() -> bool {
         if (shape)
             return false;
-        shape = consumeBasicShape(range, context, { });
+        shape = consumeBasicShape(range, state, { });
         return !!shape;
     };
     auto consumeBox = [&]() -> bool {

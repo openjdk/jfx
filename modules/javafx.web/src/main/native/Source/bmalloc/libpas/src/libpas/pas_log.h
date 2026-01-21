@@ -27,7 +27,7 @@
 #define PAS_LOG_N
 
 #include "pas_utils.h"
-#include <pthread.h>
+#include "pas_thread.h"
 #include <stdarg.h>
 
 PAS_BEGIN_EXTERN_C;

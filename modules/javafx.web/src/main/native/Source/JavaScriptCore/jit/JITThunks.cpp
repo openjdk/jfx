@@ -55,7 +55,6 @@ void JITThunks::initialize(VM& vm)
 #define JSC_DEFINE_COMMON_JIT_THUNK(name, func) \
     m_commonThunks[static_cast<unsigned>(CommonJITThunkID::name)] = func(vm);
 JSC_FOR_EACH_COMMON_THUNK(JSC_DEFINE_COMMON_JIT_THUNK)
-JSC_FOR_EACH_YARR_JIT_BACKREFERENCES_THUNK(JSC_DEFINE_COMMON_JIT_THUNK)
 #undef JSC_DEFINE_COMMON_JIT_THUNK
 }
 

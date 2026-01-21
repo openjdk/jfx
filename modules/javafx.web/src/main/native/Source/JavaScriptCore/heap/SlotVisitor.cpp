@@ -227,7 +227,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 
 void SlotVisitor::appendSlow(JSCell* cell, Dependency dependency)
 {
-    if (UNLIKELY(m_heapAnalyzer))
+    if (m_heapAnalyzer) [[unlikely]]
         m_heapAnalyzer->analyzeEdge(m_currentCell, cell, rootMarkReason());
 
     appendHiddenSlowImpl(cell, dependency);
@@ -281,8 +281,8 @@ ALWAYS_INLINE void SlotVisitor::appendToMarkStack(ContainerType& container, JSCe
 {
     ASSERT(m_heap.isMarked(cell));
 #if CPU(X86_64)
-    if (UNLIKELY(Options::dumpZappedCellCrashData())) {
-        if (UNLIKELY(cell->isZapped()))
+    if (Options::dumpZappedCellCrashData()) [[unlikely]] {
+        if (cell->isZapped()) [[unlikely]]
             reportZappedCellAndCrash(m_heap, cell);
     }
 #endif
@@ -386,9 +386,9 @@ ALWAYS_INLINE void SlotVisitor::visitChildren(const JSCell* cell)
         // FIXME: This could be so much better.
         // https://bugs.webkit.org/show_bug.cgi?id=162462
 #if CPU(X86_64)
-        if (UNLIKELY(Options::dumpZappedCellCrashData())) {
+        if (Options::dumpZappedCellCrashData()) [[unlikely]] {
             Structure* structure = cell->structure();
-            if (LIKELY(structure)) {
+            if (structure) [[likely]] {
                 const MethodTable* methodTable = &structure->classInfoForCells()->methodTable;
                 methodTable->visitChildren(const_cast<JSCell*>(cell), *this);
                 break;
@@ -400,7 +400,7 @@ ALWAYS_INLINE void SlotVisitor::visitChildren(const JSCell* cell)
         break;
     }
 
-    if (UNLIKELY(m_heapAnalyzer)) {
+    if (m_heapAnalyzer) [[unlikely]] {
         if (m_isFirstVisit)
             m_heapAnalyzer->analyzeNode(const_cast<JSCell*>(cell));
     }

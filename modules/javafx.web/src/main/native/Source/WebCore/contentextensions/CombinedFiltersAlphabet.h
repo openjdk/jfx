@@ -53,7 +53,7 @@ private:
         static const bool safeToCompareToEmptyOrDeleted = false;
     };
 
-    UncheckedKeyHashSet<const Term*, TermPointerHash> m_uniqueTerms;
+    HashSet<const Term*, TermPointerHash> m_uniqueTerms;
     Vector<std::unique_ptr<Term>> m_internedTermsStorage;
 };
 

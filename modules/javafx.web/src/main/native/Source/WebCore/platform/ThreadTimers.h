@@ -27,6 +27,7 @@
 #ifndef ThreadTimers_h
 #define ThreadTimers_h
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
@@ -65,11 +66,13 @@ public:
     unsigned nextHeapInsertionCount() { return m_currentHeapInsertionOrder++; }
 
 private:
+    inline CheckedPtr<SharedTimer> checkedSharedTimer();
+
     void sharedTimerFiredInternal();
     void fireTimersInNestedEventLoopInternal();
 
     ThreadTimerHeap m_timerHeap;
-    SharedTimer* m_sharedTimer { nullptr }; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
+    CheckedPtr<SharedTimer> m_sharedTimer; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
     bool m_firingTimers { false };
     bool m_shouldBreakFireLoopForRenderingUpdate { false };
     unsigned m_currentHeapInsertionOrder { 0 };

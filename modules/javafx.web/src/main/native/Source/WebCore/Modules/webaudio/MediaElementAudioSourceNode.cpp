@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "AudioNodeOutput.h"
 #include "AudioSourceProvider.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MediaElementAudioSourceOptions.h"
 #include "MediaPlayer.h"
@@ -50,14 +51,15 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaElementAudioSourceNode);
 
 ExceptionOr<Ref<MediaElementAudioSourceNode>> MediaElementAudioSourceNode::create(BaseAudioContext& context, MediaElementAudioSourceOptions&& options)
 {
-    RELEASE_ASSERT(options.mediaElement);
+    RefPtr mediaElement = WTFMove(options.mediaElement);
+    RELEASE_ASSERT(mediaElement);
 
-    if (options.mediaElement->audioSourceNode())
+    if (!mediaElement || mediaElement->audioSourceNode())
         return Exception { ExceptionCode::InvalidStateError, "Media element is already associated with an audio source node"_s };
 
-    auto node = adoptRef(*new MediaElementAudioSourceNode(context, *options.mediaElement));
+    auto node = adoptRef(*new MediaElementAudioSourceNode(context, *mediaElement));
 
-    options.mediaElement->setAudioSourceNode(node.ptr());
+    mediaElement->setAudioSourceNode(node.ptr());
 
     // context keeps reference until node is disconnected.
     context.sourceNodeWillBeginPlayback(node);
@@ -120,15 +122,14 @@ void MediaElementAudioSourceNode::setFormat(size_t numberOfChannels, float sourc
     }
 }
 
-void MediaElementAudioSourceNode::provideInput(AudioBus* bus, size_t framesToProcess)
+void MediaElementAudioSourceNode::provideInput(AudioBus& bus, size_t framesToProcess)
 {
-    ASSERT(bus);
     if (auto* provider = mediaElement().audioSourceProvider())
         provider->provideInput(bus, framesToProcess);
     else {
         // Either this port doesn't yet support HTMLMediaElement audio stream access,
         // or the stream is not yet available.
-        bus->zero();
+        bus.zero();
     }
 }
 
@@ -142,7 +143,7 @@ bool MediaElementAudioSourceNode::wouldTaintOrigin()
 
 void MediaElementAudioSourceNode::process(size_t numberOfFrames)
 {
-    AudioBus* outputBus = output(0)->bus();
+    Ref outputBus = output(0)->bus();
 
     // Use tryLock() to avoid contention in the real-time audio thread.
     // If we fail to acquire the lock then the HTMLMediaElement must be in the middle of
@@ -162,7 +163,7 @@ void MediaElementAudioSourceNode::process(size_t numberOfFrames)
 
     if (m_multiChannelResampler) {
         ASSERT(m_sourceSampleRate != sampleRate());
-        m_multiChannelResampler->process(outputBus, numberOfFrames);
+        m_multiChannelResampler->process(outputBus.get(), numberOfFrames);
     } else {
         // Bypass the resampler completely if the source is at the context's sample-rate.
         ASSERT(m_sourceSampleRate == sampleRate());

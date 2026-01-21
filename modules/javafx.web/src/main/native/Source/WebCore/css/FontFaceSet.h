@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "CSSFontFaceSet.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include <wtf/UniqueRef.h>
 
@@ -55,8 +56,8 @@ public:
     void clear();
 
     using LoadPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<FontFace>>>;
-    void load(const String& font, const String& text, LoadPromise&&);
-    ExceptionOr<bool> check(const String& font, const String& text);
+    void load(ScriptExecutionContext&, const String& font, const String& text, LoadPromise&&);
+    ExceptionOr<bool> check(ScriptExecutionContext&, const String& font, const String& text);
 
     enum class LoadStatus { Loading, Loaded };
     LoadStatus status() const;
@@ -112,9 +113,9 @@ private:
     // Callback for ReadyPromise.
     FontFaceSet& readyPromiseResolve();
 
-    Ref<CSSFontFaceSet> m_backing;
-    UncheckedKeyHashMap<RefPtr<FontFace>, Vector<Ref<PendingPromise>>> m_pendingPromises;
-    UniqueRef<ReadyPromise> m_readyPromise;
+    const Ref<CSSFontFaceSet> m_backing;
+    HashMap<RefPtr<FontFace>, Vector<Ref<PendingPromise>>> m_pendingPromises;
+    const UniqueRef<ReadyPromise> m_readyPromise;
 
     bool m_isDocumentLoaded { true };
 };

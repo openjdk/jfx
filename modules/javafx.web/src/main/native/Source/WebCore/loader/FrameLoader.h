@@ -66,6 +66,7 @@ class SharedBuffer;
 class DOMWrapperWorld;
 class Document;
 class DocumentLoader;
+class Element;
 class Event;
 class Frame;
 class FormState;
@@ -105,7 +106,7 @@ using ContentPolicyDecisionFunction = CompletionHandler<void(PolicyAction)>;
 
 class FrameLoader final : public CanMakeWeakPtr<FrameLoader> {
     WTF_MAKE_NONCOPYABLE(FrameLoader);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FrameLoader, Loader);
     friend class PolicyChecker;
 public:
     FrameLoader(LocalFrame&, CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)>&& clientCreator);
@@ -120,16 +121,15 @@ public:
     WEBCORE_EXPORT LocalFrame& frame() const;
     WEBCORE_EXPORT Ref<LocalFrame> protectedFrame() const;
 
-    PolicyChecker& policyChecker() const { return *m_policyChecker; }
+    PolicyChecker& policyChecker() const { return m_policyChecker; }
 
     HistoryController& history() const { return m_history; }
-    WEBCORE_EXPORT Ref<HistoryController> protectedHistory() const;
 
     ResourceLoadNotifier& notifier() const { return m_notifier; }
 
     class SubframeLoader;
-    SubframeLoader& subframeLoader() { return *m_subframeLoader; }
-    const SubframeLoader& subframeLoader() const { return *m_subframeLoader; }
+    SubframeLoader& subframeLoader() { return m_subframeLoader; }
+    const SubframeLoader& subframeLoader() const { return m_subframeLoader; }
 
     void setupForReplace();
 
@@ -143,7 +143,7 @@ public:
 #endif
     ResourceLoaderIdentifier loadResourceSynchronously(const ResourceRequest&, ClientCredentialPolicy, const FetchOptions&, const HTTPHeaderMap&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>& data);
 
-    WEBCORE_EXPORT void changeLocation(const URL&, const AtomString& target, Event*, const ReferrerPolicy&, ShouldOpenExternalURLsPolicy, std::optional<NewFrameOpenerPolicy> = std::nullopt, const AtomString& downloadAttribute = nullAtom(), std::optional<PrivateClickMeasurement>&& = std::nullopt, NavigationHistoryBehavior = NavigationHistoryBehavior::Push);
+    WEBCORE_EXPORT void changeLocation(const URL&, const AtomString& target, Event*, const ReferrerPolicy&, ShouldOpenExternalURLsPolicy, std::optional<NewFrameOpenerPolicy> = std::nullopt, const AtomString& downloadAttribute = nullAtom(), std::optional<PrivateClickMeasurement>&& = std::nullopt, NavigationHistoryBehavior = NavigationHistoryBehavior::Push, Element* sourceElement = nullptr);
     void changeLocation(FrameLoadRequest&&, Event* = nullptr, std::optional<PrivateClickMeasurement>&& = std::nullopt);
     void submitForm(Ref<FormSubmission>&&);
 
@@ -358,6 +358,9 @@ public:
 
     void updateURLAndHistory(const URL&, RefPtr<SerializedScriptValue>&& stateObject, NavigationHistoryBehavior = NavigationHistoryBehavior::Replace);
 
+    void setRequiredCookiesVersion(uint64_t version) { m_requiredCookiesVersion = version; }
+    uint64_t requiredCookiesVersion() const { return m_requiredCookiesVersion; }
+
     WEBCORE_EXPORT void prefetchDNSIfNeeded(const URL&);
 
 private:
@@ -396,7 +399,7 @@ private:
     void dispatchUnloadEvents(UnloadEventPolicy);
 
     void continueLoadAfterNavigationPolicy(const ResourceRequest&, FormState*, NavigationPolicyDecision, AllowNavigationToInvalidURL);
-    void continueLoadAfterNewWindowPolicy(const ResourceRequest&, FormState*, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck, AllowNavigationToInvalidURL, NewFrameOpenerPolicy);
+    void continueLoadAfterNewWindowPolicy(ResourceRequest&&, FormState*, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck, AllowNavigationToInvalidURL, NewFrameOpenerPolicy);
     void continueFragmentScrollAfterNavigationPolicy(const ResourceRequest&, const SecurityOrigin* requesterOrigin, bool shouldContinue, NavigationHistoryBehavior);
 
     bool shouldPerformFragmentNavigation(bool isFormSubmission, const String& httpMethod, FrameLoadType, const URL&);
@@ -422,7 +425,7 @@ private:
     void loadWithDocumentLoader(DocumentLoader*, FrameLoadType, RefPtr<FormState>&&, AllowNavigationToInvalidURL, CompletionHandler<void()>&& = [] { }); // Calls continueLoadAfterNavigationPolicy
     void load(DocumentLoader&, const SecurityOrigin* requesterOrigin); // Calls loadWithDocumentLoader
 
-    void loadWithNavigationAction(const ResourceRequest&, NavigationAction&&, FrameLoadType, RefPtr<FormState>&&, AllowNavigationToInvalidURL, ShouldTreatAsContinuingLoad, CompletionHandler<void()>&& = [] { }); // Calls loadWithDocumentLoader
+    void loadWithNavigationAction(ResourceRequest&&, NavigationAction&&, FrameLoadType, RefPtr<FormState>&&, AllowNavigationToInvalidURL, ShouldTreatAsContinuingLoad, CompletionHandler<void()>&& = [] { }); // Calls loadWithDocumentLoader
 
     void loadPostRequest(FrameLoadRequest&&, const String& referrer, FrameLoadType, Event*, RefPtr<FormState>&&, CompletionHandler<void()>&&);
     void loadURL(FrameLoadRequest&&, const String& referrer, FrameLoadType, Event*, RefPtr<FormState>&&, std::optional<PrivateClickMeasurement>&&, CompletionHandler<void()>&&);
@@ -465,15 +468,15 @@ private:
 
     void updateRequestAndAddExtraFields(Frame&, ResourceRequest&, IsMainResource, FrameLoadType, ShouldUpdateAppInitiatedValue, IsServiceWorkerNavigationLoad, WillOpenInNewWindow, Document*);
 
-    bool dispatchNavigateEvent(const URL& newURL, FrameLoadType, const AtomString&, NavigationHistoryBehavior, bool isSameDocument, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr);
+    bool dispatchNavigateEvent(const URL& newURL, FrameLoadType, const AtomString&, NavigationHistoryBehavior, bool isSameDocument, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr, Element* sourceElement = nullptr);
 
     WeakRef<LocalFrame> m_frame;
-    UniqueRef<LocalFrameLoaderClient> m_client;
+    const UniqueRef<LocalFrameLoaderClient> m_client;
 
-    const std::unique_ptr<PolicyChecker> m_policyChecker;
+    const UniqueRef<PolicyChecker> m_policyChecker;
     const UniqueRef<HistoryController> m_history;
     mutable ResourceLoadNotifier m_notifier;
-    const std::unique_ptr<SubframeLoader> m_subframeLoader;
+    const UniqueRef<SubframeLoader> m_subframeLoader;
     mutable FrameLoaderStateMachine m_stateMachine;
 
     class FrameProgressTracker;
@@ -545,6 +548,9 @@ private:
 
     bool m_errorOccurredInLoading { false };
     bool m_doNotAbortNavigationAPI { false };
+    bool m_navigationAPITraversalInProgress { false };
+    RefPtr<HistoryItem> m_pendingNavigationAPIItem;
+    uint64_t m_requiredCookiesVersion { 0 };
 };
 
 // This function is called by createWindow() in JSDOMWindowBase.cpp, for example, for

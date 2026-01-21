@@ -32,6 +32,7 @@
 
 #include "DownSampler.h"
 
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -68,13 +69,13 @@ void DownSampler::initializeKernel()
     // after doing the main convolution using m_reducedKernel.
     for (int i = 1; i < n; i += 2) {
         // Compute the sinc() with offset.
-        double s = sincScaleFactor * piDouble * (i - halfSize);
+        double s = sincScaleFactor * std::numbers::pi * (i - halfSize);
         double sinc = !s ? 1.0 : sin(s) / s;
         sinc *= sincScaleFactor;
 
         // Compute Blackman window, matching the offset of the sinc().
         double x = static_cast<double>(i) / n;
-        double window = a0 - a1 * cos(2.0 * piDouble * x) + a2 * cos(4.0 * piDouble * x);
+        double window = a0 - a1 * cos(2.0 * std::numbers::pi * x) + a2 * cos(4.0 * std::numbers::pi * x);
 
         // Window the sinc() function.
         // Then store only the odd terms in the kernel.
