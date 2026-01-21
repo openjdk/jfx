@@ -484,6 +484,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
             // Take into account whether the popup was autofixed for JDK-8338145
             // If it was and the height changed, we need to adjust the position as well
+            // to retain the original position relative to the combo box itself
             if (!first && heightChange != 0.0) {
                 // The popup does not directly store information on whether it was autofixed
                 // We can determine this by looking whether it was moved upward
