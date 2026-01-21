@@ -44,10 +44,7 @@ import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import javafx.scene.Node;
 
 public class NGGroup extends NGNode {
-    /**
-     * The blend mode to use with this group.
-     */
-    private Blend.Mode blendMode = Blend.Mode.SRC_OVER;
+
     // NOTE I need a special array list here where all nodes added can have
     // their parent set correctly, and all nodes removed have it cleared correctly.
     // Actually, if a node is removed, I probably don't have to worry about
@@ -220,62 +217,15 @@ public class NGGroup extends NGNode {
             }
         }
 
-        if (blendMode == Blend.Mode.SRC_OVER ||
-                orderedChildren.size() < 2) {  // Blend modes only work "between" siblings
-
-            // Guard against case where renderRoot is not part of orderedChildren
-            for (int i = (startPos == -1 ? 0 : startPos); i < orderedChildren.size(); i++) {
-                NGNode child = orderedChildren.get(i);
-                child.render(g);
-            }
-            return;
+        // Guard against case where renderRoot is not part of orderedChildren
+        for (int i = (startPos == -1 ? 0 : startPos); i < orderedChildren.size(); i++) {
+            NGNode child = orderedChildren.get(i);
+            child.render(g);
         }
-
-        Blend b = new Blend(blendMode, null, null);
-        FilterContext fctx = getFilterContext(g);
-
-        ImageData bot = null;
-        boolean idValid = true;
-        do {
-            // TODO: probably don't need to wrap the transform here... (JDK-8092196)
-            BaseTransform transform = g.getTransformNoClone().copy();
-            if (bot != null) {
-                bot.unref();
-                bot = null;
-            }
-            Rectangle rclip = PrEffectHelper.getGraphicsClipNoClone(g);
-            for (int i = startPos; i < orderedChildren.size(); i++) {
-                NGNode child = orderedChildren.get(i);
-                ImageData top = NodeEffectInput.
-                    getImageDataForNode(fctx, child, false, transform, rclip);
-                if (bot == null) {
-                    bot = top;
-                } else {
-                    ImageData newbot =
-                        b.filterImageDatas(fctx, transform, rclip, null, bot, top);
-                    bot.unref();
-                    top.unref();
-                    bot = newbot;
-                }
-            }
-            if (bot != null && (idValid = bot.validate(fctx))) {
-                Rectangle r = bot.getUntransformedBounds();
-                PrDrawable botimg = (PrDrawable)bot.getUntransformedImage();
-                g.setTransform(bot.getTransform());
-                g.drawTexture(botimg.getTextureObject(),
-                        r.x, r.y, r.width, r.height);
-            }
-        } while (bot == null || !idValid);
-
-        bot.unref();
     }
 
     @Override
     protected boolean hasOverlappingContents() {
-        if (blendMode != Mode.SRC_OVER) {
-            // All other modes are flattened so there are no overlapping issues
-            return false;
-        }
         List<NGNode> orderedChildren = getOrderedChildren();
         int n = orderedChildren.size();
         if (n == 1) {
