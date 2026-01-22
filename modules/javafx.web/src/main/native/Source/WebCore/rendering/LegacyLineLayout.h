@@ -68,6 +68,8 @@ public:
 
     static void appendRunsForObject(BidiRunList<BidiRun>*, int start, int end, RenderObject&, InlineBidiResolver&);
 
+    static bool shouldSkipCreatingRunsForObject(RenderObject&);
+
 private:
     std::unique_ptr<LegacyRootInlineBox> createRootInlineBox();
     LegacyRootInlineBox* createAndAppendRootInlineBox();

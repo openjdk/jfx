@@ -91,27 +91,17 @@ template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableA
 
 template<typename VectorElementType> Vector<VectorElementType> makeVector(NSArray *array)
 {
-    Vector<VectorElementType> vector;
-    vector.reserveInitialCapacity(array.count);
-    for (id element in array) {
+    return Vector<VectorElementType>(array.count, [&](size_t index) {
         constexpr const VectorElementType* typedNull = nullptr;
-        if (auto vectorElement = makeVectorElement(typedNull, element))
-            vector.append(WTFMove(*vectorElement));
-    }
-    vector.shrinkToFit();
-    return vector;
+        return makeVectorElement(typedNull, array[index]);
+    });
 }
 
 template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> makeVector(NSArray *array, NOESCAPE MapFunctionType&& function)
 {
-    Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> vector;
-    vector.reserveInitialCapacity(array.count);
-    for (id element in array) {
-        if (auto vectorElement = std::invoke(std::forward<MapFunctionType>(function), element))
-            vector.append(WTFMove(*vectorElement));
-    }
-    vector.shrinkToFit();
-    return vector;
+    return Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type>(array.count, [&](size_t index) {
+        return std::invoke(std::forward<MapFunctionType>(function), array[index]);
+    });
 }
 
 inline Vector<uint8_t> makeVector(NSData *data)

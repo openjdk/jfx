@@ -62,6 +62,7 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 #include <limits>
+#include <numeric>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -114,6 +115,12 @@ HTMLFormElement::~HTMLFormElement()
     if (!shouldAutocomplete())
         document().unregisterForDocumentSuspensionCallbacks(*this);
 
+    // formWillBeDestroyed below will try to update the validity of all radio buttons in a given group.
+    m_radioButtonGroups.clear();
+
+    // formWillBeDestroyed below will try to update the validity of all radio buttons in a given group.
+    m_radioButtonGroups.clear();
+
     m_defaultButton = nullptr;
     for (auto& weakElement : m_listedElements) {
         ASSERT(weakElement);
@@ -145,6 +152,8 @@ void HTMLFormElement::removedFromAncestor(RemovalType removalType, ContainerNode
     for (auto& imageElement : imageElements)
         imageElement->formOwnerRemovedFromTree(root);
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    if (removalType.disconnectedFromDocument)
+      m_controlsCollection = nullptr; // Avoid leaks since HTMLCollection has a back Ref to this element.
 }
 
 unsigned HTMLFormElement::length() const
@@ -166,16 +175,16 @@ HTMLElement* HTMLFormElement::item(unsigned index)
     return elements()->item(index);
 }
 
-std::optional<std::variant<RefPtr<RadioNodeList>, RefPtr<Element>>> HTMLFormElement::namedItem(const AtomString& name)
+std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> HTMLFormElement::namedItem(const AtomString& name)
 {
     auto namedItems = namedElements(name);
 
     if (namedItems.isEmpty())
         return std::nullopt;
     if (namedItems.size() == 1)
-        return std::variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<Element> { WTFMove(namedItems[0]) } };
+        return Variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<Element> { WTFMove(namedItems[0]) } };
 
-    return std::variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<RadioNodeList> { radioNodeList(name) } };
+    return Variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<RadioNodeList> { radioNodeList(name) } };
 }
 
 Vector<AtomString> HTMLFormElement::supportedPropertyNames() const
@@ -516,7 +525,7 @@ unsigned HTMLFormElement::formElementIndexWithFormAttribute(Element* element, un
 
     // Does binary search on m_listedElements in order to find the index to be inserted.
     while (left != right) {
-        unsigned middle = left + ((right - left) / 2);
+        unsigned middle = std::midpoint(left, right);
         ASSERT(middle < m_listedElementsBeforeIndex || middle >= m_listedElementsAfterIndex);
         position = element->compareDocumentPosition(*m_listedElements[middle]);
         if (position & DOCUMENT_POSITION_FOLLOWING)
@@ -605,7 +614,7 @@ void HTMLFormElement::unregisterFormListedElement(FormListedElement& element)
     if (index < m_listedElementsAfterIndex)
         --m_listedElementsAfterIndex;
     removeFromPastNamesMap(element);
-    m_listedElements.remove(index);
+    m_listedElements.removeAt(index);
 
     if (auto* nodeLists = this->nodeLists())
         nodeLists->invalidateCaches();
@@ -658,7 +667,15 @@ void HTMLFormElement::unregisterImgElement(HTMLImageElement& element)
 
 Ref<HTMLFormControlsCollection> HTMLFormElement::elements()
 {
-    return ensureRareData().ensureNodeLists().addCachedCollection<HTMLFormControlsCollection>(*this, CollectionType::FormControls);
+    // Ordinarily JS wrapper keeps the collection alive but this function is used by HTMLFormElement::namedElements internally without creating one.
+    // This cache is cleared whenever this element is disconnected from a document.
+    if (!m_controlsCollection) {
+        Ref controlsCollection = ensureRareData().ensureNodeLists().addCachedCollection<HTMLFormControlsCollection>(*this, CollectionType::FormControls);
+        if (!isConnected())
+            return controlsCollection;
+        m_controlsCollection = WTFMove(controlsCollection);
+    }
+    return *m_controlsCollection;
 }
 
 Ref<HTMLCollection> HTMLFormElement::elementsForNativeBindings()
@@ -684,32 +701,17 @@ String HTMLFormElement::action() const
     return document().completeURL(value).string();
 }
 
-void HTMLFormElement::setAction(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(actionAttr, value);
-}
-
-void HTMLFormElement::setEnctype(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(enctypeAttr, value);
-}
-
 String HTMLFormElement::method() const
 {
     return FormSubmission::Attributes::methodString(m_attributes.method());
 }
 
-void HTMLFormElement::setMethod(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(methodAttr, value);
-}
-
 DOMTokenList& HTMLFormElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document&, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document&, StringView token) {
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s) || equalLettersIgnoringASCIICase(token, "opener"_s);
-        });
+        }));
     }
     return *m_relList;
 }
@@ -956,11 +958,6 @@ Vector<Ref<ValidatedFormListedElement>> HTMLFormElement::copyValidatedListedElem
 HTMLFormElement* HTMLFormElement::findClosestFormAncestor(const Element& startElement)
 {
     return const_cast<HTMLFormElement*>(ancestorsOfType<HTMLFormElement>(startElement).first());
-}
-
-void HTMLFormElement::setAutocomplete(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(autocompleteAttr, value);
 }
 
 const AtomString& HTMLFormElement::autocomplete() const

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CanvasNoiseInjection.h"
 #include "FloatRect.h"
 #include "IntSize.h"
@@ -61,8 +62,6 @@ class IntRect;
 class ScriptExecutionContext;
 class SecurityOrigin;
 class WebCoreOpaqueRoot;
-
-struct CSSParserContext;
 
 enum class ShouldApplyPostProcessingToDirtyRect : bool { No, Yes };
 
@@ -105,7 +104,7 @@ public:
 
     virtual CanvasRenderingContext* renderingContext() const = 0;
 
-    virtual const CSSParserContext& cssParserContext() const = 0;
+    const CSSParserContext& cssParserContext() const;
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
@@ -118,7 +117,7 @@ public:
     void notifyObserversCanvasDisplayBufferPrepared();
     bool hasDisplayBufferObservers() const { return !m_displayBufferObservers.isEmptyIgnoringNullReferences(); }
 
-    UncheckedKeyHashSet<Element*> cssCanvasClients() const;
+    HashSet<Element*> cssCanvasClients() const;
 
     // !rect means caller knows the full canvas is invalidated previously.
     void didDraw(const std::optional<FloatRect>& rect) { return didDraw(rect, ShouldApplyPostProcessingToDirtyRect::Yes); }
@@ -133,7 +132,7 @@ public:
 
     WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
 
-    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) = 0;
+    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) = 0;
     virtual void dispatchEvent(Event&) = 0;
 
     bool postProcessPixelBufferResults(Ref<PixelBuffer>&&) const;
@@ -156,6 +155,7 @@ protected:
     explicit CanvasBase(IntSize, ScriptExecutionContext&);
 
     virtual ScriptExecutionContext* canvasBaseScriptExecutionContext() const = 0;
+    virtual std::unique_ptr<CSSParserContext> createCSSParserContext() const = 0;
 
     virtual void setSize(const IntSize&);
 
@@ -173,6 +173,7 @@ private:
     mutable RefPtr<ImageBuffer> m_imageBuffer;
     mutable std::atomic<size_t> m_imageBufferMemoryCost { 0 };
     mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
+    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 
     String m_lastFillText;
 
@@ -191,6 +192,14 @@ private:
 };
 
 WebCoreOpaqueRoot root(CanvasBase*);
+
+
+inline const CSSParserContext& CanvasBase::cssParserContext() const
+{
+    if (!m_cssParserContext) [[unlikely]]
+        m_cssParserContext = createCSSParserContext();
+    return *m_cssParserContext;
+}
 
 } // namespace WebCore
 

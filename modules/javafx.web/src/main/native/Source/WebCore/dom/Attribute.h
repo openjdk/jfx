@@ -41,6 +41,12 @@ public:
     {
     }
 
+    Attribute(QualifiedName&& name, AtomString&& value)
+        : m_name(WTFMove(name))
+        , m_value(WTFMove(value))
+    {
+    }
+
     // NOTE: The references returned by these functions are only valid for as long
     // as the Attribute stays in place. For example, calling a function that mutates
     // an Element's internal attribute storage may invalidate them.

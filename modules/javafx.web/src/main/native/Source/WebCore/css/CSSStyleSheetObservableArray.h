@@ -26,12 +26,12 @@
 #pragma once
 
 #include "CSSStyleSheet.h"
-#include "ExceptionOr.h"
 #include "JSObservableArray.h"
 
 namespace WebCore {
 
 class ContainerNode;
+template<typename> class ExceptionOr;
 
 class CSSStyleSheetObservableArray : public JSC::ObservableArray {
 public:

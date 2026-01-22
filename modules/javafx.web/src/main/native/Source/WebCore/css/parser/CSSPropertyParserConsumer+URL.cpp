@@ -25,8 +25,16 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+URL.h"
 
+#include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
+#include "CSSParserTokenRangeGuard.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyParserConsumer+KeywordDefinitions.h"
+#include "CSSPropertyParserConsumer+MetaConsumer.h"
+#include "CSSPropertyParserConsumer+Primitives.h"
+#include "CSSPropertyParserConsumer+String.h"
+#include "CSSPropertyParserState.h"
+#include "CSSURLValue.h"
 #include "CSSValueKeywords.h"
 #include <wtf/text/StringView.h>
 
@@ -36,35 +44,120 @@ namespace CSSPropertyParserHelpers {
 // MARK: <url>
 // https://drafts.csswg.org/css-values/#urls
 
-StringView consumeURLRaw(CSSParserTokenRange& range)
+// <url> = <url()> | <src()>
+//
+// <url()> = url( <string> <url-modifier>* ) | <url-token>
+// <src()> = src( <string> <url-modifier>* )
+
+// <url-modifier> = <cross-origin-modifier> | <integrity-modifier> | <referrer-policy-modifier>
+//
+// <cross-origin-modifier> = cross-origin( anonymous | use-credentials )
+// <integrity-modifier> = integrity( <string> )
+// <referrer-policy-modifier> = referrer-policy( no-referrer | no-referrer-when-downgrade | same-origin | origin | strict-origin | origin-when-cross-origin | strict-origin-when-cross-origin | unsafe-url)
+
+std::optional<CSS::URL> consumeURLRaw(CSSParserTokenRange& range, CSS::PropertyParserState& state, OptionSet<AllowedURLModifiers> allowedURLModifiers)
 {
     auto& token = range.peek();
     if (token.type() == UrlToken) {
+        auto result = CSS::completeURL(token.value().toString(), state.context);
+        if (!result)
+            return { };
         range.consumeIncludingWhitespace();
-        return token.value();
+        return result;
     }
 
-    if (token.functionId() == CSSValueUrl) {
-        auto rangeCopy = range;
-        auto args = rangeCopy.consumeBlock();
-        auto& next = args.consumeIncludingWhitespace();
-        if (next.type() == BadStringToken || !args.atEnd())
-            return StringView();
-        ASSERT(next.type() == StringToken);
-        range = rangeCopy;
-        range.consumeWhitespace();
-        return next.value();
+    switch (token.functionId()) {
+    case CSSValueUrl: {
+        CSSParserTokenRangeGuard guard { range };
+
+        auto args = consumeFunction(range);
+
+        auto string = consumeStringRaw(args);
+        if (string.isNull())
+            return { };
+        auto result = CSS::completeURL(string.toString(), state.context);
+        if (!result)
+            return { };
+
+        if (!state.context.cssURLModifiersEnabled) {
+            if (!args.atEnd())
+                return { };
+        } else {
+            while (!args.atEnd()) {
+                switch (args.peek().functionId()) {
+                case CSSValueCrossOrigin: {
+                    if (!allowedURLModifiers.contains(AllowedURLModifiers::CrossOrigin))
+                        return { };
+                    if (result->modifiers.crossOrigin)
+                        return { };
+                    auto crossOriginArgs = consumeFunction(args);
+                    auto crossOriginValue = MetaConsumer<
+                        CSS::Keyword::Anonymous,
+                        CSS::Keyword::UseCredentials
+                    >::consume(crossOriginArgs, state);
+                    if (!crossOriginValue || !crossOriginArgs.atEnd())
+                        return { };
+                    result->modifiers.crossOrigin = CSS::URLCrossOriginFunction { .parameters = { *crossOriginValue } };
+                    break;
+    }
+                case CSSValueIntegrity: {
+                    if (!state.context.cssURLIntegrityModifierEnabled)
+                        return { };
+                    if (!allowedURLModifiers.contains(AllowedURLModifiers::Integrity))
+                        return { };
+                    if (result->modifiers.integrity)
+                        return { };
+                    auto integrityArgs = consumeFunction(args);
+                    auto integrityValue = consumeStringRaw(integrityArgs);
+                    if (integrityValue.isNull() || !integrityArgs.atEnd())
+                        return { };
+                    result->modifiers.integrity = CSS::URLIntegrityFunction { .parameters = { integrityValue.toString() } };
+                    break;
+                }
+                case CSSValueReferrerPolicy: {
+                    if (!allowedURLModifiers.contains(AllowedURLModifiers::ReferrerPolicy))
+                        return { };
+                    if (result->modifiers.referrerPolicy)
+                        return { };
+                    auto referrerPolicyArgs = consumeFunction(args);
+                    auto referrerPolicyValue = MetaConsumer<
+                        CSS::Keyword::NoReferrer,
+                        CSS::Keyword::NoReferrerWhenDowngrade,
+                        CSS::Keyword::SameOrigin,
+                        CSS::Keyword::Origin,
+                        CSS::Keyword::StrictOrigin,
+                        CSS::Keyword::OriginWhenCrossOrigin,
+                        CSS::Keyword::StrictOriginWhenCrossOrigin,
+                        CSS::Keyword::UnsafeUrl
+                    >::consume(referrerPolicyArgs, state);
+                    if (!referrerPolicyValue || !referrerPolicyArgs.atEnd())
+                        return { };
+                    result->modifiers.referrerPolicy = CSS::URLReferrerPolicyFunction { .parameters = { *referrerPolicyValue } };
+                    break;
+                }
+                default:
+                    return { };
+                }
+            }
+        }
+
+        guard.commit();
+
+        return result;
+    }
+
+    default:
+        break;
     }
 
     return { };
 }
 
-RefPtr<CSSPrimitiveValue> consumeURL(CSSParserTokenRange& range)
+RefPtr<CSSValue> consumeURL(CSSParserTokenRange& range, CSS::PropertyParserState& state, OptionSet<AllowedURLModifiers> allowedURLModifiers)
 {
-    auto url = consumeURLRaw(range);
-    if (url.isNull())
+    if (auto rawURL = consumeURLRaw(range, state, allowedURLModifiers))
+        return CSSURLValue::create(WTFMove(*rawURL));
         return nullptr;
-    return CSSPrimitiveValue::createURI(url.toString());
 }
 
 } // namespace CSSPropertyParserHelpers

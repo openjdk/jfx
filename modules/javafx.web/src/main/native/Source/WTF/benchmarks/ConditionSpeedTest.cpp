@@ -31,6 +31,7 @@
 #include "ToyLocks.h"
 #include <condition_variable>
 #include <mutex>
+#include <ranges>
 #include <thread>
 #include <type_traits>
 #include <unistd.h>
@@ -53,7 +54,7 @@ unsigned numConsumers;
 unsigned maxQueueSize;
 unsigned numMessagesPerProducer;
 
-NO_RETURN void usage()
+[[noreturn]] void usage()
 {
     printf("Usage: ConditionSpeedTest lock|mutex|all <num producers> <num consumers> <max queue size> <num messages per producer>\n");
     exit(1);
@@ -107,7 +108,7 @@ void runTest(
                             emptyCondition, lock, locker,
                             [&] () {
                                 if (verbose)
-                                    dataLog(toString(Thread::current(), ": Checking consumption predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
+                                    dataLog(toString(Thread::currentSingleton(), ": Checking consumption predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
                                 return !shouldContinue || !queue.isEmpty();
                             });
                         if (!shouldContinue && queue.isEmpty())
@@ -137,7 +138,7 @@ void runTest(
                             fullCondition, lock, locker,
                             [&] () {
                                 if (verbose)
-                                    dataLog(toString(Thread::current(), ": Checking production predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
+                                    dataLog(toString(Thread::currentSingleton(), ": Checking production predicate with shouldContinue = ", shouldContinue, ", queue.size() == ", queue.size(), "\n"));
                                 return queue.size() < maxQueueSize;
                             });
                         mustNotify = queue.isEmpty();
@@ -161,7 +162,7 @@ void runTest(
         thread->waitForCompletion();
 
     RELEASE_ASSERT(numProducers * numMessagesPerProducer == received.size());
-    std::sort(received.begin(), received.end());
+    std::ranges::sort(received);
     for (unsigned messageIndex = 0; messageIndex < numMessagesPerProducer; ++messageIndex) {
         for (unsigned producerIndex = 0; producerIndex < numProducers; ++producerIndex)
             RELEASE_ASSERT(messageIndex == received[messageIndex * numProducers + producerIndex]);

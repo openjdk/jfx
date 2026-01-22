@@ -37,9 +37,8 @@
 
 namespace WebCore {
 
-LineWidth::LineWidth(RenderBlockFlow& block, bool isFirstLine)
+LineWidth::LineWidth(RenderBlockFlow& block)
     : m_block(block)
-    , m_isFirstLine(isFirstLine)
 {
     updateAvailableWidth();
 }
@@ -67,58 +66,12 @@ bool LineWidth::fitsOnLineExcludingTrailingCollapsedWhitespace() const
     return adjustedCurrentWidth < m_availableWidth || WTF::areEssentiallyEqual(adjustedCurrentWidth, m_availableWidth);
 }
 
-void LineWidth::updateAvailableWidth(LayoutUnit replacedHeight)
+void LineWidth::updateAvailableWidth()
 {
     LayoutUnit height = m_block.logicalHeight();
-    LayoutUnit logicalHeight = m_block.minLineHeightForReplacedRenderer(m_isFirstLine, replacedHeight);
-    m_left = m_block.logicalLeftOffsetForLine(height, logicalHeight);
-    m_right = m_block.logicalRightOffsetForLine(height, logicalHeight);
-
-    computeAvailableWidthFromLeftAndRight();
-}
-
-static bool newFloatShrinksLine(const FloatingObject& newFloat, const RenderBlockFlow& block, bool isFirstLine)
-{
-    LayoutUnit blockOffset = block.logicalHeight();
-    if (blockOffset >= block.logicalTopForFloat(newFloat) && blockOffset < block.logicalBottomForFloat(newFloat))
-        return true;
-
-    // initial-letter float always shrinks the first line.
-    const auto& style = newFloat.renderer().style();
-    if (isFirstLine && style.pseudoElementType() == PseudoId::FirstLetter && !style.initialLetter().isEmpty())
-        return true;
-    return false;
-}
-
-void LineWidth::shrinkAvailableWidthForNewFloatIfNeeded(const FloatingObject& newFloat)
-{
-    if (!newFloatShrinksLine(newFloat, m_block, m_isFirstLine))
-        return;
-    ShapeOutsideDeltas shapeDeltas;
-    if (ShapeOutsideInfo* shapeOutsideInfo = newFloat.renderer().shapeOutsideInfo()) {
-        LayoutUnit lineHeight = m_block.lineHeight(m_isFirstLine, m_block.isHorizontalWritingMode() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
-        shapeDeltas = shapeOutsideInfo->computeDeltasForContainingBlockLine(m_block, newFloat, m_block.logicalHeight(), lineHeight);
-    }
-
-    if (newFloat.type() == FloatingObject::FloatLeft) {
-        float newLeft = m_block.logicalRightForFloat(newFloat);
-        if (shapeDeltas.isValid()) {
-            if (shapeDeltas.lineOverlapsShape())
-                newLeft += shapeDeltas.rightMarginBoxDelta();
-            else // If the line doesn't overlap the shape, then we need to act as if this float didn't exist.
-                newLeft = m_left;
-        }
-        m_left = std::max<float>(m_left, newLeft);
-    } else {
-        float newRight = m_block.logicalLeftForFloat(newFloat);
-        if (shapeDeltas.isValid()) {
-            if (shapeDeltas.lineOverlapsShape())
-                newRight += shapeDeltas.leftMarginBoxDelta();
-            else // If the line doesn't overlap the shape, then we need to act as if this float didn't exist.
-                newRight = m_right;
-        }
-        m_right = std::min<float>(m_right, newRight);
-    }
+    auto lineHeight = std::max(0_lu, m_block.lineHeight());
+    m_left = m_block.logicalLeftOffsetForLine(height, lineHeight);
+    m_right = m_block.logicalRightOffsetForLine(height, lineHeight);
 
     computeAvailableWidthFromLeftAndRight();
 }
@@ -151,59 +104,6 @@ void LineWidth::updateLineDimension(LayoutUnit newLineTop, LayoutUnit newLineWid
     m_availableWidth = newLineWidth;
     m_left = newLineLeft;
     m_right = newLineRight;
-}
-
-void LineWidth::wrapNextToShapeOutside(bool isFirstLine)
-{
-    LayoutUnit lineHeight = m_block.lineHeight(isFirstLine, m_block.isHorizontalWritingMode() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
-    LayoutUnit lineLogicalTop = m_block.logicalHeight();
-    LayoutUnit newLineTop = lineLogicalTop;
-    LayoutUnit floatLogicalBottom = m_block.nextFloatLogicalBottomBelow(lineLogicalTop);
-
-    float newLineWidth;
-    float newLineLeft = m_left;
-    float newLineRight = m_right;
-    while (true) {
-        newLineWidth = availableWidthAtOffset(m_block, newLineTop, newLineLeft, newLineRight, lineHeight);
-        if (newLineWidth >= m_uncommittedWidth)
-            break;
-
-        if (newLineTop >= floatLogicalBottom)
-            break;
-
-        ++newLineTop;
-    }
-    updateLineDimension(newLineTop, LayoutUnit(newLineWidth), LayoutUnit(newLineLeft), LayoutUnit(newLineRight));
-}
-
-void LineWidth::fitBelowFloats(bool isFirstLine)
-{
-    ASSERT(!m_committedWidth);
-    ASSERT(!fitsOnLine());
-
-    LayoutUnit floatLogicalBottom;
-    LayoutUnit lastFloatLogicalBottom = m_block.logicalHeight();
-    float newLineWidth = m_availableWidth;
-    float newLineLeft = m_left;
-    float newLineRight = m_right;
-
-    FloatingObject* lastFloatFromPreviousLine = (m_block.containsFloats() ? m_block.m_floatingObjects->set().last().get() : 0);
-    if (lastFloatFromPreviousLine && lastFloatFromPreviousLine->renderer().shapeOutsideInfo())
-        return wrapNextToShapeOutside(isFirstLine);
-
-    while (true) {
-        floatLogicalBottom = m_block.nextFloatLogicalBottomBelow(lastFloatLogicalBottom);
-        if (floatLogicalBottom <= lastFloatLogicalBottom)
-            break;
-
-        newLineWidth = availableWidthAtOffset(m_block, floatLogicalBottom, newLineLeft, newLineRight);
-        lastFloatLogicalBottom = floatLogicalBottom;
-
-        if (newLineWidth >= m_uncommittedWidth)
-            break;
-    }
-
-    updateLineDimension(lastFloatLogicalBottom, LayoutUnit(newLineWidth), LayoutUnit(newLineLeft), LayoutUnit(newLineRight));
 }
 
 void LineWidth::setTrailingWhitespaceWidth(float collapsedWhitespace, float borderPaddingMargin)

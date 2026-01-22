@@ -62,12 +62,6 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_getStartImpl
     return IMPL->start();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_setStartImpl(JNIEnv*, jclass, jlong peer, jint value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setStartForBindings(value);
-}
-
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_getReversedImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;

@@ -43,14 +43,12 @@ WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Asin);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Atan);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Atan2);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Clamp);
-WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(ContainerProgress);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Cos);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Exp);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Hypot);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Invert);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Log);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Max);
-WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(MediaProgress);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Min);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Mod);
 WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(Negate);
@@ -170,7 +168,6 @@ Child makeNumeric(double value, CSSUnitType unit)
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         break;
@@ -221,6 +218,16 @@ Type getType(const NonCanonicalDimension& root)
 Type getType(const Symbol& root)
 {
     return Type::determineType(root.unit);
+}
+
+Type getType(const SiblingCount&)
+{
+    return Type { };
+}
+
+Type getType(const SiblingIndex&)
+{
+    return Type { };
 }
 
 Type getType(const Child& child)
@@ -435,21 +442,9 @@ std::optional<Type> toType(const Progress& root)
     return transformTypeFor(root, type);
 }
 
-std::optional<Type> toType(const MediaProgress&)
-{
-    // `media-progress()` always has type `number`.
-    return Type { };
-}
-
-std::optional<Type> toType(const ContainerProgress&)
-{
-    // `container-progress()` always has type `number`.
-    return Type { };
-}
-
 TextStream& operator<<(TextStream& ts, Tree tree)
 {
-    return ts << "CSSCalc::Tree [ " << serializationForCSS(tree, { .range = CSS::All, .serializationContext = CSS::defaultSerializationContext() }) << " ]";
+    return ts << "CSSCalc::Tree [ "_s << serializationForCSS(tree, { .range = CSS::All, .serializationContext = CSS::defaultSerializationContext() }) << " ]"_s;
 }
 
 } // namespace CSSCalc

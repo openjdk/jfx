@@ -90,7 +90,7 @@ IntOutsets FEOffset::calculateOutsets(const FloatSize& offset)
     return outsets;
 }
 
-bool FEOffset::resultIsAlphaImage(const FilterImageVector& inputs) const
+bool FEOffset::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const
 {
     return inputs[0]->isAlphaImage();
 }
@@ -102,12 +102,12 @@ std::unique_ptr<FilterEffectApplier> FEOffset::createSoftwareApplier() const
 
 TextStream& FEOffset::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feOffset";
+    ts << indent << "[feOffset"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " dx=\"" << dx() << "\" dy=\"" << dy() << "\"";
+    ts << " dx=\""_s << dx() << "\" dy=\""_s << dy() << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

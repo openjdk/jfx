@@ -3,7 +3,7 @@
  * (C) 2000 Gunnstein Lye (gunnstein@netcom.no)
  * (C) 2000 Frederik Holljen (frederik.holljen@hig.no)
  * (C) 2001 Peter Kelly (pmk@post.com)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Motorola Mobility. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -25,7 +25,9 @@
 #include "config.h"
 #include "Range.h"
 
+#include "BoundaryPointInlines.h"
 #include "Comment.h"
+#include "ContainerNodeInlines.h"
 #include "CustomElementReactionQueue.h"
 #include "DOMRect.h"
 #include "DOMRectList.h"
@@ -43,6 +45,7 @@
 #include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "ProcessingInstruction.h"
+#include "RangeBoundaryPointInlines.h"
 #include "ScopedEventQueue.h"
 #include "ShadowRoot.h"
 #include "TextIterator.h"
@@ -112,7 +115,7 @@ Node* Range::commonAncestorContainer() const
 void Range::updateAssociatedSelection()
 {
     if (m_isAssociatedWithSelection)
-        protectedOwnerDocument()->checkedSelection()->updateFromAssociatedLiveRange();
+        protectedOwnerDocument()->selection().updateFromAssociatedLiveRange();
 }
 
 void Range::updateAssociatedHighlight()
@@ -197,7 +200,7 @@ ExceptionOr<short> Range::comparePoint(Node& container, unsigned offset) const
     auto ordering = treeOrder({ container, offset }, makeSimpleRange(*this));
     if (is_lt(ordering))
         return -1;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -265,7 +268,7 @@ ExceptionOr<short> Range::compareBoundaryPoints(unsigned short how, const Range&
     auto ordering = treeOrder(makeBoundaryPoint(*thisPoint), makeBoundaryPoint(*otherPoint));
     if (is_lt(ordering))
         return -1;
-    if (WebCore::is_eq(ordering))
+    if (is_eq(ordering))
         return 0;
     if (is_gt(ordering))
         return 1;
@@ -448,7 +451,7 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
             return result.releaseException();
     }
 
-        UncheckedKeyHashSet<Ref<Element>> elementSet;
+        HashSet<Ref<Element>> elementSet;
         for (Ref element : customElementsReactionHoldingTank.takeElements())
             elementSet.add(element.get());
         if (!elementSet.isEmpty()) {
@@ -748,7 +751,7 @@ String Range::toString() const
 }
 
 // https://w3c.github.io/DOM-Parsing/#widl-Range-createContextualFragment-DocumentFragment-DOMString-fragment
-ExceptionOr<Ref<DocumentFragment>> Range::createContextualFragment(std::variant<RefPtr<TrustedHTML>, String>&& markup)
+ExceptionOr<Ref<DocumentFragment>> Range::createContextualFragment(Variant<RefPtr<TrustedHTML>, String>&& markup)
 {
     Node& node = startContainer();
     auto stringValueHolder = trustedTypeCompliantString(*node.document().scriptExecutionContext(), WTFMove(markup), "Range createContextualFragment"_s);
@@ -856,10 +859,10 @@ ExceptionOr<void> Range::surroundContents(Node& newParent)
     Ref protectedNewParent = newParent;
 
     // Step 1: If a non-Text node is partially contained in the context object, then throw an InvalidStateError.
-    RefPtr startNonTextContainer = &startContainer();
+    RefPtr startNonTextContainer = startContainer();
     if (is<Text>(startNonTextContainer))
         startNonTextContainer = startNonTextContainer->parentNode();
-    RefPtr endNonTextContainer = &endContainer();
+    RefPtr endNonTextContainer = endContainer();
     if (is<Text>(endNonTextContainer))
         endNonTextContainer = endNonTextContainer->parentNode();
     if (startNonTextContainer != endNonTextContainer)
@@ -966,7 +969,7 @@ void Range::nodeWillBeRemoved(Node& node)
 
 bool Range::parentlessNodeMovedToNewDocumentAffectsRange(Node& node)
 {
-    return node.containsIncludingShadowDOM(&m_start.container());
+    return node.isShadowIncludingInclusiveAncestorOf(&m_start.container());
 }
 
 void Range::updateRangeForParentlessNodeMovedToNewDocument(Node& node)
@@ -1135,7 +1138,7 @@ void Range::updateFromSelection(const SimpleRange& value)
 
 LocalDOMWindow* Range::window() const
 {
-    return m_isAssociatedWithSelection ? m_ownerDocument->domWindow() : nullptr;
+    return m_isAssociatedWithSelection ? m_ownerDocument->window() : nullptr;
 }
 
 SimpleRange makeSimpleRange(const Range& range)

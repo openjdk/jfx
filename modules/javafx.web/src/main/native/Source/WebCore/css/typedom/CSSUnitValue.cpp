@@ -37,6 +37,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSUnits.h"
 #include "CalculationCategory.h"
+#include "ExceptionOr.h"
 #include <cmath>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -137,8 +138,8 @@ RefPtr<CSSValue> CSSUnitValue::toCSSValue() const
 // FIXME: This function could be mostly generated from CSSProperties.json.
 static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value, CSSUnitType unit)
 {
-    CSS::Range valueRange = CSS::All;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange) && (value < valueRange.min || value > valueRange.max))
+    auto valueRange = CSSParserFastPaths::lengthValueRangeForPropertiesSupportingSimpleLengths(propertyID);
+    if (valueRange && (value < valueRange->min || value > valueRange->max))
         return true;
 
     switch (propertyID) {
@@ -220,9 +221,9 @@ static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value,
 static CSS::Range rangeForProperty(CSSPropertyID propertyID, CSSUnitType)
 {
     // FIXME: Merge with isValueOutOfRangeForProperty.
-    auto valueRange = CSS::All;
-    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, valueRange))
-        return valueRange;
+
+    if (auto valueRange = CSSParserFastPaths::lengthValueRangeForPropertiesSupportingSimpleLengths(propertyID))
+        return *valueRange;
 
     switch (propertyID) {
     case CSSPropertyAnimationDuration:

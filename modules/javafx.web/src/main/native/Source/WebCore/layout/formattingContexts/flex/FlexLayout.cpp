@@ -30,6 +30,7 @@
 #include "FlexFormattingUtils.h"
 #include "FlexRect.h"
 #include "InlineFormattingContext.h"
+#include "PathOperation.h"
 #include "RenderStyleSetters.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"

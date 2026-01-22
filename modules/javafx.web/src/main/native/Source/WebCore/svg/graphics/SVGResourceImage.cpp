@@ -33,25 +33,25 @@
 
 namespace WebCore {
 
-Ref<SVGResourceImage> SVGResourceImage::create(RenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
+Ref<SVGResourceImage> SVGResourceImage::create(RenderSVGResourceContainer& renderResource, const Style::URL& resourceURL)
 {
-    return adoptRef(*new SVGResourceImage(renderResource, reresolvedURL));
+    return adoptRef(*new SVGResourceImage(renderResource, resourceURL));
 }
 
-SVGResourceImage::SVGResourceImage(RenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
+SVGResourceImage::SVGResourceImage(RenderSVGResourceContainer& renderResource, const Style::URL& resourceURL)
     : m_renderResource(renderResource)
-    , m_reresolvedURL(reresolvedURL)
+    , m_resourceURL(resourceURL)
 {
 }
 
-Ref<SVGResourceImage> SVGResourceImage::create(LegacyRenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
+Ref<SVGResourceImage> SVGResourceImage::create(LegacyRenderSVGResourceContainer& renderResource, const Style::URL& resourceURL)
 {
-    return adoptRef(*new SVGResourceImage(renderResource, reresolvedURL));
+    return adoptRef(*new SVGResourceImage(renderResource, resourceURL));
 }
 
-SVGResourceImage::SVGResourceImage(LegacyRenderSVGResourceContainer& renderResource, const URL& reresolvedURL)
+SVGResourceImage::SVGResourceImage(LegacyRenderSVGResourceContainer& renderResource, const Style::URL& resourceURL)
     : m_legacyRenderResource(renderResource)
-    , m_reresolvedURL(reresolvedURL)
+    , m_resourceURL(resourceURL)
 {
 }
 
@@ -86,7 +86,7 @@ void SVGResourceImage::drawPattern(GraphicsContext& context, const FloatRect& de
 void SVGResourceImage::dump(WTF::TextStream& ts) const
 {
     GeneratedImage::dump(ts);
-    ts << m_reresolvedURL;
+    ts << m_resourceURL;
 }
 
 } // namespace WebCore

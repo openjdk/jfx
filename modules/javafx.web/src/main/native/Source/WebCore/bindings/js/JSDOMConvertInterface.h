@@ -46,7 +46,8 @@ struct JSToWrappedOverloader {
 };
 
 template<typename T>
-struct JSToWrappedOverloader<T, typename std::enable_if<JSDOMWrapperConverterTraits<T>::needsState>::type> {
+    requires JSDOMWrapperConverterTraits<T>::needsState
+struct JSToWrappedOverloader<T> {
     using ReturnType = typename JSDOMWrapperConverterTraits<T>::ToWrappedReturnType;
     using WrapperType = typename JSDOMWrapperConverterTraits<T>::WrapperClass;
 
@@ -66,7 +67,7 @@ template<typename T> struct Converter<IDLInterface<T>> : DefaultConverter<IDLInt
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         auto object = JSToWrappedOverloader<T>::toWrapped(lexicalGlobalObject, value);
-        if (UNLIKELY(!object)) {
+        if (!object) [[unlikely]] {
             exceptionThrower(lexicalGlobalObject, scope);
             return Result::exception();
         }
@@ -101,7 +102,7 @@ template<typename T> struct VariadicConverter<IDLInterface<T>> {
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         auto result = WebCore::convert<IDLInterface<T>>(lexicalGlobalObject, value);
-        if (UNLIKELY(result.hasException(scope)))
+        if (result.hasException(scope)) [[unlikely]]
             return std::nullopt;
 
         return Item { *result.releaseReturnValue() };

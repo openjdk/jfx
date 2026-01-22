@@ -28,10 +28,11 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePaySessionPaymentRequest.h"
-#include "ExceptionOr.h"
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class PaymentRequestValidator {
 public:

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,6 +48,7 @@
 #include "Settings.h"
 #include <wtf/URL.h>
 #include "UserContentController.h"
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
@@ -144,16 +145,24 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
         vector.appendContainerWithMapping(universalActions, [](uint64_t actionLocation) {
             return static_cast<uint32_t>(actionLocation);
         });
-        std::sort(vector.begin(), vector.end());
+        std::ranges::sort(vector);
 
-        // Add actions in reverse order to properly deal with IgnorePreviousRules.
-        for (auto i = vector.size(); i; i--) {
-            auto action = DeserializedAction::deserialize(serializedActions, vector[i - 1]);
+        // We need to handle IgnoreFollowingRules...
+        for (size_t i = 0; i < vector.size(); i++) {
+            auto action = DeserializedAction::deserialize(serializedActions, vector[i]);
+            if (std::holds_alternative<IgnoreFollowingRulesAction>(action.data()))
+                break;
+            actionsStruct.actions.append(WTFMove(action));
+        }
+
+        // ...and iterate in reverse order to properly deal with IgnorePreviousRules.
+        for (auto i = actionsStruct.actions.size(); i; i--) {
+            auto action = actionsStruct.actions[i - 1];
             if (std::holds_alternative<IgnorePreviousRulesAction>(action.data())) {
                 actionsStruct.sawIgnorePreviousRules = true;
+                actionsStruct.actions.removeAt(0, i);
                 break;
             }
-            actionsStruct.actions.append(WTFMove(action));
         }
     }
     return actionsStruct;
@@ -235,6 +244,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
     URL mainDocumentURL;
     URL frameURL;
     bool mainFrameContext = false;
+    RequestMethod requestMethod = readRequestMethod(initiatingDocumentLoader.request().httpMethod()).value_or(RequestMethod::None);
 
     if (auto* frame = initiatingDocumentLoader.frame()) {
         mainFrameContext = frame->isMainFrame();
@@ -242,17 +252,18 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
 
         if (initiatingDocumentLoader.isLoadingMainResource()
             && frame->isMainFrame()
-            && resourceType == ResourceType::Document)
+            && resourceType.containsAny({ ResourceType::TopDocument, ResourceType::ChildDocument }))
             mainDocumentURL = url;
         else if (auto* page = frame->page())
             mainDocumentURL = page->mainFrameURL();
     }
-    if (currentDocument)
+
+    if (currentDocument && currentDocument->url().isValid())
         frameURL = currentDocument->url();
     else
         frameURL = url;
 
-    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext };
+    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext, requestMethod };
     auto actions = actionsForResourceLoad(resourceLoadInfo, ruleListFilter);
 
     ContentRuleListResults results;
@@ -263,14 +274,14 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         const String& contentRuleListIdentifier = actionsFromContentRuleList.contentRuleListIdentifier;
         ContentRuleListResults::Result result;
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
                 results.summary.blockedLoad = true;
                 result.blockedLoad = true;
             }, [&](const BlockCookiesAction&) {
                 results.summary.blockedCookies = true;
                 result.blockedCookies = true;
             }, [&](const CSSDisplayNoneSelectorAction& actionData) {
-                if (resourceType == ResourceType::Document)
+                if (resourceType.containsAny({ ResourceType::TopDocument, ResourceType::ChildDocument }))
                     initiatingDocumentLoader.addPendingContentExtensionDisplayNoneSelector(contentRuleListIdentifier, actionData.string, action.actionID());
                 else if (currentDocument)
                     currentDocument->extensionStyleSheets().addDisplayNoneSelector(contentRuleListIdentifier, actionData.string, action.actionID());
@@ -285,6 +296,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
                 }
             }, [&](const IgnorePreviousRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction& action) {
                 if (initiatingDocumentLoader.allowsActiveContentRuleListActionsForURL(contentRuleListIdentifier, url)) {
                     result.modifiedHeaders = true;
@@ -292,6 +305,9 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
                 }
             }, [&] (const RedirectAction& redirectAction) {
                 if (initiatingDocumentLoader.allowsActiveContentRuleListActionsForURL(contentRuleListIdentifier, url)) {
+                    if (!results.summary.blockedLoad)
+                        results.summary.redirectedPriorToBlock = true;
+
                     result.redirected = true;
                     results.summary.redirectActions.append({ redirectAction, m_contentExtensions.get(contentRuleListIdentifier)->extensionBaseURL() });
                 }
@@ -300,7 +316,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
 
         if (!actionsFromContentRuleList.sawIgnorePreviousRules) {
             if (auto* styleSheetContents = globalDisplayNoneStyleSheet(contentRuleListIdentifier)) {
-                if (resourceType == ResourceType::Document)
+                if (resourceType.containsAny({ ResourceType::TopDocument, ResourceType::ChildDocument }))
                     initiatingDocumentLoader.addPendingContentExtensionSheet(contentRuleListIdentifier, *styleSheetContents);
                 else if (currentDocument)
                     currentDocument->extensionStyleSheets().maybeAddContentExtensionSheet(contentRuleListIdentifier, *styleSheetContents);
@@ -316,7 +332,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             String newProtocol = url.protocolIs("http"_s) ? "https"_s : "wss"_s;
             currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Promoted URL from "_s, url.string(), " to "_s, newProtocol));
         }
-        if (results.summary.blockedLoad) {
+
+        if (results.shouldBlock()) {
             String consoleMessage;
             if (auto message = customTrackerBlockingMessageForConsole(results, url, mainDocumentURL))
                 consoleMessage = WTFMove(*message);
@@ -338,16 +355,17 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
     return results;
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL, const URL& frameURL)
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL, const URL& frameURL, const String& httpMethod)
 {
-    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, ResourceType::Ping };
+    RequestMethod requestMethod = readRequestMethod(httpMethod).value_or(RequestMethod::None);
+    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, ResourceType::Ping, false, requestMethod };
     auto actions = actionsForResourceLoad(resourceLoadInfo);
 
     ContentRuleListResults results;
     makeSecureIfNecessary(results, url);
     for (const auto& actionsFromContentRuleList : actions) {
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
                 results.summary.blockedLoad = true;
             }, [&](const BlockCookiesAction&) {
                 results.summary.blockedCookies = true;
@@ -358,6 +376,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingL
                 if ((url.protocolIs("http"_s) || url.protocolIs("ws"_s)) && (!url.port() || WTF::isDefaultPortForProtocol(url.port().value(), url.protocol())))
                     results.summary.madeHTTPS = true;
             }, [&](const IgnorePreviousRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction&) {
                 // We currently have not implemented active actions from the network process (CORS preflight).
@@ -378,13 +398,15 @@ bool ContentExtensionsBackend::processContentRuleListsForResourceMonitoring(cons
     bool matched = false;
     for (const auto& actionsFromContentRuleList : actions) {
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
                 matched = true;
             }, [&](const BlockCookiesAction&) {
             }, [&](const CSSDisplayNoneSelectorAction&) {
             }, [&](const NotifyAction&) {
             }, [&](const MakeHTTPSAction&) {
             }, [&](const IgnorePreviousRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction&) {
             }, [&] (const RedirectAction&) {
@@ -411,12 +433,9 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         request.upgradeInsecureRequest();
     }
 
-    std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),
-        [] (const ModifyHeadersAction& a, const ModifyHeadersAction& b) {
-        return a.priority > b.priority;
-    });
+    std::ranges::sort(results.summary.modifyHeadersActions, std::ranges::greater { }, &ModifyHeadersAction::priority);
 
-    UncheckedKeyHashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
+    HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
     for (auto& action : results.summary.modifyHeadersActions)
         action.applyToRequest(request, headerNameToFirstOperationApplied);
 

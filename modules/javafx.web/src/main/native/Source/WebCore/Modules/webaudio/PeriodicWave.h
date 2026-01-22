@@ -29,7 +29,6 @@
 #pragma once
 
 #include "AudioArray.h"
-#include "ExceptionOr.h"
 #include "PeriodicWaveOptions.h"
 #include <JavaScriptCore/Forward.h>
 #include <memory>
@@ -39,6 +38,7 @@
 namespace WebCore {
 
 class BaseAudioContext;
+template<typename> class ExceptionOr;
 
 enum class ShouldDisableNormalization : bool { No, Yes };
 

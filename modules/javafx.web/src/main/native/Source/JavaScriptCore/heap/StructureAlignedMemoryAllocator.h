@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "IsoMemoryAllocatorBase.h"
+#include "AlignedMemoryAllocator.h"
 #include <wtf/Gigacage.h>
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
@@ -34,11 +34,9 @@
 
 namespace JSC {
 
-class StructureAlignedMemoryAllocator final : public IsoMemoryAllocatorBase {
+class StructureAlignedMemoryAllocator final : public AlignedMemoryAllocator {
 public:
-    using Base = IsoMemoryAllocatorBase;
-
-    StructureAlignedMemoryAllocator(CString);
+    StructureAlignedMemoryAllocator();
     ~StructureAlignedMemoryAllocator() final;
 
     void dump(PrintStream&) const final;
@@ -47,14 +45,10 @@ public:
     void freeMemory(void*) final;
     void* tryReallocateMemory(void*, size_t) final;
 
-    static void initializeStructureAddressSpace();
+    void* tryAllocateAlignedMemory(size_t alignment, size_t) final;
+    void freeAlignedMemory(void*) final;
 
-protected:
-    void* tryMallocBlock() final;
-    void freeBlock(void* block) final;
-    void commitBlock(void* block) final;
-    void decommitBlock(void* block) final;
+    static void initializeStructureAddressSpace();
 };
 
 } // namespace JSC
-

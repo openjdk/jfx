@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,22 +36,26 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigationPreloadManager);
 
 void NavigationPreloadManager::enable(Promise&& promise)
 {
-    m_registration.container().enableNavigationPreload(m_registration.identifier(), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->container().enableNavigationPreload(registration->identifier(), WTFMove(promise));
 }
 
 void NavigationPreloadManager::disable(Promise&& promise)
 {
-    m_registration.container().disableNavigationPreload(m_registration.identifier(), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->container().disableNavigationPreload(registration->identifier(), WTFMove(promise));
 }
 
 void NavigationPreloadManager::setHeaderValue(String&& value, Promise&& promise)
 {
-    m_registration.container().setNavigationPreloadHeaderValue(m_registration.identifier(), WTFMove(value), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->container().setNavigationPreloadHeaderValue(registration->identifier(), WTFMove(value), WTFMove(promise));
 }
 
 void NavigationPreloadManager::getState(StatePromise&& promise)
 {
-    m_registration.container().getNavigationPreloadState(m_registration.identifier(), WTFMove(promise));
+    Ref registration = m_registration.get();
+    registration->container().getNavigationPreloadState(registration->identifier(), WTFMove(promise));
 }
 
 } // namespace WebCore

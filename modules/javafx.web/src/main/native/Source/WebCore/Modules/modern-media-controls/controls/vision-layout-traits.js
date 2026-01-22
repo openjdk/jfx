@@ -27,8 +27,6 @@ class VisionLayoutTraits extends LayoutTraits
 {
     mediaControlsClass()
     {
-        if (this.isFullscreen)
-            return VisionFullscreenMediaControls;
         return VisionInlineMediaControls;
     }
 

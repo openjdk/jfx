@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include "JSValueInWrappedObject.h"
 #include <JavaScriptCore/Strong.h>
@@ -39,6 +38,7 @@ class InternalWritableStream;
 class JSDOMGlobalObject;
 class ReadableStream;
 class WritableStream;
+template<typename> class ExceptionOr;
 
 class TransformStream : public RefCounted<TransformStream> {
 public:
@@ -55,8 +55,8 @@ private:
     TransformStream(JSC::JSValue, Ref<ReadableStream>&&, Ref<WritableStream>&&);
 
     JSValueInWrappedObject m_internalTransformStream;
-    Ref<ReadableStream> m_readable;
-    Ref<WritableStream> m_writable;
+    const Ref<ReadableStream> m_readable;
+    const Ref<WritableStream> m_writable;
 };
 
 } // namespace WebCore

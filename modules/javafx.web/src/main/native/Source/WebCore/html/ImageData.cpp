@@ -30,6 +30,7 @@
 #include "config.h"
 #include "ImageData.h"
 
+#include "ExceptionOr.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <wtf/text/TextStream.h>
@@ -154,7 +155,7 @@ ImageData::ImageData(const IntSize& size, ImageDataArray&& data, PredefinedColor
 
 ImageData::~ImageData() = default;
 
-Ref<ByteArrayPixelBuffer> ImageData::pixelBuffer() const
+Ref<ByteArrayPixelBuffer> ImageData::byteArrayPixelBuffer() const
 {
     Ref uint8Data = m_data.asUint8ClampedArray();
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, toDestinationColorSpace(m_colorSpace) };

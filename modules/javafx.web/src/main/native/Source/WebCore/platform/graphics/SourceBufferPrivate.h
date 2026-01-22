@@ -152,7 +152,7 @@ public:
     using SamplesPromise = NativePromise<Vector<String>, PlatformMediaError>;
     WEBCORE_EXPORT virtual Ref<SamplesPromise> bufferedSamplesForTrackId(TrackID);
     WEBCORE_EXPORT virtual Ref<SamplesPromise> enqueuedSamplesForTrackID(TrackID);
-    virtual MediaTime minimumUpcomingPresentationTimeForTrackID(TrackID) { return MediaTime::invalidTime(); }
+    WEBCORE_EXPORT virtual MediaTime minimumUpcomingPresentationTimeForTrackID(TrackID);
     virtual void setMaximumQueueDepthForTrackID(TrackID, uint64_t) { }
 
 #if !RELEASE_LOG_DISABLED
@@ -194,7 +194,6 @@ protected:
 
     virtual bool canSetMinimumUpcomingPresentationTime(TrackID) const { return false; }
     virtual void setMinimumUpcomingPresentationTime(TrackID, const MediaTime&) { }
-    virtual void clearMinimumUpcomingPresentationTime(TrackID) { }
 
     enum class NeedsFlush: bool {
         No = 0,

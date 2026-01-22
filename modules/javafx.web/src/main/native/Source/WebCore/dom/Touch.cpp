@@ -29,8 +29,9 @@
 
 #include "Touch.h"
 
+#include "EventTargetInlines.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 
 namespace WebCore {
@@ -96,6 +97,8 @@ Touch::Touch(EventTarget* target, int identifier, int clientX, int clientY, int 
     , m_absoluteLocation(absoluteLocation)
 {
 }
+
+Touch::~Touch() = default;
 
 Ref<Touch> Touch::cloneWithNewTarget(EventTarget* eventTarget) const
 {

@@ -38,7 +38,7 @@ class ScrollView;
 
 class AccessibilityScrollView final : public AccessibilityObject {
 public:
-    static Ref<AccessibilityScrollView> create(AXID, ScrollView&);
+    static Ref<AccessibilityScrollView> create(AXID, ScrollView&, AXObjectCache&);
     AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ScrollArea; }
     ScrollView* scrollView() const final { return currentScrollView(); }
 
@@ -49,8 +49,11 @@ public:
 
     RefPtr<AXRemoteFrame> remoteFrame() const { return m_remoteFrame; }
 
+    String ownerDebugDescription() const;
+    String extraDebugInfo() const final { return ownerDebugDescription(); }
+
 private:
-    explicit AccessibilityScrollView(AXID, ScrollView&);
+    explicit AccessibilityScrollView(AXID, ScrollView&, AXObjectCache&);
     void detachRemoteParts(AccessibilityDetachmentType) final;
 
     ScrollView* currentScrollView() const;
@@ -61,6 +64,7 @@ private:
     bool isEnabled() const final { return true; }
     bool hasRemoteFrameChild() const final { return m_remoteFrame; }
 
+    bool isRoot() const final;
     bool isAttachment() const final;
     PlatformWidget platformWidget() const final;
     Widget* widgetForAttachmentView() const final { return currentScrollView(); }
@@ -79,17 +83,18 @@ private:
     Document* document() const final;
     LocalFrameView* documentFrameView() const final;
     LayoutRect elementRect() const final;
+    LayoutRect boundingBoxRect() const final { return elementRect(); }
     AccessibilityObject* parentObject() const final;
 
     AccessibilityObject* firstChild() const final { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
 
+    bool m_childrenDirty;
     SingleThreadWeakPtr<ScrollView> m_scrollView;
     WeakPtr<HTMLFrameOwnerElement, WeakPtrImplWithEventTargetData> m_frameOwnerElement;
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
-    bool m_childrenDirty;
     RefPtr<AXRemoteFrame> m_remoteFrame;
 };
 

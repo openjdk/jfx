@@ -35,20 +35,39 @@ class CSSValue;
 
 enum CSSValueID : uint16_t;
 
-struct CSSParserContext;
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
+enum class ValueType {
+    Specified,
+    Computed
+};
+
 // Take two keywords that make up a <position-area> and build a CSSValue that
-// conforms to the serialization for position-area. This includes:
-// * Collapsing two keywords into one if possible
+// minimizes the serialization of position-area. The minimization done depends on
+// the context where the value is used.
+//
+// For all contexts:
+// * If one keyword is explicit about its axis, and the other keyword is span-all,
+//   only keep the first keyword.
 // * If returning a pair of keywords, order the block/X axis keyword before
 //   the inline/Y axis keyword.
+//
+// For context where the computed value is used:
+// * If one keyword is explicitly on the block/inline axis, and the other keyword
+//   is explicitly on the opposite axis or axisless, remove the explicit-ness.
+//   (e.g "block-start inline-end" becomes "start end")
+//
 // Returns null if the keywords aren't valid/compatible. Otherwise, return a
 // CSSPrimitiveValue or CSSValuePair depending on if the keywords can be collapsed.
-RefPtr<CSSValue> valueForPositionArea(CSSValueID, CSSValueID);
+RefPtr<CSSValue> valueForPositionArea(CSSValueID, CSSValueID, ValueType);
 
-RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange&, const CSSParserContext&);
+// MARK: <'position-area'>
+// https://drafts.csswg.org/css-anchor-position-1/#propdef-position-area
+RefPtr<CSSValue> consumePositionArea(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

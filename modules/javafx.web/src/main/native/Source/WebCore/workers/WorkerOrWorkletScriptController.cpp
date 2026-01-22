@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
- * Copyright (C) 2011, 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -210,12 +210,12 @@ void WorkerOrWorkletScriptController::disableWebAssembly(const String& errorMess
     m_globalScopeWrapper->setWebAssemblyEnabled(false, errorMessage);
 }
 
-void WorkerOrWorkletScriptController::setRequiresTrustedTypes(bool required)
+void WorkerOrWorkletScriptController::setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement enforcement)
 {
     initScriptIfNeeded();
     JSLockHolder lock { vm() };
 
-    m_globalScopeWrapper->setRequiresTrustedTypes(required);
+    m_globalScopeWrapper->setTrustedTypesEnforcement(enforcement);
 }
 
 void WorkerOrWorkletScriptController::evaluate(const ScriptSourceCode& sourceCode, String* returnedExceptionMessage)
@@ -496,7 +496,7 @@ void WorkerOrWorkletScriptController::loadAndEvaluateModule(const URL& moduleURL
     auto scriptFetcher = WorkerScriptFetcher::create(WTFMove(parameters), credentials, globalScope->destination(), globalScope->referrerPolicy());
 
     auto* promise = JSExecState::loadModule(globalObject, moduleURL, JSC::JSScriptFetchParameters::create(vm, scriptFetcher->parameters()), JSC::JSScriptFetcher::create(vm, { scriptFetcher.ptr() }));
-    if (LIKELY(promise)) {
+    if (promise) [[likely]] {
         auto task = createSharedTask<void(std::optional<Exception>&&)>([completionHandler = WTFMove(completionHandler)](std::optional<Exception>&& exception) mutable {
             completionHandler(WTFMove(exception));
         });

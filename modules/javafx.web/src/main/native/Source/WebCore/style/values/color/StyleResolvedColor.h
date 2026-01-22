@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +37,7 @@ struct Color;
 struct ColorResolutionState;
 
 struct ResolvedColor {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ResolvedColor);
 
     WebCore::Color color;
 
@@ -55,8 +56,8 @@ constexpr bool containsCurrentColor(const ResolvedColor&)
     return false;
 }
 
-void serializationForCSS(StringBuilder&, const CSS::SerializationContext&, const ResolvedColor&);
-String serializationForCSS(const CSS::SerializationContext&, const ResolvedColor&);
+void serializationForCSSTokenization(StringBuilder&, const CSS::SerializationContext&, const ResolvedColor&);
+String serializationForCSSTokenization(const CSS::SerializationContext&, const ResolvedColor&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, const ResolvedColor&);
 

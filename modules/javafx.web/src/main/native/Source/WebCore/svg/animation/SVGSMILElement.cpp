@@ -153,7 +153,6 @@ SVGSMILElement::SVGSMILElement(const QualifiedName& tagName, Document& doc, Uniq
     , m_cachedMin(invalidCachedTime)
     , m_cachedMax(invalidCachedTime)
 {
-    resolveFirstInterval();
 }
 
 SVGSMILElement::~SVGSMILElement()
@@ -286,7 +285,7 @@ Node::InsertedIntoAncestorResult SVGSMILElement::insertedIntoAncestor(InsertionT
     if (!owner)
         return InsertedIntoAncestorResult::Done;
 
-    m_timeContainer = &owner->timeContainer();
+    m_timeContainer = owner->timeContainer();
     protectedTimeContainer()->setDocumentOrderIndexesDirty();
 
     // "If no attribute is present, the default begin value (an offset-value of 0) must be evaluated."
@@ -331,7 +330,7 @@ SMILTime SVGSMILElement::parseOffsetValue(StringView data)
 {
     bool ok;
     double result = 0;
-    auto parse = data.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+    auto parse = data.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
     if (parse.endsWith('h'))
         result = parse.left(parse.length() - 1).toDouble(ok) * 60 * 60;
     else if (parse.endsWith("min"_s))
@@ -352,7 +351,7 @@ SMILTime SVGSMILElement::parseClockValue(StringView data)
     if (data.isNull())
         return SMILTime::unresolved();
 
-    auto parse = data.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+    auto parse = data.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
     if (parse == indefiniteAtom())
         return SMILTime::indefinite();
 
@@ -380,7 +379,7 @@ SMILTime SVGSMILElement::parseClockValue(StringView data)
 
 bool SVGSMILElement::parseCondition(StringView value, BeginOrEnd beginOrEnd)
 {
-    auto parseString = value.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+    auto parseString = value.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
 
     double sign = 1.;
     size_t pos = parseString.find('+');
@@ -394,8 +393,8 @@ bool SVGSMILElement::parseCondition(StringView value, BeginOrEnd beginOrEnd)
     if (pos == notFound)
         conditionString = parseString;
     else {
-        conditionString = parseString.left(pos).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
-        auto offsetString = parseString.substring(pos + 1).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+        conditionString = parseString.left(pos).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
+        auto offsetString = parseString.substring(pos + 1).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
         offset = parseOffsetValue(offsetString);
         if (offset.isUnresolved())
             return false;
@@ -455,7 +454,7 @@ void SVGSMILElement::parseBeginOrEnd(StringView parseString, BeginOrEnd beginOrE
     Vector<SMILTimeWithOrigin>& timeList = beginOrEnd == Begin ? m_beginTimes : m_endTimes;
     if (beginOrEnd == End)
         m_hasEndEventConditions = false;
-    UncheckedKeyHashSet<double> existing;
+    HashSet<double> existing;
     for (auto& time : timeList)
         existing.add(time.time().value());
     for (auto string : parseString.split(';')) {
@@ -865,20 +864,15 @@ void SVGSMILElement::resolveInterval(bool first, SMILTime& beginResult, SMILTime
         SMILTime tempBegin = findInstanceTime(Begin, beginAfter, equalsMinimumOK);
         if (tempBegin.isUnresolved())
             break;
-        SMILTime tempEnd;
-        if (m_endTimes.isEmpty())
-            tempEnd = resolveActiveEnd(tempBegin, SMILTime::indefinite());
-        else {
-            tempEnd = findInstanceTime(End, tempBegin, true);
+        SMILTime tempEnd = findInstanceTime(End, tempBegin, true);
+        if (!m_endTimes.isEmpty()) {
             if ((first && tempBegin == tempEnd && tempEnd == lastIntervalTempEnd) || (!first && tempEnd == m_intervalEnd))
                 tempEnd = findInstanceTime(End, tempBegin, false);
-            if (tempEnd.isUnresolved()) {
-                if (!m_endTimes.isEmpty() && !m_hasEndEventConditions)
+            if (tempEnd.isUnresolved() && !m_hasEndEventConditions)
                     break;
             }
             tempEnd = resolveActiveEnd(tempBegin, tempEnd);
-        }
-        if (!first || (tempEnd > 0 || (!tempBegin.value() && !tempEnd.value()))) {
+        if (!first || tempEnd > SMILTime() || (!tempBegin.value() && !tempEnd.value())) {
             beginResult = tempBegin;
             endResult = tempEnd;
             return;
@@ -1057,21 +1051,27 @@ float SVGSMILElement::calculateAnimationPercentAndRepeat(SMILTime elapsed, unsig
     ASSERT(simpleDuration.isFinite());
     SMILTime activeTime = elapsed - m_intervalBegin;
     SMILTime repeatingDuration = this->repeatingDuration();
-    if (elapsed >= m_intervalEnd || activeTime > repeatingDuration) {
+
+    if ((elapsed >= m_intervalEnd && !repeatingDuration.isIndefinite()) || activeTime > repeatingDuration) {
         repeat = static_cast<unsigned>(repeatingDuration.value() / simpleDuration.value());
         if (!fmod(repeatingDuration.value(), simpleDuration.value()))
             --repeat;
+    } else
+        repeat = static_cast<unsigned>(activeTime.value() / simpleDuration.value());
 
+    double percent;
+    if (elapsed >= m_intervalEnd || activeTime > repeatingDuration) {
         double lastActiveDuration = elapsed >= m_intervalEnd ? m_intervalEnd.value() - m_intervalBegin.value() : repeatingDuration.value();
-        double percent = lastActiveDuration / simpleDuration.value();
+        percent = lastActiveDuration / simpleDuration.value();
         percent = percent - floor(percent);
         if (percent < std::numeric_limits<float>::epsilon() || 1 - percent < std::numeric_limits<float>::epsilon())
-            return 1.0f;
-        return narrowPrecisionToFloat(percent);
+            percent = 1.0f;
+    } else {
+        SMILTime simpleTime = fmod(activeTime.value(), simpleDuration.value());
+        percent = simpleTime.value() / simpleDuration.value();
     }
-    repeat = static_cast<unsigned>(activeTime.value() / simpleDuration.value());
-    SMILTime simpleTime = fmod(activeTime.value(), simpleDuration.value());
-    return narrowPrecisionToFloat(simpleTime.value() / simpleDuration.value());
+
+    return narrowPrecisionToFloat(percent);
 }
 
 SMILTime SVGSMILElement::calculateNextProgressTime(SMILTime elapsed) const

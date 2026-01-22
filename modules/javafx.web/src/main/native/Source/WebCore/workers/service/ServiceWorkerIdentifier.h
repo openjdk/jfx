@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class ServiceWorkerIdentifierType { };
+struct ServiceWorkerIdentifierType;
 using ServiceWorkerIdentifier = AtomicObjectIdentifier<ServiceWorkerIdentifierType>;
 
 } // namespace WebCore

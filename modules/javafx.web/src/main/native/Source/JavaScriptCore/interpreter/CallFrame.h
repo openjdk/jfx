@@ -124,33 +124,53 @@ using JSInstruction = BaseInstruction<JSOpcodeTraits>;
 
     //      Layout of CallFrame
     //
+    //  Higher addresses are on top.
+    //  Slots marked with "(+)" have a different meaning when executing Wasm code.
+    //  See details below the diagram.
+    //
+    //
     //   |          ......            |   |
     //   +----------------------------+   |
-    //   |           argN             |   v  lower address
+    //   |           argN             |   v  lower addresses
+    //   +----------------------------+
+    //   |           ...              |
     //   +----------------------------+
     //   |           arg1             |
     //   +----------------------------+
     //   |           arg0             |
     //   +----------------------------+
-    //   |           this             |
+    //   |          this(+)           |
     //   +----------------------------+
     //   | argumentCountIncludingThis |
     //   +----------------------------+
     //   |          callee            |
     //   +----------------------------+
-    //   |        codeBlock           |
+    //   |       codeBlock(+)         |
     //   +----------------------------+
-    //   |      return-address        |
+    //   |       returnAddress        |
     //   +----------------------------+
-    //   |       callerFrame          |
-    //   +----------------------------+  <- callee's cfr is pointing this address
+    //   |        callerFrame         |  <- callee's cfr is pointing at this address
+    //   +----------------------------+
     //   |          local0            |
     //   +----------------------------+
     //   |          local1            |
     //   +----------------------------+
+    //   |           ...              |
+    //   +----------------------------+
     //   |          localN            |
     //   +----------------------------+
     //   |          ......            |
+    //
+    //
+    //  Overloaded slots:
+    //
+    //    - 'this': when executing wasm code, the slot contains the value of SP saved before the call.
+    //      Saving the value allows moving the SP freely in tail calls.
+    //    - 'codeBlock': when executing wasm code, the slot contains a pointer to the Wasm instance.
+    //      The pointer is determined by 'resolveWasmCall()' in WasmIPIntSlowPaths.cpp.
+    //      A special case is calling a module import whose functionCallLinkInfo.targetInstance is
+    //      null, which is the case when the imported function is a JS function.
+    //      In that case, 'codeBlock' points at the functionCallLinkInfo object.
 
     enum class CallFrameSlot {
         codeBlock = CallerFrameAndPC::sizeInRegisters,

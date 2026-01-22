@@ -19,13 +19,10 @@
  */
 
 #pragma once
-#if PLATFORM(JAVA)
-#if USE(TEXTURE_MAPPER_GL)
-#endif
 
 #if USE(TEXTURE_MAPPER)
 
-88#include "TextureMapperGLHeaders.h"
+#include "TextureMapperGLHeaders.h"
 #include "TransformationMatrix.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
@@ -147,6 +144,3 @@ private:
 } // namespace WebCore
 
 #endif // USE(TEXTURE_MAPPER)
-#if PLATFORM(JAVA)
-#endif // USE(TEXTURE_MAPPER_GL)
-#endif

@@ -32,7 +32,6 @@
 #include "CSSGroupingRule.h"
 
 #include "CSSParser.h"
-#include "CSSParserImpl.h"
 #include "CSSRuleList.h"
 #include "CSSStyleSheet.h"
 #include "StylePropertiesInlines.h"
@@ -57,6 +56,16 @@ CSSGroupingRule::~CSSGroupingRule()
     }
 }
 
+Ref<const StyleRuleGroup> CSSGroupingRule::protectedGroupRule() const
+{
+    return m_groupRule;
+}
+
+Ref<StyleRuleGroup> CSSGroupingRule::protectedGroupRule()
+{
+    return m_groupRule;
+}
+
 ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsigned index)
 {
     ASSERT(m_childRuleCSSOMWrappers.size() == m_groupRule->childRules().size());
@@ -66,12 +75,23 @@ ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsi
         return Exception { ExceptionCode::IndexSizeError };
     }
 
-    CSSStyleSheet* styleSheet = parentStyleSheet();
-    RefPtr newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, nestedContext());
+    RefPtr styleSheet = parentStyleSheet();
+    auto nestedContextWithCurrentRule = [&] -> CSSParserEnum::NestedContext {
+        if (m_groupRule->isStyleRule()) {
+            ASSERT_NOT_REACHED(); // This is handled in CSSStyleRule.
+            return CSSParserEnum::NestedContextType::Style;
+        }
+        if (m_groupRule->isScopeRule())
+            return CSSParserEnum::NestedContextType::Scope;
+        // Find the context in the ancestor chain.
+        return nestedContext();
+    }();
+    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, CSSParser::AllowedRules::ImportRules, nestedContextWithCurrentRule);
     if (!newRule) {
-        if (!hasStyleRuleAncestor())
+        // CSSNestedDeclarations parsing is allowed if there is an ancestor style rule or an ancestor scope rule.
+        if (!nestedContextWithCurrentRule)
             return Exception { ExceptionCode::SyntaxError };
-        newRule = CSSParserImpl::parseNestedDeclarations(parserContext(), ruleString);
+        newRule = CSSParser::parseNestedDeclarations(parserContext(), ruleString);
         if (!newRule)
         return Exception { ExceptionCode::SyntaxError };
     }
@@ -114,7 +134,7 @@ ExceptionOr<void> CSSGroupingRule::deleteRule(unsigned index)
 
     if (m_childRuleCSSOMWrappers[index])
         m_childRuleCSSOMWrappers[index]->setParentRule(nullptr);
-    m_childRuleCSSOMWrappers.remove(index);
+    m_childRuleCSSOMWrappers.removeAt(index);
 
     return { };
 }
@@ -196,7 +216,7 @@ CSSRule* CSSGroupingRule::item(unsigned index) const
 CSSRuleList& CSSGroupingRule::cssRules() const
 {
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSGroupingRule>>(const_cast<CSSGroupingRule&>(*this));
+        lazyInitialize(m_ruleListCSSOMWrapper, makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSGroupingRule>>(const_cast<CSSGroupingRule&>(*this)));
     return *m_ruleListCSSOMWrapper;
 }
 

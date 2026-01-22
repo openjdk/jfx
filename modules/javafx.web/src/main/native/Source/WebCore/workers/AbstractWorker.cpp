@@ -32,6 +32,7 @@
 #include "AbstractWorker.h"
 
 #include "ContentSecurityPolicy.h"
+#include "ExceptionOr.h"
 #include "OriginAccessPatterns.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
@@ -58,13 +59,19 @@ FetchOptions AbstractWorker::workerFetchOptions(const WorkerOptions& options, Fe
 
 ExceptionOr<URL> AbstractWorker::resolveURL(const String& url)
 {
-    auto& context = *scriptExecutionContext();
+    Ref context = *scriptExecutionContext();
 
     // FIXME: This should use the dynamic global scope (bug #27887).
-    URL scriptURL = context.completeURL(url);
+    URL scriptURL = context->completeURL(url);
     if (!scriptURL.isValid())
         return Exception { ExceptionCode::SyntaxError };
 
+    return scriptURL;
+}
+
+std::optional<Exception> AbstractWorker::validateURL(ScriptExecutionContext& context, const URL& scriptURL)
+{
+    // Per the specification, any same-origin URL (including blob: URLs) can be used. data: URLs can also be used, but they create a worker with an opaque origin.
     if (!context.protectedSecurityOrigin()->canRequest(scriptURL, OriginAccessPatternsForWebProcess::singleton()) && !scriptURL.protocolIsData())
         return Exception { ExceptionCode::SecurityError };
 
@@ -72,7 +79,7 @@ ExceptionOr<URL> AbstractWorker::resolveURL(const String& url)
     if (!context.checkedContentSecurityPolicy()->allowWorkerFromSource(scriptURL))
         return Exception { ExceptionCode::SecurityError };
 
-    return scriptURL;
+    return { };
 }
 
 } // namespace WebCore

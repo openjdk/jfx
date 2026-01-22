@@ -118,11 +118,11 @@ public:
         return result;
     }
 
-    UChar operator[](unsigned i) const { RELEASE_ASSERT(i < m_text.length()); return m_text[i]; }
-    std::span<const LChar> span8() const { ASSERT(is8Bit()); return m_text.span8(); }
-    std::span<const UChar> span16() const { ASSERT(!is8Bit()); return m_text.span16(); }
-    std::span<const LChar> subspan8(unsigned i) const { return span8().subspan(i); }
-    std::span<const UChar> subspan16(unsigned i) const { return span16().subspan(i); }
+    char16_t operator[](unsigned i) const { RELEASE_ASSERT(i < m_text.length()); return m_text[i]; }
+    std::span<const LChar> span8() const LIFETIME_BOUND { ASSERT(is8Bit()); return m_text.span8(); }
+    std::span<const char16_t> span16() const LIFETIME_BOUND { ASSERT(!is8Bit()); return m_text.span16(); }
+    std::span<const LChar> subspan8(unsigned i) const LIFETIME_BOUND { return span8().subspan(i); }
+    std::span<const char16_t> subspan16(unsigned i) const LIFETIME_BOUND { return span16().subspan(i); }
 
     bool is8Bit() const { return m_text.is8Bit(); }
     unsigned length() const { return m_text.length(); }
@@ -151,7 +151,7 @@ public:
     void setDirection(TextDirection direction) { m_direction = static_cast<unsigned>(direction); }
     void setDirectionalOverride(bool override) { m_directionalOverride = override; }
     void setCharacterScanForCodePath(bool scan) { m_characterScanForCodePath = scan; }
-    StringView text() const { return m_text; }
+    StringView text() const LIFETIME_BOUND { return m_text; }
 
     TextRun isolatedCopy() const;
 

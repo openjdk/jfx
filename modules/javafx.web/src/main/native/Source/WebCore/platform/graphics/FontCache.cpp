@@ -118,14 +118,14 @@ struct FontDataCacheKeyTraits : WTF::GenericHashTraits<FontPlatformData> {
     }
 };
 
-using FontPlatformDataCache = UncheckedKeyHashMap<FontPlatformDataCacheKey, std::unique_ptr<FontPlatformData>, FontPlatformDataCacheKeyHash, FontPlatformDataCacheKeyHashTraits>;
-using FontDataCache = UncheckedKeyHashMap<FontPlatformData, Ref<Font>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
+using FontPlatformDataCache = HashMap<FontPlatformDataCacheKey, std::unique_ptr<FontPlatformData>, FontPlatformDataCacheKeyHash, FontPlatformDataCacheKeyHashTraits>;
+using FontDataCache = HashMap<FontPlatformData, Ref<Font>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
 #if ENABLE(OPENTYPE_VERTICAL)
-using FontVerticalDataCache = UncheckedKeyHashMap<FontPlatformData, RefPtr<OpenTypeVerticalData>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
+using FontVerticalDataCache = HashMap<FontPlatformData, RefPtr<OpenTypeVerticalData>, FontDataCacheKeyHash, FontDataCacheKeyTraits>;
 #endif
 
 struct FontCache::FontDataCaches {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FontCache);
 
     FontDataCache data;
     FontPlatformDataCache platformData;
@@ -134,7 +134,7 @@ struct FontCache::FontDataCaches {
 #endif
 };
 
-FontCache& FontCache::forCurrentThread()
+CheckedRef<FontCache> FontCache::forCurrentThread()
 {
     return threadGlobalData().fontCache();
 }
@@ -213,8 +213,8 @@ FontPlatformData* FontCache::cachedFontPlatformData(const FontDescription& fontD
 #endif
 
     static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&]() {
-        platformInit();
+    std::call_once(onceFlag, [checkedThis = CheckedPtr { this }]() {
+        checkedThis->platformInit();
     });
 
     FontPlatformDataCacheKey key { fontDescription, { familyName }, fontCreationContext };
@@ -334,7 +334,7 @@ void FontCache::purgeInactiveFontData(unsigned purgeCount)
         return std::nullopt;
     });
 
-    LOG(Fonts, " removing %lu keys", keysToRemove.size());
+    LOG(Fonts, " removing %zu keys", keysToRemove.size());
 
     for (auto& key : keysToRemove)
         m_fontDataCaches->platformData.remove(key);
@@ -352,9 +352,9 @@ RefPtr<OpenTypeVerticalData> FontCache::verticalData(const FontPlatformData& pla
 }
 #endif
 
-void FontCache::updateFontCascade(const FontCascade& fontCascade, RefPtr<FontSelector>&& fontSelector)
+void FontCache::updateFontCascade(const FontCascade& fontCascade)
 {
-    fontCascade.updateFonts(m_fontCascadeCache.retrieveOrAddCachedFonts(fontCascade.fontDescription(), WTFMove(fontSelector)));
+    fontCascade.updateFonts(m_fontCascadeCache.retrieveOrAddCachedFonts(fontCascade.fontDescription(), fontCascade.fontSelector()));
 }
 
 size_t FontCache::fontCount()
@@ -423,11 +423,11 @@ static void dispatchToAllFontCaches(F function)
 {
     ASSERT(isMainThread());
 
-    function(FontCache::forCurrentThread());
+    function(FontCache::forCurrentThread().get());
 
     for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
         thread.runLoop().postTask([function](ScriptExecutionContext&) {
-            if (auto fontCache = FontCache::forCurrentThreadIfExists())
+            if (CheckedPtr fontCache = FontCache::forCurrentThreadIfExists())
                 function(*fontCache);
         });
     }
@@ -463,7 +463,7 @@ bool FontCache::useBackslashAsYenSignForFamily(const AtomString& family)
         return false;
 
     if (m_familiesUsingBackslashAsYenSign.isEmpty()) {
-        auto add = [&] (ASCIILiteral name, std::initializer_list<UChar> unicodeName) {
+        auto add = [&] (ASCIILiteral name, std::initializer_list<char16_t> unicodeName) {
             m_familiesUsingBackslashAsYenSign.add(AtomString { name });
             m_familiesUsingBackslashAsYenSign.add(AtomString(std::span { unicodeName }));
         };

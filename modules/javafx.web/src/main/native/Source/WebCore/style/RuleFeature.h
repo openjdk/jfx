@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CSSSelector.h"
+#include "CSSSelectorList.h"
 #include "CommonAtomStrings.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -55,7 +55,9 @@ enum class MatchElement : uint8_t {
     HasSibling,
     HasSiblingDescendant,
     HasAnySibling,
-    HasNonSubject, // FIXME: This is a catch-all for cases where :has() is in a non-subject position.
+    HasChildParent,
+    HasChildAncestor,
+    HasNonSubject, // FIXME: This is a catch-all for the rest of cases where :has() is in a non-subject position.
     HasScopeBreaking, // FIXME: This is a catch-all for cases where :has() contains a scope breaking sub-selector like, like :has(:is(.x .y)).
     Host,
     HostChild
@@ -85,9 +87,9 @@ struct RuleFeature : public RuleAndSelector {
 static_assert(sizeof(RuleFeature) <= 16, "RuleFeature is a frequently allocated object. Keep it small.");
 
 struct RuleFeatureWithInvalidationSelector : public RuleFeature {
-    RuleFeatureWithInvalidationSelector(const RuleData&, MatchElement, IsNegation, const CSSSelector* invalidationSelector);
+    RuleFeatureWithInvalidationSelector(const RuleData&, MatchElement, IsNegation, CSSSelectorList&& invalidationSelector);
 
-    const CSSSelector* invalidationSelector { nullptr };
+    CSSSelectorList invalidationSelector;
 };
 #pragma pack(pop)
 
@@ -106,25 +108,23 @@ struct RuleFeatureSet {
     bool usesMatchElement(MatchElement matchElement) const { return usedMatchElements[enumToUnderlyingType(matchElement)]; }
     void setUsesMatchElement(MatchElement matchElement) { usedMatchElements[enumToUnderlyingType(matchElement)] = true; }
 
-    UncheckedKeyHashSet<AtomString> idsInRules;
-    UncheckedKeyHashSet<AtomString> idsMatchingAncestorsInRules;
-    UncheckedKeyHashSet<AtomString> attributeLowercaseLocalNamesInRules;
-    UncheckedKeyHashSet<AtomString> attributeLocalNamesInRules;
-    UncheckedKeyHashSet<AtomString> contentAttributeNamesInRules;
-    Vector<RuleAndSelector> siblingRules;
-    Vector<RuleAndSelector> uncommonAttributeRules;
+    HashSet<AtomString> idsInRules;
+    HashSet<AtomString> idsMatchingAncestorsInRules;
+    HashSet<AtomString> attributeLowercaseLocalNamesInRules;
+    HashSet<AtomString> attributeLocalNamesInRules;
+    HashSet<AtomString> contentAttributeNamesInRules;
 
-    UncheckedKeyHashMap<AtomString, std::unique_ptr<RuleFeatureVector>> idRules;
-    UncheckedKeyHashMap<AtomString, std::unique_ptr<RuleFeatureVector>> classRules;
-    UncheckedKeyHashMap<AtomString, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>> attributeRules;
-    UncheckedKeyHashMap<PseudoClassInvalidationKey, std::unique_ptr<RuleFeatureVector>> pseudoClassRules;
-    UncheckedKeyHashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>> hasPseudoClassRules;
+    HashMap<AtomString, std::unique_ptr<RuleFeatureVector>> idRules;
+    HashMap<AtomString, std::unique_ptr<RuleFeatureVector>> classRules;
+    HashMap<AtomString, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>> attributeRules;
+    HashMap<PseudoClassInvalidationKey, std::unique_ptr<RuleFeatureVector>> pseudoClassRules;
+    HashMap<PseudoClassInvalidationKey, std::unique_ptr<Vector<RuleFeatureWithInvalidationSelector>>> hasPseudoClassRules;
     Vector<RuleAndSelector> scopeBreakingHasPseudoClassRules;
 
-    UncheckedKeyHashSet<AtomString> classesAffectingHost;
-    UncheckedKeyHashSet<AtomString> attributesAffectingHost;
-    UncheckedKeyHashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>> pseudoClassesAffectingHost;
-    UncheckedKeyHashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>> pseudoClasses;
+    HashSet<AtomString> classesAffectingHost;
+    HashSet<AtomString> attributesAffectingHost;
+    HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>> pseudoClassesAffectingHost;
+    HashSet<CSSSelector::PseudoClass, IntHash<CSSSelector::PseudoClass>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClass>> pseudoClasses;
 
     std::array<bool, matchElementCount> usedMatchElements { };
 
@@ -134,8 +134,6 @@ struct RuleFeatureSet {
 
 private:
     struct SelectorFeatures {
-        bool hasSiblingSelector { false };
-
         using InvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation>;
         using HasInvalidationFeature = std::tuple<const CSSSelector*, MatchElement, IsNegation, DoesBreakScope>;
 

@@ -22,6 +22,7 @@
 
 #include "ElementInlines.h"
 #include "LegacyRenderSVGResourceContainer.h"
+#include "RenderElementInlines.h"
 #include "SVGRenderStyle.h"
 #include "SVGResources.h"
 #include "SVGResourcesCycleSolver.h"
@@ -128,7 +129,7 @@ void SVGResourcesCache::clientLayoutChanged(RenderElement& renderer)
     // Invalidate the resources if either the RenderElement itself changed,
     // or we have filter resources, which could depend on the layout of children.
     if ((renderer.selfNeedsLayout() || resources->filter()) && hasResourcesRequiringRemovalOnClientLayoutChange(*resources))
-        resources->removeClientFromCache(renderer, false);
+        resources->removeClientFromCacheAndMarkForInvalidation(renderer, false);
 }
 
 static inline bool rendererCanHaveResources(RenderObject& renderer)
@@ -167,7 +168,7 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
         if (!oldStyle)
             return true;
 
-        if (!arePointingToEqualData(oldStyle->clipPath(), newStyle.clipPath()))
+        if (oldStyle->clipPath() != newStyle.clipPath())
             return true;
 
         // RenderSVGResourceMarker only supports SVG <mask> references.
@@ -184,10 +185,10 @@ void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDiffere
         Ref oldSVGStyle = oldStyle->svgStyle();
         Ref newSVGStyle = newStyle.svgStyle();
 
-        if (oldSVGStyle->fillPaintUri() != newSVGStyle->fillPaintUri())
+        if (oldSVGStyle->fill().url != newSVGStyle->fill().url)
             return true;
 
-        if (oldSVGStyle->strokePaintUri() != newSVGStyle->strokePaintUri())
+        if (oldSVGStyle->stroke().url != newSVGStyle->stroke().url)
             return true;
 
         return false;
@@ -251,7 +252,7 @@ void SVGResourcesCache::clientDestroyed(RenderElement& renderer)
         return;
 
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer)) {
-        resources->removeClientFromCache(renderer);
+        resources->removeClientFromCacheAndMarkForInvalidation(renderer);
         resourcesCacheFromRenderer(renderer).removeResourcesFromRenderer(renderer);
     }
 }

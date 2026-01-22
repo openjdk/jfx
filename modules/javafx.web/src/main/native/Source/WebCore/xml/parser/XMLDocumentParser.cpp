@@ -287,10 +287,10 @@ static XMLParsingNamespaces findXMLParsingNamespaces(Element* contextElement)
 
     result.defaultNamespace = contextElement->lookupNamespaceURI(nullAtom());
 
-    for (auto& element : lineageOfType<Element>(*contextElement)) {
-        if (!element.hasAttributes())
+    for (Ref element : lineageOfType<Element>(*contextElement)) {
+        if (!element->hasAttributes())
             continue;
-        for (auto& attribute : element.attributes()) {
+        for (auto& attribute : element->attributes()) {
             if (attribute.prefix() == xmlnsAtom())
                 result.prefixNamespaces.set(attribute.localName(), attribute.value());
         }

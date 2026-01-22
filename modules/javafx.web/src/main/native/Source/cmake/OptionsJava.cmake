@@ -153,13 +153,6 @@ set(WebCore_LIBRARY_TYPE STATIC)
 set(WebCoreTestSupport_LIBRARY_TYPE STATIC)
 set(PAL_LIBRARY_TYPE STATIC)
 
-#JAVA 32 bit window platform
-if (WIN32)
-    if (${WTF_CPU_X86})
-        set(WebCore_LIBRARY_TYPE OBJECT)
-    endif ()
-endif ()
-
 
 if (CMAKE_MAJOR_VERSION LESS 3)
     # Before CMake 3 it was necessary to use a build script instead of using cmake --build directly

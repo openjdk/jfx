@@ -28,13 +28,12 @@
 
 // https://drafts.csswg.org/css-animations/#csskeyframerule
 
-// Introduced in DOM Level ?:
+typedef USVString CSSOMString;
+
 [
     Exposed=Window
 ] interface CSSKeyframeRule : CSSRule {
-    attribute DOMString keyText;
-    // FIXME: Add [SameObject] below after https://webkit.org/b/163414
-    [PutForwards=cssText] readonly attribute CSSStyleDeclaration style;
-
+    attribute CSSOMString keyText;
+    [SameObject, PutForwards=cssText] readonly attribute CSSStyleProperties style;
 };
 
