@@ -78,7 +78,7 @@ public:
 
         // Basic block is to the left of the returned block.
         if (bytecodeOffset < basicBlock->leaderOffset()) {
-            ASSERT(basicBlock - 1 >= m_basicBlocks.data());
+            ASSERT(basicBlock - 1 >= m_basicBlocks.span().data());
             ASSERT(blockContainsBytecodeOffset(basicBlock[-1], bytecodeOffset));
             return &basicBlock[-1];
         }

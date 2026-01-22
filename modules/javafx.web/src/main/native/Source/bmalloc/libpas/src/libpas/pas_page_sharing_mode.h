@@ -44,14 +44,14 @@ pas_page_sharing_mode_does_sharing(
 {
     switch (mode) {
     case pas_invalid_sharing_mode:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return false;
     case pas_do_not_share_pages:
         return false;
     case pas_share_pages:
         return true;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 
@@ -66,7 +66,7 @@ pas_page_sharing_mode_get_string(pas_page_sharing_mode mode)
     case pas_share_pages:
         return "share_pages";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

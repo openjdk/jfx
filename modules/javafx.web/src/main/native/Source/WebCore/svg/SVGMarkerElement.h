@@ -34,9 +34,9 @@ class SVGMarkerElement final : public SVGElement, public SVGFitToViewBox {
 public:
     // Forward declare enumerations in the W3C naming scheme, for IDL generation.
     enum {
-        SVG_MARKERUNITS_UNKNOWN = SVGMarkerUnitsUnknown,
-        SVG_MARKERUNITS_USERSPACEONUSE = SVGMarkerUnitsUserSpaceOnUse,
-        SVG_MARKERUNITS_STROKEWIDTH = SVGMarkerUnitsStrokeWidth
+        SVG_MARKERUNITS_UNKNOWN = std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::Unknown),
+        SVG_MARKERUNITS_USERSPACEONUSE = std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::UserSpaceOnUse),
+        SVG_MARKERUNITS_STROKEWIDTH = std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::StrokeWidth)
     };
 
     enum {
@@ -95,7 +95,7 @@ private:
     Ref<SVGAnimatedLength> m_refY { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
     Ref<SVGAnimatedLength> m_markerWidth { SVGAnimatedLength::create(this, SVGLengthMode::Width, "3"_s) };
     Ref<SVGAnimatedLength> m_markerHeight { SVGAnimatedLength::create(this, SVGLengthMode::Height, "3"_s) };
-    Ref<SVGAnimatedEnumeration> m_markerUnits { SVGAnimatedEnumeration::create(this, SVGMarkerUnitsStrokeWidth) };
+    Ref<SVGAnimatedEnumeration> m_markerUnits { SVGAnimatedEnumeration::create(this, SVGMarkerUnitsType::StrokeWidth) };
     Ref<SVGAnimatedAngle> m_orientAngle { SVGAnimatedAngle::create(this) };
     Ref<SVGAnimatedOrientType> m_orientType { SVGAnimatedOrientType::create(this, SVGMarkerOrientAngle) };
 };

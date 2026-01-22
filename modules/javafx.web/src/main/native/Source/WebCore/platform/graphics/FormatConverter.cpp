@@ -1600,6 +1600,7 @@ void FormatConverter::convert(GraphicsContextGL::DataFormat srcFormat, GraphicsC
             FORMATCONVERTER_CASE_SRCFORMAT(GraphicsContextGL::DataFormat::RA8)
             FORMATCONVERTER_CASE_SRCFORMAT(GraphicsContextGL::DataFormat::RA32F)
             FORMATCONVERTER_CASE_SRCFORMAT(GraphicsContextGL::DataFormat::RGBA8)
+            FORMATCONVERTER_CASE_SRCFORMAT(GraphicsContextGL::DataFormat::RGBA16)
             FORMATCONVERTER_CASE_SRCFORMAT(GraphicsContextGL::DataFormat::ARGB8)
             FORMATCONVERTER_CASE_SRCFORMAT(GraphicsContextGL::DataFormat::ABGR8)
             FORMATCONVERTER_CASE_SRCFORMAT(GraphicsContextGL::DataFormat::AR8)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "AlternativeTextController.h"
 
+#include "BoundaryPointInlines.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentInlines.h"
@@ -36,6 +37,7 @@
 #include "EditorClient.h"
 #include "Element.h"
 #include "EventLoop.h"
+#include "EventTargetInlines.h"
 #include "FloatQuad.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
@@ -104,13 +106,9 @@ void AlternativeTextController::startAlternativeTextUITimer(AlternativeTextType 
     const Seconds correctionPanelTimerInterval { 300_ms };
 
     if (!isAutomaticSpellingCorrectionEnabled()) {
-#if !ENABLE(ALTERNATIVE_TEXT_REQUIRES_AUTOMATIC_SPELLING_CORRECTION)
         // Exclude correction & reversion bubbles which have accept on dismiss behavior.
         if (type == AlternativeTextType::Correction || type == AlternativeTextType::Reversion)
             return;
-#else
-        return;
-#endif
     }
 
     // If type is PanelTypeReversion, then the new range has been set. So we shouldn't clear it.
@@ -182,8 +180,13 @@ void AlternativeTextController::show(const SimpleRange& rangeToReplace, const St
     m_rangeWithAlternative = rangeToReplace;
     m_details = replacement;
     m_isActive = true;
-    if (CheckedPtr client = alternativeTextClient())
-        client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacement, { });
+
+    if (!m_document->frame())
+        return;
+    FrameIdentifier rootFrameID = m_document->frame()->rootFrame().frameID();
+
+    if (CheckedPtr client = alternativeTextClient(); client)
+        client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacement, { }, rootFrameID);
 }
 
 void AlternativeTextController::handleCancelOperation()
@@ -241,7 +244,7 @@ void AlternativeTextController::respondToUnappliedSpellCorrection(const VisibleS
     if (CheckedPtr client = alternativeTextClient())
         client->recordAutocorrectionResponse(AutocorrectionResponse::Reverted, corrected, correction);
 
-    auto document = protectedDocument();
+    Ref document = m_document.get();
     RefPtr protectedFrame { document->frame() };
     document->updateLayout();
 
@@ -259,7 +262,7 @@ void AlternativeTextController::timerFired()
     m_isDismissedByEditing = false;
     switch (m_type) {
     case AlternativeTextType::Correction: {
-        auto document = protectedDocument();
+        Ref document = m_document.get();
         VisibleSelection selection(document->selection().selection());
         VisiblePosition start(selection.start(), selection.affinity());
         VisiblePosition p = startOfWord(start, WordSide::LeftWordIfOnBoundary);
@@ -278,9 +281,12 @@ void AlternativeTextController::timerFired()
         m_originalText = plainText(*m_rangeWithAlternative);
         auto boundingBox = rootViewRectForRange(*m_rangeWithAlternative);
         if (!boundingBox.isEmpty()) {
+            if (!m_document->frame())
+                return;
+            FrameIdentifier rootFrameID = m_document->frame()->rootFrame().frameID();
             if (CheckedPtr client = alternativeTextClient()) {
                 removeMarkers(*m_rangeWithAlternative, { DocumentMarkerType::CorrectionIndicator });
-                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacementString, { });
+                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, replacementString, { }, rootFrameID);
         }
     }
     }
@@ -306,12 +312,15 @@ void AlternativeTextController::timerFired()
             break;
         }
         String topSuggestion = suggestions.first();
-        suggestions.remove(0);
+        suggestions.removeAt(0);
         m_isActive = true;
         auto boundingBox = rootViewRectForRange(*m_rangeWithAlternative);
         if (!boundingBox.isEmpty()) {
+            if (!m_document->frame())
+                return;
+            FrameIdentifier rootFrameID = m_document->frame()->rootFrame().frameID();
             if (CheckedPtr client = alternativeTextClient())
-                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, topSuggestion, suggestions);
+                client->showCorrectionAlternative(m_type, boundingBox, m_originalText, topSuggestion, suggestions, rootFrameID);
         }
     }
         break;
@@ -533,7 +542,7 @@ void AlternativeTextController::markPrecedingWhitespaceForDeletedAutocorrectionA
 
 bool AlternativeTextController::processMarkersOnTextToBeReplacedByResult(const TextCheckingResult& result, const SimpleRange& rangeWithAlternative, const String& stringToBeReplaced)
 {
-    auto document = protectedDocument();
+    Ref document = m_document.get();
     auto& markers = document->markers();
     if (markers.hasMarkers(rangeWithAlternative, DocumentMarkerType::Replacement)) {
         if (result.type == TextCheckingType::Correction)
@@ -702,7 +711,7 @@ void AlternativeTextController::respondToAppliedEditing(CompositeEditCommand* co
 bool AlternativeTextController::insertDictatedText(const String& text, const Vector<DictationAlternative>& dictationAlternatives, Event* triggeringEvent)
 {
     RefPtr<EventTarget> target;
-    auto document = protectedDocument();
+    Ref document = m_document.get();
     if (triggeringEvent)
         target = triggeringEvent->target();
     else

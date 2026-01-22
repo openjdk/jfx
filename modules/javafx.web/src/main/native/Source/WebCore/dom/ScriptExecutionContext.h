@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008-2024 Apple Inc. All Rights Reserved.
- * Copyright (C) 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,50 +27,64 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "CrossOriginMode.h"
-#include "DOMTimer.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "SecurityContext.h"
 #include "ServiceWorkerIdentifier.h"
-#include "Settings.h"
-#include "StorageBlockingPolicy.h"
-#include <JavaScriptCore/ConsoleTypes.h>
-#include <JavaScriptCore/HandleTypes.h>
-#include <pal/SessionID.h>
-#include <wtf/CheckedRef.h>
-#include <wtf/CompletionHandler.h>
-#include <wtf/CrossThreadTask.h>
+#include "Timer.h"
+#include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
-#include <wtf/NativePromise.h>
 #include <wtf/ObjectIdentifier.h>
-#include <wtf/OptionSet.h>
-#include <wtf/URL.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
+
+namespace WTF {
+class CrossThreadTask;
+class NativePromiseRequest;
+class URL;
+} // namespace WTF
+
+using WTF::CrossThreadTask;
+using WTF::NativePromiseRequest;
+using WTF::URL;
 
 namespace JSC {
 class CallFrame;
 class Exception;
+class JSGlobalObject;
 class JSPromise;
 class VM;
+enum class MessageLevel : uint8_t;
+enum class MessageSource : uint8_t;
+enum class MessageType : uint8_t;
 enum class ScriptExecutionStatus;
+enum class TrustedTypesEnforcement;
 }
+
+using JSC::MessageSource;
+using JSC::MessageLevel;
 
 namespace Inspector {
 class ConsoleMessage;
 class ScriptCallStack;
 }
 
+namespace PAL {
+class SessionID;
+} // namespace PAL
+
 namespace WebCore {
 
+class ActiveDOMObject;
 class EventLoop;
 class CachedScript;
 class CSSFontSelector;
 class CSSValuePool;
+class ContextDestructionObserver;
+class DOMTimer;
 class DatabaseContext;
 class DeferredPromise;
+class Document;
 class EventQueue;
 class EventLoopTaskGroup;
 class EventTarget;
@@ -87,11 +101,15 @@ class ServiceWorkerContainer;
 class SocketProvider;
 class WebCoreOpaqueRoot;
 enum class AdvancedPrivacyProtections : uint16_t;
+enum class CrossOriginMode : bool;
 enum class LoadedFromOpaqueSource : bool;
 enum class NoiseInjectionPolicy : uint8_t;
-enum class ScriptTelemetryCategory : uint8_t;
+enum class ReasonForSuspension : uint8_t;
+enum class ScriptTrackingPrivacyCategory : uint8_t;
+enum class StorageBlockingPolicy : uint8_t;
 enum class TaskSource : uint8_t;
 struct CryptoKeyData;
+struct SettingsValues;
 
 #if ENABLE(NOTIFICATIONS)
 class NotificationClient;
@@ -125,7 +143,7 @@ public:
     virtual bool isJSExecutionForbidden() const = 0;
 
     virtual EventLoopTaskGroup& eventLoop() = 0;
-    CheckedRef<EventLoopTaskGroup> checkedEventLoop();
+    inline CheckedRef<EventLoopTaskGroup> checkedEventLoop();
 
     virtual const URL& url() const = 0;
     enum class ForceUTF8 : bool { No, Yes };
@@ -135,14 +153,14 @@ public:
 
     virtual String userAgent(const URL&) const = 0;
 
-    virtual const Settings::Values& settingsValues() const = 0;
+    virtual const SettingsValues& settingsValues() const = 0;
 
     virtual NotificationClient* notificationClient() { return nullptr; }
-    virtual std::optional<PAL::SessionID> sessionID() const { return std::nullopt; }
+    virtual std::optional<PAL::SessionID> sessionID() const;
 
     virtual void disableEval(const String& errorMessage) = 0;
     virtual void disableWebAssembly(const String& errorMessage) = 0;
-    virtual void setRequiresTrustedTypes(bool required) = 0;
+    virtual void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement) = 0;
 
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
 
@@ -170,10 +188,12 @@ public:
     virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0) = 0;
 
     virtual SecurityOrigin& topOrigin() const = 0;
+    Ref<SecurityOrigin> protectedTopOrigin() const;
 
     virtual bool shouldBypassMainWorldContentSecurityPolicy() const { return false; }
 
     PublicURLManager& publicURLManager();
+    Ref<PublicURLManager> protectedPublicURLManager();
 
     virtual void suspendActiveDOMObjects(ReasonForSuspension);
     virtual void resumeActiveDOMObjects(ReasonForSuspension);
@@ -215,14 +235,15 @@ public:
     WEBCORE_EXPORT void ref();
     WEBCORE_EXPORT void deref();
 
-    WEBCORE_EXPORT bool requiresScriptExecutionTelemetry(ScriptTelemetryCategory);
+    WEBCORE_EXPORT bool requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory);
 
     class Task {
         WTF_MAKE_TZONE_ALLOCATED(Task);
     public:
         enum CleanupTaskTag { CleanupTask };
 
-        template<typename T, typename = typename std::enable_if<!std::is_base_of<Task, T>::value && std::is_convertible<T, Function<void(ScriptExecutionContext&)>>::value>::type>
+        template<typename T>
+            requires (!std::derived_from<T, Task> && std::convertible_to<T, Function<void(ScriptExecutionContext&)>>)
         Task(T task)
             : m_task(WTFMove(task))
             , m_isCleanupTask(false)
@@ -235,7 +256,8 @@ public:
         {
         }
 
-        template<typename T, typename = typename std::enable_if<std::is_convertible<T, Function<void(ScriptExecutionContext&)>>::value>::type>
+        template<typename T>
+            requires std::convertible_to<T, Function<void(ScriptExecutionContext&)>>
         Task(CleanupTaskTag, T task)
             : m_task(WTFMove(task))
             , m_isCleanupTask(true)
@@ -253,21 +275,16 @@ public:
     virtual void postTask(Task&&) = 0; // Executes the task on context's thread asynchronously.
 
     template<typename... Arguments>
-    void postCrossThreadTask(Arguments&&... arguments)
-    {
-        postTask([crossThreadTask = createCrossThreadTask(arguments...)](ScriptExecutionContext&) mutable {
-            crossThreadTask.performTask();
-        });
-    }
+    inline void postCrossThreadTask(Arguments&&...);
 
     void postTaskToResponsibleDocument(Function<void(Document&)>&&);
 
     // Gets the next id in a circular sequence from 1 to 2^31-1.
     int circularSequentialID();
 
-    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, &timer).isNewEntry; }
-    RefPtr<DOMTimer> takeTimeout(int timeoutId) { return m_timeouts.take(timeoutId); }
-    DOMTimer* findTimeout(int timeoutId) { return m_timeouts.get(timeoutId); }
+    inline bool addTimeout(int timeoutId, DOMTimer&); // Defined in ScriptExecutionContextInlines.h
+    inline RefPtr<DOMTimer> takeTimeout(int timeoutId); // Defined in ScriptExecutionContextInlines.h
+    inline DOMTimer* findTimeout(int timeoutId); // Defined in ScriptExecutionContextInlines.h
 
     virtual JSC::VM& vm() = 0;
     virtual Ref<JSC::VM> protectedVM();
@@ -291,10 +308,9 @@ public:
     // These two methods are used when CryptoKeys are serialized into IndexedDB. As a side effect, it is also
     // used for things that utilize the same structure clone algorithm, for example, message passing between
     // worker and document.
-    virtual std::optional<Vector<uint8_t>> wrapCryptoKey(const Vector<uint8_t>& key) = 0;
+    virtual std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) = 0;
     virtual std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>& wrappedKey) = 0;
 #endif
-
     int timerNestingLevel() const { return m_timerNestingLevel; }
     void setTimerNestingLevel(int timerNestingLevel) { m_timerNestingLevel = timerNestingLevel; }
 
@@ -321,7 +337,7 @@ public:
 
     void registerServiceWorker(ServiceWorker&);
     void unregisterServiceWorker(ServiceWorker&);
-    ServiceWorker* serviceWorker(ServiceWorkerIdentifier identifier) { return m_serviceWorkers.get(identifier); }
+    inline ServiceWorker* serviceWorker(ServiceWorkerIdentifier); // Defined in ScriptExecutionContextInlines.h.
 
     ServiceWorkerContainer* serviceWorkerContainer();
     ServiceWorkerContainer* ensureServiceWorkerContainer();
@@ -358,50 +374,19 @@ public:
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
 
-    template<typename Promise, typename Task>
-    void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task)
-    {
-        auto request = makeUnique<NativePromiseRequest>();
-        WeakPtr weakRequest { *request };
-        auto command = promise->whenSettled(nativePromiseDispatcher(), [weakThis = WeakPtr { *this }, taskSource, task = WTFMove(task), request = WTFMove(request)] (auto&& result) mutable {
-            request->complete();
-            RefPtr protectedThis = weakThis.get();
-            if (!protectedThis)
-                return;
-            protectedThis->eventLoop().queueTask(taskSource, [task = WTFMove(task), result = WTFMove(result)] () mutable {
-                task(WTFMove(result));
-            });
-        });
-        if (weakRequest) {
-            m_nativePromiseRequests.add(*weakRequest);
-            command->track(*weakRequest);
-        }
-    }
+    template<typename Promise, typename TaskType>
+    void enqueueTaskWhenSettled(Ref<Promise>&&, TaskSource, TaskType&&);
 
-    template<typename Promise, typename Task, typename Finalizer>
-    void enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, Task&& task, Finalizer&& finalizer)
-    {
-        enqueueTaskWhenSettled(WTFMove(promise), taskSource, CompletionHandlerWithFinalizer<void(typename Promise::Result&&)>(WTFMove(task), WTFMove(finalizer)));
-    }
+    template<typename Promise, typename TaskType, typename Finalizer>
+    void enqueueTaskWhenSettled(Ref<Promise>&&, TaskSource, TaskType&&, Finalizer&&);
 
     bool isAlwaysOnLoggingAllowed() const;
 
 protected:
     class AddConsoleMessageTask : public Task {
     public:
-        AddConsoleMessageTask(std::unique_ptr<Inspector::ConsoleMessage>&& consoleMessage)
-            : Task([&consoleMessage](ScriptExecutionContext& context) {
-                context.addConsoleMessage(WTFMove(consoleMessage));
-            })
-        {
-        }
-
-        AddConsoleMessageTask(MessageSource source, MessageLevel level, const String& message)
-            : Task([source, level, message = message.isolatedCopy()](ScriptExecutionContext& context) {
-                context.addConsoleMessage(source, level, message);
-            })
-        {
-        }
+        inline AddConsoleMessageTask(std::unique_ptr<Inspector::ConsoleMessage>&&);
+        inline AddConsoleMessageTask(MessageSource, MessageLevel, const String&);
     };
 
     ReasonForSuspension reasonForSuspendingActiveDOMObjects() const { return m_reasonForSuspendingActiveDOMObjects; }
@@ -433,11 +418,11 @@ private:
     void checkConsistency() const;
     WEBCORE_EXPORT GuaranteedSerialFunctionDispatcher& nativePromiseDispatcher();
 
-    UncheckedKeyHashSet<MessagePort*> m_messagePorts;
-    UncheckedKeyHashSet<ContextDestructionObserver*> m_destructionObservers;
-    UncheckedKeyHashSet<ActiveDOMObject*> m_activeDOMObjects;
+    HashSet<MessagePort*> m_messagePorts;
+    HashSet<ContextDestructionObserver*> m_destructionObservers;
+    HashSet<ActiveDOMObject*> m_activeDOMObjects;
 
-    UncheckedKeyHashMap<int, RefPtr<DOMTimer>> m_timeouts;
+    HashMap<int, RefPtr<DOMTimer>> m_timeouts;
 
     struct PendingException;
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;
@@ -457,14 +442,14 @@ private:
 #endif
 
     RefPtr<ServiceWorker> m_activeServiceWorker;
-    UncheckedKeyHashMap<ServiceWorkerIdentifier, ServiceWorker*> m_serviceWorkers;
+    HashMap<ServiceWorkerIdentifier, ServiceWorker*> m_serviceWorkers;
 
     String m_domainForCachePartition;
     mutable ScriptExecutionContextIdentifier m_identifier;
 
-    UncheckedKeyHashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
+    HashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
 
-    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
+    StorageBlockingPolicy m_storageBlockingPolicy;
     ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
 
     Type m_type;

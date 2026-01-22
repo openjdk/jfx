@@ -190,11 +190,11 @@ public:
     } \
     BlockDirectoryBitVectorView<Kind::capitalBitName> lowerBitName() const \
     { \
-        return BlockDirectoryBitVectorView<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.data(), m_numBits)); \
+        return BlockDirectoryBitVectorView<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.span().data(), m_numBits)); \
     } \
     BlockDirectoryBitVectorRef<Kind::capitalBitName> lowerBitName() \
     { \
-        return BlockDirectoryBitVectorRef<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.data(), m_numBits)); \
+        return BlockDirectoryBitVectorRef<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.span().data(), m_numBits)); \
     }
     FOR_EACH_BLOCK_DIRECTORY_BIT(BLOCK_DIRECTORY_BIT_ACCESSORS)
 #undef BLOCK_DIRECTORY_BIT_ACCESSORS

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, 2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2021, 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/BitVector.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Variant.h>
 
 namespace WTF {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LikelyDenseUnsignedIntegerSet);
 
-// This is effectively a std::variant<HashSet, Pair<BitVector, IndexType>>
+// This is effectively a Variant<HashSet, Pair<BitVector, IndexType>>
 // If it is in BitVector mode, it keeps track of the minimum value in the set, and has the bitVector shifted by the same amount.
 // So for example {64000, 64002, 64003} would be represented as the bitVector 1101 with a m_min of 64000.
 // It shifts between the two modes whenever that would at least halve its memory usage. So it will never use more than twice the optimal amount of memory, and yet should not ping-pong between the two modes too often.
@@ -45,7 +45,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LikelyDenseUnsignedIntegerSet);
 // This reduces repeated re-indexings of the bitvector when repeatedly adding a value just below the current minimum.
 template<typename IndexType>
 class LikelyDenseUnsignedIntegerSet {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LikelyDenseUnsignedIntegerSet);
     WTF_MAKE_NONCOPYABLE(LikelyDenseUnsignedIntegerSet);
     static_assert(std::is_unsigned<IndexType>::value);
     using Set = UncheckedKeyHashSet<IndexType, WTF::IntHash<IndexType>, WTF::UnsignedWithZeroKeyHashTraits<IndexType> >;
@@ -182,7 +182,7 @@ public:
     }
 
     class iterator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(iterator);
     public:
         iterator(BitVector::iterator it, IndexType shift)
             : m_underlying({ it })
@@ -213,17 +213,17 @@ public:
         friend bool operator==(const iterator&, const iterator&) = default;
 
     private:
-        std::variant<BitVector::iterator, typename Set::iterator> m_underlying;
+        Variant<BitVector::iterator, typename Set::iterator> m_underlying;
         IndexType m_shift;
     };
 
-    iterator begin() const
+    iterator begin() const LIFETIME_BOUND
     {
         if (isBitVector())
             return { m_inline.bitVector.begin(), m_min };
         return { m_inline.hashSet.begin(), m_min };
     }
-    iterator end() const
+    iterator end() const LIFETIME_BOUND
     {
         if (isBitVector())
             return { m_inline.bitVector.end(), m_min };

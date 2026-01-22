@@ -63,6 +63,7 @@ public:
     virtual ~FetchResponse();
 
     WEBCORE_EXPORT static Ref<FetchResponse> create(ScriptExecutionContext*, std::optional<FetchBody>&&, FetchHeaders::Guard, ResourceResponse&&);
+    static Ref<FetchResponse> create(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);
 
     static ExceptionOr<Ref<FetchResponse>> create(ScriptExecutionContext&, std::optional<FetchBody::Init>&&, Init&&);
     static ExceptionOr<Ref<FetchResponse>> create(ScriptExecutionContext&, std::optional<FetchBodyWithType>&&, Init&&);
@@ -93,7 +94,7 @@ public:
     void feedStream() final;
     void cancel() final;
 
-    using ResponseData = std::variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
+    using ResponseData = Variant<std::nullptr_t, Ref<FormData>, Ref<SharedBuffer>>;
     ResponseData consumeBody();
     void setBodyData(ResponseData&&, uint64_t bodySizeWithPadding);
 
@@ -178,10 +179,12 @@ private:
         NotificationCallback m_responseCallback;
         ConsumeDataByChunkCallback m_consumeDataCallback;
         std::unique_ptr<FetchLoader> m_loader;
-        Ref<PendingActivity<FetchResponse>> m_pendingActivity;
+        const Ref<PendingActivity<FetchResponse>> m_pendingActivity;
         FetchOptions::Credentials m_credentials;
         bool m_shouldStartStreaming { false };
     };
+
+    CheckedPtr<Loader> checkedLoader() { return m_loader.get(); }
 
     mutable std::optional<ResourceResponse> m_filteredResponse;
     ResourceResponse m_internalResponse;

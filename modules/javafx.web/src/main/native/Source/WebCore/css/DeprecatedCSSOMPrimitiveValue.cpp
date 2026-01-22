@@ -30,6 +30,7 @@
 #include "CSSCounterValue.h"
 #include "CSSRectValue.h"
 #include "CSSSerializationContext.h"
+#include "CSSURLValue.h"
 #include "DeprecatedCSSOMCounter.h"
 #include "DeprecatedCSSOMRGBColor.h"
 #include "DeprecatedCSSOMRect.h"
@@ -49,6 +50,8 @@ unsigned short DeprecatedCSSOMPrimitiveValue::primitiveType() const
         return CSS_RECT;
     if (m_value->isColor())
         return CSS_RGBCOLOR;
+    if (m_value->isURL())
+        return CSS_URI;
 
     auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(m_value.get());
     if (!primitiveValue)
@@ -80,7 +83,6 @@ unsigned short DeprecatedCSSOMPrimitiveValue::primitiveType() const
     case CSSUnitType::CSS_RAD:                          return CSS_RAD;
     case CSSUnitType::CSS_S:                            return CSS_S;
     case CSSUnitType::CSS_STRING:                       return CSS_STRING;
-    case CSSUnitType::CSS_URI:                          return CSS_URI;
     case CSSUnitType::CSS_VALUE_ID:                     return CSS_IDENT;
 
     // All other, including newer types, should return UNKNOWN.
@@ -126,7 +128,7 @@ ExceptionOr<String> DeprecatedCSSOMPrimitiveValue::getStringValue() const
     case CSS_ATTR:      return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
     case CSS_IDENT:     return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
     case CSS_STRING:    return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
-    case CSS_URI:       return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
+    case CSS_URI:       return downcast<CSSURLValue>(m_value.get()).stringValue();
 
     // All other, including newer types, should raise an exception.
     default:            return Exception { ExceptionCode::InvalidAccessError };

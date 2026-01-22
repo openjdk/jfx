@@ -35,14 +35,14 @@ namespace JSC {
 template<typename Func>
 ALWAYS_INLINE HeapCell* FreeList::allocateWithCellSize(const Func& slowPath, size_t cellSize)
 {
-    if (LIKELY(m_intervalStart < m_intervalEnd)) {
+    if (m_intervalStart < m_intervalEnd) [[likely]] {
         char* result = m_intervalStart;
         m_intervalStart += cellSize;
         return std::bit_cast<HeapCell*>(result);
     }
 
     FreeCell* cell = nextInterval();
-    if (UNLIKELY(isSentinel(cell)))
+    if (isSentinel(cell)) [[unlikely]]
         return slowPath();
 
     FreeCell::advance(m_secret, m_nextInterval, m_intervalStart, m_intervalEnd);

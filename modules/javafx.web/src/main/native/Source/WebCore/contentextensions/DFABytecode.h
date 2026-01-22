@@ -88,6 +88,7 @@ enum class DFABytecodeFlagsSize : uint8_t {
     UInt8 = 0x00,
     UInt16 = 0x10,
     UInt24 = 0x20,
+    UInt32 = 0x30
 };
 enum class DFABytecodeActionSize : uint8_t {
     UInt8 = 0x00,

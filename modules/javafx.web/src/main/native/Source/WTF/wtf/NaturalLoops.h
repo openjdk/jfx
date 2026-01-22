@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <ranges>
+#include <wtf/DataLog.h>
 #include <wtf/Dominators.h>
 
 namespace WTF {
@@ -34,12 +36,13 @@ class NaturalLoops;
 
 template<typename Graph>
 class NaturalLoop {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(NaturalLoop);
 public:
     NaturalLoop()
         : m_graph(nullptr)
         , m_header(nullptr)
         , m_outerLoopIndex(UINT_MAX)
+        , m_innerLoopIndex(UINT_MAX)
     {
     }
 
@@ -47,6 +50,7 @@ public:
         : m_graph(&graph)
         , m_header(header)
         , m_outerLoopIndex(UINT_MAX)
+        , m_innerLoopIndex(UINT_MAX)
         , m_index(index)
     {
     }
@@ -77,6 +81,7 @@ public:
     unsigned index() const { return m_index; }
 
     bool isOuterMostLoop() const { return m_outerLoopIndex == UINT_MAX; }
+    bool isInnerMostLoop() const { return m_innerLoopIndex == UINT_MAX; }
 
     void dump(PrintStream& out) const
     {
@@ -105,12 +110,13 @@ private:
     typename Graph::Node m_header;
     Vector<typename Graph::Node, 4> m_body;
     unsigned m_outerLoopIndex;
+    unsigned m_innerLoopIndex;
     unsigned m_index;
 };
 
 template<typename Graph>
 class NaturalLoops {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(NaturalLoops);
 public:
     typedef std::array<unsigned, 2> InnerMostLoopIndices;
 
@@ -128,8 +134,8 @@ public:
 
         static constexpr bool verbose = false;
 
-        if (verbose) {
-            dataLog("Dominators:\n");
+        if constexpr (verbose) {
+            dataLogLn("Dominators:");
             dominators.dump(WTF::dataFile());
         }
 
@@ -162,8 +168,7 @@ public:
             }
         }
 
-        if (verbose)
-            dataLog("After bootstrap: ", *this, "\n");
+        dataLogLnIf(verbose, "After bootstrap: ", *this);
 
         FastBitVector seenBlocks;
         Vector<typename Graph::Node, 4> blockWorklist;
@@ -175,8 +180,7 @@ public:
             seenBlocks.clearAll();
             ASSERT(blockWorklist.isEmpty());
 
-            if (verbose)
-                dataLog("Dealing with loop ", loop, "\n");
+            dataLogLnIf(verbose, "Dealing with loop ", loop);
 
             for (unsigned j = loop.size(); j--;) {
                 seenBlocks[graph.index(loop[j])] = true;
@@ -186,8 +190,7 @@ public:
             while (!blockWorklist.isEmpty()) {
                 typename Graph::Node block = blockWorklist.takeLast();
 
-                if (verbose)
-                    dataLog("    Dealing with ", graph.dump(block), "\n");
+                dataLogLnIf(verbose, "    Dealing with ", graph.dump(block));
 
                 if (block == loop.header())
                     continue;
@@ -237,6 +240,8 @@ public:
             RELEASE_ASSERT(m_innerMostLoopIndices[loop.header()][0] == i);
 
             loop.m_outerLoopIndex = m_innerMostLoopIndices[loop.header()][1];
+            if (loop.m_outerLoopIndex != UINT_MAX)
+                m_loops[loop.m_outerLoopIndex].m_innerLoopIndex = loop.index();
         }
 
         if (selfCheck) {
@@ -256,15 +261,14 @@ public:
 
                 Vector<const NaturalLoop<Graph>*> fancyLoopsOf = loopsOf(block);
 
-                std::sort(simpleLoopsOf.begin(), simpleLoopsOf.end());
-                std::sort(fancyLoopsOf.begin(), fancyLoopsOf.end());
+                std::ranges::sort(simpleLoopsOf);
+                std::ranges::sort(fancyLoopsOf);
 
                 RELEASE_ASSERT(simpleLoopsOf == fancyLoopsOf);
             }
         }
 
-        if (verbose)
-            dataLog("Results: ", *this, "\n");
+        dataLogLnIf(verbose, "Results: ", *this);
     }
 
     Graph& graph() { return m_graph; }
@@ -287,10 +291,10 @@ public:
             return nullptr;
         if (loop->header() == block)
             return loop;
-        if (ASSERT_ENABLED) {
+#if ASSERT_ENABLED
             for (; loop; loop = innerMostOuterLoop(*loop))
                 ASSERT(loop->header() != block);
-        }
+#endif
         return nullptr;
     }
 

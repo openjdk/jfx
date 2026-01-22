@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,8 @@
 #include "SerializedScriptValue.h"
 #include "TransactionOperation.h"
 #include "WebCoreOpaqueRootInlines.h"
+#include "WorkerOrWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -189,7 +191,7 @@ void IDBTransaction::abortDueToFailedRequest(DOMException& error)
     if (isFinishedOrFinishing())
         return;
 
-    m_domError = &error;
+    m_domError = error;
     abortInternal();
 }
 
@@ -434,7 +436,7 @@ void IDBTransaction::completeNoncursorRequest(IDBRequest& request, const IDBResu
 
     request.completeRequestAndDispatchEvent(result);
 
-    m_currentlyCompletingRequest = &request;
+    m_currentlyCompletingRequest = request;
 }
 
 void IDBTransaction::completeCursorRequest(IDBRequest& request, const IDBResultData& result)
@@ -443,7 +445,7 @@ void IDBTransaction::completeCursorRequest(IDBRequest& request, const IDBResultD
 
     request.didOpenOrIterateCursor(result);
 
-    m_currentlyCompletingRequest = &request;
+    m_currentlyCompletingRequest = request;
 }
 
 void IDBTransaction::finishedDispatchEventForRequest(IDBRequest& request)
@@ -628,7 +630,7 @@ void IDBTransaction::dispatchEvent(Event& event)
 
     Ref protectedThis { *this };
 
-    EventDispatcher::dispatchEvent({ this, m_database.ptr() }, event);
+    EventDispatcher::dispatchEvent(std::initializer_list<EventTarget*>({ this, m_database.ptr() }), event);
 
     if (!event.isTrusted())
         return;
@@ -761,6 +763,7 @@ void IDBTransaction::createIndexOnServer(IDBClient::TransactionOperation& operat
     ASSERT(canCurrentThreadAccessThreadLocalData(m_database->originThread()));
     ASSERT(isVersionChange());
 
+    operation.setNextRequestCanGoToServer(false);
     m_database->connectionProxy().createIndex(operation, info);
 }
 
@@ -1547,6 +1550,15 @@ void IDBTransaction::autoCommit()
         return;
     ASSERT(!m_currentlyCompletingRequest);
 
+    RefPtr context = scriptExecutionContext();
+    RefPtr scope = context ? dynamicDowncast<WorkerOrWorkletGlobalScope>(*context) : nullptr;
+    CheckedPtr scriptController = scope ? scope->script() : nullptr;
+    if (scriptController && scriptController->isTerminatingExecution() && scriptController->isExecutionForbidden()) {
+        // In this case, transaction should be aborted when context is destroyed.
+        RELEASE_LOG(Storage, "IDBTransaction::autoCommit: Disabled as script execution is terminated");
+        return;
+    }
+
     commitInternal();
 }
 
@@ -1554,6 +1566,22 @@ uint64_t IDBTransaction::generateOperationID()
 {
     static std::atomic<uint64_t> currentOperationID(1);
     return currentOperationID += 1;
+}
+
+void IDBTransaction::generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo& indexInfo, const std::optional<IDBKeyPath>& keyPath, const IDBKeyData& key, const IDBValue& value, std::optional<int64_t> recordID)
+{
+    RefPtr context = scriptExecutionContext();
+    auto* globalObject = context ? context->globalObject() : nullptr;
+    if (!globalObject)
+        return connectionProxy().didGenerateIndexKeyForRecord(info().identifier(), requestIdentifier, indexInfo, key, IndexKey { }, recordID);
+
+    auto jsValue = deserializeIDBValueToJSValue(*globalObject, value);
+    if (jsValue.isUndefinedOrNull())
+        return connectionProxy().didGenerateIndexKeyForRecord(info().identifier(), requestIdentifier, indexInfo, key, IndexKey { }, recordID);
+
+    IndexKey indexKey;
+    generateIndexKeyForValue(*globalObject, indexInfo, jsValue, indexKey, keyPath, key);
+    return connectionProxy().didGenerateIndexKeyForRecord(info().identifier(), requestIdentifier, indexInfo, key, indexKey, recordID);
 }
 
 } // namespace WebCore

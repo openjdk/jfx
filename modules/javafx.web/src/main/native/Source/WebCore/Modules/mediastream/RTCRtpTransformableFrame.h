@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,28 +26,40 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "RTCRtpScriptTransformer.h"
 #include <span>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct RTCEncodedAudioFrameMetadata {
-    uint32_t synchronizationSource;
-    Vector<uint32_t> contributingSources;
+    std::optional<uint32_t> synchronizationSource;
+    std::optional<uint8_t> payloadType;
+    std::optional<Vector<uint32_t>> contributingSources;
+    std::optional<uint16_t> sequenceNumber;
+    std::optional<uint32_t> rtpTimestamp;
+    String mimeType;
 };
 
 struct RTCEncodedVideoFrameMetadata {
     std::optional<int64_t> frameId;
-    Vector<int64_t> dependencies;
-    uint16_t width;
-    uint16_t height;
+    std::optional<Vector<int64_t>> dependencies;
+    std::optional<uint16_t> width;
+    std::optional<uint16_t> height;
     std::optional<int32_t> spatialIndex;
     std::optional<int32_t> temporalIndex;
-    uint32_t synchronizationSource;
+    std::optional<uint32_t> synchronizationSource;
+    std::optional<uint8_t> payloadType;
+    std::optional<Vector<uint32_t>> contributingSources;
+    std::optional<int64_t> timestamp;
+    std::optional<uint32_t> rtpTimestamp;
+    String mimeType;
 };
 
-class RTCRtpTransformableFrame : public RefCounted<RTCRtpTransformableFrame> {
+class RTCRtpScriptTransformer;
+class RTCRtpTransformableFrame : public ThreadSafeRefCounted<RTCRtpTransformableFrame> {
 public:
     virtual ~RTCRtpTransformableFrame() = default;
 
@@ -59,6 +71,22 @@ public:
     virtual RTCEncodedVideoFrameMetadata videoMetadata() const = 0;
 
     virtual bool isKeyFrame() const = 0;
+
+    virtual Ref<RTCRtpTransformableFrame> clone() = 0;
+    virtual void setOptions(const RTCEncodedAudioFrameMetadata&) = 0;
+    virtual void setOptions(const RTCEncodedVideoFrameMetadata&) = 0;
+
+    void setTransformer(RTCRtpScriptTransformer&);
+    bool isFromTransformer(RTCRtpScriptTransformer& transformer) const { return &transformer == m_transformer.get(); }
+
+private:
+    WeakPtr<RTCRtpScriptTransformer> m_transformer;
+};
+
+inline void RTCRtpTransformableFrame::setTransformer(RTCRtpScriptTransformer& transformer)
+{
+    ASSERT(!m_transformer);
+    m_transformer = transformer;
 };
 
 } // namespace WebCore

@@ -28,7 +28,7 @@
 #include "iso_heap.h"
 #include "pas_fast_tls.h"
 #include "pas_scavenger.h"
-#include <pthread.h>
+#include "pas_thread.h"
 #include <vector>
 #include <thread>
 

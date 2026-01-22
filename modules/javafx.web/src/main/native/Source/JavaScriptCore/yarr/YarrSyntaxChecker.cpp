@@ -37,16 +37,16 @@ public:
     void assertionBOL() { }
     void assertionEOL() { }
     void assertionWordBoundary(bool) { }
-    void atomPatternCharacter(char32_t) { }
+    void atomPatternCharacter(char32_t, bool) { }
     void atomBuiltInCharacterClass(BuiltInCharacterClassID, bool) { }
     void atomCharacterClassBegin(bool = false) { }
-    void atomCharacterClassAtom(UChar) { }
-    void atomCharacterClassRange(UChar, UChar) { }
+    void atomCharacterClassAtom(char16_t) { }
+    void atomCharacterClassRange(char16_t, char16_t) { }
     void atomCharacterClassBuiltIn(BuiltInCharacterClassID, bool) { }
     void atomClassStringDisjunction(Vector<Vector<char32_t>>&) { }
     void atomCharacterClassSetOp(CharacterClassSetOp) { }
-    void atomCharacterClassPushNested() { }
-    void atomCharacterClassPopNested() { }
+    void atomCharacterClassPushNested(bool) { }
+    void atomCharacterClassPopNested(bool) { }
     void atomCharacterClassEnd() { }
     void atomParenthesesSubpatternBegin(bool = true, std::optional<String> = std::nullopt) { }
     void atomParentheticalAssertionBegin(bool, MatchDirection) { }

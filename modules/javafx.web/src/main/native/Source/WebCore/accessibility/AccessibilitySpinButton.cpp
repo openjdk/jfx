@@ -27,31 +27,35 @@
 #include "AccessibilitySpinButton.h"
 
 #include "AXObjectCache.h"
+#include "ContainerNodeInlines.h"
 #include "RenderElement.h"
 
 namespace WebCore {
 
-Ref<AccessibilitySpinButton> AccessibilitySpinButton::create(AXID axID, AXObjectCache& cache)
-{
-    return adoptRef(*new AccessibilitySpinButton(axID, cache));
-}
-
 AccessibilitySpinButton::AccessibilitySpinButton(AXID axID, AXObjectCache& cache)
-    : AccessibilityMockObject(axID)
+    : AccessibilityMockObject(axID, cache)
     , m_spinButtonElement(nullptr)
     , m_incrementor(downcast<AccessibilitySpinButtonPart>(*cache.create(AccessibilityRole::SpinButtonPart)))
     , m_decrementor(downcast<AccessibilitySpinButtonPart>(*cache.create(AccessibilityRole::SpinButtonPart)))
 {
     m_incrementor->setIsIncrementor(true);
-    m_incrementor->setParent(this);
-
     m_decrementor->setIsIncrementor(false);
-    m_decrementor->setParent(this);
-
-    addChild(m_incrementor.get());
-    addChild(m_decrementor.get());
-    m_childrenInitialized = true;
 }
+
+Ref<AccessibilitySpinButton> AccessibilitySpinButton::create(AXID axID, AXObjectCache& cache)
+{
+    Ref spinButton = adoptRef(*new AccessibilitySpinButton(axID, cache));
+    // We have to do this setup here and not in the constructor to avoid an
+    // adoptionIsRequired ASSERT in RefCounted.h.
+    spinButton->m_incrementor->setParent(spinButton.ptr());
+    spinButton->m_decrementor->setParent(spinButton.ptr());
+    spinButton->addChild(spinButton->m_incrementor.get());
+    spinButton->addChild(spinButton->m_decrementor.get());
+    spinButton->m_childrenInitialized = true;
+
+    return spinButton;
+}
+
 
 AccessibilitySpinButton::~AccessibilitySpinButton() = default;
 
@@ -84,7 +88,7 @@ LayoutRect AccessibilitySpinButton::elementRect() const
 
 void AccessibilitySpinButton::addChildren()
 {
-    // This class sets its children once in the constructor, and should never
+    // This class sets its children once in the create function, and should never
     // have dirty or uninitialized children afterwards.
     ASSERT(m_childrenInitialized);
     ASSERT(!m_subtreeDirty);

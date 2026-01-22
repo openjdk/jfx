@@ -33,7 +33,7 @@
 #include "WorkerObjectProxy.h"
 #include "WorkerOptions.h"
 #include <wtf/CheckedPtr.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
@@ -45,14 +45,14 @@ class SharedWorkerThread;
 struct WorkerFetchResult;
 struct WorkerInitializationData;
 
-class SharedWorkerThreadProxy final : public ThreadSafeRefCounted<SharedWorkerThreadProxy>, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy, public CanMakeWeakPtr<SharedWorkerThreadProxy>, public CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy> {
-    WTF_MAKE_FAST_ALLOCATED;
+class SharedWorkerThreadProxy final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SharedWorkerThreadProxy, WTF::DestructionThread::Main>, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy, public CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SharedWorkerThreadProxy);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SharedWorkerThreadProxy);
 public:
     template<typename... Args> static Ref<SharedWorkerThreadProxy> create(Args&&... args) { return adoptRef(*new SharedWorkerThreadProxy(std::forward<Args>(args)...)); }
     WEBCORE_EXPORT ~SharedWorkerThreadProxy();
 
-    static SharedWorkerThreadProxy* byIdentifier(ScriptExecutionContextIdentifier);
+    static RefPtr<SharedWorkerThreadProxy> byIdentifier(ScriptExecutionContextIdentifier);
     WEBCORE_EXPORT static bool hasInstances();
 
     SharedWorkerIdentifier identifier() const;
@@ -96,11 +96,11 @@ private:
 
     ReportingClient* reportingClient() const final;
 
-    Ref<Page> m_page;
-    Ref<Document> m_document;
+    const Ref<Page> m_page;
+    const Ref<Document> m_document;
     ScriptExecutionContextIdentifier m_contextIdentifier;
-    Ref<SharedWorkerThread> m_workerThread;
-    CacheStorageProvider& m_cacheStorageProvider;
+    const Ref<SharedWorkerThread> m_workerThread;
+    WeakRef<CacheStorageProvider> m_cacheStorageProvider;
     RefPtr<CacheStorageConnection> m_cacheStorageConnection;
     bool m_isTerminatingOrTerminated { false };
     ClientOrigin m_clientOrigin;

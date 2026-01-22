@@ -37,7 +37,7 @@
 #include "Position.h"
 #include "Range.h"
 #include "RenderLayer.h"
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "VisibleSelection.h"
 #include <wtf/WeakRef.h>
@@ -49,8 +49,8 @@ namespace {
 
 struct SelectionContext {
 
-    using RendererMap = UncheckedKeyHashMap<SingleThreadWeakRef<RenderObject>, std::unique_ptr<RenderSelectionGeometry>>;
-    using RenderBlockMap = UncheckedKeyHashMap<SingleThreadWeakRef<const RenderBlock>, std::unique_ptr<RenderBlockSelectionGeometry>>;
+    using RendererMap = SingleThreadWeakHashMap<RenderObject, std::unique_ptr<RenderSelectionGeometry>>;
+    using RenderBlockMap = SingleThreadWeakHashMap<const RenderBlock, std::unique_ptr<RenderBlockSelectionGeometry>>;
 
     unsigned startOffset;
     unsigned endOffset;
@@ -68,9 +68,16 @@ static RenderObject* rendererAfterOffset(const RenderObject& renderer, unsigned 
 
 static bool isValidRendererForSelection(const RenderObject& renderer, const RenderRange& selection)
 {
-    return (renderer.canBeSelectionLeaf() || &renderer == selection.start() || &renderer == selection.end())
-    && renderer.selectionState() != RenderObject::HighlightState::None
-    && renderer.containingBlock();
+    if (!renderer.containingBlock())
+        return false;
+
+    if (renderer.isSkippedContent())
+        return false;
+
+    if (renderer.selectionState() == RenderObject::HighlightState::None)
+        return false;
+
+    return renderer.canBeSelectionLeaf() || &renderer == selection.start() || &renderer == selection.end();
 }
 
 static RenderBlock* containingBlockBelowView(const RenderObject& renderer)
@@ -143,15 +150,13 @@ void RenderSelection::clear()
 
 void RenderSelection::repaint() const
 {
-    UncheckedKeyHashSet<CheckedPtr<RenderBlock>> processedBlocks;
+    HashSet<CheckedPtr<RenderBlock>> processedBlocks;
     RenderObject* end = nullptr;
     if (m_renderRange.end())
         end = rendererAfterOffset(*m_renderRange.end(), m_renderRange.endOffset());
     RenderRangeIterator highlightIterator(m_renderRange.start());
     for (auto* renderer = highlightIterator.current(); renderer && renderer != end; renderer = highlightIterator.next()) {
-        if (!renderer->canBeSelectionLeaf() && renderer != m_renderRange.start() && renderer != m_renderRange.end())
-            continue;
-        if (renderer->selectionState() == RenderObject::HighlightState::None)
+        if (!isValidRendererForSelection(*renderer, m_renderRange))
             continue;
         RenderSelectionGeometry(*renderer, true).repaint();
         // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
@@ -175,11 +180,10 @@ IntRect RenderSelection::collectBounds(ClipToVisibleContent clipToVisibleContent
 
     RenderRangeIterator selectionIterator(start);
     while (start && start != stop) {
-        if ((start->canBeSelectionLeaf() || start == m_renderRange.start() || start == m_renderRange.end())
-            && start->selectionState() != RenderObject::HighlightState::None) {
+        if (isValidRendererForSelection(*start, m_renderRange)) {
             // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
             renderers.set(*start, makeUnique<RenderSelectionGeometry>(*start, clipToVisibleContent == ClipToVisibleContent::Yes));
-            LOG_WITH_STREAM(Selection, stream << " added start " << *start << " with rect " << renderers.get(start)->rect());
+            LOG_WITH_STREAM(Selection, stream << " added start " << *start << " with rect " << renderers.get(*start)->rect());
 
             auto* block = start->containingBlock();
             while (block && !is<RenderView>(*block)) {
@@ -197,13 +201,14 @@ IntRect RenderSelection::collectBounds(ClipToVisibleContent clipToVisibleContent
 
     // Now create a single bounding box rect that encloses the whole selection.
     LayoutRect selectionRect;
-    for (auto& info : renderers.values()) {
+    for (auto slectionEntry : renderers) {
+        auto* selectionGeometry = slectionEntry.value.get();
         // RenderSelectionGeometry::rect() is in the coordinates of the repaintContainer, so map to page coordinates.
-        LayoutRect currentRect = info->rect();
+        LayoutRect currentRect = selectionGeometry->rect();
         if (currentRect.isEmpty())
             continue;
 
-        if (auto* repaintContainer = info->repaintContainer()) {
+        if (auto* repaintContainer = selectionGeometry->repaintContainer()) {
             FloatRect localRect = currentRect;
             FloatQuad absQuad = repaintContainer->localToAbsoluteQuad(localRect);
             currentRect = absQuad.enclosingBoundingBox();
@@ -220,8 +225,8 @@ void RenderSelection::apply(const RenderRange& newSelection, RepaintMode blockRe
 {
     auto oldSelectionData = collectSelectionData(m_renderRange, blockRepaintMode == RepaintMode::NewXOROld);
     // Remove current selection.
-    for (auto& renderer : oldSelectionData.renderers.keys())
-        renderer->setSelectionStateIfNeeded(RenderObject::HighlightState::None);
+    for (auto selectionEntry : oldSelectionData.renderers)
+        selectionEntry.key.setSelectionStateIfNeeded(RenderObject::HighlightState::None);
     m_renderRange = newSelection;
     auto* selectionStart = m_renderRange.start();
     // Update the selection status of all objects between selectionStart and selectionEnd
@@ -242,7 +247,7 @@ void RenderSelection::apply(const RenderRange& newSelection, RepaintMode blockRe
     for (auto* currentRenderer = selectionStart; currentRenderer && currentRenderer != selectionEnd; currentRenderer = selectionIterator.next()) {
         if (currentRenderer == selectionStart || currentRenderer == m_renderRange.end())
             continue;
-        if (!currentRenderer->canBeSelectionLeaf())
+        if (!currentRenderer->canBeSelectionLeaf() || currentRenderer->isSkippedContent())
             continue;
         currentRenderer->setSelectionStateIfNeeded(RenderObject::HighlightState::Inside);
     }
@@ -283,41 +288,41 @@ void RenderSelection::apply(const RenderRange& newSelection, RepaintMode blockRe
         return;
 
     // Have any of the old selected objects changed compared to the new selection?
-    for (auto& selectedRendererInfo : oldSelectionData.renderers) {
+    for (auto selectedRendererInfo : oldSelectionData.renderers) {
         auto& renderer = selectedRendererInfo.key;
-        auto* newInfo = newSelectedRenderers.get(renderer.get());
+        auto* newInfo = newSelectedRenderers.get(renderer);
         auto* oldInfo = selectedRendererInfo.value.get();
         if (!newInfo || oldInfo->rect() != newInfo->rect() || oldInfo->state() != newInfo->state()
-            || (m_renderRange.start() == renderer.ptr() && oldSelectionData.startOffset != m_renderRange.startOffset())
-            || (m_renderRange.end() == renderer.ptr() && oldSelectionData.endOffset != m_renderRange.endOffset())) {
+            || (m_renderRange.start() == &renderer && oldSelectionData.startOffset != m_renderRange.startOffset())
+            || (m_renderRange.end() == &renderer && oldSelectionData.endOffset != m_renderRange.endOffset())) {
             oldInfo->repaint();
             if (newInfo) {
                 newInfo->repaint();
-                newSelectedRenderers.remove(renderer.get());
+                newSelectedRenderers.remove(renderer);
             }
         }
     }
 
     // Any new objects that remain were not found in the old objects dict, and so they need to be updated.
-    for (auto& selectedRendererInfo : newSelectedRenderers)
+    for (auto selectedRendererInfo : newSelectedRenderers)
         selectedRendererInfo.value->repaint();
 
     // Have any of the old blocks changed?
-    for (auto& selectedBlockInfo : oldSelectionData.blocks) {
+    for (auto selectedBlockInfo : oldSelectionData.blocks) {
         auto& block = selectedBlockInfo.key;
-        auto* newInfo = newSelectedBlocks.get(block.get());
+        auto* newInfo = newSelectedBlocks.get(block);
         auto* oldInfo = selectedBlockInfo.value.get();
         if (!newInfo || oldInfo->rects() != newInfo->rects() || oldInfo->state() != newInfo->state()) {
             oldInfo->repaint();
             if (newInfo) {
                 newInfo->repaint();
-                newSelectedBlocks.remove(block.get());
+                newSelectedBlocks.remove(block);
             }
         }
     }
 
     // Any new blocks that remain were not found in the old blocks dict, and so they need to be updated.
-    for (auto& selectedBlockInfo : newSelectedBlocks)
+    for (auto selectedBlockInfo : newSelectedBlocks)
         selectedBlockInfo.value->repaint();
 }
 

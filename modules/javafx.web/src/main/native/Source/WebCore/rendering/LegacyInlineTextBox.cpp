@@ -74,7 +74,7 @@ struct SameSizeAsLegacyInlineTextBox : public LegacyInlineBox {
 
 static_assert(sizeof(LegacyInlineTextBox) == sizeof(SameSizeAsLegacyInlineTextBox), "LegacyInlineTextBox should stay small");
 
-typedef UncheckedKeyHashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
+typedef HashMap<const LegacyInlineTextBox*, LayoutRect> LegacyInlineTextBoxOverflowMap;
 static LegacyInlineTextBoxOverflowMap* gTextBoxesWithOverflow;
 
 LegacyInlineTextBox::LegacyInlineTextBox(RenderSVGInlineText& renderer)
@@ -120,24 +120,6 @@ void LegacyInlineTextBox::setLogicalOverflowRect(const LayoutRect& rect)
     if (!gTextBoxesWithOverflow)
         gTextBoxesWithOverflow = new LegacyInlineTextBoxOverflowMap;
     gTextBoxesWithOverflow->add(this, rect);
-}
-
-LayoutUnit LegacyInlineTextBox::baselinePosition(FontBaseline baselineType) const
-{
-    if (!parent())
-        return 0;
-    if (&parent()->renderer() == renderer().parent())
-        return parent()->baselinePosition(baselineType);
-    return downcast<RenderBoxModelObject>(*renderer().parent()).baselinePosition(baselineType, isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
-}
-
-LayoutUnit LegacyInlineTextBox::lineHeight() const
-{
-    if (!renderer().parent())
-        return 0;
-    if (&parent()->renderer() == renderer().parent())
-        return parent()->lineHeight();
-    return downcast<RenderBoxModelObject>(*renderer().parent()).lineHeight(isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
 }
 
 LayoutUnit LegacyInlineTextBox::selectionTop() const
@@ -207,7 +189,7 @@ LayoutRect LegacyInlineTextBox::localSelectionRect(unsigned startPos, unsigned e
     selectionRect.move(logicalLeft(), 0);
     // FIXME: The computation of the snapped selection rect differs from the computation of this rect
     // in paintMarkedTextBackground(). See <https://bugs.webkit.org/show_bug.cgi?id=138913>.
-    return snappedSelectionRect(selectionRect, logicalRight(), renderer().writingMode());
+    return snappedSelectionRect(selectionRect, logicalRight(), writingMode);
 }
 
 void LegacyInlineTextBox::deleteLine()
@@ -302,7 +284,7 @@ void LegacyInlineTextBox::outputLineBox(TextStream& stream, bool mark, int depth
     value = value.substring(start(), len());
     value = makeStringByReplacingAll(value, '\\', "\\\\"_s);
     value = makeStringByReplacingAll(value, '\n', "\\n"_s);
-    stream << boxName() << " "_s << FloatRect(x(), y(), width(), height()) << " ("_s << this << ") renderer->("_s << &renderer() << ") run("_s << start() << ", "_s << start() + len() << ") \""_s << value.utf8().data() << "\""_s;
+    stream << boxName() << " "_s << FloatRect(x(), y(), width(), height()) << " ("_s << this << ") renderer->("_s << &renderer() << ") run("_s << start() << ", "_s << start() + len() << ") \""_s << value.utf8().data() << '"';
     stream.nextLine();
 }
 

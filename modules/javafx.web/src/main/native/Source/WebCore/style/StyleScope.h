@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
- * Copyright (C) 2004-2010, 2012-2013, 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2011 Google Inc. All rights reserved.
@@ -28,13 +28,16 @@
 #pragma once
 
 #include "AnchorPositionEvaluator.h"
+#include "LayoutRect.h"
 #include "LayoutSize.h"
+#include "StyleScopeIdentifier.h"
 #include "StyleScopeOrdinal.h"
 #include "Timer.h"
 #include <memory>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Identified.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -52,24 +55,26 @@ class CSSCounterStyleRegistry;
 class CSSStyleSheet;
 class Document;
 class Element;
-class WeakPtrImplWithEventTargetData;
 class HTMLSlotElement;
 class Node;
 class ProcessingInstruction;
+class RenderBoxModelObject;
 class StyleSheet;
 class StyleSheetContents;
 class StyleSheetList;
 class ShadowRoot;
 class TreeScope;
+class WeakPtrImplWithEventTargetData;
 
 namespace Style {
 
 class CustomPropertyRegistry;
+class MatchResultCache;
 class Resolver;
 class RuleSet;
 struct MatchResult;
 
-class Scope final : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr<Scope> {
+class Scope final : public CanMakeWeakPtr<Scope>, public CanMakeCheckedPtr<Scope>, public Identified<ScopeIdentifier> {
     WTF_MAKE_TZONE_ALLOCATED(Scope);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Scope);
 public:
@@ -116,6 +121,9 @@ public:
     // The change is assumed to potentially affect all author and user stylesheets including shadow roots.
     WEBCORE_EXPORT void didChangeStyleSheetEnvironment();
 
+    // This is called when extension stylesheets change.
+    void didChangeExtensionStyleSheets();
+
     void didChangeViewportSize();
 
     void invalidateMatchedDeclarationsCache();
@@ -128,14 +136,14 @@ public:
 #endif
 
     WEBCORE_EXPORT Resolver& resolver();
+    Ref<Resolver> protectedResolver();
     Resolver* resolverIfExists() { return m_resolver.get(); }
     void clearResolver();
     void releaseMemory();
 
     void clearViewTransitionStyles();
 
-    const MatchResult* cachedMatchResult(const Element&);
-    void updateCachedMatchResult(const Element&, const MatchResult&);
+    MatchResultCache& matchResultCache();
 
     const Document& document() const { return m_document; }
     Document& document() { return m_document; }
@@ -145,10 +153,11 @@ public:
     static Scope& forNode(Node&);
     static const Scope& forNode(const Node&);
     static Scope* forOrdinal(Element&, ScopeOrdinal);
+    static const Scope* forOrdinal(const Element&, ScopeOrdinal);
 
     struct LayoutDependencyUpdateContext {
-        UncheckedKeyHashSet<CheckedRef<const Element>> invalidatedContainers;
-        UncheckedKeyHashSet<CheckedRef<const Element>> invalidatedAnchorPositioned;
+        HashSet<CheckedRef<const Element>> invalidatedContainers;
+        HashSet<CheckedRef<const Element>> invalidatedAnchorPositioned;
     };
     bool invalidateForLayoutDependencies(LayoutDependencyUpdateContext&);
 
@@ -157,10 +166,11 @@ public:
     const CSSCounterStyleRegistry& counterStyleRegistry() const { return m_counterStyleRegistry.get(); }
     CSSCounterStyleRegistry& counterStyleRegistry() { return m_counterStyleRegistry.get(); }
 
-    AnchorPositionedStates& anchorPositionedStates() { return m_anchorPositionedStates; }
-    const AnchorPositionedStates& anchorPositionedStates() const { return m_anchorPositionedStates; }
-    void resetAnchorPositioningStateBeforeStyleResolution();
+    AnchorPositionedToAnchorMap& anchorPositionedToAnchorMap() { return m_anchorPositionedToAnchorMap; }
+    const AnchorPositionedToAnchorMap& anchorPositionedToAnchorMap() const { return m_anchorPositionedToAnchorMap; }
     void updateAnchorPositioningStateAfterStyleResolution();
+
+    bool invalidateForAnchorDependencies(LayoutDependencyUpdateContext&);
 
 private:
     Scope& documentScope();
@@ -168,11 +178,11 @@ private:
 
     void didRemovePendingStylesheet();
 
-    enum class UpdateType : uint8_t { ActiveSet, ContentsOrInterpretation };
+    enum class UpdateType : uint8_t { ActiveSet, FullForExtensionStyleSheets, ContentsOrInterpretation };
     void updateActiveStyleSheets(UpdateType);
     void scheduleUpdate(UpdateType);
 
-    using ResolverScopes = UncheckedKeyHashMap<Ref<Resolver>, Vector<WeakPtr<Scope>>>;
+    using ResolverScopes = HashMap<Ref<Resolver>, Vector<WeakPtr<Scope>>>;
     ResolverScopes collectResolverScopes();
     template <typename TestFunction> void evaluateMediaQueries(TestFunction&&);
 
@@ -198,7 +208,7 @@ private:
     StyleSheetChange analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets);
     void invalidateStyleAfterStyleSheetChange(const StyleSheetChange&);
 
-    void updateResolver(Vector<RefPtr<CSSStyleSheet>>&, ResolverUpdateType);
+    void updateResolver(std::span<const RefPtr<CSSStyleSheet>>, ResolverUpdateType);
     void createDocumentResolver();
     void createOrFindSharedShadowTreeResolver();
     void unshareShadowTreeResolverBeforeMutation();
@@ -215,10 +225,9 @@ private:
     static MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
 
     bool invalidateForContainerDependencies(LayoutDependencyUpdateContext&);
-    bool invalidateForAnchorDependencies(LayoutDependencyUpdateContext&);
     bool invalidateForPositionTryFallbacks(LayoutDependencyUpdateContext&);
 
-    CheckedRef<Document> m_document;
+    const CheckedRef<Document> m_document;
     ShadowRoot* m_shadowRoot { nullptr };
 
     RefPtr<Resolver> m_resolver;
@@ -230,7 +239,7 @@ private:
 
     Timer m_pendingUpdateTimer;
 
-    mutable UncheckedKeyHashSet<SingleThreadWeakRef<const CSSStyleSheet>> m_weakCopyOfActiveStyleSheetListForFastLookup;
+    mutable HashSet<SingleThreadWeakRef<const CSSStyleSheet>> m_weakCopyOfActiveStyleSheetListForFastLookup;
 
     // Track the currently loading top-level stylesheets needed for rendering.
     // Sheets loaded using the @import directive are not included in this count.
@@ -254,17 +263,23 @@ private:
     std::optional<MediaQueryViewportState> m_viewportStateOnPreviousMediaQueryEvaluation;
     WeakHashMap<Element, LayoutSize, WeakPtrImplWithEventTargetData> m_queryContainerDimensionsOnLastUpdate;
 
-    SingleThreadWeakHashMap<const RenderBoxModelObject, LayoutRect> m_anchorRectsOnLastUpdate;
+    struct AnchorPosition {
+        LayoutRect absoluteRect;
+        Vector<LayoutSize, 2> containingBlockSizes;
 
-    mutable WeakHashMap<const Element, UniqueRef<MatchResult>, WeakPtrImplWithEventTargetData> m_cachedMatchResults;
+        bool operator==(const AnchorPosition&) const = default;
+    };
+    SingleThreadWeakHashMap<const RenderBoxModelObject, AnchorPosition> m_anchorPositionsOnLastUpdate;
 
-    UniqueRef<CustomPropertyRegistry> m_customPropertyRegistry;
-    UniqueRef<CSSCounterStyleRegistry> m_counterStyleRegistry;
+    std::unique_ptr<MatchResultCache> m_matchResultCache;
+
+    const UniqueRef<CustomPropertyRegistry> m_customPropertyRegistry;
+    const UniqueRef<CSSCounterStyleRegistry> m_counterStyleRegistry;
 
     // FIXME: These (and some things above) are only relevant for the root scope.
-    UncheckedKeyHashMap<ResolverSharingKey, Ref<Resolver>> m_sharedShadowTreeResolvers;
+    HashMap<ResolverSharingKey, Ref<Resolver>> m_sharedShadowTreeResolvers;
 
-    AnchorPositionedStates m_anchorPositionedStates;
+    AnchorPositionedToAnchorMap m_anchorPositionedToAnchorMap;
 };
 
 HTMLSlotElement* assignedSlotForScopeOrdinal(const Element&, ScopeOrdinal);

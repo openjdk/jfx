@@ -72,7 +72,7 @@ bool VM::isSafeToRecurseSoft() const
 template<typename Func>
 void VM::logEvent(CodeBlock* codeBlock, const char* summary, const Func& func)
 {
-    if (LIKELY(!m_perBytecodeProfiler))
+    if (!m_perBytecodeProfiler) [[likely]]
         return;
 
     m_perBytecodeProfiler->logEvent(codeBlock, summary, func());
@@ -81,9 +81,9 @@ void VM::logEvent(CodeBlock* codeBlock, const char* summary, const Func& func)
 inline CallFrame* VM::topJSCallFrame() const
 {
     CallFrame* frame = topCallFrame;
-    if (UNLIKELY(!frame))
+    if (!frame) [[unlikely]]
         return frame;
-    if (LIKELY(!frame->isNativeCalleeFrame() && !frame->isPartiallyInitializedFrame()))
+    if (!frame->isNativeCalleeFrame() && !frame->isPartiallyInitializedFrame()) [[likely]]
         return frame;
     EntryFrame* entryFrame = topEntryFrame;
     do {
@@ -102,7 +102,7 @@ inline void VM::setFuzzerAgent(std::unique_ptr<FuzzerAgent>&& fuzzerAgent)
 template<typename Func>
 inline void VM::forEachDebugger(const Func& callback)
 {
-    if (LIKELY(m_debuggers.isEmpty()))
+    if (m_debuggers.isEmpty()) [[likely]]
         return;
 
     for (auto* debugger = m_debuggers.head(); debugger; debugger = debugger->next())

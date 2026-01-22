@@ -64,6 +64,7 @@ class NativeExecutable;
     macro(ThrowExceptionFromCall, throwExceptionFromCallGenerator) \
     macro(ThrowExceptionFromCallSlowPath, throwExceptionFromCallSlowPathGenerator) \
     macro(ThrowStackOverflowAtPrologue, throwStackOverflowAtPrologueGenerator) \
+    macro(ThrowOutOfMemoryError, throwOutOfMemoryErrorGenerator) \
     macro(VirtualThunkForRegularCall, virtualThunkForRegularCall) \
     macro(VirtualThunkForTailCall, virtualThunkForTailCall) \
     macro(VirtualThunkForConstruct, virtualThunkForConstruct) \
@@ -139,22 +140,14 @@ class NativeExecutable;
     macro(CheckPrivateBrandHandler, checkPrivateBrandHandler) \
     macro(SetPrivateBrandHandler, setPrivateBrandHandler) \
 
-#if ENABLE(YARR_JIT_BACKREFERENCES_FOR_16BIT_EXPRS)
-#define JSC_FOR_EACH_YARR_JIT_BACKREFERENCES_THUNK(macro) \
-    macro(AreCanonicallyEquivalent, Yarr::areCanonicallyEquivalentThunkGenerator)
-#else
-#define JSC_FOR_EACH_YARR_JIT_BACKREFERENCES_THUNK(macro)
-#endif
-
 enum class CommonJITThunkID : uint8_t {
 #define JSC_DEFINE_COMMON_JIT_THUNK_ID(name, func) name,
 JSC_FOR_EACH_COMMON_THUNK(JSC_DEFINE_COMMON_JIT_THUNK_ID)
-JSC_FOR_EACH_YARR_JIT_BACKREFERENCES_THUNK(JSC_DEFINE_COMMON_JIT_THUNK_ID)
 #undef JSC_DEFINE_COMMON_JIT_THUNK_ID
 };
 
 #define JSC_COUNT_COMMON_JIT_THUNK_ID(name, func) + 1
-static constexpr unsigned numberOfCommonThunkIDs = 0 JSC_FOR_EACH_COMMON_THUNK(JSC_COUNT_COMMON_JIT_THUNK_ID) JSC_FOR_EACH_YARR_JIT_BACKREFERENCES_THUNK(JSC_COUNT_COMMON_JIT_THUNK_ID);
+static constexpr unsigned numberOfCommonThunkIDs = 0 JSC_FOR_EACH_COMMON_THUNK(JSC_COUNT_COMMON_JIT_THUNK_ID);
 #undef JSC_COUNT_COMMON_JIT_THUNK_ID
 
 class JITThunks final : private WeakHandleOwner {

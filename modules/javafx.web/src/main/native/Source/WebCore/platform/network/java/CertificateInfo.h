@@ -34,14 +34,14 @@
 namespace WebCore {
 
 struct CertificateSummary;
-
 class CertificateInfo {
 public:
     using Certificate = Vector<uint8_t>;
     using CertificateChain = Vector<Certificate>;
-
     CertificateInfo() = default;
     WEBCORE_EXPORT CertificateInfo(int verificationError, CertificateChain&&);
+
+
 
     WEBCORE_EXPORT CertificateInfo isolatedCopy() const;
 

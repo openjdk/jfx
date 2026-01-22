@@ -30,6 +30,11 @@
 
 PAS_BEGIN_EXTERN_C;
 
+#ifndef PAS_USE_COMPACT_ONLY_HEAP
+#define PAS_USE_COMPACT_ONLY_HEAP 0
+#define PAS_USE_COMPACT_ONLY_TZONE_HEAP 0
+#endif
+
 enum pas_allocation_mode {
     /* We are allocating an object from ordinary memory and don't plan on
        compacting its address. */
@@ -58,7 +63,7 @@ static inline const char* pas_allocation_mode_get_string(pas_allocation_mode all
     case pas_always_compact_allocation_mode:
         return "always compact";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

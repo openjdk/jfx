@@ -25,6 +25,7 @@
 #include "SVGPatternElement.h"
 
 #include "AffineTransform.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "FloatConversion.h"
 #include "GraphicsContext.h"
@@ -37,6 +38,7 @@
 #include "SVGFitToViewBox.h"
 #include "SVGGraphicsElement.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
 #include "SVGTransformable.h"
@@ -74,7 +76,7 @@ Ref<SVGPatternElement> SVGPatternElement::create(const QualifiedName& tagName, D
 
 void SVGPatternElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
     switch (name.nodeName()) {
     case AttributeNames::patternUnitsAttr: {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
@@ -194,7 +196,7 @@ Ref<const SVGTransformList> SVGPatternElement::protectedPatternTransform() const
     return m_patternTransform->currentValue();
 }
 
-AffineTransform SVGPatternElement::localCoordinateSpaceTransform(SVGLocatable::CTMScope) const
+AffineTransform SVGPatternElement::localCoordinateSpaceTransform(CTMScope) const
 {
     return protectedPatternTransform()->concatenate();
 }

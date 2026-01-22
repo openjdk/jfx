@@ -274,63 +274,6 @@ function findLastIndex(callback /*, thisArg */)
 }
 
 @linkTimeConstant
-function maxWithPositives(a, b)
-{
-    "use strict";
-
-    return (a < b) ? b : a;
-}
-
-@linkTimeConstant
-function minWithMaybeNegativeZeroAndPositive(maybeNegativeZero, positive)
-{
-    "use strict";
-
-    return (maybeNegativeZero < positive) ? maybeNegativeZero : positive;
-}
-
-function copyWithin(target, start /*, end */)
-{
-    "use strict";
-
-    var array = @toObject(this, "Array.prototype.copyWithin requires that |this| not be null or undefined");
-    var length = @toLength(array.length);
-
-    var relativeTarget = @toIntegerOrInfinity(target);
-    var to = (relativeTarget < 0) ? @maxWithPositives(length + relativeTarget, 0) : @minWithMaybeNegativeZeroAndPositive(relativeTarget, length);
-
-    var relativeStart = @toIntegerOrInfinity(start);
-    var from = (relativeStart < 0) ? @maxWithPositives(length + relativeStart, 0) : @minWithMaybeNegativeZeroAndPositive(relativeStart, length);
-
-    var relativeEnd;
-    var end = @argument(2);
-    if (end === @undefined)
-        relativeEnd = length;
-    else
-        relativeEnd = @toIntegerOrInfinity(end);
-
-    var finalValue = (relativeEnd < 0) ? @maxWithPositives(length + relativeEnd, 0) : @minWithMaybeNegativeZeroAndPositive(relativeEnd, length);
-
-    var count = @minWithMaybeNegativeZeroAndPositive(finalValue - from, length - to);
-
-    var direction = 1;
-    if (from < to && to < from + count) {
-        direction = -1;
-        from = from + count - 1;
-        to = to + count - 1;
-    }
-
-    for (var i = 0; i < count; ++i, from += direction, to += direction) {
-        if (from in array)
-            array[to] = array[from];
-        else
-            delete array[to];
-    }
-
-    return array;
-}
-
-@linkTimeConstant
 function flatIntoArray(target, source, sourceLength, targetIndex, depth)
 {
     "use strict";
@@ -349,24 +292,6 @@ function flatIntoArray(target, source, sourceLength, targetIndex, depth)
         }
     }
     return targetIndex;
-}
-
-function flat()
-{
-    "use strict";
-
-    var array = @toObject(this, "Array.prototype.flat requires that |this| not be null or undefined");
-    var length = @toLength(array.length);
-
-    var depthNum = 1;
-    var depth = @argument(0);
-    if (depth !== @undefined)
-        depthNum = @toIntegerOrInfinity(depth);
-
-    var result = @newArrayWithSpecies(0, array);
-
-    @flatIntoArray(result, array, length, 0, depthNum);
-    return result;
 }
 
 @linkTimeConstant
@@ -419,74 +344,4 @@ function at(index)
         k += length;
 
     return (k >= 0 && k < length) ? array[k] : @undefined;
-}
-
-function toSpliced(start, deleteCount /*, ...items */)
-{
-    "use strict"
-
-    // Step 1.
-    var array = @toObject(this, "Array.prototype.toSpliced requires that |this| not be null or undefined");
-
-    // Step 2.
-    var length = @toLength(array.length);
-
-    // Step 3.
-    var relativeStart = @toIntegerOrInfinity(start);
-
-    var actualStart;
-    // Step 4-6.
-    if (relativeStart === -@Infinity)
-        actualStart = 0;
-    else if (relativeStart < 0)
-        actualStart = length + relativeStart > 0 ? length + relativeStart : 0;
-    else
-        actualStart = @min(relativeStart, length);
-
-    // Step 7.
-    var insertCount = 0;
-    var actualDeleteCount;
-
-    // Step 8-10.
-    var argCount = @argumentCount();
-    if (argCount === 0)
-        actualDeleteCount = 0;
-    else if (argCount === 1)
-        actualDeleteCount = length - actualStart;
-    else {
-        insertCount = argCount - 2;
-        var tempDeleteCount = @toIntegerOrInfinity(deleteCount);
-        tempDeleteCount = tempDeleteCount > 0 ? tempDeleteCount : 0;
-        actualDeleteCount = @min(tempDeleteCount, length - actualStart);
-    }
-
-    // Step 11.
-    var newLen = length + insertCount - actualDeleteCount;
-
-    // Step 12.
-    if (newLen >= @MAX_SAFE_INTEGER)
-        @throwTypeError("Array length exceeds 2**53 - 1");
-
-    // Step 13.
-    var result = @newArrayWithSize(newLen);
-
-    // Step 14.
-    var k = 0;
-
-    // Step 16.
-    for (; k < actualStart; k++)
-        @putByValDirect(result, k, array[k]);
-
-    // Step 17.
-    for (var i = 0; i < insertCount; i++, k++)
-        @putByValDirect(result, k, arguments[i + 2]);
-
-    // Step 18.
-    for (; k < newLen; k++) {
-        var from = k + actualDeleteCount - insertCount;
-        @putByValDirect(result, k, array[from]);
-    }
-
-    return result;
-
 }

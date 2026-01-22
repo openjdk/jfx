@@ -75,8 +75,8 @@ private:
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     bool childShouldCreateRenderer(const Node&) const override;
-    void willRecalcStyle(Style::Change) final;
-    void didRecalcStyle(Style::Change) final;
+    void willRecalcStyle(OptionSet<Style::Change>) final;
+    void didRecalcStyle(OptionSet<Style::Change>) final;
     void didAttachRenderers() final;
     void willDetachRenderers() final;
 
@@ -87,7 +87,7 @@ private:
 
     bool m_needsWidgetUpdate { false };
     bool m_needsDocumentActivationCallbacks { false };
-    std::unique_ptr<HTMLImageLoader> m_imageLoader;
+    const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     bool m_needsImageReload { false };
     bool m_hasUpdateScheduledForAfterStyleResolution { false };
 };

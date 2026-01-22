@@ -31,17 +31,16 @@ namespace WebCore {
 
 class CSSParserTokenRange;
 class CSSValue;
-struct CSSParserContext;
+
+namespace CSS {
+struct PropertyParserState;
+}
 
 namespace CSSPropertyParserHelpers {
 
 // <'offset-path'> = none | <offset-path> || <coord-box>
 // https://drafts.fxtf.org/motion-1/#propdef-offset-path
-RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange&, const CSSParserContext&);
-
-// <'offset-rotate'> = [ auto | reverse ] || <angle>
-// https://drafts.fxtf.org/motion-1/#offset-rotate-property
-RefPtr<CSSValue> consumeOffsetRotate(CSSParserTokenRange&, const CSSParserContext&);
+RefPtr<CSSValue> consumeOffsetPath(CSSParserTokenRange&, CSS::PropertyParserState&);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

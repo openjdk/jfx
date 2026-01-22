@@ -37,10 +37,8 @@ public:
     DNSResolveQueueJava() = default;
     void resolve(const String& hostname, uint64_t identifier, DNSCompletionHandler&&) final;
     void stopResolve(uint64_t identifier) final;
-
-private:
-    void updateIsUsingProxy() final;
-    void platformResolve(const String&) final;
+    void updateIsUsingProxy() override;
+    void platformResolve(const String&) override;
 };
 
 using DNSResolveQueuePlatform = DNSResolveQueueJava;

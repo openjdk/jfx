@@ -28,7 +28,6 @@
 #include "ContextDestructionObserver.h"
 #include "ExceptionCode.h"
 #include <span>
-#include <variant>
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/UniqueRef.h>
@@ -63,7 +62,7 @@ public:
 private:
     void processMessages();
 
-    using Message = std::variant<CString, Ref<FragmentedSharedBuffer>, UniqueRef<BlobLoader>>;
+    using Message = Variant<CString, Ref<FragmentedSharedBuffer>, UniqueRef<BlobLoader>>;
     Deque<Message> m_queue;
 
     WriteString m_writeString;

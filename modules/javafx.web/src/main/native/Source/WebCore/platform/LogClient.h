@@ -23,12 +23,13 @@
 
 #pragma once
 
+#include <os/log.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
 class LogClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LogClient);
 public:
     LogClient() = default;
     virtual ~LogClient() { }

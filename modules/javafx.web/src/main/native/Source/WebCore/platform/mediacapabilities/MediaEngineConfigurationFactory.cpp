@@ -33,7 +33,8 @@
 #include "MediaDecodingConfiguration.h"
 #include "MediaEncodingConfiguration.h"
 #include "MediaEngineConfigurationFactoryMock.h"
-#include <wtf/Algorithms.h>
+#include "MediaSessionManagerInterface.h"
+#include <algorithm>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Vector.h>
 
@@ -89,12 +90,12 @@ void MediaEngineConfigurationFactory::installFactory(MediaEngineFactory&& factor
 
 bool MediaEngineConfigurationFactory::hasDecodingConfigurationFactory()
 {
-    return mockEnabled() || WTF::anyOf(factories(), [] (auto& factory) { return (bool)factory.createDecodingConfiguration; });
+    return mockEnabled() || std::ranges::any_of(factories(), [](auto& factory) { return (bool)factory.createDecodingConfiguration; });
 }
 
 bool MediaEngineConfigurationFactory::hasEncodingConfigurationFactory()
 {
-    return mockEnabled() || WTF::anyOf(factories(), [] (auto& factory) { return (bool)factory.createEncodingConfiguration; });
+    return mockEnabled() || std::ranges::any_of(factories(), [](auto& factory) { return (bool)factory.createEncodingConfiguration; });
 }
 
 void MediaEngineConfigurationFactory::createDecodingConfiguration(MediaDecodingConfiguration&& config, DecodingConfigurationCallback&& callback)
@@ -122,7 +123,7 @@ void MediaEngineConfigurationFactory::createDecodingConfiguration(MediaDecodingC
                 return;
             }
 
-            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.supportedConfiguration), WTFMove(callback));
+            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.configuration), WTFMove(callback));
         });
     };
     factoryCallback(factoryCallback, factories().span(), WTFMove(config), WTFMove(callback));
@@ -153,7 +154,7 @@ void MediaEngineConfigurationFactory::createEncodingConfiguration(MediaEncodingC
                 return;
             }
 
-            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.supportedConfiguration), WTFMove(callback));
+            factoryCallback(factoryCallback, nextFactories.subspan(1), WTFMove(info.configuration), WTFMove(callback));
         });
     };
     factoryCallback(factoryCallback, factories().span(), WTFMove(config), WTFMove(callback));
@@ -167,6 +168,25 @@ void MediaEngineConfigurationFactory::enableMock()
 void MediaEngineConfigurationFactory::disableMock()
 {
     mockEnabled() = false;
+}
+
+static MediaEngineConfigurationFactory::MediaSessionManagerProvider& mediaSessionManagerProvider()
+{
+    static NeverDestroyed<MediaEngineConfigurationFactory::MediaSessionManagerProvider> provider;
+    return provider.get();
+}
+
+void MediaEngineConfigurationFactory::setMediaSessionManagerProvider(MediaSessionManagerProvider&& provider)
+{
+    mediaSessionManagerProvider() = WTFMove(provider);
+}
+
+RefPtr<MediaSessionManagerInterface> MediaEngineConfigurationFactory::mediaSessionManagerForPageIdentifier(PageIdentifier pageIdentifier)
+{
+    if (mediaSessionManagerProvider())
+        return mediaSessionManagerProvider()(pageIdentifier);
+
+    return nullptr;
 }
 
 }

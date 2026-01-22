@@ -30,6 +30,8 @@
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/Page.h>
+#include "FrameInlines.h"
+#include  "LocalFrame.h"
 #include <WebCore/ProgressTracker.h>
 
 #include "com_sun_webkit_LoadListenerClient.h"

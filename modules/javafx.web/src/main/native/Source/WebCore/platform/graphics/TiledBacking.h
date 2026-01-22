@@ -34,6 +34,10 @@
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include "DynamicContentScalingDisplayList.h"
+#endif
+
 namespace WebCore {
 class TiledBackingClient;
 }
@@ -95,6 +99,10 @@ public:
 
     virtual void willRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
     virtual void didRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayListForTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
+#endif
 };
 
 
@@ -195,6 +203,10 @@ public:
 #if USE(CA)
     virtual PlatformCALayer* tiledScrollingIndicatorLayer() = 0;
 #endif
+
+    virtual void clearObscuredInsetsAdjustments() = 0;
+    virtual void obscuredInsetsWillChange(FloatBoxExtent&&) = 0;
+    virtual FloatRect adjustedTileClipRectForObscuredInsets(const FloatRect&) const = 0;
 };
 
 } // namespace WebCore

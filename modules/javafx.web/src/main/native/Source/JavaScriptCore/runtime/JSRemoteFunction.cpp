@@ -104,14 +104,14 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallForJSFunction, (JSGlobalObject* globa
         RETURN_IF_EXCEPTION(scope, clearArgOverflowCheckAndReturnAbortValue());
         args.append(wrappedValue);
     }
-    if (UNLIKELY(args.hasOverflowed())) {
+    if (args.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
     ExecutableBase* executable = targetFunction->executable();
     if (executable->hasJITCodeForCall()) {
         // Force the executable to cache its arity entrypoint.
-        executable->entrypointFor(CodeForCall, MustCheckArity);
+        executable->entrypointFor(CodeSpecializationKind::CodeForCall, ArityCheckMode::MustCheckArity);
     }
 
     auto callData = JSC::getCallData(targetFunction);
@@ -145,7 +145,7 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallGeneric, (JSGlobalObject* globalObjec
         RETURN_IF_EXCEPTION(scope, clearArgOverflowCheckAndReturnAbortValue());
         args.append(wrappedValue);
     }
-    if (UNLIKELY(args.hasOverflowed())) {
+    if (args.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
@@ -221,7 +221,7 @@ void JSRemoteFunction::copyNameAndLength(JSGlobalObject* globalObject)
 
     if (targetHasLength) {
         JSValue targetLength;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             targetLength = slot.getValue(globalObject, vm.propertyNames->length);
         else
             targetLength = m_targetFunction->get(globalObject, vm.propertyNames->length);
@@ -251,7 +251,7 @@ void JSRemoteFunction::finishCreation(JSGlobalObject* globalObject, VM& vm)
     copyNameAndLength(globalObject);
 
     auto* exception = scope.exception();
-    if (UNLIKELY(exception && !vm.isTerminationException(exception))) {
+    if (exception && !vm.isTerminationException(exception)) [[unlikely]] {
         scope.clearException();
         throwTypeError(globalObject, scope, "wrapping returned function throws an error"_s);
     }

@@ -26,12 +26,13 @@
 #pragma once
 #if ENABLE(DECLARATIVE_WEB_PUSH)
 
-#include "ExceptionOr.h"
 #include "PushPermissionState.h"
 #include "PushSubscriptionData.h"
 #include "PushSubscriptionIdentifier.h"
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class WEBCORE_EXPORT PushStrategy {
 public:

@@ -50,10 +50,25 @@ typedef struct pas_physical_memory_transaction pas_physical_memory_transaction;
 
 struct pas_large_sharing_node {
     pas_red_black_tree_node tree_node;
+#if PAS_OS(WINDOWS)
+    /*
+    clang-cl uses ms-style structs, which means the enums are represented using a signed int.
+    This breaks on assignment with "implicit truncation from 'int' to a one-bit wide bit-field changes value from 1 to -1"
+    The struct definitions break on check-webkit-style (runtime/enum_bitfields) as this is a known problem.
 
+    Unfortunately clang-cl doesn't support the gcc_struct annotation so we can override the enum type behaviour.
+    If / when this code uses C23 (requires Clang 20), this can be solved with Enhanced enumerations N3030.
+    Until then - on Windows we'll use unsigned on these types, but add the clang::preferred_type annotation for better debug information
+    */
+
+    [[clang::preferred_type(pas_commit_mode)]] unsigned is_committed : 1;
+    [[clang::preferred_type(pas_physical_memory_synchronization_style)]] unsigned synchronization_style : 1;
+    [[clang::preferred_type(pas_mmap_capability)]] unsigned mmap_capability : 1;
+#else
     pas_commit_mode is_committed : 1;
     pas_physical_memory_synchronization_style synchronization_style : 1;
     pas_mmap_capability mmap_capability : 1;
+#endif
 
     unsigned index_in_min_heap : 29; /* it's a one-based index; it's zero to indicate that we're not in
                                         the min_heap. */
@@ -195,4 +210,3 @@ PAS_API bool pas_large_sharing_pool_for_each(
 PAS_END_EXTERN_C;
 
 #endif /* PAS_LARGE_SHARING_POOL_H */
-

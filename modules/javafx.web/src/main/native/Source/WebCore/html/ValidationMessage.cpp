@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010, 2012 Google Inc. All rights reserved.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 #include "config.h"
 #include "ValidationMessage.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "ElementInlines.h"
@@ -114,20 +115,20 @@ void ValidationMessage::updateValidationMessage(HTMLElement& element, const Stri
     }
 
     m_element = element;
-    setMessage(updatedMessage);
+    setMessage(WTFMove(updatedMessage));
 }
 
-void ValidationMessage::setMessage(const String& message)
+void ValidationMessage::setMessage(String&& message)
 {
     if (ValidationMessageClient* client = validationMessageClient()) {
-        client->showValidationMessage(*m_element, message);
+        client->showValidationMessage(*m_element, WTFMove(message));
         return;
     }
 
     // Don't modify the DOM tree in this context.
     // If so, an assertion in Element::isFocusable() fails.
     ASSERT(!message.isEmpty());
-    m_message = message;
+    m_message = WTFMove(message);
     if (!m_bubble)
         m_timer = makeUnique<Timer>(*this, &ValidationMessage::buildBubbleTree);
     else
@@ -205,41 +206,41 @@ void ValidationMessage::buildBubbleTree()
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
     ScriptDisallowedScope::EventAllowedScope allowedScope(shadowRoot);
 
-    Document& document = m_element->document();
-    m_bubble = HTMLDivElement::create(document);
+    Ref document = m_element->document();
+    m_bubble = HTMLDivElement::create(document.get());
     shadowRoot->appendChild(*m_bubble);
     m_bubble->setUserAgentPart(UserAgentParts::webkitValidationBubble());
     // Need to force position:absolute because RenderMenuList doesn't assume it
     // contains non-absolute or non-fixed renderers as children.
     m_bubble->setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
 
-    auto clipper = HTMLDivElement::create(document);
+    Ref clipper = HTMLDivElement::create(document.get());
     m_bubble->appendChild(clipper);
     clipper->setUserAgentPart(UserAgentParts::webkitValidationBubbleArrowClipper());
-    auto bubbleArrow = HTMLDivElement::create(document);
+    Ref bubbleArrow = HTMLDivElement::create(document.get());
     clipper->appendChild(bubbleArrow);
     bubbleArrow->setUserAgentPart(UserAgentParts::webkitValidationBubbleArrow());
 
-    auto message = HTMLDivElement::create(document);
+    Ref message = HTMLDivElement::create(document.get());
     m_bubble->appendChild(message);
     message->setUserAgentPart(UserAgentParts::webkitValidationBubbleMessage());
-    auto icon = HTMLDivElement::create(document);
+    Ref icon = HTMLDivElement::create(document.get());
     message->appendChild(icon);
     icon->setUserAgentPart(UserAgentParts::webkitValidationBubbleIcon());
-    auto textBlock = HTMLDivElement::create(document);
+    Ref textBlock = HTMLDivElement::create(document.get());
     message->appendChild(textBlock);
     textBlock->setUserAgentPart(UserAgentParts::webkitValidationBubbleTextBlock());
-    m_messageHeading = HTMLDivElement::create(document);
+    m_messageHeading = HTMLDivElement::create(document.get());
     textBlock->appendChild(*m_messageHeading);
     m_messageHeading->setUserAgentPart(UserAgentParts::webkitValidationBubbleHeading());
-    m_messageBody = HTMLDivElement::create(document);
+    m_messageBody = HTMLDivElement::create(document.get());
     textBlock->appendChild(*m_messageBody);
     m_messageBody->setUserAgentPart(UserAgentParts::webkitValidationBubbleBody());
 
     setMessageDOMAndStartTimer();
 
     // FIXME: Use transition to show the bubble.
-    document.scheduleToAdjustValidationMessagePosition(*this);
+    document->scheduleToAdjustValidationMessagePosition(*this);
 }
 
 void ValidationMessage::requestToHideMessage()

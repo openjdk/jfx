@@ -81,7 +81,31 @@ void MemoryObjectStore::writeTransactionStarted(MemoryBackingStoreTransaction& t
     LOG(IndexedDB, "MemoryObjectStore::writeTransactionStarted");
 
     ASSERT(!m_writeTransaction);
-    m_writeTransaction = &transaction;
+    m_writeTransaction = transaction;
+    m_keyGeneratorValueBeforeTransaction = m_keyGeneratorValue;
+
+    for (auto& index : m_indexesByIdentifier.values())
+        index->writeTransactionStarted(transaction);
+}
+
+void MemoryObjectStore::transactionAborted(MemoryBackingStoreTransaction& transaction)
+{
+    LOG(IndexedDB, "MemoryObjectStore::writeTransactionAborted");
+
+    if (m_writeTransaction != &transaction)
+        return;
+
+    auto transactionModifiedRecords = std::exchange(m_transactionModifiedRecords, { });
+    for (auto& [key, value] : transactionModifiedRecords) {
+        deleteRecord(key);
+        if (value.data())
+            addRecordWithoutUpdatingIndexes(transaction, key, { value });
+    }
+
+    m_keyGeneratorValue = m_keyGeneratorValueBeforeTransaction;
+
+    for (auto& index : m_indexesByIdentifier.values())
+        index->transactionAborted(transaction);
 }
 
 void MemoryObjectStore::writeTransactionFinished(MemoryBackingStoreTransaction& transaction)
@@ -90,6 +114,10 @@ void MemoryObjectStore::writeTransactionFinished(MemoryBackingStoreTransaction& 
 
     ASSERT_UNUSED(transaction, m_writeTransaction == &transaction);
     m_writeTransaction = nullptr;
+
+    m_transactionModifiedRecords.clear();
+    for (auto& index : m_indexesByIdentifier.values())
+        index->writeTransactionFinished(transaction);
 }
 
 MemoryBackingStoreTransaction* MemoryObjectStore::writeTransaction()
@@ -97,28 +125,52 @@ MemoryBackingStoreTransaction* MemoryObjectStore::writeTransaction()
     return m_writeTransaction.get();
 }
 
-IDBError MemoryObjectStore::createIndex(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& info)
+IDBError MemoryObjectStore::addIndex(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& indexInfo)
 {
-    LOG(IndexedDB, "MemoryObjectStore::createIndex");
-
     if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
-        return IDBError(ExceptionCode::ConstraintError);
+        return IDBError { ExceptionCode::ConstraintError, "Transaction state is invalid."_s };
 
-    ASSERT(!m_indexesByIdentifier.contains(info.identifier()));
-    if (m_indexesByIdentifier.contains(info.identifier()))
-        return IDBError { ExceptionCode::UnknownError, "Index with identifier already exists"_s };
+    if (m_indexesByIdentifier.contains(indexInfo.identifier()))
+        return IDBError { ExceptionCode::ConstraintError, "Index identifier already exists"_s };
 
-    auto index = MemoryIndex::create(info, *this);
-    // If there was an error populating the new index, then the current records in the object store violate its contraints
-    auto error = populateIndexWithExistingRecords(index.get());
-    if (!error.isNull())
-        return error;
-
-    m_info.addExistingIndex(info);
+    auto index = MemoryIndex::create(indexInfo, *this);
+    index->writeTransactionStarted(transaction);
+    m_info.addExistingIndex(indexInfo);
     transaction.addNewIndex(index.get());
     registerIndex(WTFMove(index));
 
     return IDBError { };
+}
+
+void MemoryObjectStore::revertAddIndex(MemoryBackingStoreTransaction& transaction, IDBIndexIdentifier indexIdentifier)
+{
+    if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
+        return;
+
+    m_info.deleteIndex(indexIdentifier);
+    if (RefPtr index = takeIndexByIdentifier(indexIdentifier))
+        transaction.removeNewIndex(*index);
+}
+
+IDBError MemoryObjectStore::updateIndexRecordsWithIndexKey(MemoryBackingStoreTransaction& transaction, const IDBIndexInfo& indexInfo, const IDBKeyData& key, const IndexKey& indexKey)
+{
+    if (!m_writeTransaction || !m_writeTransaction->isVersionChange() || m_writeTransaction != &transaction)
+        return IDBError { ExceptionCode::ConstraintError, "Transaction state is invalid."_s };
+
+    auto* index = m_indexesByIdentifier.get(indexInfo.identifier());
+    if (!index)
+        return IDBError { ExceptionCode::ConstraintError, "Index does not exist."_s };
+
+    if (indexKey.isNull())
+        return IDBError { };
+
+    return index->putIndexKey(key, indexKey);
+}
+
+void MemoryObjectStore::forEachRecord(Function<void(const IDBKeyData& key, const IDBValue& value)>&& apply)
+{
+    for (auto& [key, value] : m_keyValueStore)
+        apply(key, value);
 }
 
 void MemoryObjectStore::maybeRestoreDeletedIndex(Ref<MemoryIndex>&& index)
@@ -131,14 +183,6 @@ void MemoryObjectStore::maybeRestoreDeletedIndex(Ref<MemoryIndex>&& index)
     m_info.addExistingIndex(index->info());
 
     ASSERT(!m_indexesByIdentifier.contains(index->info().identifier()));
-    index->clearIndexValueStore();
-    auto error = populateIndexWithExistingRecords(index.get());
-
-    // Since this index was installed in the object store before this transaction started,
-    // assuming things were in a valid state then, we should definitely be able to successfully
-    // repopulate the index with the object store's pre-transaction records.
-    ASSERT_UNUSED(error, error.isNull());
-
     registerIndex(WTFMove(index));
 }
 
@@ -183,10 +227,7 @@ void MemoryObjectStore::deleteAllIndexes(MemoryBackingStoreTransaction& transact
 
 bool MemoryObjectStore::containsRecord(const IDBKeyData& key)
 {
-    if (!m_keyValueStore)
-        return false;
-
-    return m_keyValueStore->contains(key);
+    return m_keyValueStore.contains(key);
 }
 
 void MemoryObjectStore::clear()
@@ -194,21 +235,15 @@ void MemoryObjectStore::clear()
     LOG(IndexedDB, "MemoryObjectStore::clear");
     ASSERT(m_writeTransaction);
 
-    m_writeTransaction->objectStoreCleared(*this, WTFMove(m_keyValueStore), WTFMove(m_orderedKeys));
+    for (auto& [key, value] : std::exchange(m_keyValueStore, { }))
+        m_transactionModifiedRecords.add(key, value);
+    m_orderedKeys = nullptr;
+
     for (auto& index : m_indexesByIdentifier.values())
         index->objectStoreCleared();
 
     for (auto& cursor : m_cursors.values())
         cursor->objectStoreCleared();
-}
-
-void MemoryObjectStore::replaceKeyValueStore(std::unique_ptr<KeyValueMap>&& store, std::unique_ptr<IDBKeyDataSet>&& orderedKeys)
-{
-    ASSERT(m_writeTransaction);
-    ASSERT(m_writeTransaction->isAborting());
-
-    m_keyValueStore = WTFMove(store);
-    m_orderedKeys = WTFMove(orderedKeys);
 }
 
 void MemoryObjectStore::deleteRecord(const IDBKeyData& key)
@@ -217,21 +252,16 @@ void MemoryObjectStore::deleteRecord(const IDBKeyData& key)
 
     ASSERT(m_writeTransaction);
 
-    if (!m_keyValueStore) {
-        m_writeTransaction->recordValueChanged(*this, key, nullptr);
+    auto iterator = m_keyValueStore.find(key);
+    if (iterator == m_keyValueStore.end())
         return;
-    }
 
     ASSERT(m_orderedKeys);
 
-    auto iterator = m_keyValueStore->find(key);
-    if (iterator == m_keyValueStore->end()) {
-        m_writeTransaction->recordValueChanged(*this, key, nullptr);
-        return;
-    }
+    if (!m_writeTransaction->isAborting())
+        m_transactionModifiedRecords.add(key, iterator->value);
 
-    m_writeTransaction->recordValueChanged(*this, key, &iterator->value);
-    m_keyValueStore->remove(iterator);
+    m_keyValueStore.remove(iterator);
     m_orderedKeys->erase(key);
 
     updateIndexesForDeleteRecord(key);
@@ -262,13 +292,22 @@ void MemoryObjectStore::deleteRange(const IDBKeyRangeData& inputRange)
     }
 }
 
-IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction, const IDBKeyData& keyData, const IDBValue& value)
+void MemoryObjectStore::addRecordWithoutUpdatingIndexes(MemoryBackingStoreTransaction& transaction, const IDBKeyData& keyData, const IDBValue& value)
 {
-    IndexIDToIndexKeyMap indexKeys;
-    callOnIDBSerializationThreadAndWait([info = m_info.isolatedCopy(), keyData = keyData.isolatedCopy(), value = value.isolatedCopy(), &indexKeys](auto& globalObject) {
-        indexKeys = generateIndexKeyMapForValueIsolatedCopy(globalObject, info, keyData, value);
-    });
-    return addRecord(transaction, keyData, indexKeys, value);
+    if (m_writeTransaction != &transaction)
+        return;
+
+    ASSERT(m_writeTransaction && m_writeTransaction->isAborting());
+
+    if (!m_orderedKeys)
+        m_orderedKeys = makeUniqueWithoutFastMallocCheck<IDBKeyDataSet>();
+
+    auto mapResult = m_keyValueStore.add(keyData, value.data());
+    ASSERT_UNUSED(mapResult, mapResult.isNewEntry);
+    auto listResult = m_orderedKeys->insert(keyData);
+    ASSERT_UNUSED(listResult, listResult.second);
+
+    updateCursorsForPutRecord(listResult.first);
 }
 
 IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction, const IDBKeyData& keyData, const IndexIDToIndexKeyMap& indexKeys, const IDBValue& value)
@@ -277,16 +316,18 @@ IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction
 
     ASSERT(m_writeTransaction);
     ASSERT_UNUSED(transaction, m_writeTransaction == &transaction);
-    ASSERT(!m_keyValueStore || !m_keyValueStore->contains(keyData));
+    ASSERT(!m_keyValueStore.contains(keyData));
     ASSERT(!m_orderedKeys || m_orderedKeys->find(keyData) == m_orderedKeys->end());
 
-    if (!m_keyValueStore) {
-        ASSERT(!m_orderedKeys);
-        m_keyValueStore = makeUnique<KeyValueMap>();
+    if (!m_orderedKeys)
         m_orderedKeys = makeUniqueWithoutFastMallocCheck<IDBKeyDataSet>();
+
+    if (!m_writeTransaction->isAborting()) {
+        auto iterator = m_keyValueStore.find(keyData);
+        m_transactionModifiedRecords.add(keyData, iterator != m_keyValueStore.end() ? iterator->value : ThreadSafeDataBuffer { });
     }
 
-    auto mapResult = m_keyValueStore->set(keyData, value.data());
+    auto mapResult = m_keyValueStore.add(keyData, value.data());
     ASSERT(mapResult.isNewEntry);
     auto listResult = m_orderedKeys->insert(keyData);
     ASSERT(listResult.second);
@@ -294,7 +335,7 @@ IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction
     // If there was an error indexing this addition, then revert it.
     auto error = updateIndexesForPutRecord(keyData, indexKeys);
     if (!error.isNull()) {
-        m_keyValueStore->remove(mapResult.iterator);
+        m_keyValueStore.remove(mapResult.iterator);
         m_orderedKeys->erase(listResult.first);
     } else
         updateCursorsForPutRecord(listResult.first);
@@ -349,37 +390,6 @@ IDBError MemoryObjectStore::updateIndexesForPutRecord(const IDBKeyData& key, con
     return error;
 }
 
-IDBError MemoryObjectStore::populateIndexWithExistingRecords(MemoryIndex& index)
-{
-    if (!m_keyValueStore)
-        return IDBError { };
-
-    for (const auto& iterator : *m_keyValueStore) {
-        std::optional<IndexKey> resultIndexKey;
-        callOnIDBSerializationThreadAndWait([key = iterator.key.isolatedCopy(), value = iterator.value, info = m_info.isolatedCopy(), indexInfo = index.info().isolatedCopy(), &resultIndexKey](auto& globalObject) {
-            auto jsValue = deserializeIDBValueToJSValue(globalObject, value);
-            if (jsValue.isUndefinedOrNull())
-                return;
-
-            IndexKey indexKey;
-            generateIndexKeyForValue(globalObject, indexInfo, jsValue, indexKey, info.keyPath(), key);
-            resultIndexKey = WTFMove(indexKey).isolatedCopy();
-        });
-
-        if (!resultIndexKey)
-            return IDBError { };
-
-        if (resultIndexKey->isNull())
-            continue;
-
-        IDBError error = index.putIndexKey(iterator.key, *resultIndexKey);
-        if (!error.isNull())
-            return error;
-    }
-
-    return IDBError { };
-}
-
 uint64_t MemoryObjectStore::countForKeyRange(std::optional<IDBIndexIdentifier> indexIdentifier, const IDBKeyRangeData& inRange) const
 {
     LOG(IndexedDB, "MemoryObjectStore::countForKeyRange");
@@ -390,7 +400,7 @@ uint64_t MemoryObjectStore::countForKeyRange(std::optional<IDBIndexIdentifier> i
         return index->countForKeyRange(inRange);
     }
 
-    if (!m_keyValueStore)
+    if (m_keyValueStore.isEmpty())
         return 0;
 
     uint64_t count = 0;
@@ -410,10 +420,7 @@ uint64_t MemoryObjectStore::countForKeyRange(std::optional<IDBIndexIdentifier> i
 
 ThreadSafeDataBuffer MemoryObjectStore::valueForKey(const IDBKeyData& key) const
 {
-    if (!m_keyValueStore)
-        return { };
-
-    return m_keyValueStore->get(key);
+    return m_keyValueStore.get(key);
 }
 
 ThreadSafeDataBuffer MemoryObjectStore::valueForKeyRange(const IDBKeyRangeData& keyRangeData) const
@@ -424,8 +431,7 @@ ThreadSafeDataBuffer MemoryObjectStore::valueForKeyRange(const IDBKeyRangeData& 
     if (key.isNull())
         return ThreadSafeDataBuffer();
 
-    ASSERT(m_keyValueStore);
-    return m_keyValueStore->get(key);
+    return m_keyValueStore.get(key);
 }
 
 void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, std::optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
@@ -466,10 +472,10 @@ IDBGetResult MemoryObjectStore::indexValueForKeyRange(IDBIndexIdentifier indexId
 
 IDBKeyData MemoryObjectStore::lowestKeyWithRecordInRange(const IDBKeyRangeData& keyRangeData) const
 {
-    if (!m_keyValueStore)
+    if (m_keyValueStore.isEmpty())
         return { };
 
-    if (keyRangeData.isExactlyOneKey() && m_keyValueStore->contains(keyRangeData.lowerKey))
+    if (keyRangeData.isExactlyOneKey() && m_keyValueStore.contains(keyRangeData.lowerKey))
         return keyRangeData.lowerKey;
 
     ASSERT(m_orderedKeys);
@@ -486,7 +492,7 @@ IDBKeyData MemoryObjectStore::lowestKeyWithRecordInRange(const IDBKeyRangeData& 
         return { };
 
     if (!keyRangeData.upperKey.isNull()) {
-        if (lowestInRange->compare(keyRangeData.upperKey) > 0)
+        if (*lowestInRange > keyRangeData.upperKey)
             return { };
         if (keyRangeData.upperOpen && *lowestInRange == keyRangeData.upperKey)
             return { };
@@ -501,17 +507,8 @@ void MemoryObjectStore::registerIndex(Ref<MemoryIndex>&& index)
     ASSERT(!m_indexesByName.contains(index->info().name()));
 
     auto identifier = index->info().identifier();
-    m_indexesByName.set(index->info().name(), &index.get());
-    m_indexesByIdentifier.set(identifier, WTFMove(index));
-}
-
-void MemoryObjectStore::unregisterIndex(MemoryIndex& index)
-{
-    ASSERT(m_indexesByIdentifier.contains(index.info().identifier()));
-    ASSERT(m_indexesByName.contains(index.info().name()));
-
-    m_indexesByName.remove(index.info().name());
-    m_indexesByIdentifier.remove(index.info().identifier());
+    m_indexesByName.add(index->info().name(), &index.get());
+    m_indexesByIdentifier.add(identifier, WTFMove(index));
 }
 
 MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
@@ -523,7 +520,7 @@ MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo&
     if (!result.isNewEntry)
         return nullptr;
 
-    result.iterator->value = makeUnique<MemoryObjectStoreCursor>(*this, info, transaction);
+    result.iterator->value = MemoryObjectStoreCursor::create(*this, info, transaction);
     return result.iterator->value.get();
 }
 
@@ -535,7 +532,7 @@ void MemoryObjectStore::renameIndex(MemoryIndex& index, const String& newName)
     ASSERT(m_info.infoForExistingIndex(index.info().identifier()) == m_info.infoForExistingIndex(index.info().name()));
 
     m_info.infoForExistingIndex(index.info().identifier())->rename(newName);
-    m_indexesByName.set(newName, m_indexesByName.take(index.info().name()));
+    m_indexesByName.add(newName, m_indexesByName.take(index.info().name()));
     index.rename(newName);
 }
 

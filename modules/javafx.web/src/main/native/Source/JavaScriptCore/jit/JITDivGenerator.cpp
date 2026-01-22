@@ -123,7 +123,6 @@ void JITDivGenerator::generateFastPath(CCallHelpers& jit)
 #if USE(JSVALUE64)
     jit.moveDoubleTo64(m_leftFPR, m_scratchGPR);
     CCallHelpers::Jump notDoubleZero = jit.branchTest64(CCallHelpers::NonZero, m_scratchGPR);
-
     jit.move(GPRInfo::numberTagRegister, m_result.payloadGPR());
     m_endJumpList.append(jit.jump());
 

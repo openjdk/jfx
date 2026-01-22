@@ -50,7 +50,6 @@ typedef struct {
         switch (name ## _header_placement_mode) { \
         case pas_page_header_at_head_of_page: { \
             uintptr_t ptr = (uintptr_t)boundary; \
-            PAS_PROFILE(PAGE_BASE_FROM_BOUNDARY, ptr); \
             return (pas_page_base*)ptr; \
         } \
         \
@@ -65,11 +64,10 @@ typedef struct {
             PAS_ASSERT(data); \
             \
             page_base = (uintptr_t)pas_ptr_hash_map_get(&data->page_header_table, boundary).value; \
-            PAS_PROFILE(PAGE_BASE_FROM_BOUNDARY, page_base); \
             return (pas_page_base*)page_base; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \
@@ -98,7 +96,7 @@ typedef struct {
             return result; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \
@@ -123,7 +121,7 @@ typedef struct {
             return; \
         } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return; \
     } \
     \
