@@ -661,7 +661,7 @@ public final class StyleAttributeMap {
 
         /**
          * Sets the tab stops paragraph attribute.
-         * @param a the alignment
+         * @param positions the tab stop positions
          * @return this Builder instance
          * @since 27
          */
