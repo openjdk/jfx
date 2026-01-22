@@ -36,11 +36,6 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.prism.Graphics;
 import com.sun.scenario.effect.Blend;
-import com.sun.scenario.effect.Blend.Mode;
-import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.ImageData;
-import com.sun.scenario.effect.impl.prism.PrDrawable;
-import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import javafx.scene.Node;
 
 public class NGGroup extends NGNode {
