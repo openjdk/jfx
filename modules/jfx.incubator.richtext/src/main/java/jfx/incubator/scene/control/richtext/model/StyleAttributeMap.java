@@ -660,6 +660,21 @@ public final class StyleAttributeMap {
         }
 
         /**
+         * Sets the tab stops paragraph attribute.
+         * @param a the alignment
+         * @return this Builder instance
+         * @since 27
+         */
+        public Builder setTabStops(double ... positions) {
+            TabStop[] ts = new TabStop[positions.length];
+            for (int i = 0; i < positions.length; i++) {
+                ts[i] = new TabStop(positions[i]);
+            }
+            set(TAB_STOPS, ts);
+            return this;
+        }
+
+        /**
          * Sets the text alignment attribute to the specified color.
          * @param a the alignment
          * @return this Builder instance
