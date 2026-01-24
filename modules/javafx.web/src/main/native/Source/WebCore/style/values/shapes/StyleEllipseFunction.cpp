@@ -120,7 +120,7 @@ WebCore::Path PathComputation<Ellipse>::operator()(const Ellipse& value, const F
 auto Blending<Ellipse>::canBlend(const Ellipse& a, const Ellipse& b) -> bool
 {
     auto canBlendRadius = [](const auto& radiusA, const auto& radiusB) {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [](const Ellipse::Length&, const Ellipse::Length&) {
                 return true;
             },
@@ -139,7 +139,7 @@ auto Blending<Ellipse>::canBlend(const Ellipse& a, const Ellipse& b) -> bool
 auto Blending<Ellipse>::blend(const Ellipse& a, const Ellipse& b, const BlendingContext& context) -> Ellipse
 {
     auto blendRadius = [](const auto& radiusA, const auto& radiusB, const BlendingContext& context) -> Ellipse::RadialSize {
-        return std::visit(WTF::makeVisitor(
+        return WTF::visit(WTF::makeVisitor(
             [&](const Ellipse::Length& lengthA, const Ellipse::Length& lengthB) -> Ellipse::RadialSize {
                 return WebCore::Style::blend(lengthA, lengthB, context);
             },

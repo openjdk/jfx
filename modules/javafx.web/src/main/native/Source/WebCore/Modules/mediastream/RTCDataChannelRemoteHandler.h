@@ -78,7 +78,7 @@ private:
     Markable<RTCDataChannelIdentifier> m_localIdentifier;
 
     RTCDataChannelHandlerClient* m_client { nullptr };
-    Ref<RTCDataChannelRemoteHandlerConnection> m_connection;
+    const Ref<RTCDataChannelRemoteHandlerConnection> m_connection;
 
     struct Message {
         bool isRaw { false };

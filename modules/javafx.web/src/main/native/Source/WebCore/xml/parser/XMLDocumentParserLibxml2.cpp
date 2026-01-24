@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2000 Peter Kelly <pmk@post.com>
- * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
@@ -65,15 +65,11 @@
 #include "TextResourceDecoder.h"
 #include "ThrowOnDynamicMarkupInsertionCountIncrementer.h"
 #include "TransformSource.h"
+#include "UserScriptTypes.h"
 #include "XMLNSNames.h"
 #include "XMLDocumentParserScope.h"
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
-IGNORE_WARNINGS_BEGIN("undef")
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
-IGNORE_WARNINGS_END
-IGNORE_WARNINGS_END
 #include <wtf/MallocSpan.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -98,7 +94,7 @@ static inline bool shouldRenderInXMLTreeViewerMode(Document& document)
     if (document.transformSourceDocument())
         return false;
 
-    auto* frame = document.frame();
+    RefPtr frame = document.frame();
     if (!frame)
         return false;
 
@@ -117,18 +113,32 @@ static inline bool shouldRenderInXMLTreeViewerMode(Document& document)
 // cannot be called directly from XMLMalloc::malloc() and XMLMalloc::free() or they would cause
 // infinite recusion.
 
+#if HAVE(TYPE_AWARE_MALLOC)
+static void* xmlMallocHelper(size_t size, malloc_type_id_t typeID)
+{
+    return malloc_type_malloc(size, typeID);
+}
+#else
 static void* xmlMallocHelper(size_t size)
 {
     return xmlMalloc(size);
 }
+#endif
 
 static void xmlFreeHelper(void* p)
 {
+#if HAVE(TYPE_AWARE_MALLOC)
+    free(p);
+#else
     xmlFree(p);
+#endif
 }
 
 struct XMLMalloc {
-    static void* malloc(size_t size) { return xmlMallocHelper(size); }
+    static void* malloc(size_t size) WTF_TYPE_AWARE_MALLOC_FUNCTION(xmlMallocHelper, 1)
+    {
+        return xmlMallocHelper(size);
+    }
     static void free(void* p) { xmlFreeHelper(p); }
 };
 
@@ -250,7 +260,7 @@ public:
 
 private:
     struct PendingCallback {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(PendingCallback);
         virtual ~PendingCallback() = default;
         virtual void call(XMLDocumentParser* parser) = 0;
     };
@@ -258,8 +268,6 @@ private:
     struct PendingStartElementNSCallback : public PendingCallback {
         virtual ~PendingStartElementNSCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(xmlLocalName);
             xmlFree(xmlPrefix);
             xmlFree(xmlURI);
@@ -269,7 +277,6 @@ IGNORE_WARNINGS_BEGIN("deprecated-declarations")
                 for (int j = 0; j < 4; j++)
                     xmlFree(attributes[i * 5 + j]);
             }
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -306,11 +313,8 @@ IGNORE_WARNINGS_END
     struct PendingProcessingInstructionCallback : public PendingCallback {
         virtual ~PendingProcessingInstructionCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(target);
             xmlFree(data);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -334,10 +338,7 @@ IGNORE_WARNINGS_END
     struct PendingCommentCallback : public PendingCallback {
         virtual ~PendingCommentCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(s);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -351,12 +352,9 @@ IGNORE_WARNINGS_END
     struct PendingInternalSubsetCallback : public PendingCallback {
         virtual ~PendingInternalSubsetCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(name);
             xmlFree(externalID);
             xmlFree(systemID);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -372,10 +370,7 @@ IGNORE_WARNINGS_END
     struct PendingErrorCallback: public PendingCallback {
         virtual ~PendingErrorCallback()
         {
-// FIXME (286277): Stop ignoring -Wundef and -Wdeprecated-declarations in code that imports libxml and libxslt headers
-IGNORE_WARNINGS_BEGIN("deprecated-declarations")
             xmlFree(message);
-IGNORE_WARNINGS_END
         }
 
         void call(XMLDocumentParser* parser) override
@@ -400,7 +395,7 @@ static int matchFunc(const char*)
 {
     // Only match loads initiated due to uses of libxml2 from within XMLDocumentParser to avoid
     // interfering with client applications that also use libxml2.  http://bugs.webkit.org/show_bug.cgi?id=17353
-    return XMLDocumentParserScope::currentCachedResourceLoader() && libxmlLoaderThread == &Thread::current();
+    return XMLDocumentParserScope::currentCachedResourceLoader() && libxmlLoaderThread == &Thread::currentSingleton();
 }
 
 class OffsetBuffer {
@@ -505,7 +500,7 @@ static bool shouldAllowExternalLoad(const URL& url)
 static void* openFunc(const char* uri)
 {
     ASSERT(XMLDocumentParserScope::currentCachedResourceLoader());
-    ASSERT(libxmlLoaderThread == &Thread::current());
+    ASSERT(libxmlLoaderThread == &Thread::currentSingleton());
 
     RefPtr cachedResourceLoader = XMLDocumentParserScope::currentCachedResourceLoader().get();
     if (!cachedResourceLoader)
@@ -531,15 +526,15 @@ static void* openFunc(const char* uri)
             FetchOptions options;
             options.mode = FetchOptions::Mode::SameOrigin;
             options.credentials = FetchOptions::Credentials::Include;
-            cachedResourceLoader->frame()->loader().loadResourceSynchronously(url, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
+            cachedResourceLoader->frame()->loader().loadResourceSynchronously(URL { url }, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
 
             if (response.url().isEmpty()) {
-                if (Page* page = document ? document->page() : nullptr)
+                if (RefPtr page = document ? document->page() : nullptr)
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because cross-origin loads are not allowed."_s));
                 return &globalDescriptor;
             }
             if (!externalEntityMimeTypeAllowed(response)) {
-                if (Page* page = document ? document->page() : nullptr)
+                if (RefPtr page = document ? document->page() : nullptr)
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '"_s, url.stringCenterEllipsizedToLength(), "' because only XML MIME types are allowed."_s));
                 return &globalDescriptor;
             }
@@ -603,7 +598,7 @@ void initializeXMLParser()
         xmlRegisterOutputCallbacks(matchFunc, openFunc, writeFunc, closeFunc);
         defaultEntityLoader = xmlGetExternalEntityLoader();
         RELEASE_ASSERT_WITH_MESSAGE(defaultEntityLoader != WebCore::externalEntityLoader, "XMLDocumentParserScope was created too early");
-        libxmlLoaderThread = &Thread::current();
+        libxmlLoaderThread = &Thread::currentSingleton();
     });
 }
 
@@ -662,7 +657,7 @@ bool XMLDocumentParser::supportsXMLVersion(const String& version)
 XMLDocumentParser::XMLDocumentParser(Document& document, IsInFrameView isInFrameView, OptionSet<ParserContentPolicy> policy)
     : ScriptableDocumentParser(document, policy)
     , m_isInFrameView(isInFrameView)
-    , m_pendingCallbacks(makeUnique<PendingCallbacks>())
+    , m_pendingCallbacks(makeUniqueRef<PendingCallbacks>())
     , m_currentNode(&document)
     , m_scriptStartPosition(TextPosition::belowRangePosition())
 {
@@ -670,7 +665,7 @@ XMLDocumentParser::XMLDocumentParser(Document& document, IsInFrameView isInFrame
 
 XMLDocumentParser::XMLDocumentParser(DocumentFragment& fragment, HashMap<AtomString, AtomString>&& prefixToNamespaceMap, const AtomString& defaultNamespaceURI, OptionSet<ParserContentPolicy> parserContentPolicy)
     : ScriptableDocumentParser(fragment.document(), parserContentPolicy)
-    , m_pendingCallbacks(makeUnique<PendingCallbacks>())
+    , m_pendingCallbacks(makeUniqueRef<PendingCallbacks>())
     , m_currentNode(&fragment)
     , m_scriptStartPosition(TextPosition::belowRangePosition())
     , m_parsingFragment(true)
@@ -717,7 +712,7 @@ void XMLDocumentParser::doWrite(const String& parseString)
 
         // FIXME: Can we parse 8-bit strings directly as Latin-1 instead of upconverting to UTF-16?
         switchToUTF16(context->context());
-        xmlParseChunk(context->context(), reinterpret_cast<const char*>(StringView(parseString).upconvertedCharacters().get()), sizeof(UChar) * parseString.length(), 0);
+        xmlParseChunk(context->context(), reinterpret_cast<const char*>(StringView(parseString).upconvertedCharacters().get()), sizeof(char16_t) * parseString.length(), 0);
 
         // JavaScript (which may be run under the xmlParseChunk callstack) may
         // cause the parser to be stopped or detached.
@@ -838,16 +833,15 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
 
     bool willConstructCustomElement = false;
     if (!m_parsingFragment) {
-        if (auto* window = m_currentNode->document().domWindow()) {
-            auto* registry = window->customElementRegistry();
-            if (UNLIKELY(registry))
+        if (RefPtr window = m_currentNode->document().window()) {
+            if (RefPtr registry = window->customElementRegistry(); registry) [[unlikely]]
                 willConstructCustomElement = registry->findInterface(qName);
         }
     }
 
     std::optional<ThrowOnDynamicMarkupInsertionCountIncrementer> markupInsertionCountIncrementer;
     std::optional<CustomElementReactionStack> customElementReactionStack;
-    if (UNLIKELY(willConstructCustomElement)) {
+    if (willConstructCustomElement) [[unlikely]] {
         markupInsertionCountIncrementer.emplace(m_currentNode->document());
         m_currentNode->document().eventLoop().performMicrotaskCheckpoint();
         customElementReactionStack.emplace(m_currentNode->document().globalObject());
@@ -870,7 +864,7 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
         return;
     }
 
-    if (UNLIKELY(willConstructCustomElement)) {
+    if (willConstructCustomElement) [[unlikely]] {
         customElementReactionStack.reset();
         markupInsertionCountIncrementer.reset();
     }
@@ -910,8 +904,8 @@ void XMLDocumentParser::endElementNs()
     if (!updateLeafTextNode())
         return;
 
-    RefPtr node = m_currentNode.get();
-    auto* element = dynamicDowncast<Element>(*node);
+    Ref node = *m_currentNode;
+    RefPtr element = dynamicDowncast<Element>(node);
 
     if (element)
         element->finishParsingChildren();
@@ -994,14 +988,14 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     va_end(preflightArgs);
 
     Vector<char, 1024> buffer(stringLength + 1);
-    vsnprintf(buffer.data(), stringLength + 1, message, args);
+    vsnprintf(buffer.mutableSpan().data(), stringLength + 1, message, args);
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     TextPosition position = textPosition();
     if (m_parserPaused)
-        m_pendingCallbacks->appendErrorCallback(type, reinterpret_cast<const xmlChar*>(buffer.data()), position.m_line, position.m_column);
+        m_pendingCallbacks->appendErrorCallback(type, reinterpret_cast<const xmlChar*>(buffer.span().data()), position.m_line, position.m_column);
     else
-        handleError(type, buffer.data(), textPosition());
+        handleError(type, buffer.span().data(), textPosition());
 }
 
 void XMLDocumentParser::processingInstruction(const xmlChar* target, const xmlChar* data)
@@ -1193,7 +1187,7 @@ static xmlEntityPtr sharedXHTMLEntity()
     return &entity;
 }
 
-static size_t convertUTF16EntityToUTF8(std::span<const UChar> utf16Entity, std::span<char8_t> target)
+static size_t convertUTF16EntityToUTF8(std::span<const char16_t> utf16Entity, std::span<char8_t> target)
 {
     auto result = WTF::Unicode::convert(utf16Entity, target);
     if (result.code != WTF::Unicode::ConversionResultCode::Success)
@@ -1413,7 +1407,7 @@ xmlDocPtr xmlDocPtrForString(CachedResourceLoader& cachedResourceLoader, const S
 
     const bool is8Bit = source.is8Bit();
     auto characters = is8Bit ? byteCast<char>(source.span8()) : spanReinterpretCast<const char>(source.span16());
-    size_t sizeInBytes = source.length() * (is8Bit ? sizeof(LChar) : sizeof(UChar));
+    size_t sizeInBytes = source.length() * (is8Bit ? sizeof(LChar) : sizeof(char16_t));
     const char* encoding = is8Bit ? "iso-8859-1" : nativeEndianUTF16Encoding();
 
     XMLDocumentParserScope scope(&cachedResourceLoader, errorFunc);
@@ -1545,7 +1539,7 @@ std::optional<HashMap<String, String>> parseAttributes(CachedResourceLoader& cac
 
     XMLDocumentParserScope scope(&cachedResourceLoader);
     // FIXME: Can we parse 8-bit strings directly as Latin-1 instead of upconverting to UTF-16?
-    xmlParseChunk(parser->context(), reinterpret_cast<const char*>(StringView(parseString).upconvertedCharacters().get()), parseString.length() * sizeof(UChar), 1);
+    xmlParseChunk(parser->context(), reinterpret_cast<const char*>(StringView(parseString).upconvertedCharacters().get()), parseString.length() * sizeof(char16_t), 1);
 
     return attributes;
 }

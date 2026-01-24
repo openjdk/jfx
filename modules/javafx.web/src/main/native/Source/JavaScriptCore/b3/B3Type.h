@@ -142,6 +142,11 @@ constexpr Type pointerType()
     return Int64;
 }
 
+constexpr Type wasmRefType()
+{
+    return Int64;
+}
+
 constexpr Type registerType()
 {
     if (isRegister64Bit())

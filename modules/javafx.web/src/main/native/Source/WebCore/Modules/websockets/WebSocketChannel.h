@@ -139,7 +139,7 @@ private:
         QueuedFrameTypeBlob
     };
     struct QueuedFrame {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(QueuedFrame);
 
         WebSocketFrame::OpCode opCode;
         QueuedFrameType frameType;
@@ -212,7 +212,7 @@ private:
     BlobLoaderStatus m_blobLoaderStatus { BlobLoaderNotStarted };
 
     WebSocketDeflateFramer m_deflateFramer;
-    Ref<SocketProvider> m_socketProvider;
+    const Ref<SocketProvider> m_socketProvider;
 };
 
 } // namespace WebCore

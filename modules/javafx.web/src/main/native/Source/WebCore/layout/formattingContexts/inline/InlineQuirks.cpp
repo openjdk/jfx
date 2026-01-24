@@ -104,7 +104,7 @@ bool InlineQuirks::inlineBoxAffectsLineBox(const InlineLevelBox& inlineLevelBox)
 std::optional<LayoutUnit> InlineQuirks::initialLetterAlignmentOffset(const Box& floatBox, const RenderStyle& lineBoxStyle) const
 {
     ASSERT(floatBox.isFloatingPositioned());
-    if (!floatBox.style().lineBoxContain().contains(LineBoxContain::InitialLetter))
+    if (!floatBox.style().lineBoxContain().contains(Style::LineBoxContain::InitialLetter))
         return { };
     auto& primaryFontMetrics = lineBoxStyle.fontCascade().metricsOfPrimaryFont();
     auto lineHeight = [&]() -> InlineLayoutUnit {
@@ -204,6 +204,31 @@ std::optional<InlineLayoutUnit> InlineQuirks::adjustmentForLineGridLineSnap(cons
         return { };
 
     return gridLineHeight - remainder;
+}
+
+bool InlineQuirks::shouldCollapseLineBoxHeight(const Line::RunList& lineContent, size_t numberOfOutsideListMarkers) const
+{
+    // This quirk is needed as we put the marker in seemingly random places in the list item's subtree.
+    // (instead of having a well defined place and layout behavior).
+    if (!lineContent.size() || numberOfOutsideListMarkers != 1)
+        return false;
+
+    if (!lineContent[0].isListMarkerOutside()) {
+        ASSERT(lineContent[0].isListMarkerInside());
+        return false;
+    }
+
+    auto& rootBox = formattingContext().root();
+    if (rootBox.isAnonymous() || rootBox.isListItem())
+        return false;
+
+    for (auto& run : lineContent) {
+        if (run.isListMarkerOutside())
+            continue;
+        if (Line::Run::isContentfulOrHasDecoration(run, formattingContext()))
+            return false;
+    }
+    return true;
 }
 
 }

@@ -105,6 +105,10 @@
         "CustomDeleteProperty": {
             "contextsAllowed": ["interface"]
         },
+        "CustomEnabledBy": {
+            "contextsAllowed": ["attribute", "operation"],
+            "values": ["*"]
+        },
         "CustomGetCallData": {
             "contextsAllowed": ["interface"]
         },
@@ -188,7 +192,7 @@
             "contextsAllowed": ["attribute", "interface"]
         },
         "EnabledForWorld": {
-            "contextsAllowed": ["attribute", "operation"],
+            "contextsAllowed": ["attribute", "operation", "interface"],
             "values": ["*"],
             "supportsConjunction": true
         },
@@ -196,6 +200,14 @@
             "contextsAllowed": ["type"],
             "standard": {
                 "url": "https://webidl.spec.whatwg.org/#EnforceRange"
+            }
+        },
+        "Enumerated": {
+            "contextsAllowed": ["attribute"],
+            "values": ["*"],
+            "notes": "Specifies that an attribute is limited to known values, e.g., [Reflect, Enumerated=AttributeValues] where AttributeValues is an enum",
+            "standard": {
+                "url": "https://html.spec.whatwg.org/#keywords-and-enumerated-attributes"
             }
         },
         "Exception": {
@@ -259,6 +271,13 @@
         "InterfaceName": {
             "contextsAllowed": ["interface", "namespace"],
             "values": ["*"]
+        },
+        "InvalidValueDefault": {
+            "contextsAllowed": ["enum"],
+            "values": ["*"],
+            "standard": {
+                "url": "https://html.spec.whatwg.org/#keywords-and-enumerated-attributes"
+            }
         },
         "IsImmutablePrototypeExoticObject": {
             "contextsAllowed": ["interface"]
@@ -374,6 +393,13 @@
         "MasqueradesAsUndefined": {
             "contextsAllowed": ["interface"]
         },
+        "MissingValueDefault": {
+            "contextsAllowed": ["enum"],
+            "values": ["*"],
+            "standard": {
+                "url": "https://html.spec.whatwg.org/#keywords-and-enumerated-attributes"
+            }
+        },
         "NewImpurePropertyFiresWatchpoints": {
             "contextsAllowed": ["interface"]
         },
@@ -419,7 +445,25 @@
         },
         "Reflect": {
             "contextsAllowed": ["attribute"],
-            "values": ["*"]
+            "values": ["*"],
+            "standard": {
+                "url": "https://html.spec.whatwg.org/multipage/common-dom-interfaces.html#xattr-reflect"
+            }
+        },
+        "ReflectURL": {
+            "contextsAllowed": ["attribute"],
+            "values": ["*"],
+            "standard": {
+                "url": "https://html.spec.whatwg.org/multipage/common-dom-interfaces.html#xattr-reflecturl"
+            }
+        },
+        "ReflectSetter": {
+            "contextsAllowed": ["attribute"],
+            "values": ["*"],
+            "notes": "Variant of Reflect that relies on C++ implementation for the getter, but automatically generates the setter",
+            "standard": {
+                "url": "https://html.spec.whatwg.org/multipage/common-dom-interfaces.html#xattr-reflectsetter"
+            }
         },
         "Replaceable": {
             "contextsAllowed": ["attribute"],

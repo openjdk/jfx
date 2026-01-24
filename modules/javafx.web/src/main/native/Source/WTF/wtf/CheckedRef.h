@@ -31,8 +31,6 @@
 #include <wtf/HashTraits.h>
 #include <wtf/RawPtrTraits.h>
 #include <wtf/SingleThreadIntegralWrapper.h>
-#include <wtf/StackTrace.h>
-#include <wtf/text/WTFString.h>
 
 #if ASSERT_ENABLED
 #include <wtf/Threading.h>
@@ -42,7 +40,7 @@ namespace WTF {
 
 template<typename T, typename PtrTraits>
 class CheckedRef {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CheckedRef);
 public:
 
     ~CheckedRef()
@@ -272,7 +270,7 @@ template<typename P> struct DefaultHash<CheckedRef<P>> : PtrHash<CheckedRef<P>> 
 
 enum class DefaultedOperatorEqual : bool { No, Yes };
 
-template <typename StorageType, typename PtrCounterType, DefaultedOperatorEqual defaultedOperatorEqual> class CanMakeCheckedPtrBase {
+template <typename StorageType, typename PtrCounterType> class CanMakeCheckedPtrBase {
 public:
     CanMakeCheckedPtrBase() = default;
     CanMakeCheckedPtrBase(CanMakeCheckedPtrBase&&) { }
@@ -301,32 +299,39 @@ public:
             return m_checkedPtrCount.valueWithoutThreadCheck();
         }
 
-    friend bool operator==(const CanMakeCheckedPtrBase&, const CanMakeCheckedPtrBase&)
-    {
-        static_assert(defaultedOperatorEqual == DefaultedOperatorEqual::Yes, "Derived class should opt-in when defaulting operator==, or invalid/undefined comparison should be reworked/defined");
-        return true;
-    }
-
 private:
     mutable StorageType m_checkedPtrCount { 0 };
 };
 
 template<typename T, DefaultedOperatorEqual defaultedOperatorEqual = DefaultedOperatorEqual::No>
-class CanMakeCheckedPtr : public CanMakeCheckedPtrBase<SingleThreadIntegralWrapper<uint32_t>, uint32_t, defaultedOperatorEqual> {
+class CanMakeCheckedPtr : public CanMakeCheckedPtrBase<SingleThreadIntegralWrapper<uint32_t>, uint32_t> {
 public:
     ~CanMakeCheckedPtr()
     {
-        static_assert(std::is_same<typename T::WTFIsFastMallocAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
+        static_assert(std::is_same<typename T::WTFIsFastMallocAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_DEPRECATED_MAKE_FAST_ALLOCATED)");
         static_assert(std::is_same<typename T::WTFDidOverrideDeleteForCheckedPtr, int>::value, "Objects that use CanMakeCheckedPtr must use WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR");
+    }
+
+    friend bool operator==(const CanMakeCheckedPtr&, const CanMakeCheckedPtr&)
+    {
+        static_assert(defaultedOperatorEqual == DefaultedOperatorEqual::Yes, "Derived class should opt-in when defaulting operator==, or invalid/undefined comparison should be reworked/defined");
+        return true;
     }
 };
 
-template<typename T, DefaultedOperatorEqual defaultedOperatorEqual = DefaultedOperatorEqual::No> class CanMakeThreadSafeCheckedPtr : public CanMakeCheckedPtrBase<std::atomic<uint32_t>, uint32_t, defaultedOperatorEqual> {
+template<typename T, DefaultedOperatorEqual defaultedOperatorEqual = DefaultedOperatorEqual::No>
+class CanMakeThreadSafeCheckedPtr : public CanMakeCheckedPtrBase<std::atomic<uint32_t>, uint32_t> {
 public:
     ~CanMakeThreadSafeCheckedPtr()
     {
-        static_assert(std::is_same<typename T::WTFIsFastMallocAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
+        static_assert(std::is_same<typename T::WTFIsFastMallocAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_DEPRECATED_MAKE_FAST_ALLOCATED)");
         static_assert(std::is_same<typename T::WTFDidOverrideDeleteForCheckedPtr, int>::value, "Objects that use CanMakeCheckedPtr must use WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR");
+    }
+
+    friend bool operator==(const CanMakeThreadSafeCheckedPtr&, const CanMakeThreadSafeCheckedPtr&)
+    {
+        static_assert(defaultedOperatorEqual == DefaultedOperatorEqual::Yes, "Derived class should opt-in when defaulting operator==, or invalid/undefined comparison should be reworked/defined");
+        return true;
     }
 };
 

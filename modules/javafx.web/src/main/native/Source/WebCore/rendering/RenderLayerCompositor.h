@@ -100,6 +100,12 @@ enum class ScrollCoordinationRole {
     Positioning         = 1 << 5,
 };
 
+enum class ViewportConstrainedSublayers : uint8_t {
+    None,
+    Anchor,
+    ClippingAndAnchor,
+};
+
 static constexpr OptionSet<ScrollCoordinationRole> allScrollCoordinationRoles()
 {
     return {
@@ -244,7 +250,7 @@ public:
     void rootBackgroundColorOrTransparencyChanged();
 
     // Repaint the appropriate layers when the given RenderLayer starts or stops being composited.
-    void repaintOnCompositingChange(RenderLayer&);
+    void repaintOnCompositingChange(RenderLayer&, RenderLayerModelObject* repaintContainer);
 
     void repaintInCompositedAncestor(RenderLayer&, const LayoutRect&);
 
@@ -326,7 +332,7 @@ public:
     void collectViewTransitionNewContentLayers(RenderLayer&, Vector<Ref<GraphicsLayer>>&);
 
     // Update the geometry of the layers used for clipping and scrolling in frames.
-    void frameViewDidChangeLocation(const IntPoint& contentsOffset);
+    void frameViewDidChangeLocation(FloatPoint contentsOffset);
     void frameViewDidChangeSize();
     void frameViewDidScroll();
     void frameViewDidAddOrRemoveScrollbars();
@@ -345,6 +351,7 @@ public:
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
     float pageScaleFactor() const override;
     float zoomedOutPageScaleFactor() const override;
+    FloatSize enclosingFrameViewVisibleSize() const override;
     void didChangePlatformLayerForLayer(const GraphicsLayer*) override { }
 
     void layerTiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/);
@@ -360,19 +367,22 @@ public:
     GraphicsLayer* layerForOverhangAreas() const { return m_layerForOverhangAreas.get(); }
     GraphicsLayer* layerForContentShadow() const { return m_contentShadowLayer.get(); }
 
-    GraphicsLayer* updateLayerForTopOverhangArea(bool wantsLayer);
+    GraphicsLayer* updateLayerForTopOverhangColorExtension(bool wantsLayer);
+    GraphicsLayer* updateLayerForTopOverhangImage(bool wantsLayer);
     GraphicsLayer* updateLayerForBottomOverhangArea(bool wantsLayer);
     GraphicsLayer* updateLayerForHeader(bool wantsLayer);
     GraphicsLayer* updateLayerForFooter(bool wantsLayer);
 
     void updateLayerForOverhangAreasBackgroundColor();
+    void updateSizeAndPositionForTopOverhangColorExtensionLayer();
     void updateSizeAndPositionForOverhangAreaLayer();
 #endif // HAVE(RUBBER_BANDING)
 
     void updateRootContentsLayerBackgroundColor();
 
+    ViewportConstrainedSublayers viewportConstrainedSublayers(const RenderLayer&, const RenderLayer* compositingAncestor) const;
+
     // FIXME: make the coordinated/async terminology consistent.
-    bool isViewportConstrainedFixedOrStickyLayer(const RenderLayer&) const;
     bool useCoordinatedScrollingForLayer(const RenderLayer&) const;
     ScrollPositioningBehavior computeCoordinatedPositioningForLayer(const RenderLayer&, const RenderLayer* compositingAncestor) const;
     bool isLayerForIFrameWithScrollCoordinatedContents(const RenderLayer&) const;
@@ -445,8 +455,9 @@ private:
 
     // Make or destroy the backing for this layer; returns true if backing changed.
     enum class BackingRequired { No, Yes, Unknown };
-    bool updateBacking(RenderLayer&, RequiresCompositingData&, BackingSharingState* = nullptr, BackingRequired = BackingRequired::Unknown);
-    bool updateLayerCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&, BackingSharingState&);
+    bool updateBacking(RenderLayer&, RequiresCompositingData&, BackingSharingState*, BackingRequired);
+    bool updateExplicitBacking(RenderLayer&, RequiresCompositingData&, BackingRequired = BackingRequired::Unknown);
+    bool updateReflectionCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&);
 
     template<typename ApplyFunctionType> void applyToCompositedLayerIncludingDescendants(RenderLayer&, const ApplyFunctionType&);
 
@@ -582,7 +593,7 @@ private:
     FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer&) const;
     StickyPositionViewportConstraints computeStickyViewportConstraints(RenderLayer&) const;
 
-    RoundedRect parentRelativeScrollableRect(const RenderLayer&, const RenderLayer* ancestorLayer) const;
+    LayoutRoundedRect parentRelativeScrollableRect(const RenderLayer&, const RenderLayer* ancestorLayer) const;
 
     // Returns list of layers and their clip rects required to clip the given layer, which include clips in the
     // containing block chain between the given layer and its composited ancestor.
@@ -662,7 +673,8 @@ private:
 #if HAVE(RUBBER_BANDING)
     RefPtr<GraphicsLayer> m_layerForOverhangAreas;
     RefPtr<GraphicsLayer> m_contentShadowLayer;
-    RefPtr<GraphicsLayer> m_layerForTopOverhangArea;
+    RefPtr<GraphicsLayer> m_layerForTopOverhangImage;
+    RefPtr<GraphicsLayer> m_layerForTopOverhangColorExtension;
     RefPtr<GraphicsLayer> m_layerForBottomOverhangArea;
     RefPtr<GraphicsLayer> m_layerForHeader;
     RefPtr<GraphicsLayer> m_layerForFooter;
@@ -681,7 +693,7 @@ private:
     Color m_viewBackgroundColor;
     Color m_rootExtendedBackgroundColor;
 
-    UncheckedKeyHashMap<ScrollingNodeID, SingleThreadWeakPtr<RenderLayer>> m_scrollingNodeToLayerMap;
+    HashMap<ScrollingNodeID, SingleThreadWeakPtr<RenderLayer>> m_scrollingNodeToLayerMap;
     SingleThreadWeakHashSet<RenderLayer> m_layersWithUnresolvedRelations;
 #if PLATFORM(IOS_FAMILY)
     std::unique_ptr<LegacyWebKitScrollingLayerCoordinator> m_legacyScrollingLayerCoordinator;

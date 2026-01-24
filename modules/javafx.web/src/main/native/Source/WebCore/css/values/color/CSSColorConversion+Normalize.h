@@ -98,7 +98,7 @@ auto normalizeAndClampNumericComponentsIntoCanonicalRepresentation(const T& valu
 }
 
 template<typename Descriptor, unsigned Index, typename... Ts>
-auto normalizeAndClampNumericComponentsIntoCanonicalRepresentation(const std::variant<Ts...>& variant) -> GetCSSColorParseTypeWithCalcComponentResult<typename Descriptor::Canonical, Index>
+auto normalizeAndClampNumericComponentsIntoCanonicalRepresentation(const Variant<Ts...>& variant) -> GetCSSColorParseTypeWithCalcComponentResult<typename Descriptor::Canonical, Index>
 {
     return WTF::switchOn(variant, [](auto value) { return normalizeAndClampNumericComponentsIntoCanonicalRepresentation<Descriptor, Index>(value); });
 }
@@ -159,7 +159,7 @@ auto normalizeNumericComponentsIntoCanonicalRepresentation(const T& value) -> Ge
 }
 
 template<typename Descriptor, unsigned Index, typename... Ts>
-auto normalizeNumericComponentsIntoCanonicalRepresentation(const std::variant<Ts...>& variant) -> GetCSSColorParseTypeWithCalcComponentResult<typename Descriptor::Canonical, Index>
+auto normalizeNumericComponentsIntoCanonicalRepresentation(const Variant<Ts...>& variant) -> GetCSSColorParseTypeWithCalcComponentResult<typename Descriptor::Canonical, Index>
 {
     return WTF::switchOn(variant, [](auto value) { return normalizeNumericComponentsIntoCanonicalRepresentation<Descriptor, Index>(value); });
 }

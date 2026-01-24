@@ -94,7 +94,7 @@ private:
 
     Ref<StyleRuleKeyframes> m_keyframesRule;
     mutable Vector<RefPtr<CSSKeyframeRule>> m_childRuleCSSOMWrappers;
-    mutable std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
+    const std::unique_ptr<CSSRuleList> m_ruleListCSSOMWrapper;
 };
 
 } // namespace WebCore

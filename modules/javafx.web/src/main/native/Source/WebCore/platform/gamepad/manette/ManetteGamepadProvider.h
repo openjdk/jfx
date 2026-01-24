@@ -76,7 +76,6 @@ private:
     bool m_initialGamepadsConnected { false };
 
     GRefPtr<ManetteMonitor> m_monitor;
-    RunLoop::Timer m_initialGamepadsConnectedTimer;
     RunLoop::Timer m_inputNotificationTimer;
 };
 

@@ -44,8 +44,6 @@ inline int fudgeFactor()
     return 2;
 }
 
-bool isSpatialNavigationEnabled(const LocalFrame*);
-
 // Spatially speaking, two given elements in a web page can be:
 // 1) Fully aligned: There is a full intersection between the rects, either
 //    vertically or horizontally.
@@ -96,18 +94,8 @@ enum class RectsAlignment {
 };
 
 struct FocusCandidate {
-    FocusCandidate()
-        : visibleNode(nullptr)
-        , focusableNode(nullptr)
-        , enclosingScrollableBox(nullptr)
-        , distance(maxDistance())
-        , alignment(RectsAlignment::None)
-        , isOffscreen(true)
-        , isOffscreenAfterScrolling(true)
-    {
-    }
-
-    FocusCandidate(Node* n, FocusDirection);
+    FocusCandidate() = default;
+    FocusCandidate(Element*, FocusDirection);
     explicit FocusCandidate(HTMLAreaElement* area, FocusDirection);
     bool isNull() const { return !visibleNode; }
     bool inScrollableContainer() const { return visibleNode && enclosingScrollableBox; }
@@ -116,27 +104,27 @@ struct FocusCandidate {
     // We handle differently visibleNode and FocusableNode to properly handle the areas of imagemaps,
     // where visibleNode would represent the image element and focusableNode would represent the area element.
     // In all other cases, visibleNode and focusableNode are one and the same.
-    WeakPtr<Node, WeakPtrImplWithEventTargetData> visibleNode;
-    WeakPtr<Node, WeakPtrImplWithEventTargetData> focusableNode;
-    WeakPtr<Node, WeakPtrImplWithEventTargetData> enclosingScrollableBox;
-    long long distance;
-    RectsAlignment alignment;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> visibleNode;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> focusableNode;
+    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> enclosingScrollableBox;
+    long long distance { maxDistance() };
+    RectsAlignment alignment { RectsAlignment::None };
     LayoutRect rect;
-    bool isOffscreen;
-    bool isOffscreenAfterScrolling;
+    bool isOffscreen { false };
+    bool isOffscreenAfterScrolling { true };
 };
 
-bool hasOffscreenRect(Node*, FocusDirection = FocusDirection::None);
+bool hasOffscreenRect(const Node&, FocusDirection = FocusDirection::None);
 bool scrollInDirection(LocalFrame*, FocusDirection);
-bool scrollInDirection(Node* container, FocusDirection);
-bool canScrollInDirection(const Node* container, FocusDirection);
+bool scrollInDirection(const ContainerNode&, FocusDirection);
+bool canScrollInDirection(const ContainerNode&, FocusDirection);
 bool canScrollInDirection(const LocalFrame*, FocusDirection);
 bool canBeScrolledIntoView(FocusDirection, const FocusCandidate&);
 bool areElementsOnSameLine(const FocusCandidate& firstCandidate, const FocusCandidate& secondCandidate);
 bool isValidCandidate(FocusDirection, const FocusCandidate&, FocusCandidate&);
 void distanceDataForNode(FocusDirection, const FocusCandidate& current, FocusCandidate& candidate);
-Node* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection, Node*);
-LayoutRect nodeRectInAbsoluteCoordinates(Node*, bool ignoreBorder = false);
+ContainerNode* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection, ContainerNode&);
+LayoutRect nodeRectInAbsoluteCoordinates(const ContainerNode&, bool ignoreBorder = false);
 LayoutRect frameRectInAbsoluteCoordinates(LocalFrame*);
 LayoutRect virtualRectForDirection(FocusDirection, const LayoutRect& startingRect, LayoutUnit width = 0_lu);
 LayoutRect virtualRectForAreaElementAndDirection(HTMLAreaElement*, FocusDirection);

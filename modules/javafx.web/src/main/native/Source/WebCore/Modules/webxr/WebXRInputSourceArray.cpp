@@ -33,6 +33,7 @@
 #include "WebXRSession.h"
 #include "XRInputSourceEvent.h"
 #include "XRInputSourcesChangeEvent.h"
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -102,7 +103,7 @@ void WebXRInputSourceArray::update(double timestamp, const InputSourceList& inpu
         // 5. Set frame’s active boolean to false.
 
         for (auto& event : inputEvents) {
-            ActiveDOMObject::queueTaskKeepingObjectAlive(m_session, TaskSource::WebXR, [session = Ref { m_session }, event = WTFMove(event)]() {
+            ActiveDOMObject::queueTaskKeepingObjectAlive(m_session, TaskSource::WebXR, [session = Ref { m_session }, event = WTFMove(event)](auto&) {
                 event->setFrameActive(true);
                 session->dispatchEvent(event.copyRef());
                 event->setFrameActive(false);
@@ -133,7 +134,7 @@ void WebXRInputSourceArray::handleRemovedInputSources(const InputSourceList& inp
     //  3.1 Let inputSource be the XRInputSource in session's list of active XR input sources associated with the XR input source.
     //  3.2 Add inputSource to removed.
     m_inputSources.removeAllMatching([&inputSources, &removed, &removedWithInputEvents, &inputEvents](auto& source) {
-        if (!WTF::anyOf(inputSources, [&source](auto& item) { return item.handle == source->handle(); })) {
+        if (!std::ranges::any_of(inputSources, [&source](auto& item) { return item.handle == source->handle(); })) {
             Vector<Ref<XRInputSourceEvent>> sourceInputEvents;
             source->disconnect();
             source->pollEvents(sourceInputEvents);
@@ -192,7 +193,7 @@ void WebXRInputSourceArray::handleAddedOrUpdatedInputSources(double timestamp, c
             else
                 removedWithInputEvents.append(input);
             inputEvents.appendVector(sourceInputEvents);
-            m_inputSources.remove(index);
+            m_inputSources.removeAt(index);
 
             auto newInputSource = WebXRInputSource::create(*document, m_session, timestamp, inputSource);
             added.append(newInputSource);

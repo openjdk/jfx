@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,11 @@
 #include "ActiveDOMObject.h"
 #include "AddEventListenerOptions.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "MessageEvent.h"
+#include "NavigatorBase.h"
 #include "PushPermissionState.h"
 #include "PushSubscription.h"
 #include "SWClientConnection.h"
@@ -45,7 +47,6 @@
 namespace WebCore {
 
 class DeferredPromise;
-class NavigatorBase;
 class ServiceWorker;
 class TrustedScriptURL;
 
@@ -72,7 +73,7 @@ public:
     ReadyPromise& ready();
 
     using RegistrationOptions = ServiceWorkerRegistrationOptions;
-    void addRegistration(std::variant<RefPtr<TrustedScriptURL>, String>&&, const RegistrationOptions&, Ref<DeferredPromise>&&);
+    void addRegistration(Variant<RefPtr<TrustedScriptURL>, String>&&, const RegistrationOptions&, Ref<DeferredPromise>&&);
     void unregisterRegistration(ServiceWorkerRegistrationIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
     void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&&);
 
@@ -105,7 +106,7 @@ public:
 
     bool isStopped() const { return m_isStopped; };
 
-    NavigatorBase* navigator() { return &m_navigator; }
+    NavigatorBase& navigator() { return m_navigator; }
 
     using VoidPromise = DOMPromiseDeferred<void>;
     using NavigationPreloadStatePromise = DOMPromiseDeferred<IDLDictionary<NavigationPreloadState>>;
@@ -117,6 +118,8 @@ public:
     void addCookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier, Vector<CookieChangeSubscription>&&, Ref<DeferredPromise>&&);
     void removeCookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier, Vector<CookieChangeSubscription>&&, Ref<DeferredPromise>&&);
     void cookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier, Ref<DeferredPromise>&&);
+
+    void whenRegisterJobsAreFinished(CompletionHandler<void()>&&);
 
 private:
     ServiceWorkerContainer(ScriptExecutionContext*, NavigatorBase&);
@@ -154,7 +157,7 @@ private:
 
     std::unique_ptr<ReadyPromise> m_readyPromise;
 
-    NavigatorBase& m_navigator;
+    const CheckedRef<NavigatorBase> m_navigator;
 
     RefPtr<SWClientConnection> m_swConnection;
 
@@ -168,13 +171,14 @@ private:
     HashMap<ServiceWorkerRegistrationIdentifier, WeakRef<ServiceWorkerRegistration, WeakPtrImplWithEventTargetData>> m_registrations;
 
 #if ASSERT_ENABLED
-    Ref<Thread> m_creationThread { Thread::current() };
+    const Ref<Thread> m_creationThread { Thread::currentSingleton() };
 #endif
 
     uint64_t m_lastOngoingSettledRegistrationIdentifier { 0 };
     HashMap<uint64_t, ServiceWorkerRegistrationKey> m_ongoingSettledRegistrations;
     bool m_shouldDeferMessageEvents { false };
     Vector<MessageEvent::MessageEventWithStrongData> m_deferredMessageEvents;
+    CompletionHandler<void()> m_whenRegisterJobsAreFinished;
 };
 
 } // namespace WebCore

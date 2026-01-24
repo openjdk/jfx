@@ -54,6 +54,7 @@
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
 #include "RenderText.h"
 #include "RenderTheme.h"
@@ -67,6 +68,7 @@
 #include "StyleTreeResolver.h"
 #include "UnicodeBidi.h"
 #include "WheelEventTestMonitor.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <math.h>
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -84,10 +86,6 @@ const int optionsSpacingInlineStart = 2;
 
 // Default size when the multiple attribute is present but size attribute is absent.
 const int defaultSize = 4;
-
-// FIXME: This hardcoded baselineAdjustment is what we used to do for the old
-// widget, but I'm not sure this is right for the new control.
-const int baselineAdjustment = 7;
 
 RenderListBox::RenderListBox(HTMLSelectElement& element, RenderStyle&& style)
     : RenderBlockFlow(Type::ListBox, element, WTFMove(style))
@@ -154,7 +152,7 @@ void RenderListBox::updateFromElement()
 
         computeFirstIndexesVisibleInPaddingBeforeAfterAreas();
 
-        setNeedsLayoutAndPrefWidthsRecalc();
+        setNeedsLayoutAndPreferredWidthsUpdate();
     }
 }
 
@@ -237,7 +235,7 @@ void RenderListBox::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, L
 
     auto& logicalWidth = style().logicalWidth();
     if (logicalWidth.isCalculated())
-        minLogicalWidth = std::max(0_lu, valueForLength(logicalWidth, 0_lu));
+        minLogicalWidth = std::max(0_lu, Style::evaluate(logicalWidth, 0_lu));
     else if (!logicalWidth.isPercent())
         minLogicalWidth = maxLogicalWidth;
 }
@@ -250,14 +248,14 @@ void RenderListBox::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
-    if (style().logicalWidth().isFixed() && style().logicalWidth().value() > 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().logicalWidth());
+    if (auto fixedLogicalWidth = style().logicalWidth().tryFixed(); fixedLogicalWidth && fixedLogicalWidth->value > 0)
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(*fixedLogicalWidth);
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
     RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), writingMode().isHorizontal() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
 
-    setPreferredLogicalWidthsDirty(false);
+    clearNeedsPreferredWidthsUpdate();
 }
 
 unsigned RenderListBox::size() const
@@ -304,14 +302,6 @@ RenderBox::LogicalExtentComputedValues RenderListBox::computeLogicalHeight(Layou
     cacheIntrinsicContentLogicalHeightForFlexItem(logicalHeight);
     logicalHeight += writingMode().isHorizontal() ? verticalBorderAndPaddingExtent() : horizontalBorderAndPaddingExtent();
     return RenderBox::computeLogicalHeight(logicalHeight, logicalTop);
-}
-
-LayoutUnit RenderListBox::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode lineDirection, LinePositionMode linePositionMode) const
-{
-    auto baseline = RenderBox::baselinePosition(baselineType, firstLine, lineDirection, linePositionMode);
-    if (!shouldApplyLayoutContainment())
-        baseline -= baselineAdjustment;
-    return baseline;
 }
 
 LayoutRect RenderListBox::itemBoundingBoxRect(const LayoutPoint& additionalOffset, int index) const
@@ -1197,7 +1187,7 @@ void RenderListBox::destroyScrollbar()
         return;
 
     if (!m_scrollbar->isCustomScrollbar())
-        ScrollableArea::willRemoveScrollbar(m_scrollbar.get(), m_scrollbar->orientation());
+        ScrollableArea::willRemoveScrollbar(*m_scrollbar, m_scrollbar->orientation());
     m_scrollbar->removeFromParent();
     m_scrollbar = nullptr;
 }

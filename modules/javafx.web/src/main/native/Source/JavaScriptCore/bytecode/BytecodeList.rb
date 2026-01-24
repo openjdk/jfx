@@ -33,7 +33,6 @@ types [
     :EnumeratorMetadata,
     :GetByIdMode,
     :GetByIdModeMetadata,
-    :GetByValHistory,
     :GetPutInfo,
     :IndexingType,
     :IterationModeMetadata,
@@ -580,31 +579,6 @@ op :new_array,
         arrayAllocationProfile: ArrayAllocationProfile,
     }
 
-op :get_by_val_with_this,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        thisValue: VirtualRegister,
-        property: VirtualRegister,
-        valueProfile: unsigned,
-    },
-    metadata: {
-        arrayProfile: ArrayProfile,
-        seenIdentifiers: GetByValHistory,
-    }
-
-op :get_by_val,
-    args: {
-        dst: VirtualRegister,
-        base: VirtualRegister,
-        property: VirtualRegister,
-        valueProfile: unsigned,
-    },
-    metadata: {
-        arrayProfile: ArrayProfile,
-        seenIdentifiers: GetByValHistory,
-    }
-
 op :put_private_name,
     args: {
         base: VirtualRegister,
@@ -633,6 +607,29 @@ op :get_private_name,
     }
 
 # Alignment: 4
+op :get_by_val_with_this,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        thisValue: VirtualRegister,
+        property: VirtualRegister,
+        valueProfile: unsigned,
+    },
+    metadata: {
+        arrayProfile: ArrayProfile,
+    }
+
+op :get_by_val,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        property: VirtualRegister,
+        valueProfile: unsigned,
+    },
+    metadata: {
+        arrayProfile: ArrayProfile,
+    }
+
 op :put_by_val,
     args: {
         base: VirtualRegister,
@@ -1133,7 +1130,7 @@ op :throw_static_error,
 op :debug,
     args: {
         debugHookType: DebugHookType,
-        hasBreakpoint: bool,
+        data: VirtualRegister,
     }
 
 op :end,
@@ -1263,7 +1260,7 @@ op :spread,
         argument: VirtualRegister,
     }
 
-op :new_regexp,
+op :new_reg_exp,
     args: {
         dst: VirtualRegister,
         regexp: VirtualRegister,
@@ -1500,6 +1497,12 @@ op :ipint_trampoline
 op :ipint_entry
 op :ipint_function_prologue_simd_trampoline
 op :ipint_function_prologue_simd
+op :ipint_catch_entry
+op :ipint_catch_all_entry
+op :ipint_table_catch_entry
+op :ipint_table_catch_ref_entry
+op :ipint_table_catch_all_entry
+op :ipint_table_catch_allref_entry
 
 op :js_trampoline_op_call
 op :js_trampoline_op_call_ignore_result

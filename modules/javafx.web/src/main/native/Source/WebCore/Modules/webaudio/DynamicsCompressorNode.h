@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,11 +72,11 @@ private:
     float noiseInjectionMultiplier() const final { return 0.01; }
 
     std::unique_ptr<DynamicsCompressor> m_dynamicsCompressor;
-    Ref<AudioParam> m_threshold;
-    Ref<AudioParam> m_knee;
-    Ref<AudioParam> m_ratio;
-    Ref<AudioParam> m_attack;
-    Ref<AudioParam> m_release;
+    const Ref<AudioParam> m_threshold;
+    const Ref<AudioParam> m_knee;
+    const Ref<AudioParam> m_ratio;
+    const Ref<AudioParam> m_attack;
+    const Ref<AudioParam> m_release;
     float m_reduction { 0 };
 };
 

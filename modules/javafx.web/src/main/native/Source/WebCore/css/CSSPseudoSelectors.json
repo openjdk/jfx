@@ -265,6 +265,10 @@
             "status": "non-standard",
             "user-agent-part": true
         },
+        "-internal-color-swatch-overlay": {
+            "status": "non-standard",
+            "user-agent-part": true
+        },
         "-webkit-color-swatch-wrapper": {
             "status": "non-standard",
             "user-agent-part": true

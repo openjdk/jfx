@@ -27,6 +27,7 @@
 
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/HashTraits.h>
+#include <wtf/Packed.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {

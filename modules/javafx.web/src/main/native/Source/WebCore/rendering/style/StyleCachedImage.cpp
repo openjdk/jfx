@@ -26,8 +26,10 @@
 
 #include "CSSImageValue.h"
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "ReferencedSVGResources.h"
 #include "RenderElement.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGResourceMasker.h"
 #include "RenderView.h"
 #include "SVGImage.h"
@@ -41,21 +43,38 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleCachedImage);
 
-Ref<StyleCachedImage> StyleCachedImage::create(Ref<CSSImageValue> cssValue, float scaleFactor)
+Ref<StyleCachedImage> StyleCachedImage::create(Style::URL&& url, Ref<CSSImageValue>&& cssValue, float scaleFactor)
 {
-    return adoptRef(*new StyleCachedImage(WTFMove(cssValue), scaleFactor));
+    return adoptRef(*new StyleCachedImage(WTFMove(url), WTFMove(cssValue), scaleFactor));
+}
+
+Ref<StyleCachedImage> StyleCachedImage::create(const Style::URL& url, const Ref<CSSImageValue>& cssValue, float scaleFactor)
+{
+    return adoptRef(*new StyleCachedImage(url, cssValue, scaleFactor));
 }
 
 Ref<StyleCachedImage> StyleCachedImage::copyOverridingScaleFactor(StyleCachedImage& other, float scaleFactor)
 {
     if (other.m_scaleFactor == scaleFactor)
         return other;
-    return StyleCachedImage::create(other.m_cssValue, scaleFactor);
+    return StyleCachedImage::create(other.m_url, other.m_cssValue, scaleFactor);
 }
 
-StyleCachedImage::StyleCachedImage(Ref<CSSImageValue>&& cssValue, float scaleFactor)
+StyleCachedImage::StyleCachedImage(Style::URL&& url, Ref<CSSImageValue>&& cssValue, float scaleFactor)
     : StyleImage { Type::CachedImage }
+    , m_url { WTFMove(url) }
     , m_cssValue { WTFMove(cssValue) }
+    , m_scaleFactor { scaleFactor }
+{
+    m_cachedImage = m_cssValue->cachedImage();
+    if (m_cachedImage)
+        m_isPending = false;
+}
+
+StyleCachedImage::StyleCachedImage(const Style::URL& url, const Ref<CSSImageValue>& cssValue, float scaleFactor)
+    : StyleImage { Type::CachedImage }
+    , m_url { url }
+    , m_cssValue { cssValue }
     , m_scaleFactor { scaleFactor }
 {
     m_cachedImage = m_cssValue->cachedImage();
@@ -84,14 +103,9 @@ bool StyleCachedImage::equals(const StyleCachedImage& other) const
     return false;
 }
 
-URL StyleCachedImage::imageURL() const
+Style::URL StyleCachedImage::url() const
 {
-    return m_cssValue->imageURL();
-}
-
-URL StyleCachedImage::reresolvedURL(const Document& document) const
-{
-    return m_cssValue->reresolvedURL(document);
+    return m_url;
 }
 
 LegacyRenderSVGResourceContainer* StyleCachedImage::uncheckedRenderSVGResource(TreeScope& treeScope, const AtomString& fragment) const
@@ -106,16 +120,13 @@ LegacyRenderSVGResourceContainer* StyleCachedImage::uncheckedRenderSVGResource(c
     if (!renderer)
         return nullptr;
 
-    if (imageURL().string().find('#') == notFound) {
+    if (!m_url.resolved.string().contains('#')) {
         m_isRenderSVGResource = false;
         return nullptr;
     }
 
-    Ref document = renderer->document();
-    auto reresolvedURL = this->reresolvedURL(document);
-
     if (!m_cachedImage) {
-        auto fragmentIdentifier = SVGURIReference::fragmentIdentifierFromIRIString(reresolvedURL.string(), document);
+        auto fragmentIdentifier = SVGURIReference::fragmentIdentifierFromIRIString(m_url, renderer->protectedDocument());
         return uncheckedRenderSVGResource(renderer->treeScopeForSVGReferences(), fragmentIdentifier);
     }
 
@@ -127,8 +138,7 @@ LegacyRenderSVGResourceContainer* StyleCachedImage::uncheckedRenderSVGResource(c
     if (!rootElement)
         return nullptr;
 
-    auto fragmentIdentifier = reresolvedURL.fragmentIdentifier();
-    return uncheckedRenderSVGResource(rootElement->treeScopeForSVGReferences(), fragmentIdentifier.toAtomString());
+    return uncheckedRenderSVGResource(rootElement->treeScopeForSVGReferences(), m_url.resolved.fragmentIdentifier().toAtomString());
 }
 
 LegacyRenderSVGResourceContainer* StyleCachedImage::legacyRenderSVGResource(const RenderElement* renderer) const
@@ -146,7 +156,7 @@ RenderSVGResourceContainer* StyleCachedImage::renderSVGResource(const RenderElem
     if (!renderer)
         return nullptr;
 
-    if (imageURL().string().find('#') == notFound)
+    if (!m_url.resolved.string().contains('#'))
         return nullptr;
 
     if (!m_cachedImage) {
@@ -165,15 +175,11 @@ RenderSVGResourceContainer* StyleCachedImage::renderSVGResource(const RenderElem
     if (!rootElement)
         return nullptr;
 
-    Ref document = renderer->document();
-    auto reresolvedURL = this->reresolvedURL(document);
-    auto fragmentIdentifier = reresolvedURL.fragmentIdentifier();
-    if (RefPtr referencedMaskElement = ReferencedSVGResources::referencedMaskElement(rootElement->treeScopeForSVGReferences(), fragmentIdentifier.toAtomString())) {
-        if (auto* referencedMaskerRenderer = dynamicDowncast<RenderSVGResourceMasker>(referencedMaskElement->renderer()))
-            return referencedMaskerRenderer;
-    }
-
+    auto referencedMaskElement = ReferencedSVGResources::referencedMaskElement(rootElement->treeScopeForSVGReferences(), m_url.resolved.fragmentIdentifier().toAtomString());
+    if (!referencedMaskElement)
     return nullptr;
+
+    return dynamicDowncast<RenderSVGResourceMasker>(referencedMaskElement->renderer());
 }
 
 bool StyleCachedImage::isRenderSVGResource(const RenderElement* renderer) const
@@ -193,9 +199,9 @@ CachedImage* StyleCachedImage::cachedImage() const
     return m_cachedImage.get();
 }
 
-Ref<CSSValue> StyleCachedImage::computedStyleValue(const RenderStyle&) const
+Ref<CSSValue> StyleCachedImage::computedStyleValue(const RenderStyle& style) const
 {
-    return m_cssValue.copyRef();
+    return m_cssValue->copyForComputedStyle(Style::toCSS(m_url, style));
 }
 
 bool StyleCachedImage::canRender(const RenderElement* renderer, float multiplier) const
@@ -280,7 +286,7 @@ void StyleCachedImage::setContainerContextForRenderer(const RenderElement& rende
     m_containerSize = containerSize;
     if (!m_cachedImage)
         return;
-    m_cachedImage->setContainerContextForClient(renderer, LayoutSize(containerSize), containerZoom, imageURL());
+    m_cachedImage->setContainerContextForClient(renderer, LayoutSize(containerSize), containerZoom, m_url.resolved);
 }
 
 void StyleCachedImage::addClient(RenderElement& renderer)
@@ -319,10 +325,10 @@ RefPtr<Image> StyleCachedImage::image(const RenderElement* renderer, const Float
     ASSERT(!m_isPending);
 
     if (auto renderSVGResource = this->renderSVGResource(renderer))
-        return SVGResourceImage::create(*renderSVGResource, reresolvedURL(renderer->document()));
+        return SVGResourceImage::create(*renderSVGResource, m_url);
 
     if (auto renderSVGResource = this->legacyRenderSVGResource(renderer))
-        return SVGResourceImage::create(*renderSVGResource, reresolvedURL(renderer->document()));
+        return SVGResourceImage::create(*renderSVGResource, m_url);
 
     if (!m_cachedImage)
         return nullptr;
@@ -342,7 +348,7 @@ bool StyleCachedImage::knownToBeOpaque(const RenderElement& renderer) const
 
 bool StyleCachedImage::usesDataProtocol() const
 {
-    return m_cssValue->imageURL().protocolIsData();
+    return m_url.resolved.protocolIsData();
 }
 
 } // namespace WebCore

@@ -36,6 +36,7 @@ class RadioButtonGroups {
 public:
     RadioButtonGroups();
     ~RadioButtonGroups();
+    void clear();
     void addButton(HTMLInputElement&);
     void updateCheckedState(HTMLInputElement&);
     void requiredStateChanged(HTMLInputElement&);
@@ -46,7 +47,7 @@ public:
     Vector<Ref<HTMLInputElement>> groupMembers(const HTMLInputElement&) const;
 
 private:
-    typedef UncheckedKeyHashMap<AtomString, std::unique_ptr<RadioButtonGroup>> NameToGroupMap;
+    typedef HashMap<AtomString, std::unique_ptr<RadioButtonGroup>> NameToGroupMap;
     NameToGroupMap m_nameToGroupMap;
 };
 

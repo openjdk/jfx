@@ -42,15 +42,15 @@ JSC::EncodedJSValue constructJSExtendableMessageEvent(JSC::JSGlobalObject* lexic
     VM& vm = lexicalGlobalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame.argumentCount() < 1))
+    if (callFrame.argumentCount() < 1) [[unlikely]]
         return throwVMError(lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(lexicalGlobalObject));
 
     auto type = convert<IDLAtomStringAdaptor<IDLDOMString>>(*lexicalGlobalObject, callFrame.uncheckedArgument(0));
-    if (UNLIKELY(type.hasException(throwScope)))
+    if (type.hasException(throwScope)) [[unlikely]]
         return encodedJSValue();
 
     auto eventInitDict = convert<IDLDictionary<ExtendableMessageEvent::Init>>(*lexicalGlobalObject, callFrame.argument(1));
-    if (UNLIKELY(eventInitDict.hasException(throwScope)))
+    if (eventInitDict.hasException(throwScope)) [[unlikely]]
         return encodedJSValue();
 
     auto object = ExtendableMessageEvent::create(*lexicalGlobalObject, type.releaseReturnValue(), eventInitDict.releaseReturnValue());

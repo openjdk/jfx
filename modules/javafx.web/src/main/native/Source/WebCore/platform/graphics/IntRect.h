@@ -34,11 +34,7 @@ typedef struct CGRect CGRect;
 #endif
 
 #if PLATFORM(MAC)
-#ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGRect NSRect;
-#else
-typedef struct _NSRect NSRect;
-#endif
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -222,10 +218,6 @@ public:
     WEBCORE_EXPORT operator CGRect() const;
 #endif
 
-#if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-    WEBCORE_EXPORT operator NSRect() const;
-#endif
-
 #if USE(SKIA)
     IntRect(const SkIRect&);
     WEBCORE_EXPORT operator SkIRect() const;
@@ -264,10 +256,6 @@ inline IntRect operator-(const IntRect& r, const IntPoint& offset)
 
 #if USE(CG)
 WEBCORE_EXPORT IntRect enclosingIntRect(const CGRect&);
-#endif
-
-#if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-WEBCORE_EXPORT IntRect enclosingIntRect(const NSRect&);
 #endif
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const IntRect&);

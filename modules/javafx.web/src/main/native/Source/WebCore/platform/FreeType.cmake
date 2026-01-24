@@ -14,7 +14,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/freetype/SimpleFontDataFreeType.cpp
 
     platform/graphics/harfbuzz/ComplexTextControllerHarfBuzz.cpp
-    platform/graphics/harfbuzz/DrawGlyphsRecorderHarfBuzz.cpp
     platform/graphics/harfbuzz/FontDescriptionHarfBuzz.cpp
 )
 

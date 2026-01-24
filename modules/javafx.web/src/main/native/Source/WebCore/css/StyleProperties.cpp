@@ -25,16 +25,17 @@
 
 #include "CSSColorValue.h"
 #include "CSSCustomPropertyValue.h"
-#include "CSSParser.h"
 #include "CSSPendingSubstitutionValue.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyInitialValues.h"
 #include "CSSPropertyNames.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "CSSSerializationContext.h"
+#include "CSSStyleProperties.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "Color.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "ShorthandSerializer.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
@@ -62,20 +63,6 @@ Ref<ImmutableStyleProperties> StyleProperties::immutableCopyIfNeeded() const
 
 String serializeLonghandValue(const CSS::SerializationContext& context, CSSPropertyID property, const CSSValue& value)
 {
-    switch (property) {
-        case CSSPropertyFillOpacity:
-        case CSSPropertyFloodOpacity:
-        case CSSPropertyOpacity:
-        case CSSPropertyStopOpacity:
-        case CSSPropertyStrokeOpacity:
-        // FIXME: Handle this when creating the CSSValue for opacity, to be consistent with other CSS value serialization quirks.
-            // Opacity percentage values serialize as a fraction in the range 0-1, not "%".
-        if (auto* primitive = dynamicDowncast<CSSPrimitiveValue>(value); primitive && primitive->isPercentage())
-            return makeString(primitive->resolveAsPercentageDeprecated() / 100);
-        break;
-    default:
-        break;
-    }
     // Longhands set by mask and background shorthands can have comma-separated lists with implicit initial values in them.
     // We need to serialize those lists with the actual values, not as "initial".
     // Doing this for all CSSValueList with comma separators is better than checking the property is one of those longhands.
@@ -111,9 +98,12 @@ std::optional<Color> StyleProperties::propertyAsColor(CSSPropertyID property) co
     auto value = getPropertyCSSValue(property);
         if (!value)
         return std::nullopt;
-    return value->isColor()
-        ? CSSColorValue::absoluteColor(*value)
-        : CSSParser::parseColorWithoutContext(WebCore::serializeLonghandValue(CSS::defaultSerializationContext(), property, *value));
+
+    if (value->isColor())
+        return CSSColorValue::absoluteColor(*value);
+
+    auto serializationString = WebCore::serializeLonghandValue(CSS::defaultSerializationContext(), property, *value);
+    return CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(serializationString);
 }
 
 std::optional<CSSValueID> StyleProperties::propertyAsValueID(CSSPropertyID property) const
@@ -391,19 +381,19 @@ Ref<MutableStyleProperties> StyleProperties::copyProperties(std::span<const CSSP
     return MutableStyleProperties::create(WTFMove(vector));
 }
 
-PropertySetCSSStyleDeclaration* MutableStyleProperties::cssStyleDeclaration()
+CSSStyleProperties* MutableStyleProperties::cssStyleProperties()
 {
     return m_cssomWrapper.get();
 }
 
-CSSStyleDeclaration& MutableStyleProperties::ensureCSSStyleDeclaration()
+CSSStyleProperties& MutableStyleProperties::ensureCSSStyleProperties()
 {
     if (m_cssomWrapper) {
-        ASSERT(!static_cast<CSSStyleDeclaration*>(m_cssomWrapper.get())->parentRule());
+        ASSERT(!static_cast<CSSStyleProperties*>(m_cssomWrapper.get())->parentRule());
         ASSERT(!m_cssomWrapper->parentElement());
         return *m_cssomWrapper;
     }
-    m_cssomWrapper = makeUniqueWithoutRefCountedCheck<PropertySetCSSStyleDeclaration>(*this);
+    lazyInitialize(m_cssomWrapper, makeUniqueWithoutRefCountedCheck<PropertySetCSSStyleProperties>(*this));
     return *m_cssomWrapper;
 }
 

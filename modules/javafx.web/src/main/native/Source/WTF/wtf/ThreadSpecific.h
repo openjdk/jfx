@@ -64,7 +64,7 @@ enum class CanBeGCThread {
 
 template<typename T, CanBeGCThread canBeGCThread = CanBeGCThread::False> class ThreadSpecific {
     WTF_MAKE_NONCOPYABLE(ThreadSpecific);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ThreadSpecific);
 public:
     ThreadSpecific();
     bool isSet(); // Useful as a fast check to see if this thread has set this value.
@@ -81,7 +81,7 @@ private:
 
     struct Data {
         WTF_MAKE_NONCOPYABLE(Data);
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Data);
     public:
         using PointerType = typename std::remove_const<T>::type*;
 
@@ -159,7 +159,7 @@ inline ThreadSpecific<T, canBeGCThread>::ThreadSpecific()
 template<typename T, CanBeGCThread canBeGCThread>
 inline T* ThreadSpecific<T, canBeGCThread>::get()
 {
-    auto data = static_cast<Data*>(Thread::current().specificStorage().get(m_key));
+    auto data = static_cast<Data*>(Thread::currentSingleton().specificStorage().get(m_key));
     if (!data)
         return nullptr;
     return data->storagePointer();
@@ -168,7 +168,7 @@ inline T* ThreadSpecific<T, canBeGCThread>::get()
 template<typename T, CanBeGCThread canBeGCThread>
 inline void ThreadSpecific<T, canBeGCThread>::setInTLS(Data* data)
 {
-    return Thread::current().specificStorage().set(m_key, data);
+    return Thread::currentSingleton().specificStorage().set(m_key, data);
 }
 
 #else

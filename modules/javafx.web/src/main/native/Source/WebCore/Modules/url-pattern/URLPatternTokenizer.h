@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
+
 namespace URLPatternUtilities {
 
 enum class TokenType : uint8_t { Open, Close, Regexp, Name, Char, EscapedChar, OtherModifier, Asterisk, End, InvalidChar };

@@ -31,29 +31,34 @@
 
 namespace WebCore {
 
+class CSSCustomPropertyValue;
+enum class CSSWideKeyword : uint8_t;
 struct CSSRegisteredCustomProperty;
 
 namespace Style {
 
+class CustomProperty;
+
 class Builder {
     WTF_MAKE_TZONE_ALLOCATED(Builder);
 public:
-    Builder(RenderStyle&, BuilderContext&&, const MatchResult&, CascadeLevel, OptionSet<PropertyCascade::PropertyType> = PropertyCascade::normalProperties(), const UncheckedKeyHashSet<AnimatableCSSProperty>* animatedProperties = nullptr);
+    Builder(RenderStyle&, BuilderContext&&, const MatchResult&, CascadeLevel, PropertyCascade::IncludedProperties&& = PropertyCascade::normalProperties(), const HashSet<AnimatableCSSProperty>* animatedProperties = nullptr);
     ~Builder();
 
     void applyAllProperties();
     void applyTopPriorityProperties();
     void applyHighPriorityProperties();
     void applyNonHighPriorityProperties();
+    void adjustAfterApplying();
 
     void applyProperty(CSSPropertyID propertyID) { applyProperties(propertyID, propertyID); }
     void applyCustomProperty(const AtomString& name);
 
-    RefPtr<const CSSCustomPropertyValue> resolveCustomPropertyForContainerQueries(const CSSCustomPropertyValue&);
+    RefPtr<const CustomProperty> resolveCustomPropertyForContainerQueries(const CSSCustomPropertyValue&);
 
     BuilderState& state() { return m_state; }
 
-    const UncheckedKeyHashSet<AnimatableCSSProperty> overriddenAnimatedProperties() const { return m_cascade.overriddenAnimatedProperties(); }
+    const HashSet<AnimatableCSSProperty> overriddenAnimatedProperties() const { return m_cascade.overriddenAnimatedProperties(); }
 
 private:
     void applyProperties(int firstProperty, int lastProperty);
@@ -65,12 +70,13 @@ private:
     template<CustomPropertyCycleTracking trackCycles>
     void applyPropertiesImpl(int firstProperty, int lastProperty);
     void applyCascadeProperty(const PropertyCascade::Property&);
-    void applyRollbackCascadeProperty(const PropertyCascade::Property&, SelectorChecker::LinkMatchMask);
+    bool applyRollbackCascadeProperty(const PropertyCascade&, CSSPropertyID, SelectorChecker::LinkMatchMask);
+    bool applyRollbackCascadeCustomProperty(const PropertyCascade&, const AtomString&);
     void applyProperty(CSSPropertyID, CSSValue&, SelectorChecker::LinkMatchMask, CascadeLevel);
-    void applyCustomPropertyValue(const CSSCustomPropertyValue&, ApplyValueType, const CSSRegisteredCustomProperty*);
+    void applyCustomProperty(const AtomString& name, Variant<Ref<const Style::CustomProperty>, CSSWideKeyword>&&);
 
     Ref<CSSValue> resolveVariableReferences(CSSPropertyID, CSSValue&);
-    RefPtr<CSSCustomPropertyValue> resolveCustomPropertyValue(CSSCustomPropertyValue&);
+    std::optional<Variant<Ref<const Style::CustomProperty>, CSSWideKeyword>> resolveCustomPropertyValue(CSSCustomPropertyValue&);
 
     void applyPageSizeDescriptor(CSSValue&);
 
@@ -82,7 +88,7 @@ private:
 
     const PropertyCascade m_cascade;
     // Rollback cascades are build on demand to resolve 'revert' and 'revert-layer' keywords.
-    UncheckedKeyHashMap<RollbackCascadeKey, std::unique_ptr<const PropertyCascade>> m_rollbackCascades;
+    HashMap<RollbackCascadeKey, std::unique_ptr<const PropertyCascade>> m_rollbackCascades;
 
     BuilderState m_state;
 };

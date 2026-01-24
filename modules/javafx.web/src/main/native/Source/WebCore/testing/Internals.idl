@@ -362,15 +362,6 @@ enum AV1ConfigurationRange {
 
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
-    Conditional=ATTACHMENT_ELEMENT,
-    JSGenerateToJSObject,
-] dictionary AttachmentThumbnailInfo {
-    unsigned long width;
-    unsigned long height;
-};
-
-[
-    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] dictionary TextIndicatorOptions {
     boolean useBoundingRectAndPaintAllContentForComplexRanges = false;
     boolean computeEstimatedBackgroundColor = false;
@@ -473,6 +464,16 @@ enum ContentsFormat {
 #if defined(ENABLE_PIXEL_FORMAT_RGBA16F)
     "RGBA16F",
 #endif
+};
+
+[
+    Conditional=DAMAGE_TRACKING,
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary FrameDamage {
+    unsigned long sequenceId;
+    DOMRectReadOnly bounds;
+    sequence<DOMRectReadOnly> rects;
 };
 
 [
@@ -581,6 +582,7 @@ enum ContentsFormat {
     DOMString markerDescriptionForNode(Node node, DOMString markerType, unsigned long index);
     DOMString dumpMarkerRects(DOMString markerType);
     undefined setMarkedTextMatchesAreHighlighted(boolean flag);
+    ImageData snapshotNode(Node node);
 
     undefined invalidateFontCache();
 
@@ -729,7 +731,7 @@ enum ContentsFormat {
     unsigned long remoteImagesCountForTesting();
     undefined setAsyncDecodingEnabledForTesting(HTMLImageElement element, boolean enabled);
     undefined setForceUpdateImageDataEnabledForTesting(HTMLImageElement element, boolean enabled);
-    undefined setHeadroomForTesting(HTMLImageElement element, float headroom);
+    undefined setHasHDRContentForTesting(HTMLImageElement element);
 
     [Conditional=WEB_CODECS] boolean hasPendingActivity(WebCodecsVideoDecoder decoder);
 
@@ -745,6 +747,9 @@ enum ContentsFormat {
     boolean testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
 
     undefined setResourceCachingDisabledByWebInspector(boolean disabled);
+    undefined lowerAllFrameMemoryMonitorLimits();
+
+    [Conditional=DAMAGE_TRACKING] sequence<FrameDamage> getFrameDamageHistory();
 
     // Flags for layerTreeAsText.
     const unsigned short LAYER_TREE_INCLUDES_VISIBLE_RECTS = 1;
@@ -762,6 +767,8 @@ enum ContentsFormat {
     DOMString layerTreeAsText(Document document, optional unsigned short flags = 0);
 
     unsigned long long layerIDForElement(Element element);
+    unsigned long long horizontalScrollbarLayerID(optional Node? node = null);
+    unsigned long long verticalScrollbarLayerID(optional Node? node = null);
     
     sequence<unsigned long long> scrollingNodeIDForNode(optional Node? node = null);
 
@@ -967,6 +974,12 @@ enum ContentsFormat {
 
     [Conditional=VIDEO] undefined enableGStreamerHolePunching(HTMLVideoElement element);
 
+    [Conditional=VIDEO] double effectiveDynamicRangeLimitValue(HTMLMediaElement media);
+    double getContextEffectiveDynamicRangeLimitValue(HTMLCanvasElement canvas);
+    undefined setPageShouldSuppressHDR(boolean shouldSuppressHDR);
+    
+    [Conditional=VIDEO] undefined enterViewerMode(HTMLVideoElement element);
+
     undefined setIsPlayingToBluetoothOverride(optional boolean? isPlaying = null);
 
     [Conditional=LEGACY_ENCRYPTED_MEDIA] undefined initializeMockCDM();
@@ -1050,6 +1063,7 @@ enum ContentsFormat {
     [Conditional=VIDEO] boolean isPlayerVisibleInViewport(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerMuted(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerPaused(HTMLMediaElement element);
+    [Conditional=VIDEO] undefined forceStereoDecoding(HTMLMediaElement element);
 
     MockPageOverlay installMockPageOverlay(PageOverlayType type);
     DOMString pageOverlayLayerTreeAsText(optional unsigned short flags = 0);
@@ -1142,7 +1156,6 @@ enum ContentsFormat {
     undefined setPageIsInWindow(boolean isInWindow);
     boolean isPageActive();
 
-    [Conditional=WEB_RTC] undefined setH264HardwareEncoderAllowed(boolean allowed);
     [Conditional=WEB_RTC] undefined applyRotationForOutgoingVideoSources(RTCPeerConnection connection);
     [Conditional=WEB_RTC] undefined setWebRTCH265Support(boolean allowed);
     [Conditional=WEB_RTC] undefined setWebRTCVP9Support(boolean supportVP9Profile0, boolean supportVP9Profile2);
@@ -1171,6 +1184,7 @@ enum ContentsFormat {
     [Conditional=MEDIA_STREAM] boolean isMockRealtimeMediaSourceCenterEnabled();
     [Conditional=MEDIA_STREAM] boolean shouldAudioTrackPlay(AudioTrack track);
     [Conditional=MEDIA_STREAM] DOMString mediaStreamTrackPersistentId(MediaStreamTrack track);
+    [Conditional=MEDIA_STREAM] unsigned long audioCaptureSourceCount();
 
     [Conditional=WEB_RTC] readonly attribute DOMString rtcNetworkInterfaceName;
 
@@ -1185,7 +1199,7 @@ enum ContentsFormat {
     readonly attribute unsigned long long storageAreaMapCount;
 
     unsigned long long elementIdentifier(Element element);
-    boolean isElementAlive(unsigned long long elementIdentifier);
+    boolean isElementAlive(unsigned long long nodeIdentifier);
     unsigned long long pageIdentifier(Document document);
 
     boolean isAnyWorkletGlobalScopeAlive();
@@ -1322,6 +1336,11 @@ enum ContentsFormat {
     boolean hasSandboxIOKitOpenAccessToClass(DOMString process, DOMString ioKitClass);
     boolean hasSandboxUnixSyscallAccess(DOMString process, unsigned long syscall);
 
+#if defined(ENABLE_LOGD_BLOCKING_IN_WEBCONTENT) && ENABLE_LOGD_BLOCKING_IN_WEBCONTENT
+    boolean emitWebCoreLogs(unsigned long logCount, boolean useMainThread);
+    boolean emitLogs(DOMString logString, unsigned long logCount, boolean useMainThread);
+#endif
+
     DOMString systemColorForCSSValue(DOMString cssValue, boolean useDarkModeAppearance, boolean useElevatedUserInterfaceLevel);
     DOMString focusRingColor();
 
@@ -1356,12 +1375,11 @@ enum ContentsFormat {
 
     undefined setContentSizeCategory(ContentSizeCategory category);
 
-    [Conditional=ATTACHMENT_ELEMENT] AttachmentThumbnailInfo attachmentThumbnailInfo(HTMLAttachmentElement element);
     [Conditional=ATTACHMENT_ELEMENT, Conditional=SERVICE_CONTROLS] boolean hasImageControls(HTMLImageElement element);
 
     [Conditional=MEDIA_SESSION] double currentMediaSessionPosition(MediaSession session);
     [Conditional=MEDIA_SESSION] undefined sendMediaSessionAction(MediaSession session, MediaSessionActionDetails actionDetails);
-    [Conditional=MEDIA_SESSION] Promise<ImageData> loadArtworkImage(DOMString url);
+    [Conditional=MEDIA_SESSION&WEB_CODECS] Promise<WebCodecsVideoFrame> loadArtworkImage(DOMString url);
     [Conditional=MEDIA_SESSION] sequence<DOMString> platformSupportedCommands();
 
     [Conditional=MEDIA_SESSION_COORDINATOR, CallWith=CurrentScriptExecutionContext] undefined registerMockMediaSessionCoordinator(StringCallback callback);
@@ -1419,6 +1437,7 @@ enum ContentsFormat {
     readonly attribute DOMString defaultSpatialTrackingLabel;
 
     [Conditional=VIDEO] boolean isEffectivelyMuted(HTMLMediaElement element);
+    [Conditional=VIDEO] EventTarget addInternalEventTarget(HTMLMediaElement element);
 
     Promise<ImageBufferResourceLimits> getImageBufferResourceLimits();
 
@@ -1428,4 +1447,8 @@ enum ContentsFormat {
     undefined setResourceMonitorNetworkUsageThreshold(unsigned long threshold, double randomness);
     attribute boolean shouldSkipResourceMonitorThrottling;
 #endif
+
+    [Conditional=MODEL_ELEMENT] undefined disableModelLoadDelaysForTesting();
+    [Conditional=MODEL_ELEMENT] DOMString modelElementState(HTMLModelElement element);
+    [Conditional=MODEL_ELEMENT] boolean isModelElementIntersectingViewport(HTMLModelElement element);
 };

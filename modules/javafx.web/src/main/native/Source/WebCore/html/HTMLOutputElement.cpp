@@ -113,7 +113,7 @@ void HTMLOutputElement::setDefaultValue(String&& value)
 DOMTokenList& HTMLOutputElement::htmlFor()
 {
     if (!m_forTokens)
-        m_forTokens = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::forAttr);
+        lazyInitialize(m_forTokens, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::forAttr));
     return *m_forTokens;
 }
 

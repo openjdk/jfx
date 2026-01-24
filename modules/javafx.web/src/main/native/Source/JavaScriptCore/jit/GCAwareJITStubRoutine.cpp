@@ -163,6 +163,15 @@ void PolymorphicAccessJITStubRoutine::addedToSharedJITStubSet()
     m_isInSharedJITStubSet = true;
 }
 
+bool PolymorphicAccessJITStubRoutine::visitWeakImpl(VM& vm)
+{
+    bool isValid = true;
+    for (StructureID weakReference : m_weakStructures)
+        isValid &= vm.heap.isMarked(weakReference.decode());
+    isValid &= Base::visitWeakImpl(vm);
+    return isValid;
+}
+
 MarkingGCAwareJITStubRoutine::MarkingGCAwareJITStubRoutine(
     Type type, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code, VM& vm, FixedVector<Ref<AccessCase>>&& cases, FixedVector<StructureID>&& weakStructures, JSCell* owner,
     const Vector<JSCell*>& cells, Vector<std::unique_ptr<OptimizingCallLinkInfo>, 16>&& callLinkInfos, bool isCodeImmutable)
@@ -196,7 +205,7 @@ bool MarkingGCAwareJITStubRoutine::visitWeakImpl(VM& vm)
         if (callLinkInfo)
             callLinkInfo->visitWeak(vm);
     }
-    return PolymorphicAccessJITStubRoutine::visitWeakImpl(vm);
+    return Base::visitWeakImpl(vm);
 }
 
 CallLinkInfo* MarkingGCAwareJITStubRoutine::callLinkInfoAtImpl(const ConcurrentJSLocker&, unsigned index)

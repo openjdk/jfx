@@ -81,8 +81,9 @@ static DFABytecodeFlagsSize bytecodeFlagsSize(ResourceFlags flags)
         return DFABytecodeFlagsSize::UInt8;
     if (flags <= std::numeric_limits<uint16_t>::max())
         return DFABytecodeFlagsSize::UInt16;
-    RELEASE_ASSERT(flags <= UInt24Max);
+    if (flags <= UInt24Max)
     return DFABytecodeFlagsSize::UInt24;
+    return DFABytecodeFlagsSize::UInt32;
 }
 
 static DFABytecodeActionSize bytecodeActionSize(uint32_t actionWithoutFlags)
@@ -105,6 +106,8 @@ static size_t toSizeT(DFABytecodeFlagsSize size)
         return sizeof(uint16_t);
     case DFABytecodeFlagsSize::UInt24:
         return UInt24Size;
+    case DFABytecodeFlagsSize::UInt32:
+        return sizeof(uint32_t);
     }
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -301,7 +304,7 @@ DFABytecodeCompiler::JumpTable DFABytecodeCompiler::extractJumpTable(Vector<DFAB
         return range.destination;
     });
 
-    ranges.remove(firstRange, size);
+    ranges.removeAt(firstRange, size);
 
     return jumpTable;
 }

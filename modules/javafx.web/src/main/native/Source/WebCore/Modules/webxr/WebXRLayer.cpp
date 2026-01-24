@@ -43,6 +43,11 @@ WebXRLayer::WebXRLayer(ScriptExecutionContext* context)
 
 WebXRLayer::~WebXRLayer() = default;
 
+ScriptExecutionContext* WebXRLayer::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(WEBXR)

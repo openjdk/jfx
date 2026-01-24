@@ -107,16 +107,16 @@ enum class ScrollRequestType : uint8_t {
 
 struct RequestedScrollData {
     ScrollRequestType requestType { ScrollRequestType::PositionUpdate };
-    std::variant<FloatPoint, FloatSize> scrollPositionOrDelta;
+    Variant<FloatPoint, FloatSize> scrollPositionOrDelta;
     ScrollType scrollType { ScrollType::User };
     ScrollClamping clamping { ScrollClamping::Clamped };
     ScrollIsAnimated animated { ScrollIsAnimated::No };
-    std::optional<std::tuple<ScrollRequestType, std::variant<FloatPoint, FloatSize>, ScrollType, ScrollClamping>> requestedDataBeforeAnimatedScroll { };
+    std::optional<std::tuple<ScrollRequestType, Variant<FloatPoint, FloatSize>, ScrollType, ScrollClamping>> requestedDataBeforeAnimatedScroll { };
 
     void merge(RequestedScrollData&&);
 
     WEBCORE_EXPORT FloatPoint destinationPosition(FloatPoint currentScrollPosition) const;
-    WEBCORE_EXPORT static FloatPoint computeDestinationPosition(FloatPoint currentScrollPosition, ScrollRequestType, const std::variant<FloatPoint, FloatSize>& scrollPositionOrDelta);
+    WEBCORE_EXPORT static FloatPoint computeDestinationPosition(FloatPoint currentScrollPosition, ScrollRequestType, const Variant<FloatPoint, FloatSize>& scrollPositionOrDelta);
 
     bool comparePositionOrDelta(const RequestedScrollData& other) const
     {
@@ -157,6 +157,7 @@ enum class ScrollUpdateType : uint8_t {
     AnimatedScrollDidEnd,
     WheelEventScrollWillStart,
     WheelEventScrollDidEnd,
+    ProgrammaticScrollDidEnd,
 };
 
 struct ScrollUpdate {
@@ -168,7 +169,7 @@ struct ScrollUpdate {
 
     bool canMerge(const ScrollUpdate& other) const
     {
-        return nodeID == other.nodeID && updateLayerPositionAction == other.updateLayerPositionAction && updateType == other.updateType;
+        return nodeID == other.nodeID && updateLayerPositionAction == other.updateLayerPositionAction && updateType == other.updateType && updateType == ScrollUpdateType::PositionUpdate;
     }
 
     void merge(ScrollUpdate&& other)
@@ -213,6 +214,7 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventHandlingR
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WheelEventProcessingSteps);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollRequestType);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ScrollUpdateType);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const ScrollUpdate&);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const RequestedScrollData&);
 
 } // namespace WebCore

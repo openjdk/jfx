@@ -30,6 +30,7 @@
 #include "AirInst.h"
 #include "AirSpecial.h"
 #include "MacroAssemblerPrinter.h"
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {
@@ -70,7 +71,7 @@ inline void appendAirArgs(B3::Air::Inst& inst, T&& t, Arguments&&... others)
     appendAirArgs(inst, std::forward<Arguments>(others)...);
 }
 
-void printAirArg(PrintStream&, Context&);
+[[noreturn]] void printAirArg(PrintStream&, Context&);
 
 // Printer<Arg&> is only a place-holder which PrintSpecial::generate() will later
 // replace with a Printer for a register, constant, etc. as appropriate.
@@ -93,7 +94,7 @@ struct Printer<Reg> : public PrintRecord {
 namespace B3 { namespace Air {
 
 class PrintSpecial final : public Special {
-    WTF_MAKE_TZONE_ALLOCATED(PrintSpecial);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(PrintSpecial);
 public:
     PrintSpecial(Printer::PrintRecordList*);
     ~PrintSpecial() final;

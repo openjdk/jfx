@@ -31,7 +31,7 @@ namespace WTF {
 
 template<typename DerivedTime>
 class GenericTimeMixin {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(GenericTimeMixin);
 public:
     // Call this if you know for sure that the double represents the time according to the
     // same time source as DerivedTime. It must be in seconds.
@@ -88,27 +88,7 @@ public:
         return Seconds(m_value - other.m_value);
     }
 
-    friend constexpr bool operator==(GenericTimeMixin, GenericTimeMixin) = default;
-
-    constexpr bool operator<(const GenericTimeMixin& other) const
-    {
-        return m_value < other.m_value;
-    }
-
-    constexpr bool operator>(const GenericTimeMixin& other) const
-    {
-        return m_value > other.m_value;
-    }
-
-    constexpr bool operator<=(const GenericTimeMixin& other) const
-    {
-        return m_value <= other.m_value;
-    }
-
-    constexpr bool operator>=(const GenericTimeMixin& other) const
-    {
-        return m_value >= other.m_value;
-    }
+    friend constexpr auto operator<=>(GenericTimeMixin, GenericTimeMixin) = default;
 
     DerivedTime isolatedCopy() const
     {

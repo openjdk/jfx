@@ -55,7 +55,7 @@ RefPtr<SharedBuffer> serializeIDBKeyPath(const std::optional<IDBKeyPath>& keyPat
                 encoder.encodeString("string"_s, string);
             });
         });
-        std::visit(visitor, keyPath.value());
+        WTF::visit(visitor, keyPath.value());
     } else
         encoder->encodeEnum("type"_s, KeyPathType::Null);
 
@@ -326,7 +326,7 @@ static WARN_UNUSED_RETURN bool decodeKey(std::span<const uint8_t>& data, IDBKeyD
         if (data.size() < length * 2)
             return false;
 
-        Vector<UChar> buffer;
+        Vector<char16_t> buffer;
         buffer.reserveInitialCapacity(length);
         for (size_t i = 0; i < length; i++) {
             uint16_t ch;
