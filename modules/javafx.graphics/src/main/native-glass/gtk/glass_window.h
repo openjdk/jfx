@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -226,7 +226,6 @@ private:
     struct WindowContext *owner;
     jlong screen;
 
-    bool is_mouse_entered{false};
     bool is_disabled{false};
     bool on_top{false};
     bool can_be_deleted{false};
@@ -278,6 +277,9 @@ private:
      */
     static WindowContext* sm_mouse_drag_window;
 
+protected:
+    bool is_mouse_entered{false};
+
 public:
     WindowContext() = delete;
     WindowContext(jobject, WindowContext* _owner, long _screen,
@@ -326,7 +328,7 @@ public:
     virtual void process_mouse_button(GdkEventButton*, bool synthesized = false);
     virtual void process_mouse_motion(GdkEventMotion*);
     void process_mouse_scroll(GdkEventScroll*);
-    void process_mouse_cross(GdkEventCrossing*);
+    virtual void process_mouse_cross(GdkEventCrossing*);
     void process_key(GdkEventKey*);
     void process_state(GdkEventWindowState*);
     void process_property_notify(GdkEventProperty*);
@@ -407,6 +409,7 @@ public:
 
     void process_mouse_button(GdkEventButton*, bool synthesized = false) override;
     void process_mouse_motion(GdkEventMotion*) override;
+    void process_mouse_cross(GdkEventCrossing*) override;
 
 private:
     bool get_window_edge(int, int, GdkWindowEdge*);
