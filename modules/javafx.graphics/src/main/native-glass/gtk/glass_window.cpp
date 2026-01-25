@@ -188,9 +188,7 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     });
 
     window_size.setOnChange([this](const Size& size) {
-        notify_window_resize(is_maximized()
-                                ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                                : com_sun_glass_events_WindowEvent_RESIZE);
+        notify_current_sizes();
     });
 
     view_size.setOnChange([this](const Size& size) {
@@ -822,6 +820,15 @@ void WindowContext::request_frame_extents() {
 void WindowContext::update_initial_state() {
     GdkWindowState state = gdk_window_get_state(gdk_window);
 
+    // Java side does set iconified = false when maximized
+    if ((initial_state_mask & GDK_WINDOW_STATE_ICONIFIED) != 0
+        && (initial_state_mask & GDK_WINDOW_STATE_MAXIMIZED) == 0) {
+        LOG("update_initial_state: iconify\n");
+        iconify(true);
+    }
+
+    // On gnome (probably others) a window can be both maximized and fullscreen.
+    // When fullscreen mode is exited it remains maximized.
     if (initial_state_mask & GDK_WINDOW_STATE_MAXIMIZED) {
         LOG("update_initial_state: maximized\n");
         maximize(true);
@@ -830,11 +837,6 @@ void WindowContext::update_initial_state() {
     if (initial_state_mask & GDK_WINDOW_STATE_FULLSCREEN) {
         LOG("update_initial_state: fullscreen\n");
         enter_fullscreen();
-    }
-
-    if (initial_state_mask & GDK_WINDOW_STATE_ICONIFIED) {
-        LOG("update_initial_state: iconify\n");
-        iconify(true);
     }
 
     initial_state_mask = 0;
@@ -1057,9 +1059,13 @@ void WindowContext::notify_view_resize() {
 }
 
 void WindowContext::notify_current_sizes() {
-    notify_window_resize(is_maximized()
-                            ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                            : com_sun_glass_events_WindowEvent_RESIZE);
+    if (is_iconified()) {
+        notify_window_resize(com_sun_glass_events_WindowEvent_MINIMIZE);
+    } else if (is_maximized()) {
+        notify_window_resize(com_sun_glass_events_WindowEvent_MAXIMIZE);
+    } else {
+        notify_window_resize(com_sun_glass_events_WindowEvent_RESIZE);
+    }
 
     notify_view_resize();
 }
@@ -1653,20 +1659,12 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
             gint rx = 0, ry = 0;
             gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
             gdk_window_begin_move_drag(get_gdk_window(), 1, rx, ry, event->time);
-
             return;
         }
 
-        bool shouldStartMoveDrag = mainEnv->CallBooleanMethod(
-            get_jwindow(), jGtkWindowDragAreaHitTest, (jint)event->x, (jint)event->y);
-        CHECK_JNI_EXCEPTION(mainEnv);
-
         // Clicking on a draggable area starts a move-drag operation.
-        if (shouldStartMoveDrag) {
-            // Send a synthetic PRESS + RELEASE to FX.
-            WindowContext::process_mouse_button(event, true);
-            event->type = GDK_BUTTON_RELEASE;
-            WindowContext::process_mouse_button(event, true);
+        if (hitTestResult == com_sun_glass_ui_gtk_GtkWindow_HT_CAPTION) {
+            mainEnv->CallVoidMethod(get_jwindow(), jWindowNotifyFocusUngrab);
 
             gint rx = 0, ry = 0;
             gdk_window_get_root_coords(get_gdk_window(), event->x, event->y, &rx, &ry);
@@ -1677,6 +1675,24 @@ void WindowContextExtended::process_mouse_button(GdkEventButton* event, bool syn
 
     // Call the base implementation for client area events.
     WindowContext::process_mouse_button(event);
+}
+
+void WindowContextExtended::process_mouse_cross(GdkEventCrossing* event) {
+    // We only send MouseEvent.EXIT if we didn't already send it when the cursor was moved
+    // from the client area to the resize border. This is indicated by is_mouse_entered
+    // being false at this point.
+    if (is_mouse_entered && event->type != GDK_ENTER_NOTIFY) {
+        is_mouse_entered = false;
+        mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
+            com_sun_glass_events_MouseEvent_EXIT,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            (jint) event->x, (jint) event->y,
+            (jint) event->x_root, (jint) event->y_root,
+            gdk_modifier_mask_to_glass(event->state),
+            JNI_FALSE,
+            JNI_FALSE);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 /*
@@ -1745,26 +1761,6 @@ void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
     // If the cursor has moved to a resize border, we need to send MouseEvent.EXIT to FX,
     // since from the perspective of FX, resize borders are not a part of client area.
     if (is_mouse_entered && get_jview()) {
-        is_mouse_entered = false;
-        mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
-            com_sun_glass_events_MouseEvent_EXIT,
-            com_sun_glass_events_MouseEvent_BUTTON_NONE,
-            (jint) event->x, (jint) event->y,
-            (jint) event->x_root, (jint) event->y_root,
-            gdk_modifier_mask_to_glass(event->state),
-            JNI_FALSE,
-            JNI_FALSE);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
-}
-
-void WindowContextExtended::process_mouse_cross(GdkEventCrossing* event) {
-    WindowContext::process_mouse_cross(event);
-
-    // We only send MouseEvent.EXIT if we didn't already send it when the cursor was moved
-    // from the client area to the resize border. This is indicated by is_mouse_entered
-    // being false at this point.
-    if (is_mouse_entered && event->type != GDK_ENTER_NOTIFY) {
         is_mouse_entered = false;
         mainEnv->CallVoidMethod(get_jview(), jViewNotifyMouse,
             com_sun_glass_events_MouseEvent_EXIT,

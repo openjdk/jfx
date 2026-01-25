@@ -130,11 +130,6 @@ class GtkWindow extends Window {
     @Override
     protected boolean _minimize(long ptr, boolean minimize) {
         minimizeImpl(ptr, minimize);
-
-        if (!isVisible()) {
-            notifyStateChanged(WindowEvent.MINIMIZE);
-        }
-
         return isMinimized();
     }
 
