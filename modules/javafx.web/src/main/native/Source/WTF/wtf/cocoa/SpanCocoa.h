@@ -27,6 +27,7 @@
 
 #import <dispatch/dispatch.h>
 #import <span>
+#import <wtf/RetainPtr.h>
 
 namespace WTF {
 
@@ -42,6 +43,12 @@ inline std::span<const uint8_t> span(NSData *data)
 inline RetainPtr<NSData> toNSData(std::span<const uint8_t> span)
 {
     return adoptNS([[NSData alloc] initWithBytes:span.data() length:span.size()]);
+}
+
+enum class FreeWhenDone : bool { No, Yes };
+inline RetainPtr<NSData> toNSDataNoCopy(std::span<const uint8_t> span, FreeWhenDone freeWhenDone)
+{
+    return adoptNS([[NSData alloc] initWithBytesNoCopy:const_cast<uint8_t*>(span.data()) length:span.size() freeWhenDone:freeWhenDone == FreeWhenDone::Yes]);
 }
 #endif // #ifdef __OBJC__
 
@@ -60,6 +67,8 @@ WTF_EXPORT_PRIVATE bool dispatch_data_apply_span(dispatch_data_t, NOESCAPE const
 using WTF::dispatch_data_apply_span;
 
 #ifdef __OBJC__
+using WTF::FreeWhenDone;
 using WTF::span;
 using WTF::toNSData;
+using WTF::toNSDataNoCopy;
 #endif

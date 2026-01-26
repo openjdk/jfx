@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -128,11 +128,11 @@ const URL& ResourceRequestBase::url() const
     return m_requestData.m_url;
 }
 
-void ResourceRequestBase::setURL(const URL& url, bool didFilterLinkDecoration)
+void ResourceRequestBase::setURL(URL&& url, bool didFilterLinkDecoration)
 {
     updateResourceRequest();
 
-    m_requestData.m_url = url;
+    m_requestData.m_url = WTFMove(url);
     m_requestData.m_didFilterLinkDecoration = didFilterLinkDecoration;
 
     m_platformRequestUpdated = false;
@@ -441,7 +441,7 @@ void ResourceRequestBase::clearPurpose()
 {
     updateResourceRequest();
 
-    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::Purpose);
+    m_requestData.m_httpHeaderFields.remove(HTTPHeaderName::SecPurpose);
 
     m_platformRequestUpdated = false;
 }

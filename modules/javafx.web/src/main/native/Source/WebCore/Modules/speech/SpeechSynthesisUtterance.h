@@ -28,6 +28,7 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "ActiveDOMObject.h"
+#include "ContextDestructionObserver.h"
 #include "EventTarget.h"
 #include "PlatformSpeechSynthesisUtterance.h"
 #include "SpeechSynthesisErrorCode.h"
@@ -73,7 +74,7 @@ public:
     MonotonicTime startTime() const { return m_platformUtterance->startTime(); }
     void setStartTime(MonotonicTime startTime) { m_platformUtterance->setStartTime(startTime); }
 
-    PlatformSpeechSynthesisUtterance* platformUtterance() const { return m_platformUtterance.get(); }
+    PlatformSpeechSynthesisUtterance& platformUtterance() const { return m_platformUtterance.get(); }
 
     void eventOccurred(const AtomString& type, unsigned long charIndex, unsigned long charLength, const String& name);
     void errorEventOccurred(const AtomString& type, SpeechSynthesisErrorCode);
@@ -89,13 +90,13 @@ private:
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SpeechSynthesisUtterance; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    EventTargetInterfaceType eventTargetInterface() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     friend class SpeechSynthesisUtteranceActivity;
-    RefPtr<PlatformSpeechSynthesisUtterance> m_platformUtterance;
+    const Ref<PlatformSpeechSynthesisUtterance> m_platformUtterance;
     RefPtr<SpeechSynthesisVoice> m_voice;
     UtteranceCompletionHandler m_completionHandler;
     unsigned m_activityCountForEventDispatch { 0 };
@@ -118,7 +119,7 @@ public:
     SpeechSynthesisUtterance& utterance() { return m_utterance.get(); }
 
 private:
-    Ref<SpeechSynthesisUtterance> m_utterance;
+    const Ref<SpeechSynthesisUtterance> m_utterance;
 };
 
 } // namespace WebCore

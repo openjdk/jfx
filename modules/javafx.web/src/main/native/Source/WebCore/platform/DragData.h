@@ -47,7 +47,7 @@ typedef void* DragDataRef;
 
 #elif PLATFORM(WIN)
 typedef struct IDataObject* DragDataRef;
-#elif PLATFORM(GTK)
+#elif PLATFORM(GTK) || PLATFORM(WPE)
 namespace WebCore {
 class SelectionData;
 }
@@ -73,7 +73,7 @@ enum class DragApplicationFlags : uint8_t {
 class PasteboardContext;
 
 #if PLATFORM(WIN)
-typedef UncheckedKeyHashMap<unsigned, Vector<String>> DragDataMap;
+using DragDataMap = HashMap<unsigned, Vector<String>>;
 #endif
 
 class DragData {

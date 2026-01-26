@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include "Document.h"
-#include "ExceptionOr.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
@@ -35,7 +33,9 @@
 
 namespace WebCore {
 
+class Document;
 class UndoItem;
+template<typename> class ExceptionOr;
 
 class UndoManager : public RefCountedAndCanMakeWeakPtr<UndoManager> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(UndoManager);
@@ -56,7 +56,7 @@ private:
     UndoManager(Document&);
 
     Document& m_document;
-    UncheckedKeyHashSet<RefPtr<UndoItem>> m_items;
+    HashSet<RefPtr<UndoItem>> m_items;
 };
 
 } // namespace WebCore

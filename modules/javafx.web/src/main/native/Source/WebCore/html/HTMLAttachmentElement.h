@@ -63,8 +63,6 @@ public:
 
     WEBCORE_EXPORT void updateAttributes(std::optional<uint64_t>&& newFileSize, const AtomString& newContentType, const AtomString& newFilename);
     WEBCORE_EXPORT void updateAssociatedElementWithData(const String& contentType, Ref<FragmentedSharedBuffer>&& data);
-    WEBCORE_EXPORT void updateThumbnailForNarrowLayout(const RefPtr<Image>& thumbnail);
-    WEBCORE_EXPORT void updateThumbnailForWideLayout(Vector<uint8_t>&&);
     WEBCORE_EXPORT void updateIconForNarrowLayout(const RefPtr<Image>& icon, const WebCore::FloatSize&);
     WEBCORE_EXPORT void updateIconForWideLayout(Vector<uint8_t>&&);
 
@@ -82,7 +80,6 @@ public:
     const AtomString& attachmentSubtitleForDisplay() const;
     WEBCORE_EXPORT String attachmentType() const;
     String attachmentPath() const;
-    RefPtr<Image> thumbnail() const { return m_thumbnail; }
     RefPtr<Image> icon() const { return m_icon; }
     void requestIconIfNeededWithSize(const FloatSize&);
     void requestWideLayoutIconIfNeeded();
@@ -114,7 +111,7 @@ private:
     void setNeedsIconRequest();
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool isReplaced(const RenderStyle&) const final { return true; }
+    bool isReplaced(const RenderStyle* = nullptr) const final { return true; }
     bool shouldSelectOnMouseDown() final {
 #if PLATFORM(IOS_FAMILY)
         return false;
@@ -134,12 +131,9 @@ private:
 
     RefPtr<File> m_file;
     String m_uniqueIdentifier;
-    RefPtr<Image> m_thumbnail;
     RefPtr<Image> m_icon;
     FloatSize m_iconSize;
 
-    // The thumbnail is shown if non-empty, otherwise the icon is shown if non-empty.
-    Vector<uint8_t> m_thumbnailForWideLayout;
     Vector<uint8_t> m_iconForWideLayout;
 
     RefPtr<HTMLImageElement> m_imageElement;

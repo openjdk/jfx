@@ -29,12 +29,14 @@
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
 #include "MediaPlaybackTarget.h"
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class MediaPlaybackTarget;
 
-class MediaPlaybackTargetClient {
+class MediaPlaybackTargetClient
+    : public AbstractRefCountedAndCanMakeWeakPtr<MediaPlaybackTargetClient> {
 public:
     virtual ~MediaPlaybackTargetClient() = default;
 

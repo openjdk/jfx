@@ -30,6 +30,7 @@
 #include "DeprecatedGlobalSettings.h"
 #include "MediaPlayer.h"
 #include "ThreadGlobalData.h"
+#include <ranges>
 #include <wtf/FixedVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/MainThread.h>
@@ -156,7 +157,7 @@ constexpr ComparableCaseFoldingASCIILiteral supportedImageMIMETypeArray[] = {
 template<ASCIISubset subset, unsigned size> static FixedVector<ASCIILiteral> makeFixedVector(const ComparableASCIISubsetLiteral<subset> (&array)[size])
 {
     FixedVector<ASCIILiteral> result(std::size(array));
-    std::transform(std::begin(array), std::end(array), result.begin(), [] (auto literal) {
+    std::ranges::transform(array, result.begin(), [](auto literal) {
         return literal.literal;
     });
     return result;
@@ -276,11 +277,11 @@ FixedVector<ASCIILiteral> MIMETypeRegistry::unsupportedTextMIMETypes()
     return makeFixedVector(unsupportedTextMIMETypeArray);
 }
 
-static const UncheckedKeyHashMap<String, Vector<String>, ASCIICaseInsensitiveHash>& commonMimeTypesMap()
+static const HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>& commonMimeTypesMap()
 {
     ASSERT(isMainThread());
-    static NeverDestroyed<UncheckedKeyHashMap<String, Vector<String>, ASCIICaseInsensitiveHash>> mimeTypesMap = [] {
-        UncheckedKeyHashMap<String, Vector<String>, ASCIICaseInsensitiveHash> map;
+    static NeverDestroyed<HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>> mimeTypesMap = [] {
+        HashMap<String, Vector<String>, ASCIICaseInsensitiveHash> map;
         // A table of common media MIME types and file extensions used when a platform's
         // specific MIME type lookup doesn't have a match for a media file extension.
         static constexpr TypeExtensionPair commonMediaTypes[] = {
@@ -606,7 +607,7 @@ bool MIMETypeRegistry::isTextMIMEType(const String& mimeType)
             && !equalLettersIgnoringASCIICase(mimeType, "text/xsl"_s));
 }
 
-static inline bool isValidXMLMIMETypeChar(UChar c)
+static inline bool isValidXMLMIMETypeChar(char16_t c)
 {
     // Valid characters per RFCs 3023 and 2045: 0-9a-zA-Z_-+~!$^{}|.%'`#&*
     return isASCIIAlphanumeric(c) || c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' || c == '+'

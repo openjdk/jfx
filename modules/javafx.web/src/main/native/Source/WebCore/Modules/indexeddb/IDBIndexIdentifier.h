@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class IDBIndexIdentifierType { };
+struct IDBIndexIdentifierType;
 using IDBIndexIdentifier = AtomicObjectIdentifier<IDBIndexIdentifierType>;
 
 } // namespace WebCore

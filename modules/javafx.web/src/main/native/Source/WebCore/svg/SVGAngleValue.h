@@ -21,11 +21,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "SVGPropertyTraits.h"
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class SVGAngleValue {
     WTF_MAKE_TZONE_ALLOCATED(SVGAngleValue);

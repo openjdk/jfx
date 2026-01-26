@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FocusEvent.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
@@ -73,12 +74,17 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
     }
 #endif
 
-    if (!m_node || UNLIKELY(m_type == Type::Window)) {
+    if (!m_node) {
         protectedCurrentTarget()->fireEventListeners(event, phase);
         return;
     }
 
-    if (UNLIKELY(m_contextNodeIsFormElement)) {
+    if (m_type == Type::Window) [[unlikely]] {
+        protectedCurrentTarget()->fireEventListeners(event, phase);
+        return;
+    }
+
+    if (m_contextNodeIsFormElement) [[unlikely]] {
         ASSERT(is<HTMLFormElement>(*m_node));
         auto& eventNames = WebCore::eventNames();
         if ((event.type() == eventNames.submitEvent || event.type() == eventNames.resetEvent)

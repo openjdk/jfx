@@ -54,7 +54,7 @@ PAS_DEFINE_COMPACT_ATOMIC_PTR(pas_segregated_size_directory_data,
 
 #define PAS_SEGREGATED_SIZE_DIRECTORY_ALIGNMENT_SHIFT_BITS 5
 
-struct pas_segregated_size_directory {
+struct PAS_ALIGNED(sizeof(pas_versioned_field)) pas_segregated_size_directory {
     pas_segregated_directory base;
 
     pas_segregated_heap* heap;

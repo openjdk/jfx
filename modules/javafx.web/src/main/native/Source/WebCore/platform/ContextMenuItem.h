@@ -165,7 +165,10 @@ enum ContextMenuAction {
     ContextMenuItemPDFTwoPagesContinuous,
     ContextMenuItemTagShowMediaStats,
     ContextMenuItemTagCopyLinkWithHighlight,
-    ContextMenuItemLastNonCustomTag = ContextMenuItemTagCopyLinkWithHighlight,
+    ContextMenuItemTagProofread,
+    ContextMenuItemTagRewrite,
+    ContextMenuItemTagSummarize,
+    ContextMenuItemLastNonCustomTag = ContextMenuItemTagSummarize,
     ContextMenuItemBaseCustomTag = 5000,
     ContextMenuItemLastCustomTag = 5999,
     ContextMenuItemBaseApplicationTag = 10000
@@ -208,6 +211,7 @@ public:
 
     bool isNull() const;
 
+    void setTitle(String&& title) { m_title = WTFMove(title); }
     void setTitle(const String& title) { m_title = title; }
     const String& title() const { return m_title; }
 

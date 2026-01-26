@@ -81,10 +81,8 @@ protected:
 private:
     void disassociateFromOwningElement();
     AnimationEffectPhase phaseWithoutEffect() const;
-    enum class ShouldFireEvents : uint8_t { No, YesForCSSAnimation, YesForCSSTransition };
-    ShouldFireEvents shouldFireDOMEvents() const;
     template<typename F> void invalidateDOMEvents(F&&);
-    void invalidateDOMEvents(ShouldFireEvents, WebAnimationTime cancelationTime = 0_s);
+    void invalidateDOMEvents(WebAnimationTime cancelationTime = 0_s);
     void enqueueDOMEvent(const AtomString&, WebAnimationTime elapsedTime, WebAnimationTime scheduledEffectTime);
 
     WebAnimationTime effectTimeAtStart() const;

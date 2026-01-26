@@ -22,10 +22,12 @@
 #include "config.h"
 #include "LegacyRenderSVGResourcePattern.h"
 
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "GraphicsContext.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LocalFrameView.h"
+#include "NativeImage.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFitToViewBox.h"
 #include "SVGRenderStyle.h"
@@ -55,17 +57,21 @@ Ref<SVGPatternElement> LegacyRenderSVGResourcePattern::protectedPatternElement()
     return patternElement();
 }
 
-void LegacyRenderSVGResourcePattern::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
+void LegacyRenderSVGResourcePattern::removeAllClientsFromCache()
 {
     m_patternMap.clear();
     m_shouldCollectPatternAttributes = true;
+}
+
+void LegacyRenderSVGResourcePattern::removeAllClientsFromCacheAndMarkForInvalidationIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers)
+{
+    removeAllClientsFromCache();
     markAllClientsForInvalidationIfNeeded(markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
-void LegacyRenderSVGResourcePattern::removeClientFromCache(RenderElement& client, bool markForInvalidation)
+void LegacyRenderSVGResourcePattern::removeClientFromCache(RenderElement& client)
 {
     m_patternMap.remove(client);
-    markClientForInvalidation(client, markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation);
 }
 
 void LegacyRenderSVGResourcePattern::collectPatternAttributes(PatternAttributes& attributes) const
@@ -125,6 +131,9 @@ PatternData* LegacyRenderSVGResourcePattern::buildPattern(RenderElement& rendere
     patternData->transform.scale(tileBoundaries.size() / tileImageSize);
 
     AffineTransform patternTransform = m_attributes.patternTransform();
+    if (!patternTransform.isInvertible())
+        return nullptr;
+
     if (!patternTransform.isIdentity())
         patternData->transform = patternTransform * patternData->transform;
 
@@ -140,7 +149,7 @@ PatternData* LegacyRenderSVGResourcePattern::buildPattern(RenderElement& rendere
 
     // Various calls above may trigger invalidations in some fringe cases (ImageBuffer allocation
     // failures in the SVG image cache for example). To avoid having our PatternData deleted by
-    // removeAllClientsFromCache(), we only make it visible in the cache at the very end.
+    // removeAllClientsFromCacheAndMarkForInvalidation(), we only make it visible in the cache at the very end.
     return m_patternMap.set(renderer, WTFMove(patternData)).iterator->value.get();
 }
 
@@ -173,13 +182,13 @@ auto LegacyRenderSVGResourcePattern::applyResource(RenderElement& renderer, cons
     Ref svgStyle = style.svgStyle();
 
     if (resourceMode.contains(RenderSVGResourceMode::ApplyToFill)) {
-        context->setAlpha(svgStyle->fillOpacity());
+        context->setAlpha(svgStyle->fillOpacity().value.value);
         context->setFillPattern(*patternData->pattern);
         context->setFillRule(svgStyle->fillRule());
     } else if (resourceMode.contains(RenderSVGResourceMode::ApplyToStroke)) {
         if (svgStyle->vectorEffect() == VectorEffect::NonScalingStroke)
             patternData->pattern->setPatternSpaceTransform(transformOnNonScalingStroke(&renderer, patternData->transform));
-        context->setAlpha(svgStyle->strokeOpacity());
+        context->setAlpha(svgStyle->strokeOpacity().value.value);
         context->setStrokePattern(*patternData->pattern);
         SVGRenderSupport::applyStrokeStyleToContext(*context, style, renderer);
     }
@@ -251,7 +260,7 @@ RefPtr<ImageBuffer> LegacyRenderSVGResourcePattern::createTileImage(GraphicsCont
     auto tileSize = roundedUnscaledImageBufferSize(size, scale);
 
     // FIXME: Use createImageBuffer(rect, scale), delete the above calculations and fix 'tileImageTransform'
-    auto tileImage = context.createScaledImageBuffer(tileSize, scale);
+    auto tileImage = context.createScaledImageBuffer(tileSize, scale.expandedTo(context.scaleFactor()));
     if (!tileImage)
         return nullptr;
 

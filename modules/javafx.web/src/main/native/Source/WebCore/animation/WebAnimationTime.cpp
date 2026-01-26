@@ -202,33 +202,16 @@ WebAnimationTime& WebAnimationTime::operator-=(const WebAnimationTime& other)
     return *this;
 }
 
-bool WebAnimationTime::operator<(const WebAnimationTime& other) const
+std::partial_ordering operator<=>(const WebAnimationTime& a, const WebAnimationTime& b)
 {
-    ASSERT(m_type == other.m_type);
-    return m_value < other.m_value;
+    ASSERT(a.m_type == b.m_type);
+    return a.m_value <=> b.m_value;
 }
 
-bool WebAnimationTime::operator<=(const WebAnimationTime& other) const
+std::partial_ordering operator<=>(const WebAnimationTime& a, Seconds b)
 {
-    ASSERT(m_type == other.m_type);
-    return m_value <= other.m_value;
-}
-
-bool WebAnimationTime::operator>(const WebAnimationTime& other) const
-{
-    ASSERT(m_type == other.m_type);
-    return m_value > other.m_value;
-}
-
-bool WebAnimationTime::operator>=(const WebAnimationTime& other) const
-{
-    ASSERT(m_type == other.m_type);
-    return m_value >= other.m_value;
-}
-
-bool WebAnimationTime::operator==(const WebAnimationTime& other) const
-{
-    return m_type == other.m_type && m_value == other.m_value;
+    ASSERT(a.m_type == WebAnimationTime::Type::Time);
+    return a.m_value <=> b.seconds();
 }
 
 WebAnimationTime WebAnimationTime::operator+(const Seconds& other) const
@@ -241,30 +224,6 @@ WebAnimationTime WebAnimationTime::operator-(const Seconds& other) const
 {
     ASSERT(m_type == Type::Time);
     return { m_type, m_value - other.seconds() };
-}
-
-bool WebAnimationTime::operator<(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value < other.seconds();
-}
-
-bool WebAnimationTime::operator<=(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value <= other.seconds();
-}
-
-bool WebAnimationTime::operator>(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value > other.seconds();
-}
-
-bool WebAnimationTime::operator>=(const Seconds& other) const
-{
-    ASSERT(m_type == Type::Time);
-    return m_value >= other.seconds();
 }
 
 bool WebAnimationTime::operator==(const Seconds& other) const
@@ -303,7 +262,7 @@ void WebAnimationTime::dump(TextStream& ts) const
         return;
     }
     ASSERT(m_type == Type::Percentage);
-    ts << m_value << "%";
+    ts << m_value << '%';
     return;
 }
 

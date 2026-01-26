@@ -228,7 +228,7 @@ bool pas_local_allocator_stop(
                 allocator->scavenger_data.is_in_use ? "yes" : "no");
         pas_log("at time of assert: allocator->scavenger_data.is_in_use = %s\n",
                 is_in_use ? "yes" : "no");
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
     }
 
     /* Doing this check before setting is_in_use guards against situations where calling stop would

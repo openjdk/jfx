@@ -62,7 +62,7 @@ public:
         return downcast<SharedBuffer>(*m_buffer).span().data();
     }
 
-    void lockUnderlyingBuffer() final
+    void lockUnderlyingBufferImpl() final
     {
         ASSERT(!m_buffer);
         m_buffer = m_scriptBuffer.buffer();
@@ -74,7 +74,7 @@ public:
             m_buffer = m_buffer->makeContiguous();
     }
 
-    void unlockUnderlyingBuffer() final
+    void unlockUnderlyingBufferImpl() final
     {
         ASSERT(m_buffer);
         m_buffer = nullptr;

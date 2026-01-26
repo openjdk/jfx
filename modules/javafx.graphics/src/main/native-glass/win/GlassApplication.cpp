@@ -25,6 +25,8 @@
 
 #include "common.h"
 
+#include <shlwapi.h>
+
 #include "GlassApplication.h"
 #include "GlassClipboard.h"
 #include "GlassScreen.h"
@@ -34,7 +36,6 @@
 
 #include "com_sun_glass_ui_win_WinApplication.h"
 #include "com_sun_glass_ui_win_WinSystemClipboard.h"
-
 
 /**********************************
  * GlassApplication
@@ -526,6 +527,35 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication_getPlatformPr
     (JNIEnv * env, jobject self)
 {
     return GlassApplication::GetPlatformPreferences();
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinApplication
+ * Method:    _getDefaultBrowser
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinApplication__1getDefaultBrowser
+        (JNIEnv *env, jclass cls)
+{
+    LPCWSTR fileExtension = L"https";
+    WCHAR defaultBrowser_c [MAX_PATH];
+    DWORD cchBuffer = MAX_PATH;
+
+    // Use AssocQueryString to get the default browser
+    HRESULT hr = AssocQueryStringW(
+        ASSOCF_NONE,            // No special flags
+        ASSOCSTR_COMMAND,       // Request the command string
+        fileExtension,          // File extension
+        NULL,                   // pszExtra (optional)
+        defaultBrowser_c,       // Output buffer - result
+        &cchBuffer              // Size of the output buffer
+    );
+
+    if (FAILED(hr)) {
+        return NULL;
+    }
+
+    return CreateJString(env, defaultBrowser_c);;
 }
 
 } // extern "C"

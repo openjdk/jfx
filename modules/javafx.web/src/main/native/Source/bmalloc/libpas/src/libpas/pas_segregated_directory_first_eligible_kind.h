@@ -46,7 +46,7 @@ static inline const char* pas_segregated_directory_find_eligible_kind_get_string
     case pas_segregated_directory_first_eligible_and_tabled_kind:
         return "first_eligible_and_tabled";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

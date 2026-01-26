@@ -51,14 +51,17 @@ public:
 #endif
 
     void didChangeDeviceMotion(DeviceMotionData*);
-    DeviceMotionClient& deviceMotionClient();
 
     bool hasLastData() override;
     RefPtr<Event> getLastEvent() override;
+    DeviceClient& client() final;
 
     static ASCIILiteral supplementName();
     static DeviceMotionController* from(Page*);
     static bool isActiveAt(Page*);
+
+private:
+    WeakRef<DeviceMotionClient> m_client;
 };
 
 } // namespace WebCore

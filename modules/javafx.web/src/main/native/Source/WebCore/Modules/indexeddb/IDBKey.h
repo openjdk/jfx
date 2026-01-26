@@ -27,7 +27,6 @@
 
 #include "IndexedDB.h"
 #include "ThreadSafeDataBuffer.h"
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
@@ -138,7 +137,7 @@ public:
         return std::get<ThreadSafeDataBuffer>(m_value);
     }
 
-    int compare(const IDBKey& other) const;
+    std::weak_ordering compare(const IDBKey& other) const;
     bool isLessThan(const IDBKey& other) const;
     bool isEqual(const IDBKey& other) const;
 
@@ -164,7 +163,7 @@ private:
     explicit IDBKey(const ThreadSafeDataBuffer&);
 
     const IndexedDB::KeyType m_type;
-    std::variant<Vector<RefPtr<IDBKey>>, String, double, ThreadSafeDataBuffer> m_value;
+    Variant<Vector<RefPtr<IDBKey>>, String, double, ThreadSafeDataBuffer> m_value;
 
     const size_t m_sizeEstimate;
 
@@ -172,39 +171,31 @@ private:
     enum { OverheadSize = 16 };
 };
 
-inline int compareBinaryKeyData(const Vector<uint8_t>& a, const Vector<uint8_t>& b)
+inline std::strong_ordering compareBinaryKeyData(const Vector<uint8_t>& a, const Vector<uint8_t>& b)
 {
     size_t length = std::min(a.size(), b.size());
 
     for (size_t i = 0; i < length; ++i) {
-        if (a[i] > b[i])
-            return 1;
-        if (a[i] < b[i])
-            return -1;
+        if (auto result = a[i] <=> b[i]; is_neq(result))
+            return result;
     }
 
-    if (a.size() == b.size())
-        return 0;
-
-    if (a.size() > b.size())
-        return 1;
-
-    return -1;
+    return a.size() <=> b.size();
 }
 
-inline int compareBinaryKeyData(const ThreadSafeDataBuffer& a, const ThreadSafeDataBuffer& b)
+inline std::strong_ordering compareBinaryKeyData(const ThreadSafeDataBuffer& a, const ThreadSafeDataBuffer& b)
 {
     auto* aData = a.data();
     auto* bData = b.data();
 
     // Covers the cases where both pointers are null as well as both pointing to the same buffer.
     if (aData == bData)
-        return 0;
+        return std::strong_ordering::equal;
 
-    if (aData && !bData)
-        return 1;
-    if (!aData && bData)
-        return -1;
+    if (!bData)
+        return std::strong_ordering::greater;
+    if (!aData)
+        return std::strong_ordering::less;
 
     return compareBinaryKeyData(*aData, *bData);
 }

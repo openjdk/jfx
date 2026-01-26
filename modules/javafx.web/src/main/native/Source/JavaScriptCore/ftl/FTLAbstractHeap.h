@@ -141,7 +141,7 @@ public:
 private:
     const AbstractHeap& returnInitialized(AbstractHeap& field, ptrdiff_t index)
     {
-        if (UNLIKELY(!field.isInitialized()))
+        if (!field.isInitialized()) [[unlikely]]
             initialize(field, index);
         return field;
     }
@@ -161,7 +161,7 @@ private:
     };
     typedef UncheckedKeyHashMap<ptrdiff_t, std::unique_ptr<AbstractHeap>, WTF::IntHash<ptrdiff_t>, WithoutZeroOrOneHashTraits> MapType;
 
-    std::unique_ptr<MapType> m_largeIndices;
+    MapType m_largeIndices;
     Vector<CString, 16> m_largeIndexNames;
 };
 

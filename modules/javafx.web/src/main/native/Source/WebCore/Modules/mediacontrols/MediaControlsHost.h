@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 
 #include "HTMLMediaElement.h"
 #include "MediaSession.h"
-#include <variant>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -55,7 +54,7 @@ class MediaControlsHost final
     , private MediaSessionObserver
 #endif
     , public CanMakeWeakPtr<MediaControlsHost> {
-    WTF_MAKE_FAST_ALLOCATED(MediaControlsHost);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MediaControlsHost);
 public:
     USING_CAN_MAKE_WEAKPTR(CanMakeWeakPtr<MediaControlsHost>);
 
@@ -74,7 +73,7 @@ public:
     Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList&);
     Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList&);
 
-    using TextOrAudioTrack = std::variant<RefPtr<TextTrack>, RefPtr<AudioTrack>>;
+    using TextOrAudioTrack = Variant<RefPtr<TextTrack>, RefPtr<AudioTrack>>;
     String displayNameForTrack(const std::optional<TextOrAudioTrack>&);
 
     static TextTrack& captionMenuOffItem();
@@ -112,7 +111,7 @@ public:
 
     static String generateUUID();
 
-    static String shadowRootCSSText();
+    Vector<String, 2> shadowRootStyleSheets() const;
     static String base64StringForIconNameAndType(const String& iconName, const String& iconType);
     static String formattedStringForDuration(double);
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
@@ -141,7 +140,7 @@ private:
     void metadataChanged(const RefPtr<MediaMetadata>&) final;
 #endif
 
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    WeakRef<HTMLMediaElement> m_mediaElement;
     RefPtr<MediaControlTextTrackContainerElement> m_textTrackContainer;
     RefPtr<TextTrack> m_previouslySelectedTextTrack;
 

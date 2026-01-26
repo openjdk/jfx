@@ -28,28 +28,32 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSImportRule.h"
-#include "CSSParserFastPaths.h"
 #include "CSSParserMode.h"
 #include "CSSPropertyNames.h"
+#include "CSSPropertyParserState.h"
+#include "CSSPropertyParsing.h"
 #include "CSSPropertySourceData.h"
 #include "CSSRule.h"
 #include "CSSRuleList.h"
+#include "CSSStyleProperties.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CSSValueKeywords.h"
 #include "CommonAtomStrings.h"
-#include "ContainerNode.h"
+#include "ContainerNodeInlines.h"
 #include "ContentSecurityPolicy.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventTarget.h"
+#include "EventTargetInlines.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontPlatformData.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
+#include "HTMLSlotElement.h"
 #include "HTMLStyleElement.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorHistory.h"
@@ -280,7 +284,7 @@ private:
 
 InspectorCSSAgent::InspectorCSSAgent(PageAgentContext& context)
     : InspectorAgentBase("CSS"_s, context)
-    , m_frontendDispatcher(makeUnique<CSSFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<CSSFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(CSSBackendDispatcher::create(context.backendDispatcher, this))
     , m_inspectedPage(context.inspectedPage)
     , m_nodesWithPendingLayoutFlagsChangeDispatchTimer(*this, &InspectorCSSAgent::nodesWithPendingLayoutFlagsChangeDispatchTimerFired)
@@ -289,7 +293,7 @@ InspectorCSSAgent::InspectorCSSAgent(PageAgentContext& context)
 
 InspectorCSSAgent::~InspectorCSSAgent() = default;
 
-void InspectorCSSAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
+void InspectorCSSAgent::didCreateFrontendAndBackend()
 {
 }
 
@@ -909,10 +913,13 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::CSS::C
                 property->setLonghands(WTFMove(longhands));
         }
 
-        if (CSSParserFastPaths::isKeywordFastPathEligibleStyleProperty(propertyID)) {
+        if (CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(propertyID)) {
+            auto propertyParserState = CSS::PropertyParserState {
+                .context = strictCSSParserContext(),
+            };
             auto values = JSON::ArrayOf<String>::create();
             for (auto valueID : allCSSValueKeywords()) {
-                if (CSSParserFastPaths::isKeywordValidForStyleProperty(propertyID, valueID, strictCSSParserContext()))
+                if (CSSPropertyParsing::isKeywordValidForStyleProperty(propertyID, valueID, propertyParserState))
                     values->addItem(nameString(valueID));
             }
             if (values->length())
@@ -932,7 +939,7 @@ Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<String>>> InspectorCSSAgent
 {
     auto fontFamilyNames = JSON::ArrayOf<String>::create();
 
-    Vector<String> systemFontFamilies = FontCache::forCurrentThread().systemFontFamilies();
+    Vector<String> systemFontFamilies = FontCache::forCurrentThread()->systemFontFamilies();
     for (const auto& familyName : systemFontFamilies)
         fontFamilyNames->addItem(familyName);
 
@@ -1043,6 +1050,19 @@ static bool hasJSEventListener(Node& node)
     return false;
 }
 
+static bool isSlotElementWithAssignedNodes(Node& node)
+{
+    if (RefPtr slotElement = dynamicDowncast<HTMLSlotElement>(node)) {
+        if (const auto* assignedNodes = slotElement->assignedNodes()) {
+            for (const auto& assignedNode : *assignedNodes) {
+                if (assignedNode)
+                    return true;
+            }
+        }
+    }
+    return false;
+}
+
 OptionSet<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagsForNode(Node& node)
 {
     auto* renderer = node.renderer();
@@ -1071,6 +1091,12 @@ OptionSet<InspectorCSSAgent::LayoutFlag> InspectorCSSAgent::layoutFlagsForNode(N
     if (hasJSEventListener(node))
         layoutFlags.add(InspectorCSSAgent::LayoutFlag::Event);
 
+    if (node.assignedSlot())
+        layoutFlags.add(InspectorCSSAgent::LayoutFlag::SlotAssigned);
+
+    if (isSlotElementWithAssignedNodes(node))
+        layoutFlags.add(InspectorCSSAgent::LayoutFlag::SlotFilled);
+
     return layoutFlags;
 }
 
@@ -1090,6 +1116,10 @@ static RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> 
         protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::Grid));
     if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::Event))
         protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::Event));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::SlotAssigned))
+        protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::SlotAssigned));
+    if (layoutFlags.contains(InspectorCSSAgent::LayoutFlag::SlotFilled))
+        protocolLayoutFlags->addItem(Inspector::Protocol::Helpers::getEnumConstantValue(Inspector::Protocol::CSS::LayoutFlag::SlotFilled));
     return protocolLayoutFlags;
 }
 
@@ -1143,6 +1173,17 @@ void InspectorCSSAgent::willRemoveEventListener(EventTarget& target)
 {
     if (auto* node = dynamicDowncast<Node>(target))
         nodeHasLayoutFlagsChange(*node);
+}
+
+void InspectorCSSAgent::didChangeAssignedSlot(Node& slotable)
+{
+    nodeHasLayoutFlagsChange(slotable);
+}
+
+void InspectorCSSAgent::didChangeAssignedNodes(Element& slotElement)
+{
+    ASSERT(is<HTMLSlotElement>(slotElement));
+    nodeHasLayoutFlagsChange(slotElement);
 }
 
 void InspectorCSSAgent::nodeHasLayoutFlagsChange(Node& node)
@@ -1317,8 +1358,8 @@ Ref<JSON::ArrayOf<Inspector::Protocol::CSS::RuleMatch>> InspectorCSSAgent::build
         auto matchingSelectors = JSON::ArrayOf<int>::create();
         const CSSSelectorList& selectorList = matchedRule->selectorList();
         int index = 0;
-        for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector)) {
-            bool matched = selectorChecker.match(*selector, element, context);
+        for (auto& selector : selectorList) {
+            bool matched = selectorChecker.match(selector, element, context);
             if (matched)
                 matchingSelectors->addItem(index);
             ++index;
@@ -1342,7 +1383,7 @@ RefPtr<Inspector::Protocol::CSS::CSSStyle> InspectorCSSAgent::buildObjectForAttr
 
     auto mutableStyle = presentationalHintStyle->mutableCopy();
 
-    auto inspectorStyle = InspectorStyle::create(InspectorCSSId(), mutableStyle->ensureCSSStyleDeclaration(), nullptr);
+    auto inspectorStyle = InspectorStyle::create(InspectorCSSId(), mutableStyle->ensureCSSStyleProperties(), nullptr);
     return inspectorStyle->buildObjectForStyle();
 }
 

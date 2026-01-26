@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,16 +53,15 @@ void InsertNodeBeforeCommand::doApply()
         return;
     ASSERT(isEditableNode(*parent));
 
-    parent->insertBefore(protectedInsertChild(), m_refChild.copyRef());
+    parent->insertBefore(m_insertChild, m_refChild.copyRef());
 }
 
 void InsertNodeBeforeCommand::doUnapply()
 {
-    auto insertChild = protectedInsertChild();
-    if (!isEditableNode(insertChild))
+    if (!isEditableNode(m_insertChild))
         return;
 
-    insertChild->remove();
+    m_insertChild->remove();
 }
 
 #ifndef NDEBUG

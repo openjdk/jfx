@@ -65,7 +65,7 @@ struct GeneralEnclosed {
     String text;
 };
 
-using QueryInParens = std::variant<Condition, Feature, GeneralEnclosed>;
+using QueryInParens = Variant<Condition, Feature, GeneralEnclosed>;
 
 struct Condition {
     LogicalOperator logicalOperator { LogicalOperator::And };
@@ -89,7 +89,7 @@ struct FeatureEvaluationContext {
 };
 
 struct FeatureSchema {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FeatureSchema);
 
     enum class Type : uint8_t { Discrete, Range };
     enum class ValueType : uint8_t { Integer, Number, Length, Ratio, Resolution, Identifier, CustomProperty };

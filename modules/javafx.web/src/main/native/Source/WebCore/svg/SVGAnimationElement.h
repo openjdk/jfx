@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "SVGAttributeAnimator.h"
 #include "SVGSMILElement.h"
 #include "SVGTests.h"
 #include "UnitBezier.h"

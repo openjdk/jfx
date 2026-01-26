@@ -38,6 +38,7 @@ public: \
     using HeapRef = ::bmalloc::api::HeapRef; \
     using SizeAndAlignment = ::bmalloc::api::SizeAndAlignment; \
     using TZoneMallocFallback = ::bmalloc::api::TZoneMallocFallback; \
+    using CompactAllocationMode = ::bmalloc::CompactAllocationMode; \
     \
     BINLINE void* operator new(size_t, void* p) { return p; } \
     BINLINE void* operator new[](size_t, void* p) { return p; } \
@@ -54,11 +55,18 @@ public: \
     void* operator new(size_t size) \
     { \
         static HeapRef s_heapRef; \
-        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), ::bmalloc::api::compactAllocationMode<_type>(), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) TZONE_DYNAMIC_COMPACTION_ARG(_type) }; \
     \
-        if (BUNLIKELY(!s_heapRef || size != sizeof(_type))) \
+        if (!s_heapRef || size != sizeof(_type)) { [[unlikely]] \
+            if constexpr (::bmalloc::api::compactAllocationMode<_type>() == CompactAllocationMode::Compact) \
+                return ::bmalloc::api::tzoneAllocateCompactSlow(size, s_heapSpec); \
             return ::bmalloc::api::tzoneAllocate ## _compactMode ## Slow(size, s_heapSpec); \
+        } \
         BASSERT(::bmalloc::api::tzoneMallocFallback > TZoneMallocFallback::ForceDebugMalloc); \
+        if constexpr (::bmalloc::api::compactAllocationMode<_type>() == CompactAllocationMode::Compact) \
+            return ::bmalloc::api::tzoneAllocateCompact(s_heapRef); \
+        if (::bmalloc::api::shouldDynamicallyCompact(s_heapSpec)) \
+            return ::bmalloc::api::tzoneAllocateCompact(s_heapRef); \
         return ::bmalloc::api::tzoneAllocate ## _compactMode(s_heapRef); \
     } \
     \
@@ -84,10 +92,14 @@ private: \
 #define MAKE_BTZONE_MALLOCED_IMPL(_type, _compactMode) \
 ::bmalloc::api::HeapRef _type::s_heapRef; \
 \
-const TZoneSpecification _type::s_heapSpec = { &_type::s_heapRef, sizeof(_type), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+const TZoneSpecification _type::s_heapSpec = { &_type::s_heapRef, sizeof(_type), ::bmalloc::api::compactAllocationMode<_type>(), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) TZONE_DYNAMIC_COMPACTION_ARG(_type) }; \
 \
 void* _type::operatorNewSlow(size_t size) \
 { \
+    if constexpr (::bmalloc::api::compactAllocationMode<_type>() == CompactAllocationMode::Compact) \
+        return ::bmalloc::api::tzoneAllocateCompactSlow(size, s_heapSpec); \
+    if (::bmalloc::api::shouldDynamicallyCompact(s_heapSpec)) \
+        return ::bmalloc::api::tzoneAllocateCompactSlow(size, s_heapSpec); \
     return ::bmalloc::api::tzoneAllocate ## _compactMode ## Slow(size, s_heapSpec); \
 } \
 \

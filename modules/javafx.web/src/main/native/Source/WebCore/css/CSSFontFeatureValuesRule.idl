@@ -26,6 +26,12 @@ typedef USVString CSSOMString;
 ] interface CSSFontFeatureValuesRule : CSSRule {
     readonly attribute CSSOMString fontFamily;
     
-    // Like Gecko, we don't expose the children at-rules @styleset,...etc
-    // https://searchfox.org/mozilla-central/source/dom/webidl/CSSFontFeatureValuesRule.webidl
+    // FIXME: Implement support for CSSFontFeatureValuesMaps.
+    // readonly attribute CSSFontFeatureValuesMap annotation;
+    // readonly attribute CSSFontFeatureValuesMap ornaments;
+    // readonly attribute CSSFontFeatureValuesMap stylistic;
+    // readonly attribute CSSFontFeatureValuesMap swash;
+    // readonly attribute CSSFontFeatureValuesMap characterVariant;
+    // readonly attribute CSSFontFeatureValuesMap styleset;
+    // readonly attribute CSSFontFeatureValuesMap historicalForms;
 };

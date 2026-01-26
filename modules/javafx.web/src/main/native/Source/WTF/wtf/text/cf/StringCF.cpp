@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -50,7 +50,7 @@ String::String(CFStringRef str)
         }
     }
 
-    StringBuffer<UChar> ucharBuffer(size);
+    StringBuffer<char16_t> ucharBuffer(size);
     CFStringGetCharacters(str, CFRangeMake(0, size), reinterpret_cast<UniChar *>(ucharBuffer.characters()));
     m_impl = StringImpl::adopt(WTFMove(ucharBuffer));
 }

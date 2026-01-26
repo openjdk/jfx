@@ -28,11 +28,13 @@
 #include "SpinButtonElement.h"
 
 #include "Chrome.h"
+#include "ContainerNodeInlines.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
 #include "LocalFrame.h"
 #include "MouseEvent.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderBox.h"
 #include "RenderTheme.h"
@@ -71,6 +73,12 @@ void SpinButtonElement::willDetachRenderers()
     releaseCapture();
 }
 
+bool SpinButtonElement::isDisabledFormControl() const
+{
+    RefPtr host = shadowHost();
+    return host && host->isDisabledFormControl();
+}
+
 void SpinButtonElement::defaultEventHandler(Event& event)
 {
     auto* mouseEvent = dynamicDowncast<MouseEvent>(event);
@@ -80,7 +88,7 @@ void SpinButtonElement::defaultEventHandler(Event& event)
         return;
     }
 
-    RenderBox* box = renderBox();
+    CheckedPtr box = renderBox();
     if (!box) {
         if (!event.defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
@@ -123,12 +131,13 @@ void SpinButtonElement::defaultEventHandler(Event& event)
                 if (RefPtr frame = document().frame()) {
                     frame->eventHandler().setCapturingMouseEventsElement(this);
                     m_capturing = true;
-                    if (Page* page = document().page())
+                    if (RefPtr page = document().page())
                         page->chrome().registerPopupOpeningObserver(*this);
                 }
             }
             UpDownState oldUpDownState = m_upDownState;
-            switch (renderer()->theme().innerSpinButtonLayout(*renderer())) {
+            CheckedRef renderer = *this->renderer();
+            switch (renderer->theme().innerSpinButtonLayout(renderer.get())) {
             case RenderTheme::InnerSpinButtonLayout::Vertical:
                 m_upDownState = local.y() < box->height() / 2 ? Up : Down;
                 break;
@@ -140,7 +149,7 @@ void SpinButtonElement::defaultEventHandler(Event& event)
                 break;
             }
             if (m_upDownState != oldUpDownState)
-                renderer()->repaint();
+                renderer->repaint();
         } else {
             releaseCapture();
             m_upDownState = Indeterminate;
@@ -191,7 +200,7 @@ void SpinButtonElement::releaseCapture()
         if (RefPtr frame = document().frame()) {
             frame->eventHandler().setCapturingMouseEventsElement(nullptr);
             m_capturing = false;
-            if (Page* page = document().page())
+            if (RefPtr page = document().page())
                 page->chrome().unregisterPopupOpeningObserver(*this);
         }
     }
@@ -199,7 +208,7 @@ void SpinButtonElement::releaseCapture()
 
 bool SpinButtonElement::matchesReadWritePseudoClass() const
 {
-    return shadowHost()->matchesReadWritePseudoClass();
+    return protectedShadowHost()->matchesReadWritePseudoClass();
 }
 
 void SpinButtonElement::startRepeatingTimer()

@@ -257,17 +257,17 @@ void FEColorMatrixSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer) const
     applyPlatformUnaccelerated(pixelBuffer);
 }
 
-bool FEColorMatrixSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FEColorMatrixSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    Ref input = inputs[0];
+    auto& input = inputs[0].get();
 
     RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
-    RefPtr inputImage = input->imageBuffer();
+    RefPtr inputImage = input.imageBuffer();
     if (inputImage) {
-        auto inputImageRect = input->absoluteImageRectRelativeTo(result);
+        auto inputImageRect = input.absoluteImageRectRelativeTo(result);
         resultImage->context().drawImageBuffer(*inputImage, inputImageRect);
     }
 
