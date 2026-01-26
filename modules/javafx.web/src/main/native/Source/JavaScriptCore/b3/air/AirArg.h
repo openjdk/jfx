@@ -1130,6 +1130,11 @@ public:
         return logScale(scale());
     }
 
+    MacroAssembler::Extend extend() const
+    {
+        return m_extend;
+    }
+
     Air::Special* special() const
     {
         ASSERT(kind() == Special);

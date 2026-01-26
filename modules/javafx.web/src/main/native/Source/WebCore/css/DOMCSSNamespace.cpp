@@ -35,6 +35,7 @@
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
+#include "CSSSupportsParser.h"
 #include "Document.h"
 #include "HighlightRegistry.h"
 #include "MutableStyleProperties.h"
@@ -76,8 +77,8 @@ bool DOMCSSNamespace::supports(Document& document, const String& conditionText)
 {
     CSSParserContext context(document);
     context.mode = HTMLStandardMode;
-    CSSParser parser(context);
-    return parser.parseSupportsCondition(conditionText);
+
+    return CSSSupportsParser::supportsCondition(conditionText, context, CSSSupportsParser::ParsingMode::AllowBareDeclarationAndGeneralEnclosed) == CSSSupportsParser::Supported;
 }
 
 String DOMCSSNamespace::escape(const String& ident)

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,6 +27,7 @@
 #include "CollectionTraversal.h"
 #include "Document.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include "NodeList.h"
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
@@ -47,10 +48,9 @@ public:
 
     NodeListInvalidationType invalidationType() const { return m_invalidationType; }
     ContainerNode& ownerNode() const { return m_ownerNode; }
-    Ref<ContainerNode> protectedOwnerNode() const { return m_ownerNode; }
     void invalidateCacheForAttribute(const QualifiedName& attributeName) const;
     virtual void invalidateCacheForDocument(Document&) const = 0;
-    void invalidateCache() const { invalidateCacheForDocument(document()); }
+    void invalidateCache() const { invalidateCacheForDocument(protectedDocument().get()); }
 
     bool isRegisteredForInvalidationAtDocument() const { return m_isRegisteredForInvalidationAtDocument; }
     void setRegisteredForInvalidationAtDocument(bool isRegistered) { m_isRegisteredForInvalidationAtDocument = isRegistered; }
@@ -65,7 +65,7 @@ protected:
 private:
     bool isLiveNodeList() const final { return true; }
 
-    Ref<ContainerNode> m_ownerNode;
+    const Ref<ContainerNode> m_ownerNode;
 
     const NodeListInvalidationType m_invalidationType;
     bool m_isRegisteredForInvalidationAtDocument { false };
@@ -119,7 +119,7 @@ template <class NodeListType>
 CachedLiveNodeList<NodeListType>::~CachedLiveNodeList()
 {
     if (m_indexCache.hasValidCache())
-        document().unregisterNodeListForInvalidation(*this);
+        protectedDocument()->unregisterNodeListForInvalidation(*this);
 }
 
 } // namespace WebCore

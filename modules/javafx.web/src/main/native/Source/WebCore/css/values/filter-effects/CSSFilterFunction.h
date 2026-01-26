@@ -35,12 +35,11 @@
 #include "CSSOpacityFunction.h"
 #include "CSSSaturateFunction.h"
 #include "CSSSepiaFunction.h"
-#include <variant>
 
 namespace WebCore {
 namespace CSS {
 
-using FilterFunction = std::variant<
+using FilterFunction = Variant<
     AppleInvertLightnessFunction,
     BlurFunction,
     BrightnessFunction,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,11 @@
 
 namespace WebCore {
 
+class Node;
 class UserContentProvider;
 class UserMessageHandlersNamespace;
+class WebKitNodeInfo;
+class WebKitSerializedNode;
 
 class WebKitNamespace : public LocalDOMWindowProperty, public RefCounted<WebKitNamespace> {
 public:
@@ -46,11 +49,17 @@ public:
     virtual ~WebKitNamespace();
 
     UserMessageHandlersNamespace* messageHandlers();
+    Ref<WebKitNodeInfo> createNodeInfo(Node&);
+
+    struct SerializedNodeInit {
+        bool deep { false };
+    };
+    Ref<WebKitSerializedNode> serializeNode(Node&, SerializedNodeInit&&);
 
 private:
     explicit WebKitNamespace(LocalDOMWindow&, UserContentProvider&);
 
-    Ref<UserMessageHandlersNamespace> m_messageHandlerNamespace;
+    const Ref<UserMessageHandlersNamespace> m_messageHandlerNamespace;
 };
 
 } // namespace WebCore

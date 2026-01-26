@@ -82,6 +82,11 @@ AtomString SVGURIReference::fragmentIdentifierFromIRIString(const String& url, c
     return emptyAtom();
 }
 
+AtomString SVGURIReference::fragmentIdentifierFromIRIString(const Style::URL& url, const Document& document)
+{
+    return fragmentIdentifierFromIRIString(url.resolved.string(), document);
+}
+
 auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeScope& treeScope, RefPtr<Document> externalDocument) -> TargetElementResult
 {
     // If there's no fragment identifier contained within the IRI string, we can't lookup an element.
@@ -117,6 +122,11 @@ auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeSc
         return { shadowHost->treeScope().getElementById(id), WTFMove(id) };
 
     return { treeScope.getElementById(id), WTFMove(id) };
+}
+
+auto SVGURIReference::targetElementFromIRIString(const Style::URL& iri, const TreeScope& treeScope, RefPtr<Document> externalDocument) -> TargetElementResult
+{
+    return targetElementFromIRIString(iri.resolved.string(), treeScope, WTFMove(externalDocument));
 }
 
 bool SVGURIReference::haveLoadedRequiredResources() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011, 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  * Copyright 2010, The Android Open Source Project
  *
@@ -30,6 +30,7 @@
 
 #if ENABLE(GEOLOCATION)
 
+#include "DocumentInlines.h"
 #include "Geolocation.h"
 
 namespace WebCore {
@@ -76,13 +77,13 @@ void GeoNotifier::runSuccessCallback(GeolocationPosition* position)
     if (!m_geolocation->isAllowed())
         CRASH();
 
-    protectedSuccessCallback()->handleEvent(position);
+    m_successCallback->invoke(position);
 }
 
 void GeoNotifier::runErrorCallback(GeolocationPositionError& error)
 {
-    if (RefPtr errorCallback = m_errorCallback)
-        errorCallback->handleEvent(error);
+    if (m_errorCallback)
+        m_errorCallback->invoke(error);
 }
 
 void GeoNotifier::startTimerIfNeeded()
@@ -119,7 +120,7 @@ void GeoNotifier::timerFired()
 
     if (m_errorCallback) {
         auto error = GeolocationPositionError::create(GeolocationPositionError::TIMEOUT, "Timeout expired"_s);
-        m_errorCallback->handleEvent(error);
+        m_errorCallback->invoke(error);
     }
     geolocation->requestTimedOut(this);
 }

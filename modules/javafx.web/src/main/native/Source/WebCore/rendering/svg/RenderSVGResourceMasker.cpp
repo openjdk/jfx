@@ -27,6 +27,7 @@
 #include "Image.h"
 #include "ImageBuffer.h"
 #include "IntRect.h"
+#include "NativeImage.h"
 #include "RenderLayer.h"
 #include "RenderLayerInlines.h"
 #include "RenderSVGModelObjectInlines.h"

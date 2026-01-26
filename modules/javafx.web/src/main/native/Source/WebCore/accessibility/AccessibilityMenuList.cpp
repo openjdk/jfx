@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,18 +34,20 @@
 namespace WebCore {
 
 AccessibilityMenuList::AccessibilityMenuList(AXID axID, RenderMenuList& renderer, AXObjectCache& cache)
-    : AccessibilityRenderObject(axID, renderer)
+    : AccessibilityRenderObject(axID, renderer, cache)
     , m_popup(downcast<AccessibilityMenuListPopup>(*cache.create(AccessibilityRole::MenuListPopup)))
 {
-    m_popup->setParent(this);
-
-    addChild(m_popup.get());
-    m_childrenInitialized = true;
 }
 
 Ref<AccessibilityMenuList> AccessibilityMenuList::create(AXID axID, RenderMenuList& renderer, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityMenuList(axID, renderer, cache));
+    Ref menuList = adoptRef(*new AccessibilityMenuList(axID, renderer, cache));
+    // We have to do this setup here and not in the constructor to avoid an
+    // adoptionIsRequired ASSERT in RefCounted.h.
+    menuList->m_popup->setParent(menuList.ptr());
+    menuList->addChild(menuList->m_popup.get());
+    menuList->m_childrenInitialized = true;
+    return menuList;
 }
 
 bool AccessibilityMenuList::press()
@@ -87,7 +89,7 @@ void AccessibilityMenuList::updateChildrenIfNecessary()
 
 void AccessibilityMenuList::addChildren()
 {
-    // This class sets its children once in the constructor, and should never
+    // This class sets its children once in the create function, and should never
     // have dirty or uninitialized children afterwards.
     ASSERT(m_childrenInitialized);
     ASSERT(!m_childrenDirty);

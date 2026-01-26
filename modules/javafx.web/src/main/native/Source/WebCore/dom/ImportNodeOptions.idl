@@ -25,5 +25,5 @@
 
 dictionary ImportNodeOptions {
     boolean selfOnly = false;
-    CustomElementRegistry customElements;
+    CustomElementRegistry customElementRegistry;
 };

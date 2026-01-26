@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "ContainerNodeInlines.h"
 #include "HTMLFrameElement.h"
 #include "RenderFrameBase.h"
 

@@ -1292,7 +1292,6 @@ end
 
 wasmOp(ref_i31, WasmRefI31, macro(ctx)
     mloadi(ctx, m_value, t0)
-    andq 0x7fffffff, t0
     lshifti 0x1, t0
     rshifti 0x1, t0
     orq TagNumber, t0

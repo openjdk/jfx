@@ -60,7 +60,10 @@ public:
     Result<void> parseShader();
 
     void maybeSplitToken(unsigned index);
+    void splitMinusMinus();
     void disambiguateTemplates();
+    bool canContinueAdditiveExpression(const Token&);
+    bool canBeginUnaryExpression(const Token&);
 
     // AST::<type>::Ref whenever it can return multiple types.
     Result<AST::Identifier> parseIdentifier();

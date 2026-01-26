@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -127,24 +128,22 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
             auto intrinsicPaddingTop = LayoutUnit { };
             auto intrinsicPaddingBottom = LayoutUnit { };
 
-            switch (cellBox.style().verticalAlign()) {
-            case VerticalAlign::Middle: {
+            WTF::switchOn(cellBox.style().verticalAlign(),
+                [&](const CSS::Keyword::Middle&) {
                 auto intrinsicVerticalPadding = std::max(0_lu, cellLogicalHeight - cellBoxGeometry.verticalMarginBorderAndPadding() - cellBoxGeometry.contentBoxHeight());
                 intrinsicPaddingTop = intrinsicVerticalPadding / 2;
                 intrinsicPaddingBottom = intrinsicVerticalPadding / 2;
-                break;
-            }
-            case VerticalAlign::Baseline: {
+                },
+                [&](const CSS::Keyword::Baseline&) {
                 auto rowBaseline = LayoutUnit { rowList[cell->startRow()].baseline() };
                 auto cellBaseline = LayoutUnit { cell->baseline() };
                 intrinsicPaddingTop = std::max(0_lu, rowBaseline - cellBaseline - cellBoxGeometry.borderBefore());
                 intrinsicPaddingBottom = std::max(0_lu, cellLogicalHeight - cellBoxGeometry.verticalMarginBorderAndPadding() - intrinsicPaddingTop - cellBoxGeometry.contentBoxHeight());
-                break;
-            }
-            default:
+                },
+                [&](const auto&) {
                 ASSERT_NOT_IMPLEMENTED_YET();
-                break;
             }
+            );
             if (intrinsicPaddingTop && cellBox.hasInFlowOrFloatingChild()) {
                 auto adjustCellContentWithInstrinsicPaddingBefore = [&] {
                     // Child boxes (and runs) are always in the coordinate system of the containing block's border box.
@@ -361,26 +360,19 @@ IntrinsicWidthConstraints TableFormattingContext::computedPreferredWidthForColum
             // Spanner cells put their intrinsic widths on the initial slots.
             grid.slot(cellPosition)->setWidthConstraints(*intrinsicWidth);
 
-            auto cellLogicalWidth = cellStyle.logicalWidth();
             auto columnIndex = cellPosition.column;
-            switch (cellLogicalWidth.type()) {
-            case LengthType::Fixed: {
-                auto fixedWidth = LayoutUnit { cellLogicalWidth.value() } + horizontalBorderAndPaddingWidth;
+            WTF::switchOn(cellStyle.logicalWidth(),
+                [&](const Style::PreferredSize::Fixed& fixed) {
+                    auto fixedWidth = LayoutUnit { fixed.value } + horizontalBorderAndPaddingWidth;
                 maximumFixedColumnWidths[columnIndex] = std::max(maximumFixedColumnWidths[columnIndex].value_or(0_lu), fixedWidth);
                 hasColumnWithFixedWidth = true;
-                break;
-            }
-            case LengthType::Percent: {
-                maximumPercentColumnWidths[columnIndex] = std::max(maximumPercentColumnWidths[columnIndex].value_or(0.f), cellLogicalWidth.percent());
+                },
+                [&](const Style::PreferredSize::Percentage& percentage) {
+                    maximumPercentColumnWidths[columnIndex] = std::max(maximumPercentColumnWidths[columnIndex].value_or(0.f), percentage.value);
                 hasColumnWithPercentWidth = true;
-                break;
-            }
-            case LengthType::Relative:
-                ASSERT_NOT_IMPLEMENTED_YET();
-                break;
-            default:
-                break;
-            }
+                },
+                [&](const auto&) { }
+            );
         }
     };
     collectCellsIntrinsicWidthConstraints();

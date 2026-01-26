@@ -28,6 +28,7 @@
 
 #include "InlineIteratorLineBox.h"
 #include <algorithm>
+#include <ranges>
 
 namespace WebCore {
 namespace InlineIterator {
@@ -44,7 +45,7 @@ static TextLogicalOrderCache makeTextLogicalOrderCacheIfNeeded(const RenderText&
     if (cache->boxes.isEmpty())
         return nullptr;
 
-    std::sort(cache->boxes.begin(), cache->boxes.end(), [&](auto& a, auto& b) {
+    std::ranges::sort(cache->boxes, [&](auto& a, auto& b) {
         return a->start() < b->start();
     });
 

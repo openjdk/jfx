@@ -25,12 +25,14 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "JSDOMGuardedObject.h"
 #include <JavaScriptCore/JSObject.h>
 
 namespace WebCore {
+
+class Exception;
 class ReadableStreamSink;
+template<typename> class ExceptionOr;
 
 class InternalReadableStream final : public DOMGuarded<JSC::JSObject> {
 public:

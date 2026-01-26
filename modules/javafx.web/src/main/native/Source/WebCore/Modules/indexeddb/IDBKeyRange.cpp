@@ -26,6 +26,7 @@
 #include "config.h"
 #include "IDBKeyRange.h"
 
+#include "ExceptionOr.h"
 #include "IDBBindingUtilities.h"
 #include "IDBKey.h"
 #include "IDBKeyData.h"
@@ -140,20 +141,20 @@ ExceptionOr<bool> IDBKeyRange::includes(JSC::JSGlobalObject& state, JSC::JSValue
         return Exception { ExceptionCode::DataError, "Failed to execute 'includes' on 'IDBKeyRange': The passed-in value is not a valid IndexedDB key."_s };
 
     if (m_lower) {
-        int compare = m_lower->compare(key.get());
+        auto compare = m_lower->compare(key.get());
 
-        if (compare > 0)
+        if (is_gt(compare))
             return false;
-        if (m_isLowerOpen && !compare)
+        if (m_isLowerOpen && is_eq(compare))
             return false;
     }
 
     if (m_upper) {
-        int compare = m_upper->compare(key.get());
+        auto compare = m_upper->compare(key.get());
 
-        if (compare < 0)
+        if (is_lt(compare))
             return false;
-        if (m_isUpperOpen && !compare)
+        if (m_isUpperOpen && is_eq(compare))
             return false;
     }
 

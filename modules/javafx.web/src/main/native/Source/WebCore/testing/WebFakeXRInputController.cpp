@@ -27,8 +27,10 @@
 #include "WebFakeXRInputController.h"
 
 #if ENABLE(WEBXR)
+#include "ExceptionOr.h"
 #include "WebFakeXRDevice.h"
 #include "XRHandJoint.h"
+#include <ranges>
 
 namespace WebCore {
 
@@ -170,7 +172,7 @@ WebFakeXRInputController::ButtonOrPlaceholder WebFakeXRInputController::getButto
         // Devices that lack one of the optional inputs listed in the tables above MUST preserve their place in the
         // buttons or axes array, reporting a placeholder button or placeholder axis, respectively.
         if (buttonType != ButtonType::OptionalButton && buttonType != ButtonType::OptionalThumbstick) {
-            size_t priority = std::find(XR_STANDARD_BUTTONS.begin(), XR_STANDARD_BUTTONS.end(), buttonType) - XR_STANDARD_BUTTONS.begin();
+            size_t priority = std::ranges::find(XR_STANDARD_BUTTONS, buttonType) - XR_STANDARD_BUTTONS.begin();
             ASSERT(priority != XR_STANDARD_BUTTONS.size());
 
             for (size_t i = priority + 1; i < XR_STANDARD_BUTTONS.size(); ++i) {

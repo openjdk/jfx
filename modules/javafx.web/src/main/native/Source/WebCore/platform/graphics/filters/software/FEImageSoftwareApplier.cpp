@@ -29,13 +29,14 @@
 #include "FEImage.h"
 #include "Filter.h"
 #include "GraphicsContext.h"
+#include "NativeImage.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(FEImageSoftwareApplier);
 
-bool FEImageSoftwareApplier::apply(const Filter& filter, const FilterImageVector&, FilterImage& result) const
+bool FEImageSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>>, FilterImage& result) const
 {
     RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
@@ -45,7 +46,7 @@ bool FEImageSoftwareApplier::apply(const Filter& filter, const FilterImageVector
     auto primitiveSubregion = result.primitiveSubregion();
     auto& context = resultImage->context();
 
-    if (RefPtr nativeImage = sourceImage.nativeImageIfExists()) {
+    if (auto nativeImage = sourceImage.nativeImageIfExists()) {
         auto imageRect = primitiveSubregion;
         auto srcRect = m_effect->sourceImageRect();
         m_effect->preserveAspectRatio().transformRect(imageRect, srcRect);
@@ -55,7 +56,7 @@ bool FEImageSoftwareApplier::apply(const Filter& filter, const FilterImageVector
         return true;
     }
 
-    if (RefPtr imageBuffer = sourceImage.imageBufferIfExists()) {
+    if (auto imageBuffer = sourceImage.imageBufferIfExists()) {
         auto imageRect = primitiveSubregion;
         imageRect.moveBy(m_effect->sourceImageRect().location());
         imageRect.scale(filter.filterScale());

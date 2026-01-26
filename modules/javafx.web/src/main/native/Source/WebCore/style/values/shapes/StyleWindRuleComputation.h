@@ -38,10 +38,13 @@ namespace Style {
 
 template<typename StyleType> struct WindRuleComputation;
 
-template<typename StyleType> WebCore::WindRule windRule(const StyleType& value)
-{
+struct WindRuleComputationInvoker {
+    template<typename StyleType> WebCore::WindRule operator()(const StyleType& value) const
+    {
     return WindRuleComputation<StyleType>{}(value);
-}
+    }
+};
+inline constexpr WindRuleComputationInvoker windRule{};
 
 // Specialization for `FunctionNotation`.
 template<CSSValueID Name, typename StyleType> struct WindRuleComputation<FunctionNotation<Name, StyleType>> {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -740,5 +740,20 @@ public final class RichUtils {
         } else {
             return ev.getCommitted();
         }
+    }
+
+    // borrowed from
+    // https://github.com/andy-goryachev/AppFramework/blob/1e9f2197ce510a77ec5f719a2cb7112b0b6cf7be/src/goryachev/fx/FX.java#L1081
+    // with the author's permission
+    /** returns a parent of the specified type, or null.  if node is an instance of the specified class, returns node */
+    public static <T extends Node> T getParentOfClass(Class<T> c, Node node) {
+        while (node != null) {
+            if (c.isInstance(node)) {
+                return (T)node;
+            }
+
+            node = node.getParent();
+        }
+        return null;
     }
 }

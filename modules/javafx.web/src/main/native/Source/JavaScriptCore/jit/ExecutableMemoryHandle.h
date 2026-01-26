@@ -26,6 +26,8 @@
 #pragma once
 
 #include "JSExportMacros.h"
+#include <wtf/CodePtr.h>
+#include <wtf/RawPointer.h>
 
 #if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 #include <wtf/CodePtr.h>
@@ -46,7 +48,7 @@ namespace JSC {
 #if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ExecutableMemoryHandle);
 class ExecutableMemoryHandle : public ThreadSafeRefCounted<ExecutableMemoryHandle> {
-    WTF_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(ExecutableMemoryHandle);
+    WTF_DEPRECATED_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(ExecutableMemoryHandle, ExecutableMemoryHandle);
 
 public:
     using MemoryPtr = CodePtr<WTF::HandleMemoryPtrTag>;

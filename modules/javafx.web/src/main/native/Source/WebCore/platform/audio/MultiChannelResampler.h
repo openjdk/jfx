@@ -43,10 +43,10 @@ class MultiChannelResampler final {
     WTF_MAKE_TZONE_ALLOCATED(MultiChannelResampler);
 public:
     // requestFrames constrols the size of the buffer in frames when provideInput is called.
-    MultiChannelResampler(double scaleFactor, unsigned numberOfChannels, unsigned requestFrames, Function<void(AudioBus*, size_t framesToProcess)>&& provideInput);
+    MultiChannelResampler(double scaleFactor, unsigned numberOfChannels, unsigned requestFrames, Function<void(AudioBus&, size_t framesToProcess)>&& provideInput);
     ~MultiChannelResampler();
 
-    void process(AudioBus* destination, size_t framesToProcess);
+    void process(AudioBus& destination, size_t framesToProcess);
 
 private:
     void provideInputForChannel(std::span<float> buffer, size_t framesToProcess, unsigned channelIndex);
@@ -60,8 +60,8 @@ private:
 
     unsigned m_numberOfChannels;
     size_t m_outputFramesReady { 0 };
-    Function<void(AudioBus*, size_t framesToProcess)> m_provideInput;
-    RefPtr<AudioBus> m_multiChannelBus;
+    Function<void(AudioBus&, size_t framesToProcess)> m_provideInput;
+    const Ref<AudioBus> m_multiChannelBus;
 };
 
 } // namespace WebCore

@@ -70,6 +70,12 @@ private:
 };
 #endif // REGEXP_FUNC_TEST_DATA_GEN
 
+template<typename CellType, SubspaceAccess mode>
+inline GCClient::IsoSubspace* RegExp::subspaceFor(VM& vm)
+{
+    return &vm.regExpSpace();
+}
+
 inline Structure* RegExp::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
     return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
@@ -131,7 +137,7 @@ ALWAYS_INLINE int RegExp::matchInline(JSGlobalObject* nullOrGlobalObject, VM& vm
         return throwError();
 
     ovector.resize(offsetVectorSize());
-    int* offsetVector = ovector.data();
+    int* offsetVector = ovector.mutableSpan().data();
 
     if constexpr (matchFrom == Yarr::MatchFrom::VMThread) {
         if (hasValidAtom()) {
@@ -295,7 +301,7 @@ ALWAYS_INLINE MatchResult RegExp::matchInline(JSGlobalObject* nullOrGlobalObject
     int result;
     Vector<int, 32> nonReturnedOvector;
     nonReturnedOvector.grow(offsetVectorSize());
-    offsetVector = nonReturnedOvector.data();
+    offsetVector = nonReturnedOvector.mutableSpan().data();
     {
         constexpr bool usesPatternContextBuffer = false;
         Yarr::MatchingContextHolder regExpContext(vm, usesPatternContextBuffer, this, matchFrom);

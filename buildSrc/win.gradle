@@ -330,9 +330,9 @@ WIN.glass.rcFlags = [
 WIN.glass.ccFlags = [ccFlags].flatten()
 WIN.glass.linker = linker
 WIN.glass.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
-        "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib", "version.lib",
+        "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib", "shlwapi.lib", "version.lib",
         "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll",
-        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll", "/DELAYLOAD:version.dll"]).flatten()
+        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll", "/DELAYLOAD:shlwapi.dll", "/DELAYLOAD:version.dll"]).flatten()
 WIN.glass.lib = "glass"
 
 WIN.decora = [:]

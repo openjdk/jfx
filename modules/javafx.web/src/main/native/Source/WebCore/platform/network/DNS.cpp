@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2012, 2018 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -93,7 +93,7 @@ bool isIPAddressDisallowed(const URL& url)
 
 bool IPAddress::containsOnlyZeros() const
 {
-    return std::visit(WTF::makeVisitor([] (const WTF::HashTableEmptyValueType&) {
+    return WTF::visit(WTF::makeVisitor([] (const WTF::HashTableEmptyValueType&) {
         ASSERT_NOT_REACHED();
         return false;
     }, [] (const in_addr& address) {

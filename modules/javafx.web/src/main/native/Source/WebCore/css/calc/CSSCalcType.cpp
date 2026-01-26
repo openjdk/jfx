@@ -304,7 +304,6 @@ Type Type::determineType(CSSUnitType unitType)
     case CSSUnitType::CSS_QUIRKY_EM:
     case CSSUnitType::CSS_STRING:
     case CSSUnitType::CSS_UNKNOWN:
-    case CSSUnitType::CSS_URI:
     case CSSUnitType::CSS_VALUE_ID:
     case CSSUnitType::CustomIdent:
         break;
@@ -475,7 +474,7 @@ TextStream& operator<<(TextStream& ts, Type::PercentHintValue percentHint)
 
 TextStream& operator<<(TextStream& ts, Type type)
 {
-    return ts << "CSSCalc::Type [ px=" << type.length << " deg=" << type.angle << " s=" << type.time << " hz=" << type.frequency << " dppx=" << type.resolution << " fr=" << type.flex << " %=" << type.percent << " hint=" << type.percentHint << " ]";
+    return ts << "CSSCalc::Type [ px="_s << type.length << " deg="_s << type.angle << " s="_s << type.time << " hz="_s << type.frequency << " dppx="_s << type.resolution << " fr="_s << type.flex << " %="_s << type.percent << " hint="_s << type.percentHint << " ]"_s;
 }
 
 } // namespace CSSCalc

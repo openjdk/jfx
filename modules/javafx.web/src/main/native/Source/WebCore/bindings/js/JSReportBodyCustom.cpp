@@ -30,11 +30,13 @@
 #include "CORPViolationReportBody.h"
 #include "CSPViolationReportBody.h"
 #include "DeprecationReportBody.h"
+#include "IntegrityPolicyViolationReportBody.h"
 #include "JSCOEPInheritenceViolationReportBody.h"
 #include "JSCORPViolationReportBody.h"
 #include "JSCSPViolationReportBody.h"
 #include "JSDOMBinding.h"
 #include "JSDeprecationReportBody.h"
+#include "JSIntegrityPolicyViolationReportBody.h"
 #include "JSTestReportBody.h"
 #include "ReportBody.h"
 #include "TestReportBody.h"
@@ -55,6 +57,8 @@ JSValue toJSNewlyCreated(JSC::JSGlobalObject*, JSDOMGlobalObject* globalObject, 
         return createWrapper<DeprecationReportBody>(globalObject, WTFMove(reportBody));
     if (is<TestReportBody>(reportBody))
         return createWrapper<TestReportBody>(globalObject, WTFMove(reportBody));
+    if (is<IntegrityPolicyViolationReportBody>(reportBody))
+        return createWrapper<IntegrityPolicyViolationReportBody>(globalObject, WTFMove(reportBody));
     return createWrapper<ReportBody>(globalObject, WTFMove(reportBody));
 }
 

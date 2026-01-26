@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -192,7 +193,7 @@ void CachedRawResource::didAddClient(CachedResourceClient& c)
                 ASSERT(!validationInProgress());
                 response.setSource(ResourceResponse::Source::MemoryCache);
             }
-            client->responseReceived(*this, response, WTFMove(responseProcessedHandler));
+            client->responseReceived(*this, WTFMove(response), WTFMove(responseProcessedHandler));
         } else
             responseProcessedHandler();
     });
@@ -228,12 +229,12 @@ void CachedRawResource::redirectReceived(ResourceRequest&& request, const Resour
     }
 }
 
-void CachedRawResource::responseReceived(const ResourceResponse& newResponse)
+void CachedRawResource::responseReceived(ResourceResponse&& newResponse)
 {
     CachedResourceHandle protectedThis { this };
     if (!m_resourceLoaderIdentifier)
         m_resourceLoaderIdentifier = m_loader->identifier();
-    CachedResource::responseReceived(newResponse);
+    CachedResource::responseReceived(WTFMove(newResponse));
     CachedResourceClientWalker<CachedRawResourceClient> walker(*this);
     while (CachedRawResourceClient* c = walker.next())
         c->responseReceived(*this, response(), nullptr);
@@ -290,8 +291,8 @@ static bool shouldIgnoreHeaderForCacheReuse(HTTPHeaderName name)
     case HTTPHeaderName::Accept:
     case HTTPHeaderName::CacheControl:
     case HTTPHeaderName::Pragma:
-    case HTTPHeaderName::Purpose:
     case HTTPHeaderName::Referer:
+    case HTTPHeaderName::SecPurpose:
     case HTTPHeaderName::UserAgent:
         return true;
 
@@ -356,10 +357,10 @@ void CachedRawResource::clear()
 }
 
 #if USE(QUICK_LOOK)
-void CachedRawResource::previewResponseReceived(const ResourceResponse& newResponse)
+void CachedRawResource::previewResponseReceived(ResourceResponse&& newResponse)
 {
     CachedResourceHandle protectedThis { this };
-    CachedResource::previewResponseReceived(newResponse);
+    CachedResource::previewResponseReceived(WTFMove(newResponse));
     CachedResourceClientWalker<CachedRawResourceClient> walker(*this);
     while (CachedRawResourceClient* c = walker.next())
         c->previewResponseReceived(*this, response());

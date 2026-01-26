@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc.
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,18 +28,12 @@
 
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCPeerConnectionBackend.h"
+#include "LibWebRTCRefWrappers.h"
 #include "RTCRtpSenderBackend.h"
 #include "RealtimeOutgoingAudioSource.h"
 #include "RealtimeOutgoingVideoSource.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
-
-ALLOW_UNUSED_PARAMETERS_BEGIN
-
-#include <webrtc/api/rtp_sender_interface.h>
-#include <webrtc/api/scoped_refptr.h>
-
-ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
 class LibWebRTCRtpSenderBackend;
@@ -57,13 +51,14 @@ class LibWebRTCPeerConnectionBackend;
 class LibWebRTCRtpSenderBackend final : public RTCRtpSenderBackend, public CanMakeWeakPtr<LibWebRTCRtpSenderBackend> {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCRtpSenderBackend);
 public:
-    using Source = std::variant<std::nullptr_t, Ref<RealtimeOutgoingAudioSource>, Ref<RealtimeOutgoingVideoSource>>;
-    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&, Source&&);
-    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&);
+    using Source = Variant<std::nullptr_t, Ref<RealtimeOutgoingAudioSource>, Ref<RealtimeOutgoingVideoSource>>;
+    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, RefPtr<webrtc::RtpSenderInterface>&&, Source&&);
+    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, RefPtr<webrtc::RtpSenderInterface>&&);
     ~LibWebRTCRtpSenderBackend();
 
-    void setRTCSender(rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender) { m_rtcSender = WTFMove(rtcSender); }
+    void setRTCSender(RefPtr<webrtc::RtpSenderInterface>&& rtcSender) { m_rtcSender = WTFMove(rtcSender); }
     webrtc::RtpSenderInterface* rtcSender() { return m_rtcSender.get(); }
+    RefPtr<webrtc::RtpSenderInterface> protectedRTCSender() { return m_rtcSender; }
 
     RealtimeOutgoingVideoSource* videoSource();
     void clearSource() { setSource(nullptr); }
@@ -86,9 +81,9 @@ private:
     RefPtr<LibWebRTCPeerConnectionBackend> protectedPeerConnectionBackend() const;
 
     WeakPtr<LibWebRTCPeerConnectionBackend> m_peerConnectionBackend;
-    rtc::scoped_refptr<webrtc::RtpSenderInterface> m_rtcSender;
+    RefPtr<webrtc::RtpSenderInterface> m_rtcSender;
     Source m_source;
-    RefPtr<RTCRtpTransformBackend> m_transformBackend;
+    const RefPtr<RTCRtpTransformBackend> m_transformBackend;
     mutable std::optional<webrtc::RtpParameters> m_currentParameters;
 };
 

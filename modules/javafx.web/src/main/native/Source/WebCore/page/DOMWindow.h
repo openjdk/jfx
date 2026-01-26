@@ -27,6 +27,7 @@
 
 #include "DocumentEnums.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "GlobalWindowIdentifier.h"
 #include "ImageBitmap.h"
 #include "ScrollTypes.h"

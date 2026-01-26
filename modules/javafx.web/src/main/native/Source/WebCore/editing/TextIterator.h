@@ -77,16 +77,16 @@ private:
 
 class TextIteratorCopyableText {
 public:
-    StringView text() const { return m_singleCharacter ? StringView(WTF::span(m_singleCharacter)) : StringView(m_string).substring(m_offset, m_length); }
+    StringView text() const LIFETIME_BOUND { return m_singleCharacter ? StringView(WTF::span(m_singleCharacter)) : StringView(m_string).substring(m_offset, m_length); }
     void appendToStringBuilder(StringBuilder&) const;
 
     void reset();
     void set(String&&);
     void set(String&&, unsigned offset, unsigned length);
-    void set(UChar);
+    void set(char16_t);
 
 private:
-    UChar m_singleCharacter { 0 };
+    char16_t m_singleCharacter { 0 };
     String m_string;
     unsigned m_offset { 0 };
     unsigned m_length { 0 };
@@ -107,7 +107,7 @@ public:
     bool atEnd() const { return !m_positionNode; }
     WEBCORE_EXPORT void advance();
 
-    StringView text() const { ASSERT(!atEnd()); return m_text; }
+    StringView text() const LIFETIME_BOUND { ASSERT(!atEnd()); return m_text; }
     WEBCORE_EXPORT SimpleRange range() const;
     WEBCORE_EXPORT Node* node() const;
     RefPtr<Node> protectedCurrentNode() const;
@@ -131,7 +131,7 @@ private:
     bool handleNonTextNode();
     void handleTextRun();
     void handleTextNodeFirstLetter(RenderTextFragment&);
-    void emitCharacter(UChar, RefPtr<Node>&& characterNode, RefPtr<Node>&& offsetBaseNode, int textStartOffset, int textEndOffset);
+    void emitCharacter(char16_t, RefPtr<Node>&& characterNode, RefPtr<Node>&& offsetBaseNode, int textStartOffset, int textEndOffset);
     void emitText(Text& textNode, RenderText&, int textStartOffset, int textEndOffset);
     void revertToRemainingTextRun();
 
@@ -178,7 +178,7 @@ private:
     // Used to do the whitespace collapsing logic.
     RefPtr<Text> m_lastTextNode;
     bool m_lastTextNodeEndedWithCollapsedSpace { false };
-    UChar m_lastCharacter { 0 };
+    char16_t m_lastCharacter { 0 };
 
     // Used when deciding whether to emit a "positioning" (e.g. newline) before any other content
     bool m_hasEmitted { false };
@@ -197,7 +197,7 @@ public:
     bool atEnd() const { return !m_positionNode; }
     WEBCORE_EXPORT void advance();
 
-    StringView text() const { ASSERT(!atEnd()); return m_text; }
+    StringView text() const LIFETIME_BOUND { ASSERT(!atEnd()); return m_text; }
     WEBCORE_EXPORT SimpleRange range() const;
     Node* node() const { ASSERT(!atEnd()); return m_node.get(); }
     RefPtr<Node> protectedNode() const { return m_node.get(); }
@@ -208,7 +208,7 @@ private:
     RenderText* handleFirstLetter(int& startOffset, int& offsetInNode);
     bool handleReplacedElement();
     bool handleNonTextNode();
-    void emitCharacter(UChar, RefPtr<Node>&&, int startOffset, int endOffset);
+    void emitCharacter(char16_t, RefPtr<Node>&&, int startOffset, int endOffset);
     bool advanceRespectingRange(Node*);
 
     const TextIteratorBehaviors m_behaviors;
@@ -235,7 +235,7 @@ private:
 
     // Used to do the whitespace logic.
     RefPtr<Text> m_lastTextNode;
-    UChar m_lastCharacter { 0 };
+    char16_t m_lastCharacter { 0 };
 
     // Whether m_node has advanced beyond the iteration range (i.e. m_startContainer).
     bool m_havePassedStartContainer { false };
@@ -253,7 +253,7 @@ public:
     bool atEnd() const { return m_underlyingIterator.atEnd(); }
     WEBCORE_EXPORT void advance(int numCharacters);
 
-    StringView text() const { return m_underlyingIterator.text().substring(m_runOffset); }
+    StringView text() const LIFETIME_BOUND { return m_underlyingIterator.text().substring(m_runOffset); }
     WEBCORE_EXPORT SimpleRange range() const;
 
     bool atBreak() const { return m_atBreak; }
@@ -274,6 +274,7 @@ public:
     bool atEnd() const { return m_underlyingIterator.atEnd(); }
     void advance(int numCharacters);
 
+    StringView text() const LIFETIME_BOUND { return m_underlyingIterator.text().left(m_underlyingIterator.text().length() - m_runOffset); }
     SimpleRange range() const;
 
 private:
@@ -293,7 +294,7 @@ public:
     bool atEnd() const { return !m_didLookAhead && m_underlyingIterator.atEnd(); }
     void advance();
 
-    StringView text() const;
+    StringView text() const LIFETIME_BOUND;
 
 private:
     TextIterator m_underlyingIterator;
@@ -302,7 +303,7 @@ private:
     TextIteratorCopyableText m_previousText;
 
     // Many chunks from text iterator concatenated.
-    Vector<UChar> m_buffer;
+    Vector<char16_t> m_buffer;
 
     // Did we have to look ahead in the text iterator to confirm the current chunk?
     bool m_didLookAhead { true };
@@ -310,7 +311,12 @@ private:
 
 constexpr TextIteratorBehaviors findIteratorOptions(FindOptions options = { })
 {
-    TextIteratorBehaviors iteratorOptions { TextIteratorBehavior::EntersTextControls, TextIteratorBehavior::ClipsToFrameAncestors, TextIteratorBehavior::EntersImageOverlays };
+    TextIteratorBehaviors iteratorOptions {
+        TextIteratorBehavior::EntersTextControls,
+        TextIteratorBehavior::ClipsToFrameAncestors,
+        TextIteratorBehavior::EntersImageOverlays,
+        TextIteratorBehavior::EntersSkippedContentRelevantToUser
+    };
     if (!options.contains(FindOption::DoNotTraverseFlatTree))
         iteratorOptions.add(TextIteratorBehavior::TraversesFlatTree);
     return iteratorOptions;

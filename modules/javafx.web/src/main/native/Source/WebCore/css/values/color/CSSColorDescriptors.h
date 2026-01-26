@@ -34,7 +34,6 @@
 #include "ColorTypes.h"
 #include "StylePrimitiveNumericTypes.h"
 #include <optional>
-#include <variant>
 #include <wtf/Brigand.h>
 #include <wtf/OptionSet.h>
 #include <wtf/StdLibExtras.h>
@@ -76,7 +75,7 @@ template<typename... Ts> struct CSSColorComponent {
 template<typename Descriptor, unsigned Index>
 using GetComponent = std::decay_t<decltype(std::get<Index>(Descriptor::components))>;
 
-// e.g. for GetComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
+// e.g. for GetComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> Variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetComponentResult = typename GetComponent<Descriptor, Index>::Result;
 
@@ -92,17 +91,17 @@ using GetColorType = typename Descriptor::ColorType;
 template<typename Descriptor>
 using GetColorTypeComponentType = typename GetColorType<Descriptor>::ComponentType;
 
-// MARK: Style resolved parse type (components are std::variants with Style namespaced primitives)
+// MARK: Style resolved parse type (components are Variants with Style namespaced primitives)
 
 // e.g. for GetStyleColorParseTypeComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<Style::Percentage, Style::Number, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetStyleColorParseTypeComponentTypeList = brigand::transform<typename GetComponent<Descriptor, Index>::ResultTypeList, Style::ToStyleMapping<brigand::_1>>;
 
-// e.g. for GetStyleColorParseTypeComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<Style::Percentage, Style::Number, CSS::Keyword::None>
+// e.g. for GetStyleColorParseTypeComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> Variant<Style::Percentage, Style::Number, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetStyleColorParseTypeComponentResult = VariantOrSingle<GetStyleColorParseTypeComponentTypeList<Descriptor, Index>>;
 
-// e.g. for StyleColorParseType<ColorRGBFunction<T>> -> std::tuple<std::variant<Style::Percentage, Style::Number, CSS::Keyword::None>, ...>
+// e.g. for StyleColorParseType<ColorRGBFunction<T>> -> std::tuple<Variant<Style::Percentage, Style::Number, CSS::Keyword::None>, ...>
 template<typename Descriptor>
 using StyleColorParseType = std::tuple<
     GetStyleColorParseTypeComponentResult<Descriptor, 0>,
@@ -121,17 +120,17 @@ template<typename Descriptor> constexpr bool componentsRequireConversionData(con
     return false;
 }
 
-// MARK: CSS absolute color parse type (components are std::variants with CSS namespaced primitive, but no symbol values)
+// MARK: CSS absolute color parse type (components are Variants with CSS namespaced primitive, but no symbol values)
 
 // e.g. for GetCSSColorParseTypeWithCalcComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetCSSColorParseTypeWithCalcComponentTypeList = typename GetComponent<Descriptor, Index>::ResultTypeList;
 
-// e.g. for GetCSSColorParseTypeWithCalcComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
+// e.g. for GetCSSColorParseTypeWithCalcComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> Variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>
 template<typename Descriptor, unsigned Index>
 using GetCSSColorParseTypeWithCalcComponentResult = VariantOrSingle<GetCSSColorParseTypeWithCalcComponentTypeList<Descriptor, Index>>;
 
-// e.g. for CSSColorParseTypeWithCalc<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>, ...>
+// e.g. for CSSColorParseTypeWithCalc<ColorRGBFunction<T>> -> std::tuple<Variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None>, ...>
 template<typename Descriptor>
 using CSSColorParseTypeWithCalc = std::tuple<
     GetCSSColorParseTypeWithCalcComponentResult<Descriptor, 0>,
@@ -156,17 +155,17 @@ template<typename Descriptor> bool componentsRequireConversionData(const CSSColo
         || requiresConversionData(std::get<3>(components));
 }
 
-// MARK: CSS relative color parse type (components are std::variants with CSS namespaced primitive, includes symbol values)
+// MARK: CSS relative color parse type (components are Variants with CSS namespaced primitive, includes symbol values)
 
 // e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<ColorRGBFunction<SRGB<float>>, 2> -> brigand::list<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>
 template<typename Descriptor, unsigned Index>
 using GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList = CSS::PlusSymbol<typename GetComponent<Descriptor, Index>::ResultTypeList>;
 
-// e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>
+// e.g. for GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<ColorRGBFunction<SRGB<float>>, 2> -> Variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>
 template<typename Descriptor, unsigned Index>
 using GetCSSColorParseTypeWithCalcAndSymbolsComponentResult = VariantOrSingle<GetCSSColorParseTypeWithCalcAndSymbolsComponentTypeList<Descriptor, Index>>;
 
-// e.g. for CSSColorParseTypeWithCalcAndSymbols<ColorRGBFunction<T>> -> std::tuple<std::variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>, ...>
+// e.g. for CSSColorParseTypeWithCalcAndSymbols<ColorRGBFunction<T>> -> std::tuple<Variant<CSS::Percentage<>, CSS::Number<>, CSS::Keyword::None, CSS::Symbol>, ...>
 template<typename Descriptor>
 using CSSColorParseTypeWithCalcAndSymbols = std::tuple<
     GetCSSColorParseTypeWithCalcAndSymbolsComponentResult<Descriptor, 0>,

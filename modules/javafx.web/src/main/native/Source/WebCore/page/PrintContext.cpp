@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
- * Copyright (C) 2007-2023 Apple Inc.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,14 +22,18 @@
 #include "PrintContext.h"
 
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementTraversal.h"
+#include "FrameDestructionObserverInlines.h"
 #include "GraphicsContext.h"
 #include "LengthBox.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "RenderStyleInlines.h"
 #include "RenderView.h"
+#include "Settings.h"
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -97,10 +101,18 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
     auto style = frame()->document()->styleScope().resolver().styleForPage(0);
 
     float pixelToPointScaleFactor = 1.0f / CSS::pixelsPerPt;
-    return { style->marginTop().isAuto() ? printMargin.top() : style->marginTop().value() * pixelToPointScaleFactor,
-        style->marginRight().isAuto() ? printMargin.right() : style->marginRight().value() * pixelToPointScaleFactor,
-        style->marginBottom().isAuto() ? printMargin.bottom() : style->marginBottom().value() * pixelToPointScaleFactor,
-        style->marginLeft().isAuto() ? printMargin.left() : style->marginLeft().value() * pixelToPointScaleFactor };
+
+    auto marginTop = style->marginTop().tryFixed();
+    auto marginRight = style->marginRight().tryFixed();
+    auto marginBottom = style->marginBottom().tryFixed();
+    auto marginLeft = style->marginLeft().tryFixed();
+
+    return {
+        marginTop ? marginTop->value * pixelToPointScaleFactor : printMargin.top(),
+        marginRight ? marginRight->value * pixelToPointScaleFactor : printMargin.right(),
+        marginBottom ? marginBottom->value * pixelToPointScaleFactor : printMargin.bottom(),
+        marginLeft ? marginLeft->value * pixelToPointScaleFactor : printMargin.left(),
+    };
 }
 
 FloatSize PrintContext::computedPageSize(FloatSize pageSize, FloatBoxExtent printMargin)
@@ -209,7 +221,7 @@ void PrintContext::begin(float width, float height)
     FloatSize minLayoutSize = frame->resizePageRectsKeepingRatio(originalPageSize, FloatSize(width * minimumShrinkFactor(), height * minimumShrinkFactor()));
 
     // This changes layout, so callers need to make sure that they don't paint to screen while in printing mode.
-    frame->setPrinting(true, minLayoutSize, originalPageSize, maximumShrinkFactor() / minimumShrinkFactor(), AdjustViewSize);
+    frame->setPrinting(true, minLayoutSize, originalPageSize, maximumShrinkFactor() / minimumShrinkFactor(), AdjustViewSize::Yes);
 }
 
 float PrintContext::computeAutomaticScaleFactor(const FloatSize& availablePaperSize)
@@ -286,7 +298,7 @@ void PrintContext::end()
     auto& frame = *this->frame();
     ASSERT(m_isPrinting);
     m_isPrinting = false;
-    frame.setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize);
+    frame.setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize::Yes);
     m_linkedDestinations = nullptr;
 }
 
@@ -375,9 +387,9 @@ String PrintContext::pageProperty(LocalFrame* frame, const String& propertyName,
 
     // Implement formatters for properties we care about.
     if (propertyName == "margin-left"_s) {
-        if (style->marginLeft().isAuto())
+        if (auto marginLeft = style->marginLeft().tryFixed())
+            return String::number(marginLeft->value);
             return autoAtom();
-        return String::number(style->marginLeft().value());
     }
     if (propertyName == "line-height"_s)
         return String::number(style->lineHeight().value());

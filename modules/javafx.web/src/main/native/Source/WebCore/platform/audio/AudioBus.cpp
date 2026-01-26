@@ -41,14 +41,8 @@
 
 namespace WebCore {
 
-constexpr unsigned MaxBusChannels = 32;
-
-RefPtr<AudioBus> AudioBus::create(unsigned numberOfChannels, size_t length, bool allocate)
+Ref<AudioBus> AudioBus::create(unsigned numberOfChannels, size_t length, bool allocate)
 {
-    ASSERT(numberOfChannels <= MaxBusChannels);
-    if (numberOfChannels > MaxBusChannels)
-        return nullptr;
-
     return adoptRef(*new AudioBus(numberOfChannels, length, allocate));
 }
 
@@ -158,10 +152,24 @@ bool AudioBus::topologyMatches(const AudioBus& bus) const
     return true;
 }
 
-RefPtr<AudioBus> AudioBus::createBufferFromRange(const AudioBus* sourceBuffer, unsigned startFrame, unsigned endFrame)
+Ref<AudioBus> AudioBus::createCopy(const AudioBus& sourceBuffer)
 {
-    size_t numberOfSourceFrames = sourceBuffer->length();
-    unsigned numberOfChannels = sourceBuffer->numberOfChannels();
+    size_t numberOfSourceFrames = sourceBuffer.length();
+    unsigned numberOfChannels = sourceBuffer.numberOfChannels();
+
+    Ref<AudioBus> audioBus = create(numberOfChannels, numberOfSourceFrames);
+    audioBus->setSampleRate(sourceBuffer.sampleRate());
+
+    for (unsigned i = 0; i < numberOfChannels; ++i)
+        audioBus->channel(i)->copyFromRange(sourceBuffer.channel(i), 0, numberOfSourceFrames);
+
+    return audioBus;
+}
+
+RefPtr<AudioBus> AudioBus::createBufferFromRange(const AudioBus& sourceBuffer, unsigned startFrame, unsigned endFrame)
+{
+    size_t numberOfSourceFrames = sourceBuffer.length();
+    unsigned numberOfChannels = sourceBuffer.numberOfChannels();
 
     // Sanity checking
     bool isRangeSafe = startFrame < endFrame && endFrame <= numberOfSourceFrames;
@@ -172,10 +180,10 @@ RefPtr<AudioBus> AudioBus::createBufferFromRange(const AudioBus* sourceBuffer, u
     size_t rangeLength = endFrame - startFrame;
 
     RefPtr<AudioBus> audioBus = create(numberOfChannels, rangeLength);
-    audioBus->setSampleRate(sourceBuffer->sampleRate());
+    audioBus->setSampleRate(sourceBuffer.sampleRate());
 
     for (unsigned i = 0; i < numberOfChannels; ++i)
-        audioBus->channel(i)->copyFromRange(sourceBuffer->channel(i), startFrame, endFrame);
+        audioBus->channel(i)->copyFromRange(sourceBuffer.channel(i), startFrame, endFrame);
 
     return audioBus;
 }
@@ -221,12 +229,6 @@ void AudioBus::copyFromRange(const AudioBus& sourceBus, unsigned startFrame, uns
     }
 
     unsigned numberOfChannels = this->numberOfChannels();
-    ASSERT(numberOfChannels <= MaxBusChannels);
-    if (numberOfChannels > MaxBusChannels) {
-        zero();
-        return;
-    }
-
     for (unsigned i = 0; i < numberOfChannels; ++i)
         channel(i)->copyFromRange(sourceBus.channel(i), startFrame, endFrame);
 }
@@ -438,35 +440,25 @@ void AudioBus::copyWithGainFrom(const AudioBus& sourceBus, float gain)
     }
 
     unsigned numberOfChannels = this->numberOfChannels();
-    ASSERT(numberOfChannels <= MaxBusChannels);
-    if (numberOfChannels > MaxBusChannels)
-        return;
 
     // If it is copying from the same bus and no need to change gain, just return.
     if (this == &sourceBus && gain == 1)
         return;
 
     AudioBus& sourceBusSafe = const_cast<AudioBus&>(sourceBus);
-    std::array<std::span<const float>, MaxBusChannels> sources;
-    std::array<std::span<float>, MaxBusChannels> destinations;
-
-    for (unsigned i = 0; i < numberOfChannels; ++i) {
-        sources[i] = sourceBusSafe.channel(i)->span();
-        destinations[i] = channel(i)->mutableSpan();
-    }
-
     unsigned framesToProcess = length();
 
+    for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
+        std::span<const float> source = sourceBusSafe.channel(channelIndex)->span();
+        std::span<float> destination = channel(channelIndex)->mutableSpan();
+
     // Handle gains of 0 and 1 (exactly) specially.
-    if (gain == 1) {
-        for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-            memcpySpan(destinations[channelIndex], sources[channelIndex].first(framesToProcess));
-    } else if (!gain) {
-        for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-            zeroSpan(destinations[channelIndex].first(framesToProcess));
-    } else {
-        for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-            VectorMath::multiplyByScalar(sources[channelIndex].first(framesToProcess), gain, destinations[channelIndex]);
+        if (gain == 1)
+            memcpySpan(destination, source.first(framesToProcess));
+        else if (!gain)
+            zeroSpan(destination.first(framesToProcess));
+        else
+            VectorMath::multiplyByScalar(source.first(framesToProcess), gain, destination);
     }
 }
 
@@ -499,17 +491,17 @@ void AudioBus::copyWithSampleAccurateGainValuesFrom(const AudioBus& sourceBus, s
     }
 }
 
-RefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sourceBus, bool mixToMono, double newSampleRate)
+RefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus& sourceBus, bool mixToMono, double newSampleRate)
 {
     // sourceBus's sample-rate must be known.
-    ASSERT(sourceBus && sourceBus->sampleRate());
-    if (!sourceBus || !sourceBus->sampleRate())
+    ASSERT(sourceBus.sampleRate());
+    if (!sourceBus.sampleRate())
         return nullptr;
 
-    double sourceSampleRate = sourceBus->sampleRate();
+    double sourceSampleRate = sourceBus.sampleRate();
     double destinationSampleRate = newSampleRate;
     double sampleRateRatio = sourceSampleRate / destinationSampleRate;
-    unsigned numberOfSourceChannels = sourceBus->numberOfChannels();
+    unsigned numberOfSourceChannels = sourceBus.numberOfChannels();
 
     if (numberOfSourceChannels == 1)
         mixToMono = false; // already mono
@@ -520,17 +512,17 @@ RefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sourceBu
             return AudioBus::createByMixingToMono(sourceBus);
 
         // Return exact copy.
-        return AudioBus::createBufferFromRange(sourceBus, 0, sourceBus->length());
+        return AudioBus::createBufferFromRange(sourceBus, 0, sourceBus.length());
     }
 
-    if (sourceBus->isSilent()) {
-        RefPtr<AudioBus> silentBus = create(numberOfSourceChannels, sourceBus->length() / sampleRateRatio);
+    if (sourceBus.isSilent()) {
+        RefPtr<AudioBus> silentBus = create(numberOfSourceChannels, sourceBus.length() / sampleRateRatio);
         silentBus->setSampleRate(newSampleRate);
         return silentBus;
     }
 
     // First, mix to mono (if necessary) then sample-rate convert.
-    const AudioBus* resamplerSourceBus;
+    RefPtr<const AudioBus> resamplerSourceBus;
     RefPtr<AudioBus> mixedMonoBus;
     if (mixToMono) {
         mixedMonoBus = AudioBus::createByMixingToMono(sourceBus);
@@ -560,35 +552,48 @@ RefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sourceBu
     return destinationBus;
 }
 
-RefPtr<AudioBus> AudioBus::createByMixingToMono(const AudioBus* sourceBus)
+Ref<AudioBus> AudioBus::createByMixingToMono(const AudioBus& sourceBus)
 {
-    if (sourceBus->isSilent())
-        return create(1, sourceBus->length());
+    if (sourceBus.isSilent())
+        return create(1, sourceBus.length());
 
-    switch (sourceBus->numberOfChannels()) {
+    switch (sourceBus.numberOfChannels()) {
     case 1:
         // Simply create an exact copy.
-        return AudioBus::createBufferFromRange(sourceBus, 0, sourceBus->length());
+        return AudioBus::createCopy(sourceBus);
     case 2:
         {
-            unsigned n = sourceBus->length();
-            RefPtr<AudioBus> destinationBus = create(1, n);
+            unsigned n = sourceBus.length();
+            Ref<AudioBus> destinationBus = create(1, n);
 
-            auto sourceL = sourceBus->channel(0)->span();
-            auto sourceR = sourceBus->channel(1)->span();
+            auto sourceL = sourceBus.channel(0)->span();
+            auto sourceR = sourceBus.channel(1)->span();
             auto destination = destinationBus->channel(0)->mutableSpan();
 
             // Do the mono mixdown.
             VectorMath::addVectorsThenMultiplyByScalar(sourceL, sourceR, 0.5, destination);
 
             destinationBus->clearSilentFlag();
-            destinationBus->setSampleRate(sourceBus->sampleRate());
+            destinationBus->setSampleRate(sourceBus.sampleRate());
+            return destinationBus;
+        }
+    default:
+        {
+            unsigned n = sourceBus.length();
+            unsigned channelCount = sourceBus.numberOfChannels();
+            float scalar = 1.0 / channelCount;
+
+            Ref<AudioBus> destinationBus = create(1, n);
+            auto destination = destinationBus->channel(0)->mutableSpan();
+
+            for (unsigned channelNumber = 0; channelNumber < channelCount; ++channelNumber)
+                VectorMath::multiplyByScalarThenAddToOutput(sourceBus.channel(channelNumber)->span(), scalar, destination);
+
+            destinationBus->clearSilentFlag();
+            destinationBus->setSampleRate(sourceBus.sampleRate());
             return destinationBus;
         }
     }
-
-    ASSERT_NOT_REACHED();
-    return nullptr;
 }
 
 bool AudioBus::isSilent() const

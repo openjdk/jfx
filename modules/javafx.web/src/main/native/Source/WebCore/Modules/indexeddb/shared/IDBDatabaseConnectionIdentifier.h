@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class IDBDatabaseConnectionIdentifierType { };
+struct IDBDatabaseConnectionIdentifierType;
 using IDBDatabaseConnectionIdentifier = AtomicObjectIdentifier<IDBDatabaseConnectionIdentifierType>;
 
 } // namespace WebCore

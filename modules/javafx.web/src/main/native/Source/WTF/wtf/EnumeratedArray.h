@@ -36,7 +36,7 @@ namespace WTF {
 // LastValue is the maximum value of the enum, which determines the size of the array.
 template <typename Key, typename T, Key LastValue = EnumTraits<Key>::values::max>
 class EnumeratedArray {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(EnumeratedArray);
 public:
     using value_type = T;
     using size_type = Key;
@@ -84,112 +84,112 @@ public:
         return *this;
     }
 
-    constexpr reference at(size_type pos)
+    constexpr reference at(size_type pos) LIFETIME_BOUND
     {
         return m_storage.at(index(pos));
     }
 
-    constexpr const_reference at(size_type pos) const
+    constexpr const_reference at(size_type pos) const LIFETIME_BOUND
     {
         return m_storage.at(index(pos));
     }
 
-    constexpr reference operator[](size_type pos)
+    constexpr reference operator[](size_type pos) LIFETIME_BOUND
     {
         return m_storage[index(pos)];
     }
 
-    constexpr const_reference operator[](size_type pos) const
+    constexpr const_reference operator[](size_type pos) const LIFETIME_BOUND
     {
         return m_storage[index(pos)];
     }
 
-    constexpr reference front()
+    constexpr reference front() LIFETIME_BOUND
     {
         return m_storage.front();
     }
 
-    constexpr const_reference front() const
+    constexpr const_reference front() const LIFETIME_BOUND
     {
         return m_storage.front();
     }
 
-    constexpr reference back()
+    constexpr reference back() LIFETIME_BOUND
     {
         return m_storage.back();
     }
 
-    constexpr const_reference back() const
+    constexpr const_reference back() const LIFETIME_BOUND
     {
         return m_storage.back();
     }
 
-    constexpr T* data() noexcept
+    constexpr T* data() noexcept LIFETIME_BOUND
     {
         return m_storage.data();
     }
 
-    constexpr const T* data() const noexcept
+    constexpr const T* data() const noexcept LIFETIME_BOUND
     {
         return m_storage.data();
     }
 
-    constexpr iterator begin() noexcept
+    constexpr iterator begin() noexcept LIFETIME_BOUND
     {
         return m_storage.begin();
     }
 
-    constexpr const_iterator begin() const noexcept
+    constexpr const_iterator begin() const noexcept LIFETIME_BOUND
     {
         return m_storage.begin();
     }
 
-    constexpr const_iterator cbegin() const noexcept
+    constexpr const_iterator cbegin() const noexcept LIFETIME_BOUND
     {
         return m_storage.cbegin();
     }
 
-    constexpr iterator end() noexcept
+    constexpr iterator end() noexcept LIFETIME_BOUND
     {
         return m_storage.end();
     }
 
-    constexpr const_iterator end() const noexcept
+    constexpr const_iterator end() const noexcept LIFETIME_BOUND
     {
         return m_storage.end();
     }
 
-    constexpr const_iterator cend() const noexcept
+    constexpr const_iterator cend() const noexcept LIFETIME_BOUND
     {
         return m_storage.cend();
     }
 
-    constexpr reverse_iterator rbegin() noexcept
+    constexpr reverse_iterator rbegin() noexcept LIFETIME_BOUND
     {
         return m_storage.rbegin();
     }
 
-    constexpr const_reverse_iterator rbegin() const noexcept
+    constexpr const_reverse_iterator rbegin() const noexcept LIFETIME_BOUND
     {
         return m_storage.rbegin();
     }
 
-    constexpr const_reverse_iterator crbegin() const noexcept
+    constexpr const_reverse_iterator crbegin() const noexcept LIFETIME_BOUND
     {
         return m_storage.crbegin();
     }
 
-    constexpr reverse_iterator rend() noexcept
+    constexpr reverse_iterator rend() noexcept LIFETIME_BOUND
     {
         return m_storage.rend();
     }
 
-    constexpr const_reverse_iterator rend() const noexcept
+    constexpr const_reverse_iterator rend() const noexcept LIFETIME_BOUND
     {
         return m_storage.rend();
     }
 
-    constexpr const_reverse_iterator crend() const noexcept
+    constexpr const_reverse_iterator crend() const noexcept LIFETIME_BOUND
     {
         return m_storage.crend();
     }
@@ -226,27 +226,9 @@ public:
     }
 
     template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator<(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
+    std::strong_ordering operator<=>(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
     {
-        return m_storage < rhs.m_storage;
-    }
-
-    template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator<=(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
-    {
-        return m_storage <= rhs.m_storage;
-    }
-
-    template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator>(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
-    {
-        return m_storage > rhs.m_storage;
-    }
-
-    template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator>=(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
-    {
-        return m_storage >= rhs.m_storage;
+        return m_storage <=> rhs.m_storage;
     }
 
 private:

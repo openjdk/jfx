@@ -39,7 +39,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BloomFilter);
 // See http://en.wikipedia.org/wiki/Bloom_filter
 template <unsigned keyBits>
 class BloomFilter {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BloomFilter);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BloomFilter, BloomFilter);
 public:
     static constexpr size_t tableSize = 1 << keyBits;
 
@@ -160,7 +160,7 @@ inline void BloomFilter<keyBits>::clear()
 // See http://en.wikipedia.org/wiki/Bloom_filter#Counting_filters
 template <unsigned keyBits>
 class CountingBloomFilter {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CountingBloomFilter);
 public:
     static constexpr size_t tableSize = 1 << keyBits;
     static unsigned maximumCount() { return std::numeric_limits<uint8_t>::max(); }
@@ -214,9 +214,9 @@ inline void CountingBloomFilter<keyBits>::add(unsigned hash)
 {
     auto& first = firstBucket(hash);
     auto& second = secondBucket(hash);
-    if (LIKELY(first < maximumCount()))
+    if (first < maximumCount()) [[likely]]
         ++first;
-    if (LIKELY(second < maximumCount()))
+    if (second < maximumCount()) [[likely]]
         ++second;
 }
 
@@ -228,9 +228,9 @@ inline void CountingBloomFilter<keyBits>::remove(unsigned hash)
     ASSERT(first);
     ASSERT(second);
     // In case of an overflow, the bucket sticks in the table until clear().
-    if (LIKELY(first < maximumCount()))
+    if (first < maximumCount()) [[likely]]
         --first;
-    if (LIKELY(second < maximumCount()))
+    if (second < maximumCount()) [[likely]]
         --second;
 }
 
