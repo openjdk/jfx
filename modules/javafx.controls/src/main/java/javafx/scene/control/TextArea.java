@@ -47,6 +47,7 @@ import javafx.css.StyleableProperty;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
 import javafx.css.converter.SizeConverter;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.skin.TextAreaSkin;
 
 import javafx.css.Styleable;
@@ -81,6 +82,51 @@ import javafx.scene.AccessibleRole;
  * @since JavaFX 2.0
  */
 public class TextArea extends TextInputControl {
+    /** Denotes the function that moves the caret to the document end. */
+    public static final FunctionTag DOCUMENT_END = new FunctionTag();
+    /** Denotes the function that moves the caret to the document start. */
+    public static final FunctionTag DOCUMENT_START = new FunctionTag();
+    /** Denotes the function that moves the caret one line down. */
+    public static final FunctionTag DOWN = new FunctionTag();
+    /** Denotes the function that inserts a TAB character at the caret position. */
+    public static final FunctionTag INSERT_TAB = new FunctionTag();
+    /** Denotes the function that insert a new line at the caret position. */
+    public static final FunctionTag INSERT_NEW_LINE = new FunctionTag();
+    /** Denotes the function that moves the caret to the end of the visible line. */
+    public static final FunctionTag LINE_END = new FunctionTag();
+    /** Denotes the function that moves the caret to the start of the visible line. */
+    public static final FunctionTag LINE_START = new FunctionTag();
+    /** Denotes the function that moves the caret one paragraph down. */
+    public static final FunctionTag PARAGRAPH_DOWN = new FunctionTag();
+    /** Denotes the function that moves the caret one paragraph up. */
+    public static final FunctionTag PARAGRAPH_UP = new FunctionTag();
+    /** Denotes the function that moves the caret one page down. */
+    public static final FunctionTag PAGE_DOWN = new FunctionTag();
+    /** Denotes the function that moves the caret one page up. */
+    public static final FunctionTag PAGE_UP = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one line down. */
+    public static final FunctionTag SELECT_DOWN = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection to the end of the current paragraph. */
+    //public static final FunctionTag SELECT_END_EXTEND = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection to the start of the current paragraph. */
+    //public static final FunctionTag SELECT_HOME_EXTEND = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection to the end of the visible line. */
+    public static final FunctionTag SELECT_LINE_END = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection to the start of the visible line. */
+    public static final FunctionTag SELECT_LINE_START = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one page down. */
+    public static final FunctionTag SELECT_PAGE_DOWN = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one page up. */
+    public static final FunctionTag SELECT_PAGE_UP = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one paragraph down. */
+    public static final FunctionTag SELECT_PARAGRAPH_DOWN = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one paragraph up. */
+    public static final FunctionTag SELECT_PARAGRAPH_UP = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one line up. */
+    public static final FunctionTag SELECT_UP = new FunctionTag();
+    /** Denotes the function that moves the caret one line up. */
+    public static final FunctionTag UP = new FunctionTag();
+
     // Text area content model
     private static final class TextAreaContent extends ContentBase {
         private final List<StringBuilder> paragraphs = new ArrayList<>();

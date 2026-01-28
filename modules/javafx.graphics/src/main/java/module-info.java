@@ -101,7 +101,6 @@ module javafx.graphics {
         javafx.controls;
     exports com.sun.javafx.scene to
         javafx.controls,
-        jfx.incubator.input,
         jfx.incubator.richtext,
         javafx.media,
         javafx.swing,
@@ -121,7 +120,6 @@ module javafx.graphics {
         javafx.controls;
     exports com.sun.javafx.scene.traversal to
         javafx.controls,
-        jfx.incubator.input,
         jfx.incubator.richtext,
         javafx.web;
     exports com.sun.javafx.sg.prism to
@@ -141,7 +139,6 @@ module javafx.graphics {
     exports com.sun.javafx.util to
         javafx.controls,
         javafx.fxml,
-        jfx.incubator.input,
         jfx.incubator.richtext,
         javafx.media,
         javafx.swing,

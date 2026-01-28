@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -37,13 +37,13 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.input.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.FX;
-import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
 

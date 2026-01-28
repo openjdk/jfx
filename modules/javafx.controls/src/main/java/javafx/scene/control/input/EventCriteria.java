@@ -22,31 +22,28 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package javafx.scene.control.input;
 
-import java.util.Set;
+import javafx.event.Event;
+import javafx.event.EventType;
 
 /**
- * Codifies priority of event handler invocation.
+ * This interface enables wider control in specifying conditional matching logic when adding skin/behavior handlers.
+ *
+ * @param <T> the type of the event
+ * @since 999 TODO
  */
-public enum EventHandlerPriority {
-    USER_HIGH(6000),
-    USER_KB(5000),
-    SKIN_KB(4000),
-    SKIN_HIGH(3000),
-    SKIN_LOW(2000), // not used, reserved for SkinInputMap.addHandlerLast
-    USER_LOW(1000); // not used, reserved for InputMap.addHandlerLast
+public interface EventCriteria<T extends Event> {
+    /**
+     * Returns the event type for which this criteria are valid.
+     * @return the event type
+     */
+    public EventType<T> getEventType();
 
-    /** set of priorities associated with a {@code Skin} */
-    public static final Set<EventHandlerPriority> ALL_SKIN = Set.of(
-        SKIN_KB,
-        SKIN_HIGH,
-        SKIN_LOW
-    );
-
-    final int priority;
-
-    private EventHandlerPriority(int priority) {
-        this.priority = priority;
-    }
+    /**
+     * Returns true if the specified event matches this criteria.
+     * @param ev the event
+     * @return true if match occurs
+     */
+    public boolean isEventAcceptable(T ev);
 }

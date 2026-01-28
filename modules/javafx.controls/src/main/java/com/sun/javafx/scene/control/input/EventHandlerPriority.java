@@ -22,44 +22,31 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package com.sun.javafx.scene.control.input;
 
-import javafx.event.EventType;
-import javafx.scene.input.KeyEvent;
-import jfx.incubator.scene.control.input.KeyBinding;
+import java.util.Set;
 
 /**
- * Contains logic for mapping KeyBinding to a specific KeyEvent.
+ * Codifies priority of event handler invocation.
  */
-public class KeyEventMapper {
-    private static final int PRESSED = 0x01;
-    private static final int RELEASED = 0x02;
-    private static final int TYPED = 0x04;
+public enum EventHandlerPriority {
+    USER_HIGH(6000),
+    USER_KB(5000),
+    SKIN_KB(4000),
+    SKIN_HIGH(3000),
+    SKIN_LOW(2000), // not used, reserved for SkinInputMap.addHandlerLast
+    USER_LOW(1000); // not used, reserved for InputMap.addHandlerLast
 
-    private int types;
+    /** set of priorities associated with a {@code Skin} */
+    public static final Set<EventHandlerPriority> ALL_SKIN = Set.of(
+        SKIN_KB,
+        SKIN_HIGH,
+        SKIN_LOW
+    );
 
-    public EventType<KeyEvent> addType(KeyBinding k) {
-        if (k.isKeyPressed()) {
-            types |= PRESSED;
-            return KeyEvent.KEY_PRESSED;
-        } else if (k.isKeyReleased()) {
-            types |= RELEASED;
-            return KeyEvent.KEY_RELEASED;
-        } else {
-            types |= TYPED;
-            return KeyEvent.KEY_TYPED;
-        }
-    }
+    final int priority;
 
-    public boolean hasKeyPressed() {
-        return (types & PRESSED) != 0;
-    }
-
-    public boolean hasKeyReleased() {
-        return (types & RELEASED) != 0;
-    }
-
-    public boolean hasKeyTyped() {
-        return (types & TYPED) != 0;
+    private EventHandlerPriority(int priority) {
+        this.priority = priority;
     }
 }

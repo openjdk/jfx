@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -57,6 +57,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.input.KeyBinding;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
@@ -69,7 +70,6 @@ import javafx.stage.Window;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 import com.oracle.demo.richtext.util.FX;
-import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.LineNumberDecorator;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SideDecorator;

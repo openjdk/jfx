@@ -25,7 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -97,6 +96,7 @@ import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.TabObservableList;
 import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import com.sun.javafx.util.Utils;
 
 /**
@@ -150,10 +150,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     private Rectangle tabHeaderAreaClipRect;
     private Tab selectedTab;
 
-    private final TabPaneBehavior behavior;
-
-
-
     /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -169,10 +165,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      */
     public TabPaneSkin(TabPane control) {
         super(control);
-
-        // install default input map for the TabPane control
-        this.behavior = new TabPaneBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
         clipRect = new Rectangle(control.getWidth(), control.getHeight());
         getSkinnable().setClip(clipRect);
@@ -262,9 +254,18 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        if (getSkinnable() == null) return;
+    @Override
+    public void install() {
+        super.install();
+        // install stateless behavior
+        TabPaneBehavior.install(getSkinnable());
+    }
+
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
 
         if (selectionModel != null) {
             selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
@@ -282,10 +283,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         super.dispose();
-
-        if (behavior != null) {
-            behavior.dispose();
-        }
     }
 
     /** {@inheritDoc} */
@@ -731,12 +728,12 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     private void initializeSwipeHandlers() {
         if (Properties.IS_TOUCH_SUPPORTED) {
-            getSkinnable().addEventHandler(SwipeEvent.SWIPE_LEFT, t -> {
-                behavior.selectNextTab();
+            getSkinnable().addEventHandler(SwipeEvent.SWIPE_LEFT, (ev) -> {
+                getSkinnable().selectNextTab();
             });
 
-            getSkinnable().addEventHandler(SwipeEvent.SWIPE_RIGHT, t -> {
-                behavior.selectPreviousTab();
+            getSkinnable().addEventHandler(SwipeEvent.SWIPE_RIGHT, (ev) -> {
+                getSkinnable().selectPreviousTab();
             });
         }
     }
@@ -1310,8 +1307,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     switch (action) {
                         case FIRE: {
                             Tab tab = getTab();
-                            if (behavior.canCloseTab(tab)) {
-                                behavior.closeTab(tab);
+                            if (TabPaneBehavior.canCloseTab(tab)) {
+                                TabPaneBehavior.closeTab(getSkinnable(), tab);
                                 setOnMousePressed(null);
                             }
                             break;
@@ -1321,14 +1318,14 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 }
             };
             closeBtn.setAccessibleRole(AccessibleRole.BUTTON);
-            closeBtn.setAccessibleText(getString("Accessibility.title.TabPane.CloseButton"));
+            closeBtn.setAccessibleText(ControlResources.getString("Accessibility.title.TabPane.CloseButton"));
             closeBtn.getStyleClass().setAll("tab-close-button");
             closeBtn.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent me) {
                     Tab tab = getTab();
-                    if (me.getButton().equals(MouseButton.PRIMARY) && behavior.canCloseTab(tab)) {
-                        behavior.closeTab(tab);
+                    if (me.getButton().equals(MouseButton.PRIMARY) && TabPaneBehavior.canCloseTab(tab)) {
+                        TabPaneBehavior.closeTab(getSkinnable(), tab);
                         setOnMousePressed(null);
                         me.consume();
                     }
@@ -1533,13 +1530,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     }
                     if (me.getButton().equals(MouseButton.MIDDLE)) {
                         if (showCloseButton()) {
-                            if (behavior.canCloseTab(tab)) {
+                            if (TabPaneBehavior.canCloseTab(tab)) {
                                 dispose();
-                                behavior.closeTab(tab);
+                                TabPaneBehavior.closeTab(getSkinnable(), tab);
                             }
                         }
                     } else if (me.getButton().equals(MouseButton.PRIMARY)) {
-                        behavior.selectTab(tab);
+                        TabPaneBehavior.selectTab(getSkinnable(), tab);
                     }
                 }
             });
