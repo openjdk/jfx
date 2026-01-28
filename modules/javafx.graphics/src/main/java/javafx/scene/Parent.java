@@ -984,6 +984,19 @@ public abstract non-sealed class Parent extends Node {
         return performingLayout;
     }
 
+    private boolean inLayoutChildren;
+
+    /**
+     * Returns whether this node is currently running its {@link #layoutChildren()}
+     * method. This is useful to detect if a change to layout properties of a
+     * direct child should be ignored, or should trigger a layout pass.
+     *
+     * @return {@code true} if this node is running {@link #layoutChildren()}, otherwise {@code false}
+     */
+    boolean inLayoutChildren() {
+        return inLayoutChildren;
+    }
+
     private boolean sizeCacheClear = true;
     private double prefWidthCache = -1;
     private double prefHeightCache = -1;
@@ -1244,17 +1257,6 @@ public abstract non-sealed class Parent extends Node {
     }
 
     /**
-     * It stores the reference to the current child being laid out by its parent.
-     * This reference is important to differentiate whether a layout is triggered
-     * by its parent or other events.
-     */
-    private Node currentLayoutChild = null;
-
-    boolean isCurrentLayoutChild(Node node) {
-        return node == currentLayoutChild;
-    }
-
-    /**
      * Executes a top-down layout pass on the scene graph under this parent.
      *
      * Calling this method while the Parent is doing layout is a no-op.
@@ -1280,19 +1282,27 @@ public abstract non-sealed class Parent extends Node {
                     break;
                 }
                 performingLayout = true;
-                layoutChildren();
+                inLayoutChildren = true;
+
+                try {
+                    layoutChildren();
+                }
+                finally {
+                    inLayoutChildren = false;
+                }
+
                 // Intended fall-through
             case DIRTY_BRANCH:
                 for (int i = 0, max = children.size(); i < max; i++) {
                     final Node child = children.get(i);
-                    currentLayoutChild = child;
+
                     if (child instanceof Parent) {
                         ((Parent)child).layout();
                     } else if (child instanceof SubScene) {
                         ((SubScene)child).layoutPass();
                     }
                 }
-                currentLayoutChild = null;
+
                 performingLayout = false;
                 break;
         }
@@ -1309,12 +1319,11 @@ public abstract non-sealed class Parent extends Node {
     protected void layoutChildren() {
         for (int i=0, max=children.size(); i<max; i++) {
             final Node node = children.get(i);
-            currentLayoutChild = node;
+
             if (node.isResizable() && node.isManaged()) {
                 node.autosize();
             }
         }
-        currentLayoutChild = null;
     }
 
     /**
