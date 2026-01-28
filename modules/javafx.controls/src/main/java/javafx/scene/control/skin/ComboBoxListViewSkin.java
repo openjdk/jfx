@@ -116,7 +116,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
             itemCountDirty = true;
             getSkinnable().requestLayout();
-            requestPopupLayout();
+            recomputePopupLayout();
         }
     };
 
@@ -402,7 +402,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         itemCountDirty = true;
         getSkinnable().requestLayout();
-        requestPopupLayout();
+        recomputePopupLayout();
     }
 
     private void updateValue() {
@@ -639,6 +639,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (listView.getSkin() instanceof VirtualContainerBase) {
             int maxRows = comboBox.getVisibleRowCount();
             VirtualContainerBase<?,?> skin = (VirtualContainerBase<?,?>)listView.getSkin();
+                skin.updateItemCount();
+                skin.requestRebuildCells();
             ph = skin.getVirtualFlowPreferredHeight(maxRows);
         } else {
             double ch = comboBoxItems.size() * 25;
@@ -709,4 +711,3 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
     }
 }
-

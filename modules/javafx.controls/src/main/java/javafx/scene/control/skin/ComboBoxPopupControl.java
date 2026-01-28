@@ -77,7 +77,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     PopupControl popup;
 
     private boolean popupNeedsReconfiguring = true;
-    private boolean popupResize = false;
 
     private final ComboBoxBase<T> comboBoxBase;
     private TextField textField;
@@ -468,6 +467,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (popupContent instanceof Region) {
             // snap to pixel
             final Region r = (Region) popupContent;
+            r.setMinSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+            r.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
 
             // 0 is used here for the width due to JDK-8095712
             double prefHeight = snapSizeY(r.prefHeight(0));
@@ -557,11 +558,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final Point2D p = getPrefPopupPosition();
 
         final Node popupContent = getPopupContent();
-        if (popupResize && popupContent instanceof Region) {
-            Region region = (Region) popupContent;
-            region.setMinSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
-            region.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
-        }
         final double minWidth = popupContent.prefWidth(Region.USE_COMPUTED_SIZE);
         final double minHeight = popupContent.prefHeight(Region.USE_COMPUTED_SIZE);
 
@@ -573,12 +569,10 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final Bounds b = popupContent.getLayoutBounds();
         final double currentWidth = b.getWidth();
         final double currentHeight = b.getHeight();
-        final double newWidth = popupResize ? minWidth
-                : (currentWidth < minWidth ? minWidth : currentWidth);
-        final double newHeight = popupResize ? minHeight
-                : (currentHeight < minHeight ? minHeight : currentHeight);
+        final double newWidth = currentWidth < minWidth ? minWidth : currentWidth;
+        final double newHeight = currentHeight < minHeight ? minHeight : currentHeight;
 
-        if (newWidth != currentWidth || newHeight != currentHeight || popupResize) {
+        if (newWidth != currentWidth || newHeight != currentHeight) {
             // Resizing content to resolve issues such as JDK-8116801 and JDK-8123876
             // (where JDK-8123876 was introduced due to a previous fix for JDK-8116801)
             popupContent.resize(newWidth, newHeight);
@@ -587,12 +581,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 ((Region)popupContent).setPrefSize(newWidth, newHeight);
             }
         }
-
-        popupResize = false;
     }
 
-    final void requestPopupLayout() {
-        popupResize = true;
+    final void recomputePopupLayout() {
         popupNeedsReconfiguring = true;
         reconfigurePopup();
         sizePopup();
