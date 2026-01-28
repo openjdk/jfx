@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,14 @@
 
 package test.javafx.css;
 
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.FontFaceImpl;
+import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.media.MediaFeatures;
+import com.sun.javafx.css.media.SizeQueryType;
+import com.sun.javafx.css.media.TriState;
+import com.sun.javafx.css.media.expression.ConjunctionExpression;
+import com.sun.javafx.css.media.expression.FunctionExpression;
+import com.sun.javafx.css.media.expression.GreaterOrEqualExpression;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -33,16 +40,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import javafx.application.ColorScheme;
 import javafx.css.CssParser;
 import javafx.css.CssParserShim;
 import javafx.css.Declaration;
 import javafx.css.FontFace;
-
 import javafx.css.ParsedValue;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
+import javafx.css.Size;
+import javafx.css.SizeUnits;
 import javafx.css.Stylesheet;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
@@ -343,5 +353,105 @@ public class CssParserTest {
                 file.delete();
             }
         }
+    }
+
+    @Test
+    public void stylesheetImport_withAlwaysFalseMediaQueryList_isNotImported() {
+        var oldDefault = MediaFeatures.DEFAULT;
+
+        try {
+            MediaFeatures.DEFAULT = (_, _) -> FunctionExpression.of(
+                "CssParserTest-feature1", "value", () -> TriState.FALSE, _ -> null, null);
+
+            String importedStylesheet = Base64.getEncoder().encodeToString("""
+                .rule1 { foo: bar; }
+                @media (prefers-reduced-motion) {
+                    .rule2 { foo: bar; }
+                }
+                """.getBytes(StandardCharsets.UTF_8));
+
+            Stylesheet stylesheet = new CssParser().parse("""
+                @import url("data:text/css;base64,%s") (CssParserTest-feature1);
+                .rule3 { foo: bar; }
+                """.formatted(importedStylesheet));
+
+            assertEquals(1, stylesheet.getRules().size());
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().getFirst()));
+        } finally {
+            MediaFeatures.DEFAULT = oldDefault;
+        }
+    }
+
+    @Test
+    public void stylesheetImport_withAlwaysTrueMediaQueryList_isImportedUnconditionally() {
+        var oldDefault = MediaFeatures.DEFAULT;
+
+        try {
+            MediaFeatures.DEFAULT = (_, _) -> FunctionExpression.of(
+                "CssParserTest-feature2", "value", () -> TriState.TRUE, _ -> null, null);
+
+            String importedStylesheet = Base64.getEncoder().encodeToString("""
+                .rule1 { foo: bar; }
+                @media (prefers-reduced-motion) {
+                    .rule2 { foo: bar; }
+                }
+                """.getBytes(StandardCharsets.UTF_8));
+
+            Stylesheet stylesheet = new CssParser().parse("""
+                @import url("data:text/css;base64,%s") (CssParserTest-feature2);
+                .rule3 { foo: bar; }
+                """.formatted(importedStylesheet));
+
+            assertEquals(3, stylesheet.getRules().size());
+
+            Rule importedRule1 = stylesheet.getRules().get(0);
+            assertNull(RuleHelper.getMediaRule(importedRule1));
+
+            Rule importedRule2 = stylesheet.getRules().get(1);
+            assertNull(RuleHelper.getMediaRule(importedRule2).getParent());
+
+            Rule rule3 = stylesheet.getRules().get(2);
+            assertNull(RuleHelper.getMediaRule(rule3));
+        } finally {
+            MediaFeatures.DEFAULT = oldDefault;
+        }
+    }
+
+    @Test
+    public void stylesheetImport_withMediaQueryList_isImportedWithMediaRules() {
+        String importedStylesheet = Base64.getEncoder().encodeToString("""
+            .rule1 { foo: bar; }
+            @media (prefers-reduced-motion) {
+                .rule2 { foo: bar; }
+            }
+            """.getBytes(StandardCharsets.UTF_8));
+
+        Stylesheet stylesheet = new CssParser().parse("""
+            @import url("data:text/css;base64,%s") (min-width: 1000px) and (prefers-color-scheme: dark);
+            .rule3 { foo: bar; }
+            """.formatted(importedStylesheet));
+
+        assertEquals(3, stylesheet.getRules().size());
+
+        Rule importedRule1 = stylesheet.getRules().get(0);
+        Rule importedRule2 = stylesheet.getRules().get(1);
+
+        var importConditions = List.of(ConjunctionExpression.of(
+            GreaterOrEqualExpression.ofSize(SizeQueryType.WIDTH, new Size(1000, SizeUnits.PX)),
+            FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK)));
+
+        assertEquals(
+            importConditions,
+            RuleHelper.getMediaRule(importedRule1).getQueries());
+
+        assertNull(RuleHelper.getMediaRule(importedRule1).getParent());
+
+        assertEquals(
+            List.of(FunctionExpression.of("prefers-reduced-motion", null, _ -> null, true)),
+            RuleHelper.getMediaRule(importedRule2).getQueries());
+
+        assertEquals(
+            importConditions,
+            RuleHelper.getMediaRule(importedRule2).getParent().getQueries());
     }
 }

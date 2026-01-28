@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,13 @@
 
 package javafx.css;
 
-public class CssParserShim {
+import com.sun.javafx.css.media.MediaQueryList;
+import java.util.Objects;
 
-    CssParser parser;
+record StylesheetImport(Stylesheet stylesheet, MediaQueryList importConditions) {
 
-    public CssParserShim(CssParser parser) {
-        this.parser = parser;
-    }
-
-    public CssParserShim() {
-        this.parser = new CssParser();
-    }
-
-    public ParsedValue parseExpr(String property, String expr) {
-        return parser.parseExpr(property, expr);
-    }
-
-    public Stylesheet parseUnmerged(String stylesheetText, boolean includeUnmatchableRules) {
-        return parser.parseUnmerged(stylesheetText, includeUnmatchableRules);
+    StylesheetImport {
+        Objects.requireNonNull(stylesheet, "stylesheet cannot be null");
+        Objects.requireNonNull(importConditions, "importConditions cannot be null");
     }
 }
