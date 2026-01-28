@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -334,11 +334,12 @@ public class RichTextModel extends StyledTextModel {
         public StyleAttributeMap getStyleAttributeMap(int offset) {
             int pos = 0;
             int ct = size();
+            int last = ct - 1;
             for (int i = 0; i < ct; i++) {
                 RSegment seg = get(i);
                 int len = seg.getTextLength();
                 pos += len;
-                if ((offset <= pos) || (i + 1 == ct)) {
+                if ((offset <= pos) || (i == last)) {
                     return seg.getStyleAttributeMap();
                 }
             }
