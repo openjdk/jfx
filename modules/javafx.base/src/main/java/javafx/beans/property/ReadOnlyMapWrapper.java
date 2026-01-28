@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,46 +43,65 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      */
     public ReadOnlyMapWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyMapWrapper(ObservableMap<K, V> initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyMapWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlyMapWrapper}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyMapWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyMapWrapper}
+     * The constructor of {@code ReadOnlyMapWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyMapWrapper}
-     * @param name
-     *            the name of this {@code ReadOnlyMapWrapper}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyMapWrapper(Object bean, String name,
                               ObservableMap<K, V> initialValue) {
         super(bean, name, initialValue);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyMapWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public ReadOnlyMapWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyMapWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public ReadOnlyMapWrapper(Object bean, Class<?> declaringClass, String name, ObservableMap<K, V> initialValue) {
+        super(bean, declaringClass, name, initialValue);
     }
 
     /**
@@ -93,7 +112,9 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
      */
     public ReadOnlyMapProperty<K, V> getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -138,6 +159,11 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
         }
 
         @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlyMapWrapper.this.getDeclaringClass();
+        }
+
+        @Override
         public ReadOnlyIntegerProperty sizeProperty() {
             return ReadOnlyMapWrapper.this.sizeProperty();
         }
@@ -145,6 +171,14 @@ public class ReadOnlyMapWrapper<K, V> extends SimpleMapProperty<K, V> {
         @Override
         public ReadOnlyBooleanProperty emptyProperty() {
             return ReadOnlyMapWrapper.this.emptyProperty();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyMapWrapper.this).getTargetClass();
         }
     }
 }

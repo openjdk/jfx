@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.beans.property;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import javafx.beans.value.ObservableValue;
 
 /**
@@ -39,10 +41,13 @@ import javafx.beans.value.ObservableValue;
 public interface ReadOnlyProperty<T> extends ObservableValue<T> {
 
     /**
-     * Returns the {@code Object} that contains this property. If this property
-     * is not contained in an {@code Object}, {@code null} is returned.
+     * Returns the {@code Object} that is associated with this property.
+     * <p>
+     * For instance properties, this is the object that contains the property.
+     * For {@linkplain AttachedProperty attached properties}, it is the object to which the property is attached.
+     * Is this property is not associated with an object, {@code null} is returned.
      *
-     * @return the containing {@code Object} or {@code null}
+     * @return the associated {@code Object} or {@code null}
      */
     Object getBean();
 
@@ -54,4 +59,54 @@ public interface ReadOnlyProperty<T> extends ObservableValue<T> {
      */
     String getName();
 
+    /**
+     * Returns the {@code Class} in which this property was declared.
+     * <p>
+     * If this property is not associated with an object, {@code null} is returned.
+     *
+     * @return   the declaring class of this property, or {@code null}
+     * @implSpec Implementations of {@linkplain AttachedProperty attached properties} must override this method
+     *           and return the declaring class of the attached property, as the default implementation will not
+     *           be able to discover the declaring class at runtime.
+     * @implNote For instance properties, the default implementation uses reflection to search for a method
+     *           with a signature compatible with {@code ReadOnlyProperty<?> <name>Property()}, where
+     *           {@code <name>} is the name of the property as returned by the {@link #getName()} method.
+     *           The return type must be a subtype of {@code ReadOnlyProperty<?>}. The class that declares
+     *           such a method is the declaring class of the property.
+     *           However, implementations are advised to override this method and return the declaring class
+     *           directly, instead of relying on the reflective auto-discovery mechanism. Attached properties
+     *           must always override this method.
+     * @since 27
+     */
+    default Class<?> getDeclaringClass() {
+        Object bean = getBean();
+        if (bean == null) {
+            return null;
+        }
+
+        String name = getName();
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+
+        Class<?> beanClass = bean.getClass();
+        String propertyName = name + "Property";
+
+        do {
+            try {
+                Method method = beanClass.getDeclaredMethod(propertyName);
+
+                if ((method.getModifiers() & Modifier.STATIC) == 0
+                        && ReadOnlyProperty.class.isAssignableFrom(method.getReturnType())) {
+                    return beanClass;
+                }
+            } catch (NoSuchMethodException ignored) {
+                // fall through
+            }
+
+            beanClass = beanClass.getSuperclass();
+        } while (beanClass != null);
+
+        return null;
+    }
 }
