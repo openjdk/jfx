@@ -467,6 +467,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (popupContent instanceof Region) {
             // snap to pixel
             final Region r = (Region) popupContent;
+            r.setMinSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+            r.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
 
             // 0 is used here for the width due to JDK-8095712
             double prefHeight = snapSizeY(r.prefHeight(0));
@@ -567,7 +569,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final Bounds b = popupContent.getLayoutBounds();
         final double currentWidth = b.getWidth();
         final double currentHeight = b.getHeight();
-        final double newWidth  = currentWidth < minWidth ? minWidth : currentWidth;
+        final double newWidth = currentWidth < minWidth ? minWidth : currentWidth;
         final double newHeight = currentHeight < minHeight ? minHeight : currentHeight;
 
         if (newWidth != currentWidth || newHeight != currentHeight) {
@@ -579,6 +581,12 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 ((Region)popupContent).setPrefSize(newWidth, newHeight);
             }
         }
+    }
+
+    final void recomputePopupLayout() {
+        popupNeedsReconfiguring = true;
+        reconfigurePopup();
+        sizePopup();
     }
 
     private void handleKeyEvent(KeyEvent ke, boolean doConsume) {
