@@ -88,6 +88,9 @@ void setGLXAttrs(jint *attrs, int *glxAttrs) {
     glxAttrs[index++] = GLX_DEPTH_SIZE;
     glxAttrs[index++] = attrs[DEPTH_SIZE];
 
+    glxAttrs[index++] = GLX_CONFIG_CAVEAT;
+    glxAttrs[index++] = GLX_NONE;
+
     glxAttrs[index] = None;
 }
 
