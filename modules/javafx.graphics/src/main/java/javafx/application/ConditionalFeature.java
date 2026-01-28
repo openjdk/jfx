@@ -164,6 +164,16 @@ public enum ConditionalFeature {
     EXTENDED_WINDOW,
 
     /**
+     * Indicates that a system supports the use of a {@code StageBackdrop}.
+     * <p>
+     * This feature is currently supported on Windows 11 and macOS.
+     * @since 27
+     * @deprecated This is a preview feature which may be changed or removed in a future release.
+     */
+    @Deprecated(since = "27")
+    WINDOW_BACKDROP,
+
+    /**
      * Indicates whether or not controls should use two-level focus. Two-level
      * focus is when separate operations are needed in some controls to first
      * enter a control and then to perform operations on the control. Two-level
