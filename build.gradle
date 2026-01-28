@@ -59,6 +59,8 @@
  */
 defaultTasks = ["sdk"]
 
+import com.sun.javafx.gradle.CompileTarget
+
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Instant
@@ -163,16 +165,6 @@ void loadProperties(String sourceFileName) {
             ext[key] = property.value;
         }
     }
-}
-
-/**
- * Struct used to contain some information passed to the closure
- * passed to compileTargets.
- */
-class CompileTarget {
-    String name;
-    String upper;
-    String capital;
 }
 
 /**
@@ -341,8 +333,6 @@ ext.IS_RISCV64 = OS_ARCH.toLowerCase().contains("riscv64")
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
 ext.IS_WINDOWS = OS_NAME.contains("windows")
 ext.IS_LINUX = OS_NAME.contains("linux")
-
-ext.MAVEN_GROUP_ID = "org.openjfx"
 
 // Enable native access from modules with native code
 ext.enableNativeGraphics='--enable-native-access=javafx.graphics'
@@ -526,10 +516,6 @@ ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 ext.IS_RELEASE = !ext.IS_DEBUG_JAVA
 
-// Specifies whether to enable the Maven publishing tasks
-defineProperty("MAVEN_PUBLISH", "false")
-ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
-
 // Define the compiler lint warnings to enable.
 //
 // We define a separate set of options for normal classes, test classes
@@ -702,7 +688,6 @@ if (HUDSON_JOB_NAME == "not_hudson") {
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
 defineProperty("RELEASE_VERSION_LONG", "${RELEASE_VERSION_SHORT}+${PROMOTED_BUILD_NUMBER}${relOpt}")
-defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}") : "")
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -820,7 +805,6 @@ try {
 // for exporting to a JDK build. If HAS_JAVAFX_MODULES is false, then we will
 // build / test a standalone sdk for running with a JDK that does not include
 // the javafx modules.
-
 
 /**
  * Fetch/Check that external tools are present for the build. This method
@@ -1562,8 +1546,6 @@ logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
 logger.quiet("RELEASE_VERSION_LONG: $RELEASE_VERSION_LONG")
 logger.quiet("RELEASE_VERSION_PADDED: $RELEASE_VERSION_PADDED")
-logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
-logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
 logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
 
 /******************************************************************************
@@ -1780,113 +1762,6 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
 
     project.processShimsShaders.dependsOn(processShimsShaders)
 
-}
-
-void addMavenPublication(Project project, List<String> projectDependencies) {
-    if (!IS_MAVEN_PUBLISH) {
-        return
-    }
-
-    if (!project.hasProperty("moduleName")) {
-        fail("Project ${project} has no module name")
-    }
-    projectDependencies.each { projName ->
-        def dep = project.project(":$projName")
-        if (!dep.hasProperty("moduleName")) {
-            fail("${project} dependency ${dep} has no module name")
-        }
-    }
-
-    project.apply plugin: 'maven-publish'
-
-    project.group = MAVEN_GROUP_ID
-    project.version = MAVEN_VERSION
-
-    if (project.name == 'base') {
-        project.publishing {
-            publications {
-                javafx(MavenPublication) {
-                    artifactId = 'javafx'
-                    artifacts = []
-                }
-            }
-        }
-    }
-
-    gradle.taskGraph.whenReady { g ->
-        project.tasks.findAll { it.name == 'generatePomFileForJavafxPublication'}.each { it ->
-            it.doLast {
-                copy {
-                    into project.file("${project.buildDir}/publications/javafx")
-                    from file("${rootProject.projectDir}/javafx.pom")
-                    rename "javafx.pom", "pom-default.xml"
-                    filter { line ->
-                        line.replaceAll("@VERSION@", MAVEN_VERSION)
-                    }
-                }
-            }
-        }
-    }
-
-    project.publishing {
-        repositories {
-            maven {
-                def repositoryUrl = project.hasProperty('repositoryUrl') ? project.getProperty('repositoryUrl') : ""
-                def repositoryUsername = project.hasProperty('repositoryUsername') ? project.getProperty('repositoryUsername') : ""
-                def repositoryPassword = project.hasProperty('repositoryPassword') ? project.getProperty('repositoryPassword') : ""
-                url repositoryUrl
-                credentials {
-                   username repositoryUsername
-                   password repositoryPassword
-                }
-            }
-        }
-    }
-
-    compileTargets { t ->
-        project.publishing {
-            publications {
-                maven(MavenPublication) {
-                    def artifactName = project.moduleName.replace('.', '-')
-                    artifactId = artifactName
-
-                    afterEvaluate {
-                        artifact project.tasks."moduleEmptyPublicationJar$t.capital"
-                        artifact project.tasks."modularPublicationJar$t.capital" {
-                            archiveClassifier.set("$t.name")
-                        }
-                    }
-
-                    pom.withXml {
-                        Node parent = asNode().appendNode("parent")
-                        parent.appendNode("groupId", MAVEN_GROUP_ID)
-                        parent.appendNode("artifactId", "javafx")
-                        parent.appendNode("version", MAVEN_VERSION)
-
-                        Node dependencies = asNode().appendNode("dependencies")
-
-                        Node projectDependencyPlatform = dependencies.appendNode("dependency")
-                        projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        projectDependencyPlatform.appendNode("artifactId", artifactName)
-                        projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
-                        projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
-
-                        if (!projectDependencies.empty) {
-                            projectDependencies.each { projName ->
-                                def dep = project.project(":$projName")
-                                def depName = dep.moduleName.replace('.', '-')
-                                Node projectDependency = dependencies.appendNode("dependency")
-                                projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                projectDependency.appendNode("artifactId", depName)
-                                projectDependency.appendNode("version", MAVEN_VERSION)
-                           }
-                        }
-                    }
-                }
-            }
-
-        }
-    }
 }
 
 /**
@@ -2307,7 +2182,6 @@ project(":base") {
     sourceSets.main.java.srcDirs += "$buildDir/gensrc/java"
 
     compileJava.dependsOn processVersionInfo
-    addMavenPublication(project, [])
 
     addValidateSourceSets(project, sourceSets)
 
@@ -2841,8 +2715,6 @@ project(":graphics") {
         }
     }
 
-    addMavenPublication(project, [ 'base' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -2919,8 +2791,6 @@ project(":controls") {
     }
     processShimsResources.dependsOn(copyShimBssTask)
 
-    addMavenPublication(project, [ 'graphics' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -2989,8 +2859,6 @@ project(":incubator.input") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    addMavenPublication(project, [ 'controls' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -3048,8 +2916,6 @@ project(":incubator.richtext") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    addMavenPublication(project, [ 'controls', 'incubator.input' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -3105,10 +2971,6 @@ project(":swing") {
         enabled = IS_FULL_TEST && IS_AWT_TEST
 
         jvmArgs enableNativeGraphics
-    }
-
-    if (COMPILE_SWING) {
-        addMavenPublication(project, [ 'graphics' ])
     }
 
     addValidateSourceSets(project, sourceSets)
@@ -3228,7 +3090,6 @@ project(":fxml") {
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
 
-    addMavenPublication(project, [ 'controls' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3836,7 +3697,6 @@ project(":media") {
         }
     }
 
-    addMavenPublication(project, [ 'graphics' ])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -3859,8 +3719,6 @@ project(":jsobject") {
 
     dependencies {
     }
-
-    addMavenPublication(project, [])
 
     addValidateSourceSets(project, sourceSets)
 }
@@ -4166,8 +4024,6 @@ project(":web") {
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 
-    addMavenPublication(project, [ 'controls', 'media', 'jsobject' ])
-
     addValidateSourceSets(project, sourceSets)
 }
 
@@ -4424,6 +4280,10 @@ project(":systemTests") {
 
     addValidateSourceSets(project, nonModSrcSets, modSrcSets)
 }
+
+// Apply Maven Publishing to all projects (if enabled).
+// Need to be done after all projects were defined that should be published.
+apply from: 'maven-publish.gradle'
 
 void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
     lintOpts.split("[, ]").each { s ->
@@ -5279,6 +5139,10 @@ compileTargets { t ->
     }
     buildModules.dependsOn(buildModulesTask)
 
+    // Configures the maven publication (if enabled) for all projects of this compile target.
+    // Will run after the buildModulesTask.
+    configureMavenPublication(moduleProjList, t, buildModulesTask)
+
     // BUNDLED SDK
     moduleProjList.each { project ->
         // Copy classes, bin, and lib directories
@@ -5467,46 +5331,6 @@ compileTargets { t ->
     }
     buildModules.dependsOn(zipSourceFilesTask)
 
-    // ============================================================
-
-    // Maven Publications
-    def publicationDirName = "${platformPrefix}publications"
-    def publicationDir = "${rootProject.buildDir}/${publicationDirName}"
-
-    moduleProjList.each { project ->
-        // Create publications to be uploaded
-
-        def moduleName = project.ext.moduleName
-        def buildDir = project.buildDir
-
-        def dstModularJarDir="${publicationDir}"
-        def srcClassesDir = "${buildDir}/${platformPrefix}module-classes"
-        def srcLibsDir = "${buildDir}/${platformPrefix}module-lib"
-
-        def modularEmptyPublicationJarName = "${moduleName}.jar"
-        def modularEmptyPublicationJarTask = project.task("moduleEmptyPublicationJar${t.capital}", type: Jar) {
-            destinationDirectory = file("${dstModularJarDir}")
-            archiveFileName = modularEmptyPublicationJarName
-            manifest {
-                attributes(
-                        'Automatic-Module-Name':"${moduleName}Empty"
-                )
-            }
-        }
-
-        def modularPublicationJarName = "${moduleName}-${t.name}.jar"
-        def modularPublicationJarTask = project.task("modularPublicationJar${t.capital}", type: Jar, dependsOn: modularEmptyPublicationJarTask) {
-            destinationDirectory = file("${dstModularJarDir}")
-            archiveFileName = modularPublicationJarName
-            from srcLibsDir
-            from srcClassesDir
-        }
-
-        buildModulesTask.dependsOn(modularPublicationJarTask)
-
-    }
-    // ============================================================
-
     def buildRunArgsTask = task("buildRunArgs$t.capital",
             group: "Build", dependsOn: buildModulesTask) {
         outputs.file(runArgsFile);
@@ -5654,9 +5478,6 @@ compileTargets { t ->
         if (project.tasks.getByName("copyClassFiles$t.capital") != null) {
             project.tasks.getByName("copyClassFiles$t.capital").dependsOn(buildModuleClassesTask)
         }
-        if (project.tasks.getByName("modularPublicationJar$t.capital") != null) {
-            project.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleClassesTask)
-        }
     }
 
     def buildModuleLibsTask = task("buildModuleLibs$t.capital") {
@@ -5726,7 +5547,6 @@ compileTargets { t ->
         }
         baseProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleBaseTask)
         baseProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleBaseTask)
-        baseProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleBaseTask)
 
         def buildModuleGraphicsTask = task("buildModuleGraphics$t.capital", type: Copy, dependsOn: graphicsProject.assemble) {
             group = "Basic"
@@ -5801,7 +5621,6 @@ compileTargets { t ->
         graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
         graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
         graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleGraphicsTask)
-        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleGraphicsTask)
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5876,7 +5695,6 @@ compileTargets { t ->
         mediaProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
         mediaProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
         mediaProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleMediaTask)
-        mediaProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleMediaTask)
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5929,7 +5747,6 @@ compileTargets { t ->
         webProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleWeb)
         webProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleWeb)
         webProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleWeb)
-        webProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleWeb)
 
         def buildModuleSWT = task("buildModuleSWT$t.capital", type: Copy) {
             group = "Basic"
@@ -5954,7 +5771,6 @@ compileTargets { t ->
         graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleSWT)
         graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleSWT)
         graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleSWT)
-        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleSWT)
 
         dependsOn(
             buildModuleBaseTask,
