@@ -1185,6 +1185,69 @@ public class ListCellTest {
         assertTrue(isItemChangedCalled.get());
     }
 
+    @Test
+    void testEditStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        list.setEditable(true);
+        list.setCellFactory(_ -> new ListCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(list);
+
+        list.edit(0);
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        list.edit(-1);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
+
+    @Test
+    void testUpdateItemStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        list.setEditable(true);
+        list.setCellFactory(_ -> new ListCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(list);
+
+        list.edit(0);
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(list, 0);
+        cell.updateIndex(-1);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
+
     public static class MisbehavingOnCancelListCell<T> extends ListCell<T> {
         @Override
         public void cancelEdit() {
