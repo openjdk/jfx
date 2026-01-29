@@ -31,8 +31,7 @@
 namespace WebCore {
 
 // Modes for some of the line-related functions.
-enum LinePositionMode { PositionOnContainingLine, PositionOfInteriorLineBoxes };
-enum LineDirectionMode { HorizontalLine, VerticalLine };
+enum class LineDirection : bool { Horizontal, Vertical };
 
 enum class BleedAvoidance : uint8_t {
     None,
@@ -43,6 +42,7 @@ enum class BleedAvoidance : uint8_t {
 
 enum class ContentChangeType : uint8_t {
     Image,
+    HDRImage,
     MaskImage,
     BackgroundIImage,
     Canvas,
@@ -54,6 +54,8 @@ enum class ContentChangeType : uint8_t {
 
 class BorderEdge;
 class BorderShape;
+class GraphicsContext;
+class Image;
 class ImageBuffer;
 class RenderTextFragment;
 class StickyPositionViewportConstraints;
@@ -64,6 +66,9 @@ class InlineBoxIterator;
 };
 
 enum class BoxSideFlag : uint8_t;
+enum class DecodingMode : uint8_t;
+enum class InterpolationQuality : uint8_t;
+
 using BoxSideSet = OptionSet<BoxSideFlag>;
 using BorderEdges = RectEdges<BorderEdge>;
 
@@ -186,15 +191,11 @@ public:
 
     virtual LayoutUnit containingBlockLogicalWidthForContent() const;
 
-    // Overridden by subclasses to determine line height and baseline position.
-    virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const = 0;
-    virtual LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const = 0;
-
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
 
     void setSelectionState(HighlightState) override;
 
-    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isReplacedOrAtomicInline() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
+    bool canHaveBoxInfoInFragment() const { return !isFloating() && !isBlockLevelReplacedOrAtomicInline() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
 
     void contentChanged(ContentChangeType);
     bool hasAcceleratedCompositing() const;
@@ -241,10 +242,14 @@ public:
     enum class ScaleByUsedZoom : bool { No, Yes };
     LayoutSize calculateImageIntrinsicDimensions(StyleImage*, const LayoutSize& scaledPositioningAreaSize, ScaleByUsedZoom) const;
 
-    RenderBlock* containingBlockForAutoHeightDetection(Length logicalHeight) const;
+    RenderBlock* containingBlockForAutoHeightDetection(const Style::PreferredSize& logicalHeight) const;
+    RenderBlock* containingBlockForAutoHeightDetection(const Style::MinimumSize& logicalHeight) const;
+    RenderBlock* containingBlockForAutoHeightDetection(const Style::MaximumSize& logicalHeight) const;
+
+    void removeOutOfFlowBoxesIfNeededOnStyleChange(RenderBlock& delegateBlock, const RenderStyle& oldStyle, const RenderStyle& newStyle);
 
     struct ContinuationChainNode {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ContinuationChainNode);
 
         SingleThreadWeakPtr<RenderBoxModelObject> renderer;
         ContinuationChainNode* previous { nullptr };
@@ -259,7 +264,8 @@ public:
     ContinuationChainNode* continuationChainNode() const;
 
 protected:
-    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const Length&) const;
+    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const auto&) const;
+
     virtual void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* /*wasFixed*/) const { ASSERT_NOT_REACHED(); }
     void collectAbsoluteQuadsForContinuation(Vector<FloatQuad>& quads, bool* wasFixed) const;
 
@@ -267,6 +273,8 @@ private:
     ContinuationChainNode& ensureContinuationChainNode();
 
     virtual LayoutRect frameRectForStickyPositioning() const = 0;
+
+    RenderBlock* containingBlockForAutoHeightDetectionGeneric(const auto& logicalHeight) const;
 };
 
 } // namespace WebCore

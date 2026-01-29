@@ -23,6 +23,7 @@
 
 #include "HTMLInputElement.h"
 #include "Range.h"
+#include <ranges>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
@@ -67,7 +68,7 @@ Vector<Ref<HTMLInputElement>> RadioButtonGroup::members() const
     auto sortedMembers = WTF::map(m_members, [](auto& element) -> Ref<HTMLInputElement> {
         return element;
     });
-    std::sort(sortedMembers.begin(), sortedMembers.end(), [](auto& a, auto& b) {
+    std::ranges::sort(sortedMembers, [](auto& a, auto& b) {
         return is_lt(treeOrder<ComposedTree>(a, b));
     });
     return sortedMembers;
@@ -201,6 +202,11 @@ bool RadioButtonGroup::contains(HTMLInputElement& button) const
 // so we can compile the header without including the definition of RadioButtonGroup.
 RadioButtonGroups::RadioButtonGroups() = default;
 RadioButtonGroups::~RadioButtonGroups() = default;
+
+void RadioButtonGroups::clear()
+{
+    m_nameToGroupMap.clear();
+}
 
 void RadioButtonGroups::addButton(HTMLInputElement& element)
 {

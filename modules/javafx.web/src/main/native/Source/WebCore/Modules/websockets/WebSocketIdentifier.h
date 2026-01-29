@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class WebSocketIdentifierType { };
+struct WebSocketIdentifierType;
 using WebSocketIdentifier = AtomicObjectIdentifier<WebSocketIdentifierType>;
 
 } // namespace WebCore

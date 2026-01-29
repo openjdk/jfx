@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SyntheticModuleRecord.h"
 
+#include "ArgList.h"
 #include "BuiltinNames.h"
 #include "JSCInlines.h"
 #include "JSInternalPromise.h"

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,49 +29,71 @@
 namespace WebCore {
 namespace CSS {
 
+// MARK: Two Component Types
+
 struct TwoComponentPositionHorizontal {
-    std::variant<Keyword::Left, Keyword::Right, Keyword::Center, LengthPercentage<>> offset;
+    Variant<Keyword::Left, Keyword::Right, Keyword::Center, Keyword::XStart, Keyword::XEnd, LengthPercentage<>> offset;
 
     bool operator==(const TwoComponentPositionHorizontal&) const = default;
 };
 DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionHorizontal, offset);
 
 struct TwoComponentPositionVertical {
-    std::variant<Keyword::Top, Keyword::Bottom, Keyword::Center, LengthPercentage<>> offset;
+    Variant<Keyword::Top, Keyword::Bottom, Keyword::Center, Keyword::YStart, Keyword::YEnd, LengthPercentage<>> offset;
 
     bool operator==(const TwoComponentPositionVertical&) const = default;
 };
 DEFINE_TYPE_WRAPPER_GET(TwoComponentPositionVertical, offset);
 
-using TwoComponentPosition              = SpaceSeparatedTuple<TwoComponentPositionHorizontal, TwoComponentPositionVertical>;
+// MARK: Three Component Types
 
-using FourComponentPositionHorizontal   = SpaceSeparatedTuple<std::variant<Keyword::Left, Keyword::Right>, LengthPercentage<>>;
-using FourComponentPositionVertical     = SpaceSeparatedTuple<std::variant<Keyword::Top, Keyword::Bottom>, LengthPercentage<>>;
-using FourComponentPosition             = SpaceSeparatedTuple<FourComponentPositionHorizontal, FourComponentPositionVertical>;
+struct ThreeComponentPositionHorizontal {
+    Variant<Keyword::Left, Keyword::Right, Keyword::Center, Keyword::XStart, Keyword::XEnd> offset;
+
+    bool operator==(const ThreeComponentPositionHorizontal&) const = default;
+};
+DEFINE_TYPE_WRAPPER_GET(ThreeComponentPositionHorizontal, offset);
+
+struct ThreeComponentPositionVertical {
+    Variant<Keyword::Top, Keyword::Bottom, Keyword::Center, Keyword::YStart, Keyword::YEnd> offset;
+
+    bool operator==(const ThreeComponentPositionVertical&) const = default;
+};
+DEFINE_TYPE_WRAPPER_GET(ThreeComponentPositionVertical, offset);
+
+// MARK: Four Component Types
+struct FourComponentPositionHorizontal {
+    SpaceSeparatedTuple<Variant<Keyword::Left, Keyword::Right, Keyword::XStart, Keyword::XEnd>, LengthPercentage<>> offset;
+
+    bool operator==(const FourComponentPositionHorizontal&) const = default;
+};
+DEFINE_TYPE_WRAPPER_GET(FourComponentPositionHorizontal, offset);
+
+struct FourComponentPositionVertical {
+    SpaceSeparatedTuple<Variant<Keyword::Top, Keyword::Bottom, Keyword::YStart, Keyword::YEnd>, LengthPercentage<>> offset;
+
+    bool operator==(const FourComponentPositionVertical&) const = default;
+};
+DEFINE_TYPE_WRAPPER_GET(FourComponentPositionVertical, offset);
+
+using TwoComponentPositionHorizontalVertical               = SpaceSeparatedTuple<TwoComponentPositionHorizontal, TwoComponentPositionVertical>;
+
+using ThreeComponentPositionHorizontalVerticalLengthFirst  = SpaceSeparatedTuple<FourComponentPositionHorizontal, ThreeComponentPositionVertical>;
+using ThreeComponentPositionHorizontalVerticalLengthSecond = SpaceSeparatedTuple<ThreeComponentPositionHorizontal, FourComponentPositionVertical>;
+
+using FourComponentPositionHorizontalVertical              = SpaceSeparatedTuple<FourComponentPositionHorizontal, FourComponentPositionVertical>;
 
 struct Position {
-    Position(TwoComponentPosition&& twoComponent)
-        : value { WTFMove(twoComponent) }
-    {
-    }
+    using Kind = Variant<
+        TwoComponentPositionHorizontalVertical,
+        ThreeComponentPositionHorizontalVerticalLengthFirst,
+        ThreeComponentPositionHorizontalVerticalLengthSecond,
+        FourComponentPositionHorizontalVertical
+    >;
 
-    Position(const TwoComponentPosition& twoComponent)
-        : value { twoComponent }
-    {
-    }
-
-    Position(FourComponentPosition&& fourComponent)
-        : value { WTFMove(fourComponent) }
-    {
-    }
-
-    Position(const FourComponentPosition& fourComponent)
-        : value { fourComponent }
-    {
-    }
-
-    Position(std::variant<TwoComponentPosition, FourComponentPosition>&& variant)
-        : value { WTFMove(variant) }
+    template<typename T>
+    Position(T&& value)
+        : value { std::forward<T>(value) }
     {
     }
 
@@ -82,15 +104,69 @@ struct Position {
 
     bool operator==(const Position&) const = default;
 
-    std::variant<TwoComponentPosition, FourComponentPosition> value;
+    Kind value;
 };
 DEFINE_TYPE_WRAPPER_GET(Position, value);
 
+struct PositionX {
+    using Kind = Variant<
+        TwoComponentPositionHorizontal,
+        FourComponentPositionHorizontal
+    >;
+
+    template<typename T>
+    PositionX(T&& value)
+        : value { std::forward<T>(value) }
+    {
+    }
+
+    template<typename... F> decltype(auto) switchOn(F&&... f) const
+    {
+        return WTF::switchOn(value, std::forward<F>(f)...);
+    }
+
+    bool operator==(const PositionX&) const = default;
+
+    Kind value;
+};
+DEFINE_TYPE_WRAPPER_GET(PositionX, value);
+
+struct PositionY {
+    using Kind = Variant<
+        TwoComponentPositionVertical,
+        FourComponentPositionVertical
+    >;
+
+    template<typename T>
+    PositionY(T&& value)
+        : value { std::forward<T>(value) }
+    {
+    }
+
+    template<typename... F> decltype(auto) switchOn(F&&... f) const
+    {
+        return WTF::switchOn(value, std::forward<F>(f)...);
+    }
+
+    bool operator==(const PositionY&) const = default;
+
+    Kind value;
+};
+DEFINE_TYPE_WRAPPER_GET(PositionY, value);
+
 bool isCenterPosition(const Position&);
+
+std::pair<CSS::PositionX, CSS::PositionY> split(CSS::Position&&);
 
 } // namespace CSS
 } // namespace WebCore
 
 DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::TwoComponentPositionHorizontal, 1)
 DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::TwoComponentPositionVertical, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::ThreeComponentPositionHorizontal, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::ThreeComponentPositionVertical, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::FourComponentPositionHorizontal, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::FourComponentPositionVertical, 1)
 DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::Position, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::PositionX, 1)
+DEFINE_TUPLE_LIKE_CONFORMANCE(WebCore::CSS::PositionY, 1)

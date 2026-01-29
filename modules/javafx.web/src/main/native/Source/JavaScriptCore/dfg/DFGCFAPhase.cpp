@@ -203,14 +203,14 @@ private:
             injectOSR(block);
 
         m_state.beginBasicBlock(block);
-        if (UNLIKELY(m_verbose)) {
+        if (m_verbose) [[unlikely]] {
             dataLogLn("      head vars: ", block->valuesAtHead);
             if (m_graph.m_form == SSA)
                 dataLogLn("      head regs: ", nodeValuePairListDump(block->ssa->valuesAtHead));
         }
         for (unsigned i = 0; i < block->size(); ++i) {
             Node* node = block->at(i);
-            if (UNLIKELY(m_verbose)) {
+            if (m_verbose) [[unlikely]] {
                 WTF::dataFile().atomically([&](auto&) {
                     dataLog("      ", Graph::opName(node->op()), " @", node->index(), ": ");
                 if (!safeToExecute(m_state, m_graph, node))

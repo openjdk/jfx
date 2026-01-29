@@ -107,7 +107,7 @@
 #define PAS_ENABLE_JIT                   1
 #endif /* PAS_LIBMALLOC -> so end of !defined(PAS_BMALLOC) && !defined(PAS_LIBMALLOC) */
 
-#define PAS_COMPACT_PTR_SIZE             3
+#define PAS_COMPACT_PTR_SIZE             3llu
 #define PAS_COMPACT_PTR_BITS             (PAS_COMPACT_PTR_SIZE << 3)
 #define PAS_COMPACT_PTR_MASK             ((uintptr_t)(((uint64_t)1 \
                                                        << (PAS_COMPACT_PTR_BITS & 63)) - 1))

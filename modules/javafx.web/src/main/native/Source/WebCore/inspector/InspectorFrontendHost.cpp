@@ -35,6 +35,7 @@
 #include "ColorConversion.h"
 #include "ColorSerialization.h"
 #include "ColorSpace.h"
+#include "ContextDestructionObserverInlines.h"
 #include "ContextMenu.h"
 #include "ContextMenuController.h"
 #include "ContextMenuItem.h"
@@ -46,6 +47,7 @@
 #include "File.h"
 #include "FloatRect.h"
 #include "FocusController.h"
+#include "FrameInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLIFrameElement.h"
 #include "HitTestResult.h"
@@ -57,8 +59,11 @@
 #include "JSExecState.h"
 #include "JSInspectorFrontendHost.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
+#include "LocalFrameView.h"
 #include "MouseEvent.h"
 #include "Node.h"
+#include "NodeInlines.h"
 #include "OffscreenCanvasRenderingContext2D.h"
 #include "Page.h"
 #include "PagePasteboardContext.h"
@@ -189,7 +194,7 @@ void InspectorFrontendHost::addSelfToGlobalObjectInWorld(DOMWrapperWorld& world)
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
     globalObject.putDirect(vm, JSC::Identifier::fromString(vm, "InspectorFrontendHost"_s), toJS<IDLInterface<InspectorFrontendHost>>(globalObject, globalObject, *this));
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         reportException(&globalObject, scope.exception());
 }
 
@@ -443,7 +448,7 @@ void InspectorFrontendHost::killText(const String& text, bool shouldPrependToKil
     if (!m_frontendPage)
         return;
 
-    RefPtr focusedOrMainFrame = m_frontendPage->checkedFocusController()->focusedOrMainFrame();
+    RefPtr focusedOrMainFrame = m_frontendPage->focusController().focusedOrMainFrame();
     if (!focusedOrMainFrame)
         return;
 
@@ -611,8 +616,14 @@ void InspectorFrontendHost::dispatchEventAsContextMenuEvent(Event& event)
         return;
 
     auto& mouseEvent = downcast<MouseEvent>(event);
-    auto& frame = *downcast<Node>(mouseEvent.target())->document().frame();
-    m_frontendPage->contextMenuController().showContextMenuAt(frame, roundedIntPoint(mouseEvent.absoluteLocation()));
+    LocalFrame& frame = *downcast<Node>(mouseEvent.target())->document().frame();
+    LayoutPoint location = mouseEvent.absoluteLocation();
+    if (RefPtr<LocalFrameView> view = frame.view()) {
+        FloatBoxExtent insets = view->obscuredContentInsets();
+        location.move(insets.left(), insets.top());
+    }
+
+    m_frontendPage->contextMenuController().showContextMenuAt(frame, roundedIntPoint(location));
 #else
     UNUSED_PARAM(event);
 #endif
@@ -678,11 +689,7 @@ bool InspectorFrontendHost::engineeringSettingsAllowed()
 
 bool InspectorFrontendHost::supportsShowCertificate() const
 {
-#if PLATFORM(COCOA)
-    return true;
-#else
-    return false;
-#endif
+    return m_frontendPage->settings().inspectorSupportsShowingCertificate();
 }
 
 bool InspectorFrontendHost::showCertificate(const String& serializedCertificate)

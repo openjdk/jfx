@@ -122,7 +122,7 @@ void ResourceUsageThread::createThreadIfNeeded()
     });
 }
 
-NO_RETURN void ResourceUsageThread::threadBody()
+[[noreturn]] void ResourceUsageThread::threadBody()
 {
     // Wait a bit after waking up for the first time.
     sleep(10_ms);

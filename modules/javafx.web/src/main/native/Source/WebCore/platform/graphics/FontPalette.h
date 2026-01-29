@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <variant>
 #include <wtf/Hasher.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/TextStream.h>
@@ -61,16 +60,16 @@ inline TextStream& operator<<(TextStream& ts, const FontPalette& fontPalette)
 {
     switch (fontPalette.type) {
     case FontPalette::Type::Normal:
-        ts << "normal";
+        ts << "normal"_s;
         break;
     case FontPalette::Type::Light:
-        ts << "light";
+        ts << "light"_s;
         break;
     case FontPalette::Type::Dark:
-        ts << "dark";
+        ts << "dark"_s;
         break;
     case FontPalette::Type::Custom:
-        ts << "custom: " << fontPalette.identifier;
+        ts << "custom: "_s << fontPalette.identifier;
         break;
     }
     return ts;

@@ -21,11 +21,8 @@
 
 #include "config.h"
 #include "TextureMapperShaderProgram.h"
-#if PLATFORM(JAVA)
-#if USE(TEXTURE_MAPPER_GL)
-#endif
 
-#if USE(TEXTURE_MAPPER)
+#if USE(TEXTURE_MAPPER) && !PLATFORM(JAVA)
 
 #include "GLContext.h"
 #include "Logging.h"
@@ -89,8 +86,8 @@ static const char* vertexTemplateCommon =
             vec2 controlPoint = a_vertex.zw;
             bool isCenter = distance(position, controlPoint) > 0.;
             if (isCenter) {
-            // v_antialias needs to be 0 for the outer edge and 1. for the inner edge.
-            // We make sure that the varying interpolates between 0 (outer edge), 1 (inner edge) and n > 1 (center).
+                // v_antialias needs to be 0 for the outer edge and 1. for the inner edge.
+                // We make sure that the varying interpolates between 0 (outer edge), 1 (inner edge) and n > 1 (center).
                 // Mathematically, v_antialias for the center is:
                 //
                 //    v_antialias = (viewportSpaceDistance + antialiasInflationDistance) / antialiasInflationDistance
@@ -154,6 +151,9 @@ static const char* vertexTemplateCommon =
     GLSL_DIRECTIVE(ifdef ENABLE_TextureExternalOES) \
         GLSL_DIRECTIVE(extension GL_OES_EGL_image_external : require) \
         GLSL_DIRECTIVE(define SamplerExternalOESType samplerExternalOES) \
+        STRINGIFY( \
+            precision mediump samplerExternalOES;\n \
+        ) \
     GLSL_DIRECTIVE(else) \
         GLSL_DIRECTIVE(define SamplerExternalOESType sampler2D) \
     GLSL_DIRECTIVE(endif)
@@ -389,7 +389,7 @@ static const char* fragmentTemplateCommon =
             }
 
             color = vec4(0., 0., 0., total);
-            }
+        }
 
         void applyAlphaToShadow(inout vec4 color, vec2 texCoord)
         {
@@ -536,7 +536,7 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
 {
 #define SET_APPLIER_FROM_OPTIONS(Applier) \
     optionsApplierBuilder.append(\
-        (options & TextureMapperShaderProgram::Applier) ? span(ENABLE_APPLIER(Applier)) : span(DISABLE_APPLIER(Applier)))
+        (options & TextureMapperShaderProgram::Applier) ? unsafeSpan(ENABLE_APPLIER(Applier)) : unsafeSpan(DISABLE_APPLIER(Applier)))
 
     unsigned glVersion = GLContext::current()->version();
 
@@ -574,10 +574,10 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     vertexShaderBuilder.append(optionsApplierBuilder.toString());
 
     // Append the appropriate input/output variable definitions.
-    vertexShaderBuilder.append(span(vertexTemplateLT320Vars));
+    vertexShaderBuilder.append(unsafeSpan(vertexTemplateLT320Vars));
 
     // Append the common code.
-    vertexShaderBuilder.append(span(vertexTemplateCommon));
+    vertexShaderBuilder.append(unsafeSpan(vertexTemplateCommon));
 
     StringBuilder fragmentShaderBuilder;
 
@@ -585,18 +585,18 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     fragmentShaderBuilder.append(optionsApplierBuilder.toString());
 
     if (glVersion >= 300)
-        fragmentShaderBuilder.append(span(GLSL_DIRECTIVE(define GaussianKernelHalfSize u_gaussianKernelHalfSize)));
+        fragmentShaderBuilder.append(unsafeSpan(GLSL_DIRECTIVE(define GaussianKernelHalfSize u_gaussianKernelHalfSize)));
     else
-        fragmentShaderBuilder.append(span(GLSL_DIRECTIVE(define GaussianKernelHalfSize GAUSSIAN_KERNEL_MAX_HALF_SIZE)));
+        fragmentShaderBuilder.append(unsafeSpan(GLSL_DIRECTIVE(define GaussianKernelHalfSize GAUSSIAN_KERNEL_MAX_HALF_SIZE)));
 
     // Append the common header.
-    fragmentShaderBuilder.append(span(fragmentTemplateHeaderCommon));
+    fragmentShaderBuilder.append(unsafeSpan(fragmentTemplateHeaderCommon));
 
     // Append the appropriate input/output variable definitions.
-    fragmentShaderBuilder.append(span(fragmentTemplateLT320Vars));
+    fragmentShaderBuilder.append(unsafeSpan(fragmentTemplateLT320Vars));
 
     // Append the common code.
-    fragmentShaderBuilder.append(span(fragmentTemplateCommon));
+    fragmentShaderBuilder.append(unsafeSpan(fragmentTemplateCommon));
 
     return adoptRef(*new TextureMapperShaderProgram(vertexShaderBuilder.toString(), fragmentShaderBuilder.toString()));
 }
@@ -611,10 +611,10 @@ static CString getShaderLog(GLuint shader)
 
     Vector<GLchar> info(logLength);
     GLsizei infoLength = 0;
-    glGetShaderInfoLog(shader, logLength, &infoLength, info.data());
+    glGetShaderInfoLog(shader, logLength, &infoLength, info.mutableSpan().data());
 
     size_t stringLength = std::max(infoLength, 0);
-    return std::span<const char> { info.data(), stringLength };
+    return byteCast<char>(info.span().first(stringLength));
 }
 
 static CString getProgramLog(GLuint program)
@@ -626,10 +626,10 @@ static CString getProgramLog(GLuint program)
 
     Vector<GLchar> info(logLength);
     GLsizei infoLength = 0;
-    glGetProgramInfoLog(program, logLength, &infoLength, info.data());
+    glGetProgramInfoLog(program, logLength, &infoLength, info.mutableSpan().data());
 
     size_t stringLength = std::max(infoLength, 0);
-    return std::span<const char> { info.data(), stringLength };
+    return byteCast<char>(info.span().first(stringLength));
 }
 #endif
 
@@ -703,6 +703,3 @@ GLuint TextureMapperShaderProgram::getLocation(VariableID variable, ASCIILiteral
 } // namespace WebCore
 
 #endif // USE(TEXTURE_MAPPER)
-#if PLATFORM(JAVA)
-#endif // USE(TEXTURE_MAPPER_GL)
-#endif

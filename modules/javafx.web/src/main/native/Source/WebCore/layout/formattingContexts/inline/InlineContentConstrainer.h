@@ -30,6 +30,7 @@
 #include "InlineFormattingUtils.h"
 #include "InlineItem.h"
 #include "InlineLineBuilder.h"
+#include "InlineLineTypes.h"
 #include "InlineTextItem.h"
 #include <optional>
 
@@ -38,7 +39,7 @@ namespace Layout {
 
 class InlineContentConstrainer {
 public:
-    InlineContentConstrainer(InlineFormattingContext&, const InlineItemList&, const HorizontalConstraints&);
+    InlineContentConstrainer(InlineFormattingContext&, const InlineItemList&, HorizontalConstraints);
     std::optional<Vector<LayoutUnit>> computeParagraphLevelConstraints(TextWrapStyle);
 
 private:
@@ -61,7 +62,7 @@ private:
     void initialize();
     void updateCachedWidths();
     void checkCanConstrainInlineItems();
-    EntryPretty layoutSingleLineForPretty(InlineItemRange layoutRange, InlineLayoutUnit idealLineWidth, EntryPretty lastValidEntry);
+    EntryPretty layoutSingleLineForPretty(InlineItemRange layoutRange, InlineLayoutUnit idealLineWidth, EntryPretty lastValidEntry, size_t previousBreakIndex);
 
     std::optional<Vector<LayoutUnit>> balanceRangeWithLineRequirement(InlineItemRange, InlineLayoutUnit idealLineWidth, size_t numberOfLines, bool isFirstChunk);
     std::optional<Vector<LayoutUnit>> balanceRangeWithNoLineRequirement(InlineItemRange, InlineLayoutUnit idealLineWidth, bool isFirstChunk);
@@ -72,16 +73,18 @@ private:
     bool shouldTrimTrailing(size_t inlineItemIndex, bool useFirstLineStyle) const;
     Vector<size_t> computeBreakOpportunities(InlineItemRange) const;
     Vector<LayoutUnit> computeLineWidthsFromBreaks(InlineItemRange, const Vector<size_t>& breaks, bool isFirstChunk) const;
-    InlineLayoutUnit computeTextIndent(std::optional<bool> previousLineEndsWithLineBreak) const;
+    InlineLayoutUnit computeMaxTextIndent() const;
+    InlineLayoutUnit computeTextIndent(PreviousLineState) const;
 
     InlineFormattingContext& m_inlineFormattingContext;
     const InlineItemList& m_inlineItemList;
-    const HorizontalConstraints& m_horizontalConstraints;
+    const HorizontalConstraints m_horizontalConstraints;
 
     Vector<InlineItemRange> m_originalLineInlineItemRanges;
     Vector<LayoutUnit> m_originalLineConstraints;
     LayoutUnit m_maximumLineWidthConstraint { 0 };
     Vector<bool> m_originalLineEndsWithForcedBreak;
+    InlineLayoutUnit m_inlineItemWidthsMax { 0 };
     Vector<InlineLayoutUnit> m_inlineItemWidths;
     Vector<InlineLayoutUnit> m_firstLineStyleInlineItemWidths;
     size_t m_numberOfLinesInOriginalLayout { 0 };

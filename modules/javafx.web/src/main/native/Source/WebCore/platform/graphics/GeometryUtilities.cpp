@@ -28,6 +28,8 @@
 #include "GeometryUtilities.h"
 
 #include "FloatQuad.h"
+#include <numbers>
+#include <numeric>
 #include <wtf/MathExtras.h>
 #include <wtf/Vector.h>
 
@@ -197,7 +199,7 @@ bool ellipseContainsPoint(const FloatPoint& center, const FloatSize& radii, cons
 
 FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
 {
-    return { (first.x() + second.x()) / 2, (first.y() + second.y()) / 2 };
+    return { std::midpoint(first.x(), second.x()), std::midpoint(first.y(), second.y()) };
 }
 
 static float dotProduct(const FloatSize& u, const FloatSize& v)
@@ -213,7 +215,7 @@ static float angleBetweenVectors(const FloatSize& u, const FloatSize& v)
 
 RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad& quad, std::optional<float> minRotationInRadians)
 {
-    constexpr auto twoPiFloat = 2 * piFloat;
+    constexpr auto twoPiFloat = 2 * std::numbers::pi_v<float>;
 
     auto minRotationAmount = minRotationInRadians.value_or(std::numeric_limits<float>::epsilon());
 
@@ -381,6 +383,11 @@ float normalizeAngleInRadians(float radians)
 {
     float circles = radians / radiansPerTurnFloat;
     return radiansPerTurnFloat * (circles - floor(circles));
+}
+
+FloatRect scaledRectAtOrigin(const FloatRect& rect, float scale, const FloatPoint& origin)
+{
+    return { origin + (rect.location() - origin) * scale, rect.size() * scale };
 }
 
 }

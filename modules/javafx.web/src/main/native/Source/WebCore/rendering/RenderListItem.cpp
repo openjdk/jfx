@@ -24,6 +24,7 @@
 #include "config.h"
 #include "RenderListItem.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSFontSelector.h"
 #include "ElementInlines.h"
 #include "ElementTraversal.h"
@@ -34,6 +35,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyleSetters.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
@@ -95,9 +97,9 @@ bool isHTMLListElement(const Node& node)
 // Returns the enclosing list with respect to the DOM order.
 static Element* enclosingList(const RenderListItem& listItem)
 {
-    auto& element = listItem.element();
+    auto* element = listItem.element();
     auto* pseudoElement = dynamicDowncast<PseudoElement>(element);
-    auto* parent = pseudoElement ? pseudoElement->hostElement() : element.parentElement();
+    auto* parent = pseudoElement ? pseudoElement->hostElement() : element->parentElement();
     for (auto* ancestor = parent; ancestor; ancestor = ancestor->parentElement()) {
         if (isHTMLListElement(*ancestor) || (ancestor->renderer() && ancestor->renderer()->shouldApplyStyleContainment()))
             return ancestor;
@@ -144,7 +146,7 @@ static RenderListItem* nextListItemHelper(const Element& list, const Element& el
 
 static inline RenderListItem* nextListItem(const Element& list, const RenderListItem& item)
 {
-    return nextListItemHelper(list, item.element());
+    return nextListItemHelper(list, *item.element());
 }
 
 static inline RenderListItem* firstListItem(const Element& list)
@@ -154,7 +156,7 @@ static inline RenderListItem* firstListItem(const Element& list)
 
 static RenderListItem* previousListItem(const Element& list, const RenderListItem& item)
 {
-    auto* current = &item.element();
+    auto* current = item.element();
     auto advance = [&] {
         current = ElementTraversal::previousIncludingPseudo(*current, &list);
     };
@@ -256,7 +258,7 @@ void RenderListItem::updateValue()
 {
         m_value = std::nullopt;
         if (m_marker)
-            m_marker->setNeedsLayoutAndPrefWidthsRecalc();
+        m_marker->setNeedsLayoutAndPreferredWidthsUpdate();
 }
 
 void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -270,7 +272,7 @@ void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* old
 void RenderListItem::computePreferredLogicalWidths()
 {
     // FIXME: RenderListMarker::updateInlineMargins() mutates margin style which affects preferred widths.
-    if (m_marker && m_marker->preferredLogicalWidthsDirty())
+    if (m_marker && m_marker->needsPreferredLogicalWidthsUpdate())
         m_marker->updateInlineMarginsAndContent();
 
     RenderBlockFlow::computePreferredLogicalWidths();
@@ -301,7 +303,7 @@ String RenderListItem::markerTextWithSuffix() const
 void RenderListItem::counterDirectivesChanged()
 {
     if (m_marker)
-        m_marker->setNeedsLayoutAndPrefWidthsRecalc();
+        m_marker->setNeedsLayoutAndPreferredWidthsUpdate();
 
     updateValue();
     auto* list = enclosingList(*this);

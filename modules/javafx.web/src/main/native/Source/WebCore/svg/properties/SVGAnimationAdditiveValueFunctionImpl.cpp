@@ -26,6 +26,8 @@
 #include "config.h"
 #include "SVGAnimationAdditiveValueFunctionImpl.h"
 
+#include "CSSPropertyParserConsumer+Color.h"
+#include "ContainerNodeInlines.h"
 #include "RenderElement.h"
 #include "SVGElement.h"
 #include <wtf/text/StringToIntegerConversion.h>
@@ -47,8 +49,8 @@ Color SVGAnimationColorFunction::colorFromString(SVGElement& targetElement, cons
 
 std::optional<float> SVGAnimationColorFunction::calculateDistance(SVGElement&, const String& from, const String& to) const
 {
-    auto simpleFrom = CSSParser::parseColorWithoutContext(from.trim(deprecatedIsSpaceOrNewline)).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
-    auto simpleTo = CSSParser::parseColorWithoutContext(to.trim(deprecatedIsSpaceOrNewline)).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    auto simpleFrom = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(from.trim(deprecatedIsSpaceOrNewline)).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    auto simpleTo = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(to.trim(deprecatedIsSpaceOrNewline)).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
 
     float red = simpleFrom.red - simpleTo.red;
     float green = simpleFrom.green - simpleTo.green;

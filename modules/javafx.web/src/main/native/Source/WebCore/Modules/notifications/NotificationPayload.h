@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "NotificationOptionsPayload.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/URL.h>
@@ -36,6 +35,7 @@ OBJC_CLASS NSDictionary;
 namespace WebCore {
 
 struct NotificationData;
+template<typename> class ExceptionOr;
 
 struct NotificationPayload {
     URL defaultActionURL;

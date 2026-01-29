@@ -28,7 +28,6 @@
 #include "ISO8601.h"
 #include "IntlObject.h"
 #include "JSObject.h"
-#include <variant>
 
 namespace JSC {
 

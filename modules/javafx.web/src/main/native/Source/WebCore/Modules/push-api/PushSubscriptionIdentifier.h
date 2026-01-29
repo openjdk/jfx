@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-enum class PushSubscriptionIdentifierType { };
+struct PushSubscriptionIdentifierType;
 using PushSubscriptionIdentifier = ObjectIdentifier<PushSubscriptionIdentifierType>;
 
 struct PushSubscriptionSetIdentifier {

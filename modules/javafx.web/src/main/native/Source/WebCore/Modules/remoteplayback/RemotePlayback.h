@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "WebCoreOpaqueRoot.h"
 #include <wtf/HashMap.h>
 #include <wtf/LoggerHelper.h>
@@ -100,7 +101,7 @@ private:
     WTFLogChannel& logChannel() const;
     ASCIILiteral logClassName() const { return "RemotePlayback"_s; }
 
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     uint64_t m_logIdentifier { 0 };
 #endif
 

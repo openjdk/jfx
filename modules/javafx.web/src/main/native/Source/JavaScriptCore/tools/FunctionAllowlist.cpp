@@ -92,7 +92,7 @@ bool FunctionAllowlist::contains(CodeBlock* codeBlock) const
     if (m_entries.contains(name))
         return true;
 
-    String hash = String::fromUTF8(codeBlock->hashAsStringIfPossible().span());
+    String hash = makeString(codeBlock->hash());
     if (m_entries.contains(hash))
         return true;
 

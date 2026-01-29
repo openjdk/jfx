@@ -67,14 +67,14 @@ State::State(Graph& graph)
     graph.m_plan.setFinalizer(makeUnique<JITFinalizer>(graph.m_plan));
     finalizer = static_cast<JITFinalizer*>(graph.m_plan.finalizer());
 
-    proc = makeUnique<Procedure>(/* usesSIMD = */ false);
+    proc = makeUniqueWithoutFastMallocCheck<Procedure>(/* usesSIMD = */ false);
 
     if (graph.m_vm.shouldBuilderPCToCodeOriginMapping())
         proc->setNeedsPCToOriginMap();
 
     proc->setOriginPrinter(
         [] (PrintStream& out, B3::Origin origin) {
-            out.print(std::bit_cast<Node*>(origin.data()));
+            out.print(origin.dfgOrigin());
         });
 
     proc->setFrontendData(&graph);
@@ -130,7 +130,7 @@ void State::dumpDisassembly(PrintStream& out, LinkBuffer& linkBuffer, const Scop
         if (!currentB3Value)
             return;
 
-            printDFGNode(std::bit_cast<Node*>(value->origin().data()));
+            printDFGNode(value->origin().dfgOrigin());
 
             UncheckedKeyHashSet<B3::Value*> localPrintedValues;
         auto printValueRecursive = recursableLambda([&] (auto self, B3::Value* value) -> void {

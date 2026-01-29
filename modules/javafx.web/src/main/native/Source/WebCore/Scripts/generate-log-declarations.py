@@ -64,7 +64,7 @@ def get_log_messages(log_messages_input_file):
     with open(log_messages_input_file) as input_file:
         input_file_lines = input_file.readlines()
         identifier_regexp = r'(?P<identifier>[A-Z_0-9]*)'
-        inner_format_string_regexp = r'((\"[\w:;%~\'\-\[\]=,\.\(\)\{\} ]*\")\s*(PRI[A-Za-z0-9]+)?)'
+        inner_format_string_regexp = r'((\"[\w:;%~\'\-\[\]=,\.\(\)\{\} ]*\")\s*(PRI[A-Za-z0-9]+|PUBLIC_LOG_STRING|PRIVATE_LOG_STRING)?)'
         parameter_list_regexp = r'\((?P<parameter_list>.*)\)'
         log_type_regexp = r'(?P<log_type>DEFAULT|INFO|ERROR|FAULT)'
         log_category_regexp = r'(?P<category>[\w]*)'

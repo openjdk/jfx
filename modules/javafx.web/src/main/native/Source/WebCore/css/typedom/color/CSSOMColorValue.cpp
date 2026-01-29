@@ -45,7 +45,7 @@ RefPtr<CSSOMColorValue> CSSOMColorValue::to(CSSKeywordish)
     return nullptr;
 }
 
-std::variant<RefPtr<CSSOMColorValue>, RefPtr<CSSStyleValue>> CSSOMColorValue::parse(const String&)
+Variant<RefPtr<CSSOMColorValue>, RefPtr<CSSStyleValue>> CSSOMColorValue::parse(const String&)
 {
     // FIXME: implement this.
     return RefPtr<CSSOMColorValue> { nullptr };

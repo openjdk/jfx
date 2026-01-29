@@ -36,22 +36,19 @@ namespace JSC {
 
 void emitSetVarargsFrame(CCallHelpers& jit, GPRReg lengthGPR, bool lengthIncludesThis, GPRReg numUsedSlotsGPR, GPRReg resultGPR)
 {
-    jit.move(numUsedSlotsGPR, resultGPR);
     // We really want to make sure the size of the new call frame is a multiple of
     // stackAlignmentRegisters(), however it is easier to accomplish this by
     // rounding numUsedSlotsGPR to the next multiple of stackAlignmentRegisters().
     // Together with the rounding below, we will assure that the new call frame is
     // located on a stackAlignmentRegisters() boundary and a multiple of
     // stackAlignmentRegisters() in size.
-    jit.addPtr(CCallHelpers::TrustedImm32(stackAlignmentRegisters() - 1), resultGPR);
+    jit.addPtr(CCallHelpers::TrustedImm32(stackAlignmentRegisters() - 1), numUsedSlotsGPR, resultGPR);
     jit.andPtr(CCallHelpers::TrustedImm32(~(stackAlignmentRegisters() - 1)), resultGPR);
-
-    jit.addPtr(lengthGPR, resultGPR);
-    jit.addPtr(CCallHelpers::TrustedImm32(CallFrame::headerSizeInRegisters + (lengthIncludesThis ? 0 : 1)), resultGPR);
 
     // resultGPR now has the required frame size in Register units
     // Round resultGPR to next multiple of stackAlignmentRegisters()
-    jit.addPtr(CCallHelpers::TrustedImm32(stackAlignmentRegisters() - 1), resultGPR);
+    jit.addPtr(lengthGPR, resultGPR);
+    jit.addPtr(CCallHelpers::TrustedImm32(CallFrame::headerSizeInRegisters + (lengthIncludesThis ? 0 : 1) + (stackAlignmentRegisters() - 1)), resultGPR);
     jit.andPtr(CCallHelpers::TrustedImm32(~(stackAlignmentRegisters() - 1)), resultGPR);
 
     // Now resultGPR has the right stack frame offset in Register units.

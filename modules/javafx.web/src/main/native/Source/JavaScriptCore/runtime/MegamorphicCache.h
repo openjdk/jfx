@@ -276,7 +276,7 @@ public:
     void bumpEpoch()
     {
         ++m_epoch;
-        if (UNLIKELY(m_epoch == invalidEpoch))
+        if (m_epoch == invalidEpoch) [[unlikely]]
             clearEntries();
     }
 

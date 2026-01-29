@@ -27,7 +27,6 @@
 #include "CSSPrimitiveNumericConcepts.h"
 #include "CSSValueTypes.h"
 #include <optional>
-#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/IterationStatus.h>
 #include <wtf/Ref.h>
@@ -129,7 +128,7 @@ template<typename T> bool requiresConversionData(const T&)
     return false;
 }
 
-template<typename... Ts> bool requiresConversionData(const std::variant<Ts...>& component)
+template<typename... Ts> bool requiresConversionData(const Variant<Ts...>& component)
 {
     return WTF::switchOn(component, [&](auto alternative) -> bool { return requiresConversionData(alternative); });
 }
@@ -146,7 +145,7 @@ template<typename T> constexpr bool isUnevaluatedCalc(const T&)
     return Calc<T>;
 }
 
-template<typename... Ts> constexpr bool isUnevaluatedCalc(const std::variant<Ts...>& component)
+template<typename... Ts> constexpr bool isUnevaluatedCalc(const Variant<Ts...>& component)
 {
     return WTF::switchOn(component, [&](auto alternative) -> bool { return isUnevaluatedCalc(alternative); });
 }
@@ -168,7 +167,7 @@ template<typename T> auto simplifyUnevaluatedCalc(const T& component, const CSST
     return component;
 }
 
-template<typename... Ts> auto simplifyUnevaluatedCalc(const std::variant<Ts...>& component, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) -> std::variant<Ts...>
+template<typename... Ts> auto simplifyUnevaluatedCalc(const Variant<Ts...>& component, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) -> Variant<Ts...>
 {
     return WTF::switchOn(component, [&](auto alternative) -> bool { return simplifyUnevaluatedCalc(alternative, conversionData, symbolTable); });
 }

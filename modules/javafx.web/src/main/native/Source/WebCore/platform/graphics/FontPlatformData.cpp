@@ -98,7 +98,12 @@ void FontPlatformData::updateSizeWithFontSizeAdjust(const FontSizeAdjust& fontSi
     if (!fontSizeAdjust.value)
         return;
 
-    auto tmpFont = FontCache::forCurrentThread().fontForPlatformData(*this);
+    if (!*fontSizeAdjust.value) {
+        updateSize(0);
+        return;
+    }
+
+    auto tmpFont = FontCache::forCurrentThread()->fontForPlatformData(*this);
     auto adjustedFontSize = Style::adjustedFontSize(computedSize, fontSizeAdjust, tmpFont->fontMetrics());
 
     if (adjustedFontSize == size())

@@ -69,12 +69,12 @@ static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
 }
 #endif
 
-String generateMetalCode(ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues)
+String generateMetalCode(ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues, DeviceState&& deviceState)
 {
     StringBuilder stringBuilder;
     stringBuilder.append(metalCodePrologue());
 
-    Metal::emitMetalFunctions(stringBuilder, shaderModule, prepareResult, constantValues);
+    Metal::emitMetalFunctions(stringBuilder, shaderModule, prepareResult, constantValues, WTFMove(deviceState));
 
 #if PLATFORM(COCOA)
     dumpMetalCodeIfNeeded(stringBuilder);

@@ -28,14 +28,15 @@
 #if ENABLE(WEBGL) && ENABLE(VIDEO) && USE(AVFOUNDATION)
 
 #include "GraphicsContextGLCV.h"
+#include "GraphicsContextGLCocoa.h"
 #include "ImageOrientation.h"
 #include <memory>
+#include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 
 namespace WebCore {
-class GraphicsContextGLCocoa;
 
 // GraphicsContextGLCV implementation for GraphicsContextGLCocoa.
 // This class is part of the internal implementation of GraphicsContextGLCocoa.
@@ -54,7 +55,7 @@ private:
 
     RetainPtr<CVPixelBufferRef> convertPixelBuffer(CVPixelBufferRef);
 
-    GraphicsContextGLCocoa& m_owner;
+    const CheckedRef<GraphicsContextGLCocoa> m_owner;
     GCGLDisplay m_display { nullptr };
     GCGLContext m_context { nullptr };
     GCGLConfig m_config { nullptr };
@@ -72,7 +73,7 @@ private:
     GCGLint m_uvTextureSizeUniformLocation { -1 };
 
     struct TextureContent {
-        intptr_t surface { 0 };
+        RetainPtr<IOSurfaceRef> surface;
         uint32_t surfaceID { 0 };
         uint32_t surfaceSeed { 0 };
         GCGLint level { 0 };
@@ -84,7 +85,7 @@ private:
 
         friend bool operator==(const TextureContent&, const TextureContent&) = default;
     };
-    using TextureContentMap = UncheckedKeyHashMap<GCGLuint, TextureContent, IntHash<GCGLuint>, WTF::UnsignedWithZeroKeyHashTraits<GCGLuint>>;
+    using TextureContentMap = HashMap<GCGLuint, TextureContent, IntHash<GCGLuint>, WTF::UnsignedWithZeroKeyHashTraits<GCGLuint>>;
     TextureContentMap m_knownContent;
 };
 

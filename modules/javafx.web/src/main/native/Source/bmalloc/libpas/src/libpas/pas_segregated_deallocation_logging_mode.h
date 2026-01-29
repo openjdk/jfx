@@ -52,7 +52,7 @@ static inline bool pas_segregated_deallocation_logging_mode_does_logging(
     case pas_segregated_deallocation_checked_size_aware_logging_mode:
         return true;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 
@@ -61,7 +61,7 @@ static inline bool pas_segregated_deallocation_logging_mode_is_size_aware(
 {
     switch (logging_mode) {
     case pas_segregated_deallocation_no_logging_mode:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return false;
     case pas_segregated_deallocation_size_oblivious_logging_mode:
     case pas_segregated_deallocation_checked_size_oblivious_logging_mode:
@@ -70,7 +70,7 @@ static inline bool pas_segregated_deallocation_logging_mode_is_size_aware(
     case pas_segregated_deallocation_checked_size_aware_logging_mode:
         return true;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 
@@ -79,7 +79,7 @@ static inline bool pas_segregated_deallocation_logging_mode_is_checked(
 {
     switch (logging_mode) {
     case pas_segregated_deallocation_no_logging_mode:
-        PAS_ASSERT(!"Should not be reached");
+        PAS_ASSERT_NOT_REACHED();
         return false;
     case pas_segregated_deallocation_size_oblivious_logging_mode:
     case pas_segregated_deallocation_size_aware_logging_mode:
@@ -88,7 +88,7 @@ static inline bool pas_segregated_deallocation_logging_mode_is_checked(
     case pas_segregated_deallocation_checked_size_aware_logging_mode:
         return true;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

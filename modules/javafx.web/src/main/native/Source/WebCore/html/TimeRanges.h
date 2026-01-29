@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "PlatformTimeRanges.h"
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class TimeRanges : public RefCounted<TimeRanges> {
 public:

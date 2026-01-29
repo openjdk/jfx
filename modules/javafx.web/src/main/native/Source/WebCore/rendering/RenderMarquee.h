@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003 Apple Inc.
+ * Copyright (C) 2003 Apple Inc. All rights reserved.
  *
  * Portions are Copyright (C) 1998 Netscape Communications Corporation.
  *
@@ -84,7 +84,7 @@ private:
 
     void timerFired();
 
-    RenderLayer* m_layer;
+    const CheckedPtr<RenderLayer> m_layer;
     Timer m_timer;
     int m_currentLoop { 0 };
     int m_totalLoops { 0 };

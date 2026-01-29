@@ -47,6 +47,8 @@ public:
     HTMLCanvasElement& canvas() { return m_canvas.get(); }
     void requestFrame() { static_cast<Source&>(source()).requestFrame(); }
 
+    RefPtr<VideoFrame> grabFrame();
+
     RefPtr<MediaStreamTrack> clone() final;
 
 private:
@@ -56,6 +58,7 @@ private:
 
         void requestFrame() { m_shouldEmitFrame = true; }
         std::optional<double> frameRequestRate() const { return m_frameRequestRate; }
+        RefPtr<VideoFrame> grabFrame();
 
         WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
 
@@ -97,7 +100,7 @@ private:
 
     bool isCanvas() const final { return true; }
 
-    Ref<HTMLCanvasElement> m_canvas;
+    const Ref<HTMLCanvasElement> m_canvas;
 };
 
 }

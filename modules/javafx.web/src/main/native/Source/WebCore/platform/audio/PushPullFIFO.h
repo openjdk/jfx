@@ -52,22 +52,22 @@ public:
     //  - In case of overflow (FIFO full while push), the existing frames in FIFO
     //    will be overwritten and |indexRead| will be forcibly moved to
     //    |indexWrite| to avoid reading overwritten frames.
-    WEBCORE_EXPORT void push(const AudioBus* inputBus);
+    WEBCORE_EXPORT void push(const AudioBus& inputBus);
 
     // Pulls |framesRequested| by the audio device thread and returns the actual
     // number of frames to be rendered by the source. (i.e. WebAudio graph)
-    WEBCORE_EXPORT size_t pull(AudioBus* outputBus, size_t framesRequested);
+    WEBCORE_EXPORT size_t pull(AudioBus& outputBus, size_t framesRequested);
 
     size_t framesAvailable() const { return m_framesAvailable; }
     size_t length() const { return m_fifoLength; }
     unsigned numberOfChannels() const;
-    AudioBus* bus() const { return m_fifoBus.get(); }
+    AudioBus& bus() const { return m_fifoBus.get(); }
 
 private:
     // The size of the FIFO.
     const size_t m_fifoLength = 0;
 
-    RefPtr<AudioBus> m_fifoBus;
+    const Ref<AudioBus> m_fifoBus;
 
     // The number of frames in the FIFO actually available for pulling.
     size_t m_framesAvailable { 0 };

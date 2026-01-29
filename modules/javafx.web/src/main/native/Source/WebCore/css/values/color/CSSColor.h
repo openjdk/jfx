@@ -31,7 +31,6 @@
 #include "CSSKeywordColor.h"
 #include "CSSResolvedColor.h"
 #include "CSSValueTypes.h"
-#include <variant>
 #include <wtf/Markable.h>
 
 namespace WebCore {
@@ -50,8 +49,8 @@ struct Color {
 private:
     struct EmptyToken { constexpr bool operator==(const EmptyToken&) const = default; };
 
-    // FIXME: Replace std::variant with a generic CompactPointerVariant type.
-    using ColorKind = std::variant<
+    // FIXME: Replace Variant with a generic CompactPointerVariant type.
+    using ColorKind = Variant<
         EmptyToken, // Special value used by Markable to represent empty state.
         ResolvedColor,
         KeywordColor,
@@ -164,12 +163,9 @@ public:
     // as const references, pretending the UniqueRefs don't exist.
     template<typename... F> decltype(auto) switchOn(F&&...) const;
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const Color&);
-        static Color emptyValue();
-    };
-
 private:
+    friend struct MarkableTraits<Color>;
+
     template<typename T>
     static ColorKind makeIndirectColor(T&&);
     static ColorKind copy(const ColorKind&);
@@ -206,4 +202,14 @@ template<typename... F> decltype(auto) Color::switchOn(F&&... f) const
 } // namespace CSS
 } // namespace WebCore
 
-template<> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::Color> = true;
+namespace WTF {
+
+template<>
+struct MarkableTraits<WebCore::CSS::Color> {
+    static bool isEmptyValue(const WebCore::CSS::Color& color) { return std::holds_alternative<WebCore::CSS::Color::EmptyToken>(color.value); }
+    static WebCore::CSS::Color emptyValue() { return WebCore::CSS::Color(WebCore::CSS::Color::EmptyToken()); }
+};
+
+} // namespace WTF
+
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::CSS::Color)

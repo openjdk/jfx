@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -153,8 +153,8 @@ private:
     RefPtr<InspectorFrontendHost> m_frontendHost;
     std::unique_ptr<InspectorFrontendClientLocal::Settings> m_settings;
     DockSide m_dockSide;
-    Ref<InspectorBackendDispatchTask> m_dispatchTask;
-    Ref<InspectorFrontendAPIDispatcher> m_frontendAPIDispatcher;
+    const Ref<InspectorBackendDispatchTask> m_dispatchTask;
+    const Ref<InspectorFrontendAPIDispatcher> m_frontendAPIDispatcher;
 };
 
 } // namespace WebCore

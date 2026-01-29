@@ -21,7 +21,6 @@
 
 #include "Color.h"
 #include "RenderSVGResourceContainer.h"
-#include <variant>
 
 namespace WebCore {
 
@@ -41,7 +40,7 @@ protected:
     RenderSVGResourcePaintServer(Type, SVGElement&, RenderStyle&&);
 };
 
-using SVGPaintServerOrColor = std::variant<std::monostate, RenderSVGResourcePaintServer*, Color>;
+using SVGPaintServerOrColor = Variant<std::monostate, RenderSVGResourcePaintServer*, Color>;
 
 }
 

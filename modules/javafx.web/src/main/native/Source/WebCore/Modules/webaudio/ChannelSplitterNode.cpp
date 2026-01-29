@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -65,23 +66,21 @@ ChannelSplitterNode::ChannelSplitterNode(BaseAudioContext& context, unsigned num
 
 void ChannelSplitterNode::process(size_t framesToProcess)
 {
-    AudioBus* source = input(0)->bus();
-    ASSERT(source);
-    ASSERT_UNUSED(framesToProcess, framesToProcess == source->length());
+    AudioBus& source = input(0)->bus();
+    ASSERT_UNUSED(framesToProcess, framesToProcess == source.length());
 
-    unsigned numberOfSourceChannels = source->numberOfChannels();
+    unsigned numberOfSourceChannels = source.numberOfChannels();
 
     for (unsigned i = 0; i < numberOfOutputs(); ++i) {
-        AudioBus* destination = output(i)->bus();
-        ASSERT(destination);
+        AudioBus& destination = output(i)->bus();
 
         if (i < numberOfSourceChannels) {
             // Split the channel out if it exists in the source.
             // It would be nice to avoid the copy and simply pass along pointers, but this becomes extremely difficult with fanout and fanin.
-            destination->channel(0)->copyFrom(source->channel(i));
+            destination.channel(0)->copyFrom(source.channel(i));
         } else if (output(i)->renderingFanOutCount() > 0) {
             // Only bother zeroing out the destination if it's connected to anything
-            destination->zero();
+            destination.zero();
         }
     }
 }

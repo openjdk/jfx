@@ -153,7 +153,7 @@ bool OSAllocator::tryProtect(void* address, size_t bytes, bool readable, bool wr
 
 void OSAllocator::protect(void* address, size_t bytes, bool readable, bool writable)
 {
-    if (bool result = tryProtect(address, bytes, readable, writable); UNLIKELY(!result)) {
+    if (bool result = tryProtect(address, bytes, readable, writable); !result) [[unlikely]] {
         dataLogLn("mprotect failed: ", static_cast<int>(GetLastError()));
         RELEASE_ASSERT_NOT_REACHED();
     }
