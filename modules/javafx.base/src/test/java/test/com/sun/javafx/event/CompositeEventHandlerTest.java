@@ -31,9 +31,9 @@ import com.sun.javafx.event.CompositeEventHandlerShim;
 import static org.junit.jupiter.api.Assertions.*;
 
 import javafx.event.Event;
+import javafx.event.EventHandlerPriority;
 import javafx.event.WeakEventHandler;
 import javafx.event.WeakEventHandlerUtil;
-import org.junit.jupiter.api.Assertions;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +58,7 @@ public class CompositeEventHandlerTest {
         final WeakEventHandler<Event> weakEventHandler =
                 new WeakEventHandler<>(eventCountingHandler);
 
-        compositeEventHandler.addEventFilter(weakEventHandler);
+        compositeEventHandler.addEventFilter(weakEventHandler, EventHandlerPriority.PRIMARY);
         assertFalse(compositeEventHandler.hasHandler(), "must not have handler after adding filter");
         assertTrue(compositeEventHandler.hasFilter(), "must have filter");
         WeakEventHandlerUtil.clear(weakEventHandler);
@@ -75,7 +75,7 @@ public class CompositeEventHandlerTest {
                 new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventHandler =
                 new WeakEventHandler<>(eventCountingHandler);
-        compositeEventHandler.addEventHandler(weakEventHandler);
+        compositeEventHandler.addEventHandler(weakEventHandler, EventHandlerPriority.PRIMARY);
         assertTrue(CompositeEventHandlerShim.containsHandler(
                 compositeEventHandler, weakEventHandler), "sanity: really added?");
         assertFalse(compositeEventHandler.hasFilter(), "must not have filter after adding handler");
@@ -97,7 +97,7 @@ public class CompositeEventHandlerTest {
         final WeakEventHandler<Event> weakEventHandler =
                 new WeakEventHandler<>(eventCountingHandler);
 
-        compositeEventHandler.addEventFilter(weakEventHandler);
+        compositeEventHandler.addEventFilter(weakEventHandler, EventHandlerPriority.PRIMARY);
         assertFalse(compositeEventHandler.hasHandler(), "must not have handler after adding filter");
         assertTrue(compositeEventHandler.hasFilter(), "must have filter");
         compositeEventHandler.removeEventFilter(weakEventHandler);
@@ -114,7 +114,7 @@ public class CompositeEventHandlerTest {
                 new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventHandler =
                 new WeakEventHandler<>(eventCountingHandler);
-        compositeEventHandler.addEventHandler(weakEventHandler);
+        compositeEventHandler.addEventHandler(weakEventHandler, EventHandlerPriority.PRIMARY);
         assertTrue(CompositeEventHandlerShim.containsHandler(
                 compositeEventHandler, weakEventHandler), "sanity: really added?");
         assertFalse(compositeEventHandler.hasFilter(), "must not have filter after adding handler");
@@ -131,7 +131,7 @@ public class CompositeEventHandlerTest {
     public void testHasFilter() {
         final EventCountingHandler<Event> eventCountingHandler =
                 new EventCountingHandler<>();
-        compositeEventHandler.addEventFilter(eventCountingHandler);
+        compositeEventHandler.addEventFilter(eventCountingHandler, EventHandlerPriority.PRIMARY);
         assertFalse(compositeEventHandler.hasHandler(), "must not have handler after adding filter");
         assertTrue(compositeEventHandler.hasFilter(), "must have filter");
         compositeEventHandler.removeEventFilter(eventCountingHandler);
@@ -146,7 +146,7 @@ public class CompositeEventHandlerTest {
     public void testHasHandlerAdd() {
         final EventCountingHandler<Event> eventCountingHandler =
                 new EventCountingHandler<>();
-        compositeEventHandler.addEventHandler(eventCountingHandler);
+        compositeEventHandler.addEventHandler(eventCountingHandler, EventHandlerPriority.PRIMARY);
         assertTrue(CompositeEventHandlerShim.containsHandler(
                 compositeEventHandler, eventCountingHandler), "sanity: really added?");
         assertFalse(compositeEventHandler.hasFilter(), "must not have filter after adding handler");
@@ -179,22 +179,22 @@ public class CompositeEventHandlerTest {
         final WeakEventHandler<Event> weakEventHandler =
                 new WeakEventHandler<>(eventCountingHandler);
 
-        compositeEventHandler.addEventHandler(weakEventHandler);
+        compositeEventHandler.addEventHandler(weakEventHandler, EventHandlerPriority.PRIMARY);
 
         assertTrue(
                 CompositeEventHandlerShim.containsHandler(compositeEventHandler, weakEventHandler));
-        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent(), false);
         assertEquals(0, eventCountingHandler.getEventCount());
-        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent(), false);
         assertEquals(1, eventCountingHandler.getEventCount());
 
         WeakEventHandlerUtil.clear(weakEventHandler);
 
         assertFalse(
                 CompositeEventHandlerShim.containsHandler(compositeEventHandler, weakEventHandler));
-        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent(), false);
         assertEquals(1, eventCountingHandler.getEventCount());
-        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent(), false);
         assertEquals(1, eventCountingHandler.getEventCount());
     }
 
@@ -205,22 +205,22 @@ public class CompositeEventHandlerTest {
         final WeakEventHandler<Event> weakEventFilter =
                 new WeakEventHandler<>(eventCountingFilter);
 
-        compositeEventHandler.addEventFilter(weakEventFilter);
+        compositeEventHandler.addEventFilter(weakEventFilter, EventHandlerPriority.PRIMARY);
 
         assertTrue(
                 CompositeEventHandlerShim.containsFilter(compositeEventHandler, weakEventFilter));
-        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent(), false);
         assertEquals(1, eventCountingFilter.getEventCount());
-        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent(), false);
         assertEquals(1, eventCountingFilter.getEventCount());
 
         WeakEventHandlerUtil.clear(weakEventFilter);
 
         assertFalse(
                 CompositeEventHandlerShim.containsFilter(compositeEventHandler, weakEventFilter));
-        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchCapturingEvent(new EmptyEvent(), false);
         assertEquals(1, eventCountingFilter.getEventCount());
-        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent());
+        compositeEventHandler.dispatchBubblingEvent(new EmptyEvent(), false);
         assertEquals(1, eventCountingFilter.getEventCount());
     }
 }
