@@ -31,6 +31,7 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.marlin.Helpers;
 import com.sun.marlin.MarlinConst;
 import com.sun.marlin.MarlinProperties;
 import com.sun.marlin.MarlinRenderer;
@@ -232,7 +233,7 @@ public final class DMarlinPrismUtils {
     }
 
     private static boolean nearZero(final double num) {
-        return Math.abs(num) < 2.0d * Math.ulp(num);
+        return Math.abs(num) < 2.0d * Helpers.ulp(num);
     }
 
     private static DPathConsumer2D initRenderer(
