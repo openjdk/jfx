@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final boolean DEBUG = false;
 
     /** The data format identifier */
-    public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text");
+    public static final DataFormat DATA_FORMAT = DataFormat.of("application/x-com-oracle-editable-rich-text");
 
     private static final StringConverter<Boolean> BOOLEAN_CONVERTER = Converters.booleanConverter();
     private static final StringConverter<Color> COLOR_CONVERTER = Converters.colorConverter();
