@@ -28,99 +28,67 @@ package javafx.util.converter;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.time.temporal.TemporalQuery;
 import java.util.Locale;
+import java.util.Objects;
 
-import javafx.util.StringConverter;
-import javafx.util.converter.LocalDateTimeStringConverter.LdtConverter;
+/// A `StringConverter` implementation for [LocalTime] values.
+///
+/// @see LocalDateStringConverter
+/// @see LocalDateTimeStringConverter
+/// @since JavaFX 8u40
+public class LocalTimeStringConverter extends BaseTemporalStringConverter<LocalTime> {
 
-/**
- * <p>{@link StringConverter} implementation for {@link LocalTime} values.</p>
- *
- * @see LocalDateStringConverter
- * @see LocalDateTimeStringConverter
- * @since JavaFX 8u40
- */
-public class LocalTimeStringConverter extends StringConverter<LocalTime> {
-
-    LdtConverter<LocalTime> ldtConverter;
-
-    // ------------------------------------------------------------ Constructors
-
-    /**
-     * Create a {@link StringConverter} for {@link LocalTime} values, using a
-     * default formatter and parser with {@link FormatStyle#SHORT}, and the
-     * user's {@link Locale}.
-     */
+    /// Creates a `LocalTimeStringConverter` that uses a formatter and parser based on [FormatStyle#SHORT], and the
+    /// user's [Locale].
     public LocalTimeStringConverter() {
-        ldtConverter = new LdtConverter<>(LocalTime.class, null, null,
-                                                  null, null, null, null);
+        this(null);
     }
 
-    /**
-     * Create a {@link StringConverter} for {@link LocalTime} values, using a
-     * default formatter and parser with the specified {@link FormatStyle} and
-     * based on the user's {@link Locale}.
-     *
-     * @param timeStyle The {@link FormatStyle} that will be used by the default
-     * formatter and parser. If null then {@link FormatStyle#SHORT} will be used.
-     */
+    /// Creates a `LocalTimeStringConverter` that uses a formatter and parser based on the specified `FormatStyle` and
+    /// the user's [Locale].
+    ///
+    /// @param timeStyle the `FormatStyle` that will be used by the formatter and parser. If `null`, [FormatStyle#SHORT]
+    ///        will be used.
     public LocalTimeStringConverter(FormatStyle timeStyle) {
-        ldtConverter = new LdtConverter<>(LocalTime.class, null, null,
-                                                  null, timeStyle, null, null);
+        this(timeStyle, null);
     }
 
-    /**
-     * Create a StringConverter for {@link LocalTime} values, using a
-     * default formatter and parser with the specified {@link FormatStyle}
-     * and {@link Locale}.
-     *
-     * @param timeStyle The {@link FormatStyle} that will be used by the default
-     * formatter and parser. If null then {@link FormatStyle#SHORT} will be used.
-     * @param locale The {@link Locale} that will be used by the default
-     * formatter and parser. If null then
-     * {@code Locale.getDefault(Locale.Category.FORMAT)} will be used.
-     */
+    /// Creates a `LocalTimeStringConverter` that uses a formatter and parser based on the specified `FormatStyle` and
+    /// `Locale`.
+    ///
+    /// @param timeStyle The `FormatStyle` that will be used by the formatter and parser. If `null`, [FormatStyle#SHORT]
+    ///        will be used.
+    /// @param locale the `Locale` that will be used by the formatter and parser. If `null`, the user's locale will be
+    ///        used.
     public LocalTimeStringConverter(FormatStyle timeStyle, Locale locale) {
-        ldtConverter = new LdtConverter<>(LocalTime.class, null, null,
-                                                  null, timeStyle, locale, null);
+        super(null, Objects.requireNonNullElse(timeStyle, FormatStyle.SHORT), locale, null);
     }
 
-    /**
-     * Create a StringConverter for {@link LocalTime} values using the
-     * supplied formatter and parser, which are responsible for
-     * choosing the desired {@link Locale}.
-     *
-     * <p>For example, a fixed pattern can be used for converting both ways:</p>
-     * <blockquote><pre>
-     * String pattern = "HH:mm:ss";
-     * DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-     * StringConverter&lt;LocalTime&gt; converter =
-     *     DateTimeStringConverter.getLocalTimeConverter(formatter, null);
-     * </pre></blockquote>
-     *
-     * @param formatter An instance of {@link DateTimeFormatter} which
-     * will be used for formatting by the toString() method. If null
-     * then a default formatter will be used.
-     * @param parser An instance of {@link DateTimeFormatter} which
-     * will be used for parsing by the fromString() method. This can
-     * be identical to formatter. If null, then formatter will be
-     * used, and if that is also null, then a default parser will be
-     * used.
-     */
+    /// Creates a `LocalTimeStringConverter` that uses the given formatter and parser.
+    ///
+    /// For example, a fixed pattern can be used for converting both ways:
+    /// {@snippet :
+    /// String pattern = "HH:mm:ss";
+    /// DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+    /// StringConverter<LocalTime> converter = DateTimeStringConverter.getLocalTimeConverter(formatter, null);
+    /// }
+    ///
+    /// @param formatter the formatter that will be used by the `toString()` method. If `null`, a default formatter will
+    ///        be used.
+    /// @param parser the parser that will be used by the `fromString()` method. This can be identical to formatter. If
+    ///        `null`, `formatter` will be used, and if that is also `null`, a default parser will be used.
     public LocalTimeStringConverter(DateTimeFormatter formatter, DateTimeFormatter parser) {
-        ldtConverter = new LdtConverter<>(LocalTime.class, formatter, parser,
-                                                   null, null, null, null);
+        super(formatter, parser, null, FormatStyle.SHORT);
     }
 
-    // ------------------------------------------------------- Converter Methods
-
-    /** {@inheritDoc} */
-    @Override public LocalTime fromString(String value) {
-        return ldtConverter.fromString(value);
+    @Override
+    DateTimeFormatter getLocalizedFormatter(FormatStyle dateStyle, FormatStyle timeStyle) {
+        return DateTimeFormatter.ofLocalizedTime(timeStyle);
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString(LocalTime value) {
-        return ldtConverter.toString(value);
+    @Override
+    TemporalQuery<LocalTime> getTemporalQuery() {
+        return LocalTime::from;
     }
 }
