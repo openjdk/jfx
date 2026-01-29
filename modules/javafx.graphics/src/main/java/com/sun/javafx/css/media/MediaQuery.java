@@ -55,6 +55,16 @@ public sealed interface MediaQuery
     int getContextAwareness();
 
     /**
+     * Attempts to determine the result of this media query without a context, and returns {@link TriState#TRUE}
+     * if the query matches for all possible contexts, {@link TriState#FALSE} if it matches for no possible
+     * context, or {@link TriState#UNKNOWN} if the result depends on the context or cannot be determined.
+     *
+     * @return {@link TriState#TRUE} if the query is always true, {@link TriState#FALSE}
+     *         if the query is always false, otherwise {@link TriState#UNKNOWN}
+     */
+    TriState evaluate();
+
+    /**
      * Evaluates this media query against the provided context.
      *
      * @param context the evaluation context
