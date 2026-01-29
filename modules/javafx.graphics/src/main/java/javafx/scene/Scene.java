@@ -25,40 +25,21 @@
 
 package javafx.scene;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Accessible;
-import com.sun.javafx.scene.SceneContext;
-import com.sun.javafx.scene.traversal.TraversalMethod;
-import com.sun.javafx.util.Logging;
-import com.sun.javafx.util.Utils;
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.event.EventQueue;
-import com.sun.javafx.event.EventUtil;
-import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.scene.CssFlags;
-import com.sun.javafx.scene.LayoutFlags;
-import com.sun.javafx.scene.SceneEventDispatcher;
-import com.sun.javafx.scene.SceneHelper;
-import com.sun.javafx.scene.InputMethodStateManager;
-import com.sun.javafx.scene.input.DragboardHelper;
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import com.sun.javafx.scene.input.InputEventUtils;
-import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.SceneTraversalEngine;
-import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
-import com.sun.javafx.stage.EmbeddedWindow;
-import com.sun.javafx.sg.prism.NGCamera;
-import com.sun.javafx.sg.prism.NGLightBase;
-import com.sun.javafx.tk.*;
-import com.sun.prism.impl.PrismSettings;
-
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ColorScheme;
@@ -67,7 +48,15 @@ import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
-import javafx.beans.property.*;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -75,11 +64,41 @@ import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableObjectProperty;
-import javafx.css.Stylesheet;
-import javafx.event.*;
-import javafx.geometry.*;
+import javafx.event.Event;
+import javafx.event.EventDispatchChain;
+import javafx.event.EventDispatcher;
+import javafx.event.EventHandler;
+import javafx.event.EventTarget;
+import javafx.event.EventType;
+import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Orientation;
+import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.image.WritableImage;
-import javafx.scene.input.*;
+import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.GestureEvent;
+import javafx.scene.input.InputEvent;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.InputMethodTextRun;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.Mnemonic;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseDragEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.TouchEvent;
+import javafx.scene.input.TouchPoint;
+import javafx.scene.input.TransferMode;
+import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.HeaderDragType;
@@ -91,22 +110,54 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import com.sun.glass.ui.Accessible;
+import com.sun.glass.ui.Application;
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.event.EventQueue;
+import com.sun.javafx.event.EventUtil;
+import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
-
-import java.io.File;
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Stream;
-
 import com.sun.javafx.logging.PulseLogger;
-
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
+import com.sun.javafx.perf.PerformanceTracker;
+import com.sun.javafx.scene.CssFlags;
+import com.sun.javafx.scene.InputMethodStateManager;
+import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.scene.SceneContext;
+import com.sun.javafx.scene.SceneEventDispatcher;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.input.ClipboardHelper;
+import com.sun.javafx.scene.input.DragboardHelper;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
+import com.sun.javafx.scene.input.InputEventUtils;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.input.TouchPointHelper;
-import java.lang.ref.WeakReference;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalUtils;
+import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.javafx.sg.prism.NGLightBase;
+import com.sun.javafx.stage.EmbeddedWindow;
+import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.HeaderAreaType;
+import com.sun.javafx.tk.TKClipboard;
+import com.sun.javafx.tk.TKDragGestureListener;
+import com.sun.javafx.tk.TKDragSourceListener;
+import com.sun.javafx.tk.TKDropTargetListener;
+import com.sun.javafx.tk.TKPulseListener;
+import com.sun.javafx.tk.TKScene;
+import com.sun.javafx.tk.TKSceneListener;
+import com.sun.javafx.tk.TKScenePaintListener;
+import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.Utils;
+import com.sun.prism.impl.PrismSettings;
 
 /**
  * The JavaFX {@code Scene} class is the container for all content in a scene graph.
@@ -2214,25 +2265,13 @@ public class Scene implements EventTarget {
         return focusDirty;
     }
 
-    private TopMostTraversalEngine traversalEngine = new SceneTraversalEngine(this);
-
-    /**
-     * Traverses focus from the given node in the given direction.
-     */
-    boolean traverse(Node node, Direction dir, TraversalMethod method) {
-        if (node.getSubScene() != null) {
-            return node.getSubScene().traverse(node, dir, method);
-        }
-        return traversalEngine.trav(node, dir, method) != null;
-    }
-
     /**
      * Moves the focus to a reasonable initial location. Called when a scene's
      * focus is dirty and there's no current owner, or if the owner has been
      * removed from the scene.
      */
     private void focusInitial() {
-        traversalEngine.traverseToFirst();
+        TopMostTraversalEngine.traverseToFirst(getRoot());
     }
 
     /**
@@ -2242,7 +2281,7 @@ public class Scene implements EventTarget {
      * function assumes that it is still a member of the same scene.
      */
     private void focusIneligible(Node node) {
-        traverse(node, Direction.NEXT, TraversalMethod.DEFAULT);
+        TraversalUtils.traverse(node, TraversalDirection.NEXT, false);
     }
 
     boolean processKeyEvent(KeyEvent e) {
