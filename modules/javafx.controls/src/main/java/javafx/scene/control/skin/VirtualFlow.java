@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,6 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Cell;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
@@ -1072,8 +1071,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // when we enter this method, the absoluteOffset and position are
         // already determined. In case this method invokes other methods
         // that may change either absoluteOffset or position, it is the
-        // responsability of those methods to make sure both parameters are
-        // changed in a consistent way.
+        // responsibility of those methods to make sure both parameters are
+        // changed consistently.
         // For example, the recalculateEstimatedSize method also recalculates
         // the absoluteOffset and position.
 
@@ -1587,7 +1586,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             setCellIndex(cell, targetIndex);
             resizeCell(cell);
             setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
-            cell.setVisible(true);
             if (downOrRight) {
                 cells.addLast(cell);
                 scrollPixels(getCellLength(cell));
@@ -2159,7 +2157,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // Position the cell, and update the maxPrefBreadth variable as we go.
             positionCell(cell, offset);
             setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
-            cell.setVisible(true);
             --index;
         }
 
@@ -2244,7 +2241,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
 
             offset += getCellLength(cell);
-            cell.setVisible(true);
             ++index;
         }
 
@@ -2276,7 +2272,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 prospectiveEnd += cellLength;
                 positionCell(cell, start);
                 setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
-                cell.setVisible(true);
             }
 
             // The amount by which to translate the cells down
@@ -2817,7 +2812,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (cell != null) {
             setCellIndex(cell, index);
             resizeCell(cell);
-            cell.setVisible(false);
             sheetChildren.add(cell);
             privateCells.add(cell);
         }
@@ -2842,46 +2836,40 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void cleanPile() {
-        boolean wasFocusOwner = false;
+        boolean focusOwnerHasScene = focusOwnerHasScene();
 
+        // Remove all cells that are in the pile, but still inside the sheet.
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
-            wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
-            cell.setVisible(false);
+            if (cell.getParent() != null) {
+                sheetChildren.remove(cell);
+            }
         }
 
-        // Remove all cells that are in the pile and therefore not relevant anymore.
-        if (sheetChildren.size() != cells.size()) {
-            sheetChildren.removeAll(pile);
-        }
+        // If the focus owner has a scene but does not have one anymore
+        // after we removed all cells from the sheet that are in the pile,
+        // we know that indeed the cell or a child (like the graphic) had focus.
 
         // Fix for JDK-8095710: Rather than have the cells do weird things with
         // focus (in particular, have focus jump between cells), we return focus
         // to the VirtualFlow itself.
-        if (wasFocusOwner) {
-            requestFocus();
+        if (focusOwnerHasScene) {
+            if (!focusOwnerHasScene()) {
+                requestFocus();
+            }
         }
     }
 
-    private boolean doesCellContainFocus(T c) {
-        Scene scene = c.getScene();
-        final Node focusOwner = scene == null ? null : scene.getFocusOwner();
-
-        if (focusOwner != null) {
-            if (c.equals(focusOwner)) {
-                return true;
-            }
-
-            Parent p = focusOwner.getParent();
-            while (p != null && ! (p instanceof VirtualFlow)) {
-                if (c.equals(p)) {
-                    return true;
-                }
-                p = p.getParent();
-            }
+    private boolean focusOwnerHasScene() {
+        if (getScene() == null) {
+            return false;
         }
 
-        return false;
+        if (getScene().getFocusOwner() == null) {
+            return false;
+        }
+
+        return getScene().getFocusOwner().getScene() != null;
     }
 
     private double getPrefBreadth(double oppDimension) {
