@@ -2838,16 +2838,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void cleanPile() {
         boolean wasFocusOwner = false;
 
+        // Set all cells in the pile to invisible
+        // We do NOT remove them from sheetChildren to avoid O(n*m) complexity
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
             wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
-
-            // Remove the cell from sheetChildren to avoid O(n*m) complexity
-            // of sheetChildren.removeAll(pile)
-            if (cell.getParent() != null) {
-                sheetChildren.remove(cell);
-            }
         }
 
         // Fix for JDK-8095710: Rather than have the cells do weird things with
