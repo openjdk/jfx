@@ -104,7 +104,7 @@ final class PresentingPainter extends ViewPainter {
 
                 /* present for vsync buffer swap */
                 if (vs.getDoPresent()) {
-                    if (!presentable.present()) {
+                    if (!presentable.present(vs.getDoVsync())) {
                         disposePresentable();
                         sceneState.getScene().entireSceneNeedsRepaint();
                     }
