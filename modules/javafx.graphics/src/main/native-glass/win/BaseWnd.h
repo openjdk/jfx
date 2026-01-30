@@ -50,6 +50,7 @@ public:
     // returns its bounds. This method is used to find the default window
     // size/location when CW_USEDEFAULT can't be used (e.g. for WS_POPUP windows).
     static BOOL GetDefaultWindowBounds(LPRECT r);
+    static BOOL BackdropsSupported();
 
     HWND GetHWND() { return m_hWnd; }
 
