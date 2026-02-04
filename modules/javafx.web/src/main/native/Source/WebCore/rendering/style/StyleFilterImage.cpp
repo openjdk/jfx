@@ -33,11 +33,12 @@
 #include "CSSValuePool.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
-#include "ComputedStyleExtractor.h"
 #include "HostWindow.h"
 #include "ImageBuffer.h"
 #include "NullGraphicsContext.h"
+#include "ReferenceFilterOperation.h"
 #include "RenderElement.h"
+#include "RenderObjectInlines.h"
 #include "StyleFilterProperty.h"
 #include <wtf/PointerComparison.h>
 
@@ -108,7 +109,7 @@ void StyleFilterImage::load(CachedResourceLoader& cachedResourceLoader, const Re
     }
 
     for (auto& filterOperation : m_filterOperations) {
-        if (RefPtr referenceFilterOperation = dynamicDowncast<ReferenceFilterOperation>(filterOperation))
+        if (RefPtr referenceFilterOperation = dynamicDowncast<Style::ReferenceFilterOperation>(filterOperation))
             referenceFilterOperation->loadExternalDocumentIfNeeded(cachedResourceLoader, options);
     }
 

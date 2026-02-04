@@ -69,7 +69,7 @@ static auto dumpVariadic(TextStream&, const IndirectNode<Op>&, ASCIILiteral pref
 
 template<typename Op>
 static auto operator<<(TextStream&, const IndirectNode<Op>&) -> TextStream&;
-static auto operator<<(TextStream&, const Random::CachingOptions&) -> TextStream&;
+static auto operator<<(TextStream&, const Random::Fixed&) -> TextStream&;
 static auto operator<<(TextStream&, const None&) -> TextStream&;
 static auto operator<<(TextStream&, const ChildOrNone&) -> TextStream&;
 static auto operator<<(TextStream&, const Child&) -> TextStream&;
@@ -88,18 +88,18 @@ static auto operator<<(TextStream&, const IndirectNode<Hypot>&) -> TextStream&;
 
 template<typename Op> TextStream& dumpVariadic(TextStream& ts, const IndirectNode<Op>& root, ASCIILiteral prefix, ASCIILiteral between)
 {
-    ts << prefix << "(";
+    ts << prefix << '(';
 
     auto separator = ""_s;
     for (auto& child : root->children)
         ts << std::exchange(separator, between) << child;
 
-    return ts << ")";
+    return ts << ')';
 }
 
 template<typename Op> auto operator<<(TextStream& ts, const IndirectNode<Op>& root) -> TextStream&
 {
-    ts << Op::op << "(";
+    ts << Op::op << '(';
 
     auto separator = ""_s;
     forAllChildren(*root, WTF::makeVisitor(
@@ -112,17 +112,17 @@ template<typename Op> auto operator<<(TextStream& ts, const IndirectNode<Op>& ro
         }
     ));
 
-    return ts << ")";
+    return ts << ')';
 }
 
-TextStream& operator<<(TextStream& ts, const Random::CachingOptions& options)
+TextStream& operator<<(TextStream& ts, const Random::Fixed& fixed)
 {
-    return ts << "options(id(" << options.identifier << "), per-element(" << options.perElement << "))";
+    return ts << "fixed "_s << fixed.baseValue;
 }
 
 TextStream& operator<<(TextStream& ts, const None&)
 {
-    return ts << "none";
+    return ts << "none"_s;
 }
 
 TextStream& operator<<(TextStream& ts, const ChildOrNone& root)
@@ -142,7 +142,7 @@ TextStream& operator<<(TextStream& ts, const Number& root)
 
 TextStream& operator<<(TextStream& ts, const Percentage& root)
 {
-    return ts << TextStream::FormatNumberRespectingIntegers(root.value) << "%";
+    return ts << TextStream::FormatNumberRespectingIntegers(root.value) << '%';
 }
 
 TextStream& operator<<(TextStream& ts, const Dimension& root)
@@ -162,12 +162,12 @@ TextStream& operator<<(TextStream& ts, const IndirectNode<Product>& root)
 
 TextStream& operator<<(TextStream& ts, const IndirectNode<Negate>& root)
 {
-    return ts << "-(" << root->a << ")";
+    return ts << "-("_s << root->a << ')';
 }
 
 TextStream& operator<<(TextStream& ts, const IndirectNode<Invert>& root)
 {
-    return ts << "1.0 / (" << root->a << ")";
+    return ts << "1.0 / ("_s << root->a << ')';
 }
 
 TextStream& operator<<(TextStream& ts, const IndirectNode<Min>& root)

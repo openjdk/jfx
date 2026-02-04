@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  *
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "DocumentMarkerController.h"
 
+#include "BoundaryPointInlines.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DocumentInlines.h"
@@ -113,8 +114,8 @@ void DocumentMarkerController::addTransparentContentMarker(const SimpleRange& ra
         //
         // Otherwise, this information would be lost if the original range is collapsed, so this prevents that from happening.
 
-        DocumentMarker::TransparentContentData markerData { { range.protectedStartContainer().ptr() }, uuid };
-        Ref node = range.protectedStartContainer();
+        Ref node = range.startContainer();
+        DocumentMarker::TransparentContentData markerData { { node.ptr() }, uuid };
         addMarker(node.get(), { DocumentMarkerType::TransparentContent, { range.startOffset(), range.endOffset() }, WTFMove(markerData) });
 
         return;
@@ -347,8 +348,8 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
                 break;
             if (canMergeMarkers(marker, toInsert) && marker.endOffset() >= toInsert.startOffset()) {
                 toInsert.setStartOffset(marker.startOffset());
-                list->remove(i);
-                numMarkers--;
+                list->removeAt(i);
+                --numMarkers;
                 break;
             }
         }
@@ -361,7 +362,7 @@ void DocumentMarkerController::addMarker(Node& node, DocumentMarker&& newMarker)
             if (marker.startOffset() > toInsert.endOffset())
                 break;
             if (canMergeMarkers(marker, toInsert)) {
-                list->remove(j);
+                list->removeAt(j);
                 if (toInsert.endOffset() <= marker.endOffset()) {
                     toInsert.setEndOffset(marker.endOffset());
                     break;
@@ -465,7 +466,7 @@ void DocumentMarkerController::removeMarkers(Node& node, OffsetRange range, Opti
         needRepaint = true;
 
         DocumentMarker copiedMarker = marker;
-        list->remove(i);
+        list->removeAt(i);
         if (overlapRule == RemovePartiallyOverlappingMarker::Yes)
             continue;
 
@@ -542,7 +543,7 @@ void DocumentMarkerController::applyToCollapsedRangeMarker(const SimpleRange& ra
     if (!range.collapsed())
         return;
 
-    Ref node = range.protectedStartContainer();
+    Ref node = range.startContainer();
     if (auto list = m_markers.get(node.ptr())) {
         auto offsetRange = characterDataOffsetRange(range, node.get());
         for (auto& marker : *list) {
@@ -711,7 +712,7 @@ OptionSet<DocumentMarkerType> DocumentMarkerController::removeMarkersFromList(Ma
             }
 
             // pitch the old marker
-            list->remove(i);
+            list->removeAt(i);
             needsRepainting = true;
             // i now is the index of the next marker
         }
@@ -776,7 +777,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
 
 #if PLATFORM(IOS_FAMILY)
         if (targetStartOffset >= node.length() || targetEndOffset <= 0) {
-            list->remove(i);
+                list->removeAt(i);
             continue;
         }
 #endif
@@ -789,7 +790,7 @@ void DocumentMarkerController::shiftMarkers(Node& node, unsigned startOffset, in
         // FIXME: No obvious reason this should be iOS-specific. Remove the #if at some point.
         else if (marker.endOffset() > startOffset) {
             if (targetEndOffset <= marker.startOffset()) {
-                list->remove(i);
+                list->removeAt(i);
                 continue;
             }
             marker.setEndOffset(std::min(targetEndOffset, node.length()));

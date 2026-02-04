@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +28,36 @@
 
 #if LIBPAS_ENABLED
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include "pas_utils.h"
-#include "pas_heap.h"
 #include "pas_probabilistic_guard_malloc_allocator.h"
-#include "pas_large_heap.h"
-#include "pas_ptr_hash_map.h"
+
 #include "iso_heap_config.h"
-#include "pas_utility_heap.h"
+#include "pas_heap.h"
+#include "pas_large_heap.h"
 #include "pas_large_utility_free_heap.h"
+#include "pas_ptr_hash_map.h"
 #include "pas_random.h"
+#include "pas_utility_heap.h"
+#include "pas_utility_heap_support.h"
+#include "pas_utils.h"
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#if !PAS_OS(WINDOWS)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
+/* PlayStation does not currently support the backtrace API. Android API versions < 33 don't, either. Windows does not either. Linux only with GLibc and not uCLibc/Musl. */
+#if (PAS_OS(ANDROID) && __ANDROID_API__ >= 33) || PAS_OS(DARWIN) || (PAS_OS(LINUX) && defined(__GLIBC__) && !defined(__UCLIBC__))
+#include <execinfo.h>
+#else
+size_t backtrace(void** buffer, size_t size)
+{
+    PAS_UNUSED_PARAM(buffer);
+    PAS_UNUSED_PARAM(size);
+    return 0;
+}
+#endif
 
 static size_t free_wasted_mem  = PAS_PGM_MAX_WASTED_MEMORY;
 static size_t free_virtual_mem = PAS_PGM_MAX_VIRTUAL_MEMORY;
@@ -51,8 +67,14 @@ static size_t pgm_metadata_index = 0;
 uint16_t pas_probabilistic_guard_malloc_random;
 uint16_t pas_probabilistic_guard_malloc_counter = 0;
 
-bool pas_probabilistic_guard_malloc_can_use = true;
+bool pas_probabilistic_guard_malloc_can_use = false;
 bool pas_probabilistic_guard_malloc_is_initialized = false;
+
+/*
+ * Flag to indicate if PGM has enabled at all for this process,
+ * even if it been subsequently disabled, or no guarded allocations have been made
+*/
+static bool pas_probabilistic_guard_malloc_has_been_used = false;
 
 /*
  * the hash map is used to keep track of all pgm allocations
@@ -159,6 +181,23 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     uintptr_t upper_guard = pas_round_up(key + size, page_size);
     size_t upper_guard_size = (result.begin + mem_to_alloc) - upper_guard;
 
+#if PAS_OS(WINDOWS)
+    void* virtualalloc_res = VirtualAlloc((void*) lower_guard, lower_guard_size, MEM_COMMIT, PAGE_NOACCESS);
+    PAS_ASSERT(virtualalloc_res);
+
+    virtualalloc_res = VirtualAlloc((void*) upper_guard, upper_guard_size, MEM_COMMIT, PAGE_NOACCESS);
+    PAS_ASSERT(virtualalloc_res);
+
+    /*
+     * ensure physical addresses are released
+     * loop using meminfo here if the upper guard free is failing
+     */
+    bool virtualfree_res = VirtualFree((void*) lower_guard, lower_guard_size, MEM_DECOMMIT);
+    PAS_ASSERT(virtualfree_res);
+
+    virtualfree_res = VirtualFree((void*) upper_guard, upper_guard_size, MEM_DECOMMIT);
+    PAS_ASSERT(virtualfree_res);
+#else
     int mprotect_res = mprotect((void*)lower_guard, lower_guard_size, PROT_NONE);
     PAS_ASSERT(!mprotect_res);
 
@@ -174,13 +213,7 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
 
     madvise_res = madvise((void*)lower_guard, lower_guard_size, MADV_FREE);
     PAS_ASSERT(!madvise_res);
-    /*
-     * the key is the location where the user's starting memory address is located.
-     * allocations are right aligned, so the end backs up to the upper guard page.
-     *
-     * Take random decision to right align or left align in order to be able to catch
-     * overflow and underflow conditions with equal probability.
-     */
+#endif
 
     PAS_PROFILE(PGM_ALLOCATE, heap_config, key);
 
@@ -188,6 +221,9 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
     pas_pgm_storage* value = pas_utility_heap_try_allocate(sizeof(pas_pgm_storage), "pas_pgm_hash_map_VALUE");
     PAS_ASSERT(value);
 
+    value->alloc_backtrace              = pas_utility_heap_allocate(sizeof(pas_backtrace_metadata), "pas_alloc_backtrace_metadata");
+    value->alloc_backtrace->frame_size  = backtrace(value->alloc_backtrace->backtrace_buffer, PGM_BACKTRACE_MAX_FRAMES);
+    value->dealloc_backtrace            = NULL;
     value->mem_to_waste              = mem_to_waste;
     value->size_of_data_pages          = mem_to_alloc - (lower_guard_size + upper_guard_size);
     value->start_of_data_pages         = result.begin + lower_guard_size;
@@ -235,8 +271,35 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
         return;
 
     pas_pgm_storage* value = (pas_pgm_storage*)entry->value;
+#if PAS_OS(WINDOWS)
+    MEMORY_BASIC_INFORMATION memInfo;
+    VirtualQuery((void *) value->start_of_data_pages, &memInfo, sizeof(memInfo));
+
+    void* virtualalloc_res = NULL;
+    bool virtualfree_res = false;
+    size_t totalSeen = 0;
+    void *currentPtr = (void*) value->start_of_data_pages;
+    while (totalSeen < value->size_of_data_pages) {
+        MEMORY_BASIC_INFORMATION memInfo;
+        VirtualQuery(currentPtr, &memInfo, sizeof(memInfo));
+        virtualalloc_res = VirtualAlloc(currentPtr, memInfo.RegionSize, MEM_COMMIT, PAGE_NOACCESS);
+        PAS_ASSERT(virtualalloc_res);
+
+        /* ensure physical addresses are released */
+        virtualfree_res = VirtualFree(currentPtr, memInfo.RegionSize, MEM_DECOMMIT);
+        PAS_ASSERT(virtualfree_res);
+
+        PAS_ASSERT(memInfo.RegionSize > 0);
+        currentPtr = (void*) ((uintptr_t) currentPtr + memInfo.RegionSize);
+        totalSeen += memInfo.RegionSize;
+    }
+#else
     int mprotect_res = mprotect((void*)value->start_of_data_pages, value->size_of_data_pages, PROT_NONE);
     PAS_ASSERT(!mprotect_res);
+
+    /* grab some memory for dealloc backtrace and capture deallocation backtrace */
+    value->dealloc_backtrace = pas_utility_heap_allocate(sizeof(pas_backtrace_metadata), "pas_dealloc_backtrace_metadata");
+    value->dealloc_backtrace->frame_size = backtrace(value->dealloc_backtrace->backtrace_buffer, PGM_BACKTRACE_MAX_FRAMES);
 
     /*
      * ensure physical addresses are released
@@ -244,6 +307,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
      */
     int madvise_res = madvise((void*)value->start_of_data_pages, value->size_of_data_pages, MADV_FREE);
     PAS_ASSERT(!madvise_res);
+#endif
 
     free_wasted_mem  += value->mem_to_waste;
     free_virtual_mem += value->size_of_allocated_pages;
@@ -255,7 +319,10 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
     value->free_status = true;
     pas_ptr_hash_map_entry* old_entry = &pgm_metadata_vector[pgm_metadata_index];
     if (old_entry->key) {
-        pas_utility_heap_deallocate(old_entry->value);
+        pas_pgm_storage* old_pas_pgm_storage = (pas_pgm_storage*)(old_entry->value);
+        pas_utility_heap_deallocate((void*)old_pas_pgm_storage->alloc_backtrace);
+        pas_utility_heap_deallocate((void*)old_pas_pgm_storage->dealloc_backtrace);
+        pas_utility_heap_deallocate((void*)old_pas_pgm_storage);
         bool removed = pas_ptr_hash_map_remove(&pas_pgm_hash_map, (void*)old_entry->key, NULL, &pas_large_utility_free_heap_allocation_config);
         PAS_ASSERT(removed);
     }
@@ -266,6 +333,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
         pas_probabilistic_guard_malloc_debug_info((void*)key, value, "Deallocating Memory");
 
     pas_probabilistic_guard_malloc_can_use = true;
+    pas_probabilistic_guard_malloc_has_been_used = true;
 }
 
 bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem)
@@ -324,6 +392,15 @@ pas_ptr_hash_map_entry* pas_probabilistic_guard_malloc_get_metadata_array(void)
 }
 
 /*
+ * Function to be called to check if PGM has been enabled on this process at any point,
+ * regardless of if it has since been disabled, or if any guarded allocations were made.
+*/
+bool pas_probabilistic_guard_malloc_enabled_on_process(void)
+{
+    return pas_probabilistic_guard_malloc_has_been_used;
+}
+
+/*
  * During heap creation we want to check whether we should enable PGM.
  * PGM being enabled in the heap config does not mean it will be enabled at runtime.
  * This function will be run once for all heaps (ISO, bmalloc, JIT, etc...), but only those with
@@ -347,14 +424,8 @@ void pas_probabilistic_guard_malloc_initialize_pgm(void)
 {
     if (!pas_probabilistic_guard_malloc_is_initialized) {
         pas_probabilistic_guard_malloc_is_initialized = true;
-
-        if (PAS_LIKELY(pas_get_fast_random(1000) >= 1)) {
             pas_probabilistic_guard_malloc_can_use = false;
-            return;
         }
-
-        pas_probabilistic_guard_malloc_random = pas_get_secure_random(1000) + 4000;
-    }
 }
 
 /*
@@ -364,6 +435,7 @@ void pas_probabilistic_guard_malloc_initialize_pgm_as_enabled(uint16_t pgm_rando
 {
     pas_probabilistic_guard_malloc_is_initialized = true;
     pas_probabilistic_guard_malloc_can_use = true;
+    pas_probabilistic_guard_malloc_has_been_used = true;
     pas_probabilistic_guard_malloc_random = pgm_random_rate;
     pas_probabilistic_guard_malloc_counter = 0;
     memset(pgm_metadata_vector, 0, sizeof(pgm_metadata_vector));

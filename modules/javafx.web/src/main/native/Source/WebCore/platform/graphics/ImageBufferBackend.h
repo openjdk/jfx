@@ -69,6 +69,7 @@ class IOSurfacePool;
 class Image;
 class NativeImage;
 class PixelBuffer;
+class PixelBufferSourceView;
 class ProcessIdentity;
 class SharedBuffer;
 
@@ -129,7 +130,7 @@ public:
     virtual void transformToColorSpace(const DestinationColorSpace&) { }
 
     virtual void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) = 0;
-    virtual void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
+    virtual void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) = 0;
 
     WEBCORE_EXPORT virtual RefPtr<SharedBuffer> sinkIntoPDFDocument();
 
@@ -189,10 +190,10 @@ protected:
     IntSize size() const { return m_parameters.backendSize; };
     float resolutionScale() const { return m_parameters.resolutionScale; }
     const DestinationColorSpace& colorSpace() const { return m_parameters.colorSpace; }
-    ImageBufferPixelFormat pixelFormat() const { return m_parameters.pixelFormat; }
+    ImageBufferPixelFormat pixelFormat() const { return m_parameters.bufferFormat.pixelFormat; }
 
     WEBCORE_EXPORT void getPixelBuffer(const IntRect& srcRect, std::span<const uint8_t> data, PixelBuffer& destination);
-    WEBCORE_EXPORT void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, std::span<uint8_t> destination);
+    WEBCORE_EXPORT void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, std::span<uint8_t> destination);
 
     Parameters m_parameters;
 };

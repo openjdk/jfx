@@ -42,7 +42,7 @@ inline std::tuple<ASCIILiteral, JSString*> inferBuiltinTag(JSGlobalObject* globa
 
 #if PLATFORM(IOS) || PLATFORM(VISION)
     static bool needsOldBuiltinTag = isPokerBros();
-    if (UNLIKELY(needsOldBuiltinTag))
+    if (needsOldBuiltinTag) [[unlikely]]
         return std::tuple { object->className(), nullptr };
 #endif
 

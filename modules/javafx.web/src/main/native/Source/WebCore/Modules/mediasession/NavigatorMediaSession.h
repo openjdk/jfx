@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ public:
     ~NavigatorMediaSession();
 
     WEBCORE_EXPORT static MediaSession& mediaSession(Navigator&);
-    static RefPtr<MediaSession> mediaSessionIfExists(Navigator&);
+    WEBCORE_EXPORT static RefPtr<MediaSession> mediaSessionIfExists(Navigator&);
     MediaSession& mediaSession();
     RefPtr<MediaSession> mediaSessionIfExists();
 
@@ -52,8 +52,8 @@ private:
     static NavigatorMediaSession* from(Navigator&);
     static ASCIILiteral supplementName();
 
-    RefPtr<MediaSession> m_mediaSession;
-    CheckedRef<Navigator> m_navigator;
+    const RefPtr<MediaSession> m_mediaSession;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 }

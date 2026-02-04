@@ -105,7 +105,9 @@ NSString *decodeHostName(NSString *string)
     std::optional<String> host = URLHelpers::mapHostName(string, nullptr);
     if (!host)
         return nil;
-    return !*host ? string : (NSString *)*host;
+    if (!*host)
+        return string;
+    return host->createNSString().autorelease();
 }
 
 NSString *encodeHostName(NSString *string)
@@ -113,7 +115,9 @@ NSString *encodeHostName(NSString *string)
     std::optional<String> host = URLHelpers::mapHostName(string, decodePercentEscapes);
     if (!host)
         return nil;
-    return !*host ? string : (NSString *)*host;
+    if (!*host)
+        return string;
+    return host->createNSString().autorelease();
 }
 
 static RetainPtr<NSString> stringByTrimmingWhitespace(NSString *string)
@@ -134,9 +138,9 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFURLComponentType
 
     auto bytes = bytesAsVector(bridge_cast(URL));
 
-    auto result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingUTF8, nullptr));
+    auto result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.span().data(), range.location - 1, kCFStringEncodingUTF8, nullptr));
     if (!result)
-        result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingISOLatin1, nullptr));
+        result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.span().data(), range.location - 1, kCFStringEncodingISOLatin1, nullptr));
 
     return result ? result.bridgingAutorelease() : URL;
 }
@@ -194,7 +198,7 @@ static RetainPtr<NSData> dataWithUserTypedString(NSString *string)
 
     auto outBytesSpan = outBytes.releaseBuffer().leakSpan();
     return adoptNS([[NSData alloc] initWithBytesNoCopy:outBytesSpan.data() length:outBytesSpan.size() deallocator:^(void* bytes, NSUInteger) {
-        FastMalloc::free(bytes);
+        VectorBufferMalloc::free(bytes);
     }]); // adopts outBytes
 }
 
@@ -214,7 +218,7 @@ NSURL *URLWithUserTypedString(NSString *string, NSURL *)
 
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=186057
     // We should be able to use url.createCFURL instead of using directly CFURL parsing routines.
-    RetainPtr data = dataWithUserTypedString(mappedString);
+    RetainPtr data = dataWithUserTypedString(mappedString.createNSString().get());
     if (!data)
         return [NSURL URLWithString:@""];
 
@@ -318,7 +322,7 @@ NSData *originalURLData(NSURL *URL)
 
 NSString *userVisibleString(NSURL *URL)
 {
-    return URLHelpers::userVisibleURL(span(originalURLData(URL)));
+    return URLHelpers::userVisibleURL(span(originalURLData(URL))).createNSString().autorelease();
 }
 
 BOOL isUserVisibleURL(NSString *string)

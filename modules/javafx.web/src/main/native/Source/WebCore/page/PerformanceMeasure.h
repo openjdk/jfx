@@ -51,7 +51,7 @@ private:
     Type performanceEntryType() const final { return Type::Measure; }
     ASCIILiteral entryType() const final { return "measure"_s; }
 
-    Ref<SerializedScriptValue> m_serializedDetail;
+    const Ref<SerializedScriptValue> m_serializedDetail;
 };
 
 } // namespace WebCore

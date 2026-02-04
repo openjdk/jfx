@@ -27,7 +27,8 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "FrameInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
 #include "LocalFrame.h"
@@ -40,14 +41,14 @@
 
 namespace WebCore {
 
-Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
+Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
 {
     auto result = adoptRef(*new MediaKeySystemRequest(document, keySystem, WTFMove(promise)));
     result->suspendIfNeeded();
     return result;
 }
 
-MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
+MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
     : ActiveDOMObject(document)
     , m_keySystem(keySystem)
     , m_promise(WTFMove(promise))
@@ -68,15 +69,14 @@ SecurityOrigin* MediaKeySystemRequest::topLevelDocumentOrigin() const
 
 void MediaKeySystemRequest::start()
 {
-    RefPtr context = scriptExecutionContext();
-    ASSERT(context);
-    if (!context) {
+    RefPtr document = this->document();
+    ASSERT(document);
+    if (!document) {
         deny();
         return;
     }
 
-    auto& document = downcast<Document>(*context);
-    auto* controller = MediaKeySystemController::from(document.page());
+    auto* controller = MediaKeySystemController::from(document->protectedPage().get());
     if (!controller) {
         deny();
         return;
@@ -90,9 +90,9 @@ void MediaKeySystemRequest::allow(String&& mediaKeysHashSalt)
     if (!scriptExecutionContext())
         return;
 
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, mediaKeysHashSalt = WTFMove(mediaKeysHashSalt)] () mutable {
-        if (auto allowCompletionHandler = std::exchange(m_allowCompletionHandler, { }))
-            allowCompletionHandler(WTFMove(mediaKeysHashSalt), WTFMove(m_promise));
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [mediaKeysHashSalt = WTFMove(mediaKeysHashSalt)](auto& request) mutable {
+        if (auto allowCompletionHandler = std::exchange(request.m_allowCompletionHandler, { }))
+            allowCompletionHandler(WTFMove(mediaKeysHashSalt), WTFMove(request.m_promise));
     });
 }
 
@@ -101,17 +101,21 @@ void MediaKeySystemRequest::deny(const String& message)
     if (!scriptExecutionContext())
         return;
 
+    RefPtr promise = m_promise;
+    if (!promise)
+        return;
+
     ExceptionCode code = ExceptionCode::NotSupportedError;
     if (!message.isEmpty())
-        m_promise->reject(code, message);
+        promise->reject(code, message);
     else
-        m_promise->reject(code);
+        promise->reject(code);
 }
 
 void MediaKeySystemRequest::stop()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    if (auto* controller = MediaKeySystemController::from(document.page()))
+    Ref document = *this->document();
+    if (auto* controller = MediaKeySystemController::from(document->protectedPage().get()))
         controller->cancelMediaKeySystemRequest(*this);
 }
 

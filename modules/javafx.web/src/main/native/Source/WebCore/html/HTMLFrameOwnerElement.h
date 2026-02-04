@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "Document.h"
 #include "Frame.h"
 #include "HTMLElement.h"
 #include "ReferrerPolicy.h"
@@ -73,7 +74,7 @@ protected:
     HTMLFrameOwnerElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
     void setSandboxFlags(SandboxFlags);
     bool isProhibitedSelfReference(const URL&) const;
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
+    bool isKeyboardFocusable(const FocusEventData&) const override;
 
 private:
     bool isHTMLFrameOwnerElement() const final { return true; }
@@ -108,16 +109,6 @@ private:
 
     WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_root;
 };
-
-inline HTMLFrameOwnerElement* Frame::ownerElement() const
-{
-    return m_ownerElement.get();
-}
-
-inline RefPtr<HTMLFrameOwnerElement> Frame::protectedOwnerElement() const
-{
-    return m_ownerElement.get();
-}
 
 } // namespace WebCore
 

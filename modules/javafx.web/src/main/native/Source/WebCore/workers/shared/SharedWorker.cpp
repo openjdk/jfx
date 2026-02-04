@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "EventNames.h"
+#include "EventTargetInterfaces.h"
 #include "Logging.h"
 #include "MessageChannel.h"
 #include "MessagePort.h"
@@ -74,7 +75,7 @@ static inline SharedWorkerObjectConnection* mainThreadConnection()
     return SharedWorkerProvider::singleton().sharedWorkerConnection();
 }
 
-ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, std::variant<RefPtr<TrustedScriptURL>, String>&& scriptURLString, std::optional<std::variant<String, WorkerOptions>>&& maybeOptions)
+ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, Variant<RefPtr<TrustedScriptURL>, String>&& scriptURLString, std::optional<Variant<String, WorkerOptions>>&& maybeOptions)
 {
     auto compliantScriptURLString = trustedTypeCompliantString(document, WTFMove(scriptURLString), "SharedWorker constructor"_s);
     if (compliantScriptURLString.hasException())
@@ -94,13 +95,6 @@ ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, std::var
     if (contentSecurityPolicy)
         contentSecurityPolicy->upgradeInsecureRequestIfNeeded(url, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    // Per the specification, any same-origin URL (including blob: URLs) can be used. data: URLs can also be used, but they create a worker with an opaque origin.
-    if (!document.protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton()) && !url.protocolIsData())
-        return Exception { ExceptionCode::SecurityError, "URL of the shared worker is cross-origin"_s };
-
-    if (contentSecurityPolicy && !contentSecurityPolicy->allowWorkerFromSource(url))
-        return Exception { ExceptionCode::SecurityError };
-
     WorkerOptions options;
     if (maybeOptions) {
         WTF::switchOn(*maybeOptions, [&] (const String& name) {
@@ -118,6 +112,14 @@ ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, std::var
 
     auto sharedWorker = adoptRef(*new SharedWorker(document, key, channel->port1()));
     sharedWorker->suspendIfNeeded();
+
+    if (auto exception = validateURL(document, url)) {
+        if (!document.settings().workerAsynchronousURLErrorHandlingEnabled())
+            return Exception { ExceptionCode::SecurityError, "URL of the shared worker is cross-origin"_s };
+        sharedWorker->m_isActive = false;
+        sharedWorker->queueTaskToDispatchEvent(sharedWorker.get(), TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
+        return sharedWorker;
+    }
 
     mainThreadConnection()->requestSharedWorker(key, sharedWorker->identifier(), WTFMove(transferredPort), options);
     return sharedWorker;

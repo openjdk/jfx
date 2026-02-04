@@ -35,6 +35,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageBufferAllocator);
 
 ImageBufferAllocator::ImageBufferAllocator() = default;
+ImageBufferAllocator::~ImageBufferAllocator() = default;
 
 RefPtr<ImageBuffer> ImageBufferAllocator::createImageBuffer(const FloatSize& size, const DestinationColorSpace& colorSpace, RenderingMode renderingMode) const
 {

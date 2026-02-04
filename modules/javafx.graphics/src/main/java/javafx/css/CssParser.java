@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.css.TransitionDefinitionConverter;
 import com.sun.javafx.css.media.MediaQueryParser;
+import com.sun.javafx.css.parser.CssParserHelper;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
 import javafx.css.converter.BooleanConverter;
@@ -74,6 +75,7 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.effect.BlurType;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.layout.BackgroundRepeat;
@@ -121,6 +123,15 @@ import java.util.Stack;
  * @since 9
  */
 final public class CssParser {
+
+    static {
+        CssParserHelper.setAccessor(new CssParserHelper.Accessor() {
+            @Override
+            public Size parseSize(Token token) {
+                return sizeImpl(token);
+            }
+        });
+    }
 
     /**
      * Constructs a {@code CssParser}.
@@ -574,6 +585,21 @@ final public class CssParser {
     }
 
     private Size size(final Token token) throws ParseException {
+        Size size = sizeImpl(token);
+        if (size == null) {
+            if (LOGGER.isLoggable(Level.FINEST)) {
+                LOGGER.finest("Expected \'<number>\'");
+            }
+
+            ParseException re = new ParseException("Expected \'<number>\'", token, this);
+            reportError(createError(re.toString()));
+            throw re;
+        }
+
+        return size;
+    }
+
+    private static Size sizeImpl(final Token token) {
         SizeUnits units = SizeUnits.PX;
         // Amount to trim off the suffix, if any. Most are 2 chars.
         int trim = 2;
@@ -637,12 +663,7 @@ final public class CssParser {
             units = SizeUnits.MS;
             break;
         default:
-            if (LOGGER.isLoggable(Level.FINEST)) {
-                LOGGER.finest("Expected \'<number>\'");
-            }
-            ParseException re = new ParseException("Expected \'<number>\'",token, this);
-            reportError(createError(re.toString()));
-            throw re;
+            return null;
         }
         // TODO: Handle NumberFormatException
         return new Size(
@@ -4104,6 +4125,43 @@ final public class CssParser {
                     }, InterpolatorConverter.getInstance());
             }
 
+            case "linear(" -> {
+                List<Point2D> args = new ArrayList<>();
+
+                for (Term arg = term.firstArg; arg != null; arg = arg.nextArg) {
+                    double inputValue = Double.NaN;
+                    double outputValue = Double.NaN;
+
+                    if (arg == null || arg.token == null || arg.token.getType() != CssLexer.NUMBER) {
+                        error(arg, "Expected \'<number>\'");
+                    } else {
+                        outputValue = Double.parseDouble(arg.token.getText());
+                    }
+
+                    // 0, 1, or 2 <percentage>s
+                    for (int i = 0; i < 2; ++i) {
+                        Term next = arg.nextInSeries;
+                        if (next != null) {
+                            if (next.token == null || next.token.getType() != CssLexer.PERCENTAGE) {
+                                error(next, "Expected \'<percentage>\'");
+                            } else {
+                                inputValue = size(next.token).getValue() / 100.0;
+                            }
+
+                            arg = next;
+                            args.add(new Point2D(inputValue, outputValue));
+                        } else if (i == 0) {
+                            args.add(new Point2D(inputValue, outputValue));
+                        }
+                    }
+                }
+
+                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
+                        new ParsedValueImpl(term.token.getText(), null),
+                        new ParsedValueImpl(args, null)
+                    }, InterpolatorConverter.getInstance());
+            }
+
             default -> {
                 yield new ParsedValueImpl<>(
                     new ParsedValueImpl(term.token.getText(), null),
@@ -4112,11 +4170,11 @@ final public class CssParser {
         };
     }
 
-    // https://www.w3.org/TR/css-easing-1/#easing-functions
-    // <easing-function> = linear | <cubic-bezier-easing-function> | <step-easing-function>
+    // https://www.w3.org/TR/css-easing-2/#easing-functions
+    // <easing-function> = linear | <linear-easing-function> | <cubic-bezier-easing-function> | <step-easing-function>
     private boolean isEasingFunction(Token token) throws ParseException {
         return token != null && switch (token.getText()) {
-            case "linear" -> true;
+            case "linear", "linear(" -> true;
             case "ease", "ease-in", "ease-out", "ease-in-out", "cubic-bezier(" -> true;
             case "step-start", "step-end", "steps(" -> true;
             case "-fx-ease-in", "-fx-ease-out", "-fx-ease-both" -> true;

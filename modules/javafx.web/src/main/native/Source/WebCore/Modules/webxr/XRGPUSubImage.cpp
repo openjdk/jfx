@@ -36,9 +36,6 @@
 
 namespace WebCore {
 
-static constexpr auto gpuSubImageWidth = 1920;
-static constexpr auto gpuSubImageHeight = 1824;
-
 WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XRGPUSubImage);
 
 static auto makeTextureViewDescriptor(WebGPU::XREye eye)
@@ -54,19 +51,21 @@ static auto makeTextureViewDescriptor(WebGPU::XREye eye)
     };
 }
 
-XRGPUSubImage::XRGPUSubImage(Ref<WebGPU::XRSubImage>&& backing, WebGPU::XREye eye, GPUDevice& device)
+XRGPUSubImage::XRGPUSubImage(Ref<WebGPU::XRSubImage>&& backing, WebGPU::XREye eye, std::array<uint16_t, 2>&& physicalSize, WebCore::IntRect&& viewport, GPUDevice& device)
     : m_backing(WTFMove(backing))
     , m_device(device)
     , m_descriptor(makeTextureViewDescriptor(eye))
-    , m_viewport(WebXRViewport::create(IntRect { 0, 0, gpuSubImageWidth, gpuSubImageHeight }))
+    , m_viewport(WebXRViewport::create(WTFMove(viewport)))
+    , m_width(physicalSize[0])
+    , m_height(physicalSize[1])
 {
 }
 
-static GPUTextureDescriptor textureDescriptor(GPUTextureFormat format)
+static GPUTextureDescriptor textureDescriptor(GPUTextureFormat format, unsigned width, unsigned height)
 {
     return GPUTextureDescriptor {
         { "canvas backing"_s },
-        GPUExtent3DDict { gpuSubImageWidth, gpuSubImageHeight, 1 },
+        GPUExtent3DDict { width, height, 1 },
         1,
         1,
         GPUTextureDimension::_2d,
@@ -82,7 +81,7 @@ ExceptionOr<Ref<GPUTexture>> XRGPUSubImage::colorTexture()
     if (!texture)
         return Exception { ExceptionCode::InvalidStateError };
 
-    return GPUTexture::create(texture.releaseNonNull(), textureDescriptor(GPUTextureFormat::Bgra8unormSRGB), m_device);
+    return GPUTexture::create(texture.releaseNonNull(), textureDescriptor(GPUTextureFormat::Bgra8unorm, m_width, m_height), m_device);
 }
 
 RefPtr<GPUTexture> XRGPUSubImage::depthStencilTexture()
@@ -91,7 +90,7 @@ RefPtr<GPUTexture> XRGPUSubImage::depthStencilTexture()
     if (!texture)
         return nullptr;
 
-    return GPUTexture::create(texture.releaseNonNull(), textureDescriptor(GPUTextureFormat::Depth24plus), m_device);
+    return GPUTexture::create(texture.releaseNonNull(), textureDescriptor(GPUTextureFormat::Depth24plus, m_width, m_height), m_device);
 }
 
 RefPtr<GPUTexture> XRGPUSubImage::motionVectorTexture()

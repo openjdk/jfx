@@ -65,6 +65,7 @@ public:
         size_t index() const { return m_index; }
         size_t argumentCountIncludingThis() const { return m_argumentCountIncludingThis; }
         bool callerIsEntryFrame() const { return m_callerIsEntryFrame; }
+        bool isWasmFrame() const { return m_isWasmFrame; }
         CallFrame* callerFrame() const { return m_callerFrame; }
         EntryFrame* entryFrame() const { return m_entryFrame; }
         CalleeBits callee() const { return m_callee; }
@@ -87,6 +88,7 @@ public:
             ASSERT(isNativeCalleeFrame());
             return m_wasmFunctionIndexOrName;
         }
+        size_t wasmFunctionIndex() const;
 
         JS_EXPORT_PRIVATE String functionName() const;
         JS_EXPORT_PRIVATE String sourceURL() const;
@@ -134,6 +136,7 @@ public:
         bool m_callerIsEntryFrame : 1 { false };
         bool m_isWasmFrame : 1 { false };
         Wasm::IndexOrName m_wasmFunctionIndexOrName { };
+        size_t m_wasmFunctionIndex { 0 };
 
         friend class StackVisitor;
     };

@@ -178,8 +178,9 @@ inline SpeculatedType typeFilterFor(UseKind useKind)
     case SetObjectUse:
         return SpecSetObject;
     case MapIteratorObjectUse:
+        return SpecMapIteratorObject;
     case SetIteratorObjectUse:
-        return SpecObjectOther;
+        return SpecSetIteratorObject;
     case WeakMapObjectUse:
         return SpecWeakMapObject;
     case WeakSetObjectUse:
@@ -244,6 +245,17 @@ inline bool isDouble(UseKind kind)
     case DoubleRepUse:
     case DoubleRepRealUse:
     case DoubleRepAnyIntUse:
+        return true;
+    default:
+        return false;
+    }
+}
+
+inline bool isInt32(UseKind kind)
+{
+    switch (kind) {
+    case Int32Use:
+    case KnownInt32Use:
         return true;
     default:
         return false;

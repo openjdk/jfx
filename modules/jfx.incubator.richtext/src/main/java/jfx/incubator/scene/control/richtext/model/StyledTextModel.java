@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
 import com.sun.jfx.incubator.scene.control.richtext.StyledTextModelHelper;
 import com.sun.jfx.incubator.scene.control.richtext.UndoableChange;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
+import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.Marker;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -208,6 +209,16 @@ public abstract class StyledTextModel {
     protected abstract void insertParagraph(int index, Supplier<Region> generator);
 
     /**
+     * Applies paragraph styles in the specified paragraph.
+     *
+     * @param index the paragraph index
+     * @param paragraphAttrs the paragraph attributes
+     * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
+     * @since 26
+     */
+    protected abstract void applyParagraphStyle(int index, StyleAttributeMap paragraphAttrs);
+
+    /**
      * Replaces the paragraph styles in the specified paragraph.
      *
      * @param index the paragraph index
@@ -288,6 +299,7 @@ public abstract class StyledTextModel {
     // TODO should it hold WeakReferences?
     private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList();
     private final HashMap<FHKey,FHPriority> handlers = new HashMap<>(2);
+    private LineEnding lineEnding = LineEnding.system();
     private final Markers markers = new Markers();
     private final UndoableChange head = UndoableChange.createHead();
     private final ReadOnlyBooleanWrapper undoable = new ReadOnlyBooleanWrapper(this, "undoable", false);
@@ -473,9 +485,11 @@ public abstract class StyledTextModel {
      * @see #replace(StyleResolver, TextPos, TextPos, StyledInput)
      */
     public final void export(TextPos start, TextPos end, StyledOutput out) throws IOException {
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         int cmp = start.compareTo(end);
         if (cmp > 0) {
-            // make sure start < end
             TextPos p = start;
             start = end;
             end = p;
@@ -571,7 +585,7 @@ public abstract class StyledTextModel {
             return TextPos.ZERO;
         } else if (ix < ct) {
             len = getParagraphLength(ix);
-            if (p.offset() < len) {
+            if (p.offset() <= len) {
                 return p;
             }
         } else {
@@ -672,7 +686,9 @@ public abstract class StyledTextModel {
     private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo, boolean isEdit) {
         checkWritable();
 
-        // TODO clamp to document boundaries
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         int cmp = start.compareTo(end);
         if (cmp > 0) {
             TextPos p = start;
@@ -765,6 +781,9 @@ public abstract class StyledTextModel {
     public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
         checkWritable();
 
+        // clamp and normalize
+        start = clamp(start);
+        end = clamp(end);
         if (start.compareTo(end) > 0) {
             TextPos p = start;
             start = end;
@@ -791,10 +810,20 @@ public abstract class StyledTextModel {
         boolean allowUndo = isUndoRedoEnabled();
         UndoableChange ch = allowUndo ? UndoableChange.create(this, evStart, evEnd, false) : null;
 
-        if (pa != null) {
-            // set paragraph attributes
+        // paragraph attributes
+        if (pa == null) {
+            if (!mergeAttributes) {
+                for (int ix = start.index(); ix <= end.index(); ix++) {
+                    setParagraphStyle(ix, pa);
+                }
+            }
+        } else {
             for (int ix = start.index(); ix <= end.index(); ix++) {
-                setParagraphStyle(ix, pa);
+                if (mergeAttributes) {
+                    applyParagraphStyle(ix, pa);
+                } else {
+                    setParagraphStyle(ix, pa);
+                }
             }
         }
 
@@ -1059,5 +1088,27 @@ public abstract class StyledTextModel {
         if (!isWritable()) {
             throw new UnsupportedOperationException("the model is not writeable");
         }
+    }
+
+    /**
+     * Specifies the line ending characters.
+     *
+     * @return the line ending value
+     * @defaultValue {@link LineEnding#system()}
+     * @since 26
+     */
+    public final LineEnding getLineEnding() {
+        return lineEnding;
+    }
+
+    /**
+     * Sets the line ending characters.
+     * @param value the line ending value, cannot be null
+     * @throws NullPointerException if the value is null
+     * @since 26
+     */
+    public final void setLineEnding(LineEnding value) {
+        Objects.requireNonNull(value, "line ending must not be null");
+        lineEnding = value;
     }
 }

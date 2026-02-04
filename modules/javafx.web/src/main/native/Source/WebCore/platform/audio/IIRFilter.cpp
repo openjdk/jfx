@@ -1,6 +1,6 @@
 /*
  * Copyright 2016 The Chromium Authors. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "VectorMath.h"
 #include <algorithm>
 #include <complex>
+#include <numbers>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -145,7 +146,7 @@ void IIRFilter::getFrequencyResponse(unsigned length, std::span<const float> fre
             phaseResponse[k] = std::nanf("");
         } else {
             // zRecip = 1/z = exp(-j*frequency)
-            double omega = -piDouble * frequency[k];
+            double omega = -std::numbers::pi * frequency[k];
             auto zRecip = std::complex<double>(cos(omega), sin(omega));
 
             auto numerator = evaluatePolynomial(m_feedforward.span(), zRecip, m_feedforward.size() - 1);

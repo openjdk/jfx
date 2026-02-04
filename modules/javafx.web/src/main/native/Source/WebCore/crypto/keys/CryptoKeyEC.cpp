@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CRYPTO)
 
 #include "CryptoAlgorithmRegistry.h"
+#include "ExceptionOr.h"
 #include "JsonWebKey.h"
 #if HAVE(SWIFT_CPP_INTEROP)
 #include <pal/PALSwift.h>

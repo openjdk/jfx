@@ -116,7 +116,7 @@ static inline JSValue getOperand(CallFrame* callFrame, VirtualRegister operand) 
 
 #define LLINT_CHECK_EXCEPTION() do {                    \
         doExceptionFuzzingIfEnabled(globalObject, throwScope, "LLIntSlowPaths", pc);    \
-        if (UNLIKELY(throwScope.exception())) {         \
+        if (throwScope.exception()) [[unlikely]] {      \
             pc = returnToThrow(vm);                   \
             LLINT_END_IMPL();                           \
         }                                               \
@@ -175,7 +175,7 @@ static inline JSValue getOperand(CallFrame* callFrame, VirtualRegister operand) 
 #define LLINT_CALL_CHECK_EXCEPTION(globalObject) do {               \
         JSGlobalObject* __cce_globalObject = (globalObject);                                 \
         doExceptionFuzzingIfEnabled(__cce_globalObject, throwScope, "LLIntSlowPaths/call", nullptr); \
-        if (UNLIKELY(throwScope.exception()))                           \
+        if (throwScope.exception()) [[unlikely]]                           \
             LLINT_CALL_END_IMPL(nullptr, callToThrow(vm).code().taggedPtr(), ExceptionHandlerPtrTag); \
     } while (false)
 
@@ -233,7 +233,7 @@ extern "C" UGPRPair SYSV_ABI llint_trace_operand(CallFrame* callFrame, const JSI
     LLINT_BEGIN();
     dataLogF(
         "<%p> %p / %p: executing bc#%zu, op#%u: Trace(%d): %d\n",
-        &Thread::current(),
+        &Thread::currentSingleton(),
         callFrame->codeBlock(),
         globalObject,
         static_cast<intptr_t>(callFrame->codeBlock()->bytecodeOffset(pc)),
@@ -259,7 +259,7 @@ extern "C" UGPRPair SYSV_ABI llint_trace_value(CallFrame* callFrame, const JSIns
     u.asValue = JSValue::encode(value);
     dataLogF(
         "<%p> %p / %p: executing bc#%zu, op#%u: Trace(%d): %d: %08x:%08x: %s\n",
-        &Thread::current(),
+        &Thread::currentSingleton(),
         callFrame->codeBlock(),
         callFrame,
         static_cast<intptr_t>(callFrame->codeBlock()->bytecodeOffset(pc)),
@@ -278,7 +278,7 @@ LLINT_SLOW_PATH_DECL(trace_prologue)
         LLINT_END_IMPL();
 
     CodeBlock* codeBlock = callFrame->codeBlock();
-    dataLogF("<%p> %p / %p: in prologue of ", &Thread::current(), codeBlock, callFrame);
+    dataLogF("<%p> %p / %p: in prologue of ", &Thread::currentSingleton(), codeBlock, callFrame);
     dataLog(codeBlock, "\n");
     LLINT_END_IMPL();
 }
@@ -291,7 +291,7 @@ static void traceFunctionPrologue(CallFrame* callFrame, const char* comment, Cod
     JSFunction* callee = jsCast<JSFunction*>(callFrame->jsCallee());
     FunctionExecutable* executable = callee->jsExecutable();
     CodeBlock* codeBlock = executable->codeBlockFor(kind);
-    dataLogF("<%p> %p / %p: in %s of ", &Thread::current(), codeBlock, callFrame, comment);
+    dataLogF("<%p> %p / %p: in %s of ", &Thread::currentSingleton(), codeBlock, callFrame, comment);
     dataLog(codeBlock);
     dataLogF(" function %p, executable %p; numVars = %u, numParameters = %u, numCalleeLocals = %u, caller = %p.\n",
         callee, executable, codeBlock->numVars(), codeBlock->numParameters(), codeBlock->numCalleeLocals(), callFrame->callerFrame());
@@ -299,25 +299,25 @@ static void traceFunctionPrologue(CallFrame* callFrame, const char* comment, Cod
 
 LLINT_SLOW_PATH_DECL(trace_prologue_function_for_call)
 {
-    traceFunctionPrologue(callFrame, "call prologue", CodeForCall);
+    traceFunctionPrologue(callFrame, "call prologue", CodeSpecializationKind::CodeForCall);
     LLINT_END_IMPL();
 }
 
 LLINT_SLOW_PATH_DECL(trace_prologue_function_for_construct)
 {
-    traceFunctionPrologue(callFrame, "construct prologue", CodeForConstruct);
+    traceFunctionPrologue(callFrame, "construct prologue", CodeSpecializationKind::CodeForConstruct);
     LLINT_END_IMPL();
 }
 
 LLINT_SLOW_PATH_DECL(trace_arityCheck_for_call)
 {
-    traceFunctionPrologue(callFrame, "call arity check", CodeForCall);
+    traceFunctionPrologue(callFrame, "call arity check", CodeSpecializationKind::CodeForCall);
     LLINT_END_IMPL();
 }
 
 LLINT_SLOW_PATH_DECL(trace_arityCheck_for_construct)
 {
-    traceFunctionPrologue(callFrame, "construct arity check", CodeForConstruct);
+    traceFunctionPrologue(callFrame, "construct arity check", CodeSpecializationKind::CodeForConstruct);
     LLINT_END_IMPL();
 }
 
@@ -329,7 +329,7 @@ LLINT_SLOW_PATH_DECL(trace)
     CodeBlock* codeBlock = callFrame->codeBlock();
     OpcodeID opcodeID = pc->opcodeID();
     dataLogF("<%p> %p / %p: executing bc#%zu, %s, pc = %p\n",
-            &Thread::current(),
+            &Thread::currentSingleton(),
             codeBlock,
             callFrame,
             static_cast<intptr_t>(codeBlock->bytecodeOffset(pc)),
@@ -432,7 +432,7 @@ static UGPRPair entryOSR(CodeBlock* codeBlock, const char *name, EntryKind kind)
     if (kind == Prologue)
         LLINT_RETURN_TWO(codeBlock->jitCode()->executableAddress(), nullptr);
     ASSERT(kind == ArityCheck);
-    LLINT_RETURN_TWO(codeBlock->jitCode()->addressForCall(MustCheckArity).taggedPtr(), nullptr);
+    LLINT_RETURN_TWO(codeBlock->jitCode()->addressForCall(ArityCheckMode::MustCheckArity).taggedPtr(), nullptr);
 }
 #else // ENABLE(JIT)
 static UGPRPair entryOSR(CodeBlock* codeBlock, const char*, EntryKind)
@@ -483,7 +483,7 @@ LLINT_SLOW_PATH_DECL(loop_osr)
             *codeBlock, ": Entered loop_osr with executeCounter = ",
             codeBlock->llintExecuteCounter());
 
-    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing() && codeBlock->loopHintsAreEligibleForFuzzingEarlyReturn())) {
+    if (Options::returnEarlyFromInfiniteLoopsForFuzzing() && codeBlock->loopHintsAreEligibleForFuzzingEarlyReturn()) [[unlikely]] {
         uintptr_t* ptr = vm.getLoopHintExecutionCounter(pc);
         *ptr += codeBlock->llintExecuteCounter().m_activeThreshold;
         if (*ptr >= Options::earlyReturnFromInfiniteLoopsLimit())
@@ -567,9 +567,9 @@ LLINT_SLOW_PATH_DECL(stack_check)
     // throw the StackOverflowError unconditionally.
 #if ENABLE(C_LOOP)
     Register* topOfFrame = callFrame->topOfFrame();
-    if (LIKELY(topOfFrame < reinterpret_cast<Register*>(callFrame))) {
+    if (topOfFrame < reinterpret_cast<Register*>(callFrame)) [[likely]] {
         ASSERT(!vm.interpreter.cloopStack().containsAddress(topOfFrame));
-        if (LIKELY(vm.ensureStackCapacityFor(topOfFrame)))
+        if (vm.ensureStackCapacityFor(topOfFrame)) [[likely]]
             LLINT_RETURN_TWO(pc, 0);
     }
 #endif
@@ -591,7 +591,7 @@ extern "C" UGPRPair SYSV_ABI llint_default_call(CallFrame* calleeFrame, CallLink
     calleeFrame->setCodeBlock(nullptr);
     void* callTarget = linkFor(vm, owner, calleeFrame, callLinkInfo);
     ensureStillAliveHere(owner);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return encodeResult(callTarget, std::bit_cast<void*>(&vm));
     return encodeResult(callTarget, nullptr);
 }
@@ -607,7 +607,7 @@ extern "C" UGPRPair SYSV_ABI llint_virtual_call(CallFrame* calleeFrame, CallLink
     calleeFrame->setCodeBlock(nullptr);
     void* callTarget = virtualForWithFunction(vm, owner, calleeFrame, callLinkInfo, calleeAsFunctionCellIgnored);
     ensureStillAliveHere(owner);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return encodeResult(callTarget, std::bit_cast<void*>(&vm));
     return encodeResult(callTarget, nullptr);
 }
@@ -622,11 +622,11 @@ extern "C" UGPRPair SYSV_ABI llint_polymorphic_call(CallFrame* calleeFrame, Call
     JSCell* calleeAsFunctionCell;
     calleeFrame->setCodeBlock(nullptr);
     void* callTarget = virtualForWithFunction(vm, owner, calleeFrame, callLinkInfo, calleeAsFunctionCell);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return encodeResult(callTarget, std::bit_cast<void*>(&vm));
     linkPolymorphicCall(vm, owner, calleeFrame, *callLinkInfo, CallVariant(calleeAsFunctionCell));
     ensureStillAliveHere(owner);
-    if (UNLIKELY(scope.exception()))
+    if (scope.exception()) [[unlikely]]
         return encodeResult(callTarget, std::bit_cast<void*>(&vm));
     return encodeResult(callTarget, nullptr);
 }
@@ -655,10 +655,10 @@ LLINT_SLOW_PATH_DECL(slow_path_new_array_with_size)
     LLINT_RETURN(constructArrayWithSizeQuirk(globalObject, &metadata.m_arrayAllocationProfile, getOperand(callFrame, bytecode.m_length)));
 }
 
-LLINT_SLOW_PATH_DECL(slow_path_new_regexp)
+LLINT_SLOW_PATH_DECL(slow_path_new_reg_exp)
 {
     LLINT_BEGIN();
-    auto bytecode = pc->as<OpNewRegexp>();
+    auto bytecode = pc->as<OpNewRegExp>();
     RegExp* regExp = jsCast<RegExp*>(getOperand(callFrame, bytecode.m_regexp));
     static constexpr bool areLegacyFeaturesEnabled = true;
     LLINT_RETURN(RegExpObject::create(vm, globalObject->regExpStructure(), regExp, areLegacyFeaturesEnabled));
@@ -923,7 +923,7 @@ static JSValue performLLIntGetByID(BytecodeIndex bytecodeIndex, CodeBlock* codeB
                 metadata.defaultMode.cachedOffset = slot.cachedOffset();
                 vm.writeBarrier(codeBlock);
             }
-        } else if (UNLIKELY(metadata.hitCountForLLIntCaching && slot.isValue())) {
+        } else if (metadata.hitCountForLLIntCaching && slot.isValue()) [[unlikely]] {
             ASSERT(slot.slotBase() != baseValue);
 
             if (!(--metadata.hitCountForLLIntCaching))
@@ -1192,13 +1192,13 @@ static ALWAYS_INLINE JSValue getByVal(VM& vm, JSGlobalObject* globalObject, Code
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (LIKELY(baseValue.isCell() && subscript.isString())) {
+    if (baseValue.isCell() && subscript.isString()) [[likely]] {
         Structure& structure = *baseValue.asCell()->structure();
         if (JSCell::canUseFastGetOwnProperty(structure)) {
             auto existingAtomString = asString(subscript)->toExistingAtomString(globalObject);
             RETURN_IF_EXCEPTION(scope, JSValue());
-            if (!existingAtomString.isNull()) {
-                if (JSValue result = baseValue.asCell()->fastGetOwnProperty(vm, structure, existingAtomString.impl()))
+            if (existingAtomString) {
+                if (JSValue result = baseValue.asCell()->fastGetOwnProperty(vm, structure, existingAtomString.data))
                     return result;
             }
         }
@@ -1240,7 +1240,7 @@ static ALWAYS_INLINE JSValue getByVal(VM& vm, JSGlobalObject* globalObject, Code
         ArrayProfile* arrayProfile = &metadata.m_arrayProfile;
         arrayProfile->setOutOfBounds();
         if (subscript == jsNumber(-1)) {
-            if (auto* array = jsDynamicCast<JSArray*>(baseValue.asCell()); LIKELY(array && array->definitelyNegativeOneMiss()))
+            if (auto* array = jsDynamicCast<JSArray*>(baseValue.asCell()); array && array->definitelyNegativeOneMiss()) [[likely]]
                 return jsUndefined();
         }
     }
@@ -1259,25 +1259,6 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_val)
     auto bytecode = pc->as<OpGetByVal>();
     JSValue baseValue = getOperand(callFrame, bytecode.m_base);
     JSValue subscript = getOperand(callFrame, bytecode.m_property);
-
-    if (subscript.isString() || subscript.isSymbol()) {
-        auto& metadata = bytecode.metadata(codeBlock);
-        if (metadata.m_seenIdentifiers.count() <= Options::getByValICMaxNumberOfIdentifiers()) {
-            const UniquedStringImpl* impl = nullptr;
-            if (subscript.isSymbol())
-                impl = &jsCast<Symbol*>(subscript)->privateName().uid();
-            else {
-                JSString* string = asString(subscript);
-                if (auto* maybeUID = string->tryGetValueImpl()) {
-                    if (maybeUID->isAtom())
-                        impl = static_cast<const UniquedStringImpl*>(maybeUID);
-                }
-            }
-
-            metadata.m_seenIdentifiers.observe(impl);
-        }
-    }
-
     LLINT_RETURN_PROFILED(getByVal(vm, globalObject, codeBlock, baseValue, subscript, bytecode));
 }
 
@@ -1387,7 +1368,7 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_val_direct)
 
     // Don't put to an object if toString threw an exception.
     auto property = subscript.toPropertyKey(globalObject);
-    if (UNLIKELY(throwScope.exception()))
+    if (throwScope.exception()) [[unlikely]]
         LLINT_END();
 
     if (std::optional<uint32_t> index = parseIndex(property))
@@ -1879,13 +1860,22 @@ LLINT_SLOW_PATH_DECL(slow_path_switch_imm)
     LLINT_BEGIN();
     auto bytecode = pc->as<OpSwitchImm>();
     JSValue scrutinee = getOperand(callFrame, bytecode.m_scrutinee);
-    ASSERT(scrutinee.isDouble());
-    double value = scrutinee.asDouble();
+    double value = scrutinee.asNumber();
     int32_t intValue = static_cast<int32_t>(value);
     auto& unlinkedTable = codeBlock->unlinkedSwitchJumpTable(bytecode.m_tableIndex);
-    if (value == intValue)
+    if (value == intValue) [[likely]] {
+        if (!unlinkedTable.isList()) {
         JUMP_TO(unlinkedTable.offsetForValue(intValue));
-    else
+            LLINT_END();
+        }
+
+        for (unsigned i = 0; i < unlinkedTable.m_branchOffsets.size(); i += 2) {
+            if (unlinkedTable.m_branchOffsets[i] == intValue) {
+                JUMP_TO(unlinkedTable.m_branchOffsets[i + 1]);
+                LLINT_END();
+            }
+        }
+    }
         JUMP_TO(unlinkedTable.defaultOffset());
     LLINT_END();
 }
@@ -1900,7 +1890,19 @@ LLINT_SLOW_PATH_DECL(slow_path_switch_char)
     ASSERT(string->length() == 1);
     auto& unlinkedTable = codeBlock->unlinkedSwitchJumpTable(bytecode.m_tableIndex);
     auto str = string->value(globalObject);
-    JUMP_TO(unlinkedTable.offsetForValue(str.data[0]));
+    int32_t intValue = str.data[0];
+    if (!unlinkedTable.isList()) {
+        JUMP_TO(unlinkedTable.offsetForValue(intValue));
+    LLINT_END();
+    }
+
+    for (unsigned i = 0; i < unlinkedTable.m_branchOffsets.size(); i += 2) {
+        if (unlinkedTable.m_branchOffsets[i] == intValue) {
+            JUMP_TO(unlinkedTable.m_branchOffsets[i + 1]);
+            LLINT_END();
+        }
+    }
+    JUMP_TO(unlinkedTable.defaultOffset());
     LLINT_END();
 }
 
@@ -2032,7 +2034,7 @@ static UGPRPair handleHostCall(CallFrame* calleeFrame, JSValue callee, CodeSpeci
     calleeFrame->setCodeBlock(nullptr);
     calleeFrame->clearReturnPC();
 
-    if (kind == CodeForCall) {
+    if (kind == CodeSpecializationKind::CodeForCall) {
         auto callData = JSC::getCallData(callee);
         ASSERT(callData.type != CallData::Type::JS);
 
@@ -2051,7 +2053,7 @@ static UGPRPair handleHostCall(CallFrame* calleeFrame, JSValue callee, CodeSpeci
         LLINT_CALL_THROW(globalObject, createNotAFunctionError(globalObject, callee));
     }
 
-    ASSERT(kind == CodeForConstruct);
+    ASSERT(kind == CodeSpecializationKind::CodeForConstruct);
 
     auto constructData = JSC::getConstructData(callee);
     ASSERT(constructData.type != CallData::Type::JS);
@@ -2102,7 +2104,7 @@ static inline UGPRPair setUpCall(CallFrame* calleeFrame, CodeSpecializationKind 
     // FIXME: Support wasm IC.
     // https://bugs.webkit.org/show_bug.cgi?id=220339
     if (executable->isHostFunction())
-        codePtr = executable->entrypointFor(kind, MustCheckArity);
+        codePtr = executable->entrypointFor(kind, ArityCheckMode::MustCheckArity);
     else {
         FunctionExecutable* functionExecutable = static_cast<FunctionExecutable*>(executable);
         if (!isCall(kind) && functionExecutable->constructAbility() == ConstructAbility::CannotConstruct)
@@ -2117,9 +2119,9 @@ static inline UGPRPair setUpCall(CallFrame* calleeFrame, CodeSpecializationKind 
 
         ArityCheckMode arity;
         if (calleeFrame->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters()))
-            arity = MustCheckArity;
+            arity = ArityCheckMode::MustCheckArity;
         else
-            arity = ArityCheckNotRequired;
+            arity = ArityCheckMode::ArityCheckNotRequired;
         codePtr = functionExecutable->entrypointFor(kind, arity);
     }
 
@@ -2238,27 +2240,27 @@ static inline UGPRPair varargsSetup(CallFrame* callFrame, const JSInstruction* p
 
 LLINT_SLOW_PATH_DECL(slow_path_call_varargs)
 {
-    return varargsSetup<OpCallVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeForCall);
+    return varargsSetup<OpCallVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeSpecializationKind::CodeForCall);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_tail_call_varargs)
 {
-    return varargsSetup<OpTailCallVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeForCall);
+    return varargsSetup<OpTailCallVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeSpecializationKind::CodeForCall);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_tail_call_forward_arguments)
 {
-    return varargsSetup<OpTailCallForwardArguments, SetArgumentsWith::CurrentArguments>(callFrame, pc, CodeForCall);
+    return varargsSetup<OpTailCallForwardArguments, SetArgumentsWith::CurrentArguments>(callFrame, pc, CodeSpecializationKind::CodeForCall);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_construct_varargs)
 {
-    return varargsSetup<OpConstructVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeForConstruct);
+    return varargsSetup<OpConstructVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeSpecializationKind::CodeForConstruct);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_super_construct_varargs)
 {
-    return varargsSetup<OpSuperConstructVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeForConstruct);
+    return varargsSetup<OpSuperConstructVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeSpecializationKind::CodeForConstruct);
 }
 
 static inline UGPRPair commonCallDirectEval(CallFrame* callFrame, const JSInstruction* pc, MacroAssemblerCodeRef<JSEntryPtrTag> returnPoint)
@@ -2278,10 +2280,10 @@ static inline UGPRPair commonCallDirectEval(CallFrame* callFrame, const JSInstru
 
     JSScope* callerScopeChain = jsCast<JSScope*>(getOperand(callFrame, bytecode.m_scope));
     JSValue thisValue = getOperand(callFrame, bytecode.m_thisValue);
-    JSValue result = eval(calleeFrame, thisValue, callerScopeChain, bytecode.m_lexicallyScopedFeatures);
+    JSValue result = eval(calleeFrame, thisValue, callerScopeChain, codeBlock, BytecodeIndex(codeBlock->bytecodeOffset(pc)), bytecode.m_lexicallyScopedFeatures);
     LLINT_CALL_CHECK_EXCEPTION(globalObject);
     if (!result)
-        RELEASE_AND_RETURN(throwScope, setUpCall(calleeFrame, CodeForCall, calleeAsValue));
+        RELEASE_AND_RETURN(throwScope, setUpCall(calleeFrame, CodeSpecializationKind::CodeForCall, calleeAsValue));
 
     vm.encodedHostCallReturnValue = JSValue::encode(result);
     AssertNoGC assertNoGC;
@@ -2338,7 +2340,8 @@ LLINT_SLOW_PATH_DECL(slow_path_debug)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpDebug>();
-    vm.interpreter.debug(callFrame, bytecode.m_debugHookType);
+    auto data = getOperand(callFrame, bytecode.m_data);
+    vm.interpreter.debug(callFrame, bytecode.m_debugHookType, data);
 
     LLINT_END();
 }
@@ -2502,7 +2505,7 @@ static void throwArityCheckStackOverflowError(JSGlobalObject* globalObject, Thro
     JSObject* error = createStackOverflowError(globalObject);
     throwException(globalObject, scope, error);
 #if LLINT_TRACING
-    if (UNLIKELY(Options::traceLLIntSlowPath()))
+    if (Options::traceLLIntSlowPath()) [[unlikely]]
         dataLog("Throwing exception ", JSValue(scope.exception()), ".\n");
 #endif
 }
@@ -2528,7 +2531,7 @@ static ALWAYS_INLINE int arityCheckFor(VM& vm, CallFrame* callFrame, CodeBlock* 
 
     Register* newStack = callFrame->registers() - WTF::roundUpToMultipleOf(stackAlignmentRegisters(), padding);
 
-    if (UNLIKELY(!vm.ensureStackCapacityFor(newStack)))
+    if (!vm.ensureStackCapacityFor(newStack)) [[unlikely]]
         return -1;
     return padding;
 }
@@ -2537,7 +2540,7 @@ LLINT_SLOW_PATH_DECL(slow_path_arityCheck)
 {
     LLINT_BEGIN();
     int slotsToAdd = arityCheckFor(vm, callFrame, codeBlock);
-    if (UNLIKELY(slotsToAdd < 0)) {
+    if (slotsToAdd < 0) [[unlikely]] {
         callFrame->convertToStackOverflowFrame(vm, codeBlock);
         SlowPathFrameTracer tracer(vm, callFrame);
         ErrorHandlingScope errorScope(vm);

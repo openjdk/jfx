@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,12 +24,14 @@
 
 #include "config.h"
 #include "LibWebRTCRtpTransformableFrame.h"
+#include "LibWebRTCUtils.h"
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+#include <webrtc/api/frame_transformer_factory.h>
 #include <webrtc/api/frame_transformer_interface.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
@@ -38,9 +40,9 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpTransformableFrame);
 
-LibWebRTCRtpTransformableFrame::LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudioSenderFrame)
+LibWebRTCRtpTransformableFrame::LibWebRTCRtpTransformableFrame(std::unique_ptr<webrtc::TransformableFrameInterface>&& frame, bool isAudio)
     : m_rtcFrame(WTFMove(frame))
-    , m_isAudioSenderFrame(isAudioSenderFrame)
+    , m_isAudio(isAudio)
 {
 }
 
@@ -85,14 +87,16 @@ RTCEncodedAudioFrameMetadata LibWebRTCRtpTransformableFrame::audioMetadata() con
         return { };
 
     Vector<uint32_t> cssrcs;
-    if (!m_isAudioSenderFrame) {
+    std::optional<uint16_t> sequenceNumber;
+    if (m_rtcFrame->GetDirection() == webrtc::TransformableFrameInterface::Direction::kReceiver) {
         auto* audioFrame = static_cast<webrtc::TransformableAudioFrameInterface*>(m_rtcFrame.get());
         auto contributingSources = audioFrame->GetContributingSources();
         cssrcs = Vector<uint32_t>(contributingSources.size(), [&](size_t cptr) {
             return contributingSources[cptr];
         });
+        sequenceNumber = audioFrame->SequenceNumber();
     }
-    return { m_rtcFrame->GetSsrc(), WTFMove(cssrcs) };
+    return { m_rtcFrame->GetSsrc(), m_rtcFrame->GetPayloadType(), WTFMove(cssrcs), sequenceNumber, m_rtcFrame->GetTimestamp(), fromStdString(m_rtcFrame->GetMimeType()) };
 }
 
 RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() const
@@ -110,7 +114,69 @@ RTCEncodedVideoFrameMetadata LibWebRTCRtpTransformableFrame::videoMetadata() con
     for (auto value : metadata.GetFrameDependencies())
         dependencies.append(value);
 
-    return { frameId, WTFMove(dependencies), metadata.GetWidth(), metadata.GetHeight(), metadata.GetSpatialIndex(), metadata.GetTemporalIndex(), m_rtcFrame->GetSsrc() };
+    Vector<uint32_t> cssrcs;
+    if (m_rtcFrame->GetDirection() == webrtc::TransformableFrameInterface::Direction::kReceiver) {
+        auto rtcCssrcs = metadata.GetCsrcs();
+        cssrcs = Vector<uint32_t>(rtcCssrcs.size(), [&](size_t cptr) {
+            return rtcCssrcs[cptr];
+        });
+    }
+
+    std::optional<int64_t> timestamp;
+    if (auto presentationTimestamp = m_rtcFrame->GetPresentationTimestamp())
+        timestamp = presentationTimestamp->us();
+    return { frameId, WTFMove(dependencies), metadata.GetWidth(), metadata.GetHeight(), metadata.GetSpatialIndex(), metadata.GetTemporalIndex(), m_rtcFrame->GetSsrc(), m_rtcFrame->GetPayloadType(), WTFMove(cssrcs), timestamp, m_rtcFrame->GetTimestamp(), fromStdString(m_rtcFrame->GetMimeType()) };
+}
+
+Ref<RTCRtpTransformableFrame> LibWebRTCRtpTransformableFrame::clone()
+{
+    std::unique_ptr<webrtc::TransformableFrameInterface> rtcClone;
+    if (m_isAudio)
+        rtcClone = webrtc::CloneAudioFrame(static_cast<webrtc::TransformableAudioFrameInterface*>(m_rtcFrame.get()));
+    else
+        rtcClone = webrtc::CloneVideoFrame(static_cast<webrtc::TransformableVideoFrameInterface*>(m_rtcFrame.get()));
+    return adoptRef(*new LibWebRTCRtpTransformableFrame(WTFMove(rtcClone), m_isAudio));
+}
+
+void LibWebRTCRtpTransformableFrame::setOptions(const RTCEncodedAudioFrameMetadata& metadata)
+{
+    ASSERT(m_isAudio);
+    // FIXME: Support more metadata.
+    if (metadata.rtpTimestamp)
+        m_rtcFrame->SetRTPTimestamp(*metadata.rtpTimestamp);
+}
+
+void LibWebRTCRtpTransformableFrame::setOptions(const RTCEncodedVideoFrameMetadata& newMetadata)
+{
+    ASSERT(!m_isAudio);
+    auto rtcMetadata = static_cast<webrtc::TransformableVideoFrameInterface*>(m_rtcFrame.get())->Metadata();
+
+    if (newMetadata.frameId)
+        rtcMetadata.SetFrameId(*newMetadata.frameId);
+    if (newMetadata.dependencies)
+        rtcMetadata.SetFrameDependencies({ newMetadata.dependencies->span().data(), newMetadata.dependencies->size() });
+    if (newMetadata.width)
+        rtcMetadata.SetWidth(*newMetadata.width);
+    if (newMetadata.height)
+        rtcMetadata.SetHeight(*newMetadata.height);
+    if (newMetadata.spatialIndex)
+        rtcMetadata.SetSpatialIndex(*newMetadata.spatialIndex);
+    if (newMetadata.temporalIndex)
+        rtcMetadata.SetTemporalIndex(*newMetadata.temporalIndex);
+    if (newMetadata.synchronizationSource)
+        rtcMetadata.SetSsrc(*newMetadata.synchronizationSource);
+    // FIXME: newMetadata.payloadType
+    if (newMetadata.contributingSources) {
+        std::vector<uint32_t> csrcs(newMetadata.contributingSources->size());
+        for (auto& csrc : *newMetadata.contributingSources)
+            csrcs.push_back(csrc);
+        rtcMetadata.SetCsrcs(WTFMove(csrcs));
+    }
+    if (newMetadata.rtpTimestamp)
+        m_rtcFrame->SetRTPTimestamp(*newMetadata.rtpTimestamp);
+    // FIXME: newMetadata.mimeType
+
+    static_cast<webrtc::TransformableVideoFrameInterface*>(m_rtcFrame.get())->SetMetadata(WTFMove(rtcMetadata));
 }
 
 } // namespace WebCore

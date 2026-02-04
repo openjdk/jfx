@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-using SFrameCompatibilityPrefixBuffer = std::variant<std::span<const uint8_t>, Vector<uint8_t>>;
+using SFrameCompatibilityPrefixBuffer = Variant<std::span<const uint8_t>, Vector<uint8_t>>;
 
 size_t computeH264PrefixOffset(std::span<const uint8_t>);
 SFrameCompatibilityPrefixBuffer computeH264PrefixBuffer(std::span<const uint8_t>);

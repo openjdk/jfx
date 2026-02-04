@@ -29,15 +29,16 @@
 #if ENABLE(THREADED_ANIMATION_RESOLUTION)
 
 #include "AnimationEffect.h"
+#include "AnimationUtilities.h"
 #include "BlendingKeyframes.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSPropertyNames.h"
 #include "Document.h"
 #include "FilterOperations.h"
 #include "FloatRect.h"
 #include "KeyframeEffect.h"
 #include "LayoutSize.h"
-#include "OffsetRotation.h"
+#include "StyleInterpolation.h"
+#include "StyleOffsetRotate.h"
 #include "StyleOriginatedAnimation.h"
 #include "WebAnimation.h"
 #include "WebAnimationTypes.h"
@@ -81,7 +82,7 @@ AcceleratedEffect::Keyframe AcceleratedEffect::Keyframe::clone() const
     auto clonedAnimatedProperties = m_animatedProperties;
 
     RefPtr<TimingFunction> clonedTimingFunction;
-    if (auto* srcTimingFunction = m_timingFunction.get())
+    if (RefPtr srcTimingFunction = m_timingFunction)
         clonedTimingFunction = srcTimingFunction->clone();
 
     return {
@@ -98,7 +99,7 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AcceleratedEffect);
 static AcceleratedEffectProperty acceleratedPropertyFromCSSProperty(AnimatableCSSProperty property, const Settings& settings)
 {
 #if ASSERT_ENABLED
-    ASSERT(CSSPropertyAnimation::animationOfPropertyIsAccelerated(property, settings));
+    ASSERT(Style::Interpolation::isAccelerated(property, settings));
 #else
     UNUSED_PARAM(settings);
 #endif
@@ -171,11 +172,11 @@ static CSSPropertyID cssPropertyFromAcceleratedProperty(AcceleratedEffectPropert
 
 RefPtr<AcceleratedEffect> AcceleratedEffect::create(const KeyframeEffect& effect, const IntRect& borderBoxRect, const AcceleratedEffectValues& baseValues, OptionSet<AcceleratedEffectProperty>& disallowedProperties)
 {
-    auto* acceleratedEffect = new AcceleratedEffect(effect, borderBoxRect, disallowedProperties);
+    RefPtr acceleratedEffect = adoptRef(new AcceleratedEffect(effect, borderBoxRect, disallowedProperties));
     acceleratedEffect->validateFilters(baseValues, disallowedProperties);
     if (acceleratedEffect->animatedProperties().isEmpty())
         return nullptr;
-    return adoptRef(*acceleratedEffect);
+    return acceleratedEffect;
 }
 
 Ref<AcceleratedEffect> AcceleratedEffect::create(AnimationEffectTiming timing, Vector<Keyframe>&& keyframes, WebAnimationType type, CompositeOperation composite, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<WebCore::AcceleratedEffectProperty>&& animatedProperties, bool paused, double playbackRate, std::optional<WebAnimationTime> startTime, std::optional<WebAnimationTime> holdTime)
@@ -190,7 +191,7 @@ Ref<AcceleratedEffect> AcceleratedEffect::clone() const
     });
 
     RefPtr<TimingFunction> clonedDefaultKeyframeTimingFunction;
-    if (auto* defaultKeyframeTimingFunction = m_defaultKeyframeTimingFunction.get())
+    if (RefPtr defaultKeyframeTimingFunction = m_defaultKeyframeTimingFunction)
         clonedDefaultKeyframeTimingFunction = defaultKeyframeTimingFunction->clone();
 
     auto clonedAnimatedProperties = m_animatedProperties;
@@ -210,7 +211,7 @@ AcceleratedEffect::AcceleratedEffect(const KeyframeEffect& effect, const IntRect
     m_animationType = effect.animationType();
 
     ASSERT(effect.animation());
-    if (auto* animation = effect.animation()) {
+    if (RefPtr animation = effect.animation()) {
         m_paused = animation->playState() == WebAnimation::PlayState::Paused;
         m_playbackRate = animation->playbackRate();
         ASSERT(animation->holdTime() || animation->startTime());
@@ -228,7 +229,7 @@ AcceleratedEffect::AcceleratedEffect(const KeyframeEffect& effect, const IntRect
     for (auto& srcKeyframe : effect.blendingKeyframes()) {
         OptionSet<AcceleratedEffectProperty> animatedProperties;
         for (auto animatedCSSProperty : srcKeyframe.properties()) {
-            if (CSSPropertyAnimation::animationOfPropertyIsAccelerated(animatedCSSProperty, settings)) {
+            if (Style::Interpolation::isAccelerated(animatedCSSProperty, settings)) {
                 auto acceleratedProperty = acceleratedPropertyFromCSSProperty(animatedCSSProperty, settings);
                 if (disallowedProperties.contains(acceleratedProperty))
                     continue;
@@ -333,11 +334,11 @@ static void blend(AcceleratedEffectProperty property, AcceleratedEffectValues& o
         output.offsetPosition = blend(from.offsetPosition, to.offsetPosition, blendingContext);
         break;
     case AcceleratedEffectProperty::OffsetRotate:
-        if (!from.offsetRotate.canBlend(to.offsetRotate)) {
+        if (!Style::canBlend(from.offsetRotate, to.offsetRotate)) {
             blendingContext.isDiscrete = true;
             blendingContext.normalizeProgress();
         }
-        output.offsetRotate = from.offsetRotate.blend(to.offsetRotate, blendingContext);
+        output.offsetRotate = Style::blend(from.offsetRotate, to.offsetRotate, blendingContext);
         break;
     case AcceleratedEffectProperty::Filter:
         output.filter = to.filter.blend(from.filter, blendingContext);
@@ -416,12 +417,12 @@ void AcceleratedEffect::apply(WebAnimationTime currentTime, AcceleratedEffectVal
             blend(animatedProperty, values, startKeyframeValues, endKeyframeValues, context, bounds);
         };
 
-        KeyframeInterpolation::RequiresBlendingForAccumulativeIterationCallback requiresBlendingForAccumulativeIterationCallback = [&]() {
+        KeyframeInterpolation::RequiresInterpolationForAccumulativeIterationCallback requiresInterpolationForAccumulativeIterationCallback = [&]() {
             // FIXME: implement accumulation.
             return false;
         };
 
-        interpolateKeyframes(animatedProperty, interval, progress, *resolvedTiming.currentIteration, m_timing.iterationDuration, resolvedTiming.before, composeProperty, accumulateProperty, interpolateProperty, requiresBlendingForAccumulativeIterationCallback);
+        interpolateKeyframes(animatedProperty, interval, progress, *resolvedTiming.currentIteration, m_timing.iterationDuration, resolvedTiming.before, composeProperty, accumulateProperty, interpolateProperty, requiresInterpolationForAccumulativeIterationCallback);
     }
 }
 
@@ -477,7 +478,7 @@ void AcceleratedEffect::validateFilters(const AcceleratedEffectValues& baseValue
         // from the other filter operations and it will be applied to the layer as the last filer.
         ASSERT(longestFilterList);
         for (auto& operation : *longestFilterList) {
-            if (operation->type() == FilterOperation::Type::DropShadow && operation != longestFilterList->last())
+            if ((operation->type() == FilterOperation::Type::DropShadow || operation->type() == FilterOperation::Type::DropShadowWithStyleColor) && operation != longestFilterList->last())
                 return false;
         }
 
@@ -535,7 +536,7 @@ const TimingFunction* AcceleratedEffect::timingFunctionForKeyframe(const Keyfram
 bool AcceleratedEffect::isPropertyAdditiveOrCumulative(KeyframeInterpolation::Property property) const
 {
     return WTF::switchOn(property, [&](const AcceleratedEffectProperty acceleratedProperty) {
-        return CSSPropertyAnimation::isPropertyAdditiveOrCumulative(cssPropertyFromAcceleratedProperty(acceleratedProperty));
+        return Style::Interpolation::isAdditiveOrCumulative(cssPropertyFromAcceleratedProperty(acceleratedProperty));
     }, [] (auto&) {
         ASSERT_NOT_REACHED();
         return false;

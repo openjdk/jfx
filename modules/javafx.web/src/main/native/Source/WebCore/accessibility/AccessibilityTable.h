@@ -38,13 +38,13 @@ class HTMLTableElement;
 
 class AccessibilityTable : public AccessibilityRenderObject {
 public:
-    static Ref<AccessibilityTable> create(AXID, RenderObject&);
-    static Ref<AccessibilityTable> create(AXID, Node&);
+    static Ref<AccessibilityTable> create(AXID, RenderObject&, AXObjectCache&, bool isAriaTable = false);
+    static Ref<AccessibilityTable> create(AXID, Node&, AXObjectCache&, bool isAriaTable = false);
     virtual ~AccessibilityTable();
 
     void init() final;
 
-    virtual bool isAriaTable() const { return false; }
+    bool isAriaTable() const { return m_isAriaTable; }
 
     void addChildren() final;
     void clearChildren() final;
@@ -73,6 +73,8 @@ public:
     bool isExposable() const final { return m_isExposable; }
     void recomputeIsExposable();
 
+    bool isMultiSelectable() const final;
+
     int axColumnCount() const final;
     int axRowCount() const final;
 
@@ -82,8 +84,8 @@ public:
     void setCellSlotsDirty();
 
 protected:
-    explicit AccessibilityTable(AXID, RenderObject&);
-    explicit AccessibilityTable(AXID, Node&);
+    explicit AccessibilityTable(AXID, RenderObject&, AXObjectCache&, bool isAriaTable = false);
+    explicit AccessibilityTable(AXID, Node&, AXObjectCache&, bool isAriaTable = false);
 
     AccessibilityChildrenVector m_rows;
     AccessibilityChildrenVector m_columns;
@@ -93,6 +95,7 @@ protected:
 
     RefPtr<AccessibilityObject> m_headerContainer;
     bool m_isExposable;
+    bool m_isAriaTable;
 
     // Used in type checking function is<AccessibilityTable>.
     bool isAccessibilityTableInstance() const final { return true; }
@@ -103,7 +106,7 @@ protected:
 
 private:
     AccessibilityRole determineAccessibilityRole() final;
-    virtual bool computeIsTableExposableThroughAccessibility() const { return isDataTable(); }
+    virtual bool computeIsTableExposableThroughAccessibility() const { return m_isAriaTable || isDataTable(); }
     void labelText(Vector<AccessibilityText>&) const final;
     HTMLTableElement* tableElement() const;
 

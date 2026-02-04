@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -225,8 +225,8 @@ public class InterpolatorTest {
     }
 
     @Test
-    public void testSPLINE_Concave() {
-        Interpolator i = Interpolator.SPLINE(0.0, 0.5, 0.5, 1.0);
+    public void testSpline_Concave() {
+        Interpolator i = Interpolator.ofSpline(0.0, 0.5, 0.5, 1.0);
         assertEquals(1.0, i.interpolate(1.0, 2.0, 0.0), EPSILON);
         assertEquals(1.5573742287206063, i.interpolate(1.0, 2.0, 0.2), EPSILON);
         assertEquals(1.8400223953585164, i.interpolate(1.0, 2.0, 0.5), EPSILON);
@@ -235,8 +235,8 @@ public class InterpolatorTest {
     }
 
     @Test
-    public void testSPLINE_Convex() {
-        Interpolator i = Interpolator.SPLINE(0.5, 0.0, 1.0, 0.5);
+    public void testSpline_Convex() {
+        Interpolator i = Interpolator.ofSpline(0.5, 0.0, 1.0, 0.5);
         assertEquals(1.0, i.interpolate(1.0, 2.0, 0.0), EPSILON);
         assertEquals(1.0257826739185762, i.interpolate(1.0, 2.0, 0.2), EPSILON);
         assertEquals(1.1599776046414838, i.interpolate(1.0, 2.0, 0.5), EPSILON);
@@ -245,8 +245,8 @@ public class InterpolatorTest {
     }
 
     @Test
-    public void testSPLINE_WithInflectionPoint() {
-        Interpolator i = Interpolator.SPLINE(0.0, 1.0, 1.0, 0.0);
+    public void testSpline_WithInflectionPoint() {
+        Interpolator i = Interpolator.ofSpline(0.0, 1.0, 1.0, 0.0);
 
         assertEquals(1.0, i.interpolate(1.0, 2.0, 0.0), EPSILON);
         assertEquals(1.4614221762502215, i.interpolate(1.0, 2.0, 0.2), EPSILON);
@@ -256,8 +256,8 @@ public class InterpolatorTest {
     }
 
     @Test
-    public void testSPLINE_Linear() {
-        Interpolator i = Interpolator.SPLINE(1/3, 1/3, 2/3, 2/3);
+    public void testSpline_Linear() {
+        Interpolator i = Interpolator.ofSpline(1/3, 1/3, 2/3, 2/3);
 
         assertEquals(1.0, i.interpolate(1.0, 2.0, 0.0), EPSILON);
         assertEquals(1.2, i.interpolate(1.0, 2.0, 0.2), EPSILON);
@@ -267,11 +267,11 @@ public class InterpolatorTest {
     }
 
     @Test
-    public void testTANGENT_Linear() {
+    public void testTangent_Linear() {
         SimpleLongProperty property = new SimpleLongProperty();
 
-        Interpolator i0 = Interpolator.TANGENT(Duration.seconds(1), 20);
-        Interpolator i1 = Interpolator.TANGENT(Duration.seconds(1), 40);
+        Interpolator i0 = Interpolator.ofTangent(Duration.seconds(1), 20);
+        Interpolator i1 = Interpolator.ofTangent(Duration.seconds(1), 40);
 
         InterpolationInterval interval = InterpolationInterval.create(new KeyValue(property, 60L, i1),
                 TickCalculation.fromDuration(Duration.seconds(3)),

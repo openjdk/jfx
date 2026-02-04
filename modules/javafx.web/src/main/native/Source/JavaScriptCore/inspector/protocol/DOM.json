@@ -237,7 +237,9 @@
                 { "name": "colorSpace", "$ref": "VideoColorSpace" },
                 { "name": "framerate", "type": "number", "description": "The nominal frame rate of video track in frames per second." },
                 { "name": "height", "type": "integer", "description": "The native height of the video track in CSS pixels" },
-                { "name": "width", "type": "integer", "description": "The native width of the video track in CSS pixels" }
+                { "name": "width", "type": "integer", "description": "The native width of the video track in CSS pixels" },
+                { "name": "spatialVideoMetadata", "$ref": "SpatialVideoMetadata", "optional": true },
+                { "name": "videoProjectionMetadata", "$ref": "VideoProjectionMetadata", "optional": true }
             ]
         },
         {
@@ -259,6 +261,32 @@
                 { "name": "displayCompositedVideoFrames", "type": "integer", "description": "The number of frames of the total which were composited by the display." },
                 { "name": "droppedVideoFrames", "type": "integer", "description": "The number of frames of the total which were dropped without being displayed." },
                 { "name": "totalVideoFrames", "type": "integer", "description": "The total number of frames enqueued for display by the media element." }
+            ]
+        },
+        {
+            "id": "SpatialVideoMetadata",
+            "type": "object",
+            "description": "A structure containing metadata describing spatial video properties.",
+            "properties": [
+                { "name": "width", "type": "number" },
+                { "name": "height", "type": "number" },
+                { "name": "horizontalFOVDegrees", "type": "number", "description": "The horizontal field-of-view measurement, in degrees" },
+                { "name": "baseline", "type": "number", "description": "The distance between the centers of the lenses in a camera system, in micrometers" },
+                { "name": "disparityAdjustment", "type": "number", "description": "The relative shift of the left and right eye images, as a percentage." }
+            ]
+        },
+        {
+            "id": "VideoProjectionMetadataKind",
+            "type": "string",
+            "enum": ["unknown", "equirectangular", "half-equirectangular", "equi-angular-cubemap", "parametric", "pyramid", "apple-immersive-video" ],
+            "description": "Video Projection Metadata Kind."
+        },
+        {
+            "id": "VideoProjectionMetadata",
+            "type": "object",
+            "description": "A structure containing metadata describing video projections.",
+            "properties": [
+                { "name": "kind", "$ref": "VideoProjectionMetadataKind", "description": "The kind of video projection." }
             ]
         },
         {
@@ -284,6 +312,26 @@
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get children for." },
                 { "name": "depth", "type": "integer", "optional": true, "description": "The maximum depth at which children should be retrieved, defaults to 1. Use -1 for the entire subtree or provide an integer larger than 0." }
+            ]
+        },
+        {
+            "name": "requestAssignedSlot",
+            "description": "Requests the <code>HTMLSlotElement</code> that the node with the given id is assigned to.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId" }
+            ],
+            "returns": [
+                { "name": "slotElementId", "$ref": "NodeId", "optional": true, "description": "Not provided if the given node is not assigned to a <code>HTMLSlotElement</code>." }
+            ]
+        },
+        {
+            "name": "requestAssignedNodes",
+            "description": "Requests the list of assigned nodes for the <code>HTMLSlotElement</code> with the given id.",
+            "parameters": [
+                { "name": "slotElementId", "$ref": "NodeId" }
+            ],
+            "returns": [
+                { "name": "assignedNodeIds", "type": "array", "items": { "$ref": "NodeId" } }
             ]
         },
         {

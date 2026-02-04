@@ -25,6 +25,7 @@
 
 #include "AffineTransform.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "LegacyRenderSVGResource.h"
 #include "PathTraversalState.h"

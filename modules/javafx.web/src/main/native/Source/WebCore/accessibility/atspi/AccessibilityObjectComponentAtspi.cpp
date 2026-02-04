@@ -158,7 +158,7 @@ float AccessibilityObjectAtspi::opacity() const
         return 1;
 
     if (auto* renderer = m_coreObject->renderer())
-        return renderer->style().opacity();
+        return renderer->style().opacity().value.value;
 
     return 1;
 }

@@ -32,6 +32,7 @@
 #include "SuperSampler.h"
 #include "Yarr.h"
 #include "YarrCanonicalize.h"
+#include <numeric>
 #include <wtf/BitVector.h>
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/CheckedArithmetic.h>
@@ -136,7 +137,7 @@ public:
     {
         size_t size = DisjunctionContext::allocationSize(disjunction->m_frameSize);
         auto* newAllocatorPool = allocatorPool->ensureCapacity(size);
-        if (UNLIKELY(!newAllocatorPool))
+        if (!newAllocatorPool) [[unlikely]]
             return nullptr;
         allocatorPool = newAllocatorPool;
         return new (allocatorPool->alloc(size)) DisjunctionContext();
@@ -254,7 +255,7 @@ public:
 
         size_t size = Checked<size_t>(ParenthesesDisjunctionContext::allocationSize(numNestedSubpatterns, numDuplicateNamedGroups)) + DisjunctionContext::allocationSize(disjunction->m_frameSize);
         auto* newAllocatorPool = allocatorPool->ensureCapacity(size);
-        if (UNLIKELY(!newAllocatorPool))
+        if (!newAllocatorPool) [[unlikely]]
             return nullptr;
         allocatorPool = newAllocatorPool;
         return new (allocatorPool->alloc(size)) ParenthesesDisjunctionContext(pattern, output, term, numDuplicateNamedGroups, duplicateNamedCaptureGroups);
@@ -499,7 +500,7 @@ public:
             size_t high = matches.size() - 1;
 
             while (low <= high) {
-                size_t mid = low + (high - low) / 2;
+                size_t mid = std::midpoint(low, high);
                 int diff = ch - matches[mid];
                 if (!diff)
                     return true;
@@ -528,7 +529,7 @@ public:
             size_t high = ranges.size() - 1;
 
             while (low <= high) {
-                size_t mid = low + (high - low) / 2;
+                size_t mid = std::midpoint(low, high);
                 int rangeBeginDiff = ch - ranges[mid].begin;
                 if (rangeBeginDiff >= 0 && ch <= ranges[mid].end)
                     return true;
@@ -993,7 +994,7 @@ public:
         switch (term.atom.quantityType) {
         case QuantifierType::NonGreedy:
             backTrack->matchAmount = 0;
-            FALLTHROUGH;
+            [[fallthrough]];
 
         case QuantifierType::FixedCount:
             backTrack->begin = input.getPos();
@@ -1235,7 +1236,7 @@ public:
             return true;
         case QuantifierType::NonGreedy:
             ASSERT(backTrack->begin != notFound);
-            FALLTHROUGH;
+            [[fallthrough]];
         case QuantifierType::FixedCount:
             break;
         }
@@ -1256,7 +1257,7 @@ public:
                 context->term -= term.atom.parenthesesWidth;
                 return false;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         case QuantifierType::NonGreedy:
             if (backTrack->begin == notFound) {
                 backTrack->begin = input.getPos();
@@ -1273,7 +1274,7 @@ public:
                 context->term -= term.atom.parenthesesWidth;
                 return true;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         case QuantifierType::FixedCount:
             break;
         }
@@ -1421,7 +1422,7 @@ public:
             while (backTrack->matchAmount < minimumMatchCount) {
                 // Try to do a match, and it it succeeds, add it to the list.
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 fixedMatchResult = matchDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (fixedMatchResult == JSRegExpResult::Match)
@@ -1452,7 +1453,7 @@ public:
         case QuantifierType::Greedy: {
             while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 JSRegExpResult result = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (result == JSRegExpResult::Match)
@@ -1514,7 +1515,7 @@ public:
             while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 // Try to do a match, and it it succeeds, add it to the list.
                 context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 result = matchDisjunction(disjunctionBody, context->getDisjunctionContext());
 
@@ -1548,7 +1549,7 @@ public:
             if (result == JSRegExpResult::Match) {
                 while (backTrack->matchAmount < term.atom.quantityMaxCount) {
                     ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                    if (UNLIKELY(!context))
+                    if (!context) [[unlikely]]
                         return JSRegExpResult::ErrorNoMemory;
                     JSRegExpResult parenthesesResult = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                     if (parenthesesResult == JSRegExpResult::Match)
@@ -1595,7 +1596,7 @@ public:
             // If we've not reached the limit, try to add one more match.
             if (backTrack->matchAmount < term.atom.quantityMaxCount) {
                 ParenthesesDisjunctionContext* context = allocParenthesesDisjunctionContext(disjunctionBody, output, term);
-                if (UNLIKELY(!context))
+                if (!context) [[unlikely]]
                     return JSRegExpResult::ErrorNoMemory;
                 JSRegExpResult result = matchNonZeroDisjunction(disjunctionBody, context->getDisjunctionContext());
                 if (result == JSRegExpResult::Match) {
@@ -1724,7 +1725,7 @@ public:
 
     JSRegExpResult matchDisjunction(ByteDisjunction* disjunction, DisjunctionContext* context, bool btrack = false)
     {
-        if (UNLIKELY(!isSafeToRecurse()))
+        if (!isSafeToRecurse()) [[unlikely]]
             return JSRegExpResult::ErrorNoMemory;
 
         if (!--remainingMatchCount) {
@@ -1874,7 +1875,7 @@ public:
         case ByteTerm::Type::PatternCasedCharacterNonGreedy:
             // Case insensitive matching of unicode characters is handled as Type::CharacterClass.
             ASSERT(!isEitherUnicodeCompilation() || U_IS_BMP(currentTerm().atom.patternCharacter));
-            FALLTHROUGH;
+            [[fallthrough]];
         case ByteTerm::Type::PatternCharacterNonGreedy: {
             DUMP_CURR_CHAR();
             BackTrackInfoPatternCharacter* backTrack = reinterpret_cast<BackTrackInfoPatternCharacter*>(context->frame + currentTerm().frameLocation);
@@ -2210,7 +2211,7 @@ public:
         RELEASE_ASSERT(allocatorPool);
 
         DisjunctionContext* context = allocDisjunctionContext(pattern->m_body.get());
-        if (UNLIKELY(!context))
+        if (!context) [[unlikely]]
             return offsetNoMatch;
 
         dataLogLnIf(verbose, "  Interpret input: ", input, "\n  Matching");
@@ -2278,7 +2279,7 @@ public:
 
     std::unique_ptr<BytecodePattern> compile(BumpPointerAllocator* allocator, ConcurrentJSLock* lock, ErrorCode& errorCode)
     {
-        if (UNLIKELY(!isSafeToRecurse())) {
+        if (!isSafeToRecurse()) [[unlikely]] {
             errorCode = ErrorCode::TooManyDisjunctions;
             return nullptr;
         }
@@ -2479,7 +2480,7 @@ public:
         unsigned frameLocation = m_bodyDisjunction->terms[beginTerm].frameLocation;
 
         if (!m_bodyDisjunction->terms[beginTerm].alternative.next)
-            m_bodyDisjunction->terms.remove(beginTerm);
+            m_bodyDisjunction->terms.removeAt(beginTerm);
         else {
             while (m_bodyDisjunction->terms[beginTerm].alternative.next) {
                 beginTerm += m_bodyDisjunction->terms[beginTerm].alternative.next;
@@ -2666,7 +2667,7 @@ public:
 
     std::optional<ErrorCode> WARN_UNUSED_RETURN emitDisjunction(PatternDisjunction* disjunction, CheckedUint32 inputCountAlreadyChecked, unsigned parenthesesInputCountAlreadyChecked, MatchDirection matchDirection = Forward)
     {
-        if (UNLIKELY(!isSafeToRecurse()))
+        if (!isSafeToRecurse()) [[unlikely]]
             return ErrorCode::TooManyDisjunctions;
 
         for (unsigned alt = 0; alt < disjunction->m_alternatives.size(); ++alt) {
@@ -3205,17 +3206,17 @@ unsigned interpret(BytecodePattern* bytecode, StringView input, unsigned start, 
     SuperSamplerScope superSamplerScope(false);
     if (input.is8Bit())
         return Interpreter<LChar>(bytecode, output, input.span8(), start).interpret();
-    return Interpreter<UChar>(bytecode, output, input.span16(), start).interpret();
+    return Interpreter<char16_t>(bytecode, output, input.span16(), start).interpret();
 }
 
-// These should be the same for both UChar & LChar.
+// These should be the same for both char16_t & LChar.
 static_assert(sizeof(BackTrackInfoPatternCharacter) == (YarrStackSpaceForBackTrackInfoPatternCharacter * sizeof(uintptr_t)));
 static_assert(sizeof(BackTrackInfoCharacterClass) == (YarrStackSpaceForBackTrackInfoCharacterClass * sizeof(uintptr_t)));
 static_assert(sizeof(BackTrackInfoBackReference) == (YarrStackSpaceForBackTrackInfoBackReference * sizeof(uintptr_t)));
 static_assert(sizeof(BackTrackInfoAlternative) == (YarrStackSpaceForBackTrackInfoAlternative * sizeof(uintptr_t)));
 static_assert(sizeof(BackTrackInfoParentheticalAssertion) == (YarrStackSpaceForBackTrackInfoParentheticalAssertion * sizeof(uintptr_t)));
 static_assert(sizeof(BackTrackInfoParenthesesOnce) == (YarrStackSpaceForBackTrackInfoParenthesesOnce * sizeof(uintptr_t)));
-static_assert(sizeof(Interpreter<UChar>::BackTrackInfoParentheses) <= (YarrStackSpaceForBackTrackInfoParentheses * sizeof(uintptr_t)));
+static_assert(sizeof(Interpreter<char16_t>::BackTrackInfoParentheses) <= (YarrStackSpaceForBackTrackInfoParentheses * sizeof(uintptr_t)));
 
 
 } }

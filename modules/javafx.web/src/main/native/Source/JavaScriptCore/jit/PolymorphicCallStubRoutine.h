@@ -55,7 +55,7 @@ public:
 
     void unlinkOrUpgradeImpl(VM&, CodeBlock*, CodeBlock*);
 
-    void clear();
+    void unlinkForcefully();
 
     PolymorphicCallStubRoutine* owner();
 
@@ -94,7 +94,7 @@ public:
     bool hasEdges() const;
     CallEdgeList edges() const;
 
-    void clearCallNodesFor(CallLinkInfo*);
+    void unlinkForcefully();
 
     template<typename Functor>
     void forEachDependentCell(const Functor& functor) const

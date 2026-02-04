@@ -36,6 +36,7 @@
 #include "RetrieveRecordsOptions.h"
 #include "SWServerRegistration.h"
 #include "WebCorePersistentCoders.h"
+#include <algorithm>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/persistence/PersistentCoders.h>
 
@@ -210,7 +211,7 @@ void BackgroundFetch::handleStoreResult(BackgroundFetchStore::StoreResult result
 
 void BackgroundFetch::recordIsCompleted()
 {
-    if (anyOf(m_records, [](auto& record) { return !record->isCompleted(); }))
+    if (std::ranges::any_of(m_records, [](auto& record) { return !record->isCompleted(); }))
         return;
     updateBackgroundFetchStatus(BackgroundFetchResult::Success, BackgroundFetchFailureReason::EmptyString);
 }
@@ -512,7 +513,7 @@ RefPtr<BackgroundFetch> BackgroundFetch::createFromStore(std::span<const uint8_t
     if (!registrationKeyScope)
         return nullptr;
 
-    auto* registration = server.getRegistration({ WTFMove(*registrationKeyOrigin), WTFMove(*registrationKeyScope) });
+    RefPtr registration = server.getRegistration({ WTFMove(*registrationKeyOrigin), WTFMove(*registrationKeyScope) });
     if (!registration) {
         RELEASE_LOG_ERROR(ServiceWorker, "BackgroundFetch::createFromStore missing registration");
         return nullptr;
