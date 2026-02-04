@@ -5927,7 +5927,16 @@ void LocalFrameView::adjustPageHeightDeprecated(float *newBottom, float oldTop, 
 float LocalFrameView::documentToAbsoluteScaleFactor(std::optional<float> usedZoom) const
 {
     // If usedZoom is passed, it already factors in pageZoomFactor().
+#if CPU(X86_64)
+    // FIXME(rdar://165780260): Remove when this optimizer issue is resolved.
+    // Clang's Intel optimizer requires us to help it figure out `value_or` to
+    // avoid a performance regression.
+    if (usedZoom.has_value()) [[unlikely]]
+        return usedZoom.value() * m_frame->frameScaleFactor();
+    return m_frame->pageZoomFactor() * m_frame->frameScaleFactor();
+#else
     return usedZoom.value_or(m_frame->pageZoomFactor()) * m_frame->frameScaleFactor();
+#endif
 }
 
 float LocalFrameView::absoluteToDocumentScaleFactor(std::optional<float> usedZoom) const

@@ -822,6 +822,11 @@ void RenderBlockFlow::layoutInFlowChildren(RelayoutChildren relayoutChildren, La
         }
 }
 
+static inline bool isSkippedContentRootOrSkippedContent(const RenderBlockFlow& blockFlow)
+{
+    return isSkippedContentRoot(blockFlow) || blockFlow.isSkippedContent();
+}
+
 void RenderBlockFlow::layoutBlockChildren(RelayoutChildren relayoutChildren, LayoutUnit& maxFloatLogicalBottom)
 {
     ASSERT(firstChild());
@@ -896,7 +901,7 @@ void RenderBlockFlow::layoutBlockChildren(RelayoutChildren relayoutChildren, Lay
                         continue;
                     if (block->avoidsFloats() && !block->shrinkToAvoidFloats())
                         continue;
-                    if (block->containsFloat(child))
+                    if (isSkippedContentRootOrSkippedContent(*block) || block->containsFloat(child))
                         block->markAllDescendantsWithFloatsForLayout();
                 }
             };
@@ -2359,7 +2364,7 @@ bool RenderBlockFlow::subtreeContainsFloat(const RenderBox& renderer) const
     if (containsFloat(renderer))
         return true;
 
-    for (auto& blockFlow : childrenOfType<RenderBlockFlow>(*this)) {
+    for (auto& blockFlow : descendantsOfType<RenderBlockFlow>(*this)) {
         if (blockFlow.containsFloat(renderer))
             return true;
     }
@@ -3072,9 +3077,12 @@ void RenderBlockFlow::markAllDescendantsWithFloatsForLayout(RenderBox* floatToRe
     MarkingBehavior markParents = inLayout ? MarkOnlyThis : MarkContainingBlockChain;
     setChildNeedsLayout(markParents);
 
-    if (floatToRemove)
+    if (floatToRemove) {
+        if (isSkippedContentRootOrSkippedContent(*this))
+            clearNeedsLayout(HadSkippedLayout::Yes);
+        else
         removeFloatingBox(*floatToRemove);
-    else if (childrenInline())
+    } else if (childrenInline())
         return;
 
     // Iterate over our block children and mark them as needed.
@@ -3087,7 +3095,9 @@ void RenderBlockFlow::markAllDescendantsWithFloatsForLayout(RenderBox* floatToRe
                 block.setChildNeedsLayout(markParents);
             continue;
         }
-        if ((floatToRemove ? blockFlow->subtreeContainsFloat(*floatToRemove) : blockFlow->subtreeContainsFloats()) || blockFlow->shrinkToAvoidFloats())
+        auto shouldCheckSubtree = isSkippedContentRootOrSkippedContent(*blockFlow)
+            || (floatToRemove ? blockFlow->subtreeContainsFloat(*floatToRemove) : blockFlow->subtreeContainsFloats()) || blockFlow->shrinkToAvoidFloats();
+        if (shouldCheckSubtree)
             blockFlow->markAllDescendantsWithFloatsForLayout(floatToRemove, inLayout);
     }
 }
@@ -3101,7 +3111,7 @@ void RenderBlockFlow::markSiblingsWithFloatsForLayout(RenderBox* floatToRemove)
             CheckedPtr nextSiblingBlockFlow = dynamicDowncast<RenderBlockFlow>(*nextSibling);
             if (!nextSiblingBlockFlow)
                 continue;
-            auto shouldCheckSubtree = isSkippedContentRoot(*nextSiblingBlockFlow) || nextSiblingBlockFlow->isSkippedContent() || nextSiblingBlockFlow->containsFloat(floatBoxToRemove);
+            auto shouldCheckSubtree = isSkippedContentRootOrSkippedContent(*nextSiblingBlockFlow) || nextSiblingBlockFlow->containsFloat(floatBoxToRemove);
             if (shouldCheckSubtree)
                 nextSiblingBlockFlow->markAllDescendantsWithFloatsForLayout(&floatBoxToRemove);
         }

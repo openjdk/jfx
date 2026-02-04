@@ -40,10 +40,10 @@ static inline Wasm::TypeHash typeHash(const Wasm::TypeDefinition& typeDef)
     return Wasm::TypeHash { const_cast<Wasm::TypeDefinition&>(typeDef) };
 }
 
-WebAssemblyGCStructureTypeDependencies::WebAssemblyGCStructureTypeDependencies(const Wasm::TypeDefinition& unexpandedType)
+WebAssemblyGCStructureTypeDependencies::WebAssemblyGCStructureTypeDependencies(Ref<const Wasm::TypeDefinition>&& unexpandedType)
 {
     WorkList work;
-    work.append(unexpandedType.expand());
+    work.append(unexpandedType->expand());
     while (!work.isEmpty())
         process(work.takeLast(), work);
     m_typeDefinitions.add(typeHash(unexpandedType));
@@ -77,7 +77,7 @@ WebAssemblyGCStructure::WebAssemblyGCStructure(VM& vm, JSGlobalObject* globalObj
     : Structure(vm, StructureVariant::WebAssemblyGC, globalObject, typeInfo, classInfo)
     , m_rtt(WTFMove(rtt))
     , m_type(WTFMove(type))
-    , m_typeDependencies(WebAssemblyGCStructureTypeDependencies { unexpandedType.get() })
+    , m_typeDependencies(WebAssemblyGCStructureTypeDependencies { WTFMove(unexpandedType) })
 {
 }
 

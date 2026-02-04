@@ -67,7 +67,7 @@ struct NavigationAPIMethodTracker : public RefCounted<NavigationAPIMethodTracker
 
     bool finishedBeforeCommit { false };
     String key;
-    JSC::JSValue info;
+    JSValueInWrappedObject info;
     RefPtr<SerializedScriptValue> serializedState;
     RefPtr<NavigationHistoryEntry> committedToEntry;
     Ref<DeferredPromise> committedPromise;
@@ -166,7 +166,9 @@ public:
     RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
     void rejectFinishedPromise(NavigationAPIMethodTracker*);
-    NavigationAPIMethodTracker* upcomingTraverseMethodTracker(const String& key) const { return m_upcomingTraverseMethodTrackers.get(key); }
+    NavigationAPIMethodTracker* upcomingTraverseMethodTracker(const String& key) const;
+
+    void visitAdditionalChildren(JSC::AbstractSlotVisitor&);
 
     class AbortHandler : public RefCountedAndCanMakeWeakPtr<AbortHandler> {
     public:
@@ -202,11 +204,11 @@ private:
 
     RefPtr<NavigationAPIMethodTracker> maybeSetUpcomingNonTraversalTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue info, RefPtr<SerializedScriptValue>&&);
     RefPtr<NavigationAPIMethodTracker> addUpcomingTraverseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info);
-    void cleanupAPIMethodTracker(NavigationAPIMethodTracker*);
+    void cleanupAPIMethodTracker(NavigationAPIMethodTracker*) WTF_EXCLUDES_LOCK(m_apiMethodTrackersLock);
     void resolveFinishedPromise(NavigationAPIMethodTracker*);
     void rejectFinishedPromise(NavigationAPIMethodTracker*, const Exception&, JSC::JSValue exceptionObject);
     void abortOngoingNavigation(NavigateEvent&);
-    void promoteUpcomingAPIMethodTracker(const String& destinationKey);
+    void promoteUpcomingAPIMethodTracker(const String& destinationKey) WTF_EXCLUDES_LOCK(m_apiMethodTrackersLock);
     void notifyCommittedToEntry(NavigationAPIMethodTracker*, NavigationHistoryEntry*, NavigationNavigationType);
     Result apiMethodTrackerDerivedResult(const NavigationAPIMethodTracker&);
 
@@ -218,9 +220,10 @@ private:
     RefPtr<NavigateEvent> m_ongoingNavigateEvent;
     FocusDidChange m_focusChangedDuringOngoingNavigation { FocusDidChange::No };
     bool m_suppressNormalScrollRestorationDuringOngoingNavigation { false };
-    RefPtr<NavigationAPIMethodTracker> m_ongoingAPIMethodTracker;
-    RefPtr<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker;
-    HashMap<String, Ref<NavigationAPIMethodTracker>> m_upcomingTraverseMethodTrackers;
+    mutable Lock m_apiMethodTrackersLock;
+    RefPtr<NavigationAPIMethodTracker> m_ongoingAPIMethodTracker WTF_GUARDED_BY_LOCK(m_apiMethodTrackersLock);
+    RefPtr<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker WTF_GUARDED_BY_LOCK(m_apiMethodTrackersLock);
+    HashMap<String, Ref<NavigationAPIMethodTracker>> m_upcomingTraverseMethodTrackers WTF_GUARDED_BY_LOCK(m_apiMethodTrackersLock);
     WeakHashSet<AbortHandler> m_abortHandlers;
 };
 
