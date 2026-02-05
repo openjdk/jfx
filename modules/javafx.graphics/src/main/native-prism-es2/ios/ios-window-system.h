@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,12 @@
 */
 #import <jni.h>
 
+#ifndef jlong_to_ptr
 #define jlong_to_ptr(value) ((void*)((long)value))
+#endif
+#ifndef ptr_to_jlong
 #define ptr_to_jlong(value) (jlong)((long)(value))
+#endif
 
 void* createPixelFormat(jint* ivalues);
 void deletePixelFormat(void* pixelFormat);
