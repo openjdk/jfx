@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -626,7 +626,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
         return;
     haveIDs = 1;
 
-    assert(pthread_key_create(&GlassThreadDataKey, NULL) == 0);
+    int res = pthread_key_create(&GlassThreadDataKey, NULL);
+    assert(res == 0);
 
     jApplicationClass = (*env)->NewGlobalRef(env, jClass);
     jApplicationReportException = (*env)->GetStaticMethodID(env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
