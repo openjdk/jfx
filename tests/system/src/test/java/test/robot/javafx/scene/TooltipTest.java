@@ -51,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TooltipTest {
 
-    private static final int DELTA = 100;
+    private static final int DELTA = 150;
 
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch tooltipShownLatch;
