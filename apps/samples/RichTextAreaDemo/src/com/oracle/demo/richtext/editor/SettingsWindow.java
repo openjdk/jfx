@@ -69,11 +69,9 @@ public class SettingsWindow extends Stage {
         op.section("View");
         op.option("Content Padding:", insetsOption(Settings.contentPadding, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100));
 
-        Scene scene = new Scene(op);
+        Scene scene = new Scene(op, 700, 500);
 
         setScene(scene);
-        setWidth(700);
-        setHeight(500);
         setTitle("Settings");
         centerOnScreen();
     }

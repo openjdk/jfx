@@ -36,6 +36,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -47,6 +49,8 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.DurationConverter;
 import javafx.css.converter.InsetsConverter;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
@@ -302,6 +306,7 @@ public class RichTextArea extends Control {
     private SimpleObjectProperty<SideDecorator> rightDecorator;
     private ReadOnlyBooleanWrapper undoable;
     private ReadOnlyBooleanWrapper redoable;
+    private ReadOnlyObjectWrapper<Bounds> documentArea;
     // styleables
     private SimpleStyleableObjectProperty<Duration> caretBlinkPeriod;
     private SimpleStyleableObjectProperty<Insets> contentPadding;
@@ -321,6 +326,11 @@ public class RichTextArea extends Control {
             @Override
             public boolean getText(RichTextArea t, TextPos start, TextPos end, StringBuilder sb, int limit) {
                 return t.getText(start, end, sb, limit);
+            }
+
+            @Override
+            public void setDocumentArea(RichTextArea t, double minX, double minY, double width, double height) {
+                t.setDocumentArea(minX, minY, width, height);
             }
         });
     }
@@ -2549,6 +2559,41 @@ public class RichTextArea extends Control {
             return accessibilityHelper().caretOffset();
         default:
             return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    /**
+     * Provides the bounds to the document area in local coordinates.
+     * The bounds are determined by the skin, and may be {@code null}.
+     *
+     * @return the document area
+     * @defaultValue null
+     * @since 27
+     */
+    public final ReadOnlyObjectProperty<Bounds> documentAreaProperty() {
+        return documentAreaPropertyImpl().getReadOnlyProperty();
+    }
+
+    private final ReadOnlyObjectWrapper<Bounds> documentAreaPropertyImpl() {
+        if (documentArea == null) {
+            VFlow f = vflow();
+            Bounds v = (f == null) ? null : f.getDocumentArea();
+            documentArea = new ReadOnlyObjectWrapper<>(this, "documentArea", v);
+        }
+        return documentArea;
+    }
+
+    public final Bounds getDocumentArea() {
+        if (documentArea == null) {
+            return null;
+        }
+        return documentArea.get();
+    }
+
+    private final void setDocumentArea(double minX, double minY, double width, double height) {
+        if (documentArea != null) {
+            BoundingBox b = new BoundingBox(minX, minY, width, height);
+            documentAreaPropertyImpl().set(b);
         }
     }
 }

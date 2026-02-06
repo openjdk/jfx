@@ -41,6 +41,8 @@ import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventType;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
@@ -125,6 +127,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     private double unwrappedContentWidth;
     private double viewPortWidth;
     private double viewPortHeight;
+    private double vportH;
     private static final Text measurer = makeMeasurer();
     private static final VFlowCellContext context = new VFlowCellContext();
 
@@ -1557,18 +1560,17 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             return;
         }
 
-        double h;
         if (useContentHeight) {
-            h = contentPaddingTop + contentPaddingBottom + arrangementHeight;
+            vportH = contentPaddingTop + contentPaddingBottom + arrangementHeight;
         } else {
-            h = height - hsbHeight - padTop - padBottom;
+            vportH = height - hsbHeight - padTop - padBottom;
         }
 
         if (vsbVisible) {
-            RichUtils.layoutInArea(vscroll, width - padRight, padTop, vsbWidth, h);
+            RichUtils.layoutInArea(vscroll, width - padRight, padTop, vsbWidth, vportH);
         }
         if (hsbVisible) {
-            RichUtils.layoutInArea(hscroll, padLeft, h, width - padLeft - padRight, hsbHeight);
+            RichUtils.layoutInArea(hscroll, padLeft, vportH, width - padLeft - padRight, hsbHeight);
         }
 
         // gutters
@@ -1576,19 +1578,19 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             leftGutter.setVisible(false);
         } else {
             leftGutter.setVisible(true);
-            RichUtils.layoutInArea(leftGutter, padLeft, padTop, leftSide, h);
+            RichUtils.layoutInArea(leftGutter, padLeft, padTop, leftSide, vportH);
         }
 
         if (rightDecorator == null) {
             rightGutter.setVisible(false);
         } else {
             rightGutter.setVisible(true);
-            RichUtils.layoutInArea(rightGutter, width - rightSide - padRight, padTop, rightSide, h);
+            RichUtils.layoutInArea(rightGutter, width - rightSide - padRight, padTop, rightSide, vportH);
         }
 
-        RichUtils.layoutInArea(vport, leftSide + padLeft, padTop, viewPortWidth, h);
+        RichUtils.layoutInArea(vport, leftSide + padLeft, padTop, viewPortWidth, vportH);
         // vport is a child of content
-        RichUtils.layoutInArea(content, 0.0, 0.0, viewPortWidth, h);
+        RichUtils.layoutInArea(content, 0.0, 0.0, viewPortWidth, vportH);
 
         if (wrap) {
             double w = viewPortWidth;
@@ -1668,6 +1670,14 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 }
             }
         }
+
+        RichTextAreaHelper.setDocumentArea(control, leftSide + padLeft, padTop, viewPortWidth, vportH);
+    }
+
+    public Bounds getDocumentArea() {
+        double padLeft = snappedLeftInset();
+        double padTop = snappedTopInset();
+        return new BoundingBox(leftSide + padLeft, padTop, viewPortWidth, vportH);
     }
 
     interface ShapeGenerator {

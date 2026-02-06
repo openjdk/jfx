@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
@@ -112,6 +113,7 @@ public class Ruler extends BorderPane {
         editor.contentPaddingProperty().subscribe(this::update);
         editor.modelProperty().subscribe(this::update);
         editor.selectionProperty().subscribe(this::handleSelection);
+        editor.documentAreaProperty().subscribe(this::update);
 
         tickPane.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
         tickPane.addEventHandler(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
@@ -150,7 +152,15 @@ public class Ruler extends BorderPane {
         requestLayout();
     }
 
-    private List<Tick> createTicks(TabStopPolicy p) {
+    private List<Tick> ticks() {
+        if (ticks == null) {
+            ticks = createTicks();
+        }
+        return ticks;
+    }
+
+    private List<Tick> createTicks() {
+        TabStopPolicy p = policy.get();
         if (p == null) {
             return List.of();
         }
@@ -189,18 +199,24 @@ public class Ruler extends BorderPane {
 
     @Override
     protected void layoutChildren() {
+        // account for left/right decorators and content padding
+        double left = 0.0;
+        double right = 0.0;
+        Bounds b = editor.getDocumentArea();
+        if (b != null) {
+            left = b.getMinX();
+            right = editor.getWidth() - b.getMaxX();
+        }
         Insets m = editor.getContentPadding();
         if (m != null) {
-            m = new Insets(0, m.getRight(), 0, m.getLeft());
+            left += m.getLeft();
+            right += m.getRight();
         }
+        m = new Insets(0, right, 0, left);
         layoutInArea(tickPane, 0, 0, getWidth(), getHeight(), 0, m, true, true, HPos.CENTER, VPos.CENTER);
 
-        // TODO model!  watch for default tabs which should be a part of the model
-        if (ticks == null) {
-            TabStopPolicy p = policy.get();
-            ticks = createTicks(p);
-            tickPane.getChildren().setAll(ticks);
-        }
+        // TODO listen to default tab stop policy in the model
+        tickPane.getChildren().setAll(ticks());
     }
 
     private Tick findTabStop(MouseEvent ev) {
@@ -212,21 +228,6 @@ public class Ruler extends BorderPane {
             }
         }
         return null;
-    }
-
-    // returns true if the current tick should be removed
-    private boolean deduplicate() {
-        double pos = clickedStop.position;
-        for (Tick t : ticks) {
-            if (t != clickedStop) {
-                if (t.isTabStop()) {
-                    if (Math.abs(pos - t.position) < TOO_CLOSE) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
     }
 
     private void handleSelection(SelectionSegment sel) {
@@ -254,7 +255,6 @@ public class Ruler extends BorderPane {
         if (popup || ev.isPopupTrigger()) {
             return;
         }
-
         TabStopPolicy p = policy.get();
         if (p == null) {
             return;
@@ -266,13 +266,13 @@ public class Ruler extends BorderPane {
             double x = ev.getX();
             Tick t = createTabStop(new TabStop(x));
             tickPane.getChildren().add(t);
-            ticks.add(t);
+            ticks().add(t);
             modified = true;
         } else {
             boolean remove = (dragged && deduplicate()) | (!dragged);
             if (remove) {
                 tickPane.getChildren().remove(clickedStop);
-                ticks.remove(clickedStop);
+                ticks().remove(clickedStop);
                 modified = true;
             }
         }
@@ -289,6 +289,21 @@ public class Ruler extends BorderPane {
             }
         }
         ev.consume();
+    }
+
+    // returns true if the current tick should be removed
+    private boolean deduplicate() {
+        double pos = clickedStop.position;
+        for (Tick t : ticks()) {
+            if (t != clickedStop) {
+                if (t.isTabStop()) {
+                    if (Math.abs(pos - t.position) < TOO_CLOSE) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void handleMouseDragged(MouseEvent ev) {
@@ -341,7 +356,7 @@ public class Ruler extends BorderPane {
     private List<TabStop> toTabStops() {
         ArrayList<TabStop> rv = new ArrayList<>();
         // ticks cannot be null at this point
-        for (Tick t : ticks) {
+        for (Tick t : ticks()) {
             if (t.isTabStop()) {
                 TabStop ts = t.tabStop;
                 if (ts.getPosition() > 0.1) {
