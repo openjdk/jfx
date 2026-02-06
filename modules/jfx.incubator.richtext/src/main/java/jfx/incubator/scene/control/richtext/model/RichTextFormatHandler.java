@@ -337,15 +337,20 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             if (h != null) {
                                 Object v = attrs.get(a);
                                 if (h.isAllowed(v)) {
+                                    String id = h.getId();
+                                    String ss = h.write(v);
+                                    if(ss != null) {
+                                        ss = encode(ss);
+                                    }
+
                                     wr.write('{');
                                     if (forParagraph) {
                                         wr.write('!');
                                     }
-                                    wr.write(h.getId());
-                                    String ss = h.write(v);
+                                    wr.write(id);
                                     if (ss != null) {
                                         wr.write('|');
-                                        wr.write(encode(ss));
+                                        wr.write(ss);
                                     }
                                     wr.write('}');
                                 }

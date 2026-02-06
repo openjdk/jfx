@@ -55,12 +55,12 @@ public class Converters {
         return new StringConverter<Color>() {
             @Override
             public String toString(Color c) {
-                return toHexColor(c);
+                return c == null ? null : toHexColor(c);
             }
 
             @Override
             public Color fromString(String s) {
-                return parseHexColor(s);
+                return (s == null) ? null : parseHexColor(s);
             }
         };
     }
