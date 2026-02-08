@@ -376,6 +376,8 @@ public class Scene implements EventTarget {
 
         addEventFilter(MouseEvent.MOUSE_PRESSED, pressedHandler);
         addEventFilter(TouchEvent.TOUCH_PRESSED, pressedHandler);
+
+        context.colorSchemeProperty().addListener((_, _, newValue) -> markDirty(DirtyBits.DARK_SCHEME_DIRTY));
     }
 
     static {
@@ -900,6 +902,7 @@ public class Scene implements EventTarget {
         peer.setTKScenePaintListener(new ScenePeerPaintListener());
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         peer.setRoot(getRoot().getPeer());
+        peer.setDarkScheme(context.getColorScheme() == ColorScheme.DARK);
         peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
         NodeHelper.updatePeer(getEffectiveCamera());
         peer.setCamera((NGCamera) getEffectiveCamera().getPeer());
@@ -1196,10 +1199,11 @@ public class Scene implements EventTarget {
     /**
      * Defines the background fill of this {@code Scene}. Both a {@code null}
      * value meaning 'paint no background' and a {@link javafx.scene.paint.Paint}
-     * with transparency are supported. The default fill of the Scene is
-     * {@link Color#WHITE}, but it is more commonly the case that the initial
-     * color shown to users is the background fill of the
-     * {@link #rootProperty() root node} of the {@code Scene}, as it typically is
+     * with transparency are supported. The default fill of the {@code Scene} is
+     * {@link Color#WHITE} for a light {@linkplain Preferences#colorSchemeProperty() color scheme},
+     * or {@link Color#BLACK} for a dark color scheme, but it is more commonly the
+     * case that the initial color shown to users is the background fill of the
+     * {@linkplain #rootProperty() root node} of the {@code Scene}, as it typically is
      * stretched to take up all available space in the {@code Scene}. The
      * root node of the {@code Scene} is given the CSS style class 'root', and
      * the default user agent stylesheets that ship with JavaFX (presently
@@ -2469,6 +2473,7 @@ public class Scene implements EventTarget {
     }
 
     private enum DirtyBits {
+        DARK_SCHEME_DIRTY,
         FILL_DIRTY,
         ROOT_DIRTY,
         CAMERA_DIRTY,
@@ -2604,6 +2609,10 @@ public class Scene implements EventTarget {
             inSynchronizer = true;
             if (isDirty(DirtyBits.ROOT_DIRTY)) {
                 peer.setRoot(getRoot().getPeer());
+            }
+
+            if (isDirty(DirtyBits.DARK_SCHEME_DIRTY)) {
+                peer.setDarkScheme(context.getColorScheme() == ColorScheme.DARK);
             }
 
             if (isDirty(DirtyBits.FILL_DIRTY)) {
