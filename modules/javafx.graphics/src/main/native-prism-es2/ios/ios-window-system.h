@@ -28,13 +28,6 @@
 */
 #import <jni.h>
 
-#ifndef jlong_to_ptr
-#define jlong_to_ptr(value) ((void*)((long)value))
-#endif
-#ifndef ptr_to_jlong
-#define ptr_to_jlong(value) (jlong)((long)(value))
-#endif
-
 void* createPixelFormat(jint* ivalues);
 void deletePixelFormat(void* pixelFormat);
 

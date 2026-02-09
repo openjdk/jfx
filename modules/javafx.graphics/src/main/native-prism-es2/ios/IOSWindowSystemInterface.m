@@ -25,7 +25,7 @@
 
 #import <UIKit/UIKit.h>
 #import <dlfcn.h>
-#import "ios-window-system.h"
+#import "../PrismES2Defs.h"
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000 // iOS 8.0 supported
 #include <OpenGLES/ES2/gl.h>
