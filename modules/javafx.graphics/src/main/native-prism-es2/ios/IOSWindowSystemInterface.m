@@ -60,7 +60,7 @@ void *getCurrentContext() {
     EAGLContext *ctx = [EAGLContext currentContext];
     // fprintf(stderr, "IOSWindowSystemInterface : getCurrentContext %x\n", ctx);
 
-    return (void *)ptr_to_jlong(ctx);
+    return ctx;
 }
 
 jboolean makeCurrentContext(void *context) {
