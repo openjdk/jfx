@@ -74,7 +74,7 @@ public class Ruler extends BorderPane {
     private int seq;
     private List<Tick> ticks;
     private Tick clickedStop;
-    private boolean dragged;
+    private boolean dragging;
     private boolean modified;
     private boolean popup;
     private Pane tickPane;
@@ -103,17 +103,18 @@ public class Ruler extends BorderPane {
                 }
                 TabStopPolicy p = get();
                 if (p != null) {
-                    sub = p.tabStops().subscribe(Ruler.this::update);
-                    sub.and(p.defaultIntervalProperty().subscribe(Ruler.this::update));
+                    sub = p.tabStops().subscribe(Ruler.this::clearTicks);
+                    sub.and(p.defaultIntervalProperty().subscribe(Ruler.this::requestLayout));
                 }
             }
         };
 
-        widthProperty().subscribe(this::update);
-        editor.contentPaddingProperty().subscribe(this::update);
-        editor.modelProperty().subscribe(this::update);
-        editor.selectionProperty().subscribe(this::handleSelection);
-        editor.documentAreaProperty().subscribe(this::update);
+        widthProperty().subscribe(this::requestLayout);
+        editor.contentPaddingProperty().subscribe(this::requestLayout);
+        editor.documentAreaProperty().subscribe(this::requestLayout);
+
+        editor.modelProperty().subscribe(this::clearTicks);
+        editor.selectionProperty().subscribe(this::clearTicks);
 
         tickPane.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
         tickPane.addEventHandler(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
@@ -147,7 +148,7 @@ public class Ruler extends BorderPane {
         return onChange == null ? null : onChange.get();
     }
 
-    private void update() {
+    private void clearTicks() {
         ticks = null;
         requestLayout();
     }
@@ -233,7 +234,7 @@ public class Ruler extends BorderPane {
     private void handleSelection(SelectionSegment sel) {
         this.selection = sel;
         // TODO update tab stop policy
-        if(sel == null) {
+        if (sel == null) {
             // use model's default tab stops
         } else {
             // single selection vs multiple selection
@@ -244,7 +245,7 @@ public class Ruler extends BorderPane {
         popup = ev.isPopupTrigger();
         if (!popup) {
             double x = ev.getX();
-            dragged = false;
+            dragging = false;
             modified = false;
             clickedStop = findTabStop(ev);
             ev.consume();
@@ -269,16 +270,13 @@ public class Ruler extends BorderPane {
             ticks().add(t);
             modified = true;
         } else {
-            boolean remove = (dragged && deduplicate()) | (!dragged);
+            boolean remove = (dragging && deduplicate()) | (!dragging);
             if (remove) {
                 tickPane.getChildren().remove(clickedStop);
                 ticks().remove(clickedStop);
                 modified = true;
             }
         }
-        clickedStop = null;
-        dragged = false;
-
         if (modified) {
             List<TabStop> ts = toTabStops();
             p.tabStops().setAll(ts);
@@ -288,6 +286,8 @@ public class Ruler extends BorderPane {
                 r.run();
             }
         }
+        clickedStop = null;
+        dragging = false;
         ev.consume();
     }
 
@@ -313,7 +313,7 @@ public class Ruler extends BorderPane {
             clickedStop.position = x;
             clickedStop.tabStop = new TabStop(x);
             clickedStop.getElements().setAll(createTabStopPathElements(x));
-            dragged = true;
+            dragging = true;
             modified = true;
             ev.consume();
         }
