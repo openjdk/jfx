@@ -552,6 +552,7 @@ public class RichTextAreaTest {
         control.select(p);
         control.insertTab();
         control.insertTab();
+        //            BB.B.IB
         assertEquals("a\t\tbc", text());
         control.select(TextPos.ofLeading(0, 2));
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
@@ -564,9 +565,9 @@ public class RichTextAreaTest {
         control.select(TextPos.ofLeading(0, 3));
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
         control.select(TextPos.ofLeading(0, 4));
-        assertEquals(BOLD, control.getActiveStyleAttributeMap());
-        control.select(TextPos.ofLeading(0, 5));
         assertEquals(ITALIC, control.getActiveStyleAttributeMap());
+        control.select(TextPos.ofLeading(0, 5));
+        assertEquals(BOLD, control.getActiveStyleAttributeMap());
     }
 
     @Test
