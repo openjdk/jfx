@@ -46,8 +46,8 @@ public class GenAllDecoraShaders {
 
     public static void main(String[] args) throws Exception {
         for (int i = 0; i < compileShaders.length; i++) {
-            args[7] = compileShaders[i][1]; // types of shaders to be generated
-            args[8] = compileShaders[i][2]; // jsl shader file name
+            args[args.length - 2] = compileShaders[i][1]; // types of shaders to be generated
+            args[args.length - 1] = compileShaders[i][2]; // jsl shader file name
             Class<?> cls = Class.forName(compileShaders[i][0]);
             Method meth = cls.getMethod("main", String[].class);
             meth.invoke(null, (Object) args);
