@@ -188,7 +188,7 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext* _owner, long _scre
     });
 
     window_size.setOnChange([this](const Size& size) {
-        notify_current_sizes();
+        notify_window_sizes_with_state();
     });
 
     view_size.setOnChange([this](const Size& size) {
@@ -1058,7 +1058,7 @@ void WindowContext::notify_view_resize() {
     }
 }
 
-void WindowContext::notify_current_sizes() {
+void WindowContext::notify_window_sizes_with_state() {
     if (is_iconified()) {
         notify_window_resize(com_sun_glass_events_WindowEvent_MINIMIZE);
     } else if (is_maximized()) {
@@ -1066,8 +1066,6 @@ void WindowContext::notify_current_sizes() {
     } else {
         notify_window_resize(com_sun_glass_events_WindowEvent_RESIZE);
     }
-
-    notify_view_resize();
 }
 
 void WindowContext::notify_view_move() {
@@ -1272,7 +1270,8 @@ void WindowContext::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h,
     // Ignore when maximized / fullscreen (not floating)
     // Report back to java to correct the values
     if (mapped && !is_floating()) {
-        notify_current_sizes();
+        notify_window_sizes_with_state();
+        notify_view_resize();
         notify_window_move();
         return;
     }

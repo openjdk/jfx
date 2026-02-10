@@ -380,7 +380,7 @@ private:
     void notify_window_move();
     void notify_view_resize();
     void notify_view_move();
-    void notify_current_sizes();
+    void notify_window_sizes_with_state();
     void notify_repaint();
     void notify_repaint(Rectangle);
     GdkAtom get_net_frame_extents_atom();
