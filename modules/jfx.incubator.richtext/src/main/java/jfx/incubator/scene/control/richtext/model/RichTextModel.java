@@ -30,7 +30,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.layout.Region;
+import com.sun.jfx.incubator.scene.control.richtext.Params;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 
@@ -45,6 +48,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
 public class RichTextModel extends StyledTextModel {
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     private final HashMap<StyleAttributeMap,StyleAttributeMap> styleCache = new HashMap<>();
+    private DoubleProperty defaultTabStops;
 
     /**
      * Constructs the empty model.
@@ -56,6 +60,35 @@ public class RichTextModel extends StyledTextModel {
         registerDataFormatHandler(PlainTextFormatHandler.getInstance(), true, true, 0);
         // always has at least one paragraph
         paragraphs.add(new RParagraph());
+    }
+
+    /**
+     * Specifies the default tab stop interval for tabs beyond the last stop provided
+     * by the paragraph's
+     * {@link jfx.incubator.scene.control.richtext.model.StyleAttributeMap#TAB_STOPS StyleAttributeMap.TAB_STOPS}
+     * attribute, if any.
+     * This is a fixed repeating distance (in pixels) to the
+     * next tab stop computed at regular intervals relative to the document content leading edge.
+     * <p>
+     * A value of equal or less than 0 disables the default interval.
+     *
+     * @return the default tab stop interval property
+     * @defaultValue 0
+     * @since 27
+     */
+    public final DoubleProperty defaultTabStopsProperty() {
+        if (defaultTabStops == null) {
+            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops");
+        }
+        return defaultTabStops;
+    }
+
+    public final void setDefaultTabStops(double value) {
+        defaultTabStopsProperty().set(value);
+    }
+
+    public final double getDefaultTabStops() {
+        return defaultTabStops == null ? 0.0 : defaultTabStops.get();
     }
 
     @Override

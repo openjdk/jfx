@@ -44,6 +44,7 @@ import javafx.stage.WindowEvent;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
 
 /**
  * Rich Editor Demo window.
@@ -57,7 +58,9 @@ public class RichEditorDemoWindow extends Stage {
     public final Label status;
 
     public RichEditorDemoWindow() {
-        editor = new RichTextArea();
+        RichTextModel m = new RichTextModel();
+        m.setDefaultTabStops(70);
+        editor = new RichTextArea(m);
         toolbar = new RichEditorToolbar();
 
         // example of a custom function

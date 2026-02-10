@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -59,6 +60,7 @@ import javafx.scene.text.TabStopPolicy;
 import javafx.util.Subscription;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
 
 /**
  * Ruler: a TabStopPolicy visual editor.
@@ -70,7 +72,8 @@ public class Ruler extends BorderPane {
     private static final double TOO_CLOSE = 2;
 
     private final RichTextArea editor;
-    private final SimpleObjectProperty<TabStopPolicy> policy;
+    private final SimpleObjectProperty<TabStopPolicy> tabStopPolicy;
+    private final SimpleDoubleProperty defaultStops = new SimpleDoubleProperty(0.0);
     private int seq;
     private List<Tick> ticks;
     private Tick clickedStop;
@@ -92,7 +95,7 @@ public class Ruler extends BorderPane {
         tickPane.getStyleClass().add("reference");
         setCenter(tickPane);
 
-        policy = new SimpleObjectProperty<>(this, "tabStopPolicy") {
+        tabStopPolicy = new SimpleObjectProperty<>() {
             private Subscription sub;
 
             @Override
@@ -113,7 +116,7 @@ public class Ruler extends BorderPane {
         editor.contentPaddingProperty().subscribe(this::requestLayout);
         editor.documentAreaProperty().subscribe(this::requestLayout);
 
-        editor.modelProperty().subscribe(this::clearTicks);
+        editor.modelProperty().subscribe(this::updateModel);
         editor.selectionProperty().subscribe(this::clearTicks);
 
         tickPane.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
@@ -122,15 +125,12 @@ public class Ruler extends BorderPane {
     }
 
     public final void setTabStopPolicy(TabStopPolicy p) {
-        policy.set(p);
+        // TODO filter out default tab stops, use the model's
+        tabStopPolicy.set(p);
     }
 
     public final TabStopPolicy getTabStopPolicy() {
-        return policy.get();
-    }
-
-    public final ObjectProperty<TabStopPolicy> tabStopPolicyProperty() {
-        return policy;
+        return tabStopPolicy.get();
     }
 
     public final ObjectProperty<Runnable> onChangeProperty() {
@@ -148,6 +148,15 @@ public class Ruler extends BorderPane {
         return onChange == null ? null : onChange.get();
     }
 
+    private void updateModel() {
+        defaultStops.unbind();
+        if (editor.getModel() instanceof RichTextModel m) {
+            defaultStops.bind(m.defaultTabStopsProperty());
+        } else {
+            defaultStops.set(0.0);
+        }
+    }
+
     private void clearTicks() {
         ticks = null;
         requestLayout();
@@ -161,7 +170,7 @@ public class Ruler extends BorderPane {
     }
 
     private List<Tick> createTicks() {
-        TabStopPolicy p = policy.get();
+        TabStopPolicy p = tabStopPolicy.get();
         if (p == null) {
             return List.of();
         }
@@ -180,6 +189,9 @@ public class Ruler extends BorderPane {
 
         // default stops
         double defaultStops = p.getDefaultInterval();
+        if (defaultStops <= 0.0) {
+            defaultStops = getModelDefaultStops();
+        }
         if (defaultStops > 0.0) {
             for (;;) {
                 x = nextPosition(x, defaultStops);
@@ -190,6 +202,13 @@ public class Ruler extends BorderPane {
             }
         }
         return ts;
+    }
+
+    private double getModelDefaultStops() {
+        if (editor.getModel() instanceof RichTextModel m) {
+            return m.getDefaultTabStops();
+        }
+        return 0.0;
     }
 
     // similar to FixedTabAdvancePolicy.nextPosition()
@@ -256,13 +275,11 @@ public class Ruler extends BorderPane {
         if (popup || ev.isPopupTrigger()) {
             return;
         }
-        TabStopPolicy p = policy.get();
+        TabStopPolicy p = tabStopPolicy.get();
         if (p == null) {
             return;
         }
 
-        // was dragged? update tab stops
-        // was tabstop? remove
         if (clickedStop == null) {
             double x = ev.getX();
             Tick t = createTabStop(new TabStop(x));
@@ -343,11 +360,12 @@ public class Ruler extends BorderPane {
     }
 
     private Tick createTick(double x) {
+        x += 0.5; // makes crisp line
         Tick t = new Tick(x);
-        t.setStroke(Color.BLACK);
-        t.setStrokeWidth(1.0);
+        t.setStroke(Color.GRAY);
+        t.setStrokeWidth(0.5);
         ArrayList<PathElement> es = new ArrayList<>(2);
-        es.add(new MoveTo(x, 0));
+        es.add(new MoveTo(x, getHeight() / 2.0));
         es.add(new LineTo(x, getHeight()));
         t.getElements().setAll(es);
         return t;
