@@ -28,6 +28,7 @@ package javafx.scene.paint;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import com.sun.javafx.css.parser.CssNumberParser;
 import com.sun.javafx.util.InterpolationUtils;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
@@ -547,7 +548,7 @@ public final class Color extends Paint {
 
         double c = (type == PARSE_COMPONENT)
             ? Integer.parseInt(color, start, limit, 10)
-            : Double.parseDouble(color.substring(start, limit));
+            : CssNumberParser.parseDouble(color, start, limit);
 
         switch (type) {
             case PARSE_ALPHA:
