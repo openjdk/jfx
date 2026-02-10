@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,21 +69,16 @@
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 
+#define jlong_to_ptr(value) (intptr_t)(value)
+#define ptr_to_jlong(value) (jlong)((intptr_t)(value))
+
 #if TARGET_OS_IPHONE /* iOS */
-
-#define jlong_to_ptr(value) ((void*)((long)value))
-#define ptr_to_jlong(value) (jlong)((long)(value))
-
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "ios/ios-window-system.h"
 #define IS_EGL
 
 #elif TARGET_OS_MAC /* MacOSX */
-
-#define jlong_to_ptr(value) (intptr_t)(value)
-#define ptr_to_jlong(value) (jlong)((intptr_t)(value))
-
 /* Include the OpenGL headers */
 #include <GL/gl.h>
 #include <GL/glext.h>

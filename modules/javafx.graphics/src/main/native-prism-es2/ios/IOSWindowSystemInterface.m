@@ -25,7 +25,7 @@
 
 #import <UIKit/UIKit.h>
 #import <dlfcn.h>
-#import "../PrismES2Defs.h"
+#import "ios-window-system.h"
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000 // iOS 8.0 supported
 #include <OpenGLES/ES2/gl.h>
@@ -65,7 +65,7 @@ void *getCurrentContext() {
 
 jboolean makeCurrentContext(void *context) {
     // fprintf(stderr, "IOSWindowSystemInterface : makeCurrentContext %x\n", context);
-    if ([EAGLContext setCurrentContext:jlong_to_ptr(context)] == YES) {
+    if ([EAGLContext setCurrentContext:context] == YES) {
         return JNI_TRUE;
     }
 
