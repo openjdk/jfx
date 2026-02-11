@@ -338,14 +338,15 @@ static EAGLContext * ctx = nil;
 
 // Called by the client whenever it draws (View.lock()->Pen.begin()->here)
 - (void)begin
+{
     if ([[NSThread currentThread] isMainThread] == YES) {
-        [self beginImpl];
+        [self _begin];
     } else {
-        [self performSelectorOnMainThread:@selector(beginImpl) withObject:nil waitUntilDone:NO];
+        [self performSelectorOnMainThread:@selector(_begin) withObject:nil waitUntilDone:YES];
     }
 }
 
-- (void)beginImpl
+- (void)_begin
 {
     // assert([EAGLContext currentContext] == clientContext);
     if ([EAGLContext currentContext] != clientContext) {
