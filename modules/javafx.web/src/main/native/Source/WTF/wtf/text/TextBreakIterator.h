@@ -370,6 +370,21 @@ private:
     UBreakIterator* m_iterator;
 };
 
+class NonSharedSentenceBreakIterator {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(NonSharedSentenceBreakIterator);
+    WTF_MAKE_NONCOPYABLE(NonSharedSentenceBreakIterator);
+public:
+    WTF_EXPORT_PRIVATE NonSharedSentenceBreakIterator(StringView);
+    WTF_EXPORT_PRIVATE ~NonSharedSentenceBreakIterator();
+
+    NonSharedSentenceBreakIterator(NonSharedSentenceBreakIterator&&);
+
+    operator UBreakIterator*() const { return m_iterator; }
+
+private:
+    UBreakIterator* m_iterator;
+};
+
 // Counts the number of grapheme clusters. A surrogate pair or a sequence
 // of a non-combining character and following combining characters is
 // counted as 1 grapheme cluster.

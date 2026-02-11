@@ -6168,6 +6168,9 @@ bool Element::checkVisibility(const CheckVisibilityOptions& options)
 {
     document().updateStyleIfNeeded();
 
+    if (!renderer())
+        return false;
+
     auto* style = computedStyle();
 
     // Disconnected node, not rendered.

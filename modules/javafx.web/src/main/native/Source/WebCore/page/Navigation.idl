@@ -1,8 +1,8 @@
 [
   EnabledBySetting=NavigationAPIEnabled,
+  Exposed=Window,
   GenerateIsReachable=ReachableFromDOMWindow,
-  JSCustomMarkFunction,
-  Exposed=Window
+  JSCustomMarkFunction
 ] interface Navigation : EventTarget {
   sequence<NavigationHistoryEntry> entries();
   readonly attribute NavigationHistoryEntry? currentEntry;
