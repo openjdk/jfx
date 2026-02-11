@@ -114,7 +114,7 @@ public class Ruler extends BorderPane {
 
         widthProperty().subscribe(this::requestLayout);
         editor.contentPaddingProperty().subscribe(this::requestLayout);
-        editor.documentAreaProperty().subscribe(this::requestLayout);
+        editor.documentAreaProperty().subscribe(this::clearTicks);
 
         editor.modelProperty().subscribe(this::updateModel);
         editor.selectionProperty().subscribe(this::clearTicks);
@@ -124,8 +124,8 @@ public class Ruler extends BorderPane {
         tickPane.addEventHandler(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
     }
 
+    // default tab interval will be ignored
     public final void setTabStopPolicy(TabStopPolicy p) {
-        // TODO filter out default tab stops, use the model's
         tabStopPolicy.set(p);
     }
 
@@ -170,7 +170,7 @@ public class Ruler extends BorderPane {
     }
 
     private List<Tick> createTicks() {
-        TabStopPolicy p = tabStopPolicy.get();
+        TabStopPolicy p = getTabStopPolicy();
         if (p == null) {
             return List.of();
         }
@@ -248,16 +248,6 @@ public class Ruler extends BorderPane {
             }
         }
         return null;
-    }
-
-    private void handleSelection(SelectionSegment sel) {
-        this.selection = sel;
-        // TODO update tab stop policy
-        if (sel == null) {
-            // use model's default tab stops
-        } else {
-            // single selection vs multiple selection
-        }
     }
 
     private void handleMousePressed(MouseEvent ev) {
