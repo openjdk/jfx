@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -338,6 +338,14 @@ static EAGLContext * ctx = nil;
 
 // Called by the client whenever it draws (View.lock()->Pen.begin()->here)
 - (void)begin
+    if ([[NSThread currentThread] isMainThread] == YES) {
+        [self beginImpl];
+    } else {
+        [self performSelectorOnMainThread:@selector(beginImpl) withObject:nil waitUntilDone:NO];
+    }
+}
+
+- (void)beginImpl
 {
     // assert([EAGLContext currentContext] == clientContext);
     if ([EAGLContext currentContext] != clientContext) {
