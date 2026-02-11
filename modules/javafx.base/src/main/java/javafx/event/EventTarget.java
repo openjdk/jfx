@@ -56,7 +56,7 @@ public interface EventTarget {
     EventDispatchChain buildEventDispatchChain(EventDispatchChain tail);
 
     /**
-     * Registers an event handler for this target.
+     * Registers a {@linkplain EventHandlerPriority#PRIMARY primary} event handler for this target.
      * <p>
      * The handler is called when the target receives an {@link Event} of the specified
      * type during the bubbling phase of event delivery.
@@ -71,6 +71,31 @@ public interface EventTarget {
      */
     default <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Registers an event handler with the specified {@link EventHandlerPriority} for this target.
+     * <p>
+     * The handler is called when the target receives an {@link Event} of the specified
+     * type during the bubbling phase of event delivery.
+     *
+     * @param <E> the event class of the handler
+     * @param eventType the type of the events received by the handler
+     * @param eventHandlerPriority the event handler priority
+     * @param eventHandler the event handler
+     * @throws NullPointerException if {@code eventType}, {@code eventHandlerPriority}, or {@code eventHandler} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event handlers with the specified priority
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 27
+     */
+    default <E extends Event> void addEventHandler(EventType<E> eventType,
+                                                   EventHandlerPriority eventHandlerPriority,
+                                                   EventHandler<? super E> eventHandler) {
+        if (eventHandlerPriority == EventHandlerPriority.PRIMARY) {
+            addEventHandler(eventType, eventHandler);
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /**
@@ -92,7 +117,7 @@ public interface EventTarget {
     }
 
     /**
-     * Registers an event filter for this target.
+     * Registers a {@linkplain EventHandlerPriority#PRIMARY primary} event filter for this target.
      * <p>
      * The filter is called when the target receives an {@link Event} of the specified
      * type during the capturing phase of event delivery.
@@ -107,6 +132,31 @@ public interface EventTarget {
      */
     default <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Registers an event filter with the specified {@link EventHandlerPriority} for this target.
+     * <p>
+     * The filter is called when the target receives an {@link Event} of the specified
+     * type during the capturing phase of event delivery.
+     *
+     * @param <E> the event class of the filter
+     * @param eventType the type of the events received by the filter
+     * @param eventFilterPriority the event filter priority
+     * @param eventFilter the event filter
+     * @throws NullPointerException if {@code eventType}, {@code eventFilterPriority}, or {@code eventFilter} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event filters with the specified priority
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 27
+     */
+    default <E extends Event> void addEventFilter(EventType<E> eventType,
+                                                  EventHandlerPriority eventFilterPriority,
+                                                  EventHandler<? super E> eventFilter) {
+        if (eventFilterPriority == EventHandlerPriority.PRIMARY) {
+            addEventFilter(eventType, eventFilter);
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /**

@@ -43,6 +43,7 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -475,7 +476,13 @@ public class MenuItem implements EventTarget, Styleable {
 
     @Override
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
+        eventHandlerManager.addEventHandler(eventType, eventHandler, EventHandlerPriority.PRIMARY);
+    }
+
+    @Override
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandlerPriority eventHandlerPriority,
+                                                  EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler, eventHandlerPriority);
     }
 
     @Override
@@ -485,7 +492,13 @@ public class MenuItem implements EventTarget, Styleable {
 
     @Override
     public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
-        eventHandlerManager.addEventFilter(eventType, eventFilter);
+        eventHandlerManager.addEventFilter(eventType, eventFilter, EventHandlerPriority.PRIMARY);
+    }
+
+    @Override
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandlerPriority eventFilterPriority,
+                                                 EventHandler<? super E> eventFilter) {
+        eventHandlerManager.addEventFilter(eventType, eventFilter, eventFilterPriority);
     }
 
     @Override

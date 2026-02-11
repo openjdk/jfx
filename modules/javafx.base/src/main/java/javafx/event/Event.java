@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,10 @@
 
 package javafx.event;
 
-import java.util.EventObject;
-
 import com.sun.javafx.event.EventUtil;
+import java.util.EventObject;
 import java.io.IOException;
+import java.io.Serial;
 import javafx.beans.NamedArg;
 
 // PENDING_DOC_REVIEW
@@ -43,7 +43,9 @@ import javafx.beans.NamedArg;
  */
 public class Event extends EventObject implements Cloneable {
 
+    @Serial
     private static final long serialVersionUID = 20121107L;
+
     /**
      * The constant which represents an unknown event source / target.
      */
@@ -64,6 +66,11 @@ public class Event extends EventObject implements Cloneable {
      * will travel when posted.
      */
     protected transient EventTarget target;
+
+    /**
+     * Indicates that default event handlers should not be invoked for this event.
+     */
+    private boolean defaultPrevented;
 
     /**
      * Whether this event has been consumed by any filter or handler.
@@ -133,6 +140,7 @@ public class Event extends EventObject implements Cloneable {
         newEvent.source = (newSource != null) ? newSource : NULL_SOURCE_TARGET;
         newEvent.target = (newTarget != null) ? newTarget : NULL_SOURCE_TARGET;
         newEvent.consumed = false;
+        newEvent.defaultPrevented = false;
 
         return newEvent;
     }
@@ -153,6 +161,28 @@ public class Event extends EventObject implements Cloneable {
      */
     public void consume() {
         consumed = true;
+    }
+
+    /**
+     * Indicates whether {@linkplain EventHandlerPriority#DEFAULT default} event handlers will not be
+     * invoked on the current {@link EventTarget} for this event.
+     *
+     * @return {@code true} if default handlers will not be invoked, {@code false} otherwise
+     * @since 27
+     */
+    public boolean isDefaultPrevented() {
+        return defaultPrevented;
+    }
+
+    /**
+     * Requests that {@linkplain EventHandlerPriority#DEFAULT default} event handlers will not be invoked
+     * on the current {@link EventTarget} for this event. The event will still propagate normally through
+     * the event dispatch chain.
+     *
+     * @since 27
+     */
+    public void preventDefault() {
+        defaultPrevented = true;
     }
 
     /**
