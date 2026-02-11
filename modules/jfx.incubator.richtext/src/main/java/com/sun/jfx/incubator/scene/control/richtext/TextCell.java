@@ -475,19 +475,19 @@ public final class TextCell extends BorderPane {
         return null;
     }
 
-    public void setParagraphAttributes(StyleAttributeMap a) {
+    public void setParagraphAttributes(StyleAttributeMap a, double defaultInterval) {
         Double firstLineIndent = a.getFirstLineIndent();
         if (firstLineIndent != null) {
             add(new FirstLineIndentSpacer(firstLineIndent));
         }
 
+        TabStopPolicy p = new TabStopPolicy();
         TabStop[] tabStops = a.getTabStops();
         if (tabStops != null) {
-            TabStopPolicy p = new TabStopPolicy();
             p.tabStops().setAll(tabStops);
-            // TODO p.setDefaultStops();
-            flow().setTabStopPolicy(p);
         }
+        p.setDefaultInterval(defaultInterval);
+        flow().setTabStopPolicy(p);
     }
 
     @Override

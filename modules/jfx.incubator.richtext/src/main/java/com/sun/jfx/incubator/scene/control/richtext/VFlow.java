@@ -69,6 +69,7 @@ import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.ContentChange;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
 import jfx.incubator.scene.control.richtext.model.RichParagraph;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
@@ -780,12 +781,17 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         return arrangement().getCell(modelIndex);
     }
 
-    private TextCell createTextCell(int index, RichParagraph par) {
-        if(par == null) {
+    private TextCell createTextCell(int index, RichParagraph par, double defaultInterval) {
+        if (par == null) {
             return null;
         }
-        TextCell cell;
+
         StyleAttributeMap pa = par.getParagraphAttributes();
+        if (pa == null) {
+            pa = StyleAttributeMap.EMPTY;
+        }
+
+        TextCell cell;
         Supplier<Region> gen = par.getParagraphRegion();
         if (gen != null) {
             // it's a paragraph node
@@ -796,9 +802,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             cell = new TextCell(index);
 
             // first line indent operates on TextCell and not its content
-            if (pa != null) {
-                cell.setParagraphAttributes(pa);
-            }
+            cell.setParagraphAttributes(pa, defaultInterval);
 
             // highlights
             List<Consumer<TextCell>> highlights = RichParagraphHelper.getHighlights(par);
@@ -833,9 +837,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
         }
 
-        if (pa == null) {
-            pa = StyleAttributeMap.EMPTY;
-        } else {
+        if (!pa.isEmpty()) {
             // these two attributes operate on TextCell instead of its content
             String bullet = pa.getBullet();
             if (bullet != null) {
@@ -1305,11 +1307,11 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     // adds the cell region to vflow content
     // performs the cell layout
     // adds cell to arrangement
-    private TextCell prepareCell(int modelIndex, double maxWidth) {
+    private TextCell prepareCell(int modelIndex, double maxWidth, double defaultInterval) {
         TextCell cell = cellCache.get(modelIndex);
         if (cell == null) {
             RichParagraph rp = control.getModel().getParagraph(modelIndex);
-            cell = createTextCell(modelIndex, rp);
+            cell = createTextCell(modelIndex, rp, defaultInterval);
             cellCache.add(cell.getIndex(), cell);
         }
 
@@ -1379,11 +1381,12 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         int bottomMargin = 0;;
         int count = 0;
         boolean cellOnScreen = true;
+        double defaultInterval = getDefaultInterval();
 
         // populating visible part of the sliding window + bottom margin
         int i = topCellIndex();
         for ( ; i < paragraphCount; i++) {
-            TextCell cell = prepareCell(i, maxWidth);
+            TextCell cell = prepareCell(i, maxWidth, defaultInterval);
 
             double h = cell.prefHeight(forWidth) + getLineSpacing(cell.getContent());
             h = snapSizeY(h);
@@ -1499,7 +1502,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
         // populate top margin, going backwards from topCellIndex
         for (i = topCellIndex() - 1; i >= 0; i--) {
-            TextCell cell = prepareCell(i, maxWidth);
+            TextCell cell = prepareCell(i, maxWidth, defaultInterval);
 
             double h = cell.prefHeight(forWidth) + getLineSpacing(cell.getContent());
             h = snapSizeY(h);
@@ -1729,5 +1732,12 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             return new Point2D(0, 0);
         }
         return content.localToScreen(ci.getMinX(), ci.getMaxY());
+    }
+
+    private double getDefaultInterval() {
+        if (control.getModel() instanceof RichTextModel m) {
+            return m.getDefaultTabStops();
+        }
+        return 0.0;
     }
 }
