@@ -60,12 +60,10 @@ public class SettingsWindow extends Stage {
         initOwner(parent);
 
         op = new OptionPane();
+        // navigation
         op.section("Navigation");
-        op.option("End:", enumOption(EndKey.class, Settings.endKey));
-//        op.option("Home:", new ComboBox());
-//        op.option("Next Word:", new ComboBox());
-//        op.option("Previous Word:", new ComboBox());
-
+        op.option("End Key Function:", enumOption(EndKey.class, Settings.endKey));
+        // view
         op.section("View");
         op.option("Content Padding:", insetsOption(Settings.contentPadding, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100));
 

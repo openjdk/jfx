@@ -261,6 +261,7 @@ public class Actions {
         FX.item(m, "Underline", underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
         FX.separator(m);
         FX.item(m, "Paragraph...", paragraphStyle);
+        FX.item(m, "Tabs...", this::openTabs);
 
         // view
         FX.menu(m, "View");
@@ -734,6 +735,10 @@ public class Actions {
     private void openSettings() {
         Window w = FX.getParentWindow(editor);
         new SettingsWindow(w).show();
+    }
+
+    private void openTabs() {
+        new TabsDialog(editor).show();
     }
 
     private void updateRuler(boolean on) {

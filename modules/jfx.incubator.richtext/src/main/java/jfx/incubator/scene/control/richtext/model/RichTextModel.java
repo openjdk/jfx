@@ -78,7 +78,7 @@ public class RichTextModel extends StyledTextModel {
      */
     public final DoubleProperty defaultTabStopsProperty() {
         if (defaultTabStops == null) {
-            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops") {
+            defaultTabStops = new SimpleDoubleProperty(this, "defaultTabStops", 0.0) {
                 @Override
                 protected void invalidated() {
                     fireStyleChangeEvent(TextPos.ZERO, getDocumentEnd());
