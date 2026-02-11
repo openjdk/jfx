@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -427,11 +427,7 @@ final class QuantumClipboard implements TKClipboard {
                     //do nothing - it was just an attempt
                 }
             } else {
-                DataFormat dataFormat = DataFormat.lookupMimeType(t);
-                if (dataFormat == null) {
-                    //The user is interested in any format.
-                    dataFormat = new DataFormat(t);
-                }
+                DataFormat dataFormat = DataFormat.of(t);
                 set.add(dataFormat);
             }
         }
