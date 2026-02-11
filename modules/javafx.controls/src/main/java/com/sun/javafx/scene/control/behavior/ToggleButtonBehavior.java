@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,20 +24,24 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.skin.Utils;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.UP;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
+import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
-import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.KeyEvent;
-
-import static com.sun.javafx.scene.control.inputmap.InputMap.*;
-import static javafx.scene.input.KeyCode.*;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
+import com.sun.javafx.scene.control.skin.Utils;
 
 public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior<C>{
 
@@ -45,10 +49,10 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         super(button);
 
         ObservableList<Mapping<?>> mappings = FXCollections.observableArrayList(
-            new KeyMapping(RIGHT, e -> traverse(e, "ToggleNext-Right")),
-            new KeyMapping(LEFT, e -> traverse(e, "TogglePrevious-Left")),
-            new KeyMapping(DOWN, e -> traverse(e, "ToggleNext-Down")),
-            new KeyMapping(UP, e -> traverse(e, "TogglePrevious-Up"))
+            new KeyMapping(RIGHT, e -> traverse(e, TraversalDirection.RIGHT)),
+            new KeyMapping(LEFT, e -> traverse(e, TraversalDirection.LEFT)),
+            new KeyMapping(DOWN, e -> traverse(e, TraversalDirection.DOWN)),
+            new KeyMapping(UP, e -> traverse(e, TraversalDirection.UP))
         );
 
         // we disable auto-consuming, so that unconsumed events work their way
@@ -91,7 +95,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         return i;
     }
 
-    private void traverse(KeyEvent e, String name) {
+    private final void traverse(KeyEvent e, TraversalDirection dir) {
         ToggleButton toggleButton = getNode();
         final ToggleGroup toggleGroup = toggleButton.getToggleGroup();
         // A ToggleButton does not have to be in a group.
@@ -102,7 +106,7 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         ObservableList<Toggle> toggles = toggleGroup.getToggles();
         final int currentToggleIdx = toggles.indexOf(toggleButton);
 
-        boolean traversingToNext = traversingToNext(name, toggleButton.getEffectiveNodeOrientation());
+        boolean traversingToNext = traversingToNext(dir, toggleButton.getEffectiveNodeOrientation());
         if (Utils.isTwoLevelFocus()) {
             // Because we don't auto-consume (see mapping definitions above), we
             // can simply return here and have the traversal handled by another
@@ -134,16 +138,16 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         }
     }
 
-    private boolean traversingToNext(String name, NodeOrientation effectiveNodeOrientation) {
+    private boolean traversingToNext(TraversalDirection dir, NodeOrientation effectiveNodeOrientation) {
         boolean rtl = effectiveNodeOrientation == NodeOrientation.RIGHT_TO_LEFT;
-        switch (name) {
-            case "ToggleNext-Right":
+        switch (dir) {
+            case RIGHT:
                 return rtl ? false : true;
-            case "ToggleNext-Down":
+            case DOWN:
                 return true;
-            case "TogglePrevious-Left":
+            case LEFT:
                 return rtl ? true : false;
-            case "TogglePrevious-Up":
+            case UP:
                 return false;
             default:
                 throw new IllegalArgumentException("Not a toggle action");
