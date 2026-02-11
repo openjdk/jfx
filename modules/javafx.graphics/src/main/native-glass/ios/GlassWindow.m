@@ -829,16 +829,24 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
 
 
         if (mainWindow == nil) {
-            //We have to remove rootViewController of splashscreen UIWindow in order to avoid
-            //StatusBar orientation change ...
-            UIWindow *splashScreen = [[UIApplication sharedApplication] keyWindow];
-            splashScreen.rootViewController = nil;
-
             GLASS_LOG("SCREEN: %@", screen);
             CGRect applicationFrame = [screen bounds];
-            GLASS_LOG("FRAME: %@", applicationFrame);
+            GLASS_LOG("FRAME: %.1f %.1f", applicationFrame.size.width, applicationFrame.size.height);
 
-            mainWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
+            //We have to remove rootViewController of splashscreen UIWindow in order to avoid
+            //StatusBar orientation change ...
+            UIWindowScene *windowScene = (UIWindowScene *)[[UIApplication sharedApplication] connectedScenes].allObjects.firstObject;
+            if (windowScene) {
+                UIWindow *window = windowScene.windows.firstObject;
+                if (window) {
+                    mainWindow = [[GlassMainWindow alloc] initWithWindowScene:window.windowScene];
+                } else {
+                    // fallback
+                    window = [[UIApplication sharedApplication] keyWindow];
+                    mainWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
+                }
+                window.rootViewController = nil;
+            }
             mainWindowHost = [[GlassMainView alloc] initWithFrame:CGRectMake(0.0, 0.0, applicationFrame.size.width, applicationFrame.size.height)];
 
             // Set GlassViewController - responsible for orientation change, etc.
