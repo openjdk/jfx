@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,11 @@ package com.sun.javafx.scene.paint;
 
 import java.util.LinkedList;
 import java.util.List;
+import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 
 public class GradientUtils {
@@ -292,5 +296,160 @@ public class GradientUtils {
 
             return stops;
         }
+    }
+
+    public static PaintSampler newLinearGradientSampler(LinearGradient g, Bounds b) {
+        boolean proportional = g.isProportional();
+        double x0 = proportional ? b.getMinX() + g.getStartX() * b.getWidth() : g.getStartX();
+        double y0 = proportional ? b.getMinY() + g.getStartY() * b.getHeight() : g.getStartY();
+        double x1 = proportional ? b.getMinX() + g.getEndX() * b.getWidth() : g.getEndX();
+        double y1 = proportional ? b.getMinY() + g.getEndY() * b.getHeight() : g.getEndY();
+        double vx = x1 - x0, vy = y1 - y0;
+        double denom = vx * vx + vy * vy;
+        CycleMethod cycle = g.getCycleMethod();
+        List<Stop> stops = g.getStops();
+
+        return (x, y) -> {
+            if (denom == 0) {
+                return interpolateStops(stops, 0);
+            }
+
+            double t = ((x - x0) * vx + (y - y0) * vy) / denom;
+            t = applyCycle(cycle, t);
+            return interpolateStops(stops, t);
+        };
+    }
+
+    public static PaintSampler newRadialGradientSampler(RadialGradient g, Bounds b) {
+        // Center
+        boolean proportional = g.isProportional();
+        double cx = proportional ? b.getMinX() + g.getCenterX() * b.getWidth() : g.getCenterX();
+        double cy = proportional ? b.getMinY() + g.getCenterY() * b.getHeight() : g.getCenterY();
+
+        // Radius
+        double r = proportional ? g.getRadius() * Math.min(b.getWidth(), b.getHeight()) : g.getRadius();
+        CycleMethod cycle = g.getCycleMethod();
+        List<Stop> stops = g.getStops();
+
+        // Focus point from angle and distance
+        double fd = Math.clamp(g.getFocusDistance(), 0, 1) * r;
+        double ang = Math.toRadians(g.getFocusAngle());
+        double fx = cx + Math.cos(ang) * fd;
+        double fy = cy + Math.sin(ang) * fd;
+
+        return (x, y) -> {
+            if (r <= 0) {
+                return interpolateStops(stops, 0);
+            }
+
+            double dx = x - fx, dy = y - fy;
+            double dd = dx * dx + dy * dy;
+            if (dd == 0) {
+                return interpolateStops(stops, applyCycle(cycle, 0));
+            }
+
+            // Find where the ray from the focus through (x,y) intersects the gradient circle:
+            // R(s) = F + s*(P - F), solve |R(s) - C|^2 = r^2 for s
+            double ex = fx - cx, ey = fy - cy;
+            double A = dd;
+            double B = 2 * (ex * dx + ey * dy);
+            double C = (ex * ex + ey * ey) - r * r;
+            double disc = B * B - 4 * A * C;
+            if (disc <= 0) {
+                // Outside or degenerate, treat as edge
+                double t = applyCycle(cycle, 1);
+                return interpolateStops(stops, t);
+            }
+
+            // We want the positive intersection farthest along the ray.
+            double sqrt = Math.sqrt(disc);
+            double s1 = (-B + sqrt) / (2 * A);
+            double s2 = (-B - sqrt) / (2 * A);
+            double s = Math.max(s1, s2);
+            if (s <= 0) {
+                double t = applyCycle(cycle, 1);
+                return interpolateStops(stops, t);
+            }
+
+            // Because point is at s=1, boundary is at s; so normalized radius is 1/s
+            double t = 1.0 / s;
+
+            return interpolateStops(stops, applyCycle(cycle, t));
+        };
+    }
+
+    private static double applyCycle(CycleMethod cycleMethod, double t) {
+        return switch (cycleMethod) {
+            case REPEAT -> {
+                double f = t - Math.floor(t);
+                yield f < 0 ? f + 1 : f;
+            }
+
+            case REFLECT -> {
+                double m = t % 2;
+                if (m < 0) {
+                    m += 2;
+                }
+
+                yield m <= 1 ? m : 2 - m;
+            }
+
+            default -> Math.clamp(t, 0, 1);
+        };
+    }
+
+    private static Color interpolateStops(List<Stop> stops, double t) {
+        if (stops == null || stops.isEmpty()) {
+            return Color.TRANSPARENT;
+        }
+
+        if (t <= stops.getFirst().getOffset()) {
+            return stops.getFirst().getColor();
+        }
+
+        Stop prev = stops.getFirst();
+
+        for (int i = 1; i < stops.size(); i++) {
+            Stop next = stops.get(i);
+            double offset0 = prev.getOffset();
+            double offset1 = next.getOffset();
+            if (t <= offset1) {
+                double f = (offset1 == offset0) ? 0 : (t - offset0) / (offset1 - offset0);
+                return interpolateColor(prev.getColor(), next.getColor(), f);
+            }
+
+            prev = next;
+        }
+
+        return stops.getLast().getColor();
+    }
+
+    private static Color interpolateColor(Color a, Color b, double f) {
+        double ao = a.getOpacity(), bo = b.getOpacity();
+        double o = ao + (bo - ao) * f;
+
+        if (o <= 0.0) {
+            return Color.TRANSPARENT;
+        }
+
+        // Premultiply in sRGB component space
+        double arP = a.getRed() * ao;
+        double agP = a.getGreen() * ao;
+        double abP = a.getBlue() * ao;
+        double brP = b.getRed() * bo;
+        double bgP = b.getGreen() * bo;
+        double bbP = b.getBlue() * bo;
+
+        // Interpolate premultiplied channels
+        double rP = arP + (brP - arP) * f;
+        double gP = agP + (bgP - agP) * f;
+        double bP = abP + (bbP - abP) * f;
+
+        // Unpremultiply back to straight alpha
+        double r = rP / o;
+        double g = gP / o;
+        double bl = bP / o;
+
+        return new Color(r, g, bl, Math.clamp(o, 0, 1));
     }
 }

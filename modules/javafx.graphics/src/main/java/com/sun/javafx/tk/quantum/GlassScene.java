@@ -60,7 +60,6 @@ abstract class GlassScene implements TKScene {
     private NGNode root;
     private NGCamera camera;
     private boolean darkScheme;
-    private Color opaqueFillColor;
     protected Paint fillPaint;
 
     // Write from FX thread, read from render thread
@@ -184,14 +183,12 @@ abstract class GlassScene implements TKScene {
     @Override
     public void setDarkScheme(boolean value) {
         this.darkScheme = value;
-        updateOpaqueFillColor();
         entireSceneNeedsRepaint();
     }
 
     @Override
     public void setFillPaint(Object fillPaint) {
         this.fillPaint = (Paint)fillPaint;
-        updateOpaqueFillColor();
         entireSceneNeedsRepaint();
     }
 
@@ -337,8 +334,6 @@ abstract class GlassScene implements TKScene {
                 } else {
                     return null;
                 }
-            } else if (opaqueFillColor != null) {
-                return opaqueFillColor;
             } else {
                 return darkScheme ? Color.BLACK : Color.WHITE;
             }
@@ -353,23 +348,7 @@ abstract class GlassScene implements TKScene {
         if ((fillPaint != null) && fillPaint.isOpaque() && (fillPaint.getType() == Paint.Type.COLOR)) {
             return null;
         }
-        if (opaqueFillColor != null) {
-            return null;
-        }
         return fillPaint;
-    }
-
-    private void updateOpaqueFillColor() {
-        if (fillPaint instanceof Color color && !color.isOpaque()) {
-            Color background = darkScheme ? Color.BLACK : Color.WHITE;
-            opaqueFillColor = new Color(
-                Math.clamp(color.getRedPremult() + background.getRedPremult() * (1 - color.getAlpha()), 0, 1),
-                Math.clamp(color.getGreenPremult() + background.getGreenPremult() * (1 - color.getAlpha()), 0, 1),
-                Math.clamp(color.getBluePremult() + background.getBluePremult() * (1 - color.getAlpha()), 0, 1),
-                1);
-        } else {
-            opaqueFillColor = null;
-        }
     }
 
     @Override public String toString() {

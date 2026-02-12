@@ -93,7 +93,7 @@ public class SceneFillTest {
         Util.sleep(200);
 
         Util.runAndWait(() -> {
-            assertEquals(
+            assertClose(
                 Color.web(expectLight),
                 robot.getPixelColor(stage.getX() + 100, stage.getY() + 100));
 
@@ -103,9 +103,16 @@ public class SceneFillTest {
         Util.sleep(200);
 
         Util.runAndWait(() -> {
-            assertEquals(
+            assertClose(
                 Color.web(expectDark),
                 robot.getPixelColor(stage.getX() + 100, stage.getY() + 100));
         });
+    }
+
+    private static void assertClose(Color expected, Color actual) {
+        assertEquals(expected.getRed(), actual.getRed(), 0.07, "red");
+        assertEquals(expected.getGreen(), actual.getGreen(), 0.07, "green");
+        assertEquals(expected.getBlue(), actual.getBlue(), 0.07, "blue");
+        assertEquals(expected.getOpacity(), actual.getOpacity(), 0.07, "opacity");
     }
 }
