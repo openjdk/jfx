@@ -26,6 +26,8 @@
 #include "config.h"
 #include "JSBasicCredential.h"
 
+#include <JavaScriptCore/StructureInlines.h>
+
 #if ENABLE(WEB_AUTHN)
 
 #include "JSDOMBinding.h"

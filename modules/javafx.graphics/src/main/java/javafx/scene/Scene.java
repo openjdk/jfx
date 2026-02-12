@@ -3791,9 +3791,11 @@ public class Scene implements EventTarget {
                 if (! e.isMiddleButtonDown()) { counters.get(MouseButton.MIDDLE).clear(); }
                 if (! e.isBackButtonDown()) { counters.get(MouseButton.BACK).clear(); }
                 if (! e.isForwardButtonDown()) { counters.get(MouseButton.FORWARD).clear(); }
-                cc.applyOut();
-                cc.inc();
-                cc.start(e.getSceneX(), e.getSceneY());
+                if (cc != null) {
+                    cc.applyOut();
+                    cc.inc();
+                    cc.start(e.getSceneX(), e.getSceneY());
+                }
                 lastPress = cc;
             }
 
