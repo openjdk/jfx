@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,12 +54,12 @@ public class Converters {
         return new StringConverter<Color>() {
             @Override
             public String toString(Color c) {
-                return toHexColor(c);
+                return c == null ? null : toHexColor(c);
             }
 
             @Override
             public Color fromString(String s) {
-                return parseHexColor(s);
+                return (s == null) ? null : parseHexColor(s);
             }
         };
     }
