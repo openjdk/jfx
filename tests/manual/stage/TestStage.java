@@ -68,8 +68,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderDragType;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.image.Image;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
@@ -267,35 +270,97 @@ public class TestStage extends Application {
 
         updateCommandButtonsState();
 
-        FlowPane flow0 = new FlowPane(label("Style: ", cbStageStyle), label("Modality: ", cbModality),
-                label("Owner: ", cbOwner));
-        FlowPane flow1 = new FlowPane(btnCreate, btnShow, btnCreateShow, btnHide);
-        FlowPane flow2 = new FlowPane(btnCenterOnScreen, btnSizeToScene);
-        FlowPane flow3 = new FlowPane(btnToFront, btnToBack, btnSelectNone, btnSelectLast, btnSelectPrevious,
-                btnSelectNext, btnFocus);
+        btnCreate.setTooltip(new Tooltip("Create a new test stage without showing it"));
+        btnCreateShow.setTooltip(new Tooltip("Create and immediately show a new test stage"));
+        btnShow.setTooltip(new Tooltip("Show the currently selected stage"));
+        btnHide.setTooltip(new Tooltip("Hide the currently selected stage (close if hidden)"));
+        btnToFront.setTooltip(new Tooltip("Bring stage to front"));
+        btnToBack.setTooltip(new Tooltip("Send stage to back"));
+        btnFocus.setTooltip(new Tooltip("Request focus for the stage"));
+        btnSizeToScene.setTooltip(new Tooltip("Resize stage to fit scene content"));
+        btnCenterOnScreen.setTooltip(new Tooltip("Center stage on current screen"));
+        btnSelectLast.setTooltip(new Tooltip("Select the last created stage"));
+        btnSelectPrevious.setTooltip(new Tooltip("Select previous stage"));
+        btnSelectNext.setTooltip(new Tooltip("Select next stage"));
+        btnSelectNone.setTooltip(new Tooltip("Deselect current stage"));
 
-        List.of(flow0, flow1, flow2, flow3).forEach(flow -> {
-            flow.setHgap(5);
-            flow.setVgap(5);
-        });
+        double buttonMinWidth = 90;
+        btnCreate.setMinWidth(buttonMinWidth);
+        btnCreateShow.setMinWidth(buttonMinWidth + 20);
+        btnShow.setMinWidth(buttonMinWidth);
+        btnHide.setMinWidth(buttonMinWidth);
+        btnToFront.setMinWidth(buttonMinWidth);
+        btnToBack.setMinWidth(buttonMinWidth);
+        btnFocus.setMinWidth(buttonMinWidth);
+        btnSizeToScene.setMinWidth(buttonMinWidth + 30);
+        btnCenterOnScreen.setMinWidth(buttonMinWidth + 50);
 
-        VBox commandPane = new VBox(cbCommandAlwaysOnTop, flow0, flow1, flow2, flow3);
-        commandPane.setSpacing(5);
+        Label initLabel = createSectionLabel("Stage Initialization");
+        GridPane initGrid = new GridPane();
+        initGrid.setHgap(10);
+        initGrid.setVgap(8);
+        initGrid.setPadding(new Insets(5, 10, 10, 10));
+
+        Label styleLabel = new Label("Style:");
+        Label modalityLabel = new Label("Modality:");
+        Label ownerLabel = new Label("Owner:");
+        cbStageStyle.setMinWidth(150);
+        cbModality.setMinWidth(150);
+        cbOwner.setMinWidth(150);
+
+        initGrid.add(styleLabel, 0, 0);
+        initGrid.add(cbStageStyle, 1, 0);
+        initGrid.add(modalityLabel, 2, 0);
+        initGrid.add(cbModality, 3, 0);
+        initGrid.add(ownerLabel, 0, 1);
+        initGrid.add(cbOwner, 1, 1);
+
+        Label actionsLabel = createSectionLabel("Stage Actions");
+        FlowPane createActions = new FlowPane(btnCreate, btnCreateShow, btnShow, btnHide);
+        createActions.setHgap(8);
+        createActions.setVgap(8);
+        createActions.setPadding(new Insets(5, 10, 5, 10));
+
+        Label windowOpsLabel = createSectionLabel("Window Operations");
+        FlowPane windowOps = new FlowPane(btnCenterOnScreen, btnSizeToScene, btnToFront, btnToBack, btnFocus);
+        windowOps.setHgap(8);
+        windowOps.setVgap(8);
+        windowOps.setPadding(new Insets(5, 10, 5, 10));
+
+        Label selectionLabel = createSectionLabel("Stage Selection");
+        HBox selectionBox = new HBox(8, btnSelectPrevious, btnSelectNone, btnSelectNext, btnSelectLast);
+        selectionBox.setAlignment(Pos.CENTER_LEFT);
+        selectionBox.setPadding(new Insets(5, 10, 5, 10));
+
+        cbCommandAlwaysOnTop.setPadding(new Insets(5, 10, 5, 10));
+
+        VBox commandPane = new VBox(8,
+                cbCommandAlwaysOnTop,
+                createSeparator(),
+                initLabel,
+                initGrid,
+                createSeparator(),
+                actionsLabel,
+                createActions,
+                createSeparator(),
+                windowOpsLabel,
+                windowOps,
+                createSeparator(),
+                selectionLabel,
+                selectionBox
+        );
+        commandPane.setPadding(new Insets(10));
         commandPane.setFillWidth(true);
 
         TitledPane commandPaneTitledPane = new TitledPane("Commands", commandPane);
-        commandPaneTitledPane.setCollapsible(false);
+        commandPaneTitledPane.setCollapsible(true);
 
-        TitledPane editorTitledPane = new TitledPane("Properties", propertyEditor);
-        editorTitledPane.setCollapsible(false);
-
-        VBox root = new VBox(
+        VBox root = new VBox(10,
                 commandPaneTitledPane,
-                editorTitledPane
+                propertyEditor
         );
-        root.setSpacing(5);
+        root.setPadding(new Insets(10));
         root.setFillWidth(true);
-
 
         Scene scene = new Scene(root);
         stage.setTitle("Command Stage");
@@ -332,6 +397,21 @@ public class TestStage extends Application {
         hbox.setSpacing(5);
         hbox.setAlignment(Pos.CENTER_LEFT);
         return hbox;
+    }
+
+    private Label createSectionLabel(String text) {
+        Label label = new Label(text);
+        label.setFont(Font.font(label.getFont().getFamily(), FontWeight.BOLD, 12));
+        label.setPadding(new Insets(5, 10, 0, 10));
+        return label;
+    }
+
+    private Region createSeparator() {
+        Region separator = new Region();
+        separator.setMinHeight(1);
+        separator.setMaxHeight(1);
+        separator.setStyle("-fx-background-color: -fx-box-border;");
+        return separator;
     }
 
     private void createTestStage() {
@@ -525,12 +605,14 @@ public class TestStage extends Application {
     }
 
     class PropertyEditor extends VBox {
-        private final PropertyEditorPane stagePane = new PropertyEditorPane("Stage");
-        private final PropertyEditorPane scenePane = new PropertyEditorPane("Scene");
+        private final PropertyEditorPane stagePane = new PropertyEditorPane("Stage Properties");
+        private final PropertyEditorPane scenePane = new PropertyEditorPane("Scene Properties");
 
         private final ObjectProperty<Scene> sceneProperty = new SimpleObjectProperty<>();
 
         PropertyEditor() {
+            setSpacing(10);
+            setPadding(new Insets(5));
             getChildren().addAll(stagePane, scenePane);
             stagePane.setMaxHeight(550);
             setFillWidth(true);
@@ -594,14 +676,16 @@ public class TestStage extends Application {
 
         PropertyEditorPane(String title) {
             setText(title);
-            ScrollPane propertiesScrollPane = new ScrollPane(propertyEditor);
+            setCollapsible(true);
+
+            ScrollPane propertiesScrollPane = new ScrollPane();
             propertiesScrollPane.setFitToWidth(true);
             propertiesScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
             propertiesScrollPane.setContent(gridPane);
 
-            gridPane.setHgap(5);
-            gridPane.setVgap(5);
-            gridPane.setPadding(new Insets(10));
+            gridPane.setHgap(12);
+            gridPane.setVgap(8);
+            gridPane.setPadding(new Insets(15));
 
             setContent(propertiesScrollPane);
         }
@@ -612,7 +696,8 @@ public class TestStage extends Application {
         }
 
         private void addLabel(String label) {
-            Label lbl = new Label(label);
+            Label lbl = new Label(label + ":");
+            lbl.setMinWidth(85);
             gridPane.add(lbl, 0, currentRow);
             GridPane.setHgrow(lbl, Priority.SOMETIMES);
             GridPane.setHalignment(lbl, HPos.RIGHT);
@@ -622,6 +707,7 @@ public class TestStage extends Application {
             addLabel(label);
             Label lbl = new Label();
             lbl.textProperty().bind(property.asString("%.2f"));
+            lbl.setMinWidth(120);
             gridPane.add(lbl, 1, currentRow);
             GridPane.setHgrow(lbl, Priority.ALWAYS);
             currentRow++;
@@ -633,6 +719,8 @@ public class TestStage extends Application {
             addLabel(label);
             Spinner<Double> spinner = new Spinner<>();
             spinner.setEditable(true);
+            spinner.setMinWidth(140);
+            spinner.setMaxWidth(Double.MAX_VALUE);
             SpinnerValueFactory.DoubleSpinnerValueFactory spinnerValueFactory =
                     new SpinnerValueFactory.DoubleSpinnerValueFactory(min, max, property.get(), amountToStepBy);
             spinner.setValueFactory(spinnerValueFactory);
@@ -667,6 +755,8 @@ public class TestStage extends Application {
         public void addStringProperty(String label, ReadOnlyStringProperty property, Consumer<String> setConsumer) {
             addLabel(label);
             TextField textField = new TextField(property.get());
+            textField.setMinWidth(140);
+            textField.setMaxWidth(Double.MAX_VALUE);
             gridPane.add(textField, 1, currentRow);
             GridPane.setHgrow(textField, Priority.ALWAYS);
 
