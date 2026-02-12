@@ -833,22 +833,23 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
             CGRect applicationFrame = [screen bounds];
             GLASS_LOG("FRAME: %.1f %.1f", applicationFrame.size.width, applicationFrame.size.height);
 
-            //We have to remove rootViewController of splashscreen UIWindow in order to avoid
-            //StatusBar orientation change ...
-            UIWindow *window;
+            // Remove rootViewController of the initial UIWindow in order to avoid
+            // StatusBar orientation changes, initialize our mainWindow (GlassMainWindow), and
+            // set our own rootViewController (GlassViewController).
+            UIWindow *initialWindow;
             UIWindowScene *windowScene = (UIWindowScene *)[[UIApplication sharedApplication] connectedScenes].allObjects.firstObject;
             if (windowScene) {
-                window = windowScene.windows.firstObject;
-                if (window) {
+                initialWindow = windowScene.windows.firstObject;
+                if (initialWindow) {
                     mainWindow = [[GlassMainWindow alloc] initWithWindowScene:windowScene];
                 }
             }
-            if (!window) {
-                // fallback if no windowScene (very unlikely), or no window (if no SceneDelegate is used, for instance) are found:
-                window = [[UIApplication sharedApplication] keyWindow];
+            if (!initialWindow) {
+                // fallback if no windowScene (very unlikely), or no initialWindow (if no SceneDelegate is used, for instance) are found:
+                initialWindow = [[UIApplication sharedApplication] keyWindow];
                 mainWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
             }
-            window.rootViewController = nil;
+            initialWindow.rootViewController = nil;
             mainWindowHost = [[GlassMainView alloc] initWithFrame:CGRectMake(0.0, 0.0, applicationFrame.size.width, applicationFrame.size.height)];
 
             // Set GlassViewController - responsible for orientation change, etc.
