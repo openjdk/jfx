@@ -79,11 +79,16 @@ public abstract class AbstractPrimaryTimer {
                 break;
             case ANIMATION_MBEAN_ENABLED:
                 AnimationPulse.getDefaultBean()
-                              .setEnabled(Settings.getBoolean(ANIMATION_MBEAN_ENABLED));
+                        .setEnabled(Settings.getBoolean(ANIMATION_MBEAN_ENABLED));
                 break;
         }
         return null;
     };
+
+    // Lock guarding receivers/animationTimers arrays and their lengths.
+    // The add/remove methods and the snapshot-taking in timePulseImpl
+    // are synchronized on this lock to prevent concurrent modification.
+    private final Object lock = new Object();
 
     @SuppressWarnings("unchecked")
     private ReceiverRecord<PulseReceiver>[] receivers = new ReceiverRecord[2];
@@ -93,7 +98,7 @@ public abstract class AbstractPrimaryTimer {
     // synchronize to update frameJobList and frameJobs
     @SuppressWarnings("unchecked")
     private ReceiverRecord<TimerReceiver>[] animationTimers = new ReceiverRecord[2]; // frameJobList
-                                                                                     // snapshot
+    // snapshot
     private int animationTimersLength;
     private boolean animationTimersLocked;
 
@@ -149,69 +154,85 @@ public abstract class AbstractPrimaryTimer {
      *            the Clip to be added to the scheduling queue
      */
     public void addPulseReceiver(PulseReceiver target) {
-        boolean needMoreSize = receiversLength == receivers.length;
-        if (receiversLocked || needMoreSize) {
-            receivers = Arrays.copyOf(receivers, needMoreSize ? receivers.length * 3 / 2 + 1 : receivers.length);
-            receiversLocked = false;
+        boolean notifyRunnable;
+        synchronized (lock) {
+            boolean needMoreSize = receiversLength == receivers.length;
+            if (receiversLocked || needMoreSize) {
+                receivers = Arrays.copyOf(receivers, needMoreSize ? receivers.length * 3 / 2 + 1 : receivers.length);
+                receiversLocked = false;
+            }
+            receivers[receiversLength++] = ReceiverRecord.ofPulseReceiver(target);
+            notifyRunnable = (receiversLength == 1);
         }
-        receivers[receiversLength++] = ReceiverRecord.ofPulseReceiver(target);
-        if (receiversLength == 1) {
+        if (notifyRunnable) {
             theMainLoop.updateAnimationRunnable();
         }
     }
 
     public void removePulseReceiver(PulseReceiver target) {
-        if (receiversLocked) {
-            receivers = receivers.clone();
-            receiversLocked = false;
-        }
-        for (int i = 0; i < receiversLength; ++i) {
-            if (target == receivers[i].receiver()) {
-                if (i == receiversLength - 1) {
-                    receivers[i] = null;
-                } else {
-                    System.arraycopy(receivers, i + 1, receivers, i, receiversLength - i - 1);
-                    receivers[receiversLength - 1] = null;
-                }
-                --receiversLength;
-                break;
+        boolean notifyRunnable;
+        synchronized (lock) {
+            if (receiversLocked) {
+                receivers = receivers.clone();
+                receiversLocked = false;
             }
+            for (int i = 0; i < receiversLength; ++i) {
+                if (target == receivers[i].receiver()) {
+                    if (i == receiversLength - 1) {
+                        receivers[i] = null;
+                    } else {
+                        System.arraycopy(receivers, i + 1, receivers, i, receiversLength - i - 1);
+                        receivers[receiversLength - 1] = null;
+                    }
+                    --receiversLength;
+                    break;
+                }
+            }
+            notifyRunnable = (receiversLength == 0);
         }
-        if (receiversLength == 0) {
+        if (notifyRunnable) {
             theMainLoop.updateAnimationRunnable();
         }
     }
 
     public void addAnimationTimer(TimerReceiver timer) {
-        boolean needMoreSize = animationTimersLength == animationTimers.length;
-        if (animationTimersLocked || needMoreSize) {
-            animationTimers = Arrays.copyOf(animationTimers, needMoreSize ? animationTimers.length * 3 / 2 + 1 : animationTimers.length);
-            animationTimersLocked = false;
+        boolean notifyRunnable;
+        synchronized (lock) {
+            boolean needMoreSize = animationTimersLength == animationTimers.length;
+            if (animationTimersLocked || needMoreSize) {
+                animationTimers = Arrays.copyOf(animationTimers, needMoreSize ? animationTimers.length * 3 / 2 + 1 : animationTimers.length);
+                animationTimersLocked = false;
+            }
+            animationTimers[animationTimersLength++] = ReceiverRecord.ofAnimationTimer(timer);
+            notifyRunnable = (animationTimersLength == 1);
         }
-        animationTimers[animationTimersLength++] = ReceiverRecord.ofAnimationTimer(timer);
-        if (animationTimersLength == 1) {
+        if (notifyRunnable) {
             theMainLoop.updateAnimationRunnable();
         }
     }
 
     public void removeAnimationTimer(TimerReceiver timer) {
-        if (animationTimersLocked) {
-            animationTimers = animationTimers.clone();
-            animationTimersLocked = false;
-        }
-        for (int i = 0; i < animationTimersLength; ++i) {
-            if (timer == animationTimers[i].receiver()) {
-                if (i == animationTimersLength - 1) {
-                    animationTimers[i] = null;
-                } else {
-                    System.arraycopy(animationTimers, i + 1, animationTimers, i, animationTimersLength - i - 1);
-                    animationTimers[animationTimersLength - 1] = null;
-                }
-                --animationTimersLength;
-                break;
+        boolean notifyRunnable;
+        synchronized (lock) {
+            if (animationTimersLocked) {
+                animationTimers = animationTimers.clone();
+                animationTimersLocked = false;
             }
+            for (int i = 0; i < animationTimersLength; ++i) {
+                if (timer == animationTimers[i].receiver()) {
+                    if (i == animationTimersLength - 1) {
+                        animationTimers[i] = null;
+                    } else {
+                        System.arraycopy(animationTimers, i + 1, animationTimers, i, animationTimersLength - i - 1);
+                        animationTimers[animationTimersLength - 1] = null;
+                    }
+                    --animationTimersLength;
+                    break;
+                }
+            }
+            notifyRunnable = (animationTimersLength == 0);
         }
-        if (animationTimersLength == 0) {
+        if (notifyRunnable) {
             theMainLoop.updateAnimationRunnable();
         }
     }
@@ -317,35 +338,52 @@ public abstract class AbstractPrimaryTimer {
             now = debugNanos;
         }
 
-        final ReceiverRecord<PulseReceiver>[] receiversSnapshot = receivers;
-        final int rLength = receiversLength;
-        receiversLocked = true;
+        final ReceiverRecord<PulseReceiver>[] receiversSnapshot;
+        final int rLength;
+        synchronized (lock) {
+            receiversSnapshot = receivers;
+            rLength = receiversLength;
+            receiversLocked = true;
+        }
 
-        for (int i = 0; i < rLength; i++) {
-            try {
-                receiversSnapshot[i].receiver().timePulse(TickCalculation.fromNano(now));
-            } catch (Throwable e) {
-                receiversSnapshot[i].handleException(e);
+        try {
+            for (int i = 0; i < rLength; i++) {
+                try {
+                    receiversSnapshot[i].receiver().timePulse(TickCalculation.fromNano(now));
+                } catch (Throwable e) {
+                    receiversSnapshot[i].handleException(e);
+                }
+            }
+        } finally {
+            synchronized (lock) {
+                receiversLocked = false;
             }
         }
 
-        receiversLocked = false;
         recordAnimationEnd();
 
-        final ReceiverRecord<TimerReceiver>[] animationTimersSnapshot = animationTimers;
-        final int aTLength = animationTimersLength;
-        animationTimersLocked = true;
-
-        // After every frame, call any frame jobs
-        for (int i = 0; i < aTLength; i++) {
-            try {
-                animationTimersSnapshot[i].receiver().handle(now);
-            } catch (Throwable e) {
-                animationTimersSnapshot[i].handleException(e);
-            }
+        final ReceiverRecord<TimerReceiver>[] animationTimersSnapshot;
+        final int aTLength;
+        synchronized (lock) {
+            animationTimersSnapshot = animationTimers;
+            aTLength = animationTimersLength;
+            animationTimersLocked = true;
         }
 
-        animationTimersLocked = false;
+        try {
+            // After every frame, call any frame jobs
+            for (int i = 0; i < aTLength; i++) {
+                try {
+                    animationTimersSnapshot[i].receiver().handle(now);
+                } catch (Throwable e) {
+                    animationTimersSnapshot[i].handleException(e);
+                }
+            }
+        } finally {
+            synchronized (lock) {
+                animationTimersLocked = false;
+            }
+        }
     }
 
     private static abstract class ReceiverRecord<T> {
@@ -385,7 +423,7 @@ public abstract class AbstractPrimaryTimer {
 
                 if (Logging.getJavaFXLogger().isLoggable(System.Logger.Level.WARNING)) {
                     Logging.getJavaFXLogger().warning(
-                        "Too many exceptions thrown by " + type().getSimpleName() + ", ignoring further exceptions.");
+                            "Too many exceptions thrown by " + type().getSimpleName() + ", ignoring further exceptions.");
                 }
             }
         }
