@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,10 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css.media;
 
-public class CssParserShim {
-
-    CssParser parser;
-
-    public CssParserShim(CssParser parser) {
-        this.parser = parser;
-    }
-
-    public CssParserShim() {
-        this.parser = new CssParser();
-    }
-
-    public ParsedValue parseExpr(String property, String expr) {
-        return parser.parseExpr(property, expr);
-    }
-
-    public Stylesheet parseUnmerged(String stylesheetText, boolean includeUnmatchableRules) {
-        return parser.parseUnmerged(stylesheetText, includeUnmatchableRules);
-    }
+public enum TriState {
+    TRUE,
+    FALSE,
+    UNKNOWN
 }
