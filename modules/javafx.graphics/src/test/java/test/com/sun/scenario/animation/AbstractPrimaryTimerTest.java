@@ -251,7 +251,7 @@ public class AbstractPrimaryTimerTest {
         }
     }
 
-    private static class AbstractPrimaryTimerStub extends AbstractPrimaryTimer {
+    static class AbstractPrimaryTimerStub extends AbstractPrimaryTimer {
 
         private DelayedRunnable animationRunnable;
 
