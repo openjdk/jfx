@@ -263,6 +263,7 @@ struct ContextInfoRec {
 #ifdef UNIX /* LINUX || SOLARIS */
     char *glxExtensionStr;
     PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI;
+    PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT;
 #endif /* LINUX || SOLARIS */
 
     /* gl function pointers */
