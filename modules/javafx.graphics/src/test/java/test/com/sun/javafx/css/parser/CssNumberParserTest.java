@@ -76,6 +76,8 @@ public class CssNumberParserTest {
         assertNumberFormatException(" 1");
         assertNumberFormatException("1 ");
         assertNumberFormatException("xx1e2yy", 2, 6); // slice is "1e2y"
+        assertNumberFormatException("++0");
+        assertNumberFormatException("1e--2");
     }
 
     @Test
