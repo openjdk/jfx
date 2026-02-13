@@ -63,22 +63,17 @@ Ref<CSSGridLineValue> CSSGridLineValue::create(RefPtr<CSSPrimitiveValue>&& spanV
 
 bool CSSGridLineValue::equals(const CSSGridLineValue& other) const
 {
-    if (m_spanValue) {
-        if (!other.m_spanValue || !m_spanValue->equals(*other.m_spanValue))
+    auto equals = [](CSSPrimitiveValue* value, CSSPrimitiveValue* otherValue) {
+        if ((!value && otherValue) || (value && !otherValue))
             return false;
-    } else if (other.m_spanValue)
-        return false;
+        return (!value && !otherValue) || value->equals(*otherValue);
+    };
 
-    if (m_numericValue) {
-        if (!other.m_numericValue || !m_numericValue->equals(*other.m_numericValue))
+    if (!equals(protectedSpanValue().get(), other.protectedSpanValue().get()))
             return false;
-    } else if (other.m_numericValue)
+    if (!equals(protectedNumericValue().get(), other.protectedNumericValue().get()))
         return false;
-
-    if (m_gridLineName) {
-        if (!other.m_gridLineName || !m_gridLineName->equals(*other.m_gridLineName))
-            return false;
-    } else if (other.m_gridLineName)
+    if (!equals(protectedGridLineName().get(), other.protectedGridLineName().get()))
         return false;
 
     return true;

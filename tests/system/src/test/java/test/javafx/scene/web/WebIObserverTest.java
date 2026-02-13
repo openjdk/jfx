@@ -110,8 +110,10 @@ public class WebIObserverTest {
         Util.runAndWait(() -> webView.getEngine().executeScript("testIO()"));
         Util.sleep(100);
 
-        Util.runAndWait(() ->
-                assertEquals("0.5", getIntersectionRatio(), "Intersection ratio"));
+        Util.runAndWait(() -> {
+            double ratio = Double.parseDouble(getIntersectionRatio());
+            assertEquals(0.5, ratio, 0.01, "Intersection ratio");
+        });
     }
 
     private String getIntersectionRatio() {

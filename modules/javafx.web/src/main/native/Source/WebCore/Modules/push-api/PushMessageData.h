@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/Uint8Array.h>
@@ -37,6 +36,7 @@ namespace WebCore {
 class Blob;
 class JSDOMGlobalObject;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class PushMessageData final : public RefCounted<PushMessageData> {
     WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PushMessageData);

@@ -7,7 +7,7 @@ This is a testing tool developed to support manual ad-hoc testing of individual 
 
 ## Prerequisites
 
-JavaFX SDK 24+ and JDK 24+ are required to build and run the tool.
+JavaFX SDK 25+ and the matching JDK are required to build and run the tool.
 You can use a JavaFX SDK that you build or you can download the JavaFX SDK found here:
 
 https://jdk.java.net/

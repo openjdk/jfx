@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,7 +60,7 @@ public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
-    using TrackConstraints = std::variant<bool, MediaTrackConstraints>;
+    using TrackConstraints = Variant<bool, MediaTrackConstraints>;
     static Ref<UserMediaRequest> create(Document&, MediaStreamRequest&&, TrackConstraints&&, TrackConstraints&&, DOMPromiseDeferred<IDLInterface<MediaStream>>&&);
     virtual ~UserMediaRequest();
 
@@ -92,7 +92,7 @@ private:
     Vector<String> m_videoDeviceUIDs;
     Vector<String> m_audioDeviceUIDs;
 
-    UniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>> m_promise;
+    const UniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>> m_promise;
     CompletionHandler<void()> m_allowCompletionHandler;
     MediaStreamRequest m_request;
     TrackConstraints m_audioConstraints;

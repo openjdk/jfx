@@ -24,9 +24,7 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
-#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -35,12 +33,13 @@ namespace WebCore {
 
 class DOMURL;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class URLSearchParams : public RefCounted<URLSearchParams> {
 public:
     ~URLSearchParams();
 
-    static ExceptionOr<Ref<URLSearchParams>> create(std::variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>, String>&&);
+    static ExceptionOr<Ref<URLSearchParams>> create(Variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>, String>&&);
     static Ref<URLSearchParams> create(const String& string, DOMURL* associatedURL)
     {
         return adoptRef(*new URLSearchParams(string, associatedURL));
@@ -64,7 +63,7 @@ public:
         std::optional<KeyValuePair<String, String>> next();
 
     private:
-        Ref<URLSearchParams> m_target;
+        const Ref<URLSearchParams> m_target;
         size_t m_index { 0 };
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator { *this }; }
@@ -76,7 +75,8 @@ private:
     void updateURL();
 
     WeakPtr<DOMURL> m_associatedURL;
-    Vector<KeyValuePair<String, String>> m_pairs;
+    using PairType = KeyValuePair<String, String>;
+    Vector<PairType> m_pairs;
 };
 
 } // namespace WebCore

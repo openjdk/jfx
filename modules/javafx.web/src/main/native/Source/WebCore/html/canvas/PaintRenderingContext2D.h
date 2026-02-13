@@ -26,6 +26,8 @@
 #pragma once
 
 #include "CanvasRenderingContext2DBase.h"
+#include "DisplayListRecorderImpl.h"
+#include <optional>
 
 namespace WebCore {
 
@@ -51,7 +53,7 @@ public:
 
 private:
     PaintRenderingContext2D(CustomPaintCanvas&);
-    mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
+    mutable std::optional<DisplayList::RecorderImpl> m_recordingContext;
 };
 
 } // namespace WebCore

@@ -56,7 +56,7 @@
 
 namespace WebCore {
 
-RefPtr<CSSCalcValue> CSSCalcValue::parse(CSSParserTokenRange& tokens, const CSSParserContext& context, Calculation::Category category, CSS::Range range, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions propertyOptions)
+RefPtr<CSSCalcValue> CSSCalcValue::parse(CSSParserTokenRange& tokens, CSS::PropertyParserState& state, Calculation::Category category, CSS::Range range, CSSCalcSymbolsAllowed symbolsAllowed, CSSPropertyParserOptions propertyOptions)
 {
     auto parserOptions = CSSCalc::ParserOptions {
         .category = category,
@@ -72,7 +72,7 @@ RefPtr<CSSCalcValue> CSSCalcValue::parse(CSSParserTokenRange& tokens, const CSSP
         .allowZeroValueLengthRemovalFromSum = false,
     };
 
-    auto tree = CSSCalc::parseAndSimplify(tokens, context, parserOptions, simplificationOptions);
+    auto tree = CSSCalc::parseAndSimplify(tokens, state, parserOptions, simplificationOptions);
     if (!tree)
         return nullptr;
 
@@ -185,11 +185,6 @@ CSSUnitType CSSCalcValue::primitiveType() const
 
     ASSERT_NOT_REACHED();
     return CSSUnitType::CSS_NUMBER;
-}
-
-bool CSSCalcValue::requiresConversionData() const
-{
-    return m_tree.requiresConversionData;
 }
 
 void CSSCalcValue::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
@@ -320,17 +315,17 @@ Ref<CalculationValue> CSSCalcValue::createCalculationValue(NoConversionDataRequi
 
 void CSSCalcValue::dump(TextStream& ts) const
 {
-    ts << indent << "(" << "CSSCalcValue";
+    ts << indent << '(' << "CSSCalcValue"_s;
 
     TextStream multilineStream;
     multilineStream.setIndent(ts.indent() + 2);
 
-    multilineStream.dumpProperty("minimum value", m_range.min);
-    multilineStream.dumpProperty("maximum value", m_range.max);
-    multilineStream.dumpProperty("expression", customCSSText(CSS::defaultSerializationContext()));
+    multilineStream.dumpProperty("minimum value"_s, m_range.min);
+    multilineStream.dumpProperty("maximum value"_s, m_range.max);
+    multilineStream.dumpProperty("expression"_s, customCSSText(CSS::defaultSerializationContext()));
 
     ts << multilineStream.release();
-    ts << ")\n";
+    ts << ")\n"_s;
 }
 
 TextStream& operator<<(TextStream& ts, const CSSCalcValue& value)

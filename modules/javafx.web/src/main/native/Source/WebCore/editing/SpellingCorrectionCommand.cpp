@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "SpellingCorrectionCommand.h"
 
 #include "AlternativeTextController.h"
+#include "BoundaryPointInlines.h"
 #include "DataTransfer.h"
 #include "Document.h"
 #include "DocumentFragment.h"
@@ -41,7 +42,7 @@
 namespace WebCore {
 
 #if USE(AUTOCORRECTION_PANEL)
-// On Mac OS X, we use this command to keep track of user undoing a correction for the first time.
+// On macOS, we use this command to keep track of user undoing a correction for the first time.
 // This information is needed by spell checking service to update user specific data.
 class SpellingCorrectionRecordUndoCommand : public SimpleEditCommand {
 public:
@@ -65,7 +66,7 @@ private:
     void doUnapply() override
     {
         if (!m_hasBeenUndone) {
-            protectedDocument()->protectedEditor()->unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
+            document().protectedEditor()->unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
             m_hasBeenUndone = true;
         }
 
@@ -108,7 +109,7 @@ void SpellingCorrectionCommand::doApply()
     if (!m_corrected.length())
         return;
 
-    Ref document = protectedDocument();
+    Ref document = this->document();
     if (!document->selection().shouldChangeSelection(m_selectionToBeCorrected))
         return;
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
+ * Copyright (C) 2025 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,6 +28,10 @@
 #include "TextureMapper.h"
 #include <wtf/SystemTracing.h>
 
+#if USE(SKIA)
+#include "SkiaPaintingEngine.h"
+#endif
+
 namespace WebCore {
 
 CoordinatedBackingStoreTile::CoordinatedBackingStoreTile(float scale)
@@ -48,13 +53,11 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
     if (!updatesCount)
         return;
 
-    WTFBeginSignpost(this, CoordinatedSwapBuffers, "%lu updates", updatesCount);
+    WTFBeginSignpost(this, CoordinatedSwapBuffers, "%zu updates", updatesCount);
     for (unsigned updateIndex = 0; updateIndex < updatesCount; ++updateIndex) {
         auto& update = updates[updateIndex];
-        if (!update.buffer)
-            continue;
 
-        WTFBeginSignpost(this, CoordinatedSwapBuffer, "%u/%lu, rect %ix%i+%i+%i", updateIndex + 1, updatesCount, update.tileRect.x(), update.tileRect.y(), update.tileRect.width(), update.tileRect.height());
+        WTFBeginSignpost(this, CoordinatedSwapBuffer, "%u/%zu, rect %ix%i+%i+%i", updateIndex + 1, updatesCount, update.tileRect.x(), update.tileRect.y(), update.tileRect.width(), update.tileRect.height());
 
         ASSERT(textureMapper.maxTextureSize().width() >= update.tileRect.size().width());
         ASSERT(textureMapper.maxTextureSize().height() >= update.tileRect.size().height());
@@ -62,9 +65,16 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
         FloatRect unscaledTileRect(update.tileRect);
         unscaledTileRect.scale(1. / m_scale);
 
-        OptionSet<BitmapTexture::Flags> flags;
+        OptionSet<BitmapTexture::Flags> flags { };
         if (update.buffer->supportsAlpha())
             flags.add(BitmapTexture::Flags::SupportsAlpha);
+
+#if USE(SKIA) && USE(GBM)
+        if (SkiaPaintingEngine::shouldUseLinearTileTextures()) {
+            flags.add(BitmapTexture::Flags::BackedByDMABuf);
+            flags.add(BitmapTexture::Flags::ForceLinearBuffer);
+        }
+#endif
 
         WTFBeginSignpost(this, AcquireTexture);
         if (!m_texture || unscaledTileRect != m_rect) {
@@ -81,7 +91,7 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
 #if USE(SKIA)
         if (update.buffer->isBackedByOpenGL()) {
             WTFBeginSignpost(this, CopyTextureGPUToGPU);
-            auto& buffer = static_cast<CoordinatedAcceleratedTileBuffer&>(*update.buffer);
+            auto& buffer = static_cast<CoordinatedAcceleratedTileBuffer&>(update.buffer.get());
             buffer.serverWait();
 
             // Fast path: whole tile content changed -- take ownership of the incoming texture, replacing the existing tile buffer (avoiding texture copies).
@@ -91,7 +101,6 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
             } else
                 m_texture->copyFromExternalTexture(buffer.texture().id(), update.sourceRect, toIntSize(update.bufferOffset));
 
-            update.buffer = nullptr;
             WTFEndSignpost(this, CopyTextureGPUToGPU);
             WTFEndSignpost(this, CoordinatedSwapBuffer);
             continue;
@@ -100,9 +109,8 @@ void CoordinatedBackingStoreTile::processPendingUpdates(TextureMapper& textureMa
 
         WTFBeginSignpost(this, CopyTextureCPUToGPU);
         ASSERT(!update.buffer->isBackedByOpenGL());
-        auto& buffer = static_cast<CoordinatedUnacceleratedTileBuffer&>(*update.buffer);
+        auto& buffer = static_cast<CoordinatedUnacceleratedTileBuffer&>(update.buffer.get());
         m_texture->updateContents(buffer.data(), update.sourceRect, update.bufferOffset, buffer.stride(), buffer.pixelFormat());
-        update.buffer = nullptr;
         WTFEndSignpost(this, CopyTextureCPUToGPU);
 
         WTFEndSignpost(this, CoordinatedSwapBuffer);

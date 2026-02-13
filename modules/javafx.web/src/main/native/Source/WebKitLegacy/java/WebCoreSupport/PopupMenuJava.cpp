@@ -29,6 +29,7 @@
 #include <WebCore/Color.h>
 #include <WebCore/Font.h>
 #include <WebCore/Frame.h>
+#include "FrameInlines.h"
 #include <WebCore/FrameView.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>

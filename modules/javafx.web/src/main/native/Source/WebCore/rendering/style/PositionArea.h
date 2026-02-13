@@ -25,43 +25,112 @@
  */
 
 #pragma once
+#include "BoxSides.h"
+#include "StyleSelfAlignmentData.h"
+#include "WritingMode.h"
 
 namespace WebCore {
 
 // The axis that the span specifies.
+// Represented as 3 bits: axis type, direction type, [Logical]BoxAxis value.
 enum class PositionAreaAxis : uint8_t {
-    // Physical axes. Implies self is PositionAreaSelf::No, as physical axes
-    // do not depend on writing mode of any elements.
-    Horizontal,
-    Vertical,
+    // Physical axes × Physical directions.
+    Horizontal = 0b000,
+    Vertical   = 0b001,
 
-    // Logical axes.
-    X,
-    Y,
-    Block,
-    Inline,
+    // Physical axes × Logical directions.
+    X = 0b010,
+    Y = 0b011,
+
+    // Logical axes × Logical directions.
+    Inline = 0b110,
+    Block  = 0b111,
 };
 
-// Specifies which tile(s) on the axis that the position-area span occupies.
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaAxis);
+
+// Get the opposite axis of a given axis.
+static inline PositionAreaAxis oppositePositionAreaAxis(PositionAreaAxis axis)
+{
+    switch (axis) {
+    case PositionAreaAxis::Horizontal:
+        return PositionAreaAxis::Vertical;
+    case PositionAreaAxis::Vertical:
+        return PositionAreaAxis::Horizontal;
+
+    case PositionAreaAxis::X:
+        return PositionAreaAxis::Y;
+    case PositionAreaAxis::Y:
+        return PositionAreaAxis::X;
+
+    case PositionAreaAxis::Block:
+        return PositionAreaAxis::Inline;
+    case PositionAreaAxis::Inline:
+        return PositionAreaAxis::Block;
+    }
+
+    ASSERT_NOT_REACHED();
+    return PositionAreaAxis::Horizontal;
+}
+
+static inline bool isPositionAreaAxisLogical(const PositionAreaAxis positionAxis)
+{
+    static const uint8_t axisBit = 0b100;
+    return static_cast<uint8_t>(positionAxis) & axisBit;
+}
+
+static inline bool isPositionAreaDirectionLogical(const PositionAreaAxis positionAxis)
+{
+    static const uint8_t directionBit = 0b010;
+    return static_cast<uint8_t>(positionAxis) & directionBit;
+}
+
+static inline BoxAxis mapPositionAreaAxisToPhysicalAxis(const PositionAreaAxis positionAxis, const WritingMode writingMode)
+{
+    static const uint8_t orientationBit = 0b001;
+    auto physicalAxis = static_cast<uint8_t>(positionAxis) & orientationBit;
+    if (isPositionAreaAxisLogical(positionAxis) && writingMode.isVertical())
+        physicalAxis = !physicalAxis;
+    return static_cast<BoxAxis>(physicalAxis);
+}
+
+static inline LogicalBoxAxis mapPositionAreaAxisToLogicalAxis(const PositionAreaAxis positionAxis, const WritingMode writingMode)
+{
+    static const uint8_t orientationBit = 0b001;
+    auto logicalAxis = static_cast<uint8_t>(positionAxis) & orientationBit;
+    if (!isPositionAreaAxisLogical(positionAxis) && writingMode.isVertical())
+        logicalAxis = !logicalAxis;
+    return static_cast<LogicalBoxAxis>(logicalAxis);
+}
+
+// Specifies which tracks(s) on the axis that the position-area span occupies.
+// Represented as 3 bits: start track, center track, end track.
 enum class PositionAreaTrack : uint8_t {
-    // First tile.
-    Start,
-
-    // First and center tiles.
-    SpanStart,
-
-    // Last tile.
-    End,
-
-    // Center and last tiles.
-    SpanEnd,
-
-    // Center tile.
-    Center,
-
-    // All tiles on the axis.
-    SpanAll,
+    Start     = 0b001, // First track.
+    SpanStart = 0b011, // First and center tracks.
+    End       = 0b100, // Last track.
+    SpanEnd   = 0b110, // Center and last track.
+    Center    = 0b010, // Center track.
+    SpanAll   = 0b111, // All tracks along the axis.
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaTrack);
+
+static inline PositionAreaTrack flipPositionAreaTrack(PositionAreaTrack track)
+{
+    // We need to cast values out of the enum type restrictions in order to do math.
+    auto trackBits = static_cast<uint8_t>(track);
+    static constexpr uint8_t startBit = static_cast<uint8_t>(PositionAreaTrack::Start);
+    static constexpr uint8_t endBit = static_cast<uint8_t>(PositionAreaTrack::End);
+    static constexpr uint8_t sideBits = startBit | endBit;
+
+    bool isSymmetric = !(trackBits & startBit) == !(trackBits & endBit);
+    auto invertedValue = isSymmetric ? trackBits
+        // Flip side bits and merge with not-side bits.
+        : ((trackBits & sideBits) ^ sideBits) | (trackBits & ~sideBits);
+
+    return static_cast<PositionAreaTrack>(invertedValue);
+}
 
 // When the span refers to a logical axis that needs to be resolved to physical
 // axis, this determines whether to use the writing mode of the element's
@@ -74,12 +143,14 @@ enum class PositionAreaSelf : bool {
     Yes
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaSelf);
+
 // A span in the position-area. position-area requires two spans of opposite
 // axis to determine the containing block area.
 //
 // A span is uniquely determined by three properties:
 // * the axis the span is on
-// * which track it occupies
+// * which track(s) it occupies
 // * "self" - whether to use the writing mode of the element itself or
 //   its containing block to resolve logical axes.
 //
@@ -114,7 +185,7 @@ private:
     uint8_t m_self : 1;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const PositionAreaSpan&);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionAreaSpan);
 
 // A position-area is formed by two spans of opposite axes, that uniquely determine
 // the area of the containing block.
@@ -124,6 +195,13 @@ public:
 
     PositionAreaSpan blockOrXAxis() const { return m_blockOrXAxis; }
     PositionAreaSpan inlineOrYAxis() const { return m_inlineOrYAxis; }
+    PositionAreaSpan spanForAxis(BoxAxis physicalAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
+    PositionAreaSpan spanForAxis(LogicalBoxAxis logicalAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
+
+    // Start/end based on container's coordinate-increasing direction (RenderBox coordinates)
+    PositionAreaTrack coordMatchedTrackForAxis(BoxAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
+
+    ItemPosition defaultAlignmentForAxis(BoxAxis, WritingMode containerWritingMode, WritingMode selfWritingMode) const;
 
     bool operator==(const PositionArea&) const = default;
 
@@ -132,6 +210,6 @@ private:
     PositionAreaSpan m_inlineOrYAxis;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const PositionArea&);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionArea);
 
 } // namespace WebCore

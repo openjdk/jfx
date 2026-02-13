@@ -92,6 +92,7 @@ private:
     friend class LibWebRTCMediaEndpoint;
     friend class LibWebRTCRtpSenderBackend;
     RTCPeerConnection& connection() { return m_peerConnection; }
+    Ref<RTCPeerConnection> protectedConnection() { return m_peerConnection.get(); }
 
     void getStatsSucceeded(const DeferredPromise&, Ref<RTCStatsReport>&&);
 
@@ -125,7 +126,7 @@ private:
     void disableICECandidateFiltering() final;
     bool isNegotiationNeeded(uint32_t) const final;
 
-    Ref<LibWebRTCMediaEndpoint> m_endpoint;
+    const Ref<LibWebRTCMediaEndpoint> m_endpoint;
     bool m_isLocalDescriptionSet { false };
     bool m_isRemoteDescriptionSet { false };
 

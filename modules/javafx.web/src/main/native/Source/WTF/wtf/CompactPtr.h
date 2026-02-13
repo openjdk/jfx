@@ -27,6 +27,7 @@
 
 #include <cstdint>
 #include <utility>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/GetPtr.h>
 #include <wtf/HashFunctions.h>
@@ -50,14 +51,13 @@ namespace WTF {
 
 template <typename T>
 class CompactPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CompactPtr);
 public:
 #if HAVE(36BIT_ADDRESS)
-    // The CompactPtr algorithm relies on being able to shift
-    // a 36-bit address right by 4 in order to fit in 32-bits.
-    // The only way this is an ok thing to do without information
-    // loss is if the if the address is always 16 bytes aligned i.e.
-    // the lower 4 bits is always 0.
+    // The CompactPtr algorithm relies on shifting a 36-bit address
+    // right by 4 bits to fit within 32 bits.
+    // This operation is lossless only if the address is always
+    // 16-byte aligned, meaning the lower 4 bits are always 0.
     using StorageType = uint32_t;
     static constexpr bool is32Bit = true;
 #else
@@ -226,12 +226,6 @@ template<typename T, typename U>
 inline bool operator==(const CompactPtr<T>& a, U* b)
 {
     return a.get() == b;
-}
-
-template<typename T, typename U>
-inline bool operator==(T* a, const CompactPtr<U>& b)
-{
-    return a == b.get();
 }
 
 template <typename T>

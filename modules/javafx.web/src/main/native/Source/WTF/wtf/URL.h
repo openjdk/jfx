@@ -56,7 +56,7 @@ protected:
 };
 
 class URL {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(URL);
 public:
     // Generates a URL which contains a null string.
     URL() { invalidate(); }
@@ -191,6 +191,7 @@ public:
     WTF_EXPORT_PRIVATE bool protocolIsJavaScript() const;
     bool protocolIsInFTPFamily() const { return protocolIs("ftp"_s) || protocolIs("ftps"_s); }
     bool protocolIsInHTTPFamily() const { return m_protocolIsInHTTPFamily; }
+    WTF_EXPORT_PRIVATE bool protocolIsSecure() const;
     bool hasOpaquePath() const { return m_hasOpaquePath; }
 
     WTF_EXPORT_PRIVATE bool isAboutBlank() const;
@@ -199,7 +200,7 @@ public:
     WTF_EXPORT_PRIVATE bool isMatchingDomain(StringView) const;
 
     WTF_EXPORT_PRIVATE bool setProtocol(StringView);
-    WTF_EXPORT_PRIVATE void setHost(StringView);
+    WTF_EXPORT_PRIVATE bool setHost(StringView);
 
     WTF_EXPORT_PRIVATE void setPort(std::optional<uint16_t>);
 
@@ -234,11 +235,13 @@ public:
 #if USE(CF)
     WTF_EXPORT_PRIVATE URL(CFURLRef);
     WTF_EXPORT_PRIVATE RetainPtr<CFURLRef> createCFURL() const;
+    WTF_EXPORT_PRIVATE static RetainPtr<CFURLRef> createCFURL(const String&);
 #endif
 
 #if USE(FOUNDATION)
     WTF_EXPORT_PRIVATE URL(NSURL *);
-    WTF_EXPORT_PRIVATE operator NSURL *() const;
+    WTF_EXPORT_PRIVATE RetainPtr<NSURL> createNSURL() const;
+    WTF_EXPORT_PRIVATE static NSURL *emptyNSURL();
 #endif
 
 #if PLATFORM(JAVA)
@@ -270,12 +273,10 @@ private:
     void parse(String&&);
     void parseAllowingC0AtEnd(String&&);
 
-    void maybeTrimTrailingSpacesFromOpaquePath();
-
     friend WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
 
 #if USE(CF)
-    static RetainPtr<CFURLRef> emptyCFURL();
+    static CFURLRef emptyCFURL();
 #endif
 
     String m_string;
@@ -303,7 +304,6 @@ static_assert(sizeof(URL) == sizeof(String) + 8 * sizeof(unsigned), "URL should 
 
 bool operator==(const URL&, const URL&);
 bool operator==(const URL&, const String&);
-bool operator==(const String&, const URL&);
 
 WTF_EXPORT_PRIVATE bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
 WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
@@ -312,8 +312,8 @@ WTF_EXPORT_PRIVATE Vector<KeyValuePair<String, String>> queryParameters(const UR
 WTF_EXPORT_PRIVATE bool isEqualIgnoringQueryAndFragments(const URL&, const URL&);
 
 // Returns the parameters that were removed (including duplicates), in the order that they appear in the URL.
-WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, const UncheckedKeyHashSet<String>&);
-WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, NOESCAPE const Function<bool(const String&)>&);
+WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, const HashSet<String>&);
+WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, NOESCAPE const Function<bool(const String&, const String&)>&);
 
 WTF_EXPORT_PRIVATE const URL& aboutBlankURL();
 WTF_EXPORT_PRIVATE const URL& aboutSrcDocURL();
@@ -362,11 +362,6 @@ inline bool operator==(const URL& a, const URL& b)
 inline bool operator==(const URL& a, const String& b)
 {
     return a.string() == b;
-}
-
-inline bool operator==(const String& a, const URL& b)
-{
-    return a == b.string();
 }
 
 inline URL::URL(HashTableDeletedValueType)

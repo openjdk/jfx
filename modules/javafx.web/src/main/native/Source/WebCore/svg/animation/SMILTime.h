@@ -83,11 +83,8 @@ private:
 
 inline bool operator==(const SMILTime& a, const SMILTime& b) { return a.isFinite() && a.value() == b.value(); }
 inline bool operator!(const SMILTime& a) { return !a.isFinite() || !a.value(); }
-inline bool operator>(const SMILTime& a, const SMILTime& b) { return a.value() > b.value(); }
-inline bool operator<(const SMILTime& a, const SMILTime& b) { return a.value() < b.value(); }
-inline bool operator>=(const SMILTime& a, const SMILTime& b) { return a.value() > b.value() || operator==(a, b); }
-inline bool operator<=(const SMILTime& a, const SMILTime& b) { return a.value() < b.value() || operator==(a, b); }
-inline bool operator<(const SMILTimeWithOrigin& a, const SMILTimeWithOrigin& b) { return a.time() < b.time(); }
+inline auto operator<=>(const SMILTime& a, const SMILTime& b) { return a.value() <=> b.value(); }
+inline auto operator<=>(const SMILTimeWithOrigin& a, const SMILTimeWithOrigin& b) { return a.time() <=> b.time(); }
 
 SMILTime operator+(const SMILTime&, const SMILTime&);
 SMILTime operator-(const SMILTime&, const SMILTime&);

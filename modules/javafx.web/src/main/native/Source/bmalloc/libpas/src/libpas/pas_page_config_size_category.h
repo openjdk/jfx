@@ -51,7 +51,7 @@ static inline const char* pas_page_config_size_category_get_string(pas_page_conf
     case pas_page_config_size_category_large:
         return "large";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

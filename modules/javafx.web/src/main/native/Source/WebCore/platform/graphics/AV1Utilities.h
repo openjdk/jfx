@@ -177,4 +177,13 @@ WEBCORE_EXPORT bool validateAV1PerLevelConstraints(const AV1CodecConfigurationRe
 
 std::optional<AV1CodecConfigurationRecord> parseAV1DecoderConfigurationRecord(const SharedBuffer&);
 
+template<typename E>
+std::optional<E> parseEnumFromStringView(StringView stringView)
+{
+    auto value = parseInteger<std::underlying_type_t<E>>(stringView);
+    if (!value || !isValidEnum<E>(*value))
+        return std::nullopt;
+    return static_cast<E>(*value);
+}
+
 }

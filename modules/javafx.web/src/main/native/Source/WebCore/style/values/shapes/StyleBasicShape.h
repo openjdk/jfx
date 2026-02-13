@@ -41,7 +41,7 @@ namespace Style {
 
 // NOTE: This differs from CSS::BasicShape due to lack of RectFunction and XywhFunction, both of
 // which convert to InsetFunction during style conversion.
-using BasicShape = std::variant<
+using BasicShape = Variant<
     CircleFunction,
     EllipseFunction,
     InsetFunction,
@@ -54,8 +54,15 @@ template<typename T> concept ShapeWithCenterCoordinate = std::same_as<T, CircleF
 
 // MARK: - Conversion
 
-template<> struct ToCSS<BasicShape> { auto operator()(const BasicShape&, const RenderStyle&) -> CSS::BasicShape; };
-template<> struct ToStyle<CSS::BasicShape> { auto operator()(const CSS::BasicShape&, const BuilderState&) -> BasicShape; };
+template<> struct ToCSS<BasicShape> { auto operator()(const BasicShape&, const RenderStyle&, PathConversion = PathConversion::None) -> CSS::BasicShape; };
+template<> struct ToStyle<CSS::BasicShape> { auto operator()(const CSS::BasicShape&, const BuilderState&, std::optional<float> zoom = 1.0f) -> BasicShape; };
+
+template<> struct CSSValueCreation<BasicShape> { Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const BasicShape&, PathConversion = PathConversion::None); };
+template<> struct CSSValueConversion<BasicShape> { BasicShape operator()(BuilderState&, const CSSValue&, std::optional<float> zoom = 1.0f); };
+
+// MARK: - Serialization
+
+template<> struct Serialize<BasicShape> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const BasicShape&, PathConversion = PathConversion::None); };
 
 // MARK: - Blending
 

@@ -62,7 +62,7 @@ void SelectorFilter::collectElementIdentifierHashes(const Element& element, Vect
 
     if (element.hasAttributesWithoutUpdate()) {
         for (auto& attribute : element.attributes()) {
-            auto attributeName = element.isHTMLElement() ? attribute.localName() : attribute.localNameLowercase();
+            auto& attributeName = element.isHTMLElement() ? attribute.localName() : attribute.localNameLowercase();
             if (isExcludedAttribute(attributeName))
                 continue;
             identifierHashes.append(attributeName.impl()->existingHash() * AttributeSalt);
@@ -104,7 +104,7 @@ void SelectorFilter::pushParent(Element* parent)
 
 void SelectorFilter::pushParentInitializingIfNeeded(Element& parent)
 {
-    if (UNLIKELY(m_parentStack.isEmpty())) {
+    if (m_parentStack.isEmpty()) [[unlikely]] {
         initializeParentStack(parent);
         return;
     }

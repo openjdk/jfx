@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  * Copyright (C) 2012 Company 100 Inc.
  *
@@ -27,9 +27,6 @@
 
 #pragma once
 
-#include "Color.h"
-#include "ImagePaintingOptions.h"
-#include "IntSize.h"
 #include "PlatformImage.h"
 #include "RenderingResource.h"
 #include <wtf/TZoneMalloc.h>
@@ -37,8 +34,14 @@
 
 namespace WebCore {
 
+class Color;
+class DestinationColorSpace;
+class FloatRect;
 class GraphicsContext;
+class IntSize;
 class NativeImageBackend;
+struct Headroom;
+struct ImagePaintingOptions;
 
 class NativeImage final : public RenderingResource {
     WTF_MAKE_TZONE_ALLOCATED(NativeImage);
@@ -47,7 +50,7 @@ public:
     // Creates a NativeImage that is intended to be drawn once or only few times. Signals the platform to avoid generating any caches for the image.
     static WEBCORE_EXPORT RefPtr<NativeImage> createTransient(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
 
-    virtual ~NativeImage();
+    ~NativeImage();
 
     WEBCORE_EXPORT const PlatformImagePtr& platformImage() const;
 
@@ -55,9 +58,11 @@ public:
     bool hasAlpha() const;
     std::optional<Color> singlePixelSolidColor() const;
     WEBCORE_EXPORT DestinationColorSpace colorSpace() const;
-    Headroom headroom() const;
+    WEBCORE_EXPORT bool hasHDRContent() const;
+    WEBCORE_EXPORT Headroom headroom() const;
 
     void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions);
+    void drawWithToneMapping(GraphicsContext&, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions);
     void clearSubimages();
 
     WEBCORE_EXPORT void replaceBackend(UniqueRef<NativeImageBackend>);

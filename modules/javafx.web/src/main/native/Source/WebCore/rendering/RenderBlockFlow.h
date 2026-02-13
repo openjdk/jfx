@@ -132,6 +132,8 @@ public:
 protected:
     void willBeDestroyed() override;
 
+    void layoutBlockWithNoChildren();
+
     // This method is called at the start of layout to wipe away all of the floats in our floating objects list. It also
     // repopulates the list with any floats that intrude from previous siblings or parents. Floats that were added by
     // descendants are gone when this call completes and will get added back later on after the children have gotten
@@ -239,7 +241,7 @@ public:
     void performBlockStepSizing(RenderBox& child, LayoutUnit blockStepSizeForChild) const;
 
     void layoutBlockChild(RenderBox& child, MarginInfo&, LayoutUnit& previousFloatLogicalBottom, LayoutUnit& maxFloatLogicalBottom);
-    void adjustPositionedBlock(RenderBox& child, const MarginInfo&);
+    void adjustOutOfFlowBlock(RenderBox& child, const MarginInfo&);
     void adjustFloatingBlock(const MarginInfo&);
 
     void trimBlockEndChildrenMargins();
@@ -276,9 +278,9 @@ public:
     virtual bool requiresColumns(int) const;
 
     bool containsFloats() const override { return m_floatingObjects && !m_floatingObjects->set().isEmpty(); }
-    bool containsFloat(RenderBox&) const;
+    bool containsFloat(const RenderBox&) const;
     bool subtreeContainsFloats() const;
-    bool subtreeContainsFloat(RenderBox&) const;
+    bool subtreeContainsFloat(const RenderBox&) const;
 
     void deleteLines() override;
     void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
@@ -293,7 +295,7 @@ public:
 
     const FloatingObjectSet* floatingObjectSet() const { return m_floatingObjects ? &m_floatingObjects->set() : nullptr; }
 
-    FloatingObject& insertFloatingObjectForIFC(RenderBox&);
+    FloatingObject& insertFloatingBox(RenderBox&);
 
     LayoutUnit logicalTopForFloat(const FloatingObject& floatingObject) const { return isHorizontalWritingMode() ? floatingObject.y() : floatingObject.x(); }
     LayoutUnit logicalBottomForFloat(const FloatingObject& floatingObject) const { return isHorizontalWritingMode() ? floatingObject.maxY() : floatingObject.maxX(); }
@@ -447,7 +449,6 @@ protected:
 
     std::optional<LayoutUnit> firstLineBaseline() const override;
     std::optional<LayoutUnit> lastLineBaseline() const override;
-    std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const override;
 
     void setComputedColumnCountAndWidth(int, LayoutUnit);
 
@@ -457,8 +458,6 @@ protected:
     LayoutOptionalOutsets allowedLayoutOverflow() const override;
 
     virtual void computeColumnCountAndWidth();
-
-    virtual void cachePriorCharactersIfNeeded(const CachedLineBreakIteratorFactory&) { }
 
 protected:
     // Called to lay out the legend for a fieldset or the ruby text of a ruby run. Also used by multi-column layout to handle
@@ -478,18 +477,16 @@ private:
     void paintFloats(PaintInfo&, const LayoutPoint&, bool preservePhase = false) override;
 
     void repaintOverhangingFloats(bool paintAllDescendants) final;
-    void clipOutFloatingObjects(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) override;
+    void clipOutFloatingBoxes(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) override;
 
-    FloatingObject* insertFloatingObject(RenderBox&);
-    void removeFloatingObject(RenderBox&);
-    void removeFloatingObjectsBelow(FloatingObject*, int logicalOffset);
+    void insertFloatingBoxAndMarkForLayout(RenderBox&);
+    void removeFloatingBox(RenderBox&);
     void computeLogicalLocationForFloat(FloatingObject&, LayoutUnit& logicalTopOffset);
 
     // Called from lineWidth, to position the floats added in the last line.
     // Returns true if and only if it has positioned any floats.
     bool positionNewFloats();
     void clearFloats(UsedClear);
-    FloatingObjects* floatingObjects() { return m_floatingObjects.get(); }
 
     LayoutUnit logicalRightFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
     LayoutUnit logicalLeftFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
@@ -504,7 +501,7 @@ private:
     bool hasOverhangingFloat(RenderBox&);
     void addIntrudingFloats(RenderBlockFlow* prev, RenderBlockFlow* container, LayoutUnit xoffset, LayoutUnit yoffset);
     inline bool hasOverhangingFloats() const;
-    LayoutUnit getClearDelta(RenderBox& child, LayoutUnit yPos);
+    LayoutUnit computedClearDeltaForChild(RenderBox& child, LayoutUnit yPos);
 
     void determineLogicalLeftPositionForChild(RenderBox& child, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
 
@@ -519,7 +516,6 @@ private:
     VisiblePosition positionForPointWithInlineChildren(const LayoutPoint& pointInLogicalContents, HitTestSource) override;
     void addFocusRingRectsForInlineChildren(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*) const override;
 
-private:
     bool hasSvgTextLayout() const;
 
     bool hasInlineLayout() const;
@@ -534,6 +530,8 @@ private:
     void setTextBoxTrimForSubtree(const RenderBlockFlow* inlineFormattingContextRootForTextBoxTrimEnd = nullptr);
     void adjustTextBoxTrimAfterLayout();
     std::pair<float, float> inlineContentTopAndBottomIncludingInkOverflow() const;
+
+    void dirtyForLayoutFromPercentageHeightDescendants();
 
 #if ENABLE(TEXT_AUTOSIZING)
     int m_widthForTextAutosizing;
@@ -571,15 +569,11 @@ protected:
     std::unique_ptr<RenderBlockFlowRareData> m_rareBlockFlowData;
 
 private:
-    std::variant<
+    Variant<
         std::monostate,
         std::unique_ptr<LayoutIntegration::LineLayout>,
         std::unique_ptr<LegacyLineLayout>
     > m_lineLayout;
-
-    friend class LineBreaker;
-    friend class LineWidth; // Needs to know FloatingObject
-    friend class LegacyLineLayout;
 };
 
 inline bool RenderBlockFlow::hasSvgTextLayout() const

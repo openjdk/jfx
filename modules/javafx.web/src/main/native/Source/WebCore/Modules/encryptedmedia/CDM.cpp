@@ -31,7 +31,8 @@
 #include "CDMFactory.h"
 #include "CDMPrivate.h"
 #include "ContextDestructionObserverInlines.h"
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "FrameInlines.h"
 #include "InitDataRegistry.h"
 #include "MediaKeysRequirement.h"
 #include "MediaPlayer.h"
@@ -99,8 +100,9 @@ void CDM::getSupportedConfiguration(MediaKeySystemConfiguration&& candidateConfi
         return;
     }
 
+    RefPtr page = document->page();
     auto access = CDMPrivate::LocalStorageAccess::Allowed;
-    bool isEphemeral = !document->page() || document->page()->sessionID().isEphemeral();
+    bool isEphemeral = !page || page->sessionID().isEphemeral();
     if (isEphemeral || document->canAccessResource(ScriptExecutionContext::ResourceType::LocalStorage) == ScriptExecutionContext::HasResourceAccess::No)
         access = CDMPrivate::LocalStorageAccess::NotAllowed;
     m_private->getSupportedConfiguration(WTFMove(candidateConfiguration), access, WTFMove(callback));

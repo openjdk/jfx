@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "AudioNodeOutput.h"
 #include "AudioParam.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include "FloatConversion.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
@@ -98,7 +99,7 @@ AudioBufferSourceNode::~AudioBufferSourceNode()
 
 void AudioBufferSourceNode::process(size_t framesToProcess)
 {
-    auto& outputBus = *output(0)->bus();
+    auto& outputBus = output(0)->bus();
 
     if (!isInitialized()) {
         outputBus.zero();
@@ -140,7 +141,7 @@ void AudioBufferSourceNode::process(size_t framesToProcess)
         m_destinationChannels[i] = outputBus.channel(i)->mutableSpan();
 
     // Render by reading directly from the buffer.
-    if (!renderFromBuffer(&outputBus, quantumFrameOffset, bufferFramesToProcess, startFrameOffset)) {
+    if (!renderFromBuffer(outputBus, quantumFrameOffset, bufferFramesToProcess, startFrameOffset)) {
         outputBus.zero();
         return;
     }
@@ -149,7 +150,7 @@ void AudioBufferSourceNode::process(size_t framesToProcess)
 }
 
 // Returns true if we're finished.
-bool AudioBufferSourceNode::renderSilenceAndFinishIfNotLooping(AudioBus*, unsigned index, size_t framesToProcess)
+bool AudioBufferSourceNode::renderSilenceAndFinishIfNotLooping(AudioBus&, unsigned index, size_t framesToProcess)
 {
     if (!m_isLooping) {
         // If we're not looping, then stop playing when we get to the end.
@@ -168,18 +169,17 @@ bool AudioBufferSourceNode::renderSilenceAndFinishIfNotLooping(AudioBus*, unsign
     return false;
 }
 
-bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset)
+bool AudioBufferSourceNode::renderFromBuffer(AudioBus& bus, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset)
 {
     ASSERT(context().isAudioThread());
 
     // Basic sanity checking
-    ASSERT(bus);
     ASSERT(m_buffer);
-    if (!bus || !m_buffer)
+    if (!m_buffer)
         return false;
 
     unsigned numberOfChannels = this->numberOfChannels();
-    unsigned busNumberOfChannels = bus->numberOfChannels();
+    unsigned busNumberOfChannels = bus.numberOfChannels();
 
     bool channelCountGood = numberOfChannels && numberOfChannels == busNumberOfChannels;
     ASSERT(channelCountGood);
@@ -187,7 +187,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         return false;
 
     // Sanity check destinationFrameOffset, numberOfFrames.
-    size_t destinationLength = bus->length();
+    size_t destinationLength = bus.length();
 
     bool isLengthGood = destinationLength <= 4096 && numberOfFrames <= 4096;
     ASSERT(isLengthGood);
@@ -420,7 +420,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
         }
     }
 
-    bus->clearSilentFlag();
+    bus.clearSilentFlag();
 
     m_virtualReadIndex = virtualReadIndex;
 

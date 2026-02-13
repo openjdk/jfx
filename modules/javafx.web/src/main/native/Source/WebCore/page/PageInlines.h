@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "KeyboardScrollingAnimator.h"
 #include "MediaProducer.h"
 #include "Page.h"
 
@@ -38,6 +39,11 @@ inline bool Page::isAudioMuted() const
 inline bool Page::isMediaCaptureMuted() const
 {
     return m_mutedState.containsAny(MediaProducer::MediaStreamCaptureIsMuted);
+}
+
+inline KeyboardScrollingAnimator* Page::currentKeyboardScrollingAnimator() const
+{
+    return m_currentKeyboardScrollingAnimator.get();
 }
 
 }

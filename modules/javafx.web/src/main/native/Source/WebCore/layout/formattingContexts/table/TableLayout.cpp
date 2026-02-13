@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +31,7 @@
 #include "LayoutBoxGeometry.h"
 #include "RenderStyleInlines.h"
 #include "TableFormattingGeometry.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Layout {
@@ -75,7 +77,6 @@ struct GridSpace {
     enum class Type {
         Percent,
         Fixed,
-        Relative,
         Auto
     };
     Type type { Type::Auto };
@@ -160,7 +161,7 @@ static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, Layout
         // we can resolve overlapping spans starting with the shorter ones e.g.
         // <td colspan=4>#a</td><td>#b</td>
         // <td colspan=2>#c</td><td colspan=3>#d</td>
-        std::sort(spanningCells.begin(), spanningCells.end(), [&] (auto& a, auto& b) {
+        std::ranges::sort(spanningCells, [&](auto& a, auto& b) {
             return SpanType::spanCount(grid.slot(a.position)->cell()) < SpanType::spanCount(grid.slot(b.position)->cell());
         });
 
@@ -240,7 +241,6 @@ static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, Layout
             return;
         // Setup the priority lists. We use these when expanding/shrinking slots.
         Vector<size_t> autoColumnIndexes;
-        Vector<size_t> relativeColumnIndexes;
         Vector<size_t> fixedColumnIndexes;
         Vector<size_t> percentColumnIndexes;
 
@@ -251,9 +251,6 @@ static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, Layout
                 break;
             case GridSpace::Type::Fixed:
                 fixedColumnIndexes.append(columnIndex);
-                break;
-            case GridSpace::Type::Relative:
-                relativeColumnIndexes.append(columnIndex);
                 break;
             case GridSpace::Type::Auto:
                 autoColumnIndexes.append(columnIndex);
@@ -290,8 +287,6 @@ static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, Layout
             if (hasSpaceToDistribute())
                 expandSpace(percentColumnIndexes);
             if (hasSpaceToDistribute())
-                expandSpace(relativeColumnIndexes);
-            if (hasSpaceToDistribute())
                 expandSpace(autoColumnIndexes);
             ASSERT(!hasSpaceToDistribute());
             return;
@@ -322,8 +317,6 @@ static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, Layout
         };
         shrinkSpace(autoColumnIndexes);
         if (needsMoreSpace())
-            shrinkSpace(relativeColumnIndexes);
-        if (needsMoreSpace())
             shrinkSpace(fixedColumnIndexes);
         if (needsMoreSpace())
             shrinkSpace(percentColumnIndexes);
@@ -351,9 +344,6 @@ TableFormattingContext::TableLayout::DistributedSpaces TableFormattingContext::T
         case LengthType::Percent:
             columnWidth = computedLogicalWidth.value() * availableHorizontalSpace / 100.0f;
             type = GridSpace::Type::Percent;
-            break;
-        case LengthType::Relative:
-            ASSERT_NOT_IMPLEMENTED_YET();
             break;
         default:
             break;
@@ -429,7 +419,7 @@ TableFormattingContext::TableLayout::DistributedSpaces TableFormattingContext::T
             auto& cell = slot.cell();
             auto& cellBox = cell.box();
             auto height = formattingContext().geometryForBox(cellBox).borderBoxHeight();
-            if (cellBox.style().verticalAlign() == VerticalAlign::Baseline) {
+            if (WTF::holdsAlternative<CSS::Keyword::Baseline>(cellBox.style().verticalAlign())) {
                 maximumColumnAscent = std::max(maximumColumnAscent, cell.baseline());
                 maximumColumnDescent = std::max(maximumColumnDescent, height - cell.baseline());
                 rowHeight[rowIndex] = std::max(rowHeight[rowIndex], LayoutUnit { maximumColumnAscent + maximumColumnDescent });

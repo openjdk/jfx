@@ -28,6 +28,7 @@
 #include "CSSDropShadowFunction.h"
 #include "CSSPrimitiveValue.h"
 #include "Document.h"
+#include "DropShadowFilterOperationWithStyleColor.h"
 #include "FilterOperation.h"
 #include "RenderStyle.h"
 #include "StyleColor.h"
@@ -36,10 +37,10 @@
 namespace WebCore {
 namespace Style {
 
-CSS::DropShadow toCSSDropShadow(Ref<DropShadowFilterOperation> operation, const RenderStyle& style)
+CSS::DropShadow toCSSDropShadow(Ref<DropShadowFilterOperationWithStyleColor> operation, const RenderStyle& style)
 {
     return {
-        .color = toCSS(Style::Color { operation->color() }, style),
+        .color = toCSS(operation->styleColor(), style),
         .location = {
             toCSS(Length<> { static_cast<float>(operation->location().x()) }, style),
             toCSS(Length<> { static_cast<float>(operation->location().y()) }, style)
@@ -53,12 +54,12 @@ Ref<FilterOperation> createFilterOperation(const CSS::DropShadow& filter, const 
     int x = roundForImpreciseConversion<int>(toStyle(filter.location.x(), conversionData).value);
     int y = roundForImpreciseConversion<int>(toStyle(filter.location.y(), conversionData).value);
     int stdDeviation = filter.stdDeviation ? roundForImpreciseConversion<int>(toStyle(*filter.stdDeviation, conversionData).value) : 0;
-    auto color = filter.color ? style.colorResolvingCurrentColor(toStyleColorWithResolvedCurrentColor(*filter.color, document, style, conversionData, ForVisitedLink::No)) : style.color();
+    auto color = filter.color ? toStyleColor(*filter.color, document, style, conversionData, ForVisitedLink::No) : Style::Color { CurrentColor { } };
 
-    return DropShadowFilterOperation::create(
+    return DropShadowFilterOperationWithStyleColor::create(
         IntPoint { x, y },
         stdDeviation,
-        color.isValid() ? color : WebCore::Color::transparentBlack
+        color
     );
 }
 

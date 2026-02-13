@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007 Rob Buis <buis@kde.org>
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2010-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -35,6 +35,7 @@
 #include "LocalFrame.h"
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGText.h"
 #include "RenderSVGTransformableContainer.h"
@@ -143,7 +144,7 @@ void SVGAElement::defaultEventHandler(Event& event)
             event.setDefaultHandled();
 
             if (RefPtr frame = document().frame())
-                frame->protectedLoader()->changeLocation(protectedDocument()->completeURL(url), target, &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
+                frame->loader().changeLocation(protectedDocument()->completeURL(url), target, &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
             return;
         }
     }
@@ -179,19 +180,19 @@ bool SVGAElement::isMouseFocusable() const
     return SVGElement::isMouseFocusable();
 }
 
-bool SVGAElement::isKeyboardFocusable(KeyboardEvent* event) const
+bool SVGAElement::isKeyboardFocusable(const FocusEventData& focusEventData) const
 {
     if (isFocusable() && Element::supportsFocus())
-        return SVGElement::isKeyboardFocusable(event);
+        return SVGElement::isKeyboardFocusable(focusEventData);
 
     RefPtr frame = document().frame();
     if (!frame)
         return false;
 
-    if (isLink() && !frame->eventHandler().tabsToLinks(event))
+    if (isLink() && !frame->eventHandler().tabsToLinks(focusEventData))
         return false;
 
-    return SVGElement::isKeyboardFocusable(event);
+    return SVGElement::isKeyboardFocusable(focusEventData);
 }
 
 bool SVGAElement::canStartSelection() const
@@ -231,13 +232,13 @@ SharedStringHash SVGAElement::visitedLinkHash() const
 DOMTokenList& SVGAElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
+        lazyInitialize(m_relList, makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, SVGNames::relAttr, [](Document&, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return true;
 #endif
             return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s);
-        });
+        }));
     }
     return *m_relList;
 }

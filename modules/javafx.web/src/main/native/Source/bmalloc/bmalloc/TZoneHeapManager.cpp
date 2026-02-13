@@ -35,6 +35,7 @@
 #include "bmalloc.h"
 
 #if BOS(DARWIN)
+#include <CommonCrypto/CommonHMAC.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/sysctl.h>
@@ -60,7 +61,7 @@ static unsigned bucketsForSmallSizes { defaultBucketsForSmallSizes };
 static unsigned bucketsForLargeSizes { defaultBucketsForLargeSizes };
 static unsigned maxSmallSize { defaultMaxSmallSize };
 
-static bool requirePerBootPrimodialSeed;
+static bool requirePerBootPrimordialSeed;
 
 static constexpr bool verbose = false;
 
@@ -120,13 +121,10 @@ TZoneHeapManager::TZoneHeapManager()
 
 void determineTZoneMallocFallback()
 {
-    static Mutex s_mutex;
-    LockHolder lock(s_mutex);
-    {
         if (tzoneMallocFallback != TZoneMallocFallback::Undecided)
             return;
 
-        if (Environment::get()->isDebugHeapEnabled()) {
+    if (Environment::get()->isSystemHeapEnabled()) {
             tzoneMallocFallback = TZoneMallocFallback::ForceDebugMalloc;
             return;
         }
@@ -138,13 +136,12 @@ void determineTZoneMallocFallback()
         }
 
         tzoneMallocFallback = TZoneMallocFallback::DoNotFallBack;
-    }
 }
 
 void TZoneHeapManager::requirePerBootSeed()
 {
     RELEASE_BASSERT(s_state < State::Seeded);
-    requirePerBootPrimodialSeed = true;
+    requirePerBootPrimordialSeed = true;
 }
 
 void TZoneHeapManager::setBucketParams(unsigned smallSizeCount, unsigned largeSizeCount, unsigned smallSizeLimit)
@@ -222,7 +219,7 @@ void TZoneHeapManager::init()
 #if 0
         TZONE_LOG_DEBUG("kern.boottime is required for TZoneHeap initialization: %d errno %d\n", sysctlResult, errno);
 #endif
-        RELEASE_BASSERT(!sysctlResult || !requirePerBootPrimodialSeed);
+         RELEASE_BASSERT(!sysctlResult || !requirePerBootPrimordialSeed);
         // Some clients of JSC may not have access to kern.boottime. In those cases, use a fallback.
         gettimeofday(&timeValue, NULL);
     }
@@ -299,6 +296,7 @@ void TZoneHeapManager::init()
     }
 #endif
     s_state = State::Seeded;
+    initializeTZoneDynamicCompactMode();
 
     if (verbose)
         atexit(dumpRegisteredTypesAtExit);
@@ -327,6 +325,25 @@ static char* nameForType(LockHolder&, unsigned typeSize, unsigned alignment, uns
         typeNameTemplate.nameTemplate.index[IndexSize - i - 1] = '0' + index % 10;
         index /= 10;
     }
+
+    return &typeNameTemplate.string[0];
+}
+
+static char* nameForTypeNonCompact(LockHolder&, unsigned typeSize, unsigned alignment)
+{
+    for (unsigned i = 0; i < SizeBase64Size; ++i) {
+        typeNameTemplate.nameTemplate.sizeBase64[SizeBase64Size - i - 1] = base64Chars[typeSize % 64];
+        typeSize >>= 6;
+    }
+
+    for (unsigned i = 0; i < AlignmentBase64Size; ++i) {
+        typeNameTemplate.nameTemplate.alignmentBase64[AlignmentBase64Size - i - 1] = base64Chars[alignment % 64];
+        alignment >>= 6;
+    }
+
+    // Use the index bytes to say that this heap is non-compact.
+    typeNameTemplate.nameTemplate.index[0] = 'N';
+    typeNameTemplate.nameTemplate.index[1] = 'C';
 
     return &typeNameTemplate.string[0];
 }
@@ -458,22 +475,24 @@ BINLINE unsigned TZoneHeapManager::bucketCountForSizeClass(SizeAndAlignment::Val
 
 class WeakRandom final {
 public:
-    static constexpr uint64_t nextState(uint64_t x, uint64_t y)
+    static constexpr std::pair<uint64_t, uint64_t> nextState(uint64_t x, uint64_t y)
     {
         x ^= x << 23;
         x ^= x >> 17;
         x ^= y ^ (y >> 26);
-        return x;
+        x += y * 0x10101;
+        return { y, x };
     }
 
-    static constexpr uint64_t generate(uint64_t seed)
+    static constexpr std::pair<uint64_t, uint64_t> generate(uint64_t seed1, uint64_t seed2)
     {
-        if (!seed)
-            seed = 1;
-        uint64_t low = seed;
-        uint64_t high = seed;
-        high = nextState(low, high);
-        return low + high;
+        if (!seed1)
+            seed1 = 1;
+        if (!seed2)
+            seed2 = 1;
+        uint64_t low = seed1;
+        uint64_t high = seed2;
+        return nextState(low, high);
         }
 };
 
@@ -482,11 +501,28 @@ BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 BINLINE unsigned TZoneHeapManager::tzoneBucketForKey(const TZoneSpecification& spec, unsigned bucketCountForSize, LockHolder&)
 {
     static constexpr bool verboseBucketSelection = false;
-    uint64_t random = WeakRandom::generate(m_tzoneKeySeed);
-    random = WeakRandom::nextState(random, std::bit_cast<uintptr_t>(spec.addressOfHeapRef));
-    random = WeakRandom::nextState(random, spec.size);
-    random = WeakRandom::nextState(random, SizeAndAlignment::decodeAlignment(spec.sizeAndAlignment));
+
+#if BOS(DARWIN)
+    // The output of HMAC_SHA256 is the same length as the SHA256 digest, since HMAC's final step is running
+    // the hash function H on a value derived from the original message.
+    uint64_t hmac[CC_SHA256_DIGEST_LENGTH / sizeof(uint64_t)];
+    static_assert(sizeof(hmac) == 32);
+
+    uintptr_t addressOfHeapRef = std::bit_cast<uintptr_t>(spec.addressOfHeapRef);
+
+    CCHmac(kCCHmacAlgSHA256, &m_tzoneKeySeed, sizeof(m_tzoneKeySeed), &addressOfHeapRef, sizeof(addressOfHeapRef), hmac);
+    uint64_t random = hmac[0];
     unsigned bucket = random % bucketCountForSize;
+
+#else
+    // We don't necessarily have CommonCrypto included. We'll fall back to WeakRandom here.
+    auto [randomLow, randomHigh] = WeakRandom::generate(m_tzoneKeySeed, std::bit_cast<uintptr_t>(spec.addressOfHeapRef));
+    std::tie(randomLow, randomHigh) = WeakRandom::nextState(randomLow, randomHigh);
+    std::tie(randomLow, randomHigh) = WeakRandom::nextState(randomLow, randomHigh);
+    std::tie(randomLow, randomHigh) = WeakRandom::nextState(randomLow, randomHigh);
+    uint64_t random = randomLow;
+    unsigned bucket = random % bucketCountForSize;
+#endif
 #if 0
     if constexpr (verboseBucketSelection) {
         TZONE_LOG_DEBUG("Choosing Bucket heapRef: %p size: %u align: %u", spec.addressOfHeapRef, spec.size, SizeAndAlignment::decodeAlignment(spec.sizeAndAlignment));
@@ -495,6 +531,42 @@ BINLINE unsigned TZoneHeapManager::tzoneBucketForKey(const TZoneSpecification& s
     }
 #endif
     return bucket;
+}
+
+#if BUSE_DYNAMIC_TZONE_COMPACTION
+bool g_tzoneDynamicCompactModeEnabled = false;
+#endif
+
+void TZoneHeapManager::initializeTZoneDynamicCompactMode()
+{
+#if BUSE_DYNAMIC_TZONE_COMPACTION
+    RELEASE_BASSERT(s_state >= State::Seeded);
+    const char* envEnable = getenv("bmalloc_TZoneDynamicCompactModeEnable");
+    if (envEnable && (!strcasecmp(envEnable, "true") || !strcasecmp(envEnable, "yes") || !strcmp(envEnable, "1"))) {
+        g_tzoneDynamicCompactModeEnabled = true;
+
+        const char* envSeed = getenv("bmalloc_TZoneDynamicCompactModeSeed");
+        if (envSeed) {
+            errno = 0;
+            m_tzoneDynamicCompactModeSeed = std::strtoull(envSeed, nullptr, 16);
+            if (verbose && errno)
+                TZONE_LOG_DEBUG("Error in strtoull for bmalloc_TZoneDynamicCompactModeSeed: %s\n", strerror(errno));
+            RELEASE_BASSERT(!errno);
+        } else
+            m_tzoneDynamicCompactModeSeed = m_tzoneKeySeed;
+
+        // The generated seed can be zero, but that's OK:
+        // that corresponds to dynamic compaction being enabled for no types,
+        // which is a valid configuration that's worth fuzzing.
+        m_tzoneDynamicCompactModeSalt = WeakRandom::generate(m_tzoneDynamicCompactModeSeed);
+
+        if constexpr (verbose) {
+            TZONE_LOG_DEBUG("dynamicCompactionSeed: 0x%llx\n", m_tzoneDynamicCompactModeSeed);
+            TZONE_LOG_DEBUG("dynamicCompactionSalt: 0x%llx\n", m_tzoneDynamicCompactModeSalt);
+        }
+        RELEASE_BASSERT(m_tzoneDynamicCompactModeSalt);
+    }
+#endif
 }
 
 BALLOW_UNSAFE_BUFFER_USAGE_END
@@ -524,6 +596,21 @@ TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClas
     buckets->bucketUseCounts.resize(bucketCount);
 #endif
 
+    // Fill in non-compact bucket.
+
+#if TZONE_VERBOSE_DEBUG
+    char* typeName = nameForTypeNonCompact(lock, SizeAndAlignment::decodeSize(sizeAndAlignment), SizeAndAlignment::decodeAlignment(sizeAndAlignment));
+    memcpy(buckets->nonCompactBucket.typeName, typeName, typeNameLen);
+#else
+    PAS_UNUSED_PARAM(lock);
+    setNextTypeName(buckets->nonCompactBucket.typeName, typeNameLen);
+#endif
+    buckets->nonCompactBucket.type.size = SizeAndAlignment::decodeSize(sizeAndAlignment);
+    buckets->nonCompactBucket.type.alignment = SizeAndAlignment::decodeAlignment(sizeAndAlignment);
+    buckets->nonCompactBucket.type.name = buckets->nonCompactBucket.typeName;
+    buckets->nonCompactBucket.heapref.type = (const pas_heap_type*)(&buckets->nonCompactBucket.type);
+    buckets->nonCompactBucket.heapref.is_non_compact_heap = true;
+
     for (unsigned i = 0; i < bucketCount; ++i) {
 #if TZONE_VERBOSE_DEBUG
         char* typeName = !i ? nameForType(lock, SizeAndAlignment::decodeSize(sizeAndAlignment), SizeAndAlignment::decodeAlignment(sizeAndAlignment), i) : nameForTypeUpdateIndex(lock, i);
@@ -537,6 +624,7 @@ TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClas
         buckets->buckets[i].type.name = buckets->buckets[i].typeName;
 
         buckets->buckets[i].heapref.type = (const pas_heap_type*)(&buckets->buckets[i].type);
+        buckets->buckets[i].heapref.is_non_compact_heap = false;
     }
 
     m_heapRefsBySizeAndAlignment.set(sizeAndAlignment, buckets);
@@ -551,6 +639,9 @@ BINLINE pas_heap_ref* TZoneHeapManager::heapRefForTZoneType(const TZoneSpecifica
         bucketsForSize = bucket.value();
     else
         bucketsForSize = populateBucketsForSizeClass(lock, spec.sizeAndAlignment);
+
+    if (spec.allocationMode == CompactAllocationMode::NonCompact && PAS_USE_COMPACT_ONLY_TZONE_HEAP)
+        return &bucketsForSize->nonCompactBucket.heapref;
 
     unsigned bucket = tzoneBucketForKey(spec, bucketsForSize->numberOfBuckets, lock);
 
@@ -604,9 +695,13 @@ pas_heap_ref* TZoneHeapManager::TZoneHeapManager::heapRefForTZoneTypeDifferentSi
     TZoneSpecification newSpec = {
         spec.addressOfHeapRef,
         static_cast<unsigned>(requestedSize),
+        spec.allocationMode,
         SizeAndAlignment::encode(newSize, alignment),
 #if BUSE_TZONE_SPEC_NAME_ARG
-        spec.name
+        spec.name,
+#endif
+#if BUSE_DYNAMIC_TZONE_COMPACTION
+        spec.dynamicCompactionKey,
 #endif
     };
     pas_heap_ref* result = heapRefForTZoneType(newSpec);

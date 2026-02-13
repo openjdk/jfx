@@ -33,11 +33,11 @@ namespace CSS {
 
 struct DynamicRangeLimitMixFunction;
 
-// <'dynamic-range-limit'> = standard | no-limit | constrained-high | <dynamic-range-limit-mix()>
+// <'dynamic-range-limit'> = standard | no-limit | constrained | <dynamic-range-limit-mix()>
 // https://drafts.csswg.org/css-color-hdr/#propdef-dynamic-range-limit
 struct DynamicRangeLimit {
     DynamicRangeLimit(CSS::Keyword::Standard);
-    DynamicRangeLimit(CSS::Keyword::ConstrainedHigh);
+    DynamicRangeLimit(CSS::Keyword::Constrained);
     DynamicRangeLimit(CSS::Keyword::NoLimit);
     DynamicRangeLimit(DynamicRangeLimitMixFunction&&);
 
@@ -57,7 +57,7 @@ struct DynamicRangeLimit {
 private:
     using Kind = CompactVariant<
        CSS::Keyword::Standard,
-       CSS::Keyword::ConstrainedHigh,
+       CSS::Keyword::Constrained,
        CSS::Keyword::NoLimit,
        UniqueRef<DynamicRangeLimitMixFunction>
     >;
@@ -83,4 +83,4 @@ template<typename... F> decltype(auto) DynamicRangeLimit::switchOn(F&&... f) con
 } // namespace CSS
 } // namespace WebCore
 
-template<> inline constexpr auto WebCore::TreatAsVariantLike<WebCore::CSS::DynamicRangeLimit> = true;
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::CSS::DynamicRangeLimit)

@@ -39,6 +39,7 @@
 #import "MetalMeshView.h"
 #import "MetalPhongMaterial.h"
 #import "com_sun_prism_mtl_MTLContext.h"
+#import "com_sun_prism_mtl_MTLPipeline.h"
 
 @implementation MetalContext
 
@@ -1552,4 +1553,23 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLResourceFactory_nReleaseTexture
     MetalTexture* pTex = (MetalTexture*)jlong_to_ptr(pTexture);
     [pTex release];
     pTex = nil;
+}
+
+
+// MTLPipeline methods
+
+/*
+ * Class:     com_sun_prism_mtl_MTLPipeline
+ * Method:    nSupportsMTL
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_mtl_MTLPipeline_nSupportsMTL
+    (JNIEnv *env, jclass jClass)
+{
+    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+    // The Prism MTL pipeline requires MTLGPUFamilyMac2
+    if ([device supportsFamily:MTLGPUFamilyMac2]) {
+        return true;
+    }
+    return false;
 }

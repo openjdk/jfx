@@ -28,7 +28,6 @@
 #include "CryptoAlgorithmRsaKeyGenParams.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 
 #if ENABLE(WEB_CRYPTO)
 
@@ -37,7 +36,7 @@ namespace WebCore {
 class CryptoAlgorithmRsaHashedKeyGenParams final : public CryptoAlgorithmRsaKeyGenParams {
 public:
     // FIXME: Consider merging hash and hashIdentifier.
-    std::variant<JSC::Strong<JSC::JSObject>, String> hash;
+    Variant<JSC::Strong<JSC::JSObject>, String> hash;
     CryptoAlgorithmIdentifier hashIdentifier;
 
     Class parametersClass() const final { return Class::RsaHashedKeyGenParams; }

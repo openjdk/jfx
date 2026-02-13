@@ -35,6 +35,6 @@
     [CallWith=CurrentGlobalObject, CachedAttribute] readonly attribute any options;
 
     // FIXME: Add support for RID options.
-    Promise<undefined> generateKeyFrame();
+    Promise<unsigned long long> generateKeyFrame(optional DOMString rid);
     Promise<undefined> sendKeyFrameRequest();
 };

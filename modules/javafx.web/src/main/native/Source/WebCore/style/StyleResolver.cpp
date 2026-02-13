@@ -35,7 +35,6 @@
 #include "CSSFontSelector.h"
 #include "CSSKeyframeRule.h"
 #include "CSSKeyframesRule.h"
-#include "CSSParser.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSPropertyNames.h"
 #include "CSSSelector.h"
@@ -52,7 +51,9 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "MatchResultCache.h"
 #include "MediaList.h"
+#include "MutableCSSSelector.h"
 #include "NodeRenderStyle.h"
 #include "PageRuleCollector.h"
 #include "RenderScrollbar.h"
@@ -121,9 +122,10 @@ WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Resolver);
 class Resolver::State {
 public:
     State() = default;
-    State(const Element& element, const RenderStyle* parentStyle, const RenderStyle* documentElementStyle = nullptr)
+    State(const Element& element, const RenderStyle* parentStyle, const RenderStyle* documentElementStyle, TreeResolutionState* treeResolutionState)
         : m_element(&element)
         , m_parentStyle(parentStyle)
+        , m_treeResolutionState(treeResolutionState)
     {
         ASSERT(element.isConnected());
 
@@ -131,8 +133,12 @@ public:
         auto* documentElement = document.documentElement();
         if (!documentElement || documentElement == &element)
             m_rootElementStyle = document.initialContainingBlockStyle();
+        else if (documentElementStyle)
+            m_rootElementStyle = documentElementStyle;
+        else if (auto* documentElementRenderStyle = documentElement->renderStyle())
+            m_rootElementStyle = documentElementRenderStyle;
         else
-            m_rootElementStyle = documentElementStyle ? documentElementStyle : documentElement->renderStyle();
+            m_rootElementStyle = document.initialContainingBlockStyle();
     }
 
     const Element* element() const { return m_element; }
@@ -149,8 +155,7 @@ public:
     const RenderStyle* parentStyle() const { return m_parentStyle; }
     const RenderStyle* rootElementStyle() const { return m_rootElementStyle; }
 
-    const RenderStyle* userAgentAppearanceStyle() const { return m_userAgentAppearanceStyle.get(); }
-    void setUserAgentAppearanceStyle(std::unique_ptr<RenderStyle> style) { m_userAgentAppearanceStyle = WTFMove(style); }
+    CheckedPtr<TreeResolutionState> treeResolutionState() { return m_treeResolutionState; }
 
 private:
     const Element* m_element { };
@@ -159,7 +164,7 @@ private:
     std::unique_ptr<const RenderStyle> m_ownedParentStyle;
     const RenderStyle* m_rootElementStyle { };
 
-    std::unique_ptr<RenderStyle> m_userAgentAppearanceStyle;
+    CheckedPtr<TreeResolutionState> m_treeResolutionState;
 };
 
 Ref<Resolver> Resolver::create(Document& document, ScopeType scopeType)
@@ -235,7 +240,7 @@ void Resolver::addCurrentSVGFontFaceRules()
     }
 }
 
-void Resolver::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& styleSheets)
+void Resolver::appendAuthorStyleSheets(std::span<const RefPtr<CSSStyleSheet>> styleSheets)
 {
     m_ruleSets.appendAuthorStyleSheets(styleSheets, &m_mediaQueryEvaluator, m_inspectorCSSOMWrappers);
 
@@ -263,11 +268,13 @@ void Resolver::addKeyframeStyle(Ref<StyleRuleKeyframes>&& rule)
     document().keyframesRuleDidChange(animationName);
 }
 
-auto Resolver::initializeStateAndStyle(const Element& element, const ResolutionContext& context) -> State
+auto Resolver::initializeStateAndStyle(const Element& element, const ResolutionContext& context, std::unique_ptr<RenderStyle>&& initialStyle) -> State
 {
-    auto state = State { element, context.parentStyle, context.documentElementStyle };
+    auto state = State { element, context.parentStyle, context.documentElementStyle, context.treeResolutionState.get() };
 
-    if (state.parentStyle()) {
+    if (initialStyle)
+        state.setStyle(WTFMove(initialStyle));
+    else if (state.parentStyle()) {
         state.setStyle(RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry()));
         if (&element == document().documentElement() && !context.isSVGUseTreeRoot) {
             // Initial values for custom properties are inserted to the document element style. Don't overwrite them.
@@ -294,17 +301,18 @@ auto Resolver::initializeStateAndStyle(const Element& element, const ResolutionC
     return state;
 }
 
-BuilderContext Resolver::builderContext(const State& state)
+BuilderContext Resolver::builderContext(State& state)
 {
     return {
         document(),
-        *state.parentStyle(),
+        state.parentStyle(),
         state.rootElementStyle(),
-        state.element()
+        state.element(),
+        state.treeResolutionState()
     };
 }
 
-ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
+UnadjustedStyle Resolver::unadjustedStyleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
 {
     auto state = initializeStateAndStyle(element, context);
     auto& style = *state.style();
@@ -322,40 +330,58 @@ ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContex
     if (collector.matchedPseudoElementIds())
         style.setHasPseudoStyles(collector.matchedPseudoElementIds());
 
-    // This is required for style sharing.
-    if (collector.didMatchUncommonAttributeSelector())
-        style.setUnique();
-
     auto elementStyleRelations = commitRelationsToRenderStyle(style, element, collector.styleRelations());
 
-    applyMatchedProperties(state, collector.matchResult());
+    applyMatchedProperties(state, collector.matchResult(), PropertyCascade::normalProperties());
 
-    Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
-    adjuster.adjust(style, state.userAgentAppearanceStyle());
-
-    if (style.usesViewportUnits())
-        document().setHasStyleWithViewportUnits();
-
-    return { state.takeStyle(), WTFMove(elementStyleRelations), collector.releaseMatchResult() };
+    return {
+        .style = state.takeStyle(),
+        .relations = WTFMove(elementStyleRelations),
+        .matchResult = collector.releaseMatchResult()
+    };
 }
 
-ResolvedStyle Resolver::styleForElementWithCachedMatchResult(Element& element, const ResolutionContext& context, const MatchResult& matchResult, const RenderStyle& existingRenderStyle)
+ResolvedStyle Resolver::styleForElement(Element& element, const ResolutionContext& context, RuleMatchingBehavior matchingBehavior)
 {
-    auto state = initializeStateAndStyle(element, context);
-    auto& style = *state.style();
+    auto unadjustedStyle = unadjustedStyleForElement(element, context, matchingBehavior);
+    auto& parentStyle = context.parentStyle ? *context.parentStyle : RenderStyle::defaultStyleSingleton();
 
-    style.copyPseudoElementBitsFrom(existingRenderStyle);
-    copyRelations(style, existingRenderStyle);
+    auto style = WTFMove(unadjustedStyle.style);
 
-    applyMatchedProperties(state, matchResult);
+    Adjuster adjuster(document(), parentStyle, context.parentBoxStyle, &element);
+    adjuster.adjust(*style);
 
-    Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
-    adjuster.adjust(style, state.userAgentAppearanceStyle());
+    return {
+        .style = WTFMove(style),
+        .relations = WTFMove(unadjustedStyle.relations),
+        .matchResult = WTFMove(unadjustedStyle.matchResult)
+    };
+}
 
-    if (style.usesViewportUnits())
-        document().setHasStyleWithViewportUnits();
+UnadjustedStyle Resolver::unadjustedStyleForCachedMatchResult(Element& element, const ResolutionContext& context, CachedMatchResult&& cachedResult)
+{
+    auto& unadjustedStyle = cachedResult.unadjustedStyle;
 
-    return { state.takeStyle(), { }, makeUnique<MatchResult>(matchResult) };
+    if (cachedResult.changedProperties.isEmpty()) {
+        // The cached result can be used as-is.
+        return WTFMove(unadjustedStyle);
+    }
+
+    bool applyPartially = !cachedResult.changedProperties.ids.isEmpty();
+
+    auto state = initializeStateAndStyle(element, context, applyPartially ? WTFMove(unadjustedStyle.style) : nullptr);
+    if (!applyPartially) {
+        state.style()->copyPseudoElementBitsFrom(*unadjustedStyle.style);
+        copyRelations(*state.style(), *unadjustedStyle.style);
+    }
+
+    applyMatchedProperties(state, *unadjustedStyle.matchResult, WTFMove(cachedResult.changedProperties));
+
+    return {
+        .style = state.takeStyle(),
+        .relations = WTFMove(unadjustedStyle.relations),
+        .matchResult = unadjustedStyle.matchResult
+    };
 }
 
 std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, const StyleRuleKeyframe& keyframe, BlendingKeyframe& blendingKeyframe)
@@ -382,7 +408,7 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(Element& element, const 
         }
     }
 
-    auto state = State(element, nullptr, context.documentElementStyle);
+    auto state = State(element, nullptr, context.documentElementStyle, context.treeResolutionState.get());
 
     state.setStyle(RenderStyle::clonePtr(elementStyle));
     state.setParentStyle(RenderStyle::clonePtr(context.parentStyle ? *context.parentStyle : elementStyle));
@@ -390,7 +416,7 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(Element& element, const 
     ElementRuleCollector collector(element, m_ruleSets, context.selectorMatchingState);
 
     if (elementStyle.pseudoElementType() != PseudoId::None)
-        collector.setPseudoElementRequest(Style::PseudoElementIdentifier { elementStyle.pseudoElementType(), elementStyle.pseudoElementNameArgument() });
+        collector.setPseudoElementRequest(elementStyle.pseudoElementIdentifier());
 
     if (hasRevert) {
         // In the animation origin, 'revert' rolls back the cascaded value to the user level.
@@ -405,7 +431,7 @@ std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(Element& element, const 
     builder.applyAllProperties();
 
     Adjuster adjuster(document(), *state.parentStyle(), nullptr, elementStyle.pseudoElementType() == PseudoId::None ? &element : nullptr);
-    adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
+    adjuster.adjust(*state.style());
 
     return state.takeStyle();
 }
@@ -449,7 +475,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
         return &CubicBezierTimingFunction::defaultTimingFunction();
     };
 
-    UncheckedKeyHashSet<RefPtr<const TimingFunction>> timingFunctions;
+    HashSet<RefPtr<const TimingFunction>> timingFunctions;
     auto uniqueTimingFunctionForKeyframe = [&](Ref<StyleRuleKeyframe> keyframe) -> RefPtr<const TimingFunction> {
         auto timingFunction = timingFunctionForKeyframe(keyframe);
         for (auto existingTimingFunction : timingFunctions) {
@@ -465,7 +491,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
 
     using KeyframeUniqueKey = std::tuple<StyleRuleKeyframe::Key, RefPtr<const TimingFunction>, CompositeOperation>;
     auto hasDuplicateKeys = [&]() -> bool {
-        UncheckedKeyHashSet<KeyframeUniqueKey> uniqueKeyframeKeys;
+        HashSet<KeyframeUniqueKey> uniqueKeyframeKeys;
         for (auto& keyframe : *keyframes) {
             auto compositeOperation = compositeOperationForKeyframe(keyframe);
             auto timingFunction = uniqueTimingFunctionForKeyframe(keyframe);
@@ -483,7 +509,7 @@ Vector<Ref<StyleRuleKeyframe>> Resolver::keyframeRulesForName(const AtomString& 
     // Merge keyframes with a similar offset and timing function ensuring that merged keyframes
     // move to the end of the list if the offset is a timeline range.
     Vector<Ref<StyleRuleKeyframe>> deduplicatedKeyframes;
-    UncheckedKeyHashMap<KeyframeUniqueKey, Ref<StyleRuleKeyframe>> keyframesMap;
+    HashMap<KeyframeUniqueKey, Ref<StyleRuleKeyframe>> keyframesMap;
     for (auto& originalKeyframe : *keyframes) {
         auto compositeOperation = compositeOperationForKeyframe(originalKeyframe);
         auto timingFunction = uniqueTimingFunctionForKeyframe(originalKeyframe);
@@ -514,7 +540,7 @@ void Resolver::keyframeStylesForAnimation(Element& element, const RenderStyle& e
 {
     list.clear();
 
-    auto keyframeRules = keyframeRulesForName(list.animationName(), defaultTimingFunction);
+    auto keyframeRules = keyframeRulesForName(list.keyframesName(), defaultTimingFunction);
     if (keyframeRules.isEmpty())
         return;
 
@@ -538,7 +564,7 @@ void Resolver::keyframeStylesForAnimation(Element& element, const RenderStyle& e
 
 std::optional<ResolvedStyle> Resolver::styleForPseudoElement(Element& element, const PseudoElementRequest& pseudoElementRequest, const ResolutionContext& context)
 {
-    auto state = State(element, context.parentStyle, context.documentElementStyle);
+    auto state = State(element, context.parentStyle, context.documentElementStyle, context.treeResolutionState.get());
 
     if (state.parentStyle()) {
         state.setStyle(RenderStyle::createPtrWithRegisteredInitialValues(document().customPropertyRegistry()));
@@ -568,15 +594,12 @@ std::optional<ResolvedStyle> Resolver::styleForPseudoElement(Element& element, c
     if (!pseudoElementRequest.nameArgument().isNull())
         state.style()->setPseudoElementNameArgument(pseudoElementRequest.nameArgument());
 
-    applyMatchedProperties(state, collector.matchResult());
+    applyMatchedProperties(state, collector.matchResult(), PropertyCascade::normalProperties());
 
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, nullptr);
-    adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
+    adjuster.adjust(*state.style());
 
     Adjuster::adjustVisibilityForPseudoElement(*state.style(), element);
-
-    if (state.style()->usesViewportUnits())
-        document().setHasStyleWithViewportUnits();
 
     return ResolvedStyle { state.takeStyle(), nullptr, collector.releaseMatchResult() };
 }
@@ -587,7 +610,7 @@ std::unique_ptr<RenderStyle> Resolver::styleForPage(int pageIndex)
     if (!documentElement || !documentElement->renderStyle())
         return RenderStyle::createPtr();
 
-    auto state = State(*documentElement, document().initialContainingBlockStyle());
+    auto state = State(*documentElement, document().initialContainingBlockStyle(), nullptr, nullptr);
 
     state.setStyle(RenderStyle::createPtr());
     state.style()->inheritFrom(*state.rootElementStyle());
@@ -632,7 +655,7 @@ Vector<RefPtr<const StyleRule>> Resolver::pseudoStyleRulesForElement(const Eleme
     if (!element)
         return { };
 
-    auto state = State(*element, nullptr);
+    auto state = State(*element, nullptr, nullptr, nullptr);
 
     ElementRuleCollector collector(*element, m_ruleSets, nullptr);
     collector.setMode(SelectorChecker::Mode::CollectingRules);
@@ -656,19 +679,6 @@ Vector<RefPtr<const StyleRule>> Resolver::pseudoStyleRulesForElement(const Eleme
     return collector.matchedRuleList();
 }
 
-static bool elementTypeHasAppearanceFromUAStyle(const Element& element)
-{
-    // NOTE: This is just a hard-coded list of elements that have some -webkit-appearance value in html.css
-    const auto& localName = element.localName();
-    return localName == HTMLNames::inputTag
-        || localName == HTMLNames::textareaTag
-        || localName == HTMLNames::buttonTag
-        || localName == HTMLNames::progressTag
-        || localName == HTMLNames::selectTag
-        || localName == HTMLNames::meterTag
-        || (element.isInUserAgentShadowTree() && element.userAgentPart() == UserAgentParts::webkitListButton());
-}
-
 void Resolver::invalidateMatchedDeclarationsCache()
 {
     m_matchedDeclarationsCache.invalidate();
@@ -679,71 +689,52 @@ void Resolver::clearCachedDeclarationsAffectedByViewportUnits()
     m_matchedDeclarationsCache.clearEntriesAffectedByViewportUnits();
 }
 
-void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult)
+void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult, PropertyCascade::IncludedProperties&& includedProperties)
 {
     auto& style = *state.style();
     auto& parentStyle = *state.parentStyle();
     auto& element = *state.element();
 
     unsigned cacheHash = MatchedDeclarationsCache::computeHash(matchResult, parentStyle.inheritedCustomProperties());
-    auto includedProperties = PropertyCascade::normalProperties();
 
-    auto* cacheEntry = m_matchedDeclarationsCache.find(cacheHash, matchResult, parentStyle.inheritedCustomProperties());
+    auto cacheResult = m_matchedDeclarationsCache.find(cacheHash, matchResult, parentStyle.inheritedCustomProperties(), parentStyle);
 
-    auto hasUsableEntry = cacheEntry && MatchedDeclarationsCache::isCacheable(element, style, parentStyle);
+    auto hasUsableEntry = cacheResult && MatchedDeclarationsCache::isCacheable(element, style, parentStyle);
     if (hasUsableEntry) {
+        auto& cacheEntry = cacheResult->entry;
+        bool inheritedEqual = cacheResult->inheritedEqual;
         // We can build up the style by copying non-inherited properties from an earlier style object built using the same exact
         // style declarations. We then only need to apply the inherited properties, if any, as their values can depend on the
         // element context. This is fast and saves memory by reusing the style data structures.
-        style.copyNonInheritedFrom(*cacheEntry->renderStyle);
+        style.copyNonInheritedFrom(*cacheEntry.renderStyle);
 
-        bool hasExplicitlyInherited = cacheEntry->renderStyle->hasExplicitlyInheritedProperties();
-        bool inheritedStyleEqual = parentStyle.inheritedEqual(*cacheEntry->parentRenderStyle);
+        bool hasExplicitlyInherited = cacheEntry.renderStyle->hasExplicitlyInheritedProperties();
+        bool explicitlyInheritedEqual = !hasExplicitlyInherited || parentStyle.nonInheritedEqual(*cacheEntry.parentRenderStyle);
 
-        if (inheritedStyleEqual) {
-            InsideLink linkStatus = state.style()->insideLink();
+        if (inheritedEqual) {
+            InsideLink linkStatus = style.insideLink();
             // If the cache item parent style has identical inherited properties to the current parent style then the
             // resulting style will be identical too. We copy the inherited properties over from the cache and are done.
-            style.inheritFrom(*cacheEntry->renderStyle);
+            style.inheritFrom(*cacheEntry.renderStyle);
 
             // Link status is treated like an inherited property. We need to explicitly restore it.
             style.setInsideLink(linkStatus);
-
-            if (!hasExplicitlyInherited && matchResult.nonCacheablePropertyIds.isEmpty()) {
-            if (cacheEntry->userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
-                state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry->userAgentAppearanceStyle));
-
-            return;
-        }
         }
 
         includedProperties = { };
 
-        if (!inheritedStyleEqual) {
-            includedProperties.add(PropertyCascade::PropertyType::Inherited);
-            // FIXME: See toStyleColorWithResolvedCurrentColor().
-            bool mayContainResolvedCurrentcolor = style.disallowsFastPathInheritance() && hasExplicitlyInherited;
-            if (mayContainResolvedCurrentcolor && parentStyle.color() != cacheEntry->parentRenderStyle->color())
-                includedProperties.add(PropertyCascade::PropertyType::NonInherited);
-        }
-        if (hasExplicitlyInherited)
-            includedProperties.add(PropertyCascade::PropertyType::ExplicitlyInherited);
+        if (!inheritedEqual)
+            includedProperties.types.add(PropertyCascade::PropertyType::Inherited);
+        if (!explicitlyInheritedEqual)
+            includedProperties.types.add(PropertyCascade::PropertyType::ExplicitlyInherited);
         if (!matchResult.nonCacheablePropertyIds.isEmpty())
-            includedProperties.add(PropertyCascade::PropertyType::NonCacheable);
+            includedProperties.types.add(PropertyCascade::PropertyType::NonCacheable);
+
+        if (includedProperties.isEmpty())
+            return;
     }
 
-    if (elementTypeHasAppearanceFromUAStyle(element)) {
-        // Find out if there's a -webkit-appearance property in effect from the UA sheet.
-        // If so, we cache the border and background styles so that RenderTheme::adjustStyle()
-        // can look at them later to figure out if this is a styled form control or not.
-        auto userAgentStyle = RenderStyle::clonePtr(style);
-        Builder builder(*userAgentStyle, builderContext(state), matchResult, CascadeLevel::UserAgent);
-        builder.applyAllProperties();
-
-        state.setUserAgentAppearanceStyle(WTFMove(userAgentStyle));
-    }
-
-    Builder builder(*state.style(), builderContext(state), matchResult, CascadeLevel::Author, includedProperties);
+    Builder builder(style, builderContext(state), matchResult, CascadeLevel::Author, WTFMove(includedProperties));
 
     // Top priority properties may affect resolution of high priority ones.
     builder.applyTopPriorityProperties();
@@ -751,23 +742,29 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
     // High priority properties may affect resolution of other properties (they are mostly font related).
     builder.applyHighPriorityProperties();
 
-    if (cacheEntry && !cacheEntry->isUsableAfterHighPriorityProperties(style)) {
+    if (cacheResult && !cacheResult->entry.isUsableAfterHighPriorityProperties(style)) {
         // High-priority properties may affect resolution of other properties. Kick out the existing cache entry and try again.
         m_matchedDeclarationsCache.remove(cacheHash);
-        applyMatchedProperties(state, matchResult);
+        applyMatchedProperties(state, matchResult, PropertyCascade::normalProperties());
         return;
     }
 
     builder.applyNonHighPriorityProperties();
+    builder.adjustAfterApplying();
 
-    for (auto& contentAttribute : builder.state().registeredContentAttributes())
+    setGlobalStateAfterApplyingProperties(builder.state());
+
+    if (((cacheHash && !cacheResult) || (cacheResult && !cacheResult->inheritedEqual)) && MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
+        m_matchedDeclarationsCache.add(style, parentStyle, cacheHash, matchResult);
+}
+
+void Resolver::setGlobalStateAfterApplyingProperties(const BuilderState& builderState)
+{
+    // FIXME: This stuff should be somewhere else.
+    for (auto& contentAttribute : builderState.registeredContentAttributes())
         ruleSets().mutableFeatures().registerContentAttribute(contentAttribute);
-
-    if (cacheEntry || !cacheHash)
-        return;
-
-    if (MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
-        m_matchedDeclarationsCache.add(style, parentStyle, state.userAgentAppearanceStyle(), cacheHash, matchResult);
+    if (builderState.style().usesViewportUnits())
+        document().setHasStyleWithViewportUnits();
 }
 
 bool Resolver::hasSelectorForAttribute(const Element& element, const AtomString& attributeName) const

@@ -26,7 +26,7 @@
 #undef IMPL
 
 
-#include <WebCore/CSSStyleDeclaration.h>
+#include <WebCore/CSSStyleProperties.h>
 #include <WebCore/CSSStyleRule.h>
 #include <WebCore/JSExecState.h>
 
@@ -59,7 +59,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleRuleImpl_setSelectorTextI
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleRuleImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->style()));
+    return JavaReturn<CSSStyleProperties>(env, WTF::getPtr(IMPL->style()));
 }
 
 }

@@ -37,7 +37,9 @@
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "HTMLNames.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
+#include "SerializedNode.h"
 #include "ShadowRoot.h"
 #include "ShadowRootInit.h"
 #include "SlotAssignmentMode.h"
@@ -100,21 +102,16 @@ const AtomString& HTMLTemplateElement::shadowRootMode() const
     return emptyAtom();
 }
 
-void HTMLTemplateElement::setShadowRootMode(const AtomString& value)
-{
-        setAttribute(HTMLNames::shadowrootmodeAttr, value);
-}
-
 void HTMLTemplateElement::setDeclarativeShadowRoot(ShadowRoot& shadowRoot)
 {
     m_declarativeShadowRoot = shadowRoot;
 }
 
-Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry)
+Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOperation type, CustomElementRegistry* registry) const
 {
     RefPtr<Node> clone;
     switch (type) {
-    case CloningOperation::OnlySelf:
+    case CloningOperation::SelfOnly:
         return cloneElementWithoutChildren(document, registry);
     case CloningOperation::SelfWithTemplateContent:
         clone = cloneElementWithoutChildren(document, registry);
@@ -129,6 +126,26 @@ Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& document, CloningOper
         content().cloneChildNodes(fragment->document(), nullptr, fragment);
     }
     return clone.releaseNonNull();
+}
+
+SerializedNode HTMLTemplateElement::serializeNode(CloningOperation type) const
+{
+    // FIXME: Implement CloningOperation::SelfWithTemplateContent and ShadowRoot serialization.
+    Vector<SerializedNode> children;
+    switch (type) {
+    case CloningOperation::SelfOnly:
+    case CloningOperation::SelfWithTemplateContent:
+        break;
+    case CloningOperation::Everything:
+        children = serializeChildNodes();
+        break;
+    }
+
+    auto attributes = this->elementData() ? WTF::map(this->attributes(), [] (const auto& attribute) {
+        return SerializedNode::Element::Attribute { { attribute.name() }, attribute.value() };
+    }) : Vector<SerializedNode::Element::Attribute>();
+
+    return { SerializedNode::HTMLTemplateElement { { { WTFMove(children) }, { tagQName() }, WTFMove(attributes) } } };
 }
 
 void HTMLTemplateElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)

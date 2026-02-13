@@ -28,10 +28,10 @@
 
 namespace WebCore {
 
-enum SVGParsingError {
-    NoError,
-    ParsingAttributeFailedError,
-    NegativeValueForbiddenError
+enum class SVGParsingError : uint8_t {
+    None,
+    ParsingFailed,
+    ForbiddenNegativeValue,
 };
 
 } // namespace WebCore

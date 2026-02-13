@@ -167,7 +167,7 @@ public:
     }
 
 private:
-    Ref<ValidatedFormListedElement> m_element;
+    const Ref<ValidatedFormListedElement> m_element;
 };
 
 } // namespace WebCore

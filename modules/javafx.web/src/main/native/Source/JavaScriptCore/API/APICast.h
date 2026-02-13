@@ -165,7 +165,7 @@ inline JSValueRef toRef(JSC::JSGlobalObject* globalObject, JSC::JSValue v)
 }
 
 #if CPU(ADDRESS64)
-inline JSValueRef toRef(JSC::JSValue v)
+inline JSValueRef toRefWithoutGlobalObject(JSC::JSValue v)
 {
     return std::bit_cast<JSValueRef>(JSC::Integrity::audit(v));
 }

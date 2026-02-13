@@ -87,6 +87,9 @@ void linkMonomorphicCall(VM& vm, JSCell* owner, CallLinkInfo& callLinkInfo, Code
     CodeBlock* callerCodeBlock = jsDynamicCast<CodeBlock*>(owner); // WebAssembly -> JS stubs don't have a valid CodeBlock.
     ASSERT(owner);
 
+    if (Options::forceICFailure()) [[unlikely]]
+        return;
+
     ASSERT(!callLinkInfo.isLinked());
     callLinkInfo.setMonomorphicCallee(vm, owner, callee, calleeCodeBlock, codePtr);
     callLinkInfo.setLastSeenCallee(vm, owner, callee);
@@ -97,7 +100,7 @@ void linkMonomorphicCall(VM& vm, JSCell* owner, CallLinkInfo& callLinkInfo, Code
     if (calleeCodeBlock)
         calleeCodeBlock->linkIncomingCall(owner, &callLinkInfo);
 
-    if (callLinkInfo.specializationKind() == CodeForCall)
+    if (callLinkInfo.specializationKind() == CodeSpecializationKind::CodeForCall)
         return;
     linkSlowFor(vm, callLinkInfo);
 }
@@ -107,7 +110,7 @@ CodePtr<JSEntryPtrTag> jsToWasmICCodePtr(CodeSpecializationKind kind, JSObject* 
 #if ENABLE(WEBASSEMBLY)
     if (!callee)
         return nullptr;
-    if (kind != CodeForCall)
+    if (kind != CodeSpecializationKind::CodeForCall)
         return nullptr;
     if (auto* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(callee))
         return wasmFunction->jsCallICEntrypoint();
@@ -217,11 +220,11 @@ void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkIn
 
             codePtr = jsToWasmICCodePtr(callLinkInfo.specializationKind(), variant.function());
             if (!codePtr) {
-                ArityCheckMode arityCheck = ArityCheckNotRequired;
+                ArityCheckMode arityCheck = ArityCheckMode::ArityCheckNotRequired;
                 if (codeBlock) {
                     ASSERT(!variant.executable()->isHostFunction());
                     if ((callFrame->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters()) || callLinkInfo.isVarargs()))
-                        arityCheck = MustCheckArity;
+                        arityCheck = ArityCheckMode::MustCheckArity;
 
                 }
                 codePtr = variant.executable()->generatedJITCodeForCall()->addressForCall(arityCheck);
@@ -229,7 +232,7 @@ void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkIn
             }
         } else {
             ASSERT(variant.internalFunction());
-            codePtr = vm.getCTIInternalFunctionTrampolineFor(CodeForCall);
+            codePtr = vm.getCTIInternalFunctionTrampolineFor(CodeSpecializationKind::CodeForCall);
         }
 
         slot.m_index = callSlots.size();
