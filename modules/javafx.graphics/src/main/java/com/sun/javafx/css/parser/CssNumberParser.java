@@ -36,7 +36,8 @@ public final class CssNumberParser {
     private static final int EXP_LIMIT = 10000;
 
     /**
-     * Parses a number according to the W3C "Consume a number" algorithm.
+     * Parses a number according to the W3C "Consume a number" algorithm. A number can have integer
+     * and fractional parts, and it supports E notation (exponential).
      * <p>
      * This method operates on the substring {@code [start, end)} of {@code s}, which is expected to
      * contain the string representation of a number without leading or trailing whitespace.

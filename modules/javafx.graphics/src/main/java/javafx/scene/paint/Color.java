@@ -431,35 +431,42 @@ public final class Color extends Paint {
         int len = colorString.length() - offset;
 
         try {
-            int r, g, b, a;
+            return switch (len) {
+                case 3 -> {
+                    int r = Integer.parseInt(colorString, offset, offset + 1, 16);
+                    int g = Integer.parseInt(colorString, offset + 1, offset + 2, 16);
+                    int b = Integer.parseInt(colorString, offset + 2, offset + 3, 16);
+                    yield Color.color(r / 15.0, g / 15.0, b / 15.0, opacity);
+                }
 
-            if (len == 3) {
-                r = Integer.parseInt(colorString, offset, offset + 1, 16);
-                g = Integer.parseInt(colorString, offset + 1, offset + 2, 16);
-                b = Integer.parseInt(colorString, offset + 2, offset + 3, 16);
-                return Color.color(r / 15.0, g / 15.0, b / 15.0, opacity);
-            } else if (len == 4) {
-                r = Integer.parseInt(colorString, offset, offset + 1, 16);
-                g = Integer.parseInt(colorString, offset + 1, offset + 2, 16);
-                b = Integer.parseInt(colorString, offset + 2, offset + 3, 16);
-                a = Integer.parseInt(colorString, offset + 3, offset + 4, 16);
-                return Color.color(r / 15.0, g / 15.0, b / 15.0,
-                        opacity * a / 15.0);
-            } else if (len == 6) {
-                r = Integer.parseInt(colorString, offset, offset + 2, 16);
-                g = Integer.parseInt(colorString, offset + 2, offset + 4, 16);
-                b = Integer.parseInt(colorString, offset + 4, offset + 6, 16);
-                return Color.rgb(r, g, b, opacity);
-            } else if (len == 8) {
-                r = Integer.parseInt(colorString, offset, offset + 2, 16);
-                g = Integer.parseInt(colorString, offset + 2, offset + 4, 16);
-                b = Integer.parseInt(colorString, offset + 4, offset + 6, 16);
-                a = Integer.parseInt(colorString, offset + 6, offset + 8, 16);
-                return Color.rgb(r, g, b, opacity * a / 255.0);
-            }
-        } catch (NumberFormatException nfe) {}
+                case 4 -> {
+                    int r = Integer.parseInt(colorString, offset, offset + 1, 16);
+                    int g = Integer.parseInt(colorString, offset + 1, offset + 2, 16);
+                    int b = Integer.parseInt(colorString, offset + 2, offset + 3, 16);
+                    int a = Integer.parseInt(colorString, offset + 3, offset + 4, 16);
+                    yield Color.color(r / 15.0, g / 15.0, b / 15.0, opacity * a / 15.0);
+                }
 
-        throw new IllegalArgumentException("Invalid color specification");
+                case 6 -> {
+                    int r = Integer.parseInt(colorString, offset, offset + 2, 16);
+                    int g = Integer.parseInt(colorString, offset + 2, offset + 4, 16);
+                    int b = Integer.parseInt(colorString, offset + 4, offset + 6, 16);
+                    yield Color.rgb(r, g, b, opacity);
+                }
+
+                case 8 -> {
+                    int r = Integer.parseInt(colorString, offset, offset + 2, 16);
+                    int g = Integer.parseInt(colorString, offset + 2, offset + 4, 16);
+                    int b = Integer.parseInt(colorString, offset + 4, offset + 6, 16);
+                    int a = Integer.parseInt(colorString, offset + 6, offset + 8, 16);
+                    yield Color.rgb(r, g, b, opacity * a / 255.0);
+                }
+
+                default -> throw new IllegalArgumentException("Invalid color specification");
+            };
+        } catch (NumberFormatException _) {
+            throw new IllegalArgumentException("Invalid color specification");
+        }
     }
 
     private static Color parseRGBColor(String color, int roff,

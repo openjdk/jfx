@@ -115,9 +115,13 @@ public class CssNumberParserTest {
 
     @Test
     public void preserveNegativeZero() {
-        double pz = parseDouble("0");
-        assertEquals(0.0, pz, 0.0);
-        assertEquals(Double.doubleToRawLongBits(0.0), Double.doubleToRawLongBits(pz));
+        double pz1 = parseDouble("0");
+        assertEquals(0.0, pz1, 0.0);
+        assertEquals(Double.doubleToRawLongBits(0.0), Double.doubleToRawLongBits(pz1));
+
+        double pz2 = parseDouble("0.0");
+        assertEquals(0.0, pz2, 0.0);
+        assertEquals(Double.doubleToRawLongBits(0.0), Double.doubleToRawLongBits(pz2));
 
         double nz1 = parseDouble("-0");
         assertEquals(0.0, nz1, 0.0);
@@ -176,7 +180,10 @@ public class CssNumberParserTest {
      */
     @Test
     public void roundingIsCloseToJavaLangDouble() {
-        var rnd = new Random(0xc0ffee);
+        int seed = new Random().nextInt();
+        System.out.println("Testing CssNumberParserTest.roundingIsCloseToJavaLangDouble with seed " + seed);
+
+        var rnd = new Random(seed);
         for (int i = 0; i < 100_000; i++) {
             String number = randomNumber(rnd, 20, 20, 10);
             assertRounding(number, 2);
