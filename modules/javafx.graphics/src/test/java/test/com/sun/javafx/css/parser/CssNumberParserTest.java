@@ -28,8 +28,6 @@ package test.com.sun.javafx.css.parser;
 import java.util.Random;
 import com.sun.javafx.css.parser.CssNumberParser;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,30 +35,30 @@ public class CssNumberParserTest {
 
     @Test
     public void parseIntegerAndSignedInteger() {
-        assertEquals(0.0, parseDouble("0"), 0.0);
-        assertEquals(255.0, parseDouble("255"), 0.0);
-        assertEquals(2.0, parseDouble("+2"), 0.0);
-        assertEquals(-2.0, parseDouble("-2"), 0.0);
-        assertEquals(42.0, parseDouble("00042"), 0.0);
+        assertSameDouble(0.0, "0");
+        assertSameDouble(255.0, "255");
+        assertSameDouble(2.0, "+2");
+        assertSameDouble(-2.0, "-2");
+        assertSameDouble(42.0, "00042");
     }
 
     @Test
     public void parseFractionalForms() {
-        assertEquals(0.5, parseDouble(".5"), 0.0);
-        assertEquals(-0.5, parseDouble("-.5"), 0.0);
-        assertEquals(12.34, parseDouble("12.34"), 0.0);
-        assertEquals(0.00123, parseDouble("0.00123"), 1e-18);
-        assertEquals(100.0, parseDouble("100.0"), 0.0);
+        assertSameDouble(0.5, ".5");
+        assertSameDouble(-0.5, "-.5");
+        assertSameDouble(12.34, "12.34");
+        assertSameDouble(0.00123, "0.00123");
+        assertSameDouble(100.0, "100.0");
     }
 
     @Test
     public void parseExponentForms() {
-        assertEquals(100.0, parseDouble("1e2"), 0.0);
-        assertEquals(100.0, parseDouble("1E+2"), 0.0);
-        assertEquals(125.0, parseDouble("1.25e2"), 0.0);
-        assertEquals(0.01, parseDouble("1e-2"), 0.0);
-        assertEquals(100.0, parseDouble("1e0002"), 0.0);
-        assertEquals(1.0, parseDouble("1e-0"), 0.0);
+        assertSameDouble(100.0, "1e2");
+        assertSameDouble(100.0, "1E+2");
+        assertSameDouble(125.0, "1.25e2");
+        assertSameDouble(0.01, "1e-2");
+        assertSameDouble(100.0, "1e0002");
+        assertSameDouble(1.0, "1e-0");
     }
 
     @Test
@@ -159,41 +157,32 @@ public class CssNumberParserTest {
         assertEquals(Double.doubleToRawLongBits(-0.0), Double.doubleToRawLongBits(negUnder));
     }
 
-    @ParameterizedTest
-    @CsvSource({
-        "0", "1", "-1", "42", "00042", "255", "1000",
-        "9007199254740991",   // 2^53 - 1
-        "9007199254740992",   // 2^53: last integer that can be represented exactly as a double
-        "9007199254740993",   // 2^53 + 1 (rounds to 2^53)
-        "9223372036854775807" // Long.MAX_VALUE
-    })
-    public void roundingMatchesJavaLangDoubleExactlyForIntegers(String value) {
-        double expected = Double.parseDouble(value);
-        double actual = parseDouble(value);
-        assertEquals(Double.doubleToRawLongBits(expected), Double.doubleToRawLongBits(actual));
-    }
-
     /**
-     * Deterministic fuzz test that asserts that the rounding of parsed numbers is within 2 ulps
-     * of the rounding of {@link Double#parseDouble(String)} for random numbers with up to 20 integer
-     * digits, up to 20 fractional digits, and {@code |exp| <= 10}.
+     * Deterministic fuzz test that asserts that the rounding of parsed numbers is bitwise identical to
+     * the rounding of {@link Double#parseDouble(String)} for random numbers with up to 19 significant
+     * digits, and {@code |exp| <= 10}.
      */
     @Test
-    public void roundingIsCloseToJavaLangDouble() {
+    public void roundingIsCorrectFor64BitSignificands() {
         int seed = new Random().nextInt();
-        System.out.println("Testing CssNumberParserTest.roundingIsCloseToJavaLangDouble with seed " + seed);
+        System.out.println("Testing CssNumberParserTest.roundingIsCorrectFor64BitSignificands with seed " + seed);
 
         var rnd = new Random(seed);
         for (int i = 0; i < 100_000; i++) {
-            String number = randomNumber(rnd, 20, 20, 10);
-            assertRounding(number, 2);
+            String number = randomNumber(rnd, 19, 10);
+            double expected = Double.parseDouble(number);
+            double actual = parseDouble(number);
+            assertEquals(Double.doubleToRawLongBits(expected), Double.doubleToRawLongBits(actual));
         }
     }
 
     /**
      * Returns the string representation of a random floating-point number.
+     * <p>
+     * {@code maxSigDigits} limits the total number of digits in the significand (digits before
+     * and after the decimal point, excluding sign and exponent).
      */
-    private static String randomNumber(Random rnd, int maxIntDigits, int maxFracDigits, int maxAbsExp) {
+    private static String randomNumber(Random rnd, int maxSigDigits, int maxAbsExp) {
         StringBuilder sb = new StringBuilder(32);
 
         int sign = rnd.nextInt(5);
@@ -203,24 +192,26 @@ public class CssNumberParserTest {
             sb.append('+');
         }
 
+        int maxDigits = Math.max(1, maxSigDigits);
         boolean dotForm = rnd.nextInt(6) == 0;
         if (dotForm) {
             sb.append('.');
-            int fracDigits = 1 + rnd.nextInt(Math.max(1, maxFracDigits));
+            int fracDigits = 1 + rnd.nextInt(maxDigits);
             for (int i = 0; i < fracDigits; i++) {
                 sb.append((char)('0' + rnd.nextInt(10)));
             }
         } else {
-            int intDigits = 1 + rnd.nextInt(Math.max(1, maxIntDigits));
+            int intDigits = 1 + rnd.nextInt(maxDigits);
             for (int i = 0; i < intDigits; i++) {
                 sb.append((char)('0' + rnd.nextInt(10)));
             }
 
-            if (maxFracDigits > 0 && rnd.nextBoolean()) {
+            int remaining = maxDigits - intDigits;
+            if (remaining > 0 && rnd.nextBoolean()) {
                 sb.append('.');
-                int fracDigits = 1 + rnd.nextInt(maxFracDigits);
+                int fracDigits = 1 + rnd.nextInt(remaining);
                 for (int i = 0; i < fracDigits; i++) {
-                    sb.append((char) ('0' + rnd.nextInt(10)));
+                    sb.append((char)('0' + rnd.nextInt(10)));
                 }
             }
         }
@@ -234,8 +225,7 @@ public class CssNumberParserTest {
                 sb.append('-');
             }
 
-            int abs = Math.abs(exp);
-            sb.append(abs);
+            sb.append(Math.abs(exp));
         }
 
         return sb.toString();
@@ -249,31 +239,18 @@ public class CssNumberParserTest {
         return CssNumberParser.parseDouble(s, start, end);
     }
 
+    private static void assertSameDouble(double e, String s) {
+        double expected = Double.parseDouble(s);
+        double actual = CssNumberParser.parseDouble(s, 0, s.length());
+        assertEquals(e, actual, 0.0);
+        assertEquals(Double.doubleToRawLongBits(expected), Double.doubleToRawLongBits(actual));
+    }
+
     private static void assertNumberFormatException(String s) {
         assertThrows(NumberFormatException.class, () -> parseDouble(s));
     }
 
     private static void assertNumberFormatException(String s, int start, int end) {
         assertThrows(NumberFormatException.class, () -> parseDouble(s, start, end));
-    }
-
-    private static void assertRounding(String s, long maxUlps) {
-        double expected = Double.parseDouble(s);
-        double actual = parseDouble(s);
-        assertWithinUlps(expected, actual, maxUlps, "representation=\"" + s + "\"");
-    }
-
-    private static void assertWithinUlps(double expected, double actual, long maxUlps, String context) {
-        long ulps = Math.abs(ordered(expected) - ordered(actual));
-        assertTrue(ulps <= maxUlps, () -> context +
-            " expected=" + expected +
-            " actual=" + actual +
-            " ulps=" + ulps + " (max=" + maxUlps + ")");
-    }
-
-    // Maps a double value into a long space where adjacent representable doubles differ by exactly 1.
-    private static long ordered(double v) {
-        long rawBits = Double.doubleToRawLongBits(v);
-        return rawBits >= 0 ? rawBits : (0x8000_0000_0000_0000L - rawBits);
     }
 }
