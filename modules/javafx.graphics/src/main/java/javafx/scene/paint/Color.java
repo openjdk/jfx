@@ -401,7 +401,7 @@ public final class Color extends Paint {
 
         int offset = 0;
 
-        if (colorString.regionMatches(true, 0, "#", 0, 1)) {
+        if (colorString.charAt(0) == '#') {
             offset = 1;
         } else if (colorString.regionMatches(true, 0, "0x", 0, 2)) {
             offset = 2;
