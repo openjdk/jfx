@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,12 +29,16 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.ResourceBundle;
+import java.util.function.DoubleSupplier;
 
-import javafx.scene.input.KeyCombination;
+import javafx.scene.Scene;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.scene.input.KeyCombination;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
@@ -48,10 +52,9 @@ import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
+import com.sun.javafx.util.Utils;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
-import java.util.Locale;
-import java.util.ResourceBundle;
 
 public class WindowStage extends GlassStage {
 
@@ -198,38 +201,33 @@ public class WindowStage extends GlassStage {
                 platformWindow.headerButtonMetricsProperty().subscribe(this::notifyHeaderButtonMetricsChanged);
             }
 
-            if (fxStage != null && fxStage.getScene() != null) {
-                javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
-                if (paint instanceof javafx.scene.paint.Color) {
-                    javafx.scene.paint.Color color = (javafx.scene.paint.Color) paint;
-                    platformWindow.setBackground((float) color.getRed(), (float) color.getGreen(), (float) color.getBlue());
-                } else if (paint instanceof javafx.scene.paint.LinearGradient) {
-                    javafx.scene.paint.LinearGradient lgradient = (javafx.scene.paint.LinearGradient) paint;
-                    computeAndSetBackground(lgradient.getStops());
-                } else if (paint instanceof javafx.scene.paint.RadialGradient) {
-                    javafx.scene.paint.RadialGradient rgradient = (javafx.scene.paint.RadialGradient) paint;
-                    computeAndSetBackground(rgradient.getStops());
-                }
+            if (fxStage != null && fxStage.getScene() instanceof Scene scene) {
+                // Try to get the background size from the scene or stage, and assume 512x512 as a fallback.
+                // The background size is required to approximate a sensible background color for gradient
+                // paints that are specified in absolute coordinates.
+                double width = getDoubleValue(scene::getWidth, fxStage::getWidth, 512);
+                double height = getDoubleValue(scene::getHeight, fxStage::getHeight, 512);
+                var background = darkFrame ? javafx.scene.paint.Color.BLACK : javafx.scene.paint.Color.WHITE;
+                var fill = Utils.calculateRepresentativeColor(scene.getFill(), background, width, height);
+                platformWindow.setBackground((float)fill.getRed(), (float)fill.getGreen(), (float)fill.getBlue());
             }
-
         }
+
         platformWindows.put(platformWindow, this);
     }
 
-    private void computeAndSetBackground(List<javafx.scene.paint.Stop> stops) {
-        if (stops.size() == 1) {
-            javafx.scene.paint.Color color = stops.get(0).getColor();
-            platformWindow.setBackground((float) color.getRed(),
-                    (float) color.getGreen(), (float) color.getBlue());
-        } else if (stops.size() > 1) {
-            // A simple attempt to find a reasonable average color that is
-            // within the stops arrange.
-            javafx.scene.paint.Color color = stops.get(0).getColor();
-            javafx.scene.paint.Color color2 = stops.get(stops.size() - 1).getColor();
-            platformWindow.setBackground((float) ((color.getRed() + color2.getRed()) / 2.0),
-                    (float) ((color.getGreen() + color2.getGreen()) / 2.0),
-                    (float) ((color.getBlue() + color2.getBlue()) / 2.0));
+    private double getDoubleValue(DoubleSupplier first, DoubleSupplier second, double fallback) {
+        double value = Double.isNaN(first.getAsDouble()) ? 0 : first.getAsDouble();
+        if (value != 0) {
+            return value;
         }
+
+        value = Double.isNaN(second.getAsDouble()) ? 0 : second.getAsDouble();
+        if (value != 0) {
+            return value;
+        }
+
+        return fallback;
     }
 
     private void notifyHeaderButtonMetricsChanged() {

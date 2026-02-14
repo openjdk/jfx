@@ -487,6 +487,13 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         }
         case WM_PAINT:
+            if (m_startupClearPending) {
+                m_startupClearPending = false;
+                if (m_startupBrush != NULL) {
+                    ::DeleteObject(m_startupBrush);
+                    m_startupBrush = NULL;
+                }
+            }
             HandleViewPaintEvent(GetHWND(), msg, wParam, lParam);
             break;
         case WM_CONTEXTMENU:
@@ -616,6 +623,13 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             if (lr) return lr;
             break;
         }
+        case WM_ERASEBKGND:
+            if (m_startupClearPending && m_startupBrush != NULL) {
+                RECT rc;
+                ::GetClientRect(GetHWND(), &rc);
+                ::FillRect(HDC(wParam), &rc, m_startupBrush);
+            }
+            return 1;
     }
 
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
@@ -1845,27 +1859,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setAlpha
 
 /*
  * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setBackground2
+ * Method:    _setBackground
  * Signature: (JFFF)Z
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground2
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground
     (JNIEnv *env, jobject jThis, jlong ptr, jfloat r, jfloat g, jfloat b)
 {
     ENTER_MAIN_THREAD()
     {
-        HBRUSH hbrBackground;
-
-        // That's a hack with 'negative' color
-        if (r < 0) {
-            hbrBackground = NULL;
-        } else {
-            hbrBackground = ::CreateSolidBrush(RGB(F2B(r), F2B(g), F2B(b)));
-        }
-
-        HBRUSH oldBrush = (HBRUSH)::SetClassLongPtr(hWnd, GCLP_HBRBACKGROUND, (LONG_PTR)hbrBackground);
-
-        if (oldBrush) {
-            ::DeleteObject(oldBrush);
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+        if (pWindow && pWindow->IsStartupClearPending()) {
+            pWindow->SetStartupBrush(::CreateSolidBrush(RGB(F2B(r), F2B(g), F2B(b))));
         }
     }
     jfloat r, g, b;
