@@ -148,6 +148,33 @@ BOOL BaseWnd::GetDefaultWindowBounds(LPRECT r)
 }
 
 /*static*/
+BOOL BaseWnd::BackdropsSupported()
+{
+    HINSTANCE hInst = ::GetModuleHandle(NULL);
+    TCHAR* szClassName = L"GLASSDEFAULTWINDOW";
+    BOOL supported = FALSE;
+
+    WNDCLASS wndcls;
+    ::ZeroMemory(&wndcls, sizeof(WNDCLASS));
+    wndcls.lpfnWndProc      = StaticWindowProc;
+    wndcls.hInstance        = hInst;
+    wndcls.lpszClassName    = szClassName;
+    ::RegisterClass(&wndcls);
+
+    HWND hwnd = ::CreateWindow(szClassName, L"", WS_OVERLAPPED,
+                               CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+                               0, 0, 0, 0);
+
+    DWM_SYSTEMBACKDROP_TYPE type = DWMSBT_AUTO;
+    supported = SUCCEEDED(DwmSetWindowAttribute(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &type, sizeof(type)));
+
+    ::DestroyWindow(hwnd);
+    ::UnregisterClass(szClassName, hInst);
+
+    return supported;
+}
+
+/*static*/
 LRESULT CALLBACK BaseWnd::StaticWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     BaseWnd *pThis = NULL;
