@@ -377,7 +377,7 @@ public class Scene implements EventTarget {
         addEventFilter(MouseEvent.MOUSE_PRESSED, pressedHandler);
         addEventFilter(TouchEvent.TOUCH_PRESSED, pressedHandler);
 
-        context.colorSchemeProperty().addListener((_, _, newValue) -> markDirty(DirtyBits.DARK_SCHEME_DIRTY));
+        context.colorSchemeProperty().addListener(_ -> markDirty(DirtyBits.DARK_SCHEME_DIRTY));
     }
 
     static {

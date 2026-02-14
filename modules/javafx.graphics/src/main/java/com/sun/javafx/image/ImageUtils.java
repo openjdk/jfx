@@ -79,7 +79,7 @@ public final class ImageUtils {
         if (numPixels <= (long) maxSamples) {
             sampleStep = 1;
         } else {
-            sampleStep = (int)Math.ceil(Math.sqrt((double)numPixels / (double)maxSamples));
+            sampleStep = (int)Math.ceil(Math.sqrt(numPixels / (double)maxSamples));
             if (sampleStep < 1) {
                 sampleStep = 1;
             }
