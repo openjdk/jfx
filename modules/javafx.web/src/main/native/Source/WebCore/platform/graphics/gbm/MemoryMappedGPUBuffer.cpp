@@ -293,7 +293,9 @@ void MemoryMappedGPUBuffer::updateContents(AccessScope& scope, const void* srcDa
     ASSERT(isMapped());
     ASSERT(isLinear());
 
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     uint32_t* dstPixels = static_cast<uint32_t*>(m_mappedData);
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     const uint32_t dstPitch = primaryPlaneDmaBufStride() / 4;
     const auto dstOffset = targetRect.y() * dstPitch + targetRect.x();
 

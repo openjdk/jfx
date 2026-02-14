@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -334,15 +334,20 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             if (h != null) {
                                 Object v = attrs.get(a);
                                 if (h.isAllowed(v)) {
+                                    String id = h.getId();
+                                    String ss = h.write(v);
+                                    if(ss != null) {
+                                        ss = encode(ss);
+                                    }
+
                                     wr.write('{');
                                     if (forParagraph) {
                                         wr.write('!');
                                     }
-                                    wr.write(h.getId());
-                                    String ss = h.write(v);
+                                    wr.write(id);
                                     if (ss != null) {
                                         wr.write('|');
-                                        wr.write(encode(ss));
+                                        wr.write(ss);
                                     }
                                     wr.write('}');
                                 }
