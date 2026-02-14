@@ -302,7 +302,7 @@ public final class CssNumberParser {
      *
      * @see <a href="https://arxiv.org/pdf/2101.11408">Number Parsing at a Gigabyte per Second</a>
      */
-    public static final long[] T;
+    public static final long[] T; // contains 1302 longs (~10 kb)
 
     static {
         int min = -342, max = 308;
