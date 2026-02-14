@@ -120,24 +120,37 @@ public abstract class ButtonBase extends Labeled {
      * @return the property to represent the button's action, which is invoked
      * whenever the button is fired
      */
-    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
-    public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
-    public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
-        @Override protected void invalidated() {
-            setEventHandler(ActionEvent.ACTION, get());
-        }
+    @SuppressWarnings("unchecked")
+    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() {
+        if (onAction == null) {
+            onAction = new ObjectPropertyBase<>((EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION)) {
+                @Override protected void invalidated() {
+                    setEventHandler(ActionEvent.ACTION, get());
+                }
 
-        @Override
-        public Object getBean() {
-            return ButtonBase.this;
+                @Override public Object getBean() { return ButtonBase.this; }
+                @Override public String getName() { return "onAction"; }
+            };
         }
+        return onAction;
+    }
 
-        @Override
-        public String getName() {
-            return "onAction";
+    @SuppressWarnings("unchecked")
+    public final EventHandler<ActionEvent> getOnAction() {
+        return onAction != null
+                ? onAction.get()
+                : (EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION);
+    }
+
+    public final void setOnAction(EventHandler<ActionEvent> value) {
+        if (onAction == null) {
+            setEventHandler(ActionEvent.ACTION, value);
+        } else {
+            onAction.set(value);
         }
-    };
+    }
+
+    private ObjectProperty<EventHandler<ActionEvent>> onAction;
 
 
     /* *************************************************************************
