@@ -6514,9 +6514,8 @@ public abstract sealed class Node
         private final EventType<T> eventType;
 
         public EventHandlerProperty(final String name,
-                                    final EventType<T> eventType,
-                                    final EventHandler<? super T> initialValue) {
-            super(initialValue);
+                                    final EventType<T> eventType) {
+            super(getEventHandler(eventType));
             this.name = name;
             this.eventType = eventType;
         }
@@ -6537,8 +6536,10 @@ public abstract sealed class Node
         }
     }
 
+    // TODO: More documentation
     private Map<EventType<?>, EventHandlerProperty<?>> eventHandlerProperties;
 
+    // TODO: Javadoc
     @SuppressWarnings("unchecked")
     private <T extends Event> ObjectProperty<EventHandler<? super T>> getEventHandlerProperty(EventType<T> eventType, String propertyName) {
         if (eventHandlerProperties == null) {
@@ -6546,15 +6547,17 @@ public abstract sealed class Node
         }
 
         return (ObjectProperty<EventHandler<? super T>>) eventHandlerProperties.computeIfAbsent(eventType,
-                type -> new EventHandlerProperty<>(propertyName, eventType, (EventHandler<T>) getEventHandler(type)));
+                type -> new EventHandlerProperty<>(propertyName, eventType));
     }
 
+    // TODO: Javadoc
     @SuppressWarnings("unchecked")
     private <E extends Event> EventHandler<? super E> getEventHandlerPropertyValue(EventType<E> eventType) {
         ObjectProperty<?> property = (eventHandlerProperties != null) ? eventHandlerProperties.get(eventType) : null;
         return (property != null) ? (EventHandler<E>) property.get() : getEventHandler(eventType);
     }
 
+    // TODO: Javadoc
     @SuppressWarnings("unchecked")
     private <E extends Event> void setEventHandlerPropertyValue(EventType<E> eventType, EventHandler<? super E> value) {
         EventHandlerProperty<E> property = (eventHandlerProperties != null)
@@ -8998,8 +9001,7 @@ public abstract sealed class Node
                                     .setEventHandler(eventType, eventHandler);
     }
 
-    /// TODO: JavaDoc
-    /// @since JavaFX TBD
+    /// TODO: Javadoc
     protected final <T extends Event> EventHandler<? super T> getEventHandler(
             final EventType<T> eventType) {
         return getInternalEventDispatcher().getEventHandlerManager().getEventHandler(eventType);
