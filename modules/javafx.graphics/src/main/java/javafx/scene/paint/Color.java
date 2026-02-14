@@ -406,13 +406,13 @@ public final class Color extends Paint {
         } else if (colorString.regionMatches(true, 0, "0x", 0, 2)) {
             offset = 2;
         } else if (colorString.regionMatches(true, 0, "rgb", 0, 3)) {
-            if (colorString.regionMatches(true, 3, "(", 0, 1)) {
+            if (colorString.charAt(3) == '(') {
                 return parseRGBColor(colorString, 4, false, opacity);
             } else if (colorString.regionMatches(true, 3, "a(", 0, 2)) {
                 return parseRGBColor(colorString, 5, true, opacity);
             }
         } else if (colorString.regionMatches(true, 0, "hsl", 0, 3)) {
-            if (colorString.regionMatches(true, 3, "(", 0, 1)) {
+            if (colorString.charAt(3) == '(') {
                 return parseHSLColor(colorString, 4, false, opacity);
             } else if (colorString.regionMatches(true, 3, "a(", 0, 2)) {
                 return parseHSLColor(colorString, 5, true, opacity);
