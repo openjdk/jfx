@@ -1,0 +1,213 @@
+/*
+ * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+import com.sun.javafx.gradle.CompileTarget
+
+defineProperty("MAVEN_PUBLISH", "false")
+ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
+defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (ext.IS_MILESTONE_FCS ? project.ext.RELEASE_VERSION_SHORT : project.ext.RELEASE_VERSION_LONG) : "")
+ext.MAVEN_GROUP_ID = "org.openjfx"
+
+logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
+logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
+
+registerModules()
+
+void registerModules() {
+    if (!IS_MAVEN_PUBLISH) {
+        return
+    }
+
+    Project base = project(":base")
+    Project graphics = project(":graphics")
+    Project controls = project(":controls")
+    Project fxml = project(":fxml")
+    Project media = project(":media")
+
+    addMavenPublication(base, [])
+    addMavenPublication(graphics, [ base ])
+    addMavenPublication(controls, [ graphics ])
+    addMavenPublication(fxml, [ controls ])
+    addMavenPublication(media, [ graphics ])
+
+    if (ext.COMPILE_SWING) {
+        addMavenPublication(project(":swing"), [ graphics ])
+    }
+
+    Project jsobject = project(":jsobject")
+
+    addMavenPublication(jsobject, [])
+    addMavenPublication(project(":web"), [ controls, media, jsobject ])
+
+    // Incubator modules
+    Project incubatorInput = project(":incubator.input")
+
+    addMavenPublication(incubatorInput, [ controls ])
+    addMavenPublication(project(":incubator.richtext"), [ controls, incubatorInput ])
+}
+
+ext.configureMavenPublication = { List<Project> projects, CompileTarget t, Task previousTask ->
+    if (!IS_MAVEN_PUBLISH) {
+        return
+    }
+
+    def targetProperties = project.ext[t.upper]
+    def platformPrefix = targetProperties.platformPrefix
+
+    // Maven Publications
+    def publicationDirName = "${platformPrefix}publications"
+    def publicationDir = "${rootProject.layout.buildDirectory.get()}/${publicationDirName}"
+
+    projects.each { Project project ->
+        def moduleName = project.ext.moduleName
+        def buildDir = project.layout.buildDirectory.get()
+
+        def dstModularJarDir="${publicationDir}"
+        def srcClassesDir = "${buildDir}/${platformPrefix}module-classes"
+        def srcLibsDir = "${buildDir}/${platformPrefix}module-lib"
+
+        def modularEmptyPublicationJarName = "${moduleName}.jar"
+        def modularEmptyPublicationJarTask = project.tasks.register("moduleEmptyPublicationJar${t.capital}", Jar) {
+            dependsOn previousTask
+
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularEmptyPublicationJarName
+            manifest {
+                attributes(
+                        'Automatic-Module-Name':"${moduleName}Empty"
+                )
+            }
+        }
+
+        def modularPublicationJarName = "${moduleName}-${t.name}.jar"
+        project.tasks.register("modularPublicationJar${t.capital}", Jar) {
+            dependsOn modularEmptyPublicationJarTask
+
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularPublicationJarName
+            from srcLibsDir
+            from srcClassesDir
+        }
+    }
+}
+
+void addMavenPublication(Project project, List<Project> projectDependencies) {
+    if (!project.hasProperty("moduleName")) {
+        fail("Project ${project} has no module name")
+    }
+    projectDependencies.each { dep ->
+        if (!dep.hasProperty("moduleName")) {
+            fail("${project} dependency ${dep} has no module name")
+        }
+    }
+
+    project.apply plugin: 'maven-publish'
+
+    project.group = MAVEN_GROUP_ID
+    project.version = MAVEN_VERSION
+
+    if (project.name == 'base') {
+        project.publishing {
+            publications {
+                javafx(MavenPublication) {
+                    artifactId = 'javafx'
+                    artifacts = []
+                }
+            }
+        }
+    }
+
+    gradle.taskGraph.whenReady { g ->
+        project.tasks.findAll { it.name == 'generatePomFileForJavafxPublication' }.each { it ->
+            it.doLast {
+                copy {
+                    into project.file("${project.layout.buildDirectory.get()}/publications/javafx")
+                    from file("${rootProject.projectDir}/javafx.pom")
+                    rename "javafx.pom", "pom-default.xml"
+                    filter {
+                        line -> line.replaceAll("@VERSION@", MAVEN_VERSION)
+                    }
+                }
+            }
+        }
+    }
+
+    project.publishing {
+        repositories {
+            maven {
+                def repositoryUrl = project.hasProperty('repositoryUrl') ? project.getProperty('repositoryUrl') : ""
+                def repositoryUsername = project.hasProperty('repositoryUsername') ? project.getProperty('repositoryUsername') : ""
+                def repositoryPassword = project.hasProperty('repositoryPassword') ? project.getProperty('repositoryPassword') : ""
+                url repositoryUrl
+                credentials {
+                    username repositoryUsername
+                    password repositoryPassword
+                }
+            }
+        }
+    }
+
+    compileTargets { CompileTarget t ->
+        project.publishing {
+            publications {
+                maven(MavenPublication) {
+                    String artifactName = project.moduleName.replace('.', '-')
+                    artifactId = artifactName
+
+                    afterEvaluate {
+                        artifact project.tasks."moduleEmptyPublicationJar$t.capital"
+                        artifact project.tasks."modularPublicationJar$t.capital" {
+                            archiveClassifier.set("$t.name")
+                        }
+                    }
+
+                    pom.withXml {
+                        Node parent = asNode().appendNode("parent")
+                        parent.appendNode("groupId", MAVEN_GROUP_ID)
+                        parent.appendNode("artifactId", "javafx")
+                        parent.appendNode("version", MAVEN_VERSION)
+
+                        Node dependencies = asNode().appendNode("dependencies")
+
+                        Node projectDependencyPlatform = dependencies.appendNode("dependency")
+                        projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
+                        projectDependencyPlatform.appendNode("artifactId", artifactName)
+                        projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
+                        projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
+
+                        if (!projectDependencies.empty) {
+                            projectDependencies.each { dep ->
+                                String depName = dep.moduleName.replace('.', '-')
+                                Node projectDependency = dependencies.appendNode("dependency")
+                                projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
+                                projectDependency.appendNode("artifactId", depName)
+                                projectDependency.appendNode("version", MAVEN_VERSION)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
