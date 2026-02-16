@@ -1114,17 +1114,11 @@ public class Stage extends Window {
             TKStage tkStage = (window == null ? null : window.getPeer());
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
-            ColorScheme colorScheme = scene != null
-                ? scene.getPreferences().getColorScheme()
-                : PlatformImpl.getPlatformPreferences().getColorScheme();
 
             StageStyle stageStyle = getStyle();
-            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
-                    getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK));
-            getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
-                    (int) Math.ceil(getMinHeight()));
-            getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
-                    (int) Math.floor(getMaxHeight()));
+            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(), getModality(), tkStage, rtl));
+            getPeer().setMinimumSize((int) Math.ceil(getMinWidth()), (int) Math.ceil(getMinHeight()));
+            getPeer().setMaximumSize((int) Math.floor(getMaxWidth()), (int) Math.floor(getMaxHeight()));
             getPeer().setPrefHeaderButtonHeight(getPrefHeaderButtonHeight());
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }

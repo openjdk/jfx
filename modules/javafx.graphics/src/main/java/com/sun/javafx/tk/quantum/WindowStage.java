@@ -34,7 +34,9 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.function.DoubleSupplier;
 
+import javafx.application.ColorScheme;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -48,6 +50,7 @@ import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
 import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StagePeerListener;
+import com.sun.javafx.stage.StageUtils;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
@@ -69,7 +72,6 @@ public class WindowStage extends GlassStage {
     private OverlayWarning warning = null;
     private boolean rtl = false;
     private boolean transparent = false;
-    private boolean darkFrame = false;
     private boolean isPrimaryStage = false;
     private boolean isPopupStage = false;
     private boolean isInFullScreen = false;
@@ -89,15 +91,27 @@ public class WindowStage extends GlassStage {
         ResourceBundle.getBundle(WindowStage.class.getPackage().getName() +
                                  ".QuantumMessagesBundle", LOCALE);
 
-    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality,
-                       TKStage owner, boolean darkFrame) {
+    public WindowStage(javafx.stage.Window peerWindow, final StageStyle stageStyle, Modality modality, TKStage owner) {
         this.style = stageStyle;
         this.owner = (GlassStage)owner;
         this.modality = modality;
-        this.darkFrame = darkFrame;
 
         if (peerWindow instanceof javafx.stage.Stage) {
             fxStage = (Stage)peerWindow;
+
+            fxStage.sceneProperty()
+                .map(Scene::getPreferences)
+                .flatMap(Scene.Preferences::colorSchemeProperty)
+                .subscribe(colorScheme -> {
+                    if (platformWindow != null) {
+                        platformWindow.setDarkFrame(colorScheme == ColorScheme.DARK);
+                        updatePlatformWindowBackground();
+                    }
+                });
+
+            fxStage.sceneProperty()
+                .flatMap(Scene::fillProperty)
+                .subscribe(this::updatePlatformWindowBackground);
         } else {
             fxStage = null;
         }
@@ -182,7 +196,7 @@ public class WindowStage extends GlassStage {
                 windowMask |= Window.MODAL;
             }
 
-            if (darkFrame) {
+            if (fxStage != null && StageUtils.isDarkFrame(fxStage)) {
                 windowMask |= Window.DARK_FRAME;
             }
 
@@ -201,37 +215,17 @@ public class WindowStage extends GlassStage {
                 platformWindow.headerButtonMetricsProperty().subscribe(this::notifyHeaderButtonMetricsChanged);
             }
 
-            updatePlatformWindowBackground(platformWindow);
+            updatePlatformWindowBackground();
         }
 
         platformWindows.put(platformWindow, this);
     }
 
-    private void updatePlatformWindowBackground(Window window) {
-        if (fxStage != null && fxStage.getScene() instanceof Scene scene) {
-            // Try to get the background size from the scene or stage, and assume 512x512 as a fallback.
-            // The background size is required to approximate a sensible background color for gradient
-            // paints that are specified in absolute coordinates.
-            double width = getDoubleValue(scene::getWidth, fxStage::getWidth, 512);
-            double height = getDoubleValue(scene::getHeight, fxStage::getHeight, 512);
-            var background = darkFrame ? javafx.scene.paint.Color.BLACK : javafx.scene.paint.Color.WHITE;
-            var fill = Utils.calculateRepresentativeColor(scene.getFill(), background, width, height);
-            window.setBackground((float)fill.getRed(), (float)fill.getGreen(), (float)fill.getBlue());
+    private void updatePlatformWindowBackground() {
+        if (fxStage != null && platformWindow != null) {
+            Color fill = StageUtils.calculateRepresentativeColor(fxStage);
+            platformWindow.setBackground((float)fill.getRed(), (float)fill.getGreen(), (float)fill.getBlue());
         }
-    }
-
-    private double getDoubleValue(DoubleSupplier first, DoubleSupplier second, double fallback) {
-        double value = Double.isNaN(first.getAsDouble()) ? 0 : first.getAsDouble();
-        if (value != 0) {
-            return value;
-        }
-
-        value = Double.isNaN(second.getAsDouble()) ? 0 : second.getAsDouble();
-        if (value != 0) {
-            return value;
-        }
-
-        return fallback;
     }
 
     private void notifyHeaderButtonMetricsChanged() {
@@ -910,16 +904,6 @@ public class WindowStage extends GlassStage {
     public void setPrefHeaderButtonHeight(double height) {
         if (platformWindow != null) {
             platformWindow.setPrefHeaderButtonHeight(height);
-        }
-    }
-
-    @Override
-    public void setDarkFrame(boolean value) {
-        darkFrame = value;
-
-        if (platformWindow != null) {
-            updatePlatformWindowBackground(platformWindow);
-            platformWindow.setDarkFrame(value);
         }
     }
 }
