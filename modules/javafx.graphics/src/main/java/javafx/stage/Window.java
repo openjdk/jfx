@@ -27,6 +27,7 @@ package javafx.stage;
 
 import java.util.HashMap;
 
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
