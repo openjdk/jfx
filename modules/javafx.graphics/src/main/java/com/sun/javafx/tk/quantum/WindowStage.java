@@ -201,19 +201,23 @@ public class WindowStage extends GlassStage {
                 platformWindow.headerButtonMetricsProperty().subscribe(this::notifyHeaderButtonMetricsChanged);
             }
 
-            if (fxStage != null && fxStage.getScene() instanceof Scene scene) {
-                // Try to get the background size from the scene or stage, and assume 512x512 as a fallback.
-                // The background size is required to approximate a sensible background color for gradient
-                // paints that are specified in absolute coordinates.
-                double width = getDoubleValue(scene::getWidth, fxStage::getWidth, 512);
-                double height = getDoubleValue(scene::getHeight, fxStage::getHeight, 512);
-                var background = darkFrame ? javafx.scene.paint.Color.BLACK : javafx.scene.paint.Color.WHITE;
-                var fill = Utils.calculateRepresentativeColor(scene.getFill(), background, width, height);
-                platformWindow.setBackground((float)fill.getRed(), (float)fill.getGreen(), (float)fill.getBlue());
-            }
+            updatePlatformWindowBackground(platformWindow);
         }
 
         platformWindows.put(platformWindow, this);
+    }
+
+    private void updatePlatformWindowBackground(Window window) {
+        if (fxStage != null && fxStage.getScene() instanceof Scene scene) {
+            // Try to get the background size from the scene or stage, and assume 512x512 as a fallback.
+            // The background size is required to approximate a sensible background color for gradient
+            // paints that are specified in absolute coordinates.
+            double width = getDoubleValue(scene::getWidth, fxStage::getWidth, 512);
+            double height = getDoubleValue(scene::getHeight, fxStage::getHeight, 512);
+            var background = darkFrame ? javafx.scene.paint.Color.BLACK : javafx.scene.paint.Color.WHITE;
+            var fill = Utils.calculateRepresentativeColor(scene.getFill(), background, width, height);
+            window.setBackground((float)fill.getRed(), (float)fill.getGreen(), (float)fill.getBlue());
+        }
     }
 
     private double getDoubleValue(DoubleSupplier first, DoubleSupplier second, double fallback) {
@@ -914,6 +918,7 @@ public class WindowStage extends GlassStage {
         darkFrame = value;
 
         if (platformWindow != null) {
+            updatePlatformWindowBackground(platformWindow);
             platformWindow.setDarkFrame(value);
         }
     }
