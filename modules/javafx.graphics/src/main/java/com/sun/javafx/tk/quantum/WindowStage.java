@@ -103,6 +103,7 @@ public class WindowStage extends GlassStage {
                 .map(Scene::getPreferences)
                 .flatMap(Scene.Preferences::colorSchemeProperty)
                 .subscribe(colorScheme -> {
+                    QuantumToolkit.getToolkit().checkFxUserThread();
                     if (platformWindow != null) {
                         platformWindow.setDarkFrame(colorScheme == ColorScheme.DARK);
                         updatePlatformWindowBackground();
@@ -111,7 +112,10 @@ public class WindowStage extends GlassStage {
 
             fxStage.sceneProperty()
                 .flatMap(Scene::fillProperty)
-                .subscribe(this::updatePlatformWindowBackground);
+                .subscribe(() -> {
+                    QuantumToolkit.getToolkit().checkFxUserThread();
+                    updatePlatformWindowBackground();
+                });
         } else {
             fxStage = null;
         }
