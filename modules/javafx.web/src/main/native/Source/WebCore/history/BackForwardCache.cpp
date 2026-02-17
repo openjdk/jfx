@@ -616,6 +616,9 @@ void BackForwardCache::prune(PruningReason pruningReason)
 {
     while (pageCount() > maxSize()) {
         auto oldestItem = m_items.takeFirst();
+
+        // Take the CachedPage before calling set() so ~CachedPage doesn’t find itself in m_cachedPageMap.
+        auto cachedPage = m_cachedPageMap.take(oldestItem);
         m_cachedPageMap.set(oldestItem, pruningReason);
         RELEASE_LOG(BackForwardCache, "BackForwardCache::prune removing item: %s, size: %u / %u", oldestItem.toString().utf8().data(), pageCount(), maxSize());
     }

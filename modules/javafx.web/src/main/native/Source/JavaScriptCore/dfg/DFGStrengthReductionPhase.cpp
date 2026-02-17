@@ -679,6 +679,10 @@ private:
             if (!flags)
                 break;
 
+            // NewRegExp node does not have an explicit structure, so don't reduce cross-realm RegExp.
+            if (m_node->structure().get() != m_graph.globalObjectFor(m_node->origin.semantic)->regExpStructure())
+                break;
+
             auto* regExp = vm().regExpCache()->lookup(vm(), pattern, flags.value());
             if (!regExp)
                 break;

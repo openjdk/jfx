@@ -87,14 +87,6 @@ void LineWidth::commit()
     m_hasCommitted = true;
 }
 
-inline static float availableWidthAtOffset(const RenderBlockFlow& block, const LayoutUnit& offset,
-    float& newLineLeft, float& newLineRight, const LayoutUnit& lineHeight = 0)
-{
-    newLineLeft = block.logicalLeftOffsetForLine(offset, lineHeight);
-    newLineRight = block.logicalRightOffsetForLine(offset, lineHeight);
-    return std::max(0.0f, newLineRight - newLineLeft);
-}
-
 void LineWidth::updateLineDimension(LayoutUnit newLineTop, LayoutUnit newLineWidth, float newLineLeft, float newLineRight)
 {
     if (newLineWidth <= m_availableWidth)

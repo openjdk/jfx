@@ -44,7 +44,6 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.layout.Region;
 
-
 public class LabeledImpl extends Label {
 
     public LabeledImpl(final Labeled labeled) {
@@ -56,6 +55,10 @@ public class LabeledImpl extends Label {
 
         labeledImpl.setText(labeled.getText());
         labeled.textProperty().addListener(shuttler);
+
+        labeledImpl.textTruncatedProperty().subscribe(v -> {
+            LabeledHelper.setTextTruncated(labeled, v);
+        });
 
         labeledImpl.setGraphic(labeled.getGraphic());
         labeled.graphicProperty().addListener(shuttler);
