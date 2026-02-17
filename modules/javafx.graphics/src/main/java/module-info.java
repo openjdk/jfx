@@ -40,8 +40,9 @@
  * @since 9
  */
 module javafx.graphics {
-    requires java.desktop;
     requires java.xml;
+
+    requires static java.desktop;
 
     requires transitive javafx.base;
 
