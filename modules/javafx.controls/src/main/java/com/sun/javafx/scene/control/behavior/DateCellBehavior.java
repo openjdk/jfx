@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,20 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.traversal.Direction;
-import javafx.geometry.NodeOrientation;
-import javafx.scene.Node;
-import javafx.scene.control.DateCell;
-
-import com.sun.javafx.scene.control.DatePickerContent;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-
-import java.time.temporal.ChronoUnit;
-
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.LEFT;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.*;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
+import java.time.temporal.ChronoUnit;
+import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
+import javafx.scene.TraversalDirection;
+import javafx.scene.control.DateCell;
+import com.sun.javafx.scene.control.DatePickerContent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
 
 /**
  * Behaviors for LocalDate based cells types. Simply defines methods
@@ -57,10 +54,10 @@ public class DateCellBehavior extends BehaviorBase<DateCell> {
 
         inputMap = createInputMap();
         addDefaultMapping(inputMap,
-            new InputMap.KeyMapping(UP,    e -> traverse(dateCell, Direction.UP)),
-            new InputMap.KeyMapping(DOWN,  e -> traverse(dateCell, Direction.DOWN)),
-            new InputMap.KeyMapping(LEFT,  e -> traverse(dateCell, Direction.LEFT)),
-            new InputMap.KeyMapping(RIGHT, e -> traverse(dateCell, Direction.RIGHT)),
+            new InputMap.KeyMapping(UP,    e -> traverse(dateCell, TraversalDirection.UP)),
+            new InputMap.KeyMapping(DOWN,  e -> traverse(dateCell, TraversalDirection.DOWN)),
+            new InputMap.KeyMapping(LEFT,  e -> traverse(dateCell, TraversalDirection.LEFT)),
+            new InputMap.KeyMapping(RIGHT, e -> traverse(dateCell, TraversalDirection.RIGHT)),
             new InputMap.KeyMapping(ENTER, KEY_RELEASED, e -> selectDate()),
             new InputMap.KeyMapping(SPACE, KEY_RELEASED, e -> selectDate())
         );
@@ -76,7 +73,7 @@ public class DateCellBehavior extends BehaviorBase<DateCell> {
         dpc.selectDayCell(cell);
     }
 
-    public void traverse(final DateCell cell, final Direction dir) {
+    public void traverse(final DateCell cell, final TraversalDirection dir) {
         boolean rtl = (cell.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
         DatePickerContent dpc = findDatePickerContent(cell);
         if (dpc != null) {

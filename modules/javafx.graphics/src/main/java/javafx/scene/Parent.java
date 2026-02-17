@@ -25,23 +25,23 @@
 
 package javafx.scene;
 
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import com.sun.javafx.util.TempState;
-import com.sun.javafx.util.Utils;
-import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.collections.VetoableListDecorator;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.css.Selector;
+import javafx.stage.Window;
+import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
@@ -51,16 +51,16 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.prism.NGGroup;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
+import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.sg.prism.NGGroup;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.WindowHelper;
-import java.util.Collections;
-import javafx.stage.Window;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.TempState;
+import com.sun.javafx.util.Utils;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -135,16 +135,6 @@ public abstract non-sealed class Parent extends Node {
             @Override
             public boolean pickChildrenNode(Parent parent, PickRay pickRay, PickResultChooser result) {
                 return parent.pickChildrenNode(pickRay, result);
-            }
-
-            @Override
-            public void setTraversalEngine(Parent parent, ParentTraversalEngine value) {
-                parent.setTraversalEngine(value);
-            }
-
-            @Override
-            public ParentTraversalEngine getTraversalEngine(Parent parent) {
-                return parent.getTraversalEngine();
             }
 
             @Override
@@ -918,14 +908,28 @@ public abstract non-sealed class Parent extends Node {
         return results;
     }
 
-    private ParentTraversalEngine traversalEngine;
+    /**
+     * The {@link TraversalPolicy} allows for customizing focus traversal within this
+     * {@code Parent}'s children as well as traversal outside of this {@code Parent}.
+     *
+     * @defaultValue null
+     * @since 999 TODO
+     */
+    private ObjectProperty<TraversalPolicy> traversalPolicy;
 
-    private final void setTraversalEngine(ParentTraversalEngine value) {
-        this.traversalEngine = value;
+    public final ObjectProperty<TraversalPolicy> traversalPolicyProperty() {
+        if (this.traversalPolicy == null) {
+            this.traversalPolicy = new SimpleObjectProperty<>(this, "traversalPolicy", null);
+        }
+        return this.traversalPolicy;
     }
 
-    private final ParentTraversalEngine getTraversalEngine() {
-        return traversalEngine;
+    public final void setTraversalPolicy(TraversalPolicy p) {
+        traversalPolicyProperty().set(p);
+    }
+
+    public final TraversalPolicy getTraversalPolicy() {
+        return traversalPolicy == null ? null : traversalPolicy.get();
     }
 
     /* *********************************************************************

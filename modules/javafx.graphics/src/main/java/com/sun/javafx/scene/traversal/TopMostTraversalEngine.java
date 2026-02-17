@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,58 +25,39 @@
 
 package com.sun.javafx.scene.traversal;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.ParentHelper;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.TraversalDirection;
+import javafx.scene.TraversalPolicy;
+import com.sun.javafx.scene.NodeHelper;
 
 /**
  * This is the class for all top-level traversal engines in scenes and subscenes.
  * These traversal engines are created automatically and can only have the default algorithm.
  *
- * These engines should be used by calling {@link #trav(javafx.scene.Node, Direction)}, {@link #traverseToFirst()} and
+ * These engines should be used by calling {@link #trav(javafx.scene.Node, TraversalDirection)}, {@link #traverseToFirst()} and
  * {@link #traverseToLast()} methods. These methods do the actual traversal - selecting the Node that's should be focused next and
  * focusing it. Also, listener calls are handled by top-most traversal engines.
  * select* methods can be used as well, but will *not* transfer the focus to the result, they are just query methods.
  */
-public abstract class TopMostTraversalEngine extends TraversalEngine{
-
-    protected TopMostTraversalEngine() {
-        /*
-         * for 2d behaviour from TAB use :
-         *    algorithm = new WeightedClosestCorner();
-         * for Container sequence TAB behaviour and 2d arrow behaviour use :
-         *    algorithm = new ContainerTabOrder();
-         * for 2D arrow behaviour with a target bias and a stack use :
-         *    algorithm = new Biased2DWithStack();
-         */
-        super(DEFAULT_ALGORITHM);
-    }
-
-    /**
-     * For testing purposes only!
-     */
-    TopMostTraversalEngine(Algorithm algorithm) {
-        super(algorithm);
-    }
-
+public final class TopMostTraversalEngine {
     /**
      * Traverse the focus to the next node in the specified direction.
      *
      * @param node The starting node to traverse from
      * @param dir the traversal direction
-     * @param method the traversal method
+     * @param focusVisible whether the focused Node should visible indicate focus
      * @return the new focus owner or null if none found (in that case old focus owner is still valid)
      */
-    public final Node trav(Node node, Direction dir, TraversalMethod method) {
+    public static final Node trav(Parent root, Node node, TraversalDirection dir, boolean focusVisible) {
         Node newNode = null;
         Parent p = node.getParent();
         Node traverseNode = node;
         while (p != null) {
-            // First find the nearest traversal engine override (i.e. a ParentTraversalEngine that is traversable)
-            ParentTraversalEngine engine = ParentHelper.getTraversalEngine(p);
-            if (engine != null && engine.canTraverse()) {
-                newNode = engine.select(node, dir);
+            // First find the nearest traversal policy override
+            TraversalPolicy policy = p.getTraversalPolicy();
+            if (policy != null) {
+                newNode = policy.select(p, node, dir);
                 if (newNode != null) {
                     break;
                 } else {
@@ -84,8 +65,8 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
                     // So now we try to traverse from the whole parent (associated with that traversal engine)
                     // by a traversal engine that's higher in the hierarchy
                     traverseNode = p;
-                    if (dir == Direction.NEXT) {
-                        dir = Direction.NEXT_IN_LINE;
+                    if (dir == TraversalDirection.NEXT) {
+                        dir = TraversalDirection.NEXT_IN_LINE;
                     }
                 }
             }
@@ -93,60 +74,38 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
         }
         // No engine override was able to find the Node in the specified direction, so
         if (newNode == null) {
-            newNode = select(traverseNode, dir);
+            newNode = TraversalPolicy.getDefault().select(root, traverseNode, dir);
         }
         if (newNode == null) {
-            if (dir == Direction.NEXT || dir == Direction.NEXT_IN_LINE) {
-                newNode = selectFirst();
-            } else if (dir == Direction.PREVIOUS) {
-                newNode = selectLast();
+            if (dir == TraversalDirection.NEXT || dir == TraversalDirection.NEXT_IN_LINE) {
+                newNode = TraversalPolicy.getDefault().selectFirst(root);
+            } else if (dir == TraversalDirection.PREVIOUS) {
+                newNode = TraversalPolicy.getDefault().selectLast(root);
             }
         }
         if (newNode != null) {
-            focusAndNotify(newNode, method);
+            focusAndNotify(root, newNode, focusVisible);
         }
         return newNode;
     }
 
-    private void focusAndNotify(Node newNode, TraversalMethod method) {
-        if (method == TraversalMethod.KEY) {
-            NodeHelper.requestFocusVisible(newNode);
+    private static void focusAndNotify(Parent root, Node n, boolean focusVisible) {
+        if (focusVisible) {
+            NodeHelper.requestFocusVisible(n);
         } else {
-            newNode.requestFocus();
+            n.requestFocus();
         }
-
-        notifyTreeTraversedTo(newNode);
-    }
-
-    private void notifyTreeTraversedTo(Node newNode) {
-        Parent p = newNode.getParent();
-        while (p != null) {
-            final ParentTraversalEngine traversalEngine = ParentHelper.getTraversalEngine(p);
-            if (traversalEngine != null) {
-                traversalEngine.notifyTraversedTo(newNode);
-            }
-            p = p.getParent();
-        }
-        notifyTraversedTo(newNode);
     }
 
     /**
      * Set focus on the first Node in this context (if any)
      * @return the first node or null if there's none
      */
-    public final Node traverseToFirst() {
-        Node n = selectFirst();
-        if (n != null) focusAndNotify(n, TraversalMethod.DEFAULT);
-        return n;
-    }
-
-    /**
-     * Set focus on the last Node in this context (if any)
-     * @return the last node or null if there's none
-     */
-    public final Node traverseToLast() {
-        Node n = selectLast();
-        if (n != null) focusAndNotify(n, TraversalMethod.DEFAULT);
+    public static final Node traverseToFirst(Parent root) {
+        Node n = TraversalPolicy.getDefault().selectFirst(root);
+        if (n != null) {
+            focusAndNotify(root, n, false);
+        }
         return n;
     }
 }

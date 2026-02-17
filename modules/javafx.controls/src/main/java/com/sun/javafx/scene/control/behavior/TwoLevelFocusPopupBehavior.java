@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,17 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.traversal.TraversalMethod;
-import javafx.scene.Node;
-import javafx.scene.control.PopupControl;
-
-import javafx.scene.Scene;
-import javafx.scene.input.KeyEvent;
-
 import javafx.beans.value.ChangeListener;
 import javafx.event.Event;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.TraversalDirection;
+import javafx.scene.control.PopupControl;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-
+import com.sun.javafx.scene.traversal.TraversalUtils;
 
 public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
 
@@ -95,51 +92,53 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
     final EventDispatcher preemptiveEventDispatcher = (event, tail) -> {
 
         // block the event from being passed down to children
-        if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
-            if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
+        if (event instanceof KeyEvent ev && event.getEventType() == KeyEvent.KEY_PRESSED) {
+            if (
+                !ev.isMetaDown() &&
+                !ev.isControlDown() &&
+                !ev.isAltDown())
+            {
                 if (isExternalFocus()) {
                     //
                     // don't let the behaviour leak any navigation keys when
                     // we're not in blocking mode....
                     //
                     Object obj = event.getTarget();
-
-                    switch (((KeyEvent)event).getCode()) {
-                      case TAB :
-                          if (((KeyEvent)event).isShiftDown()) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.PREVIOUS, TraversalMethod.KEY);
-                          }
-                          else {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.NEXT, TraversalMethod.KEY);
-                          }
-                          event.consume();
-                          break;
-                      case UP :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.UP, TraversalMethod.KEY);
-                          event.consume();
-                          break;
-                      case DOWN :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.DOWN, TraversalMethod.KEY);
-                          event.consume();
-                          break;
-                      case LEFT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
-                          event.consume();
-                          break;
-                      case RIGHT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
-                          event.consume();
-                          break;
-                      case ENTER :
-                          setExternalFocus(false);
-                          event.consume();
-                          break;
-                      default :
-                          // this'll kill mnemonics.... unless!
-                          Scene s = tlNode.getScene();
-                          Event.fireEvent(s, event);
-                          event.consume();
-                          break;
+                    switch (ev.getCode()) {
+                    case TAB:
+                        if (ev.isShiftDown()) {
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.PREVIOUS, true);
+                        } else {
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.NEXT, true);
+                        }
+                        event.consume();
+                        break;
+                    case UP:
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.UP, true);
+                        event.consume();
+                        break;
+                    case DOWN:
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.DOWN, true);
+                        event.consume();
+                        break;
+                    case LEFT:
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.LEFT, true);
+                        event.consume();
+                        break;
+                    case RIGHT:
+                        TraversalUtils.traverse((Node)obj, TraversalDirection.RIGHT, true);
+                        event.consume();
+                        break;
+                    case ENTER:
+                        setExternalFocus(false);
+                        event.consume();
+                        break;
+                    default:
+                        // this'll kill mnemonics.... unless!
+                        Scene s = tlNode.getScene();
+                        Event.fireEvent(s, event);
+                        event.consume();
+                        break;
                     }
                 }
             }
@@ -149,8 +148,12 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
     final EventDispatcher preemptivePopupEventDispatcher = (event, tail) -> {
 
         // block the event from being passed down to children
-        if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
-            if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
+        if (event instanceof KeyEvent ev && event.getEventType() == KeyEvent.KEY_PRESSED) {
+            if (
+                !ev.isMetaDown() &&
+                !ev.isControlDown() &&
+                !ev.isAltDown())
+            {
                 if (!isExternalFocus()) {
                     //
                     // don't let the behaviour leak any navigation keys when
@@ -158,49 +161,47 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                     //
                     Object obj = event.getTarget();
                     switch (((KeyEvent)event).getCode()) {
-                      case TAB :
-                      case ENTER :
-                          event.consume();
-                          break;
-                      case UP :
-                      case DOWN :
-                          break;
-                      case LEFT :
-                          if (obj instanceof Node) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
-                              event.consume();
-                          }
-                          else if (obj instanceof Scene) {
-                              Node node = ((Scene)obj).getFocusOwner();
-                              if (node != null) {
-                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
-                                  event.consume();
-                              }
-                          }
-                          break;
-                      case RIGHT :
-                          if (obj instanceof Node) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
-                              event.consume();
-                          }
-                          else if (obj instanceof Scene) {
-                              Node node = ((Scene)obj).getFocusOwner();
-                              if (node != null) {
-                                  NodeHelper.traverse(node, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
-                                  event.consume();
-                              }
-                          }
-                          break;
+                    case TAB:
+                    case ENTER:
+                        event.consume();
+                        break;
+                    case UP:
+                    case DOWN:
+                        break;
+                    case LEFT:
+                        if (obj instanceof Node n) {
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.LEFT, true);
+                            event.consume();
+                        } else if (obj instanceof Scene sc) {
+                            Node node = sc.getFocusOwner();
+                            if (node != null) {
+                                TraversalUtils.traverse((Node)obj, TraversalDirection.LEFT, true);
+                                event.consume();
+                            }
+                        }
+                        break;
+                    case RIGHT:
+                        if (obj instanceof Node n) {
+                            TraversalUtils.traverse((Node)obj, TraversalDirection.RIGHT, true);
+                            event.consume();
+                        } else if (obj instanceof Scene sc) {
+                            Node node = sc.getFocusOwner();
+                            if (node != null) {
+                                TraversalUtils.traverse((Node)obj, TraversalDirection.RIGHT, true);
+                                event.consume();
+                            }
+                        }
+                        break;
 
-                      default :
-                          // this'll kill mnemonics.... unless!
-                          Scene s = null;
-                          if (tlNode != null) {
-                              s = tlNode.getScene();
-                              Event.fireEvent(s, event);
-                          }
-                          event.consume();
-                          break;
+                    default:
+                        // this'll kill mnemonics.... unless!
+                        Scene s = null;
+                        if (tlNode != null) {
+                            s = tlNode.getScene();
+                            Event.fireEvent(s, event);
+                        }
+                        event.consume();
+                        break;
                     }
                 }
             }

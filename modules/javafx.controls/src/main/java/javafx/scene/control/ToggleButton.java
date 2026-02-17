@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,21 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.ParentHelper;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
+import javafx.css.PseudoClass;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.css.PseudoClass;
-
 import javafx.scene.control.skin.ToggleButtonSkin;
-
-import javafx.css.StyleableProperty;
+import com.sun.javafx.scene.traversal.OverridableTraversalPolicy;
 
 /**
  * A {@code ToggleButton} is a specialized control which has the ability to be
@@ -210,9 +206,11 @@ import javafx.css.StyleableProperty;
     public final ObjectProperty<ToggleGroup> toggleGroupProperty() {
         if (toggleGroup == null) {
             toggleGroup = new ObjectPropertyBase<>() {
+                private final OverridableTraversalPolicy policy = new OverridableTraversalPolicy();
                 private ToggleGroup old;
-                private ChangeListener<Toggle> listener = (o, oV, nV) ->
-                    ParentHelper.getTraversalEngine(ToggleButton.this).setOverriddenFocusTraversability(nV != null ? isSelected() : null);
+                private ChangeListener<Toggle> listener = (o, oV, nV) -> {
+                    policy.setOverriddenFocusTraversability(nV != null ? isSelected() : null);
+                };
 
                 @Override protected void invalidated() {
                     final ToggleGroup tg = get();
@@ -221,15 +219,14 @@ import javafx.css.StyleableProperty;
                             old.getToggles().remove(ToggleButton.this);
                         }
                         tg.getToggles().add(ToggleButton.this);
-                        final ParentTraversalEngine parentTraversalEngine = new ParentTraversalEngine(ToggleButton.this);
-                        ParentHelper.setTraversalEngine(ToggleButton.this, parentTraversalEngine);
+                        setTraversalPolicy(policy);
                         // If there's no toggle selected, do not override
-                        parentTraversalEngine.setOverriddenFocusTraversability(tg.getSelectedToggle() != null ? isSelected() : null);
+                        policy.setOverriddenFocusTraversability(tg.getSelectedToggle() != null ? isSelected() : null);
                         tg.selectedToggleProperty().addListener(listener);
                     } else if (tg == null) {
                         old.selectedToggleProperty().removeListener(listener);
                         old.getToggles().remove(ToggleButton.this);
-                        ParentHelper.setTraversalEngine(ToggleButton.this, null);
+                        setTraversalPolicy(null);
                     }
 
                     old = tg;
