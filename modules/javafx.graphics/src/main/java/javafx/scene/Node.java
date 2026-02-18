@@ -112,6 +112,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -6536,28 +6537,24 @@ public abstract sealed class Node
         }
     }
 
-    // TODO: More documentation
     private Map<EventType<?>, EventHandlerProperty<?>> eventHandlerProperties;
 
-    // TODO: Javadoc
     @SuppressWarnings("unchecked")
     private <T extends Event> ObjectProperty<EventHandler<? super T>> getEventHandlerProperty(EventType<T> eventType, String propertyName) {
         if (eventHandlerProperties == null) {
-            eventHandlerProperties = new HashMap<>();
+            eventHandlerProperties = new IdentityHashMap<>();
         }
 
         return (ObjectProperty<EventHandler<? super T>>) eventHandlerProperties.computeIfAbsent(eventType,
                 type -> new EventHandlerProperty<>(propertyName, eventType));
     }
 
-    // TODO: Javadoc
     @SuppressWarnings("unchecked")
     private <E extends Event> EventHandler<? super E> getEventHandlerPropertyValue(EventType<E> eventType) {
         ObjectProperty<?> property = (eventHandlerProperties != null) ? eventHandlerProperties.get(eventType) : null;
         return (property != null) ? (EventHandler<E>) property.get() : getEventHandler(eventType);
     }
 
-    // TODO: Javadoc
     @SuppressWarnings("unchecked")
     private <E extends Event> void setEventHandlerPropertyValue(EventType<E> eventType, EventHandler<? super E> value) {
         EventHandlerProperty<E> property = (eventHandlerProperties != null)
@@ -9001,7 +8998,14 @@ public abstract sealed class Node
                                     .setEventHandler(eventType, eventHandler);
     }
 
-    /// TODO: Javadoc
+    /**
+     * Returns the event handler set by {@link #setEventHandler(EventType, EventHandler)}.
+     *
+     * @param <T> the specific event class of the handler
+     * @param eventType the event type to associate with the given eventHandler
+     * @return the event handler for the specified event type, or {@code null} if no handler is set
+     * @since JavaFX NN
+     */
     protected final <T extends Event> EventHandler<? super T> getEventHandler(
             final EventType<T> eventType) {
         return getInternalEventDispatcher().getEventHandlerManager().getEventHandler(eventType);
