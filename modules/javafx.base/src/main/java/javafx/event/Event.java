@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 
 package javafx.event;
 
-import java.util.EventObject;
-
+import com.sun.javafx.event.EventDispatchContext;
 import com.sun.javafx.event.EventUtil;
+import java.util.EventObject;
 import java.io.IOException;
+import java.io.Serial;
 import javafx.beans.NamedArg;
 
 // PENDING_DOC_REVIEW
@@ -43,7 +44,9 @@ import javafx.beans.NamedArg;
  */
 public class Event extends EventObject implements Cloneable {
 
+    @Serial
     private static final long serialVersionUID = 20121107L;
+
     /**
      * The constant which represents an unknown event source / target.
      */
@@ -153,6 +156,53 @@ public class Event extends EventObject implements Cloneable {
      */
     public void consume() {
         consumed = true;
+    }
+
+    /**
+     * Specifies a default event handler that will handle this event if it is still unconsumed after both phases
+     * of event delivery have completed. Default event handlers are invoked in the order they were registered.
+     * As soon as a default event handler consumes the event, further propagation is stopped.
+     * <p>
+     * This method can only be called from an event filter or event handler during event delivery; any attempt
+     * to call it before event delivery has started or after event delivery is complete, as well as any attempt
+     * to call it for an event that was not received with an event filter or event handler will fail with
+     * {@link IllegalStateException}.
+     *
+     * @param handler the event handler
+     * @param <E> the type of the event
+     * @throws IllegalStateException when event delivery is not in progress, or if the event
+     *                               was not received with an event filter or event handler
+     * @since 26
+     */
+    public final <E extends Event> void ifUnconsumed(EventHandler<E> handler) {
+        var context = EventDispatchContext.getCurrent();
+        if (context == null) {
+            throw new IllegalStateException("Event delivery is not in progress");
+        }
+
+        context.addDefaultHandler(this, handler);
+    }
+
+    /**
+     * Requests that default event handlers that are added with {@link #ifUnconsumed(EventHandler)} will not
+     * be invoked for this event. The event will still propagate normally through the event dispatch chain.
+     * <p>
+     * This method can only be called from an event filter or event handler during event delivery; any attempt
+     * to call it before event delivery has started or after event delivery is complete, as well as any attempt
+     * to call it for an event that was not received with an event filter or event handler will fail with
+     * {@link IllegalStateException}.
+     *
+     * @throws IllegalStateException when event delivery is not in progress, or if the event
+     *                               was not received with an event filter or event handler
+     * @since 26
+     */
+    public final void preventDefault() {
+        var context = EventDispatchContext.getCurrent();
+        if (context == null) {
+            throw new IllegalStateException("Event delivery is not in progress");
+        }
+
+        context.preventDefault(this);
     }
 
     /**

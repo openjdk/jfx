@@ -26,6 +26,10 @@
 package javafx.event;
 
 // PENDING_DOC_REVIEW
+
+import com.sun.javafx.event.DefaultEventHandler;
+import java.util.Objects;
+
 /**
  * Represents an event target.
  * @since JavaFX 2.0
@@ -125,5 +129,75 @@ public interface EventTarget {
      */
     default <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Registers a default event handler that will handle the specified event type if it is still unconsumed
+     * after both phases of event delivery have completed. As soon as a default event handler consumes the event,
+     * further propagation is stopped.
+     *
+     * @param <E> the event class of the handler
+     * @param eventType the type of the events received by the handler
+     * @param eventHandler the event handler
+     * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event handlers
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 26
+     */
+    default <E extends Event> void addDefaultEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        addEventHandler(eventType, new DefaultEventHandler<>(Objects.requireNonNull(eventHandler, "eventHandler cannot be null")));
+    }
+
+    /**
+     * Unregisters a previously registered default event handler from this target.
+     * <p>
+     * Since it is possible to register a single {@link EventHandler} instance for different event types,
+     * the caller needs to specify the event type from which the handler should be unregistered.
+     *
+     * @param <E> the event class of the handler
+     * @param eventType the event type from which to unregister
+     * @param eventHandler the event handler
+     * @throws NullPointerException if {@code eventType} or {@code eventHandler} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event handlers
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 26
+     */
+    default <E extends Event> void removeDefaultEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        removeEventHandler(eventType, new DefaultEventHandler<>(Objects.requireNonNull(eventHandler, "eventHandler cannot be null")));
+    }
+
+    /**
+     * Registers a default event filter that will handle the specified event type if it is still unconsumed
+     * after both phases of event delivery have completed. As soon as a default event filter consumes the event,
+     * further propagation is stopped.
+     *
+     * @param <E> the event class of the filter
+     * @param eventType the type of the events received by the filter
+     * @param eventFilter the event filter
+     * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event filters
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 26
+     */
+    default <E extends Event> void addDefaultEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        addEventFilter(eventType, new DefaultEventHandler<>(Objects.requireNonNull(eventFilter, "eventFilter cannot be null")));
+    }
+
+    /**
+     * Unregisters a previously registered default event filter from this target.
+     * <p>
+     * Since it is possible to register a single {@link EventHandler} instance for different event types,
+     * the caller needs to specify the event type from which the filter should be unregistered.
+     *
+     * @param <E> the event class of the filter
+     * @param eventType the event type from which to unregister
+     * @param eventFilter the event filter
+     * @throws NullPointerException if {@code eventType} or {@code eventFilter} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event filters
+     * @implSpec The default implementation of this method throws {@code UnsupportedOperationException}.
+     * @since 26
+     */
+    default <E extends Event> void removeDefaultEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        removeEventFilter(eventType, new DefaultEventHandler<>(Objects.requireNonNull(eventFilter, "eventFilter cannot be null")));
     }
 }

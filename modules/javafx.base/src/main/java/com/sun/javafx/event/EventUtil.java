@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,6 +71,9 @@ public final class EventUtil {
                                        Event event) {
         final EventDispatchChain targetDispatchChain =
                 eventTarget.buildEventDispatchChain(eventDispatchChain);
-        return targetDispatchChain.dispatchEvent(event);
+
+        try (var context = new EventDispatchContext()) {
+            return context.dispatchEvent(targetDispatchChain, event);
+        }
     }
 }

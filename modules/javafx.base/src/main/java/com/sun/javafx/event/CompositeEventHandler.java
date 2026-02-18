@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -220,6 +220,28 @@ public final class CompositeEventHandler<T extends Event> {
         public abstract void handleCapturingEvent(T event);
 
         public abstract boolean isDisconnected();
+
+        static boolean isSame(EventHandler<?> h1, EventHandler<?> h2) {
+            if (h1 instanceof DefaultEventHandler<?> dh1 && h2 instanceof DefaultEventHandler dh2) {
+                return dh1.handler() == dh2.handler();
+            }
+
+            return h1 == h2;
+        }
+
+        static <E extends Event> void handleEvent(EventHandler<? super E> handler, E event) {
+            var context = EventDispatchContext.getCurrent();
+            if (context == null) {
+                handler.handle(event);
+            } else {
+                try {
+                    context.setCurrentEvent(event);
+                    handler.handle(event);
+                } finally {
+                    context.setCurrentEvent(null);
+                }
+            }
+        }
     }
 
     private static final class NormalEventHandlerRecord<T extends Event>
@@ -234,7 +256,7 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return isFilter == isFilter() && (this.eventHandler == eventProcessor);
+            return isFilter == isFilter() && isSame(this.eventHandler, eventProcessor);
         }
 
         @Override
@@ -244,7 +266,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            eventHandler.handle(event);
+            handleEvent(eventHandler, event);
         }
 
         @Override
@@ -253,7 +275,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public boolean isDisconnected() {
-            return false;
+            return eventHandler instanceof DefaultEventHandler<?>(WeakEventHandler<?> h) && h.wasGarbageCollected();
         }
     }
 
@@ -269,7 +291,7 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return isFilter == isFilter() && (weakEventHandler == eventProcessor);
+            return isFilter == isFilter() && isSame(weakEventHandler, eventProcessor);
         }
 
         @Override
@@ -279,7 +301,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            weakEventHandler.handle(event);
+            handleEvent(weakEventHandler, event);
         }
 
         @Override
@@ -304,7 +326,7 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return isFilter == isFilter() && (this.eventFilter == eventProcessor);
+            return isFilter == isFilter() && isSame(this.eventFilter, eventProcessor);
         }
 
         @Override
@@ -318,12 +340,12 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            eventFilter.handle(event);
+            handleEvent(eventFilter, event);
         }
 
         @Override
         public boolean isDisconnected() {
-            return false;
+            return eventFilter instanceof DefaultEventHandler<?>(WeakEventHandler<?> h) && h.wasGarbageCollected();
         }
     }
 
@@ -339,7 +361,7 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return isFilter == isFilter() && (weakEventFilter == eventProcessor);
+            return isFilter == isFilter() && isSame(weakEventFilter, eventProcessor);
         }
 
         @Override
@@ -353,7 +375,7 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            weakEventFilter.handle(event);
+            handleEvent(weakEventFilter, event);
         }
 
         @Override
