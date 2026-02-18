@@ -132,8 +132,6 @@ public abstract class ButtonBase extends Labeled {
         setEventHandler(ActionEvent.ACTION, value);
     }
 
-    private ObjectProperty<EventHandler<ActionEvent>> onAction;
-
 
     /* *************************************************************************
      *                                                                         *
