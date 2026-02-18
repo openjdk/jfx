@@ -5366,6 +5366,12 @@ compileTargets { t ->
             from srcLegalDir
             into dstLegalDir
 
+            // Include gcc.md only on Linux
+            // FIXME: implement a more general solution; see JDK-8247948
+            if (!IS_LINUX) {
+                exclude("gcc.md")
+            }
+
             // Exclude ANGLE since we (currently) do not use it
             exclude("angle.md")
         }
@@ -5439,6 +5445,12 @@ compileTargets { t ->
             from srcLegalDir
 
             into dstLegalDir
+
+            // Include gcc.md only on Linux
+            // FIXME: implement a more general solution; see JDK-8247948
+            if (!IS_LINUX) {
+                exclude("gcc.md")
+            }
 
             // Exclude ANGLE since we (currently) do not use it
             exclude("angle.md")
