@@ -86,6 +86,8 @@ public class CssNumberParserTest {
         assertNumberFormatException(".");
         assertNumberFormatException("+.");
         assertNumberFormatException("-.");
+        assertNumberFormatException("+e");
+        assertNumberFormatException("-e");
         assertNumberFormatException("e1");
         assertNumberFormatException("+e1");
     }
@@ -109,6 +111,35 @@ public class CssNumberParserTest {
         assertNumberFormatException("1.0e");
         assertNumberFormatException("1.0e+");
         assertNumberFormatException("1.0e-");
+        assertNumberFormatException("+e170");
+        assertNumberFormatException("-e170");
+        assertNumberFormatException("1234    e10");
+        assertNumberFormatException("-1234    e10");
+    }
+
+    @Test
+    public void subnormalsAndLimits() {
+        assertEquals(Double.MIN_NORMAL, parseDouble("2.2250738585072012E-308")); // below MIN_NORMAL, rounds up
+        assertTrue(Double.MIN_NORMAL > parseDouble("2.2250738585072011E-308")); // below MIN_NORMAL, rounds down
+        assertEquals(2.225073858507201E-308, parseDouble("2.2250738585072011E-308")); // below MIN_NORMAL, rounds down
+        assertSameDouble(4.9e-324, "4e-324"); // below Double.MIN_VALUE, rounds up
+        assertSameDouble(4.9e-324, "4.9e-324"); // Double.MIN_VALUE
+        assertSameDouble(9.8e-324, "9.8e-324"); // Double.MIN_VALUE*2
+        assertSameDouble(2.2250738585072014e-308, "2.2250738585072014e-308"); // MIN_NORMAL
+        assertSameDouble(2.2250738585072012e-308, "2.2250738585072012e-308"); // near MIN_NORMAL
+        assertSameDouble(2.4703282292062329e-324, "2.4703282292062329e-324"); // above MIN_VALUE/2
+        assertSameDouble(0.0, "2.4703282292062327e-324"); // MIN_VALUE/2
+        assertSameDouble(0.0, "2.4703282292062325e-324"); // below MIN_VALUE/2
+        assertSameDouble(0.0, "1e-324");
+        assertSameDouble(0.0, "2e-324");
+        assertSameDouble(0.0, "0e0");
+        assertSameDouble(0.0, "0.0e-999");
+        assertSameDouble(0.0, "-0e0");
+        assertSameDouble(0.0, "-1e-324");
+        assertSameDouble(1.7976931348623157E308, "1.7976931348623157E308"); // Double.MAX_VALUE
+        assertSameDouble(1.7976931348623158e+308, "1.7976931348623158e+308"); // near MAX_VALUE + ulp(MAX_VALUE)/2
+        assertEquals(Double.parseDouble("1.7976931348623159e+308"), // near MAX_VALUE + ulp(MAX_VALUE)/2
+                     parseDouble("1.7976931348623159e+308"));
     }
 
     @Test
