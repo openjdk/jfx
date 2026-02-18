@@ -350,7 +350,7 @@ public class EventHandlerManager extends BasicEventDispatcher {
                 EventHandlerProperty<T> ref = wref.get();
                 if (ref == null) {
                     observable.removeListener(this);
-                } else {
+                } else if (ref.observable != null) {
                     ref.set0(ref.observable.getValue());
                 }
             }
