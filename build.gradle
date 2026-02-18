@@ -2782,7 +2782,7 @@ project(":graphics") {
 
     task initShaderDirs() {
         doLast {
-            // Create empty hlsl dirs on all platforms for IDE support
+            // Create empty hlsl dirs on all platforms for IDE (Eclipse) support
             file("$project.buildDir/hlsl/Decora").mkdirs()
             file("$project.buildDir/hlsl/Prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-prism").mkdirs()
