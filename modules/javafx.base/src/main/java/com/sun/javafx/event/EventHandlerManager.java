@@ -25,9 +25,18 @@
 
 package com.sun.javafx.event;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
+import com.sun.javafx.binding.ExpressionHelper;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakListener;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -39,7 +48,8 @@ import javafx.event.EventType;
  */
 public class EventHandlerManager extends BasicEventDispatcher {
     private final Map<EventType<? extends Event>,
-                      CompositeEventHandler<? extends Event>> eventHandlerMap;
+            CompositeEventHandler<? extends Event>> eventHandlerMap;
+    private Map<EventType<?>, EventHandlerProperty<?>> eventHandlerProperties;
 
     private final Object eventSource;
 
@@ -141,13 +151,23 @@ public class EventHandlerManager extends BasicEventDispatcher {
      * @param eventType the event type to associate with the given eventHandler
      * @param eventHandler the handler to register, or null to unregister
      * @throws NullPointerException if the event type is null
+     * @throws RuntimeException if the property for the event type is already bound
      */
     public final <T extends Event> void setEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         validateEventType(eventType);
 
-        CompositeEventHandler<T> compositeEventHandler =
+        if (eventHandlerProperties != null) {
+            EventHandlerProperty<T> property = (EventHandlerProperty<T>)
+                    eventHandlerProperties.get(eventType);
+            if (property != null) {
+                property.set(eventHandler);
+                return;
+            }
+        }
+
+       CompositeEventHandler<T> compositeEventHandler =
                 (CompositeEventHandler<T>) eventHandlerMap.get(eventType);
 
         if (compositeEventHandler == null) {
@@ -169,6 +189,177 @@ public class EventHandlerManager extends BasicEventDispatcher {
         return (compositeEventHandler != null)
                        ? compositeEventHandler.getEventHandler()
                        : null;
+    }
+
+    public final <T extends Event> ObjectProperty<EventHandler<? super T>> eventHandlerProperty(
+            final EventType<T> eventType,
+            final String name) {
+        validateEventType(eventType);
+
+        if (eventHandlerProperties == null) {
+            eventHandlerProperties = new IdentityHashMap<>();
+        }
+
+        EventHandlerProperty<T> property = (EventHandlerProperty<T>)
+                eventHandlerProperties.get(eventType);
+
+        if (property == null) {
+            property = new EventHandlerProperty<>(name, createGetCompositeEventHandler(eventType));
+            eventHandlerProperties.put(eventType, property);
+        } else {
+            if (!name.equals(property.getName())) {
+                throw new IllegalArgumentException("Property name mismatch: "
+                        + name + " != " + property.getName());
+            }
+        }
+
+        return property;
+    }
+
+    private final class EventHandlerProperty<T extends Event>
+            extends ObjectProperty<EventHandler<? super T>> {
+
+        private final String name;
+        private final CompositeEventHandler<T> compositeEventHandler;
+        private ObservableValue<? extends EventHandler<? super T>> observable = null;
+        private InvalidationListener listener = null;
+        private boolean valid = true;
+        private ExpressionHelper<EventHandler<? super T>> helper = null;
+
+        private EventHandlerProperty(
+                final String name,
+                final CompositeEventHandler<T> compositeEventHandler) {
+            this.name = name;
+            this.compositeEventHandler = compositeEventHandler;
+        }
+
+        @Override
+        public Object getBean() {
+            return eventSource;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public void addListener(InvalidationListener listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        @Override
+        public void addListener(ChangeListener<? super EventHandler<? super T>> listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(ChangeListener<? super EventHandler<? super T>> listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        private void markInvalid() {
+            if (valid) {
+                valid = false;
+                ExpressionHelper.fireValueChangedEvent(helper);
+            }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public EventHandler<? super T> get() {
+            valid = true;
+            return compositeEventHandler.getEventHandler();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void set(EventHandler<? super T> value) {
+            if (isBound()) {
+                throw new RuntimeException((getBean() != null && getName() != null ?
+                        getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
+            }
+            set0(value);
+        }
+
+        private void set0(EventHandler<? super T> value) {
+            if (value != compositeEventHandler.getEventHandler()) {
+                compositeEventHandler.setEventHandler(value);
+                markInvalid();
+            }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean isBound() {
+            return observable != null;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void bind(ObservableValue<? extends EventHandler<? super T>> newObservable) {
+            if (newObservable == null) {
+                throw new NullPointerException("Cannot bind to null");
+            }
+
+            if (!newObservable.equals(this.observable)) {
+                unbind();
+                observable = newObservable;
+                if (listener == null) {
+                    listener = new Listener<>(this);
+                }
+                observable.addListener(listener);
+                set0(observable.getValue());
+            }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void unbind() {
+            if (observable != null) {
+                observable.removeListener(listener);
+                observable = null;
+            }
+        }
+
+        private static final class Listener<T extends Event>
+                implements InvalidationListener, WeakListener {
+            private final WeakReference<EventHandlerProperty<T>> wref;
+
+            public Listener(EventHandlerProperty<T> ref) {
+                this.wref = new WeakReference<>(ref);
+            }
+
+            @Override
+            public void invalidated(Observable observable) {
+                EventHandlerProperty<T> ref = wref.get();
+                if (ref == null) {
+                    observable.removeListener(this);
+                } else {
+                    ref.set0(ref.observable.getValue());
+                }
+            }
+
+            @Override
+            public boolean wasGarbageCollected() {
+                return wref.get() == null;
+            }
+        }
     }
 
     @Override

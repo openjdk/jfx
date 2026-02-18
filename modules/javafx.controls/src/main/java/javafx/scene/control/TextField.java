@@ -31,7 +31,6 @@ import java.util.List;
 
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
@@ -197,36 +196,17 @@ public class TextField extends TextInputControl {
      *
      * The action handler is normally called when the user types the ENTER key.
      */
-    private ObjectProperty<EventHandler<ActionEvent>> onAction;
-
-    @SuppressWarnings("unchecked")
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() {
-        if (onAction == null) {
-            onAction = new ObjectPropertyBase<>((EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION)) {
-                @Override protected void invalidated() {
-                    setEventHandler(ActionEvent.ACTION, get());
-                }
-
-                @Override public Object getBean() { return TextField.this; }
-                @Override public String getName() { return "onAction"; }
-            };
-        }
-        return onAction;
+        return (ObjectProperty<EventHandler<ActionEvent>>) (ObjectProperty<?>)
+                eventHandlerProperty(ActionEvent.ACTION, "onAction");
     }
 
-    @SuppressWarnings("unchecked")
     public final EventHandler<ActionEvent> getOnAction() {
-        return onAction != null
-                ? onAction.get()
-                : (EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION);
+        return (EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION);
     }
 
     public final void setOnAction(EventHandler<ActionEvent> value) {
-        if (onAction == null) {
-            setEventHandler(ActionEvent.ACTION, value);
-        } else {
-            onAction.set(value);
-        }
+        setEventHandler(ActionEvent.ACTION, value);
     }
 
     /**

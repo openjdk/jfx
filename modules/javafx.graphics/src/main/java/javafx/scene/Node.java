@@ -112,7 +112,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -2451,11 +2450,11 @@ public abstract sealed class Node
 
     public final void setOnDragEntered(
             EventHandler<? super DragEvent> value) {
-        setEventHandlerPropertyValue(DragEvent.DRAG_ENTERED, value);
+        setEventHandler(DragEvent.DRAG_ENTERED, value);
     }
 
     public final EventHandler<? super DragEvent> getOnDragEntered() {
-        return getEventHandlerPropertyValue(DragEvent.DRAG_ENTERED);
+        return getEventHandler(DragEvent.DRAG_ENTERED);
     }
 
     /**
@@ -2466,16 +2465,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super DragEvent>>
             onDragEnteredProperty() {
-        return getEventHandlerProperty(DragEvent.DRAG_ENTERED, "onDragEntered");
+        return eventHandlerProperty(DragEvent.DRAG_ENTERED, "onDragEntered");
     }
 
     public final void setOnDragExited(
             EventHandler<? super DragEvent> value) {
-        setEventHandlerPropertyValue(DragEvent.DRAG_EXITED, value);
+        setEventHandler(DragEvent.DRAG_EXITED, value);
     }
 
     public final EventHandler<? super DragEvent> getOnDragExited() {
-        return getEventHandlerPropertyValue(DragEvent.DRAG_EXITED);
+        return getEventHandler(DragEvent.DRAG_EXITED);
     }
 
     /**
@@ -2486,16 +2485,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super DragEvent>>
             onDragExitedProperty() {
-        return getEventHandlerProperty(DragEvent.DRAG_EXITED, "onDragExited");
+        return eventHandlerProperty(DragEvent.DRAG_EXITED, "onDragExited");
     }
 
     public final void setOnDragOver(
             EventHandler<? super DragEvent> value) {
-        setEventHandlerPropertyValue(DragEvent.DRAG_OVER, value);
+        setEventHandler(DragEvent.DRAG_OVER, value);
     }
 
     public final EventHandler<? super DragEvent> getOnDragOver() {
-        return getEventHandlerPropertyValue(DragEvent.DRAG_OVER);
+        return getEventHandler(DragEvent.DRAG_OVER);
     }
 
     /**
@@ -2506,7 +2505,7 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super DragEvent>>
             onDragOverProperty() {
-        return getEventHandlerProperty(DragEvent.DRAG_OVER, "onDragOver");
+        return eventHandlerProperty(DragEvent.DRAG_OVER, "onDragOver");
     }
 
     // Do we want DRAG_TRANSFER_MODE_CHANGED event?
@@ -2534,11 +2533,11 @@ public abstract sealed class Node
 
     public final void setOnDragDropped(
             EventHandler<? super DragEvent> value) {
-        setEventHandlerPropertyValue(DragEvent.DRAG_DROPPED, value);
+        setEventHandler(DragEvent.DRAG_DROPPED, value);
     }
 
     public final EventHandler<? super DragEvent> getOnDragDropped() {
-        return getEventHandlerPropertyValue(DragEvent.DRAG_DROPPED);
+        return getEventHandler(DragEvent.DRAG_DROPPED);
     }
 
     /**
@@ -2551,16 +2550,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super DragEvent>>
             onDragDroppedProperty() {
-        return getEventHandlerProperty(DragEvent.DRAG_DROPPED, "onDragDropped");
+        return eventHandlerProperty(DragEvent.DRAG_DROPPED, "onDragDropped");
     }
 
     public final void setOnDragDone(
             EventHandler<? super DragEvent> value) {
-        setEventHandlerPropertyValue(DragEvent.DRAG_DONE, value);
+        setEventHandler(DragEvent.DRAG_DONE, value);
     }
 
     public final EventHandler<? super DragEvent> getOnDragDone() {
-        return getEventHandlerPropertyValue(DragEvent.DRAG_DONE);
+        return getEventHandler(DragEvent.DRAG_DONE);
     }
 
     /**
@@ -2578,7 +2577,7 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super DragEvent>>
             onDragDoneProperty() {
-        return getEventHandlerProperty(DragEvent.DRAG_DONE, "onDragDone");
+        return eventHandlerProperty(DragEvent.DRAG_DONE, "onDragDone");
     }
 
     /**
@@ -6505,71 +6504,6 @@ public abstract sealed class Node
 
     /* *************************************************************************
      *                                                                         *
-     *                        Event Handler Properties                         *
-     *                                                                         *
-     **************************************************************************/
-
-    private final class EventHandlerProperty<T extends Event>
-            extends ObjectPropertyBase<EventHandler<? super T>> {
-        private final String name;
-        private final EventType<T> eventType;
-
-        public EventHandlerProperty(final String name,
-                                    final EventType<T> eventType) {
-            super(getEventHandler(eventType));
-            this.name = name;
-            this.eventType = eventType;
-        }
-
-        @Override
-        public Object getBean() {
-            return Node.this;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        protected void invalidated() {
-            setEventHandler(eventType, get());
-        }
-    }
-
-    private Map<EventType<?>, EventHandlerProperty<?>> eventHandlerProperties;
-
-    @SuppressWarnings("unchecked")
-    private <T extends Event> ObjectProperty<EventHandler<? super T>> getEventHandlerProperty(EventType<T> eventType, String propertyName) {
-        if (eventHandlerProperties == null) {
-            eventHandlerProperties = new IdentityHashMap<>();
-        }
-
-        return (ObjectProperty<EventHandler<? super T>>) eventHandlerProperties.computeIfAbsent(eventType,
-                type -> new EventHandlerProperty<>(propertyName, eventType));
-    }
-
-    @SuppressWarnings("unchecked")
-    private <E extends Event> EventHandler<? super E> getEventHandlerPropertyValue(EventType<E> eventType) {
-        ObjectProperty<?> property = (eventHandlerProperties != null) ? eventHandlerProperties.get(eventType) : null;
-        return (property != null) ? (EventHandler<E>) property.get() : getEventHandler(eventType);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <E extends Event> void setEventHandlerPropertyValue(EventType<E> eventType, EventHandler<? super E> value) {
-        EventHandlerProperty<E> property = (eventHandlerProperties != null)
-                ? (EventHandlerProperty<E>) eventHandlerProperties.get(eventType)
-                : null;
-
-        if (property != null) {
-            property.set(value);
-        } else {
-            setEventHandler(eventType, value);
-        }
-    }
-
-    /* *************************************************************************
-     *                                                                         *
      *                       Component Orientation Properties                  *
      *                                                                         *
      **************************************************************************/
@@ -7521,11 +7455,11 @@ public abstract sealed class Node
 
     public final void setOnContextMenuRequested(
             EventHandler<? super ContextMenuEvent> value) {
-        setEventHandlerPropertyValue(ContextMenuEvent.CONTEXT_MENU_REQUESTED, value);
+        setEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, value);
     }
 
     public final EventHandler<? super ContextMenuEvent> getOnContextMenuRequested() {
-        return getEventHandlerPropertyValue(ContextMenuEvent.CONTEXT_MENU_REQUESTED);
+        return getEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED);
     }
 
     /**
@@ -7537,16 +7471,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super ContextMenuEvent>>
             onContextMenuRequestedProperty() {
-        return getEventHandlerProperty(ContextMenuEvent.CONTEXT_MENU_REQUESTED, "onContextMenuRequested");
+        return eventHandlerProperty(ContextMenuEvent.CONTEXT_MENU_REQUESTED, "onContextMenuRequested");
     }
 
     public final void setOnMouseClicked(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.MOUSE_CLICKED, value);
+        setEventHandler(MouseEvent.MOUSE_CLICKED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnMouseClicked() {
-        return getEventHandlerPropertyValue(MouseEvent.MOUSE_CLICKED);
+        return getEventHandler(MouseEvent.MOUSE_CLICKED);
     }
 
     /**
@@ -7557,16 +7491,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseClickedProperty() {
-        return getEventHandlerProperty(MouseEvent.MOUSE_CLICKED, "onMouseClicked");
+        return eventHandlerProperty(MouseEvent.MOUSE_CLICKED, "onMouseClicked");
     }
 
     public final void setOnMouseDragged(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.MOUSE_DRAGGED, value);
+        setEventHandler(MouseEvent.MOUSE_DRAGGED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnMouseDragged() {
-        return getEventHandlerPropertyValue(MouseEvent.MOUSE_DRAGGED);
+        return getEventHandler(MouseEvent.MOUSE_DRAGGED);
     }
 
     /**
@@ -7577,16 +7511,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseDraggedProperty() {
-        return getEventHandlerProperty(MouseEvent.MOUSE_DRAGGED, "onMouseDragged");
+        return eventHandlerProperty(MouseEvent.MOUSE_DRAGGED, "onMouseDragged");
     }
 
     public final void setOnMouseEntered(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.MOUSE_ENTERED, value);
+        setEventHandler(MouseEvent.MOUSE_ENTERED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnMouseEntered() {
-        return getEventHandlerPropertyValue(MouseEvent.MOUSE_ENTERED);
+        return getEventHandler(MouseEvent.MOUSE_ENTERED);
     }
 
     /**
@@ -7596,16 +7530,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseEnteredProperty() {
-        return getEventHandlerProperty(MouseEvent.MOUSE_ENTERED, "onMouseEntered");
+        return eventHandlerProperty(MouseEvent.MOUSE_ENTERED, "onMouseEntered");
     }
 
     public final void setOnMouseExited(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.MOUSE_EXITED, value);
+        setEventHandler(MouseEvent.MOUSE_EXITED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnMouseExited() {
-        return getEventHandlerPropertyValue(MouseEvent.MOUSE_EXITED);
+        return getEventHandler(MouseEvent.MOUSE_EXITED);
     }
 
     /**
@@ -7615,16 +7549,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseExitedProperty() {
-        return getEventHandlerProperty(MouseEvent.MOUSE_EXITED, "onMouseExited");
+        return eventHandlerProperty(MouseEvent.MOUSE_EXITED, "onMouseExited");
     }
 
     public final void setOnMouseMoved(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.MOUSE_MOVED, value);
+        setEventHandler(MouseEvent.MOUSE_MOVED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnMouseMoved() {
-        return getEventHandlerPropertyValue(MouseEvent.MOUSE_MOVED);
+        return getEventHandler(MouseEvent.MOUSE_MOVED);
     }
 
     /**
@@ -7635,16 +7569,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseMovedProperty() {
-        return getEventHandlerProperty(MouseEvent.MOUSE_MOVED, "onMouseMoved");
+        return eventHandlerProperty(MouseEvent.MOUSE_MOVED, "onMouseMoved");
     }
 
     public final void setOnMousePressed(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.MOUSE_PRESSED, value);
+        setEventHandler(MouseEvent.MOUSE_PRESSED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnMousePressed() {
-        return getEventHandlerPropertyValue(MouseEvent.MOUSE_PRESSED);
+        return getEventHandler(MouseEvent.MOUSE_PRESSED);
     }
 
     /**
@@ -7655,16 +7589,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMousePressedProperty() {
-        return getEventHandlerProperty(MouseEvent.MOUSE_PRESSED, "onMousePressed");
+        return eventHandlerProperty(MouseEvent.MOUSE_PRESSED, "onMousePressed");
     }
 
     public final void setOnMouseReleased(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.MOUSE_RELEASED, value);
+        setEventHandler(MouseEvent.MOUSE_RELEASED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnMouseReleased() {
-        return getEventHandlerPropertyValue(MouseEvent.MOUSE_RELEASED);
+        return getEventHandler(MouseEvent.MOUSE_RELEASED);
     }
 
     /**
@@ -7675,16 +7609,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseReleasedProperty() {
-        return getEventHandlerProperty(MouseEvent.MOUSE_RELEASED, "onMouseReleased");
+        return eventHandlerProperty(MouseEvent.MOUSE_RELEASED, "onMouseReleased");
     }
 
     public final void setOnDragDetected(
             EventHandler<? super MouseEvent> value) {
-        setEventHandlerPropertyValue(MouseEvent.DRAG_DETECTED, value);
+        setEventHandler(MouseEvent.DRAG_DETECTED, value);
     }
 
     public final EventHandler<? super MouseEvent> getOnDragDetected() {
-        return getEventHandlerPropertyValue(MouseEvent.DRAG_DETECTED);
+        return getEventHandler(MouseEvent.DRAG_DETECTED);
     }
 
     /**
@@ -7695,16 +7629,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseEvent>>
             onDragDetectedProperty() {
-        return getEventHandlerProperty(MouseEvent.DRAG_DETECTED, "onDragDetected");
+        return eventHandlerProperty(MouseEvent.DRAG_DETECTED, "onDragDetected");
     }
 
     public final void setOnMouseDragOver(
             EventHandler<? super MouseDragEvent> value) {
-        setEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_OVER, value);
+        setEventHandler(MouseDragEvent.MOUSE_DRAG_OVER, value);
     }
 
     public final EventHandler<? super MouseDragEvent> getOnMouseDragOver() {
-        return getEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_OVER);
+        return getEventHandler(MouseDragEvent.MOUSE_DRAG_OVER);
     }
 
     /**
@@ -7716,16 +7650,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragOverProperty() {
-        return getEventHandlerProperty(MouseDragEvent.MOUSE_DRAG_OVER, "onMouseDragOver");
+        return eventHandlerProperty(MouseDragEvent.MOUSE_DRAG_OVER, "onMouseDragOver");
     }
 
     public final void setOnMouseDragReleased(
             EventHandler<? super MouseDragEvent> value) {
-        setEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_RELEASED, value);
+        setEventHandler(MouseDragEvent.MOUSE_DRAG_RELEASED, value);
     }
 
     public final EventHandler<? super MouseDragEvent> getOnMouseDragReleased() {
-        return getEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_RELEASED);
+        return getEventHandler(MouseDragEvent.MOUSE_DRAG_RELEASED);
     }
 
     /**
@@ -7737,16 +7671,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragReleasedProperty() {
-        return getEventHandlerProperty(MouseDragEvent.MOUSE_DRAG_RELEASED, "onMouseDragReleased");
+        return eventHandlerProperty(MouseDragEvent.MOUSE_DRAG_RELEASED, "onMouseDragReleased");
     }
 
     public final void setOnMouseDragEntered(
             EventHandler<? super MouseDragEvent> value) {
-        setEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_ENTERED, value);
+        setEventHandler(MouseDragEvent.MOUSE_DRAG_ENTERED, value);
     }
 
     public final EventHandler<? super MouseDragEvent> getOnMouseDragEntered() {
-        return getEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_ENTERED);
+        return getEventHandler(MouseDragEvent.MOUSE_DRAG_ENTERED);
     }
 
     /**
@@ -7758,16 +7692,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragEnteredProperty() {
-        return getEventHandlerProperty(MouseDragEvent.MOUSE_DRAG_ENTERED, "onMouseDragEntered");
+        return eventHandlerProperty(MouseDragEvent.MOUSE_DRAG_ENTERED, "onMouseDragEntered");
     }
 
     public final void setOnMouseDragExited(
             EventHandler<? super MouseDragEvent> value) {
-        setEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_EXITED, value);
+        setEventHandler(MouseDragEvent.MOUSE_DRAG_EXITED, value);
     }
 
     public final EventHandler<? super MouseDragEvent> getOnMouseDragExited() {
-        return getEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_EXITED);
+        return getEventHandler(MouseDragEvent.MOUSE_DRAG_EXITED);
     }
 
     /**
@@ -7779,15 +7713,15 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragExitedProperty() {
-        return getEventHandlerProperty(MouseDragEvent.MOUSE_DRAG_EXITED, "onMouseDragExited");
+        return eventHandlerProperty(MouseDragEvent.MOUSE_DRAG_EXITED, "onMouseDragExited");
     }
 
     public final void setOnMouseDragDone(EventHandler<? super MouseDragEvent> value) {
-        setEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_DONE, value);
+        setEventHandler(MouseDragEvent.MOUSE_DRAG_DONE, value);
     }
 
     public final EventHandler<? super MouseDragEvent> getOnMouseDragDone() {
-        return getEventHandlerPropertyValue(MouseDragEvent.MOUSE_DRAG_DONE);
+        return getEventHandler(MouseDragEvent.MOUSE_DRAG_DONE);
     }
 
     /**
@@ -7798,7 +7732,7 @@ public abstract sealed class Node
      * @since 26
      */
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragDoneProperty() {
-        return getEventHandlerProperty(MouseDragEvent.MOUSE_DRAG_DONE, "onMouseDragDone");
+        return eventHandlerProperty(MouseDragEvent.MOUSE_DRAG_DONE, "onMouseDragDone");
     }
 
 
@@ -7810,11 +7744,11 @@ public abstract sealed class Node
 
     public final void setOnScrollStarted(
             EventHandler<? super ScrollEvent> value) {
-        setEventHandlerPropertyValue(ScrollEvent.SCROLL_STARTED, value);
+        setEventHandler(ScrollEvent.SCROLL_STARTED, value);
     }
 
     public final EventHandler<? super ScrollEvent> getOnScrollStarted() {
-        return getEventHandlerPropertyValue(ScrollEvent.SCROLL_STARTED);
+        return getEventHandler(ScrollEvent.SCROLL_STARTED);
     }
 
     /**
@@ -7825,16 +7759,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollStartedProperty() {
-        return getEventHandlerProperty(ScrollEvent.SCROLL_STARTED, "onScrollStarted");
+        return eventHandlerProperty(ScrollEvent.SCROLL_STARTED, "onScrollStarted");
     }
 
     public final void setOnScroll(
             EventHandler<? super ScrollEvent> value) {
-        setEventHandlerPropertyValue(ScrollEvent.SCROLL, value);
+        setEventHandler(ScrollEvent.SCROLL, value);
     }
 
     public final EventHandler<? super ScrollEvent> getOnScroll() {
-        return getEventHandlerPropertyValue(ScrollEvent.SCROLL);
+        return getEventHandler(ScrollEvent.SCROLL);
     }
 
     /**
@@ -7844,16 +7778,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollProperty() {
-        return getEventHandlerProperty(ScrollEvent.SCROLL, "onScroll");
+        return eventHandlerProperty(ScrollEvent.SCROLL, "onScroll");
     }
 
     public final void setOnScrollFinished(
             EventHandler<? super ScrollEvent> value) {
-        setEventHandlerPropertyValue(ScrollEvent.SCROLL_FINISHED, value);
+        setEventHandler(ScrollEvent.SCROLL_FINISHED, value);
     }
 
     public final EventHandler<? super ScrollEvent> getOnScrollFinished() {
-        return getEventHandlerPropertyValue(ScrollEvent.SCROLL_FINISHED);
+        return getEventHandler(ScrollEvent.SCROLL_FINISHED);
     }
 
     /**
@@ -7863,16 +7797,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollFinishedProperty() {
-        return getEventHandlerProperty(ScrollEvent.SCROLL_FINISHED, "onScrollFinished");
+        return eventHandlerProperty(ScrollEvent.SCROLL_FINISHED, "onScrollFinished");
     }
 
     public final void setOnRotationStarted(
             EventHandler<? super RotateEvent> value) {
-        setEventHandlerPropertyValue(RotateEvent.ROTATION_STARTED, value);
+        setEventHandler(RotateEvent.ROTATION_STARTED, value);
     }
 
     public final EventHandler<? super RotateEvent> getOnRotationStarted() {
-        return getEventHandlerPropertyValue(RotateEvent.ROTATION_STARTED);
+        return getEventHandler(RotateEvent.ROTATION_STARTED);
     }
 
     /**
@@ -7883,16 +7817,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationStartedProperty() {
-        return getEventHandlerProperty(RotateEvent.ROTATION_STARTED, "onRotationStarted");
+        return eventHandlerProperty(RotateEvent.ROTATION_STARTED, "onRotationStarted");
     }
 
     public final void setOnRotate(
             EventHandler<? super RotateEvent> value) {
-        setEventHandlerPropertyValue(RotateEvent.ROTATE, value);
+        setEventHandler(RotateEvent.ROTATE, value);
     }
 
     public final EventHandler<? super RotateEvent> getOnRotate() {
-        return getEventHandlerPropertyValue(RotateEvent.ROTATE);
+        return getEventHandler(RotateEvent.ROTATE);
     }
 
     /**
@@ -7903,16 +7837,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotateProperty() {
-        return getEventHandlerProperty(RotateEvent.ROTATE, "onRotate");
+        return eventHandlerProperty(RotateEvent.ROTATE, "onRotate");
     }
 
     public final void setOnRotationFinished(
             EventHandler<? super RotateEvent> value) {
-        setEventHandlerPropertyValue(RotateEvent.ROTATION_FINISHED, value);
+        setEventHandler(RotateEvent.ROTATION_FINISHED, value);
     }
 
     public final EventHandler<? super RotateEvent> getOnRotationFinished() {
-        return getEventHandlerPropertyValue(RotateEvent.ROTATION_FINISHED);
+        return getEventHandler(RotateEvent.ROTATION_FINISHED);
     }
 
     /**
@@ -7922,16 +7856,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationFinishedProperty() {
-        return getEventHandlerProperty(RotateEvent.ROTATION_FINISHED, "onRotationFinished");
+        return eventHandlerProperty(RotateEvent.ROTATION_FINISHED, "onRotationFinished");
     }
 
     public final void setOnZoomStarted(
             EventHandler<? super ZoomEvent> value) {
-        setEventHandlerPropertyValue(ZoomEvent.ZOOM_STARTED, value);
+        setEventHandler(ZoomEvent.ZOOM_STARTED, value);
     }
 
     public final EventHandler<? super ZoomEvent> getOnZoomStarted() {
-        return getEventHandlerPropertyValue(ZoomEvent.ZOOM_STARTED);
+        return getEventHandler(ZoomEvent.ZOOM_STARTED);
     }
 
     /**
@@ -7942,16 +7876,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomStartedProperty() {
-        return getEventHandlerProperty(ZoomEvent.ZOOM_STARTED, "onZoomStarted");
+        return eventHandlerProperty(ZoomEvent.ZOOM_STARTED, "onZoomStarted");
     }
 
     public final void setOnZoom(
             EventHandler<? super ZoomEvent> value) {
-        setEventHandlerPropertyValue(ZoomEvent.ZOOM, value);
+        setEventHandler(ZoomEvent.ZOOM, value);
     }
 
     public final EventHandler<? super ZoomEvent> getOnZoom() {
-        return getEventHandlerPropertyValue(ZoomEvent.ZOOM);
+        return getEventHandler(ZoomEvent.ZOOM);
     }
 
     /**
@@ -7962,16 +7896,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomProperty() {
-        return getEventHandlerProperty(ZoomEvent.ZOOM, "onZoom");
+        return eventHandlerProperty(ZoomEvent.ZOOM, "onZoom");
     }
 
     public final void setOnZoomFinished(
             EventHandler<? super ZoomEvent> value) {
-        setEventHandlerPropertyValue(ZoomEvent.ZOOM_FINISHED, value);
+        setEventHandler(ZoomEvent.ZOOM_FINISHED, value);
     }
 
     public final EventHandler<? super ZoomEvent> getOnZoomFinished() {
-        return getEventHandlerPropertyValue(ZoomEvent.ZOOM_FINISHED);
+        return getEventHandler(ZoomEvent.ZOOM_FINISHED);
     }
 
     /**
@@ -7981,16 +7915,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomFinishedProperty() {
-        return getEventHandlerProperty(ZoomEvent.ZOOM_FINISHED, "onZoomFinished");
+        return eventHandlerProperty(ZoomEvent.ZOOM_FINISHED, "onZoomFinished");
     }
 
     public final void setOnSwipeUp(
             EventHandler<? super SwipeEvent> value) {
-        setEventHandlerPropertyValue(SwipeEvent.SWIPE_UP, value);
+        setEventHandler(SwipeEvent.SWIPE_UP, value);
     }
 
     public final EventHandler<? super SwipeEvent> getOnSwipeUp() {
-        return getEventHandlerPropertyValue(SwipeEvent.SWIPE_UP);
+        return getEventHandler(SwipeEvent.SWIPE_UP);
     }
 
     /**
@@ -8002,16 +7936,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeUpProperty() {
-        return getEventHandlerProperty(SwipeEvent.SWIPE_UP, "onSwipeUp");
+        return eventHandlerProperty(SwipeEvent.SWIPE_UP, "onSwipeUp");
     }
 
     public final void setOnSwipeDown(
             EventHandler<? super SwipeEvent> value) {
-        setEventHandlerPropertyValue(SwipeEvent.SWIPE_DOWN, value);
+        setEventHandler(SwipeEvent.SWIPE_DOWN, value);
     }
 
     public final EventHandler<? super SwipeEvent> getOnSwipeDown() {
-        return getEventHandlerPropertyValue(SwipeEvent.SWIPE_DOWN);
+        return getEventHandler(SwipeEvent.SWIPE_DOWN);
     }
 
     /**
@@ -8023,16 +7957,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeDownProperty() {
-        return getEventHandlerProperty(SwipeEvent.SWIPE_DOWN, "onSwipeDown");
+        return eventHandlerProperty(SwipeEvent.SWIPE_DOWN, "onSwipeDown");
     }
 
     public final void setOnSwipeLeft(
             EventHandler<? super SwipeEvent> value) {
-        setEventHandlerPropertyValue(SwipeEvent.SWIPE_LEFT, value);
+        setEventHandler(SwipeEvent.SWIPE_LEFT, value);
     }
 
     public final EventHandler<? super SwipeEvent> getOnSwipeLeft() {
-        return getEventHandlerPropertyValue(SwipeEvent.SWIPE_LEFT);
+        return getEventHandler(SwipeEvent.SWIPE_LEFT);
     }
 
     /**
@@ -8044,16 +7978,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeLeftProperty() {
-        return getEventHandlerProperty(SwipeEvent.SWIPE_LEFT, "onSwipeLeft");
+        return eventHandlerProperty(SwipeEvent.SWIPE_LEFT, "onSwipeLeft");
     }
 
     public final void setOnSwipeRight(
             EventHandler<? super SwipeEvent> value) {
-        setEventHandlerPropertyValue(SwipeEvent.SWIPE_RIGHT, value);
+        setEventHandler(SwipeEvent.SWIPE_RIGHT, value);
     }
 
     public final EventHandler<? super SwipeEvent> getOnSwipeRight() {
-        return getEventHandlerPropertyValue(SwipeEvent.SWIPE_RIGHT);
+        return getEventHandler(SwipeEvent.SWIPE_RIGHT);
     }
 
     /**
@@ -8065,7 +7999,7 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeRightProperty() {
-        return getEventHandlerProperty(SwipeEvent.SWIPE_RIGHT, "onSwipeRight");
+        return eventHandlerProperty(SwipeEvent.SWIPE_RIGHT, "onSwipeRight");
     }
 
 
@@ -8077,11 +8011,11 @@ public abstract sealed class Node
 
     public final void setOnTouchPressed(
             EventHandler<? super TouchEvent> value) {
-        setEventHandlerPropertyValue(TouchEvent.TOUCH_PRESSED, value);
+        setEventHandler(TouchEvent.TOUCH_PRESSED, value);
     }
 
     public final EventHandler<? super TouchEvent> getOnTouchPressed() {
-        return getEventHandlerPropertyValue(TouchEvent.TOUCH_PRESSED);
+        return getEventHandler(TouchEvent.TOUCH_PRESSED);
     }
 
     /**
@@ -8091,16 +8025,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchPressedProperty() {
-        return getEventHandlerProperty(TouchEvent.TOUCH_PRESSED, "onTouchPressed");
+        return eventHandlerProperty(TouchEvent.TOUCH_PRESSED, "onTouchPressed");
     }
 
     public final void setOnTouchMoved(
             EventHandler<? super TouchEvent> value) {
-        setEventHandlerPropertyValue(TouchEvent.TOUCH_MOVED, value);
+        setEventHandler(TouchEvent.TOUCH_MOVED, value);
     }
 
     public final EventHandler<? super TouchEvent> getOnTouchMoved() {
-        return getEventHandlerPropertyValue(TouchEvent.TOUCH_MOVED);
+        return getEventHandler(TouchEvent.TOUCH_MOVED);
     }
 
     /**
@@ -8110,16 +8044,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchMovedProperty() {
-        return getEventHandlerProperty(TouchEvent.TOUCH_MOVED, "onTouchMoved");
+        return eventHandlerProperty(TouchEvent.TOUCH_MOVED, "onTouchMoved");
     }
 
     public final void setOnTouchReleased(
             EventHandler<? super TouchEvent> value) {
-        setEventHandlerPropertyValue(TouchEvent.TOUCH_RELEASED, value);
+        setEventHandler(TouchEvent.TOUCH_RELEASED, value);
     }
 
     public final EventHandler<? super TouchEvent> getOnTouchReleased() {
-        return getEventHandlerPropertyValue(TouchEvent.TOUCH_RELEASED);
+        return getEventHandler(TouchEvent.TOUCH_RELEASED);
     }
 
     /**
@@ -8129,16 +8063,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchReleasedProperty() {
-        return getEventHandlerProperty(TouchEvent.TOUCH_RELEASED, "onTouchReleased");
+        return eventHandlerProperty(TouchEvent.TOUCH_RELEASED, "onTouchReleased");
     }
 
     public final void setOnTouchStationary(
             EventHandler<? super TouchEvent> value) {
-        setEventHandlerPropertyValue(TouchEvent.TOUCH_STATIONARY, value);
+        setEventHandler(TouchEvent.TOUCH_STATIONARY, value);
     }
 
     public final EventHandler<? super TouchEvent> getOnTouchStationary() {
-        return getEventHandlerPropertyValue(TouchEvent.TOUCH_STATIONARY);
+        return getEventHandler(TouchEvent.TOUCH_STATIONARY);
     }
 
     /**
@@ -8150,7 +8084,7 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchStationaryProperty() {
-        return getEventHandlerProperty(TouchEvent.TOUCH_STATIONARY, "onTouchStationary");
+        return eventHandlerProperty(TouchEvent.TOUCH_STATIONARY, "onTouchStationary");
     }
 
     /* *************************************************************************
@@ -8161,11 +8095,11 @@ public abstract sealed class Node
 
     public final void setOnKeyPressed(
             EventHandler<? super KeyEvent> value) {
-        setEventHandlerPropertyValue(KeyEvent.KEY_PRESSED, value);
+        setEventHandler(KeyEvent.KEY_PRESSED, value);
     }
 
     public final EventHandler<? super KeyEvent> getOnKeyPressed() {
-        return getEventHandlerPropertyValue(KeyEvent.KEY_PRESSED);
+        return getEventHandler(KeyEvent.KEY_PRESSED);
     }
 
     /**
@@ -8178,16 +8112,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyPressedProperty() {
-        return getEventHandlerProperty(KeyEvent.KEY_PRESSED, "onKeyPressed");
+        return eventHandlerProperty(KeyEvent.KEY_PRESSED, "onKeyPressed");
     }
 
     public final void setOnKeyReleased(
             EventHandler<? super KeyEvent> value) {
-        setEventHandlerPropertyValue(KeyEvent.KEY_RELEASED, value);
+        setEventHandler(KeyEvent.KEY_RELEASED, value);
     }
 
     public final EventHandler<? super KeyEvent> getOnKeyReleased() {
-        return getEventHandlerPropertyValue(KeyEvent.KEY_RELEASED);
+        return getEventHandler(KeyEvent.KEY_RELEASED);
     }
 
     /**
@@ -8200,16 +8134,16 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyReleasedProperty() {
-        return getEventHandlerProperty(KeyEvent.KEY_RELEASED, "onKeyReleased");
+        return eventHandlerProperty(KeyEvent.KEY_RELEASED, "onKeyReleased");
     }
 
     public final void setOnKeyTyped(
             EventHandler<? super KeyEvent> value) {
-        setEventHandlerPropertyValue(KeyEvent.KEY_TYPED, value);
+        setEventHandler(KeyEvent.KEY_TYPED, value);
     }
 
     public final EventHandler<? super KeyEvent> getOnKeyTyped() {
-        return getEventHandlerPropertyValue(KeyEvent.KEY_TYPED);
+        return getEventHandler(KeyEvent.KEY_TYPED);
     }
 
     /**
@@ -8222,7 +8156,7 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyTypedProperty() {
-        return getEventHandlerProperty(KeyEvent.KEY_TYPED, "onKeyTyped");
+        return eventHandlerProperty(KeyEvent.KEY_TYPED, "onKeyTyped");
     }
 
     /* *************************************************************************
@@ -8233,12 +8167,12 @@ public abstract sealed class Node
 
     public final void setOnInputMethodTextChanged(
             EventHandler<? super InputMethodEvent> value) {
-        setEventHandlerPropertyValue(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, value);
+        setEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, value);
     }
 
     public final EventHandler<? super InputMethodEvent>
             getOnInputMethodTextChanged() {
-        return getEventHandlerPropertyValue(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED);
+        return getEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED);
     }
 
     /**
@@ -8256,7 +8190,7 @@ public abstract sealed class Node
      */
     public final ObjectProperty<EventHandler<? super InputMethodEvent>>
             onInputMethodTextChangedProperty() {
-        return getEventHandlerProperty(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, "onInputMethodTextChanged");
+        return eventHandlerProperty(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, "onInputMethodTextChanged");
     }
 
     public final void setInputMethodRequests(InputMethodRequests value) {
@@ -9009,6 +8943,24 @@ public abstract sealed class Node
     protected final <T extends Event> EventHandler<? super T> getEventHandler(
             final EventType<T> eventType) {
         return getInternalEventDispatcher().getEventHandlerManager().getEventHandler(eventType);
+    }
+
+    /**
+     * Returns the event handler property for the specified event type.
+     *
+     * @param <T> the specific event class of the handler
+     * @param eventType the event type to associate with the given eventHandler
+     * @param name the name of the property
+     * @return the event handler property for the specified event type
+     * @throws IllegalArgumentException If this method has already been called,
+     *     and a different property name was passed on the first call.
+     * @since JavaFX NN
+     */
+    protected final <T extends Event> ObjectProperty<EventHandler<? super T>> eventHandlerProperty(
+            final EventType<T> eventType,
+            final String name) {
+        return getInternalEventDispatcher().getEventHandlerManager()
+                                           .eventHandlerProperty(eventType, name);
     }
 
     private NodeEventDispatcher getInternalEventDispatcher() {
