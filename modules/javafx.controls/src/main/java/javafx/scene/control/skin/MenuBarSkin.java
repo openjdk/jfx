@@ -120,6 +120,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     private static WeakHashMap<Stage, Reference<MenuBarSkin>> systemMenuMap;
     private static List<MenuBase> wrappedDefaultMenus = new ArrayList<>();
+    private static ObservableList<Menu> commonSystemMenus;
+    private static List<MenuBase> wrappedCommonSystemMenus = new ArrayList<>();
+    private static ListChangeListener<Menu> commonSystemMenusChangeListener;
+
     private static Stage currentMenuBarStage;
     private List<MenuBase> wrappedMenus;
 
@@ -488,6 +492,40 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         }
     }
 
+    private static void updateCommonSystemMenus() {
+        wrappedCommonSystemMenus.clear();
+        if (commonSystemMenus != null) {
+            for (Menu menu : commonSystemMenus) {
+                if (!menuContainsCustomMenuItem(menu)) {
+                    wrappedCommonSystemMenus.add(GlobalMenuAdapter.adapt(menu));
+                }
+            }
+        }
+        Toolkit.getToolkit().getSystemMenu().setCommonMenus(wrappedCommonSystemMenus);
+    }
+
+    /**
+     * Set the common system menus. Intended as a private API.
+     * @param menuList list of common menus
+     */
+    public static void setCommonSystemMenus(final ObservableList<Menu> menuList) {
+        if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
+            if (commonSystemMenusChangeListener == null) {
+                commonSystemMenusChangeListener = (ListChangeListener<Menu>) c -> {
+                    updateCommonSystemMenus();
+                };
+            }
+            if (commonSystemMenus != null) {
+                commonSystemMenus.removeListener(commonSystemMenusChangeListener);
+            }
+            commonSystemMenus = menuList;
+            updateCommonSystemMenus();
+            if (commonSystemMenus != null) {
+                commonSystemMenus.addListener(commonSystemMenusChangeListener);
+            }
+        }
+    }
+
     private static MenuBarSkin getMenuBarSkin(Stage stage) {
         if (systemMenuMap == null) return null;
         Reference<MenuBarSkin> skinRef = systemMenuMap.get(stage);
@@ -762,7 +800,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         return false;
     }
 
-    private boolean menuContainsCustomMenuItem(Menu menu) {
+    private static boolean menuContainsCustomMenuItem(Menu menu) {
         for (MenuItem mi : menu.getItems()) {
             if (mi instanceof CustomMenuItem && !(mi instanceof SeparatorMenuItem)) {
                 return true;

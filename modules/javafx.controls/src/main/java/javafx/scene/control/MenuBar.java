@@ -30,6 +30,8 @@ import java.util.Collections;
 import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -172,6 +174,51 @@ public class MenuBar extends Control {
         return useSystemMenuBar == null ? false : useSystemMenuBar.getValue();
     }
 
+    /**
+     * The common system menus in the system menu bar.
+     *
+     * A list of menus which are always present in the system menu bar (if the
+     * platform supports it). If a MenuBar uses the system menu bar its menus
+     * will appear alongside the common system menus. If this list is
+     * modified at runtime the system menu bar will update as expected.
+     *
+     * @return the common system menus list property
+     * @since 26
+     */
+    public static final ObjectProperty<ObservableList<Menu>> commonSystemMenusProperty() {
+        if (commonSystemMenus == null) {
+            commonSystemMenus = new SimpleObjectProperty<ObservableList<Menu>>(null) {
+                @Override protected void invalidated() {
+                    MenuBarSkin.setCommonSystemMenus(getValue());
+                }
+
+                @Override
+                public Object getBean() {
+                    return MenuBar.class;
+                }
+
+                @Override
+                public String getName() {
+                    return "commonSystemMenus";
+                }
+
+                @Override
+                public void bind(final ObservableValue<? extends ObservableList<Menu>> rawObservable) {
+                    throw new RuntimeException("cannot uni-directionally bind to common system menus - use bindBidirectional instead");
+                }
+
+            };
+        }
+        return commonSystemMenus;
+    }
+
+    private static SimpleObjectProperty<ObservableList<Menu>> commonSystemMenus;
+    public static final void setCommonSystemMenus(ObservableList<Menu> value) {
+        commonSystemMenusProperty().setValue(value);
+    }
+    public static final ObservableList<Menu> getCommonSystemMenus() {
+        return commonSystemMenus == null ? null : commonSystemMenus.getValue();
+    }
 
     /* *************************************************************************
      *                                                                         *
