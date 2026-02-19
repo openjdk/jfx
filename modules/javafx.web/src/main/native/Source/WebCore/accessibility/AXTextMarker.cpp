@@ -1049,12 +1049,12 @@ const AXTextRuns* AXTextMarker::runs() const
 
 static int previousSentenceStartFromOffset(StringView text, unsigned offset)
 {
-    return ubrk_preceding(sentenceBreakIterator(text), offset);
+    return ubrk_preceding(WTF::NonSharedSentenceBreakIterator(text), offset);
 }
 
 static int nextSentenceEndFromOffset(StringView text, unsigned offset)
 {
-    int endIndex = ubrk_following(sentenceBreakIterator(text), offset);
+    int endIndex = ubrk_following(WTF::NonSharedSentenceBreakIterator(text), offset);
 
     if (!text.substring(offset, endIndex).containsOnly<isASCIIWhitespace>()) {
         // To match AXObjectCache::nextBoundary, don't include a newline character at the end of sentences.

@@ -1623,8 +1623,8 @@ void BBQJIT::emitAllocateGCArrayUninitialized(GPRReg resultGPR, uint32_t typeInd
         JIT_COMMENT(m_jit, "Do array allocation variable sized");
 
         ASSERT(hasOneBitSet(elementSize));
-        m_jit.jitAssertIsInt32(sizeLocation.asGPR());
-        m_jit.lshift64(sizeLocation.asGPR(), TrustedImm32(getLSBSet(elementSize)), scratchGPR);
+        m_jit.zeroExtend32ToWord(sizeLocation.asGPR(), scratchGPR);
+        m_jit.lshift64(scratchGPR, TrustedImm32(getLSBSet(elementSize)), scratchGPR);
         m_jit.add64(TrustedImm64(sizeof(JSWebAssemblyArray)), scratchGPR);
 
         m_jit.emitAllocateVariableSized(resultGPR, JITAllocator::variableNonNull(), allocatorBufferBase, scratchGPR, scratchGPR, scratchGPR2, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
@@ -1983,6 +1983,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArraySet(uint32_t typeIndex, Express
         ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
 
         LOG_INSTRUCTION("ArraySet", typeIndex, arrayref, index, value);
+        consume(index);
         consume(value);
         emitThrowException(ExceptionType::NullArraySet);
         return { };

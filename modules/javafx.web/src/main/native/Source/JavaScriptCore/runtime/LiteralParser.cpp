@@ -1423,16 +1423,23 @@ JSValue LiteralParser<CharType, reviverMode>::parseRecursively(VM& vm, uint8_t* 
                     // This check avoids hash lookup and refcount churn in the common case of a matching single transition.
                     SUPPRESS_UNCOUNTED_ARG if (transition->transitionKind() == TransitionKind::PropertyAddition
                         && !transition->transitionPropertyAttributes()
-                        && equalIdentifier(transition->transitionPropertyName(), m_lexer.currentToken())
-                        && (parserMode == StrictJSON || transition->transitionPropertyName() != vm.propertyNames->underscoreProto))
+                        && equalIdentifier(transition->transitionPropertyName(), m_lexer.currentToken())) {
+                        if constexpr (parserMode == StrictJSON)
                         return ExistingProperty { transition, transition->transitionOffset() };
+                        else if (transition->transitionPropertyName() != vm.propertyNames->underscoreProto && m_visitedUnderscoreProto.isEmpty())
+                            return ExistingProperty { transition, transition->transitionOffset() };
+                    }
                 } else if (!structure->isDictionary()) {
                     // This check avoids refcount churn in the common case of a cached Identifier.
                     if (SUPPRESS_UNCOUNTED_LOCAL AtomStringImpl* ident = existingIdentifier(vm, m_lexer.currentToken())) {
                         PropertyOffset offset = 0;
                         Structure* newStructure = Structure::addPropertyTransitionToExistingStructure(structure, ident, 0, offset);
-                        if (newStructure && (parserMode == StrictJSON || newStructure->transitionPropertyName() != vm.propertyNames->underscoreProto)) [[likely]]
+                        if (newStructure) [[likely]] {
+                            if constexpr (parserMode == StrictJSON)
                             return ExistingProperty { newStructure, offset };
+                            else if (newStructure->transitionPropertyName() != vm.propertyNames->underscoreProto && m_visitedUnderscoreProto.isEmpty())
+                                return ExistingProperty { newStructure, offset };
+                        }
                         return Identifier::fromString(vm, ident);
                     }
                 }

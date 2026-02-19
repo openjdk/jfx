@@ -557,6 +557,7 @@ D3DResourceManager::CreateSwapChain(HWND hWnd, UINT numBuffers,
     newParams.Windowed = TRUE;
     newParams.BackBufferCount = numBuffers;
     newParams.SwapEffect = swapEffect;
+    newParams.BackBufferFormat = D3DFMT_A8R8G8B8;
     newParams.PresentationInterval = presentationInterval;
 
     IDirect3DSwapChain9 *pSwapChain = NULL;

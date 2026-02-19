@@ -1312,7 +1312,8 @@ void Editor::unappliedEditing(EditCommandComposition& composition)
 
     m_alternativeTextController->respondToUnappliedEditing(&composition);
 #if ENABLE(WRITING_TOOLS)
-    protectedDocument()->page()->respondToUnappliedWritingToolsEditing(&composition);
+    if (RefPtr page = document().page())
+        page->respondToUnappliedWritingToolsEditing(&composition);
 #endif
 
     m_lastEditCommand = nullptr;

@@ -48,7 +48,7 @@ namespace JSC {
 // to ensure all relevant type definitions live for at least as long as itself.
 class WebAssemblyGCStructureTypeDependencies {
     public:
-        WebAssemblyGCStructureTypeDependencies(const Wasm::TypeDefinition& unexpandedType);
+        WebAssemblyGCStructureTypeDependencies(Ref<const Wasm::TypeDefinition>&& unexpandedType);
 
     private:
         using WorkList = ReferenceWrapperVector<const Wasm::TypeDefinition>;

@@ -1,9 +1,9 @@
 # RichTextArea (Incubator)
 
 This project incubates
-[RichTextArea](src/main/java/jfx/incubator/scene/control/rich/RichTextArea.java)
+[RichTextArea](src/main/java/jfx/incubator/scene/control/richtext/RichTextArea.java)
 and
-[CodeArea](src/main/java/jfx/incubator/scene/control/rich/code/CodeArea.java)
+[CodeArea](src/main/java/jfx/incubator/scene/control/richtext/CodeArea.java)
 controls [0].
 
 

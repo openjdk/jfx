@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2000 Antti Koivisto (koivisto@kde.org)
  * Copyright (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  * Copyright (C) 2014-2021 Google Inc. All rights reserved.
  * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
@@ -621,7 +621,11 @@ inline bool RenderStyle::setWritingMode(StyleWritingMode mode)
 
 inline bool RenderStyle::setZoom(float zoomLevel)
 {
-    setUsedZoom(clampTo<float>(usedZoom() * zoomLevel, std::numeric_limits<float>::epsilon(), std::numeric_limits<float>::max()));
+    // Clamp the effective zoom value to avoid overflow in derived computations.
+    // This matches other engines values for compatbility.
+    constexpr float minEffectiveZoom = 1e-6f;
+    constexpr float maxEffectiveZoom = 1e6f;
+    setUsedZoom(clampTo<float>(usedZoom() * zoomLevel, minEffectiveZoom, maxEffectiveZoom));
     if (compareEqual(m_nonInheritedData->rareData->zoom, zoomLevel))
         return false;
     m_nonInheritedData.access().rareData.access().zoom = zoomLevel;
