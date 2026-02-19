@@ -197,7 +197,7 @@ public class CssNumberParserTest {
      */
     @Test
     public void roundingIsCorrectForSubnormals() {
-        int seed = new Random().nextInt();
+        long seed = new Random().nextLong();
         System.out.println("Testing CssNumberParserTest.roundingIsCorrectForSubnormals with seed " + seed);
 
         var rnd = new Random(seed);
@@ -225,7 +225,7 @@ public class CssNumberParserTest {
      */
     @Test
     public void roundingIsCorrectFor64BitSignificands() {
-        int seed = new Random().nextInt();
+        long seed = new Random().nextLong();
         System.out.println("Testing CssNumberParserTest.roundingIsCorrectFor64BitSignificands with seed " + seed);
 
         var rnd = new Random(seed);
