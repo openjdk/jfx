@@ -191,6 +191,33 @@ public class CssNumberParserTest {
 
     /**
      * Deterministic fuzz test that asserts that the rounding of parsed numbers is bitwise identical to
+     * the rounding of {@link Double#parseDouble(String)} for random subnormal numbers.
+     */
+    @Test
+    public void roundingIsCorrectForSubnormals() {
+        int seed = new Random().nextInt();
+        System.out.println("Testing CssNumberParserTest.roundingIsCorrectForSubnormals with seed " + seed);
+
+        var rnd = new Random(seed);
+        for (int i = 0; i < 100_000; i++) {
+            long frac = rnd.nextLong() & 0x000f_ffff_ffff_ffffL;
+            if (frac == 0) {
+                frac = 1; // keep subnormal non-zero
+            }
+
+            long bits = frac;
+            if (rnd.nextBoolean()) {
+                bits |= 1L << 63; // random sign
+            }
+
+            double d = Double.longBitsToDouble(bits);
+            String s = Double.toString(d);
+            assertSameDouble(d, s);
+        }
+    }
+
+    /**
+     * Deterministic fuzz test that asserts that the rounding of parsed numbers is bitwise identical to
      * the rounding of {@link Double#parseDouble(String)} for random numbers with up to 19 significant
      * digits, and {@code |exp| <= 10}.
      */
