@@ -25,6 +25,8 @@
 
 package test.com.sun.javafx.css.parser;
 
+import java.lang.reflect.Field;
+import java.math.BigInteger;
 import java.util.Random;
 import com.sun.javafx.css.parser.CssNumberParser;
 import org.junit.jupiter.api.Test;
@@ -288,6 +290,72 @@ public class CssNumberParserTest {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Asserts that the precomputed powers-of-five table is correct.
+     */
+    @Test
+    public void powersOfFive() throws Exception {
+        int min = -342, max = 308;
+        long[] expected = new long[(max - min + 1) * 2];
+        var twoPow127 = BigInteger.ONE.shiftLeft(127);
+        var twoPow128 = BigInteger.ONE.shiftLeft(128);
+        var five = BigInteger.valueOf(5);
+        int i = 0;
+
+        // Start with 5^342 and walk down by dividing by 5 each step.
+        BigInteger power5 = five.pow(342);
+
+        // q in [-342, -27)
+        for (int q = -342; q < -27; q++) {
+            int z = ceilLog2(power5);
+            int b = 2 * z + 128;
+            var c = BigInteger.ONE.shiftLeft(b).divide(power5).add(BigInteger.ONE);
+            while (c.bitLength() > 128) c = c.shiftRight(1);
+            store128(expected, i++, c);
+            power5 = power5.divide(five);
+        }
+
+        // q in [-27, 0)
+        for (int q = -27; q < 0; q++) {
+            int z = ceilLog2(power5);
+            int b = z + 127;
+            var c = BigInteger.ONE.shiftLeft(b).divide(power5).add(BigInteger.ONE);
+            while (c.bitLength() > 128) c = c.shiftRight(1);
+            store128(expected, i++, c);
+            power5 = power5.divide(five);
+        }
+
+        // Now walk up by multiplying with 5 each step.
+        power5 = BigInteger.ONE;
+
+        // q in [0, 308]
+        for (int q = 0; q <= 308; q++) {
+            BigInteger v = power5;
+            while (v.compareTo(twoPow127) < 0) v = v.shiftLeft(1);
+            while (v.compareTo(twoPow128) >= 0) v = v.shiftRight(1);
+            store128(expected, i++, v);
+            power5 = power5.multiply(five);
+        }
+
+        Field field = CssNumberParser.class.getDeclaredField("T");
+        field.setAccessible(true);
+        long[] actual = (long[])field.get(null);
+
+        assertArrayEquals(expected, actual);
+    }
+
+    private static void store128(long[] out, int entryIndex, BigInteger x) {
+        int base = entryIndex * 2;
+        out[base] = x.shiftRight(64).longValue();
+        out[base + 1] = x.longValue();
+    }
+
+    private static int ceilLog2(BigInteger x) {
+        int bl = x.bitLength();
+        boolean isPow2 = x.and(x.subtract(BigInteger.ONE)).equals(BigInteger.ZERO);
+        return isPow2 ? bl - 1 : bl;
     }
 
     private static double parseDouble(String s) {
