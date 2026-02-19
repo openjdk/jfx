@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2009, Google Inc. All rights reserved.
- * Copyright (c) 2017 Apple Inc. All rights reserved.
+ * Copyright (c) 2009 Google Inc. All rights reserved.
+ * Copyright (c) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -45,7 +45,6 @@ class ApplicationCacheGroup;
 class ApplicationCacheResource;
 class ApplicationCacheStorage;
 class SharedBuffer;
-class DOMApplicationCache;
 class DocumentLoader;
 class LocalFrame;
 class ResourceError;
@@ -56,7 +55,7 @@ class SubstituteData;
 class WeakPtrImplWithEventTargetData;
 
 class ApplicationCacheHost {
-    WTF_MAKE_NONCOPYABLE(ApplicationCacheHost); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_MAKE_NONCOPYABLE(ApplicationCacheHost); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ApplicationCacheHost, Loader);
 public:
     // The Status numeric values are specified in the HTML5 spec.
     enum Status {
@@ -107,7 +106,7 @@ public:
     WEBCORE_EXPORT bool maybeLoadFallbackForResponse(ResourceLoader*, const ResourceResponse&);
     WEBCORE_EXPORT bool maybeLoadFallbackForError(ResourceLoader*, const ResourceError&);
 
-    bool maybeLoadSynchronously(ResourceRequest&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>&);
+    bool maybeLoadSynchronously(const ResourceRequest&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>&);
     void maybeLoadFallbackSynchronously(const ResourceRequest&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>&);
 
     bool canCacheInBackForwardCache();
@@ -117,7 +116,6 @@ public:
     bool swapCache();
     void abort();
 
-    void setDOMApplicationCache(DOMApplicationCache*);
     void notifyDOMApplicationCache(const AtomString& eventType, int progressTotal, int progressDone);
 
     void stopLoadingInFrame(LocalFrame&);
@@ -152,7 +150,6 @@ private:
     ApplicationCache* mainResourceApplicationCache() const { return m_mainResourceApplicationCache.get(); }
     bool maybeLoadFallbackForMainError(const ResourceRequest&, const ResourceError&);
 
-    WeakPtr<DOMApplicationCache, WeakPtrImplWithEventTargetData> m_domApplicationCache;
     SingleThreadWeakRef<DocumentLoader> m_documentLoader;
 
     bool m_defersEvents { true }; // Events are deferred until after document onload.

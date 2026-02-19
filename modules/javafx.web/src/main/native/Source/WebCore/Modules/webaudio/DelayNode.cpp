@@ -30,6 +30,7 @@
 
 #include "DelayOptions.h"
 #include "DelayProcessor.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 

@@ -41,6 +41,7 @@
 #include "TextSpacing.h"
 #include "UnicodeHelpers.h"
 #include "WidthIterator.h"
+#include <numeric>
 #include <wtf/text/CharacterProperties.h>
 #include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/TextBreakIterator.h>
@@ -63,7 +64,7 @@ InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, const FontC
     if (inlineTextBox.isCombined())
         return fontCascade.size();
 
-    auto text = inlineTextBox.content();
+    auto& text = inlineTextBox.content();
     ASSERT(to <= text.length());
     auto hasKerningOrLigatures = fontCascade.enableKerning() || fontCascade.requiresShaping();
     // The "non-whitespace" + "whitespace" pattern is very common for inline content and since most of the "non-whitespace" runs end up with
@@ -94,7 +95,7 @@ InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, const FontC
     if (extendedMeasuring)
         width -= (spaceWidth(fontCascade, useSimplifiedContentMeasuring) + fontCascade.wordSpacing());
 
-    if (UNLIKELY(std::isnan(width) || std::isinf(width)))
+    if (std::isnan(width) || std::isinf(width)) [[unlikely]]
         return std::isnan(width) ? 0.0f : maxInlineLayoutUnit();
     return std::max(0.f, width);
 }
@@ -117,7 +118,7 @@ InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const Fon
 
         if (singleWhiteSpace) {
             auto width = spaceWidth(fontCascade, useSimplifiedContentMeasuring);
-            if (UNLIKELY(std::isnan(width) || std::isinf(width)))
+            if (std::isnan(width) || std::isinf(width)) [[unlikely]]
                 return std::isnan(width) ? 0.0f : maxInlineLayoutUnit();
             return std::max(0.f, width);
         }
@@ -127,9 +128,8 @@ InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const Fon
 
 InlineLayoutUnit TextUtil::trailingWhitespaceWidth(const InlineTextBox& inlineTextBox, const FontCascade& fontCascade, size_t startPosition, size_t endPosition)
 {
-    auto text = inlineTextBox.content();
     ASSERT(endPosition > startPosition + 1);
-    ASSERT(text[endPosition - 1] == space);
+    ASSERT(inlineTextBox.content()[endPosition - 1] == space);
     return width(inlineTextBox, fontCascade, startPosition, endPosition, { }, UseTrailingWhitespaceMeasuringOptimization::Yes) -
         width(inlineTextBox, fontCascade, startPosition, endPosition - 1, { }, UseTrailingWhitespaceMeasuringOptimization::No);
 }
@@ -172,7 +172,7 @@ TextUtil::FallbackFontList TextUtil::fallbackFontsForText(StringView textContent
 {
     TextUtil::FallbackFontList fallbackFonts;
 
-    auto collectFallbackFonts = [&](const auto& textRun) {
+    auto collectFallbackFonts = [&](auto&& textRun) {
         if (textRun.text().isEmpty())
             return;
 
@@ -248,9 +248,9 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
 {
     ASSERT(availableWidth >= 0);
     ASSERT(length);
-    auto text = inlineTextBox.content();
+    auto& text = inlineTextBox.content();
 
-    if (UNLIKELY(!textWidth)) {
+    if (!textWidth) [[unlikely]] {
         ASSERT_NOT_REACHED();
         return { };
     }
@@ -335,7 +335,7 @@ TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, 
             // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
             auto leftSideWidth = InlineLayoutUnit { 0 };
             while (left < right) {
-                auto middle = userPerceivedCharacterBoundaryAlignedIndex((left + right) / 2);
+                auto middle = userPerceivedCharacterBoundaryAlignedIndex(std::midpoint(left, right));
                 ASSERT(middle >= left && middle < right);
                 auto endOfMiddleCharacter = nextUserPerceivedCharacterIndex(middle);
                 auto width = TextUtil::width(inlineTextBox, fontCascade, startPosition, endOfMiddleCharacter, contentLogicalLeft);
@@ -389,10 +389,10 @@ bool TextUtil::mayBreakInBetween(String previousContent, const RenderStyle& prev
     auto lineBreakIteratorFactory = CachedLineBreakIteratorFactory { nextContent, nextContentStyle.computedLocale(), TextUtil::lineBreakIteratorMode(nextContentStyle.lineBreak()), TextUtil::contentAnalysis(nextContentStyle.wordBreak()) };
     auto previousContentLength = previousContent.length();
     // FIXME: We should look into the entire uncommitted content for more text context.
-    UChar lastCharacter = previousContentLength ? previousContent[previousContentLength - 1] : 0;
+    char16_t lastCharacter = previousContentLength ? previousContent[previousContentLength - 1] : 0;
     if (lastCharacter == softHyphen && previousContentStyle.hyphens() == Hyphens::None)
         return false;
-    UChar secondToLastCharacter = previousContentLength > 1 ? previousContent[previousContentLength - 2] : 0;
+    char16_t secondToLastCharacter = previousContentLength > 1 ? previousContent[previousContentLength - 2] : 0;
     lineBreakIteratorFactory.priorContext().set({ secondToLastCharacter, lastCharacter });
     // Now check if we can break right at the inline item boundary.
     // With the [ex-ample], findNextBreakablePosition should return the startPosition (0).
@@ -582,7 +582,7 @@ bool TextUtil::containsStrongDirectionalityText(StringView text)
 
 size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextBox& inlineTextBox, size_t startPosition, size_t length)
 {
-    auto textContent = inlineTextBox.content();
+    auto& textContent = inlineTextBox.content();
     RELEASE_ASSERT(!textContent.isEmpty());
 
     if (textContent.is8Bit())
@@ -625,7 +625,7 @@ AtomString TextUtil::ellipsisTextInInlineDirection(bool isHorizontal)
 
 InlineLayoutUnit TextUtil::hyphenWidth(const RenderStyle& style)
 {
-    return std::max(0.f, style.fontCascade().width(TextRun { StringView { style.hyphenString() } }));
+    return std::max(0.f, style.fontCascade().width(StringView { style.hyphenString() }));
 }
 
 bool TextUtil::hasHangablePunctuationStart(const InlineTextItem& inlineTextItem, const RenderStyle& style)
@@ -732,7 +732,7 @@ bool TextUtil::hasPositionDependentContentWidth(StringView textContent)
 {
     if (textContent.is8Bit())
         return charactersContain<LChar, tabCharacter>(textContent.span8());
-    return charactersContain<UChar, tabCharacter>(textContent.span16());
+    return charactersContain<char16_t, tabCharacter>(textContent.span16());
 }
 
 char32_t TextUtil::lastBaseCharacterFromText(StringView string)

@@ -79,7 +79,7 @@ std::optional<uint32_t> JSWebAssemblyTable::grow(JSGlobalObject* globalObject, u
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     uint64_t wasmValue = 0;
-    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+    if (isExnref(m_table->wasmType())) [[unlikely]] {
         if (!defaultValue.isNull()) {
             throwTypeError(globalObject, scope, "Table.grow cannot handle exnref table"_s);
             return { };
@@ -98,7 +98,7 @@ JSValue JSWebAssemblyTable::get(JSGlobalObject* globalObject, uint32_t index)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+    if (isExnref(m_table->wasmType())) [[unlikely]] {
         throwTypeError(globalObject, scope, "Table.get cannot handle exnref table"_s);
         return { };
     }
@@ -111,7 +111,7 @@ void JSWebAssemblyTable::set(JSGlobalObject* globalObject, uint32_t index, JSVal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(isExnref(m_table->wasmType()))) {
+    if (isExnref(m_table->wasmType())) [[unlikely]] {
         throwTypeError(globalObject, scope, "Table.set cannot handle exnref table"_s);
         return;
     }

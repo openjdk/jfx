@@ -29,12 +29,14 @@
 
 #include "ActiveDOMObject.h"
 #include "AudioSession.h"
+#include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 enum class DOMAudioSessionType : uint8_t { Auto, Playback, Transient, TransientSolo, Ambient, PlayAndRecord };
 enum class DOMAudioSessionState : uint8_t { Inactive, Active, Interrupted };
@@ -61,8 +63,8 @@ private:
     explicit DOMAudioSession(ScriptExecutionContext*);
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::DOMAudioSession; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    EventTargetInterfaceType eventTargetInterface() const final;
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

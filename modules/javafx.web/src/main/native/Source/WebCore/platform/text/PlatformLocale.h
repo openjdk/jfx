@@ -119,7 +119,7 @@ public:
     // December. These strings should not be abbreviations.
     virtual const Vector<String>& monthLabels() = 0;
 
-    String localizedDecimalSeparator();
+    const String& localizedDecimalSeparator();
 
     enum FormatType { FormatTypeUnspecified, FormatTypeShort, FormatTypeMedium };
 

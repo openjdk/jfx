@@ -1,7 +1,7 @@
 /**
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002-2020 Apple Inc.
+ * Copyright (C) 2002-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig (sam@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -38,8 +38,8 @@ CSSMediaRule::CSSMediaRule(StyleRuleMedia& mediaRule, CSSStyleSheet* parent)
 
 CSSMediaRule::~CSSMediaRule()
 {
-    if (m_mediaCSSOMWrapper)
-        m_mediaCSSOMWrapper->detachFromParent();
+    if (RefPtr mediaCSSOMWrapper = m_mediaCSSOMWrapper)
+        mediaCSSOMWrapper->detachFromParent();
 }
 
 const MQ::MediaQueryList& CSSMediaRule::mediaQueries() const
@@ -49,7 +49,7 @@ const MQ::MediaQueryList& CSSMediaRule::mediaQueries() const
 
 void CSSMediaRule::setMediaQueries(MQ::MediaQueryList&& queries)
 {
-    downcast<StyleRuleMedia>(groupRule()).setMediaQueries(WTFMove(queries));
+    downcast<StyleRuleMedia>(protectedGroupRule())->setMediaQueries(WTFMove(queries));
 }
 
 String CSSMediaRule::cssText() const

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2023 Apple Inc.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -30,7 +30,7 @@
 #include "GraphicsContext.h"
 #include "LayoutRect.h"
 #include "Logging.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RuntimeApplicationChecks.h>
@@ -45,10 +45,12 @@ FontCascade::FontCascade(const FontPlatformData& fontData, FontSmoothingMode fon
     , m_requiresShaping(computeRequiresShaping())
 {
     m_fontDescription.setFontSmoothing(fontSmoothingMode);
-    m_fontDescription.setSpecifiedSize(CTFontGetSize(fontData.ctFont()));
-    m_fontDescription.setComputedSize(CTFontGetSize(fontData.ctFont()));
-    m_fontDescription.setIsItalic(CTFontGetSymbolicTraits(fontData.ctFont()) & kCTFontTraitItalic);
-    m_fontDescription.setWeight((CTFontGetSymbolicTraits(fontData.ctFont()) & kCTFontTraitBold) ? boldWeightValue() : normalWeightValue());
+    RetainPtr ctFont = fontData.ctFont();
+
+    m_fontDescription.setSpecifiedSize(CTFontGetSize(ctFont.get()));
+    m_fontDescription.setComputedSize(CTFontGetSize(ctFont.get()));
+    m_fontDescription.setIsItalic(CTFontGetSymbolicTraits(ctFont.get()) & kCTFontTraitItalic);
+    m_fontDescription.setWeight((CTFontGetSymbolicTraits(ctFont.get()) & kCTFontTraitBold) ? boldWeightValue() : normalWeightValue());
 }
 
 static const AffineTransform& rotateLeftTransform()
@@ -77,7 +79,7 @@ AffineTransform computeOverallTextMatrix(const Font& font)
     std::optional<AffineTransform> syntheticOblique;
     auto& platformData = font.platformData();
     if (platformData.syntheticOblique()) {
-        float obliqueSkew = tanf(deg2rad(FontCascade::syntheticObliqueAngle()));
+        static const float obliqueSkew = std::tanf(deg2rad(FontCascade::syntheticObliqueAngle()));
         if (platformData.orientation() == FontOrientation::Vertical) {
             if (font.isTextOrientationFallback())
                 syntheticOblique = AffineTransform(1, obliqueSkew, 0, 1, 0, 0);
@@ -272,29 +274,30 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
         ScopedTextMatrix savedMatrix(computeVerticalTextMatrix(font, textMatrix), context);
 
         Vector<CGSize, 256> translations(glyphs.size());
-        CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs.data(), translations.data(), glyphs.size());
+        RetainPtr ctFont = platformData.ctFont();
+        CTFontGetVerticalTranslationsForGlyphs(ctFont.get(), glyphs.data(), translations.mutableSpan().data(), glyphs.size());
 
-        auto ascentDelta = font.fontMetrics().ascent(IdeographicBaseline) - font.fontMetrics().ascent();
+        auto ascentDelta = font.fontMetrics().ascent(FontBaseline::Ideographic) - font.fontMetrics().ascent();
         fillVectorWithVerticalGlyphPositions(positions, translations, advances, point, ascentDelta, CGContextGetTextMatrix(context));
-        CTFontDrawGlyphs(platformData.ctFont(), glyphs.data(), positions.data(), glyphs.size(), context);
+        CTFontDrawGlyphs(ctFont.get(), glyphs.data(), positions.span().data(), glyphs.size(), context);
     } else {
         fillVectorWithHorizontalGlyphPositions(positions, context, advances, point);
-        CTFontDrawGlyphs(platformData.ctFont(), glyphs.data(), positions.data(), glyphs.size(), context);
+        CTFontDrawGlyphs(RetainPtr { platformData.ctFont() }.get(), glyphs.data(), positions.span().data(), glyphs.size(), context);
     }
 }
 
 static void setCGFontRenderingMode(GraphicsContext& context)
 {
-    CGContextRef cgContext = context.platformContext();
-    CGContextSetShouldAntialiasFonts(cgContext, true);
+    RetainPtr<CGContextRef> cgContext = context.platformContext();
+    CGContextSetShouldAntialiasFonts(cgContext.get(), true);
 
-    CGAffineTransform contextTransform = CGContextGetCTM(cgContext);
+    CGAffineTransform contextTransform = CGContextGetCTM(cgContext.get());
     bool isTranslationOrIntegralScale = WTF::isIntegral(contextTransform.a) && WTF::isIntegral(contextTransform.d) && contextTransform.b == 0.f && contextTransform.c == 0.f;
     bool isRotated = ((contextTransform.b || contextTransform.c) && (contextTransform.a || contextTransform.d));
     bool doSubpixelQuantization = isTranslationOrIntegralScale || (!isRotated && context.shouldSubpixelQuantizeFonts());
 
-    CGContextSetShouldSubpixelPositionFonts(cgContext, true);
-    CGContextSetShouldSubpixelQuantizeFonts(cgContext, doSubpixelQuantization);
+    CGContextSetShouldSubpixelPositionFonts(cgContext.get(), true);
+    CGContextSetShouldSubpixelQuantizeFonts(cgContext.get(), doSubpixelQuantization);
 }
 
 void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances, const FloatPoint& anchorPoint, FontSmoothingMode smoothingMode)
@@ -308,7 +311,7 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::sp
         return;
     }
 
-    CGContextRef cgContext = context.platformContext();
+    RetainPtr<CGContextRef> cgContext = context.platformContext();
 
     if (!font.allowsAntialiasing())
         smoothingMode = FontSmoothingMode::NoSmoothing;
@@ -332,22 +335,22 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::sp
 #if PLATFORM(IOS_FAMILY)
     UNUSED_VARIABLE(shouldSmoothFonts);
 #else
-    bool originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext);
+    bool originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext.get());
     if (shouldSmoothFonts != originalShouldUseFontSmoothing)
-        CGContextSetShouldSmoothFonts(cgContext, shouldSmoothFonts);
+        CGContextSetShouldSmoothFonts(cgContext.get(), shouldSmoothFonts);
 #endif
 
-    bool originalShouldAntialias = CGContextGetShouldAntialias(cgContext);
+    bool originalShouldAntialias = CGContextGetShouldAntialias(cgContext.get());
     if (shouldAntialias != originalShouldAntialias)
-        CGContextSetShouldAntialias(cgContext, shouldAntialias);
+        CGContextSetShouldAntialias(cgContext.get(), shouldAntialias);
 
     FloatPoint point = anchorPoint;
 
     auto textMatrix = computeOverallTextMatrix(font);
-    ScopedTextMatrix restorer(textMatrix, cgContext);
+    ScopedTextMatrix restorer(textMatrix, cgContext.get());
 
     setCGFontRenderingMode(context);
-    CGContextSetFontSize(cgContext, platformData.size());
+    CGContextSetFontSize(cgContext.get(), platformData.size());
 
     auto shadow = context.dropShadow();
 
@@ -370,35 +373,35 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::sp
         Color shadowFillColor = shadow->color.colorWithAlphaMultipliedBy(fillColor.alphaAsFloat());
         context.setFillColor(shadowFillColor);
         auto shadowTextOffset = point + context.platformShadowOffset(shadow->offset);
-        showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, textMatrix);
+        showGlyphsWithAdvances(shadowTextOffset, font, cgContext.get(), glyphs, advances, textMatrix);
         if (syntheticBoldOffset) {
             shadowTextOffset.move(syntheticBoldOffset, 0);
-            showGlyphsWithAdvances(shadowTextOffset, font, cgContext, glyphs, advances, textMatrix);
+            showGlyphsWithAdvances(shadowTextOffset, font, cgContext.get(), glyphs, advances, textMatrix);
         }
         context.setFillColor(fillColor);
     }
 
-    showGlyphsWithAdvances(point, font, cgContext, glyphs, advances, textMatrix);
+    showGlyphsWithAdvances(point, font, cgContext.get(), glyphs, advances, textMatrix);
 
     if (syntheticBoldOffset)
-        showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext, glyphs, advances, textMatrix);
+        showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext.get(), glyphs, advances, textMatrix);
 
     if (hasSimpleShadow)
         context.setDropShadow(*shadow);
 
 #if !PLATFORM(IOS_FAMILY)
     if (shouldSmoothFonts != originalShouldUseFontSmoothing)
-        CGContextSetShouldSmoothFonts(cgContext, originalShouldUseFontSmoothing);
+        CGContextSetShouldSmoothFonts(cgContext.get(), originalShouldUseFontSmoothing);
 #endif
 
     if (shouldAntialias != originalShouldAntialias)
-        CGContextSetShouldAntialias(cgContext, originalShouldAntialias);
+        CGContextSetShouldAntialias(cgContext.get(), originalShouldAntialias);
 }
 
 bool FontCascade::primaryFontIsSystemFont() const
 {
     Ref fontData = primaryFont();
-    return isSystemFont(fontData->getCTFont());
+    return isSystemFont(RetainPtr { fontData->getCTFont() }.get());
 }
 
 RefPtr<const Font> FontCascade::fontForCombiningCharacterSequence(StringView stringView) const
@@ -435,7 +438,7 @@ RefPtr<const Font> FontCascade::fontForCombiningCharacterSequence(StringView str
         if (font->platformData().orientation() == FontOrientation::Vertical) {
             if (isCJKIdeographOrSymbol(baseCharacter)) {
                 if (!font->hasVerticalGlyphs())
-                    font = &font->brokenIdeographFont();
+                    font = font->brokenIdeographFont();
             } else if (m_fontDescription.nonCJKGlyphOrientation() == NonCJKGlyphOrientation::Mixed) {
                 Ref verticalRightFont = font->verticalRightOrientationFont();
                 Glyph verticalRightGlyph = verticalRightFont->glyphForCharacter(baseCharacter);
@@ -521,7 +524,7 @@ ResolvedEmojiPolicy FontCascade::resolveEmojiPolicy(FontVariantEmoji fontVariant
 bool FontCascade::canUseGlyphDisplayList(const RenderStyle& style)
 {
     // CoreText won't call the drawImage delegate for glyphs that are invisible, even if they have an associated shadow applied to its graphic context. This would result in a glyph display list without the invisible glyph which is drawn as image and we would not draw its associated shadow. Therefore, we won't use a display list for runs that are invisible and have an associated shadow.
-    return !(style.textShadow() && !style.color().isVisible());
+    return !(style.hasTextShadow() && !style.color().isVisible());
 }
 
 } // namespace WebCore

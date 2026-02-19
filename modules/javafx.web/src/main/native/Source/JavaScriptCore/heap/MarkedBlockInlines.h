@@ -238,7 +238,7 @@ class DeadCellStorage {
 public:
     DeadCellStorage() = default;
     void append(MarkedBlock::AtomNumberType cell) { return m_deadCells.append(cell); }
-    std::span<const MarkedBlock::AtomNumberType> span() const { return m_deadCells.span(); }
+    std::span<const MarkedBlock::AtomNumberType> span() const LIFETIME_BOUND { return m_deadCells.span(); }
 private:
     Vector<MarkedBlock::AtomNumberType, storageSize> m_deadCells;
 };
@@ -328,7 +328,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
                 destroy(cell);
         }
         if (sweepMode == SweepToFreeList) {
-            if (UNLIKELY(scribbleMode == Scribble))
+            if (scribbleMode == Scribble) [[unlikely]]
                 scribble(payloadBegin, payloadEnd - payloadBegin);
             FreeCell* interval = reinterpret_cast_ptr<FreeCell*>(payloadBegin);
             interval->makeLast(payloadEnd - payloadBegin, secret);
@@ -364,7 +364,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
         if (destructionMode != BlockHasNoDestructors)
             destroy(cell);
         if (sweepMode == SweepToFreeList) {
-            if (UNLIKELY(scribbleMode == Scribble))
+            if (scribbleMode == Scribble) [[unlikely]]
                 scribble(cell, cellSize);
 
             // The following check passing implies there was at least one live cell
@@ -373,7 +373,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
             if (i + m_atomsPerCell < previousDeadCell) {
                 size_t intervalLength = currentInterval * atomSize;
                 FreeCell* cell = reinterpret_cast_ptr<FreeCell*>(&block.atoms()[previousDeadCell]);
-                if (LIKELY(head))
+                if (head) [[likely]]
                     cell->setNext(head, intervalLength, secret);
                 else
                     cell->makeLast(intervalLength, secret);
@@ -391,7 +391,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
             size_t intervalLength = currentInterval * atomSize;
             FreeCell* cell = reinterpret_cast_ptr<FreeCell*>(&block.atoms()[previousDeadCell]);
 
-            if (LIKELY(head))
+            if (head) [[likely]]
                 cell->setNext(head, intervalLength, secret);
             else
                 cell->makeLast(intervalLength, secret);
@@ -620,16 +620,13 @@ inline IterationStatus MarkedBlock::Handle::forEachMarkedCell(const Functor& fun
     WTF::loadLoadFence();
     if (areMarksStale)
         return IterationStatus::Continue;
-    for (size_t i = m_startAtom; i < endAtom; i += m_atomsPerCell) {
-        if (!block.header().m_marks.get(i))
-            continue;
-
+    IterationStatus result = IterationStatus::Continue;
+    block.header().m_marks.forEachSetBit([&](size_t i) ALWAYS_INLINE_LAMBDA {
         HeapCell* cell = reinterpret_cast_ptr<HeapCell*>(&m_block->atoms()[i]);
-
-        if (functor(i, cell, kind) == IterationStatus::Done)
-            return IterationStatus::Done;
-    }
-    return IterationStatus::Continue;
+        result = functor(i, cell, kind);
+        return result;
+    });
+    return result;
 }
 
 } // namespace JSC

@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "RenderObject.h"
+#include "RenderObjectInlines.h"
 #include "RenderStyle.h"
 #include "Node.h"
 

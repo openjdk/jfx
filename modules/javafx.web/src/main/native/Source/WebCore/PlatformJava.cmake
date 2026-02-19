@@ -101,6 +101,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/java/RenderingQueue.h
     platform/graphics/texmap/BitmapTextureJava.h
     platform/graphics/texmap/TextureMapperJava.h
+    platform/graphics/texmap/TextureMapperJavaAdapter.h
     platform/java/DataObjectJava.h
     platform/java/PageSupplementJava.h
     platform/java/PlatformJavaClasses.h

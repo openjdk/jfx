@@ -28,6 +28,8 @@
 #if USE(AUDIO_SESSION)
 
 #include <memory>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
@@ -89,6 +91,8 @@ enum class AudioSessionSoundStageSize : uint8_t {
     Large,
 };
 
+enum class AudioSessionMayResume : bool { No, Yes };
+
 class AudioSession;
 class AudioSessionRoutingArbitrationClient;
 class AudioSessionInterruptionObserver;
@@ -102,14 +106,13 @@ public:
     virtual void sampleRateDidChange(const AudioSession&) { }
 };
 
-class WEBCORE_EXPORT AudioSession : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AudioSession> {
+class WEBCORE_EXPORT AudioSession : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(AudioSession, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(AudioSession);
 public:
     static Ref<AudioSession> create();
     static void setSharedSession(Ref<AudioSession>&&);
-    static AudioSession& sharedSession();
-    static Ref<AudioSession> protectedSharedSession() { return sharedSession(); }
+    static AudioSession& singleton();
 
     static bool enableMediaPlayback();
 
@@ -152,7 +155,7 @@ public:
     virtual void handleMutedStateChange() { }
 
     virtual void beginInterruption();
-    enum class MayResume : bool { No, Yes };
+    using MayResume = WebCore::AudioSessionMayResume;
     virtual void endInterruption(MayResume);
 
     virtual void beginInterruptionForTesting() { beginInterruption(); }

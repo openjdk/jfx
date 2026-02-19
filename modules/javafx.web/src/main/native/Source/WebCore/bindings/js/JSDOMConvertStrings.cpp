@@ -35,7 +35,7 @@ using namespace JSC;
 
 String identifierToString(JSGlobalObject& lexicalGlobalObject, const Identifier& identifier)
 {
-    if (UNLIKELY(identifier.isSymbol())) {
+    if (identifier.isSymbol()) [[unlikely]] {
         auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
         throwTypeError(&lexicalGlobalObject, scope, SymbolCoercionError);
         return { };
@@ -46,7 +46,7 @@ String identifierToString(JSGlobalObject& lexicalGlobalObject, const Identifier&
 
 static inline bool throwIfInvalidByteString(JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const String& string)
 {
-    if (UNLIKELY(!string.containsOnlyLatin1())) {
+    if (!string.containsOnlyLatin1()) [[unlikely]] {
         throwTypeError(&lexicalGlobalObject, scope);
         return true;
     }
@@ -60,7 +60,7 @@ String identifierToByteString(JSGlobalObject& lexicalGlobalObject, const Identif
 
     auto string = identifierToString(lexicalGlobalObject, identifier);
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(throwIfInvalidByteString(lexicalGlobalObject, scope, string)))
+    if (throwIfInvalidByteString(lexicalGlobalObject, scope, string)) [[unlikely]]
         return { };
     return string;
 }
@@ -73,7 +73,7 @@ ConversionResult<IDLByteString> valueToByteString(JSGlobalObject& lexicalGlobalO
     auto string = value.toWTFString(&lexicalGlobalObject);
     RETURN_IF_EXCEPTION(scope, ConversionResult<IDLByteString>::exception());
 
-    if (UNLIKELY(throwIfInvalidByteString(lexicalGlobalObject, scope, string)))
+    if (throwIfInvalidByteString(lexicalGlobalObject, scope, string)) [[unlikely]]
         return ConversionResult<IDLByteString>::exception();
 
     return { WTFMove(string) };
@@ -84,10 +84,10 @@ ConversionResult<IDLAtomStringAdaptor<IDLByteString>> valueToByteAtomString(JSC:
     VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = value.toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject);
+    AtomString string = value.toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject).data;
     RETURN_IF_EXCEPTION(scope, ConversionResult<IDLAtomStringAdaptor<IDLByteString>>::exception());
 
-    if (UNLIKELY(throwIfInvalidByteString(lexicalGlobalObject, scope, string.string())))
+    if (throwIfInvalidByteString(lexicalGlobalObject, scope, string.string())) [[unlikely]]
         return ConversionResult<IDLAtomStringAdaptor<IDLByteString>>::exception();
 
     return string;
@@ -117,7 +117,7 @@ ConversionResult<IDLAtomStringAdaptor<IDLUSVString>> valueToUSVAtomString(JSGlob
     auto string = value.toString(&lexicalGlobalObject)->toAtomString(&lexicalGlobalObject);
     RETURN_IF_EXCEPTION(scope, ConversionResult<IDLAtomStringAdaptor<IDLUSVString>>::exception());
 
-    return replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(string));
+    return replaceUnpairedSurrogatesWithReplacementCharacter(AtomString(string));
 }
 
 // https://w3c.github.io/trusted-types/dist/spec/#get-trusted-type-compliant-string-algorithm
@@ -126,7 +126,7 @@ ConversionResult<IDLDOMString> trustedScriptCompliantString(JSGlobalObject& glob
     VM& vm = global.vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (auto* trustedScript = JSTrustedScript::toWrapped(vm, input))
+    if (RefPtr trustedScript = JSTrustedScript::toWrapped(vm, input))
         return trustedScript->toString();
 
     RefPtr scriptExecutionContext = jsDynamicCast<JSDOMGlobalObject*>(&global)->scriptExecutionContext();
@@ -136,7 +136,7 @@ ConversionResult<IDLDOMString> trustedScriptCompliantString(JSGlobalObject& glob
     }
 
     auto convertedValue = ConversionResult<IDLDOMString> { convert<IDLUSVString>(global, input) };
-    if (UNLIKELY(convertedValue.hasException(throwScope)))
+    if (convertedValue.hasException(throwScope)) [[unlikely]]
         return ConversionResultException { };
 
     auto stringValueHolder = trustedTypeCompliantString(TrustedType::TrustedScript, *scriptExecutionContext, convertedValue.releaseReturnValue(), sink);

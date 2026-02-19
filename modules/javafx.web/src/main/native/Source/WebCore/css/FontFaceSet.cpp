@@ -148,10 +148,10 @@ void FontFaceSet::clear()
     }
 }
 
-void FontFaceSet::load(const String& font, const String& text, LoadPromise&& promise)
+void FontFaceSet::load(ScriptExecutionContext& context, const String& font, const String& text, LoadPromise&& promise)
 {
     m_backing->updateStyleIfNeeded();
-    auto matchingFacesResult = m_backing->matchingFacesExcludingPreinstalledFonts(font, text);
+    auto matchingFacesResult = m_backing->matchingFacesExcludingPreinstalledFonts(context, font, text);
     if (matchingFacesResult.hasException()) {
         promise.reject(matchingFacesResult.releaseException());
         return;
@@ -214,10 +214,10 @@ void FontFaceSet::load(const String& font, const String& text, LoadPromise&& pro
         pendingPromise->promise->resolve(pendingPromise->faces);
 }
 
-ExceptionOr<bool> FontFaceSet::check(const String& family, const String& text)
+ExceptionOr<bool> FontFaceSet::check(ScriptExecutionContext& context, const String& family, const String& text)
 {
     m_backing->updateStyleIfNeeded();
-    return m_backing->check(family, text);
+    return m_backing->check(context, family, text);
 }
 
 auto FontFaceSet::status() const -> LoadStatus

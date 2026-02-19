@@ -43,7 +43,7 @@ public:
         JSC::JSValue detail;
     };
 
-    static Ref<CustomEvent> create(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
+    WEBCORE_EXPORT static Ref<CustomEvent> create(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
 
     void initCustomEvent(const AtomString& type, bool canBubble, bool cancelable, JSC::JSValue detail = JSC::JSValue::JSUndefined);
 

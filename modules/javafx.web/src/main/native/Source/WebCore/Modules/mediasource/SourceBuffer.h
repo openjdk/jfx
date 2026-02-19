@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,7 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "AudioTrackClient.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"
 #include "TextTrackClient.h"
@@ -58,6 +58,7 @@ class TextTrackList;
 class TimeRanges;
 class VideoTrackList;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 class SourceBuffer
     : public RefCounted<SourceBuffer>
@@ -119,7 +120,7 @@ public:
     bool active() const { return m_active; }
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     enum class AppendMode { Segments, Sequence };
     AppendMode mode() const { return m_mode; }
@@ -225,8 +226,8 @@ private:
 
     void updateBuffered();
 
-    Ref<SourceBufferPrivate> m_private;
-    Ref<SourceBufferClientImpl> m_client;
+    const Ref<SourceBufferPrivate> m_private;
+    const Ref<SourceBufferClientImpl> m_client;
 
     WeakPtr<MediaSource> m_source;
     AppendMode m_mode { AppendMode::Segments };
@@ -271,7 +272,7 @@ private:
     std::optional<uint64_t> m_maximumBufferSize;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
+    const Ref<const Logger> m_logger;
     const uint64_t m_logIdentifier;
 #endif
 };

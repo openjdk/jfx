@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -68,13 +69,12 @@ void GainNode::process(size_t framesToProcess)
     // happen in the summing junction input of the AudioNode we're connected to.
     // Then we can avoid all of the following:
 
-    AudioBus* outputBus = output(0)->bus();
-    ASSERT(outputBus);
+    AudioBus& outputBus = output(0)->bus();
 
     if (!isInitialized() || !input(0)->isConnected())
-        outputBus->zero();
+        outputBus.zero();
     else {
-        AudioBus* inputBus = input(0)->bus();
+        AudioBus& inputBus = input(0)->bus();
 
         if (gain().hasSampleAccurateValues() && gain().automationRate() == AutomationRate::ARate) {
             // Apply sample-accurate gain scaling for precise envelopes, grain windows, etc.
@@ -82,16 +82,16 @@ void GainNode::process(size_t framesToProcess)
             if (framesToProcess <= m_sampleAccurateGainValues.size()) {
                 auto gainValues = m_sampleAccurateGainValues.span().first(framesToProcess);
                 gain().calculateSampleAccurateValues(gainValues);
-                outputBus->copyWithSampleAccurateGainValuesFrom(*inputBus, gainValues);
+                outputBus.copyWithSampleAccurateGainValuesFrom(inputBus, gainValues);
             }
         } else {
             // Apply the gain with de-zippering into the output bus.
             float gain = this->gain().hasSampleAccurateValues() ? this->gain().finalValue() : this->gain().value();
             if (!gain) {
                 // If the gain is 0 just zero the bus.
-                outputBus->zero();
+                outputBus.zero();
             } else
-                outputBus->copyWithGainFrom(*inputBus, gain);
+                outputBus.copyWithGainFrom(inputBus, gain);
         }
     }
 }

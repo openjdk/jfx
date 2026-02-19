@@ -28,6 +28,7 @@
 #if ENABLE(MEDIA_STREAM) && ENABLE(WEB_CODECS)
 
 #include "Exception.h"
+#include "ExceptionCode.h"
 #include "JSWebCodecsVideoFrame.h"
 #include "MediaStreamTrack.h"
 #include "VideoFrame.h"

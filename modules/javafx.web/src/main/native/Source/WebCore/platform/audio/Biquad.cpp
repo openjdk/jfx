@@ -35,6 +35,7 @@
 #include "AudioUtilities.h"
 #include "DenormalDisabler.h"
 #include <algorithm>
+#include <numbers>
 #include <stdio.h>
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -281,7 +282,7 @@ void Biquad::setLowpassParams(size_t index, double cutoff, double resonance)
         // Compute biquad coefficients for lowpass filter
         resonance = pow(10.0, 0.05 * resonance);
 
-        double theta = piDouble * cutoff;
+        double theta = std::numbers::pi * cutoff;
         double alpha = sin(theta) / (2 * resonance);
         double cosw = cos(theta);
         double beta = (1 - cosw) / 2;
@@ -314,7 +315,7 @@ void Biquad::setHighpassParams(size_t index, double cutoff, double resonance)
         // Compute biquad coefficients for highpass filter
         resonance = pow(10.0, 0.05 * resonance);
 
-        double theta = piDouble * cutoff;
+        double theta = std::numbers::pi * cutoff;
         double alpha = sin(theta) / (2 * resonance);
         double cosw = cos(theta);
         double beta = (1 + cosw) / 2;
@@ -359,7 +360,7 @@ void Biquad::setLowShelfParams(size_t index, double frequency, double dbGain)
         // The z-transform is a constant gain.
         setNormalizedCoefficients(index, A * A, 0, 0, 1, 0, 0);
     } else if (frequency > 0) {
-        double w0 = piDouble * frequency;
+        double w0 = std::numbers::pi * frequency;
         double S = 1; // filter slope (1 is max value)
         double alpha = 0.5 * sin(w0) * sqrt((A + 1 / A) * (1 / S - 1) + 2);
         double k = cos(w0);
@@ -392,7 +393,7 @@ void Biquad::setHighShelfParams(size_t index, double frequency, double dbGain)
         // The z-transform is 1.
         setNormalizedCoefficients(index, 1, 0, 0, 1, 0, 0);
     } else if (frequency > 0) {
-        double w0 = piDouble * frequency;
+        double w0 = std::numbers::pi * frequency;
         double S = 1; // filter slope (1 is max value)
         double alpha = 0.5 * sin(w0) * sqrt((A + 1 / A) * (1 / S - 1) + 2);
         double k = cos(w0);
@@ -426,7 +427,7 @@ void Biquad::setPeakingParams(size_t index, double frequency, double Q, double d
 
     if (frequency > 0 && frequency < 1) {
         if (Q > 0) {
-            double w0 = piDouble * frequency;
+            double w0 = std::numbers::pi * frequency;
             double alpha = sin(w0) / (2 * Q);
             double k = cos(w0);
 
@@ -460,7 +461,7 @@ void Biquad::setAllpassParams(size_t index, double frequency, double Q)
 
     if (frequency > 0 && frequency < 1) {
         if (Q > 0) {
-            double w0 = piDouble * frequency;
+            double w0 = std::numbers::pi * frequency;
             double alpha = sin(w0) / (2 * Q);
             double k = cos(w0);
 
@@ -494,7 +495,7 @@ void Biquad::setNotchParams(size_t index, double frequency, double Q)
 
     if (frequency > 0 && frequency < 1) {
         if (Q > 0) {
-            double w0 = piDouble * frequency;
+            double w0 = std::numbers::pi * frequency;
             double alpha = sin(w0) / (2 * Q);
             double k = cos(w0);
 
@@ -527,7 +528,7 @@ void Biquad::setBandpassParams(size_t index, double frequency, double Q)
     Q = std::max(0.0, Q);
 
     if (frequency > 0 && frequency < 1) {
-        double w0 = piDouble * frequency;
+        double w0 = std::numbers::pi * frequency;
         if (Q > 0) {
             double alpha = sin(w0) / (2 * Q);
             double k = cos(w0);
@@ -587,7 +588,7 @@ void Biquad::getFrequencyResponse(unsigned nFrequencies, std::span<const float> 
             magResponse[k] = std::nanf("");
             phaseResponse[k] = std::nanf("");
         } else {
-            double omega = -piDouble * frequency[k];
+            double omega = -std::numbers::pi * frequency[k];
             std::complex<double> z = std::complex<double>(cos(omega), sin(omega));
             std::complex<double> numerator = b0 + (b1 + b2 * z) * z;
             std::complex<double> denominator = std::complex<double>(1, 0) + (a1 + a2 * z) * z;

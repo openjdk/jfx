@@ -47,7 +47,7 @@
 #include <wtf/Vector.h>
 
 #ifdef __swift__
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 #endif
 
 typedef struct WGPUExternalTextureImpl* WGPUExternalTexture;
@@ -173,10 +173,6 @@ WGPU_EXPORT String wgpuAdapterFeatureName(WGPUFeatureName feature) WGPU_FUNCTION
 #else
 #define PUBLIC_IN_WEBGPU_SWIFT
 #endif
-
-// Used to indicate that a class member has a specialized implementation in Swift. See
-// "SwiftCXXThunk.h".
-#define HAS_SWIFTCXX_THUNK  NS_REFINED_FOR_SWIFT
 
 #endif
 

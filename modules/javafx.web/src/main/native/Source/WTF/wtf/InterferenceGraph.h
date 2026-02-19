@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/BitVector.h>
 #include <wtf/HashSet.h>
 #include <wtf/HashTraits.h>
@@ -473,8 +474,8 @@ public:
             for (IndexType value : iterableB)
                 valuesB.append(value);
             RELEASE_ASSERT(m_values.size() == valuesB.size());
-            std::sort(m_values.begin(), m_values.end());
-            std::sort(valuesB.begin(), valuesB.end());
+            std::ranges::sort(m_values);
+            std::ranges::sort(valuesB));
             for (unsigned i = 0; i < m_values.size(); ++i)
                 RELEASE_ASSERT(m_values[i] == valuesB[i]);
         }

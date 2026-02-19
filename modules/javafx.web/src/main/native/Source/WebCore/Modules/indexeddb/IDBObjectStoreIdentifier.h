@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum class IDBObjectStoreIdentifierType { };
+struct IDBObjectStoreIdentifierType;
 using IDBObjectStoreIdentifier = AtomicObjectIdentifier<IDBObjectStoreIdentifierType>;
 
 } // namespace WebCore

@@ -33,18 +33,26 @@ namespace WebCore {
 
 std::unique_ptr<ImageBufferDisplayListBackend> ImageBufferDisplayListBackend::create(const Parameters& parameters, const ImageBufferCreationContext&)
 {
-    return std::unique_ptr<ImageBufferDisplayListBackend>(new ImageBufferDisplayListBackend(parameters));
+    return std::unique_ptr<ImageBufferDisplayListBackend>(new ImageBufferDisplayListBackend(parameters, ControlFactory::shared()));
 }
 
-ImageBufferDisplayListBackend::ImageBufferDisplayListBackend(const Parameters& parameters)
+
+std::unique_ptr<ImageBufferDisplayListBackend> ImageBufferDisplayListBackend::create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, ImageBufferPixelFormat pixelFormat, RenderingPurpose purpose, ControlFactory& controlFactory)
+{
+    Parameters parameters { ImageBuffer::calculateBackendSize(size, resolutionScale), resolutionScale, colorSpace, { pixelFormat }, purpose };
+    return std::unique_ptr<ImageBufferDisplayListBackend>(new ImageBufferDisplayListBackend(parameters, controlFactory));
+}
+
+ImageBufferDisplayListBackend::ImageBufferDisplayListBackend(const Parameters& parameters, ControlFactory& controlFactory)
     : ImageBufferBackend(parameters)
+    , m_controlFactory(controlFactory)
     , m_drawingContext(parameters.backendSize)
 {
 }
 
 GraphicsContext& ImageBufferDisplayListBackend::context()
 {
-    return m_drawingContext.context();
+    return m_drawingContext;
 }
 
 RefPtr<NativeImage> ImageBufferDisplayListBackend::copyNativeImage()
@@ -54,7 +62,7 @@ RefPtr<NativeImage> ImageBufferDisplayListBackend::copyNativeImage()
         return nullptr;
 
     auto& context = buffer->context();
-    m_drawingContext.replayDisplayList(context);
+    context.drawDisplayList(m_drawingContext.copyDisplayList());
 
     return ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
 }
@@ -66,7 +74,7 @@ RefPtr<SharedBuffer> ImageBufferDisplayListBackend::sinkIntoPDFDocument()
         return nullptr;
 
     auto& context = buffer->context();
-    m_drawingContext.replayDisplayList(context);
+    context.drawDisplayList(m_drawingContext.copyDisplayList(), m_controlFactory);
 
     return ImageBuffer::sinkIntoPDFDocument(WTFMove(buffer));
 }

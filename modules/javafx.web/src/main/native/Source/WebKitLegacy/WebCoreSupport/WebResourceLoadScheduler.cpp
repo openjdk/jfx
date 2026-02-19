@@ -23,7 +23,9 @@
  */
 
 #include "WebResourceLoadScheduler.h"
-
+#if PLATFORM(JAVA)
+#include "LocalFrameInlines.h"
+#endif
 #include "PingHandle.h"
 #include <WebCore/ArchiveResource.h>
 #include <WebCore/CachedResource.h>

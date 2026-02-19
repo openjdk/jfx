@@ -51,7 +51,7 @@ pas_deallocator_scavenge_action_get_string(pas_deallocator_scavenge_action actio
         return "flush_log_action";
     }
 
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

@@ -45,21 +45,21 @@ bool JSNodeListOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handl
         return false;
 
     if (jsNodeList->wrapped().isLiveNodeList()) {
-        if (UNLIKELY(reason))
+        if (reason) [[unlikely]]
             *reason = "LiveNodeList owner is opaque root"_s;
 
         return containsWebCoreOpaqueRoot(visitor, static_cast<LiveNodeList&>(jsNodeList->wrapped()).ownerNode());
     }
 
     if (jsNodeList->wrapped().isChildNodeList()) {
-        if (UNLIKELY(reason))
+        if (reason) [[unlikely]]
             *reason = "ChildNodeList owner is opaque root"_s;
 
         return containsWebCoreOpaqueRoot(visitor, static_cast<ChildNodeList&>(jsNodeList->wrapped()).ownerNode());
     }
 
     if (jsNodeList->wrapped().isEmptyNodeList()) {
-        if (UNLIKELY(reason))
+        if (reason) [[unlikely]]
             *reason = "EmptyNodeList owner is opaque root"_s;
 
         return containsWebCoreOpaqueRoot(visitor, static_cast<EmptyNodeList&>(jsNodeList->wrapped()).ownerNode());

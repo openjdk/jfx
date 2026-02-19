@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,28 @@ SourceProvider::SourceProvider(const SourceOrigin& sourceOrigin, String&& source
 
 SourceProvider::~SourceProvider() = default;
 
+void SourceProvider::lockUnderlyingBuffer()
+{
+    if (!m_lockingCount++)
+        lockUnderlyingBufferImpl();
+}
+
+void SourceProvider::unlockUnderlyingBuffer()
+{
+    if (!--m_lockingCount)
+        unlockUnderlyingBufferImpl();
+}
+
+CodeBlockHash SourceProvider::codeBlockHashConcurrently(int startOffset, int endOffset, CodeSpecializationKind kind)
+{
+    auto entireSourceCode = source();
+    return CodeBlockHash { entireSourceCode.substring(startOffset, endOffset - startOffset), entireSourceCode, kind };
+}
+
+void SourceProvider::lockUnderlyingBufferImpl() { }
+
+void SourceProvider::unlockUnderlyingBufferImpl() { }
+
 void SourceProvider::getID()
 {
     if (!m_id) {
@@ -53,9 +75,9 @@ void SourceProvider::getID()
 
 const String& SourceProvider::sourceURLStripped()
 {
-    if (UNLIKELY(m_sourceURL.isNull()))
+    if (m_sourceURL.isNull()) [[unlikely]]
         return m_sourceURLStripped;
-    if (LIKELY(!m_sourceURLStripped.isNull()))
+    if (!m_sourceURLStripped.isNull()) [[likely]]
         return m_sourceURLStripped;
     m_sourceURLStripped = URL(m_sourceURL).strippedForUseAsReport();
     return m_sourceURLStripped;

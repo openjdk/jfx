@@ -122,6 +122,7 @@ public:
     virtual void setObscuredInsets(double, double, double, double) { notImplemented(); }
 
     virtual JSObjectRef fixedContainerEdgeColors() const { return nullptr; }
+    virtual void cancelFixedColorExtensionFadeAnimations() const { notImplemented(); }
 
     virtual void cookiesForDomain(JSStringRef, JSValueRef) { notImplemented(); }
 

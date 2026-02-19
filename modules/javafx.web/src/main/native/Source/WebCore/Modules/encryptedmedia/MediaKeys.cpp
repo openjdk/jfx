@@ -40,6 +40,7 @@
 #include "Logging.h"
 #include "MediaKeySession.h"
 #include "SharedBuffer.h"
+#include <ranges>
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 
@@ -141,7 +142,7 @@ void MediaKeys::setServerCertificate(const BufferSource& serverCertificate, Ref<
 #endif
         // 5.2. If the preceding step failed, resolve promise with a new DOMException whose name is the appropriate error name.
         // 5.1. [Else,] Resolve promise with true.
-        if (success == CDMInstance::Failed) {
+        if (success == CDMInstanceSuccessValue::Failed) {
             ERROR_LOG(identifier, "::task() - Rejected, setServerCertificate() failed");
             promise->reject(ExceptionCode::InvalidStateError);
             return;
@@ -174,7 +175,7 @@ void MediaKeys::attemptToResumePlaybackOnClients()
 
 bool MediaKeys::hasOpenSessions() const
 {
-    return std::any_of(m_sessions.begin(), m_sessions.end(),
+    return std::ranges::any_of(m_sessions,
         [](auto& session) {
             return !session->isClosed();
         });
@@ -184,11 +185,6 @@ void MediaKeys::unrequestedInitializationDataReceived(const String& initDataType
 {
     for (auto& cdmClient : m_cdmClients)
         cdmClient.cdmClientUnrequestedInitializationDataReceived(initDataType, initData.copyRef());
-}
-
-Ref<CDMInstance> MediaKeys::protectedCDMInstance() const
-{
-    return m_instance;
 }
 
 #if !RELEASE_LOG_DISABLED

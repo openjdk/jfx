@@ -35,7 +35,7 @@
 namespace WebCore {
 namespace CSS {
 
-// `PrimitiveData` is a bespoke implementation of `std::variant<Numeric, Keywords...>`
+// `PrimitiveData` is a bespoke implementation of `Variant<Numeric, Keywords...>`
 // optimized for memory use by allowing numeric types with multiple unit representations
 // (e.g. <length>, <angle>, etc.) to utilize multiple indices for a single smaller payload.
 //

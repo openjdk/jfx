@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2007, Google Inc. All rights reserved.
+ * Copyright (c) 2005, 2007 Google Inc. All rights reserved.
  * Copyright (C) 2005-2018 Apple Inc. All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 
 #if OS(WINDOWS)
 #include <windows.h>
+#include <psapi.h>
 #else
 #if HAVE(RESOURCE_H)
 #include <sys/resource.h>
@@ -79,7 +80,7 @@ void fastSetMaxSingleAllocationSize(size_t size)
 #endif // ASSERT_ENABLED
 
 #define FAIL_IF_EXCEEDS_LIMIT(size) do { \
-        if (UNLIKELY((size) > maxSingleAllocationSize)) \
+        if ((size) > maxSingleAllocationSize) [[unlikely]] \
             return nullptr; \
     } while (false)
 
@@ -162,7 +163,7 @@ void* fastAlignedMalloc(size_t alignment, size_t size)
 {
     ASSERT_IS_WITHIN_LIMIT(size);
     void* p = _aligned_malloc(size, alignment);
-    if (UNLIKELY(!p))
+    if (!p) [[unlikely]]
         CRASH();
     return p;
 }
@@ -189,7 +190,7 @@ void* fastAlignedMalloc(size_t alignment, size_t size)
 #else
     void* p = aligned_alloc(alignment, size);
 #endif
-    if (UNLIKELY(!p))
+    if (!p) [[unlikely]]
         CRASH();
     return p;
 }
@@ -502,7 +503,7 @@ void MallocCallTracker::dumpStats()
             stackHashes.append(key);
 
         // Sort by reverse total size.
-        std::sort(stackHashes.begin(), stackHashes.end(), [&] (unsigned a, unsigned b) {
+        std::ranges::sort(stackHashes, [&] (unsigned a, unsigned b) {
             const auto& aSiteTotals = callSiteToMallocData.get(a);
             const auto& bSiteTotals = callSiteToMallocData.get(b);
 

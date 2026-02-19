@@ -32,6 +32,7 @@
 #include "TreeScopeOrderedMap.h"
 
 #include "ContainerNodeAlgorithms.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLImageElement.h"
 #include "HTMLLabelElement.h"
@@ -56,7 +57,7 @@ void TreeScopeOrderedMap::add(const AtomString& key, Element& element, const Tre
 {
     ASSERT_WITH_SECURITY_IMPLICATION(!key.isNull());
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&element.treeScope() == &treeScope);
-    ASSERT_WITH_SECURITY_IMPLICATION(treeScope.rootNode().containsIncludingShadowDOM(&element));
+    ASSERT_WITH_SECURITY_IMPLICATION(treeScope.rootNode().isShadowIncludingInclusiveAncestorOf(&element));
 
     if (!element.isInTreeScope())
         return;
@@ -165,7 +166,7 @@ inline Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* TreeScopeOrdere
 
     if (entry.orderedList.isEmpty()) {
         entry.orderedList.reserveCapacity(entry.count);
-        auto elementDescendants = descendantsOfType<Element>(scope.protectedRootNode().get());
+        auto elementDescendants = descendantsOfType<Element>(scope.rootNode());
         for (auto it = entry.element ? elementDescendants.beginAt(*entry.element) : elementDescendants.begin(); it; ++it) {
             if (keyMatches(key, *it))
                 entry.orderedList.append(*it);

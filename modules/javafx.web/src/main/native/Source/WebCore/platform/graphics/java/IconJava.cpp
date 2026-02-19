@@ -63,7 +63,7 @@ void Icon::paint(GraphicsContext& gc, const FloatRect& rect)
 {
     gc.platformContext()->rq().freeSpace(16)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWICON
-    << *m_jicon << (jint)rect.x() <<  (jint)rect.y();
+    << m_jicon << (jint)rect.x() <<  (jint)rect.y();
 }
 
 } // namespace WebCore

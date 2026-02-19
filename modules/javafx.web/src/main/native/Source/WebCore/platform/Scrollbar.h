@@ -126,8 +126,8 @@ public:
     IntRect convertToContainingView(const IntRect&) const override;
     IntRect convertFromContainingView(const IntRect&) const override;
 
-    IntPoint convertToContainingView(const IntPoint&) const override;
-    IntPoint convertFromContainingView(const IntPoint&) const override;
+    IntPoint convertToContainingView(IntPoint) const override;
+    IntPoint convertFromContainingView(IntPoint) const override;
 
     void moveThumb(int pos, bool draggingDocument = false);
 
