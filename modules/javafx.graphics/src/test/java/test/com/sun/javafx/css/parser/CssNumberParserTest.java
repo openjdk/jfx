@@ -125,6 +125,7 @@ public class CssNumberParserTest {
         assertSameDouble(4.9e-324, "4e-324"); // below Double.MIN_VALUE, rounds up
         assertSameDouble(4.9e-324, "4.9e-324"); // Double.MIN_VALUE
         assertSameDouble(9.8e-324, "9.8e-324"); // Double.MIN_VALUE*2
+        assertSameDouble(1.1125369292536007E-308, "1.1125369292536007E-308"); // MIN_NORMAL/2
         assertSameDouble(2.2250738585072014e-308, "2.2250738585072014e-308"); // MIN_NORMAL
         assertSameDouble(2.2250738585072012e-308, "2.2250738585072012e-308"); // near MIN_NORMAL
         assertSameDouble(2.4703282292062329e-324, "2.4703282292062329e-324"); // above MIN_VALUE/2
