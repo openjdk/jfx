@@ -781,15 +781,14 @@
     </p>
 
     <h3><a id="introatrules">&#64; Rules</a></h3>
-    <h4>@import</h4>
-    <p>
-        Beginning with JavaFX 8u20, the CSS
-        <a href="http://www.w3.org/TR/CSS21/cascade.html#at-import">@import</a> is partially supported.
-        Only unconditional import is supported. In other words, the media&#8209;type qualifier is not supported.
-        Also, the JavaFX CSS parser is non-compliant with regard to where an @import may appear within a stylesheet
-        (see <a href="http://www.w3.org/TR/CSS21/syndata.html#at-rules">At&#8209;rules</a>).
-        Users are cautioned that this will be fixed in a future release. Adherence to the W3C standard is strongly advised.
-    </p>
+    <h4>@import <a class="grammar" style="font-weight: normal">[ &lt;url&gt; | &lt;string&gt; ] &lt;media-query-list&gt;? ;</a></h4>
+    <p>The @import rule allows applications to import rules from other stylesheets. Import rules must be placed before
+        all other @-rules and style rules, and no other rule can be placed between @import rules. If a valid import
+        rule is encountered, the content of the referenced stylesheet is treated as if it literally appeared at the
+        location of the @import rule.</p>
+    <p>An import rule can optionally include a <a href="#figure-media-query-list">media query list</a> that specifies
+        the conditions under which the imported rules apply, as if they were wrapped in a @media rule with the same
+        media query list.</p>
     <h4>@font-face</h4>
     <p>Since JavaFX 8, the implementation partially supports the CSS3 syntax to load a font from a URL using the
     <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:</p>
@@ -839,7 +838,7 @@
         A media query list evaluates to <code>true</code> if <em>any</em> of the media queries is <code>true</code>,
         and evaluates to <code>false</code> only if <em>all</em> the media queries are <code>false</code>.
         An empty media query list evaluates to <code>true</code>.
-        <figure style="margin: 0">
+        <figure style="margin: 0" id="figure-media-query-list">
             <img src="media-query.svg" width="210" alt="Media Query List">
             <figcaption style="float: left; margin-top: 27px">
                 <span class="grammar">&lt;media-query-list&gt;:</span>

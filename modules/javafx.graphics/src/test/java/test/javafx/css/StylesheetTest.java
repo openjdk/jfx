@@ -28,6 +28,8 @@ package test.javafx.css;
 import com.sun.javafx.css.RuleHelper;
 import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.MediaFeatures;
+import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.FunctionExpression;
 import javafx.application.ColorScheme;
 import javafx.css.StyleConverter.StringStore;
@@ -49,6 +51,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import javafx.css.CssParser;
+import javafx.css.CssParserShim;
 import javafx.css.Declaration;
 import javafx.css.ParsedValue;
 import javafx.css.Rule;
@@ -654,7 +657,7 @@ public class StylesheetTest {
     }
 
     private byte[] convertCssTextToBinary(String cssText) throws IOException {
-        var stylesheet = new CssParser().parse(cssText);
+        var stylesheet = new CssParserShim().parseUnmerged(cssText, true);
         var stream = new ByteArrayOutputStream();
         var stringStore = new StringStore();
         StylesheetShim.writeBinary(stylesheet, new DataOutputStream(stream), stringStore);
@@ -815,5 +818,51 @@ public class StylesheetTest {
         assertEquals(
             FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
             mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void serializeStylesheetWithConditionalImport() throws IOException {
+        var oldDefault = MediaFeatures.DEFAULT;
+
+        try {
+            TriState[] testFeatureValue = new TriState[] { TriState.FALSE };
+
+            MediaFeatures.DEFAULT = (_, _) -> FunctionExpression.of(
+                "StylesheetTest-feature1", "value", () -> testFeatureValue[0], _ -> null, null);
+
+            byte[] data = convertCssTextToBinary("""
+                @import url("%s") (StylesheetTest-feature1);
+                .rect2 { -fx-fill: green; }
+                """.formatted("data:base64," + Base64.getEncoder().encodeToString("""
+                .rect1 { -fx-fill: blue; }
+                @media (prefers-color-scheme: dark) {
+                    .rect1 { -fx-fill: red; }
+                }
+                """.getBytes(StandardCharsets.UTF_8))));
+
+            // 1. If the import condition never matches, the stylesheet is not imported.
+            testFeatureValue[0] = TriState.FALSE;
+            var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(1, stylesheet.getRules().size());
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().getFirst()));
+
+            // 2. If the import condition always matches, the stylesheet is unconditionally imported.
+            testFeatureValue[0] = TriState.TRUE;
+            stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(3, stylesheet.getRules().size());
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0))); // unconditional import
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(1)));
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(2)));
+
+            // 3. If the import condition is unknown, the stylesheet is conditionally imported.
+            testFeatureValue[0] = TriState.UNKNOWN;
+            stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(3, stylesheet.getRules().size());
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0))); // conditional import
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(1)));
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(2)));
+        } finally {
+            MediaFeatures.DEFAULT = oldDefault;
+        }
     }
 }
