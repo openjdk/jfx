@@ -239,10 +239,17 @@
                 border:2px solid black;
                 margin-right:1em;
             }
+			.skip-nav {
+			    position: absolute;
+			    top: auto;
+			    left: -9999px;
+			    overflow: hidden;
+			}
         </style>
   </head>
   <body>
     <div class="fx-code-header">
+		<div class="skip-nav"><a href="#skip-navbar-top" title="Skip navigation links">Skip navigation links</a></div>
     </div>
     <h1>JavaFX CSS Reference Guide</h1>
 	<div>Release: @FXVERSION@</div>
@@ -460,6 +467,7 @@
       </li>
       <li><a href="#references">References</a></li>
     </ul>
+	<span class="skip-nav" id="skip-navbar-top"></span>
     <h2><a id="intro">Introduction</a></h2>
     <p>
         Never has styling a Java UI been easier than with JavaFX and Cascading Style Sheets (CSS). Going from one
