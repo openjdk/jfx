@@ -173,7 +173,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         } else {
             latePress  = isSelected();
             if (!latePress) {
-                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                doSelect(e, e.getX(), e.getY(), e.getButton(), e.getClickCount(),
                         e.isShiftDown(), e.isShortcutDown());
             }
         }
@@ -182,7 +182,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
-            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+            doSelect(e, e.getX(), e.getY(), e.getButton(), e.getClickCount(),
                     e.isShiftDown(), e.isShortcutDown());
         }
     }
@@ -199,7 +199,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
      *                                                                         *
      **************************************************************************/
 
-    protected void doSelect(final double x, final double y, final MouseButton button,
+    protected void doSelect(MouseEvent e, final double x, final double y, final MouseButton button,
                             final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // we update the cell to point to the new tree node
         final T cell = getNode();
@@ -243,7 +243,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
         if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-                simpleSelect(button, clickCount, shortcutDown);
+                simpleSelect(e, button, clickCount, shortcutDown);
             } else {
                 if (shortcutDown) {
                     if (selected) {
@@ -263,13 +263,13 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
                     fm.focus(index);
                 } else {
-                    simpleSelect(button, clickCount, shortcutDown);
+                    simpleSelect(e, button, clickCount, shortcutDown);
                 }
             }
         }
     }
 
-    protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
+    protected void simpleSelect(MouseEvent e, MouseButton button, int clickCount, boolean shortcutDown) {
         final int index = getIndex();
         boolean isAlreadySelected;
 
@@ -288,21 +288,38 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
             }
         }
 
-        handleClicks(button, clickCount, isAlreadySelected);
+        doHandleClick(e, button, clickCount, isAlreadySelected);
     }
 
-    protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
+    protected void doHandleClick(MouseEvent e, MouseButton button, int clickCount, boolean isAlreadySelected) {
+        // If not focused yet, we want to shift focus first to the container.
+        if (!getCellContainer().isFocused()) {
+            getCellContainer().requestFocus();
+        }
+
+        // Consume the event if we handled it,
+        // so that the event will not bubble up and shift focus back to the container.
+        if (handleClicks(button, clickCount, isAlreadySelected)) {
+            e.consume();
+        }
+    }
+
+    protected boolean handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
         // handle editing, which only occurs with the primary mouse button
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
                 edit(getNode());
+                return true;
             } else if (clickCount == 1) {
-                // cancel editing
+                // stop editing
                 edit(null);
+                return true;
             } else if (clickCount == 2 && getNode().isEditable()) {
                 edit(getNode());
+                return true;
             }
         }
+        return false;
     }
 
     void selectRows(int focusedIndex, int index) {

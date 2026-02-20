@@ -77,7 +77,7 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
      *                                                                         *
      **************************************************************************/
 
-    @Override protected void doSelect(final double x, final double y, final MouseButton button,
+    @Override protected void doSelect(MouseEvent e, final double x, final double y, final MouseButton button,
                    final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         final Control table = getCellContainer();
         if (table == null) return;
@@ -112,11 +112,11 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
                     final int anchorRow = anchor.getRow();
                     selectRows(anchorRow, index);
                 } else {
-                    simpleSelect(button, clickCount, shortcutDown);
+                    simpleSelect(e, button, clickCount, shortcutDown);
                 }
             }
         } else {
-            simpleSelect(button, clickCount, shortcutDown);
+            simpleSelect(e, button, clickCount, shortcutDown);
         }
     }
 

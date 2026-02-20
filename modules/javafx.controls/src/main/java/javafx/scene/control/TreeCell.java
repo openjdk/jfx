@@ -592,34 +592,37 @@ public class TreeCell<T> extends IndexedCell<T> {
 
         if (index == -1 || tree == null || treeItem == null) {
             if (editing) {
-                // JDK-8265210: must cancel edit if index changed to -1 by re-use
-                doCancelEditing();
+                // JDK-8265210: must stop/cancel edit if index changed to -1 by re-use
+                doStopEdit();
             }
             return;
         }
 
         final boolean match = treeItem.equals(editItem);
 
-        // If my tree item is the item being edited and I'm not currently in
+        // If my tree item is the item being edited, and I'm not currently in
         // the edit mode, then I need to enter the edit mode
         if (match && !editing) {
             startEdit();
-        } else if (! match && editing) {
-            doCancelEditing();
+        } else if (!match && editing) {
+            doStopEdit();
         }
     }
 
-    private void doCancelEditing() {
-        // If my tree item is not the one being edited then I need to cancel
+    /**
+     * Stops the edit operation.
+     * If not overwritten, will cancel the edit without changing control'sediting state.
+     */
+    private void doStopEdit() {
+        // If my index is not the one being edited then I need to cancel
         // the edit. The tricky thing here is that as part of this call
-        // I cannot end up calling tree.edit(null) the way that the standard
+        // I cannot end up calling list.edit(-1) the way that the standard
         // cancelEdit method would do. Yet, I need to call cancelEdit
         // so that subclasses which override cancelEdit can execute. So,
         // I have to use a kind of hacky flag workaround.
         try {
-            // try-finally to make certain that the flag is reliably reset to true
             updateEditingIndex = false;
-            cancelEdit();
+            stopEdit();
         } finally {
             updateEditingIndex = true;
         }
