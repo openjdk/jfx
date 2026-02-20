@@ -29,7 +29,7 @@ import java.util.Iterator;
 
 import com.sun.javafx.geometry.BoundsUtils;
 import javafx.event.EventDispatchChain;
-
+import javafx.event.EventHandlerPriority;
 import javafx.scene.Node;
 
 import com.sun.javafx.util.WeakReferenceQueue;
@@ -1896,8 +1896,16 @@ public abstract class Transform implements Cloneable, EventTarget {
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
+        addEventHandler(eventType, EventHandlerPriority.PRIMARY, eventHandler);
+    }
+
+    @Override
+    public final <T extends Event> void addEventHandler(
+            final EventType<T> eventType,
+            final EventHandlerPriority eventHandlerPriority,
+            final EventHandler<? super T> eventHandler) {
         getInternalEventDispatcher()
-                .addEventHandler(eventType, eventHandler);
+                .addEventHandler(eventType, eventHandler, eventHandlerPriority);
         // need to validate all properties to get the change events
         validate();
     }
@@ -1926,8 +1934,16 @@ public abstract class Transform implements Cloneable, EventTarget {
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
+        addEventFilter(eventType, EventHandlerPriority.PRIMARY, eventFilter);
+    }
+
+    @Override
+    public final <T extends Event> void addEventFilter(
+            final EventType<T> eventType,
+            final EventHandlerPriority eventFilterPriority,
+            final EventHandler<? super T> eventFilter) {
         getInternalEventDispatcher()
-                .addEventFilter(eventType, eventFilter);
+                .addEventFilter(eventType, eventFilter, eventFilterPriority);
         // need to validate all properties to get the change events
         validate();
     }

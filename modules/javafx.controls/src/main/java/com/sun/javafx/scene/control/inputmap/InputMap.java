@@ -35,6 +35,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
@@ -459,7 +460,7 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
 
         if (eventHandlers.isEmpty()) {
 //            System.out.println("Added event handler for type " + et);
-            node.addEventHandler(et, eventHandler);
+            node.addEventHandler(et, EventHandlerPriority.DEFAULT, eventHandler);
         }
 
         // We need to store these event handlers so we can dispose cleanly.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,10 @@ package com.sun.javafx.event;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import java.util.Objects;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventType;
 
 /**
@@ -42,6 +43,8 @@ public class EventHandlerManager extends BasicEventDispatcher {
                       CompositeEventHandler<? extends Event>> eventHandlerMap;
 
     private final Object eventSource;
+
+    private transient boolean hasDefaultHandlers;
 
     public EventHandlerManager(final Object eventSource) {
         this.eventSource = eventSource;
@@ -59,14 +62,16 @@ public class EventHandlerManager extends BasicEventDispatcher {
      */
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventHandler) {
+            final EventHandler<? super T> eventHandler,
+            final EventHandlerPriority eventHandlerPriority) {
         validateEventType(eventType);
         validateEventHandler(eventHandler);
+        Objects.requireNonNull(eventHandlerPriority, "eventHandlerPriority must not be null");
 
         final CompositeEventHandler<T> compositeEventHandler =
                 createGetCompositeEventHandler(eventType);
 
-        compositeEventHandler.addEventHandler(eventHandler);
+        compositeEventHandler.addEventHandler(eventHandler, eventHandlerPriority);
     }
 
     /**
@@ -101,14 +106,16 @@ public class EventHandlerManager extends BasicEventDispatcher {
      */
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventFilter) {
+            final EventHandler<? super T> eventFilter,
+            final EventHandlerPriority eventFilterPriority) {
         validateEventType(eventType);
         validateEventFilter(eventFilter);
+        Objects.requireNonNull(eventFilterPriority, "eventFilterPriority must not be null");
 
         final CompositeEventHandler<T> compositeEventHandler =
                 createGetCompositeEventHandler(eventType);
 
-        compositeEventHandler.addEventFilter(eventFilter);
+        compositeEventHandler.addEventFilter(eventFilter, eventFilterPriority);
     }
 
     /**
@@ -173,22 +180,40 @@ public class EventHandlerManager extends BasicEventDispatcher {
 
     @Override
     public final Event dispatchCapturingEvent(Event event) {
+        hasDefaultHandlers = false;
         EventType<? extends Event> eventType = event.getEventType();
         do {
-            event = dispatchCapturingEvent(eventType, event);
+            event = dispatchCapturingEvent(eventType, event, false);
             eventType = eventType.getSuperType();
         } while (eventType != null);
+
+        if (hasDefaultHandlers && !event.isConsumed()) {
+            eventType = event.getEventType();
+            do {
+                event = dispatchCapturingEvent(eventType, event, true);
+                eventType = eventType.getSuperType();
+            } while (eventType != null);
+        }
 
         return event;
     }
 
     @Override
     public final Event dispatchBubblingEvent(Event event) {
+        hasDefaultHandlers = false;
         EventType<? extends Event> eventType = event.getEventType();
         do {
-            event = dispatchBubblingEvent(eventType, event);
+            event = dispatchBubblingEvent(eventType, event, false);
             eventType = eventType.getSuperType();
         } while (eventType != null);
+
+        if (hasDefaultHandlers && !event.isConsumed()) {
+            eventType = event.getEventType();
+            do {
+                event = dispatchBubblingEvent(eventType, event, true);
+                eventType = eventType.getSuperType();
+            } while (eventType != null);
+        }
 
         return event;
     }
@@ -205,31 +230,27 @@ public class EventHandlerManager extends BasicEventDispatcher {
         return compositeEventHandler;
     }
 
-    protected Object getEventSource() {
-        return eventSource;
-    }
-
     private Event dispatchCapturingEvent(
-            final EventType<? extends Event> handlerType, Event event) {
+            final EventType<? extends Event> handlerType, Event event, final boolean dispatchDefault) {
         final CompositeEventHandler<? extends Event> compositeEventHandler =
                 eventHandlerMap.get(handlerType);
 
-        if (compositeEventHandler != null && compositeEventHandler.hasFilter()) {
+        if (compositeEventHandler != null && (dispatchDefault || compositeEventHandler.hasFilter())) {
             event = fixEventSource(event, eventSource);
-            compositeEventHandler.dispatchCapturingEvent(event);
+            hasDefaultHandlers |= compositeEventHandler.dispatchCapturingEvent(event, dispatchDefault);
         }
 
         return event;
     }
 
     private Event dispatchBubblingEvent(
-            final EventType<? extends Event> handlerType, Event event) {
+            final EventType<? extends Event> handlerType, Event event, final boolean dispatchDefault) {
         final CompositeEventHandler<? extends Event> compositeEventHandler =
                 eventHandlerMap.get(handlerType);
 
-        if (compositeEventHandler != null && compositeEventHandler.hasHandler()) {
+        if (compositeEventHandler != null && (dispatchDefault || compositeEventHandler.hasHandler())) {
             event = fixEventSource(event, eventSource);
-            compositeEventHandler.dispatchBubblingEvent(event);
+            hasDefaultHandlers |= compositeEventHandler.dispatchBubblingEvent(event, dispatchDefault);
         }
 
         return event;

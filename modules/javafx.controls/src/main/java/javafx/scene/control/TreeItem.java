@@ -39,6 +39,7 @@ import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -794,12 +795,18 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * class documentation for more details).
      */
     @Override
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler, EventHandlerPriority.PRIMARY);
     }
 
     @Override
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandlerPriority eventHandlerPriority,
+                                                        EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler, eventHandlerPriority);
+    }
+
+    @Override
+    public final <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
@@ -813,12 +820,18 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * class documentation for more details).
      */
     @Override
-    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventFilter(eventType, eventHandler);
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventFilter(eventType, eventHandler, EventHandlerPriority.PRIMARY);
     }
 
     @Override
-    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandlerPriority eventFilterPriority,
+                                                       EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventFilter(eventType, eventHandler, eventFilterPriority);
+    }
+
+    @Override
+    public final <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventFilter(eventType, eventHandler);
     }
 

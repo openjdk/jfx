@@ -320,7 +320,7 @@ public final class Scenegraph_eventHandlers_Test {
         Event.fireEvent(TEST_RL_NODE, triggeringEvent);
         assertEquals(1, sceneHandler.getCounter());
         assertEquals(1, rootNodeHandler.getCounter());
-        assertEquals(2, rlNodeHandler.getCounter());
+        assertEquals(1, rlNodeHandler.getCounter());
         TEST_RL_NODE.removeEventHandler(eventType, EVENT_CONSUMING_HANDLER);
 
         setEventHandler(TEST_R_NODE, nodeOnHandlerPropRef,
@@ -328,21 +328,21 @@ public final class Scenegraph_eventHandlers_Test {
         Event.fireEvent(TEST_RL_NODE, triggeringEvent);
         assertEquals(1, sceneHandler.getCounter());
         assertEquals(1, rootNodeHandler.getCounter());
-        assertEquals(3, rlNodeHandler.getCounter());
+        assertEquals(2, rlNodeHandler.getCounter());
         setEventHandler(TEST_R_NODE, nodeOnHandlerPropRef, null);
 
         TEST_ROOT_NODE.addEventHandler(eventType, EVENT_CONSUMING_HANDLER);
         Event.fireEvent(TEST_RL_NODE, triggeringEvent);
         assertEquals(1, sceneHandler.getCounter());
-        assertEquals(2, rootNodeHandler.getCounter());
-        assertEquals(4, rlNodeHandler.getCounter());
+        assertEquals(1, rootNodeHandler.getCounter());
+        assertEquals(3, rlNodeHandler.getCounter());
         TEST_ROOT_NODE.removeEventHandler(eventType, EVENT_CONSUMING_HANDLER);
 
         TEST_SCENE.addEventHandler(eventType, EVENT_CONSUMING_HANDLER);
         Event.fireEvent(TEST_RL_NODE, triggeringEvent);
-        assertEquals(2, sceneHandler.getCounter());
-        assertEquals(3, rootNodeHandler.getCounter());
-        assertEquals(5, rlNodeHandler.getCounter());
+        assertEquals(1, sceneHandler.getCounter());
+        assertEquals(2, rootNodeHandler.getCounter());
+        assertEquals(4, rlNodeHandler.getCounter());
         TEST_SCENE.removeEventHandler(eventType, EVENT_CONSUMING_HANDLER);
 
         setEventHandler(TEST_SCENE, sceneOnHandlerPropRef, null);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPriority;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
@@ -214,7 +215,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     protected final void consumeMouseEvents(boolean value) {
         if (value) {
-            control.addEventHandler(MouseEvent.ANY, mouseEventConsumer);
+            control.addEventHandler(MouseEvent.ANY, EventHandlerPriority.DEFAULT, mouseEventConsumer);
         } else {
             control.removeEventHandler(MouseEvent.ANY, mouseEventConsumer);
         }
