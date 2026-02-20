@@ -68,7 +68,6 @@ public final class CssNumberParser {
         int exp10 = 0; // base-10 exponent applied to significand
         int digitsConsumed = 0; // digits in the main number (excluding exponent)
         boolean seenNonZero = false;
-        boolean truncated = false;
 
         // While the next input code point is a digit, consume and append.
         while (p < end) {
@@ -83,10 +82,6 @@ public final class CssNumberParser {
                         significand = significand * 10L + d;
                         sigDigits++;
                     } else {
-                        if (d != 0) {
-                            truncated = true;
-                        }
-
                         exp10++; // truncate extra integer digits by increasing the exponent
                     }
                 }
@@ -114,8 +109,6 @@ public final class CssNumberParser {
                                 significand = significand * 10L + d;
                                 sigDigits++;
                                 exp10--; // appended a fractional digit
-                            } else if (d != 0) {
-                                truncated = true;
                             }
                         } else {
                             // Leading zeros immediately after the decimal point shift the exponent.
