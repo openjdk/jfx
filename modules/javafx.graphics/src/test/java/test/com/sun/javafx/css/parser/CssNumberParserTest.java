@@ -53,6 +53,7 @@ public class CssNumberParserTest {
         assertSameDouble(100.0, "100.0");
         assertSameDouble(0.2, "0.2");
         assertSameDouble(0.2, "0.20000000000000001110");
+        assertSameDouble(0.19999999999999998335, "0.19999999999999998335");
         assertSameDouble(9000000000000000., "9000000000000000.5");
         assertSameDouble(9000000000000002., "9000000000000001.5");
         assertSameDouble(9000000000000002., "9000000000000002.5");

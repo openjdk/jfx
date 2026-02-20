@@ -183,12 +183,8 @@ public final class CssNumberParser {
 
         double value;
 
-        // If the significand is not truncated, we can use Lemire's algorithm.
-        // If it is truncated, we use a simple fallback that doesn't guarantee correct rounding.
-        if (!truncated && exp10 >= -342 && exp10 <= 308) {
+        if (exp10 >= -342 && exp10 <= 308) {
             value = convertToNearestDouble(significand, exp10);
-        } else if (exp10 == 0) {
-            value = unsignedLongToDouble(significand);
         } else {
             double v = unsignedLongToDouble(significand);
             value = v * Math.pow(10.0, exp10);
