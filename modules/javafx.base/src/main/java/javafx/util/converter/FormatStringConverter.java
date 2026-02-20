@@ -25,81 +25,46 @@
 
 package javafx.util.converter;
 
-import java.text.*;
+import java.text.Format;
+import java.text.ParsePosition;
+import java.util.Objects;
+
 import javafx.beans.NamedArg;
-import javafx.util.StringConverter;
 
-/**
- * <p>{@link StringConverter} implementation that can use a {@link Format}
- * instance.</p>
- *
- * @param <T> the type of the object being converted
- * @since JavaFX 2.2
- */
-public class FormatStringConverter<T> extends StringConverter<T> {
+/// A `StringConverter` implementation that can use a [Format] instance to convert arbitrary types to and from a string.
+///
+/// @param <T> the type converted to/from a string
+/// @since JavaFX 2.2
+public class FormatStringConverter<T> extends BaseStringConverter<T> {
 
-    // ------------------------------------------------------ Private properties
+    private final Format format;
 
-    final Format format;
-
-    // ------------------------------------------------------------ Constructors
-
-    /**
-     * Creates a {@code FormatStringConverter} for the given {@code Format} instance.
-     * @param format the {@code Format} instance
-     */
+    /// Creates a `FormatStringConverter` for arbitrary types that uses the given `Format`.
+    ///
+    /// @param format the formatter/parser that will be used by the `toString()` and `fromString()` methods. Must not be
+    ///        `null`.
     public FormatStringConverter(@NamedArg("format") Format format) {
+        Objects.requireNonNull(format);
         this.format = format;
     }
 
-    // ------------------------------------------------------- Converter Methods
-
-    /** {@inheritDoc} */
-    @Override public T fromString(String value) {
-        // If the specified value is null or zero-length, return null
-        if (value == null) {
-            return null;
-        }
-
-        value = value.trim();
-
-        if (value.length() < 1) {
-            return null;
-        }
-
-        // Create and configure the parser to be used
-        Format _format = getFormat();
-
-        // Perform the requested parsing, and attempt to conver the output
-        // back to T
-        final ParsePosition pos = new ParsePosition(0);
-        T result = (T) _format.parseObject(value, pos);
-        if (pos.getIndex() != value.length()) {
-            throw new RuntimeException("Parsed string not according to the format");
+    @Override
+    T fromNonEmptyString(String string) {
+        var pos = new ParsePosition(0);
+        @SuppressWarnings("unchecked")
+        T result = (T) format.parseObject(string, pos);
+        if (pos.getIndex() != string.length()) {
+            throw new IllegalArgumentException("Parsed string not according to the format");
         }
         return result;
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString(T value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
-
-        // Create and configure the formatter to be used
-        Format _format = getFormat();
-
-        // Perform the requested formatting
-        return _format.format(value);
+    @Override
+    String toStringFromNonNull(T object) {
+        return format.format(object);
     }
 
-    /**
-     * <p>Return a <code>Format</code> instance to use for formatting
-     * and parsing in this {@link StringConverter}.</p>
-     *
-     * @return a {@code Format} instance for formatting and parsing in this {@link StringConverter}
-     */
+    /// {@return the `Format` instance for formatting and parsing in this `FormatStringConverter`}
     protected Format getFormat() {
         return format;
     }
