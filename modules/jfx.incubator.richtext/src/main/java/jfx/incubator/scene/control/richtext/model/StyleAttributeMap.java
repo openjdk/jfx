@@ -42,61 +42,61 @@ import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
  */
 public final class StyleAttributeMap {
     /** Paragraph background color attribute. */
-    public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, true);
+    public static final StyleAttribute<Color> BACKGROUND = StyleAttribute.paragraph("BACKGROUND", Color.class);
 
     /** Bullet point paragraph attribute. */
-    public static final StyleAttribute<String> BULLET = new StyleAttribute<>("BULLET", String.class, true);
+    public static final StyleAttribute<String> BULLET = StyleAttribute.paragraph("BULLET", String.class);
 
     /** Bold typeface text attribute. */
-    public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false);
+    public static final StyleAttribute<Boolean> BOLD = StyleAttribute.character("BOLD", Boolean.class);
 
     /** First line indent paragraph attribute, in pixels. */
-    public static final StyleAttribute<Double> FIRST_LINE_INDENT = new StyleAttribute<>("FIRST_LINE_INDENT", Double.class, true);
+    public static final StyleAttribute<Double> FIRST_LINE_INDENT = StyleAttribute.paragraph("FIRST_LINE_INDENT", Double.class);
 
     /** Font family text attribute. */
-    public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false);
+    public static final StyleAttribute<String> FONT_FAMILY = StyleAttribute.character("FONT_FAMILY", String.class);
 
     /** Font size text attribute, in pixels. */
-    public static final StyleAttribute<Double> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Double.class, false);
+    public static final StyleAttribute<Double> FONT_SIZE = StyleAttribute.character("FONT_SIZE", Double.class);
 
     /** Italic type face text attribute. */
-    public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false);
+    public static final StyleAttribute<Boolean> ITALIC = StyleAttribute.character("ITALIC", Boolean.class);
 
     /** Line spacing paragraph attribute. */
-    public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true);
+    public static final StyleAttribute<Double> LINE_SPACING = StyleAttribute.paragraph("LINE_SPACING", Double.class);
 
     /** Paragraph direction attribute.  This attribute is considered only when text wrapping is enabled. */
-    public static final StyleAttribute<ParagraphDirection> PARAGRAPH_DIRECTION = new StyleAttribute<>("PARAGRAPH_DIRECTION", ParagraphDirection.class, true);
+    public static final StyleAttribute<ParagraphDirection> PARAGRAPH_DIRECTION = StyleAttribute.paragraph("PARAGRAPH_DIRECTION", ParagraphDirection.class);
 
     /** Space above (top padding) paragraph attribute. */
-    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true);
+    public static final StyleAttribute<Double> SPACE_ABOVE = StyleAttribute.paragraph("SPACE_ABOVE", Double.class);
 
     /** Space below (bottom padding) paragraph attribute. */
-    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true);
+    public static final StyleAttribute<Double> SPACE_BELOW = StyleAttribute.paragraph("SPACE_BELOW", Double.class);
 
     /** Space to the left (left padding) paragraph attribute. */
-    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true);
+    public static final StyleAttribute<Double> SPACE_LEFT = StyleAttribute.paragraph("SPACE_LEFT", Double.class);
 
     /** Space to the right (right padding) paragraph attribute. */
-    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true);
+    public static final StyleAttribute<Double> SPACE_RIGHT = StyleAttribute.paragraph("SPACE_RIGHT", Double.class);
 
     /** Strike-through text attribute. */
-    public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false);
+    public static final StyleAttribute<Boolean> STRIKE_THROUGH = StyleAttribute.character("STRIKE_THROUGH", Boolean.class);
 
     /**
      * Tab stops paragraph attribute.
      * @since 27
      */
-    public static final StyleAttribute<TabStop[]> TAB_STOPS = new StyleAttribute<>("TAB_STOPS", TabStop[].class, true);
+    public static final StyleAttribute<TabStop[]> TAB_STOPS = StyleAttribute.paragraph("TAB_STOPS", TabStop[].class);
 
     /** Text alignment paragraph attribute. */
-    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true);
+    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = StyleAttribute.paragraph("TEXT_ALIGNMENT", TextAlignment.class);
 
     /** Text color attribute. */
-    public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false);
+    public static final StyleAttribute<Color> TEXT_COLOR = StyleAttribute.character("TEXT_COLOR", Color.class);
 
     /** Underline text attribute. */
-    public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false);
+    public static final StyleAttribute<Boolean> UNDERLINE = StyleAttribute.character("UNDERLINE", Boolean.class);
 
     /** Empty attribute set. */
     public static final StyleAttributeMap EMPTY = new StyleAttributeMap(Collections.emptyMap());
@@ -428,7 +428,7 @@ public final class StyleAttributeMap {
     private StyleAttributeMap filterAttributes(boolean isParagraph) {
         Builder b = null;
         for (StyleAttribute<?> a : attributes.keySet()) {
-            if (a.isParagraphAttribute() == isParagraph) {
+            if (StyleAttributeMapHelper.isAcceptable(a, isParagraph)) {
                 if (b == null) {
                     b = StyleAttributeMap.builder();
                 }

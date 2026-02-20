@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
+import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
 import jfx.incubator.scene.control.richtext.model.ParagraphDirection;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
@@ -173,7 +174,7 @@ public class TestRichTextFormatHandler {
 
     private static void checkParagraphType(StyleAttributeMap attrs, boolean forParagraph) {
         for (StyleAttribute a : attrs.getAttributes()) {
-            Assertions.assertEquals(forParagraph, a.isParagraphAttribute(), "wrong isParagraph: " + a);
+            Assertions.assertTrue(StyleAttributeMapHelper.isAcceptable(a, forParagraph), "wrong type: " + a);
         }
     }
 

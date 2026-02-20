@@ -542,13 +542,14 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     } else {
                         Object v = h.read(args);
                         StyleAttribute a = h.getStyleAttribute();
-                        if (a.isParagraphAttribute() != forParagraph) {
-                            throw err("paragraph type mismatch");
+                        if (StyleAttributeMapHelper.isAcceptable(a, forParagraph)) {
+                            if (b == null) {
+                                b = StyleAttributeMap.builder();
+                            }
+                            b.set(a, v);
+                        } else {
+                            log("ignoring attribute: " + name);
                         }
-                        if (b == null) {
-                            b = StyleAttributeMap.builder();
-                        }
-                        b.set(a, v);
                     }
                     index = ix + 1;
                 } else {
