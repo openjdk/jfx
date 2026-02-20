@@ -791,9 +791,9 @@
         Users are cautioned that this will be fixed in a future release. Adherence to the W3C standard is strongly advised.
     </p>
     <h4>@font-face</h4>
-    <p>Since JavaFX 8, the implementation partially supports the CSS3 syntax to load a font from a URL using the
+    <p>Since JavaFX 8, the implementation partially supports the <label for="font-face-example-1">CSS3 syntax to load a font from a URL</label> using the
     <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:</p>
-    <textarea rows="8" cols="132">
+    <textarea id="font-face-example-1" readonly rows="8" cols="132">
 
      &#64;font-face {
         font-family: 'sample';
@@ -804,8 +804,8 @@
     </textarea>
     <p>This allows public resources for fonts to be used in a JavaFX application. For example, assume the URL
     "http://font.samples/web?family=samples" returns the @font&#8209;face rule given above. Then the
-        following code shows how the sample font could be used in a JavaFX application.</p>
-    <textarea rows="20" cols="132">
+        following code shows <label for="font-face-example-2">how the sample font could be used in a JavaFX application.</label></p>
+    <textarea id="font-face-example-2" readonly rows="20" cols="132">
 
     import javafx.application.Application;
     import javafx.scene.Scene;
@@ -1268,9 +1268,9 @@
     </table>
     <p>Note that for inline styles, leading dot-segments (e.g. '..' or '.') do resolve since the path is always
     anchored at the root of the classpath.</p>
-    <p>As an example, the code snippet below creates a scene filled with a fictional 'Duke.png' image, located in an
-    'image' directory:</p>
-    <textarea rows="9" cols="132">
+    <p>As an example, <label for="uri-example-1">the code snippet below creates a scene filled with a fictional 'Duke.png' image, located in an
+    'image' directory:</label></p>
+    <textarea id="uri-example-1" readonly rows="9" cols="132">
 
     &#64;Override public void start(Stage stage) {
         StackPane root = new StackPane();
