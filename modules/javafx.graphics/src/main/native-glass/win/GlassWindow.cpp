@@ -442,25 +442,26 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             if (m_minSize.x >= 0 || m_minSize.y >= 0 ||
                     m_maxSize.x >= 0 || m_maxSize.y >= 0)
             {
-                int extraW = 0, extraH = 0;
-                RECT shadowBounds, extBounds;
-                if (GetWindowRect(GetHWND(), &shadowBounds) && GetExtendedFrameBounds(GetHWND(), &extBounds)) {
-                    extraW = (extBounds.left - shadowBounds.left) + (shadowBounds.right - extBounds.right);
-                    extraH = (extBounds.top - shadowBounds.top) + (shadowBounds.bottom - extBounds.bottom);
+                FrameBounds bounds(GetHWND());
+                if (!bounds) {
+                    return 0;
                 }
+
+                int extInsetsWidth = bounds.extInsets.left + bounds.extInsets.right;
+                int extInsetsHeight = bounds.extInsets.top + bounds.extInsets.bottom;
 
                 MINMAXINFO *info = (MINMAXINFO *)lParam;
                 if (m_minSize.x >= 0) {
-                    info->ptMinTrackSize.x = m_minSize.x + extraW;
+                    info->ptMinTrackSize.x = m_minSize.x + extInsetsWidth;
                 }
                 if (m_minSize.y >= 0) {
-                    info->ptMinTrackSize.y = m_minSize.y + extraH;
+                    info->ptMinTrackSize.y = m_minSize.y + extInsetsHeight;
                 }
                 if (m_maxSize.x >= 0) {
-                    info->ptMaxTrackSize.x = m_maxSize.x + extraW;
+                    info->ptMaxTrackSize.x = m_maxSize.x + extInsetsWidth;
                 }
                 if (m_maxSize.y >= 0) {
-                    info->ptMaxTrackSize.y = m_maxSize.y + extraH;
+                    info->ptMaxTrackSize.y = m_maxSize.y + extInsetsHeight;
                 }
                 return 0;
             }
@@ -836,37 +837,29 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
         anchor.x = anchor.y = 0;
     }
 
-    RECT wBounds = {};
-    ::GetWindowRect(hWnd, &wBounds);
+    FrameBounds bounds(hWnd);
+    if (!bounds) {
+        return;
+    }
 
     if (noMove || noSize) {
         if (noMove) {
-            pWinPos->x = wBounds.left;
-            pWinPos->y = wBounds.top;
+            pWinPos->x = bounds.window.left;
+            pWinPos->y = bounds.window.top;
         }
         if (noSize) {
-            pWinPos->cx = wBounds.right - wBounds.left;
-            pWinPos->cy = wBounds.bottom - wBounds.top;
+            pWinPos->cx = bounds.window.right - bounds.window.left;
+            pWinPos->cy = bounds.window.bottom - bounds.window.top;
         }
     }
 
-    // pWinPos holds the full window rect, but we need to convert it to the visible frame rect
+    // pWinPos holds the full window rect, but we need to convert it to the extended frame rect
     // because that's what we pass to JavaFX in the next JNI upcall. In JavaFX, we always reason
     // about the visual bounds of the window, not including the invisible resize/shadow areas.
-    RECT extBounds = {};
-    ::GetExtendedFrameBounds(hWnd, &extBounds);
-
-    RECT extInsets = {
-        extBounds.left - wBounds.left,
-        extBounds.top - wBounds.top,
-        wBounds.right - extBounds.right,
-        wBounds.bottom - extBounds.bottom
-    };
-
-    pWinPos->x += extInsets.left;
-    pWinPos->y += extInsets.top;
-    pWinPos->cx -= extInsets.left + extInsets.right;
-    pWinPos->cy -= extInsets.top + extInsets.bottom;
+    pWinPos->x += bounds.extInsets.left;
+    pWinPos->y += bounds.extInsets.top;
+    pWinPos->cx -= bounds.extInsets.left + bounds.extInsets.right;
+    pWinPos->cy -= bounds.extInsets.top + bounds.extInsets.bottom;
 
     UpdateInsets();
 
@@ -915,12 +908,12 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
         env->DeleteLocalRef(jret);
     }
 
-    // pWinPos currently holds the visible frame rect; we need to convert it back to the
+    // pWinPos currently holds the extended frame rect; we need to convert it back to the
     // full window rect because that's what Windows expects in the WINDOWPOS structure.
-    pWinPos->x -= extInsets.left;
-    pWinPos->y -= extInsets.top;
-    pWinPos->cx += extInsets.left + extInsets.right;
-    pWinPos->cy += extInsets.top + extInsets.bottom;;
+    pWinPos->x -= bounds.extInsets.left;
+    pWinPos->y -= bounds.extInsets.top;
+    pWinPos->cx += bounds.extInsets.left + bounds.extInsets.right;
+    pWinPos->cy += bounds.extInsets.top + bounds.extInsets.bottom;;
 }
 
 void GlassWindow::HandleMoveEvent()
@@ -1995,22 +1988,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
         pWindow->UpdateInsets();
         RECT is = pWindow->GetInsets();
 
-        RECT shadowBounds = {};
-        if (!GetWindowRect(hWnd, &shadowBounds)) {
+        FrameBounds bounds(hWnd);
+        if (!bounds) {
             return;
         }
 
-        RECT extBounds = {};
-        if (!GetExtendedFrameBounds(hWnd, &extBounds)) {
-            return;
-        }
-
-        int newX = jbool_to_bool(xSet) ? x : extBounds.left;
-        int newY = jbool_to_bool(ySet) ? y : extBounds.top;
+        int newX = jbool_to_bool(xSet) ? x : bounds.extended.left;
+        int newY = jbool_to_bool(ySet) ? y : bounds.extended.top;
         int newW = w > 0 ? w :
-                       cw > 0 ? cw + is.right + is.left : extBounds.right - extBounds.left;
+                       cw > 0 ? cw + is.right + is.left : bounds.extended.right - bounds.extended.left;
         int newH = h > 0 ? h :
-                       ch > 0 ? ch + is.bottom + is.top : extBounds.bottom - extBounds.top;
+                       ch > 0 ? ch + is.bottom + is.top : bounds.extended.bottom - bounds.extended.top;
 
         POINT minSize = pWindow->getMinSize();
         POINT maxSize = pWindow->getMaxSize();
@@ -2019,14 +2007,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
         if (maxSize.x >= 0) newW = min(newW, maxSize.x);
         if (maxSize.y >= 0) newH = min(newH, maxSize.y);
 
-        int shadowL = extBounds.left - shadowBounds.left;
-        int shadowR = shadowBounds.right - extBounds.right;
-        int shadowT = extBounds.top - shadowBounds.top;
-        int shadowB = shadowBounds.bottom - extBounds.bottom;
-        newX = newX - shadowL;
-        newY = newY - shadowT;
-        newW = newW + shadowL + shadowR;
-        newH = newH + shadowT + shadowB;
+        newX = newX - bounds.extInsets.left;
+        newY = newY - bounds.extInsets.top;
+        newW = newW + bounds.extInsets.left + bounds.extInsets.right;
+        newH = newH + bounds.extInsets.top + bounds.extInsets.bottom;
 
         if (xSet || ySet) {
             ::SetWindowPos(hWnd, NULL, newX, newY, newW, newH,

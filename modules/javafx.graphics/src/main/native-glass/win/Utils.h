@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,6 +86,19 @@ jboolean CheckAndClearException(JNIEnv *env);
 jint GetModifiers();
 
 BOOL GetExtendedFrameBounds(HWND, RECT*);
+
+class FrameBounds final {
+public:
+    RECT window;    // GetWindowRect
+    RECT extended;  // GetExtendedFrameBounds
+    RECT extInsets; // Per-side insets of GetExtendedFrameBounds compared to GetWindowRect
+
+    FrameBounds(HWND);
+    bool operator !() const;
+
+private:
+    bool valid;
+};
 
 class JString {
 public:
