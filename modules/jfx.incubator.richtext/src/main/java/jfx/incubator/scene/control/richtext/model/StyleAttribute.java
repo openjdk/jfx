@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,23 +34,72 @@ import java.util.Objects;
  * @see StyleAttributeMap
  * @since 24
  */
-public final class StyleAttribute<T> {
+public abstract class StyleAttribute<T> {
     private final String name;
     private final Class<T> type;
-    private final boolean isParagraph;
 
     /**
      * Constructs the style attribute.
      *
      * @param name the attribute name (cannot be null)
-     * @param type the attribute type
-     * @param isParagraph specifies a paragraph attribute (true), or a character attribute (false)
+     * @param type the attribute type (cannot be null)
      */
-    public StyleAttribute(String name, Class<T> type, boolean isParagraph) {
+    private StyleAttribute(String name, Class<T> type) {
         Objects.requireNonNull(name, "name cannot be null");
+        Objects.requireNonNull(type, "type cannot be null");
         this.name = name;
         this.type = type;
-        this.isParagraph = isParagraph;
+    }
+
+    /**
+     * Creates a character attribute.
+     * @param <P> the attribute value type
+     * @param name the attribute name
+     * @param type the attribute value type
+     * @return the new character attribute instance
+     * @since 27
+     */
+    public static <P> StyleAttribute<P> character(String name, Class<P> type) {
+        return new StyleAttribute<P>(name, type) {
+            @Override
+            public boolean isCharacterAttribute() {
+                return true;
+            }
+        };
+    }
+
+    /**
+     * Creates a document attribute.
+     * @param <P> the attribute value type
+     * @param name the attribute name
+     * @param type the attribute value type
+     * @return the new document attribute instance
+     * @since 27
+     */
+    public static <P> StyleAttribute<P> document(String name, Class<P> type) {
+        return new StyleAttribute<P>(name, type) {
+            @Override
+            public boolean isDocumentAttribute() {
+                return true;
+            }
+        };
+    }
+
+    /**
+     * Creates a paragraph attribute.
+     * @param <P> the attribute value type
+     * @param name the attribute name
+     * @param type the attribute value type
+     * @return the new paragraph attribute instance
+     * @since 27
+     */
+    public static <P> StyleAttribute<P> paragraph(String name, Class<P> type) {
+        return new StyleAttribute<P>(name, type) {
+            @Override
+            public boolean isParagraphAttribute() {
+                return true;
+            }
+        };
     }
 
     /**
@@ -72,12 +121,29 @@ public final class StyleAttribute<T> {
     }
 
     /**
-     * Returns true for a paragraph attribute, false for a character attribute.
-     *
-     * @return true for a paragraph attribute, false for a character attribute
+     * Returns true if this instance is a character attribute.
+     * @return true for a character attribute
+     * @since 27
+     */
+    public boolean isCharacterAttribute() {
+        return false;
+    }
+
+    /**
+     * Returns true if this instance is a document attribute.
+     * @return true for a document attribute
+     * @since 27
+     */
+    public boolean isDocumentAttribute() {
+        return false;
+    }
+
+    /**
+     * Returns true if this instance is a paragraph attribute.
+     * @return true for a paragraph attribute
      */
     public boolean isParagraphAttribute() {
-        return isParagraph;
+        return false;
     }
 
     @Override
@@ -85,5 +151,26 @@ public final class StyleAttribute<T> {
         return name;
     }
 
-    // TODO maybe it should override equals() and hashCode()
+    @Override
+    public boolean equals(Object x) {
+        if (x == this) {
+            return true;
+        } else if (x instanceof StyleAttribute a) {
+            return
+                (isCharacterAttribute() == a.isCharacterAttribute()) &&
+                (isDocumentAttribute() == a.isDocumentAttribute()) &&
+                (isParagraphAttribute() == a.isParagraphAttribute()) &&
+                (type == a.type) &&
+                name.equals(a.name);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int h = getClass().hashCode();
+        h = 31 * h + name.hashCode();
+        h = 31 * h + type.hashCode();
+        return h;
+    }
 }

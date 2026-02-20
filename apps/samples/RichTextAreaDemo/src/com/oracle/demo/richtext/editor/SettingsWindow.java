@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,7 +32,9 @@
 
 package com.oracle.demo.richtext.editor;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.Property;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
@@ -45,6 +47,8 @@ import com.oracle.demo.richtext.util.FX;
 /**
  * Rich Editor Demo Settings window.
  *
+ * NOTE: the settings are not persisted due to limitations of FxSettings in this project.
+ *
  * @author Andy Goryachev
  */
 public class SettingsWindow extends Stage {
@@ -56,17 +60,16 @@ public class SettingsWindow extends Stage {
         initOwner(parent);
 
         op = new OptionPane();
+        // navigation
         op.section("Navigation");
-        op.option("End:", enumOption(EndKey.class, Settings.endKey));
-//        op.option("Home:", new ComboBox());
-//        op.option("Next Word:", new ComboBox());
-//        op.option("Previous Word:", new ComboBox());
+        op.option("End Key Function:", enumOption(EndKey.class, Settings.endKey));
+        // view
+        op.section("View");
+        op.option("Content Padding:", insetsOption(Settings.contentPadding, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100));
 
-        Scene scene = new Scene(op);
+        Scene scene = new Scene(op, 700, 500);
 
         setScene(scene);
-        setWidth(700);
-        setHeight(500);
         setTitle("Settings");
         centerOnScreen();
     }
@@ -81,5 +84,32 @@ public class SettingsWindow extends Stage {
         b.getSelectionModel().select(p.getValue());
         p.bind(b.getSelectionModel().selectedItemProperty());
         return b;
+    }
+
+    private static Node insetsOption(Property<Insets> p, int ... values) {
+        ComboBox<Integer> b = new ComboBox<>();
+        for (int v : values) {
+            b.getItems().add(v);
+        }
+        Integer initialValue = insetsToInt(p.getValue());
+        b.getSelectionModel().select(initialValue);
+        p.bind(Bindings.createObjectBinding(
+            () -> {
+                return intToInsets(b.getSelectionModel().getSelectedItem());
+            },
+            b.getSelectionModel().selectedItemProperty()
+        ));
+        return b;
+    }
+
+    private static Integer insetsToInt(Insets v) {
+        return v == null ? 0 : (int)v.getTop();
+    }
+
+    private static Insets intToInsets(Integer v) {
+        if (v == null) {
+            return Insets.EMPTY;
+        }
+        return new Insets(v);
     }
 }

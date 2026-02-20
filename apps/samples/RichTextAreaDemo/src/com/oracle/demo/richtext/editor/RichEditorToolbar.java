@@ -41,8 +41,11 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import com.oracle.demo.richtext.common.TextStyle;
 import com.oracle.demo.richtext.util.FX;
+import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
@@ -63,6 +66,7 @@ public class RichEditorToolbar extends BorderPane {
     public final Button paragraphButton;
     public final ToggleButton lineNumbers;
     public final ToggleButton wrapText;
+    private Ruler ruler;
 
     public RichEditorToolbar() {
         FX.name(this, "RichEditorToolbar");
@@ -150,5 +154,27 @@ public class RichEditorToolbar extends BorderPane {
         FX.select(fontFamily, a.getFontFamily());
         FX.select(fontSize, a.getFontSize());
         textColor.setValue(a.getTextColor());
+
+        if (ruler != null) {
+            TabStopPolicy tp = ruler.getTabStopPolicy();
+            if (tp != null) {
+                TabStop[] ts = a.get(StyleAttributeMap.TAB_STOPS);
+                if (ts == null) {
+                    tp.tabStops().clear();
+                } else {
+                    tp.tabStops().setAll(ts);
+                }
+            }
+        }
+    }
+
+    public Ruler setRulerFor(RichTextArea editor) {
+        if (editor == null) {
+            ruler = null;
+        } else {
+            ruler = new Ruler(editor);
+        }
+        setBottom(ruler);
+        return ruler;
     }
 }

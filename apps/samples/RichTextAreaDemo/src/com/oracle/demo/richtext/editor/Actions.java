@@ -43,6 +43,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
@@ -52,6 +53,8 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
+import javafx.scene.text.TabStopPolicy;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import com.oracle.demo.richtext.common.Styles;
@@ -111,9 +114,11 @@ public class Actions {
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
+    private final SimpleBooleanProperty rulerVisible = new SimpleBooleanProperty(true);
 
     private final RichEditorToolbar toolbar;
     private final RichTextArea editor;
+    private final TabStopPolicy tabPolicy = new TabStopPolicy();
 
     public Actions(RichEditorToolbar tb, RichTextArea ed) {
         this.toolbar = tb;
@@ -212,8 +217,11 @@ public class Actions {
             toolbar.setTextStyle(c);
         });
 
+        rulerVisible.subscribe(this::updateRuler);
+
         // settings
         Settings.endKey.subscribe(this::setEndKey);
+        Settings.contentPadding.bindBidirectional(editor.contentPaddingProperty());
 
         // defaults
         highlightCurrentLine.setSelected(true, false);
@@ -253,11 +261,13 @@ public class Actions {
         FX.item(m, "Underline", underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
         FX.separator(m);
         FX.item(m, "Paragraph...", paragraphStyle);
+        FX.item(m, "Tabs...", this::openTabs);
 
         // view
         FX.menu(m, "View");
         FX.checkItem(m, "Highlight Current Paragraph", highlightCurrentLine);
         FX.checkItem(m, "Show Line Numbers", lineNumbers);
+        FX.checkItem(m, "Show Ruler", rulerVisible);
         FX.checkItem(m, "Wrap Text", wrapText);
         // TODO line spacing
 
@@ -286,6 +296,14 @@ public class Actions {
         FX.separator(m);
         // TODO Font...
         FX.item(m, "Paragraph...", paragraphStyle);
+        return m;
+    }
+
+    private ContextMenu createRulerPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Clear Tabs", this::clearTabs);
+        FX.separator(m);
+        FX.item(m, "Hide Ruler", this::hideRuler);
         return m;
     }
 
@@ -717,5 +735,42 @@ public class Actions {
     private void openSettings() {
         Window w = FX.getParentWindow(editor);
         new SettingsWindow(w).show();
+    }
+
+    private void openTabs() {
+        new TabsDialog(editor).show();
+    }
+
+    private void updateRuler(boolean on) {
+        Ruler r = toolbar.setRulerFor(on ? editor : null);
+        if (r != null) {
+            r.setOnChange(this::handleTabStopChange);
+            r.setTabStopPolicy(tabPolicy);
+            FX.setPopupMenu(r, this::createRulerPopupMenu);
+        }
+    }
+
+    private void handleTabStopChange() {
+        // TODO update default tabs if changed
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            TabStop[] ts = tabPolicy.tabStops().toArray(TabStop[]::new);
+            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, ts).build();
+            int min = sel.getMin().index();
+            int max = sel.getMax().index();
+            for (int ix = min; ix <= max; ix++) {
+                TextPos p = TextPos.ofLeading(ix, 0);
+                editor.applyStyle(p, p, a);
+            }
+        }
+    }
+
+    private void clearTabs() {
+        tabPolicy.tabStops().clear();
+        handleTabStopChange();
+    }
+
+    private void hideRuler() {
+        rulerVisible.set(false);
     }
 }

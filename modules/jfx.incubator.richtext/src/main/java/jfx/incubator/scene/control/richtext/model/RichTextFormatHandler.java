@@ -38,6 +38,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStop;
 import javafx.scene.text.TextAlignment;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
@@ -117,6 +118,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final StringConverter<ParagraphDirection> DIRECTION_CONVERTER = Converters.paragraphDirectionConverter();
     private static final DoubleStringConverter DOUBLE_CONVERTER = new DoubleStringConverter();
     private static final StringConverter<String> STRING_CONVERTER = Converters.stringConverter();
+    private static final StringConverter<TabStop[]> TAB_STOPS_CONVERTER = Converters.tabStopsConverter();
     private static final StringConverter<TextAlignment> TEXT_ALIGNMENT_CONVERTER = Converters.textAlignmentConverter();
     // String -> Handler
     // StyleAttribute -> Handler
@@ -143,6 +145,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
         addHandler(StyleAttributeMap.SPACE_LEFT, "spaceLeft", DOUBLE_CONVERTER);
         addHandler(StyleAttributeMap.SPACE_RIGHT, "spaceRight", DOUBLE_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.STRIKE_THROUGH, "ss");
+        addHandler(StyleAttributeMap.TAB_STOPS, "tabs", TAB_STOPS_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_ALIGNMENT, "alignment", TEXT_ALIGNMENT_CONVERTER);
         addHandler(StyleAttributeMap.TEXT_COLOR, "tc", COLOR_CONVERTER);
         addHandlerBoolean(StyleAttributeMap.UNDERLINE, "u");
@@ -539,13 +542,14 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     } else {
                         Object v = h.read(args);
                         StyleAttribute a = h.getStyleAttribute();
-                        if (a.isParagraphAttribute() != forParagraph) {
-                            throw err("paragraph type mismatch");
+                        if (StyleAttributeMapHelper.isAcceptable(a, forParagraph)) {
+                            if (b == null) {
+                                b = StyleAttributeMap.builder();
+                            }
+                            b.set(a, v);
+                        } else {
+                            log("ignoring attribute: " + name);
                         }
-                        if (b == null) {
-                            b = StyleAttributeMap.builder();
-                        }
-                        b.set(a, v);
                     }
                     index = ix + 1;
                 } else {

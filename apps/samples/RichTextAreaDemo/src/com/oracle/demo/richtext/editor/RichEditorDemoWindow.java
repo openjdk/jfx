@@ -36,18 +36,15 @@ import java.io.File;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuBar;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import com.oracle.demo.richtext.util.FX;
 import jfx.incubator.scene.control.input.KeyBinding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.RichTextModel;
 
 /**
  * Rich Editor Demo window.
@@ -61,7 +58,9 @@ public class RichEditorDemoWindow extends Stage {
     public final Label status;
 
     public RichEditorDemoWindow() {
-        editor = new RichTextArea();
+        RichTextModel m = new RichTextModel();
+        m.setDefaultTabStops(70);
+        editor = new RichTextArea(m);
         toolbar = new RichEditorToolbar();
 
         // example of a custom function
