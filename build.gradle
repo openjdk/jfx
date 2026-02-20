@@ -1714,7 +1714,9 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
     def generateShaders = project.task("generate${name}Shaders",
             dependsOn: compileCompilers) {
         doFirst {
-            mkdir "$project.buildDir/gensrc/mtl-headers"
+            if (IS_MAC) {
+                mkdir "$project.buildDir/gensrc/mtl-headers"
+            }
         }
         description = "Generate $name shaders from JSL"
         def sourceDir = project.file("src/main/jsl-$lowerName")
@@ -2616,7 +2618,16 @@ project(":graphics") {
                 jvmArgs += "--module-path=$modulePath"
                 jvmArgs += "--add-modules=javafx.graphics"
                 jvmArgs += decoraAddExports
-                args += ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
+                args += ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect"]
+                if (IS_WINDOWS) {
+                    args += [ "-d3d" ]
+                } else if (IS_MAC) {
+                    args += [ "-mtl" ]
+                }
+                if (IS_LINUX | IS_INCLUDE_ES2) {
+                    args += [ "-es2" ]
+                }
+                args += ["$settings.outputs", "$settings.fileName"]
             }
         }
     }
@@ -2707,7 +2718,16 @@ project(":graphics") {
                 classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
                     project.projectDir.path + "/src/main/jsl-prism") // for the .stg
-                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-mtl", "-name", "$file"]
+                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism"]
+                if (IS_WINDOWS) {
+                    args += [ "-d3d" ]
+                } else if (IS_MAC) {
+                    args += [ "-mtl" ]
+                }
+                if (IS_LINUX | IS_INCLUDE_ES2) {
+                    args += [ "-es2" ]
+                }
+                args += ["-name", "$file"]
             }
         }
     }
@@ -2762,7 +2782,7 @@ project(":graphics") {
 
     task initShaderDirs() {
         doLast {
-            // Create empty hlsl dirs on all platforms for IDE support
+            // Create empty hlsl dirs on all platforms for IDE (Eclipse) support
             file("$project.buildDir/hlsl/Decora").mkdirs()
             file("$project.buildDir/hlsl/Prism").mkdirs()
             file("$project.buildDir/gensrc/jsl-prism").mkdirs()
