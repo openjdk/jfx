@@ -1708,7 +1708,7 @@ final class CssStyleHelper {
                     LOGGER.fine("styles = " + getMatchingStyles(styleable, cssMetaData));
                 }
                 return SKIP;
-            } catch (IllegalArgumentException iae) {
+            } catch (IllegalArgumentException | NullPointerException iae) {
                 final String msg = formatExceptionMessage(styleable, cssMetaData, style.getStyle(), iae);
                 List<CssParser.ParseError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
@@ -1718,20 +1718,6 @@ final class CssStyleHelper {
                 if (LOGGER.isLoggable(Level.WARNING)) {
                     LOGGER.warning(msg);
                     LOGGER.fine("caught: ", iae);
-                    LOGGER.fine("styleable = " + cssMetaData);
-                    LOGGER.fine("node = " + styleable.toString());
-                }
-                return SKIP;
-            } catch (NullPointerException npe) {
-                final String msg = formatExceptionMessage(styleable, cssMetaData, style.getStyle(), npe);
-                List<CssParser.ParseError> errors = null;
-                if ((errors = StyleManager.getErrors()) != null) {
-                    final CssParser.ParseError error = new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg);
-                    errors.add(error);
-                }
-                if (LOGGER.isLoggable(Level.WARNING)) {
-                    LOGGER.warning(msg);
-                    LOGGER.fine("caught: ", npe);
                     LOGGER.fine("styleable = " + cssMetaData);
                     LOGGER.fine("node = " + styleable.toString());
                 }
