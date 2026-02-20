@@ -226,7 +226,7 @@
             }
 
             /* Color Table Styles */
-            div.colorsquare { 
+            div.colorsquare {
                 display:inline-block;
                 width:20em;
                 margin: 3px 3px
@@ -1901,28 +1901,13 @@
     <p><strong>Cubic Bézier Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;cubic-bezier-easing-function&gt;</span><br></p>
     <p class="grammar">ease | ease-in | ease-out | ease-in-out | cubic-bezier(<a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>)</p>
     <p>The values have the following meaning:</p>
-    <table style="margin-left: 40px;">
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">ease</span></td>
-            <td>equivalent to <span class="grammar">cubic-bezier(0.25, 0.1, 0.25, 1)</span></td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">ease-in</span></td>
-            <td>equivalent to <span class="grammar">cubic-bezier(0.42, 0, 1, 1)</span></td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">ease-out</span></td>
-            <td>equivalent to <span class="grammar">cubic-bezier(0, 0, 0.58, 1)</span></td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">ease-in-out</span></td>
-            <td>equivalent to <span class="grammar">cubic-bezier(0.42, 0, 0.58, 1)</span></td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">cubic-bezier</span></td>
-            <td>defines the control points P1 and P2 using four real numbers: (x<sub>P1</sub>, y<sub>P1</sub>, x<sub>P2</sub>, y<sub>P2</sub>)</td>
-        </tr>
-    </table>
+    <ul>
+        <li><strong>ease</strong>: equivalent to <span class="grammar">cubic-bezier(0.25, 0.1, 0.25, 1)</span></li>
+        <li><strong>ease-in</strong>: equivalent to <span class="grammar">cubic-bezier(0.42, 0, 1, 1)</span></li>
+        <li><strong>ease-out</strong>: equivalent to <span class="grammar">cubic-bezier(0, 0, 0.58, 1)</span></li>
+        <li><strong>ease-in-out</strong>: equivalent to <span class="grammar">cubic-bezier(0.42, 0, 0.58, 1)</span></li>
+        <li><strong>cubic-bezier</strong>: defines the control points P1 and P2 using four real numbers: (x<sub>P1</sub>, y<sub>P1</sub>, x<sub>P2</sub>, y<sub>P2</sub>)</li>
+    </ul>
     <p>A cubic Bézier function is defined by four control points, where P0 is fixed at (0,0) and P3 is fixed at (1,1).
        P1 and P2 are restricted to the interval [0,1] on the input progress axis:</p>
     <figure style="display: inline-block">
@@ -1932,49 +1917,25 @@
     <p class="grammar">step-start | step-end | steps(<a href="#typenumber" class="typelink">&lt;integer&gt;</a>[,&lt;step-position&gt;]?)</p>
     <p class="grammar">where &lt;step-position&gt; = jump-start | jump-end | jump-none | jump-both | start | end</p>
     <p>The values have the following meaning:</p>
-    <table style="margin-left: 40px;">
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">step-start</span></td>
-            <td>equivalent to <span class="grammar">steps(1, start)</span></td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">step-end</span></td>
-            <td>equivalent to <span class="grammar">steps(1, end)</span></td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">steps</span></td>
-            <td>defines a step function with <a href="#typenumber" class="typelink">&lt;integer&gt;</a> intervals
-                and an optional <span class="grammar">&lt;step-position&gt;</span>;<br>if omitted,
-                <span class="grammar">end</span> is implied</span>
-            </td>
-        </tr>
-        <tr><td><br></td></tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-start</span></td>
-            <td>the interval starts with a rise point when the input progress value is 0</td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-end</span></td>
-            <td>the interval ends with a rise point when the input progress value is 1</td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-none</span></td>
-            <td>all rise points are within the open interval (0..1)</td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-both</span></td>
-            <td>the interval starts with a rise point when the input progress value is 0,
-                and ends with a rise point when the input progress value is 1</td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">start</span></td>
-            <td>equivalent to <span class="grammar">jump-start</span></td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">end</span></td>
-            <td>equivalent to <span class="grammar">jump-end</span></td>
-        </tr>
-    </table>
+    <ul>
+        <li><strong>step-start</strong>: equivalent to <span class="grammar">steps(1, start)</span></li>
+        <li><strong>step-end</strong>: equivalent to <span class="grammar">steps(1, end)</span></li>
+        <li>
+            <strong>steps</strong>: defines a step function with
+            <a href="#typenumber" class="typelink">&lt;integer&gt;</a> intervals
+            and an optional <span class="grammar">&lt;step-position&gt;</span>;<br>if omitted,
+            <span class="grammar">end</span> is implied</span>
+        </li>
+        <li><strong>jump-start</strong>: the interval starts with a rise point when the input progress value is 0</li>
+        <li><strong>jump-end</strong>: the interval ends with a rise point when the input progress value is 1</li>
+        <li><strong>jump-none</strong>: all rise points are within the open interval (0..1)</li>
+        <li><strong>jump-both</strong>:
+            the interval starts with a rise point when the input progress value is 0,
+            and ends with a rise point when the input progress value is 1
+        </li>
+        <li><strong>start</strong>: equivalent to <span class="grammar">jump-start</span></li>
+        <li><strong>end</strong>: equivalent to <span class="grammar">jump-end</span></li>
+    </ul>
     <p>Examples of step easing functions:</p>
     <figure style="display: inline-block">
         <img src="easing-stepstart.svg" width="200" alt="jump-start easing function">
@@ -1995,20 +1956,11 @@
     <p><strong>SMIL 3.0 Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;fx-easing-function&gt;</span><br></p>
     <p class="grammar">-fx-ease-in | -fx-ease-out | -fx-ease-both</p>
     <p>The values have the following meaning:</p>
-    <table style="margin-left: 40px;">
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-in</span></td>
-            <td>SMIL 3.0 ease-in function with an acceleration factor of 0.2</td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-out</span></td>
-            <td>SMIL 3.0 ease-out function with a deceleration factor of 0.2</td>
-        </tr>
-        <tr>
-            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-both</span></td>
-            <td>SMIL 3.0 ease-in/out function with an acceleration and decelaration factor of 0.2</td>
-        </tr>
-    </table>
+    <ul>
+        <li><strong>-fx-ease-in</strong>: SMIL 3.0 ease-in function with an acceleration factor of 0.2</li>
+        <li><strong>-fx-ease-out</strong>: SMIL 3.0 ease-out function with a deceleration factor of 0.2</li>
+        <li><strong>-fx-ease-both</strong>: SMIL 3.0 ease-in/out function with an acceleration and decelaration factor of 0.2</li>
+    </ul>
     <p>These functions are provided for compatibility with <code>javafx.animation.Interpolator</code>
        implementations of SMIL 3.0 cubic bezier easing functions.</p>
 
@@ -6658,7 +6610,7 @@
             <th scope="col">Default</th>
             <th scope="col">Comments</th>
           </tr>
-        </thead>   
+        </thead>
         <tbody>
           <tr>
             <th class="propertyname" scope="row">-fx-caret-blink-period</th>
@@ -6770,7 +6722,7 @@
             <th scope="col">Default</th>
             <th scope="col">Comments</th>
           </tr>
-        </thead>   
+        </thead>
         <tbody>
           <tr>
             <th class="propertyname" scope="row">-fx-font</th>
