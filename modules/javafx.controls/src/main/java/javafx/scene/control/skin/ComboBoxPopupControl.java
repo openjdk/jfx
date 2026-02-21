@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
@@ -34,6 +35,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Skin;
@@ -467,6 +469,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (popupContent instanceof Region) {
             // snap to pixel
             final Region r = (Region) popupContent;
+            r.setMinSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+            r.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
 
             // 0 is used here for the width due to JDK-8095712
             double prefHeight = snapSizeY(r.prefHeight(0));
@@ -580,7 +584,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final Bounds b = popupContent.getLayoutBounds();
         final double currentWidth = b.getWidth();
         final double currentHeight = b.getHeight();
-        final double newWidth  = currentWidth < minWidth ? minWidth : currentWidth;
+        final double newWidth = currentWidth < minWidth ? minWidth : currentWidth;
         final double newHeight = currentHeight < minHeight ? minHeight : currentHeight;
 
         if (newWidth != currentWidth || newHeight != currentHeight) {
@@ -592,6 +596,23 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 ((Region)popupContent).setPrefSize(newWidth, newHeight);
             }
         }
+    }
+
+    final void recomputePopupLayout() {
+        if (popup == null || !popup.isShowing()) {
+            popupNeedsReconfiguring = true;
+            return;
+        }
+        Platform.runLater(() -> {
+            final Node popupContent = getPopupContent();
+            if (popupContent instanceof Parent p) {
+                p.applyCss();
+                p.layout();
+            }
+
+            sizePopup(false);
+            reconfigurePopup();
+        });
     }
 
     private void handleKeyEvent(KeyEvent ke, boolean doConsume) {
