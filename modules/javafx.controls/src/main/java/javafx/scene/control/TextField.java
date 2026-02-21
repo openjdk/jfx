@@ -197,25 +197,37 @@ public class TextField extends TextInputControl {
      *
      * The action handler is normally called when the user types the ENTER key.
      */
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
-        @Override
-        protected void invalidated() {
-            setEventHandler(ActionEvent.ACTION, get());
-        }
+    private ObjectProperty<EventHandler<ActionEvent>> onAction;
 
-        @Override
-        public Object getBean() {
-            return TextField.this;
-        }
+    @SuppressWarnings("unchecked")
+    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() {
+        if (onAction == null) {
+            onAction = new ObjectPropertyBase<>((EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION)) {
+                @Override protected void invalidated() {
+                    setEventHandler(ActionEvent.ACTION, get());
+                }
 
-        @Override
-        public String getName() {
-            return "onAction";
+                @Override public Object getBean() { return TextField.this; }
+                @Override public String getName() { return "onAction"; }
+            };
         }
-    };
-    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
-    public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
+        return onAction;
+    }
+
+    @SuppressWarnings("unchecked")
+    public final EventHandler<ActionEvent> getOnAction() {
+        return onAction != null
+                ? onAction.get()
+                : (EventHandler<ActionEvent>) getEventHandler(ActionEvent.ACTION);
+    }
+
+    public final void setOnAction(EventHandler<ActionEvent> value) {
+        if (onAction == null) {
+            setEventHandler(ActionEvent.ACTION, value);
+        } else {
+            onAction.set(value);
+        }
+    }
 
     /**
      * Specifies how the text should be aligned when there is empty
