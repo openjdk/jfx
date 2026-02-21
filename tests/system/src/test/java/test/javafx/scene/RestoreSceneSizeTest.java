@@ -24,9 +24,6 @@
  */
 package test.javafx.scene;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -38,8 +35,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.PlatformUtil;
 import test.util.Util;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class RestoreSceneSizeTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
@@ -90,9 +89,6 @@ public class RestoreSceneSizeTest {
 
     @Test
     public void testUnfullscreenSize() throws Exception {
-        // Disable on Linux until JDK-8353556 is fixed
-        assumeTrue(!PlatformUtil.isLinux());
-
         Thread.sleep(200);
         final double w = (Math.ceil(WIDTH * scaleX)) / scaleX;
         final double h = (Math.ceil(HEIGHT * scaleY)) / scaleY;

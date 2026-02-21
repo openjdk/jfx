@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,89 +25,77 @@
 
 package test.robot.javafx.stage;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
-import javafx.geometry.Insets;
+import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.util.Duration;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import test.robot.testharness.VisualTestBase;
+import test.util.Util;
 
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static test.util.Util.PARAMETERIZED_TEST_DISPLAY;
 import static test.util.Util.TIMEOUT;
 
-public class StageMixedSizeTest extends VisualTestBase {
+@Timeout(value = TIMEOUT, unit= TimeUnit.MILLISECONDS)
+class StageMixedSizeTest extends VisualTestBase {
     private static final Color BACKGROUND_COLOR = Color.YELLOW;
     private static final double TOLERANCE = 0.07;
+    private static final int WAIT = 300;
     private Stage testStage;
 
-    @Test
-    public void testSetWidthOnlyAfterShownOnContentSizeWindow() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    void testSetWidthOnlyAfterShownOnContentSizeWindow(StageStyle stageStyle) {
         final int finalWidth = 200;
         final int initialContentSize = 300;
 
-        setupContentSizeTestStage(initialContentSize, initialContentSize,
-                () -> doTimeLine(Map.of(500L, () -> testStage.setWidth(finalWidth),
-                                        1000L, latch::countDown)));
+        setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize);
 
-        assertTrue(latch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
-
-        runAndWait(() -> assertColorDoesNotEqual(BACKGROUND_COLOR,
-                getColor(initialContentSize - 10, initialContentSize / 2), TOLERANCE));
-        Assertions.assertEquals(finalWidth, testStage.getWidth(), "Window width should be " + finalWidth);
+        Util.doTimeLine(WAIT,
+                () -> testStage.setWidth(finalWidth),
+                () -> assertColorDoesNotEqual(BACKGROUND_COLOR,
+                        getColor(initialContentSize - 10, initialContentSize / 2), TOLERANCE),
+                () -> assertEquals(finalWidth, testStage.getWidth(), "Window width should be " + finalWidth));
     }
 
-    @Test
-    public void testSetHeightOnlyAfterShownOnContentSizeWindow() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
+    @ParameterizedTest(name = PARAMETERIZED_TEST_DISPLAY)
+    @EnumSource(names = {"DECORATED", "UNDECORATED"})
+    void testSetHeightOnlyAfterShownOnContentSizeWindow(StageStyle stageStyle) {
         final int finalHeight = 200;
         final int initialContentSize = 300;
 
-        setupContentSizeTestStage(initialContentSize, initialContentSize,
-                () -> doTimeLine(Map.of(500L, () -> testStage.setHeight(finalHeight),
-                                        1000L, latch::countDown)));
+        setupContentSizeTestStage(stageStyle, initialContentSize, initialContentSize);
 
-        assertTrue(latch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for test stage to be shown");
-
-        runAndWait(() -> assertColorDoesNotEqual(BACKGROUND_COLOR,
-                getColor(initialContentSize / 2, initialContentSize - 10), TOLERANCE));
-        Assertions.assertEquals(finalHeight, testStage.getHeight(), "Window height should be " + finalHeight);
+        Util.doTimeLine(WAIT,
+                () -> testStage.setHeight(finalHeight),
+                () -> assertColorDoesNotEqual(BACKGROUND_COLOR,
+                        getColor(initialContentSize / 2, initialContentSize - 10), TOLERANCE),
+                () -> assertEquals(finalHeight, testStage.getHeight(), "Window height should be " + finalHeight));
     }
 
-    private void setupContentSizeTestStage(int width, int height, Runnable onShown) {
-        runAndWait(() -> {
-            testStage = getStage(true);
-            testStage.initStyle(StageStyle.TRANSPARENT);
-            Pane pane = new Pane();
-            pane.setPrefSize(width, height);
-            pane.setBackground(new Background(new BackgroundFill(BACKGROUND_COLOR, CornerRadii.EMPTY, Insets.EMPTY)));
-            Scene scene = new Scene(pane);
-            testStage.setScene(scene);
-            testStage.setX(0);
-            testStage.setY(0);
-            testStage.setOnShown(e -> onShown.run());
-            testStage.show();
-        });
-    }
+    private void setupContentSizeTestStage(StageStyle stageStyle, int width, int height) {
+        CountDownLatch shownLatch = new CountDownLatch(1);
 
-    private void doTimeLine(Map<Long, Runnable> keyFrames) {
-        Timeline timeline = new Timeline();
-        timeline.setCycleCount(1);
-        keyFrames.forEach((duration, runnable) ->
-                timeline.getKeyFrames().add(new KeyFrame(Duration.millis(duration), e -> runnable.run())));
-        timeline.play();
+        Util.runAndWait(() -> {
+                    testStage = getStage(true);
+                    testStage.initStyle(stageStyle);
+                    Scene scene = new Scene(new StackPane(), width, height, BACKGROUND_COLOR);
+                    testStage.setScene(scene);
+                    testStage.setX(0);
+                    testStage.setY(0);
+                    testStage.setOnShown(e -> Platform.runLater(shownLatch::countDown));
+                    testStage.show();
+                });
+
+        Util.await(shownLatch);
+        Util.sleep(WAIT);
     }
 }
