@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
@@ -46,6 +47,9 @@ import javafx.stage.Window;
 import java.math.BigDecimal;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.image.ImageUtils;
+import com.sun.javafx.scene.paint.GradientUtils;
+import com.sun.javafx.scene.paint.PaintSampler;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 
@@ -216,6 +220,69 @@ public class Utils {
      * Color-related utilities                                                 *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * Computes a single "representative" color for the given {@link Paint} that approximates the paint
+     * when composited in sRGB space on top of a solid background with the specified size.
+     */
+    public static Color calculateRepresentativeColor(Paint paint, Color background, double width, double height) {
+        var bounds = new BoundingBox(0, 0, width, height);
+
+        return switch (paint) {
+            case Color c -> calculateAverageSRGB((_, _) -> c, 1, background, bounds);
+
+            case LinearGradient g -> {
+                PaintSampler sampler = GradientUtils.newLinearGradientSampler(g, bounds);
+                yield calculateAverageSRGB(sampler, 32, background, bounds);
+            }
+
+            case RadialGradient g -> {
+                PaintSampler sampler = GradientUtils.newRadialGradientSampler(g, bounds);
+                yield calculateAverageSRGB(sampler, 32, background, bounds);
+            }
+
+            case ImagePattern pattern -> ImageUtils.computeDominantColor(pattern.getImage(), background);
+
+            case null -> Color.TRANSPARENT;
+        };
+    }
+
+    private static Color calculateAverageSRGB(PaintSampler sampler, int samplesPerAxis,
+                                              Color background, Bounds area) {
+        double dx = area.getWidth() / samplesPerAxis;
+        double dy = area.getHeight() / samplesPerAxis;
+        double bgR = background.getRed();
+        double bgG = background.getGreen();
+        double bgB = background.getBlue();
+        double bgA = background.getOpacity();
+        double sumR = 0, sumG = 0, sumB = 0;
+        int count = 0;
+
+        for (int j = 0; j < samplesPerAxis; j++) {
+            double y = (j + 0.5) * dy;
+            for (int i = 0; i < samplesPerAxis; i++) {
+                double x = (i + 0.5) * dx;
+
+                Color s = sampler.sample(x, y);
+                double sa = s.getOpacity();
+                double outA = sa + bgA * (1 - sa);
+                if (outA <= 0) {
+                    count++;
+                    continue;
+                }
+
+                double outR = (s.getRed() * sa + bgR * bgA * (1 - sa)) / outA;
+                double outG = (s.getGreen() * sa + bgG * bgA * (1 - sa)) / outA;
+                double outB = (s.getBlue() * sa + bgB * bgA * (1 - sa)) / outA;
+                sumR += outR;
+                sumG += outG;
+                sumB += outB;
+                count++;
+            }
+        }
+
+        return new Color(sumR / count, sumG / count, sumB / count, 1.0);
+    }
 
     /**
      * Calculates a perceptual brightness for a color between 0.0 (black) and 1.0 (white).

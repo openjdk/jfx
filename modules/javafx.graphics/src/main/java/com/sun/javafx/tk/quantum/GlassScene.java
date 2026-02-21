@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ abstract class GlassScene implements TKScene {
 
     private NGNode root;
     private NGCamera camera;
+    private boolean darkScheme;
     protected Paint fillPaint;
 
     // Write from FX thread, read from render thread
@@ -176,6 +177,12 @@ abstract class GlassScene implements TKScene {
     @Override
     public void setCamera(NGCamera camera) {
         this.camera = camera == null ? NGCamera.INSTANCE : camera;
+        entireSceneNeedsRepaint();
+    }
+
+    @Override
+    public void setDarkScheme(boolean value) {
+        this.darkScheme = value;
         entireSceneNeedsRepaint();
     }
 
@@ -314,7 +321,7 @@ abstract class GlassScene implements TKScene {
             return (Color.TRANSPARENT);
         } else {
             if (fillPaint == null) {
-                return Color.WHITE;
+                return darkScheme ? Color.BLACK : Color.WHITE;
             } else if (fillPaint.isOpaque() ||
                     (windowStage != null && windowStage.getPlatformWindow() != null &&
                     windowStage.getPlatformWindow().isUnifiedWindow())) {
@@ -328,7 +335,7 @@ abstract class GlassScene implements TKScene {
                     return null;
                 }
             } else {
-                return Color.WHITE;
+                return darkScheme ? Color.BLACK : Color.WHITE;
             }
         }
     }
