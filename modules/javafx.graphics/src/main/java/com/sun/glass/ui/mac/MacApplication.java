@@ -404,6 +404,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return true;
     }
 
+    @Override
+    protected boolean _supportsWindowBackdrops() {
+        return true;
+    }
+
     @Override protected boolean _supportsSystemMenu() {
         return true;
     }

@@ -74,11 +74,12 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_isFocusable(true),
     m_isFocused(false),
     m_focusEvent(0),
-    m_isResizable(true),
     m_isTransparent(isTransparent),
     m_isDecorated(isDecorated),
     m_isUnified(isUnified),
     m_isExtended(isExtended),
+    m_isResizable(true),
+    m_hasBackdrop(false),
     m_hMenu(NULL),
     m_alpha(255),
     m_isEnabled(true),
@@ -338,7 +339,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_DWMCOMPOSITIONCHANGED:
-            if (m_isUnified && (IS_WINVISTA)) {
+            if (m_isUnified || m_hasBackdrop) {
                 BOOL bEnabled = FALSE;
                 if(SUCCEEDED(::DwmIsCompositionEnabled(&bEnabled)) && bEnabled) {
                     MARGINS dwmMargins = { -1, -1, -1, -1 };
@@ -1439,6 +1440,31 @@ void GlassWindow::SetDarkFrame(bool dark)
     }
 }
 
+void GlassWindow::EnableBackdrop(BackdropStyle style)
+{
+    m_hasBackdrop = true;
+
+    DWM_SYSTEMBACKDROP_TYPE type = DWMSBT_TRANSIENTWINDOW;
+    switch (style) {
+        case Window:
+            type = DWMSBT_MAINWINDOW;
+            break;
+        case Tabbed:
+            type = DWMSBT_TABBEDWINDOW;
+            break;
+        case Transient:
+            type = DWMSBT_TRANSIENTWINDOW;
+            break;
+    }
+    DwmSetWindowAttribute(GetHWND(), DWMWA_SYSTEMBACKDROP_TYPE, &type, sizeof(type));
+
+    // In case the user asks for the accent color to tint the title bar. We
+    // don't want DWM to draw this since it doesn't know the correct title
+    // bar height.
+    COLORREF captionColor = DWMWA_COLOR_NONE;
+    DwmSetWindowAttribute(GetHWND(), DWMWA_CAPTION_COLOR, &captionColor, sizeof(captionColor));
+}
+
 void GlassWindow::ShowSystemMenu(int x, int y)
 {
     WINDOWPLACEMENT placement;
@@ -1575,7 +1601,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
         closeable = (mask & com_sun_glass_ui_Window_CLOSABLE) != 0;
 
         if (mask & com_sun_glass_ui_Window_EXTENDED) {
-            mask |= com_sun_glass_ui_Window_TITLED;
+            dwExStyle = WS_EX_WINDOWEDGE;
         }
 
         if (mask & com_sun_glass_ui_Window_TITLED) {
@@ -1615,6 +1641,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
             dwExStyle |= WS_EX_NOINHERITLAYOUT | WS_EX_LAYOUTRTL;
         }
 
+        if (mask & com_sun_glass_ui_Window_EXTENDED) {
+            mask |= com_sun_glass_ui_Window_TITLED;
+        }
+
         GlassWindow *pWindow =
             new GlassWindow(jThis,
                 (mask & com_sun_glass_ui_Window_TRANSPARENT) != 0,
@@ -1638,6 +1668,18 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
 
             if (mask & com_sun_glass_ui_Window_DARK_FRAME) {
                 pWindow->SetDarkFrame(true);
+            }
+
+            switch (mask & com_sun_glass_ui_Window_BACKDROP_MASK) {
+                case com_sun_glass_ui_Window_WINDOW_BACKDROP:
+                    pWindow->EnableBackdrop(GlassWindow::BackdropStyle::Window);
+                    break;
+                case com_sun_glass_ui_Window_TABBED_BACKDROP:
+                    pWindow->EnableBackdrop(GlassWindow::BackdropStyle::Tabbed);
+                    break;
+                case com_sun_glass_ui_Window_TRANSIENT_BACKDROP:
+                    pWindow->EnableBackdrop(GlassWindow::BackdropStyle::Transient);
+                    break;
             }
         }
 

@@ -54,6 +54,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import javafx.stage.StageBackdrop;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
@@ -614,9 +615,10 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
-                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
+                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame,
+                                           StageBackdrop backdrop) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame, backdrop);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -699,7 +701,7 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false, StageBackdrop.DEFAULT);
         stage.setIsPopup();
         stage.init(systemMenu);
         return stage;
@@ -1265,6 +1267,8 @@ public final class QuantumToolkit extends Toolkit {
                 return Application.GetApplication().supportsUnifiedWindows();
             case EXTENDED_WINDOW:
                 return Application.GetApplication().supportsExtendedWindows();
+            case WINDOW_BACKDROP:
+                return Application.GetApplication().supportsWindowBackdrops();
             case TWO_LEVEL_FOCUS:
                 return Application.GetApplication().hasTwoLevelFocus();
             case VIRTUAL_KEYBOARD:
