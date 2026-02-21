@@ -45,6 +45,7 @@
     vector_float4 specularColor;
     bool specularColorSet;
     id<MTLTexture> map[4];
+    id<MTLSamplerState> samplerState[4];
 }
 
 - (MetalPhongMaterial*) createPhongMaterial:(MetalContext*)ctx;
@@ -66,8 +67,10 @@
 - (int)  getSpecType;
 - (bool) isSelfIllumMap;
 - (void) setMap:(int)mapID
-            map:(id<MTLTexture>)texMap;
+            map:(id<MTLTexture>)texMap
+      useMipmap:(bool)mipmapped;
 - (id<MTLTexture>) getMap:(int)mapID;
+- (id<MTLSamplerState>) getSamplerState:(int)mapID;
 @end
 
 #endif
