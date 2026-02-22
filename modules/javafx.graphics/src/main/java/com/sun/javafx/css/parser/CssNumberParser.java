@@ -42,10 +42,8 @@ public final class CssNumberParser {
      * This method operates on the substring {@code [start, end)} of {@code s}, which is expected to
      * contain the string representation of a number without leading or trailing whitespace.
      * <p>
-     * This implementation is allocation-free and avoids per-digit floating-point math by accumulating a
-     * (truncated) base-10 significand and a base-10 exponent. For significands with less than 20 digits,
-     * it uses Lemire's algorithm to guarantee correct rounding to the nearest representable double.
-     * For significands with 20 digits or more, the result is not guaranteed to be correctly rounded.
+     * This implementation is allocation-free for significands with less than 20 digits and returns
+     * the nearest representable double value of the input string, with ties rounding to even.
      *
      * @throws NumberFormatException if the substring does not consist entirely of a valid number representation
      * @see <a href="https://www.w3.org/TR/css-syntax-3/#consume-number">Consume a number</a>
@@ -68,6 +66,7 @@ public final class CssNumberParser {
         int exp10 = 0; // base-10 exponent applied to significand
         int digitsConsumed = 0; // digits in the main number (excluding exponent)
         boolean seenNonZero = false;
+        boolean truncated = false;
 
         // While the next input code point is a digit, consume and append.
         while (p < end) {
@@ -82,6 +81,10 @@ public final class CssNumberParser {
                         significand = significand * 10L + d;
                         sigDigits++;
                     } else {
+                        if (d != 0) {
+                            truncated = true;
+                        }
+
                         exp10++; // truncate extra integer digits by increasing the exponent
                     }
                 }
@@ -109,6 +112,8 @@ public final class CssNumberParser {
                                 significand = significand * 10L + d;
                                 sigDigits++;
                                 exp10--; // appended a fractional digit
+                            } else if (d != 0) {
+                                truncated = true;
                             }
                         } else {
                             // Leading zeros immediately after the decimal point shift the exponent.
@@ -174,16 +179,13 @@ public final class CssNumberParser {
             return negative ? -0.0 : 0.0;
         }
 
-        double value;
-
-        if (exp10 >= -342 && exp10 <= 308) {
-            value = convertToNearestDouble(significand, exp10);
-        } else {
-            double v = unsignedLongToDouble(significand);
-            value = v * Math.pow(10.0, exp10);
+        // Use Lemire's algorithm if possible, otherwise fall back to Double.parseDouble()
+        if (!truncated && exp10 >= -342 && exp10 <= 308) {
+            double value = convertToNearestDouble(significand, exp10);
+            return negative ? -value : value;
         }
 
-        return negative ? -value : value;
+        return Double.parseDouble(s.substring(start, end));
     }
 
     /**
@@ -269,11 +271,6 @@ public final class CssNumberParser {
         }
 
         return normalDouble(m, p);
-    }
-
-    // Interprets x as unsigned 64-bit and converts to double
-    private static double unsignedLongToDouble(long x) {
-        return x >= 0 ? (double)x : ((double)(x >>> 1) * 2.0 + (double)(x & 1L));
     }
 
     // Packs the specified mantissa and exponent into a double

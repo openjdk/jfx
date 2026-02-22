@@ -26,6 +26,7 @@
 package test.com.sun.javafx.css.parser;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Random;
 import com.sun.javafx.css.parser.CssNumberParser;
@@ -305,10 +306,31 @@ public class CssNumberParserTest {
     }
 
     /**
+     * Tests rounding at midpoint boundaries around every power of two {@code d} (including subnormals).
+     * For each {@code d}, checks the half-ULP lower/upper boundaries that should round to {@code d}.
+     * We test powers of two because they sit at binade boundaries where the ULP size changes.
+     */
+    @Test
+    public void roundingAtBinadeBoundaries() {
+        for (int i = -1074; i <= 1023; i++) {
+            double d = Math.scalb(1.0, i);
+            var dBD = new BigDecimal(d);
+            var lowerBound = dBD.subtract(new BigDecimal(Math.ulp(Math.nextUp(-d))).multiply(HALF));
+            var upperBound = dBD.add(new BigDecimal(Math.ulp(d)).multiply(HALF));
+            assertCorrectlyRounded(lowerBound.toString());
+            assertCorrectlyRounded(upperBound.toString());
+        }
+
+        // Also verify that the overflow midpoint above MAX_VALUE rounds to +Inf.
+        assertCorrectlyRounded(new BigDecimal(Double.MAX_VALUE)
+            .add(new BigDecimal(Math.ulp(Double.MAX_VALUE)).multiply(HALF)).toString());
+    }
+
+    /**
      * Asserts that the precomputed powers-of-five table is correct.
      */
     @Test
-    public void powersOfFive() throws Exception {
+    public void powersOfFiveTable() throws Exception {
         int min = -342, max = 308;
         long[] expected = new long[(max - min + 1) * 2];
         var twoPow127 = BigInteger.ONE.shiftLeft(127);
@@ -392,4 +414,41 @@ public class CssNumberParserTest {
     private static void assertNumberFormatException(String s, int start, int end) {
         assertThrows(NumberFormatException.class, () -> parseDouble(s, start, end));
     }
+
+    private static void assertCorrectlyRounded(String s) {
+        double n = parseDouble(s);
+        boolean isNegativeN = n < 0 || n == 0 && 1/n < 0;
+        double na = Math.abs(n);
+        boolean isNegative = false;
+
+        if (s.charAt(0) == '+') {
+            s = s.substring(1);
+        } else if (s.charAt(0) == '-') {
+            s = s.substring(1);
+            isNegative = true;
+        }
+
+        assertEquals(isNegativeN, isNegative);
+
+        var bd = new BigDecimal(s);
+        BigDecimal l, u;
+
+        if (Double.isInfinite(na)) {
+            l = new BigDecimal(Double.MAX_VALUE).add(new BigDecimal(Math.ulp(Double.MAX_VALUE)).multiply(HALF));
+            u = null;
+        } else {
+            l = new BigDecimal(na).subtract(new BigDecimal(Math.ulp(Math.nextUp(-na))).multiply(HALF));
+            u = new BigDecimal(na).add(new BigDecimal(Math.ulp(n)).multiply(HALF));
+        }
+
+        int cmpL = bd.compareTo(l);
+        int cmpU = u != null ? bd.compareTo(u) : -1;
+        if ((Double.doubleToLongBits(n) & 1) != 0) {
+            assertFalse(cmpL <= 0 || cmpU >= 0);
+        } else {
+            assertFalse(cmpL < 0 || cmpU > 0);
+        }
+    }
+
+    private static final BigDecimal HALF = BigDecimal.valueOf(0.5);
 }
