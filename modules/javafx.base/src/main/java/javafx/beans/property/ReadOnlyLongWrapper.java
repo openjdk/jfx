@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,45 +38,64 @@ public class ReadOnlyLongWrapper extends SimpleLongProperty {
     private ReadOnlyPropertyImpl readOnlyProperty;
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      */
     public ReadOnlyLongWrapper() {
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public ReadOnlyLongWrapper(long initialValue) {
         super(initialValue);
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyLongProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyLongProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public ReadOnlyLongWrapper(Object bean, String name) {
         super(bean, name);
     }
 
     /**
-     * The constructor of {@code ReadOnlyLongWrapper}
+     * The constructor of {@code ReadOnlyLongWrapper}.
      *
-     * @param bean
-     *            the bean of this {@code ReadOnlyLongProperty}
-     * @param name
-     *            the name of this {@code ReadOnlyLongProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public ReadOnlyLongWrapper(Object bean, String name, long initialValue) {
         super(bean, name, initialValue);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyLongWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public ReadOnlyLongWrapper(Object bean, Class<?> declaringClass, String name) {
+        super(bean, declaringClass, name);
+    }
+
+    /**
+     * The constructor of {@code ReadOnlyLongWrapper}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public ReadOnlyLongWrapper(Object bean, Class<?> declaringClass, String name, long initialValue) {
+        super(bean, declaringClass, name, initialValue);
     }
 
     /**
@@ -87,7 +106,9 @@ public class ReadOnlyLongWrapper extends SimpleLongProperty {
      */
     public ReadOnlyLongProperty getReadOnlyProperty() {
         if (readOnlyProperty == null) {
-            readOnlyProperty = new ReadOnlyPropertyImpl();
+            readOnlyProperty = this instanceof AttachedProperty
+                ? new AttachedReadOnlyPropertyImpl()
+                : new ReadOnlyPropertyImpl();
         }
         return readOnlyProperty;
     }
@@ -118,6 +139,19 @@ public class ReadOnlyLongWrapper extends SimpleLongProperty {
         @Override
         public String getName() {
             return ReadOnlyLongWrapper.this.getName();
+        }
+
+        @Override
+        public Class<?> getDeclaringClass() {
+            return ReadOnlyLongWrapper.this.getDeclaringClass();
+        }
+    }
+
+    private class AttachedReadOnlyPropertyImpl extends ReadOnlyPropertyImpl implements AttachedProperty {
+
+        @Override
+        public Class<?> getTargetClass() {
+            return ((AttachedProperty)ReadOnlyLongWrapper.this).getTargetClass();
         }
     }
 }
