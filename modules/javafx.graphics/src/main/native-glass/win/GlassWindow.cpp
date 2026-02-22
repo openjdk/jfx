@@ -324,8 +324,8 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             // before the peer listener is set. As a result, location/size are
             // not reported, so resending them from here.
             if (!::IsIconic(GetHWND())) {
-                HandleMoveEvent(NULL);
-                HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
+                HandleMoveEvent();
+                HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE);
                 // The call below may be restricted to WS_POPUP windows
                 NotifyViewSize(GetHWND());
             }
@@ -356,18 +356,18 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             switch (wParam) {
                 case SIZE_RESTORED:
                     if (m_state != Normal) {
-                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESTORE, NULL);
+                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESTORE);
                         m_state = Normal;
                     } else {
-                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE, NULL);
+                        HandleSizeEvent(com_sun_glass_events_WindowEvent_RESIZE);
                     }
                     break;
                 case SIZE_MINIMIZED:
-                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MINIMIZE, NULL);
+                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MINIMIZE);
                     m_state = Minimized;
                     break;
                 case SIZE_MAXIMIZED:
-                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MAXIMIZE, NULL);
+                    HandleSizeEvent(com_sun_glass_events_WindowEvent_MAXIMIZE);
                     m_state = Maximized;
                     break;
             }
@@ -387,7 +387,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
           // or if the screens relative position was rearranged)
         case WM_MOVE:
             if (!::IsIconic(GetHWND())) {
-                HandleMoveEvent(NULL);
+                HandleMoveEvent();
             }
             break;
         case WM_WINDOWPOSCHANGING:
@@ -442,18 +442,26 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             if (m_minSize.x >= 0 || m_minSize.y >= 0 ||
                     m_maxSize.x >= 0 || m_maxSize.y >= 0)
             {
+                FrameBounds bounds(GetHWND());
+                if (!bounds) {
+                    return 0;
+                }
+
+                int extInsetsWidth = bounds.extInsets.left + bounds.extInsets.right;
+                int extInsetsHeight = bounds.extInsets.top + bounds.extInsets.bottom;
+
                 MINMAXINFO *info = (MINMAXINFO *)lParam;
                 if (m_minSize.x >= 0) {
-                    info->ptMinTrackSize.x = m_minSize.x;
+                    info->ptMinTrackSize.x = m_minSize.x + extInsetsWidth;
                 }
                 if (m_minSize.y >= 0) {
-                    info->ptMinTrackSize.y = m_minSize.y;
+                    info->ptMinTrackSize.y = m_minSize.y + extInsetsHeight;
                 }
                 if (m_maxSize.x >= 0) {
-                    info->ptMaxTrackSize.x = m_maxSize.x;
+                    info->ptMaxTrackSize.x = m_maxSize.x + extInsetsWidth;
                 }
                 if (m_maxSize.y >= 0) {
-                    info->ptMaxTrackSize.y = m_maxSize.y;
+                    info->ptMaxTrackSize.y = m_maxSize.y + extInsetsHeight;
                 }
                 return 0;
             }
@@ -829,18 +837,29 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
         anchor.x = anchor.y = 0;
     }
 
+    FrameBounds bounds(hWnd);
+    if (!bounds) {
+        return;
+    }
+
     if (noMove || noSize) {
-        RECT wBounds;
-        ::GetWindowRect(hWnd, &wBounds);
         if (noMove) {
-            pWinPos->x = wBounds.left;
-            pWinPos->y = wBounds.top;
+            pWinPos->x = bounds.window.left;
+            pWinPos->y = bounds.window.top;
         }
         if (noSize) {
-            pWinPos->cx = wBounds.right - wBounds.left;
-            pWinPos->cy = wBounds.bottom - wBounds.top;
+            pWinPos->cx = bounds.window.right - bounds.window.left;
+            pWinPos->cy = bounds.window.bottom - bounds.window.top;
         }
     }
+
+    // pWinPos holds the full window rect, but we need to convert it to the extended frame rect
+    // because that's what we pass to JavaFX in the next JNI upcall. In JavaFX, we always reason
+    // about the visual bounds of the window, not including the invisible resize/shadow areas.
+    pWinPos->x += bounds.extInsets.left;
+    pWinPos->y += bounds.extInsets.top;
+    pWinPos->cx -= bounds.extInsets.left + bounds.extInsets.right;
+    pWinPos->cy -= bounds.extInsets.top + bounds.extInsets.bottom;
 
     UpdateInsets();
 
@@ -888,37 +907,35 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
         }
         env->DeleteLocalRef(jret);
     }
+
+    // pWinPos currently holds the extended frame rect; we need to convert it back to the
+    // full window rect because that's what Windows expects in the WINDOWPOS structure.
+    pWinPos->x -= bounds.extInsets.left;
+    pWinPos->y -= bounds.extInsets.top;
+    pWinPos->cx += bounds.extInsets.left + bounds.extInsets.right;
+    pWinPos->cy += bounds.extInsets.top + bounds.extInsets.bottom;;
 }
 
-// if pRect == NULL => get position/size by GetWindowRect
-void GlassWindow::HandleMoveEvent(RECT *pRect)
+void GlassWindow::HandleMoveEvent()
 {
     JNIEnv* env = GetEnv();
-
     RECT r;
-    if (pRect == NULL) {
-        ::GetWindowRect(GetHWND(), &r);
-        pRect = &r;
-    }
 
-    env->CallVoidMethod(m_grefThis, midNotifyMove, pRect->left, pRect->top);
-    CheckAndClearException(env);
+    if (GetExtendedFrameBounds(GetHWND(), &r)) {
+        env->CallVoidMethod(m_grefThis, midNotifyMove, r.left, r.top);
+        CheckAndClearException(env);
+    }
 }
 
-// if pRect == NULL => get position/size by GetWindowRect
-void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
+void GlassWindow::HandleSizeEvent(int type)
 {
     JNIEnv* env = GetEnv();
-
     RECT r;
-    if (pRect == NULL) {
-        ::GetWindowRect(GetHWND(), &r);
-        pRect = &r;
-    }
 
-    env->CallVoidMethod(m_grefThis, midNotifyResize,
-                        type, pRect->right-pRect->left, pRect->bottom-pRect->top);
-    CheckAndClearException(env);
+    if (GetExtendedFrameBounds(GetHWND(), &r)) {
+        env->CallVoidMethod(m_grefThis, midNotifyResize, type, r.right - r.left, r.bottom - r.top);
+        CheckAndClearException(env);
+    }
 }
 
 void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam)
@@ -1048,7 +1065,7 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         int topBorderHeight = ::GetSystemMetrics(SM_CXPADDEDBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME);
         RECT windowRect;
 
-        if (m_isResizable && ::GetWindowRect(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
+        if (m_isResizable && ::GetExtendedFrameBounds(GetHWND(), &windowRect) && y < windowRect.top + topBorderHeight) {
             res = HTTOP;
         } else if (res == HTUNSPECIFIED) {
             res = HTCLIENT;
@@ -1115,10 +1132,14 @@ void GlassWindow::UpdateInsets()
 
     RECT outer, inner;
 
-    ::GetWindowRect(GetHWND(), &outer);
-    ::GetClientRect(GetHWND(), &inner);
+    // Clear last error because the return value of MapWindowPoints is not sufficient to detect failure
+    SetLastError(0);
 
-    ::MapWindowPoints(GetHWND(), (HWND)NULL, (LPPOINT)&inner, (sizeof(RECT)/sizeof(POINT)));
+    if (!GetClientRect(GetHWND(), &inner) ||
+            !GetExtendedFrameBounds(GetHWND(), &outer) ||
+            (MapWindowPoints(GetHWND(), (HWND)NULL, (LPPOINT)&inner, 2) == 0 && GetLastError() != 0)) {
+        return;
+    }
 
     m_insets.top = inner.top - outer.top;
     m_insets.left = inner.left - outer.left;
@@ -1315,6 +1336,8 @@ BOOL GlassWindow::EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepR
     LONG style = ::GetWindowLong(GetHWND(), GWL_STYLE);
     LONG exStyle = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
 
+    // We use GetWindowRect() instead of GetExtendedFrameBounds() because we simply pass
+    // the bounds back to SetWindowPos() when we exit full-screen mode.
     ::GetWindowRect(GetHWND(), &m_beforeFullScreenRect);
     m_beforeFullScreenStyle = style & FS_STYLE_MASK;
     m_beforeFullScreenExStyle = exStyle & FS_EXSTYLE_MASK;
@@ -1915,7 +1938,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1getAnchor
     RECT wRect;
     POINT anchor;
     if (hWnd == ::GetCapture()) {
-        if (::GetCursorPos(&anchor) && ::GetWindowRect(hWnd, &wRect)) {
+        if (::GetCursorPos(&anchor) && ::GetExtendedFrameBounds(hWnd, &wRect)) {
             anchor.x -= wRect.left;
             anchor.y -= wRect.top;
             return ((((jlong) anchor.x) << 32) |
@@ -1965,15 +1988,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
         pWindow->UpdateInsets();
         RECT is = pWindow->GetInsets();
 
-        RECT r;
-        ::GetWindowRect(hWnd, &r);
+        FrameBounds bounds(hWnd);
+        if (!bounds) {
+            return;
+        }
 
-        int newX = jbool_to_bool(xSet) ? x : r.left;
-        int newY = jbool_to_bool(ySet) ? y : r.top;
+        int newX = jbool_to_bool(xSet) ? x : bounds.extended.left;
+        int newY = jbool_to_bool(ySet) ? y : bounds.extended.top;
         int newW = w > 0 ? w :
-                       cw > 0 ? cw + is.right + is.left : r.right - r.left;
+                       cw > 0 ? cw + is.right + is.left : bounds.extended.right - bounds.extended.left;
         int newH = h > 0 ? h :
-                       ch > 0 ? ch + is.bottom + is.top : r.bottom - r.top;
+                       ch > 0 ? ch + is.bottom + is.top : bounds.extended.bottom - bounds.extended.top;
 
         POINT minSize = pWindow->getMinSize();
         POINT maxSize = pWindow->getMaxSize();
@@ -1981,6 +2006,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
         if (minSize.y >= 0) newH = max(newH, minSize.y);
         if (maxSize.x >= 0) newW = min(newW, maxSize.x);
         if (maxSize.y >= 0) newH = min(newH, maxSize.y);
+
+        newX = newX - bounds.extInsets.left;
+        newY = newY - bounds.extInsets.top;
+        newW = newW + bounds.extInsets.left + bounds.extInsets.right;
+        newH = newH + bounds.extInsets.top + bounds.extInsets.bottom;
 
         if (xSet || ySet) {
             ::SetWindowPos(hWnd, NULL, newX, newY, newW, newH,
