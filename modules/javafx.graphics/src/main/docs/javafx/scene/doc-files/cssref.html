@@ -85,7 +85,7 @@
             }
             .csspropertytable {
                 border-spacing: 1px;
-                background-color: #CCC;
+                background-color: #ededed;
             }
             .csspropertytable th, .csspropertytable td {
                 padding: 2px;
@@ -93,7 +93,7 @@
             .csspropertytable thead th, .csspropertytable thead td, .csspropertytable tbody th.subheader {
                 font-size: 10px;
                 text-align: center;
-                background-color: #CCC;
+                background-color: #ededed;
             }
             .csspropertytable tbody {
                 background-color:#FFF;
@@ -106,7 +106,7 @@
             }*/
             .cssmisctable {
                 border-spacing: 2px;
-                background-color:#CCC;
+                background-color: #ededed;
             }
             .cssmisctable th, .cssmisctable td {
                 padding: 4px;
@@ -135,7 +135,7 @@
             th.parents, td.parents {
                 font-weight:bold;
                 color:#C00;
-                background-color:#DDD;
+                background-color: #f2f2f2;
                 padding: 4px;
                 text-align:center;
                 font-size: 10px;
@@ -176,15 +176,14 @@
                 font-family:"Lucida Console", Monaco, monospace;
                 font-size: 14px;
                 /*        white-space: pre; */
-
                 padding: 0px 0px 0px 40px;
-                color:#090;
+                color:#050;
                 margin: 0px;
             }
             span.example {
                 font-family:"Lucida Console", Monaco, monospace;
                 font-size: 14px;
-                color:#090;
+                color:#050;
             }
             p.subtitle {
                 font-style: italic;
@@ -240,14 +239,23 @@
                 border:2px solid black;
                 margin-right:1em;
             }
+            .skip-nav {
+                position: absolute;
+                top: auto;
+                left: -9999px;
+                overflow: hidden;
+            }
+            .left40 {
+                margin-left: 40px;
+            }
         </style>
   </head>
   <body>
     <div class="fx-code-header">
-      <div class="version"><br>
-        Release: JavaFX @FXVERSION@</div>
+        <div class="skip-nav"><a href="#skip-navbar-top" title="Skip navigation links">Skip navigation links</a></div>
     </div>
     <h1>JavaFX CSS Reference Guide</h1>
+    <div>Release: @FXVERSION@</div>
     <h2>Contents</h2>
     <ul class="contents">
       <li><a href="#intro">Introduction</a>
@@ -462,6 +470,7 @@
       </li>
       <li><a href="#references">References</a></li>
     </ul>
+    <span class="skip-nav" id="skip-navbar-top"></span>
     <h2><a id="intro">Introduction</a></h2>
     <p>
         Never has styling a Java UI been easier than with JavaFX and Cascading Style Sheets (CSS). Going from one
@@ -791,9 +800,9 @@
         Users are cautioned that this will be fixed in a future release. Adherence to the W3C standard is strongly advised.
     </p>
     <h4>@font-face</h4>
-    <p>Since JavaFX 8, the implementation partially supports the CSS3 syntax to load a font from a URL using the
+    <p>Since JavaFX 8, the implementation partially supports the <label for="font-face-example-1">CSS3 syntax to load a font from a URL</label> using the
     <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:</p>
-    <textarea rows="8" cols="132">
+    <textarea id="font-face-example-1" readonly rows="8" cols="132">
 
      &#64;font-face {
         font-family: 'sample';
@@ -804,8 +813,8 @@
     </textarea>
     <p>This allows public resources for fonts to be used in a JavaFX application. For example, assume the URL
     "http://font.samples/web?family=samples" returns the @font&#8209;face rule given above. Then the
-        following code shows how the sample font could be used in a JavaFX application.</p>
-    <textarea rows="20" cols="132">
+        following code shows <label for="font-face-example-2">how the sample font could be used in a JavaFX application.</label></p>
+    <textarea id="font-face-example-2" readonly rows="20" cols="132">
 
     import javafx.application.Application;
     import javafx.scene.Scene;
@@ -936,10 +945,10 @@
         <caption>Available media features</caption>
         <tbody>
             <tr>
-                <th class="propertyname subheader">Viewport Characteristics</th>
-                <th class="subheader">Value</th>
-                <th class="subheader">Type</th>
-                <th class="subheader">Comments</th>
+                <th class="propertyname subheader" scope="col">Viewport Characteristics</th>
+                <th class="subheader" scope="col">Value</th>
+                <th class="subheader" scope="col">Type</th>
+                <th class="subheader" scope="col">Comments</th>
             </tr>
             <tr>
                 <td class="value">width</td>
@@ -972,10 +981,10 @@
                 <td><code>fullscreen</code> if <code>Stage.isFullScreen()</code>, <code>standalone</code> otherwise</td>
             </tr>
             <tr>
-                <th class="propertyname subheader">User Preference</th>
-                <th class="subheader">Value</th>
-                <th class="subheader">Type</th>
-                <th class="subheader">Comments</th>
+                <th class="propertyname subheader" scope="col">User Preference</th>
+                <th class="subheader" scope="col">Value</th>
+                <th class="subheader" scope="col">Type</th>
+                <th class="subheader" scope="col">Comments</th>
             </tr>
             <tr>
                 <td class="value">prefers-color-scheme</td>
@@ -1194,14 +1203,14 @@
       values are used, then the distance value for first and last stop in the
       series must be specified. This restriction may be removed in a future
       release.</p>
-    <p>"<span style="color: #009900; ">red, white 70%, blue</span>" is valid since the
+    <p>"<span style="color: #050; ">red, white 70%, blue</span>" is valid since the
       distance for red and blue is assumed to be 0% and 100%, respectively.</p>
-    <p>"<span style="color: #009900; ">red 10, white, blue 90</span>" is valid. Because
+    <p>"<span style="color: #050; ">red 10, white, blue 90</span>" is valid. Because
       distance for red and blue is 10 and 90, respectively, the distance for
       white can be calculated.</p>
-    <p>"<span style="color: #009900; ">red, white 70, blue</span>" is <span style="font-style:italic;">not</span> valid
+    <p>"<span style="color: #050; ">red, white 70, blue</span>" is <span style="font-style:italic;">not</span> valid
       since distance units do not agree.</p>
-    <p>"<span style="color: #009900; ">red, white, blue</span>" is valid. The stops are
+    <p>"<span style="color: #050; ">red, white, blue</span>" is valid. The stops are
       distributed evenly between 0% and 100%.</p>
     <h3><a id="typeurl">&lt;uri&gt;</a></h3>
     <p class="grammar">url ( [\"\']? &lt;address&gt; [\"\']? )</p>
@@ -1268,9 +1277,9 @@
     </table>
     <p>Note that for inline styles, leading dot-segments (e.g. '..' or '.') do resolve since the path is always
     anchored at the root of the classpath.</p>
-    <p>As an example, the code snippet below creates a scene filled with a fictional 'Duke.png' image, located in an
-    'image' directory:</p>
-    <textarea rows="9" cols="132">
+    <p>As an example, <label for="uri-example-1">the code snippet below creates a scene filled with a fictional 'Duke.png' image, located in an
+    'image' directory:</label></p>
+    <textarea id="uri-example-1" readonly rows="9" cols="132">
 
     &#64;Override public void start(Stage stage) {
         StackPane root = new StackPane();
@@ -1895,7 +1904,7 @@
     <p><strong>Cubic Bézier Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;cubic-bezier-easing-function&gt;</span><br></p>
     <p class="grammar">ease | ease-in | ease-out | ease-in-out | cubic-bezier(<a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>)</p>
     <p>The values have the following meaning:</p>
-    <table style="margin-left: 40px;">
+    <table class="left40" role="presentation" summary="Cubic Bézier Easing Functions">
         <tr>
             <td style="width: 120px; vertical-align: top"><span class="grammar">ease</span></td>
             <td>equivalent to <span class="grammar">cubic-bezier(0.25, 0.1, 0.25, 1)</span></td>
@@ -1926,7 +1935,7 @@
     <p class="grammar">step-start | step-end | steps(<a href="#typenumber" class="typelink">&lt;integer&gt;</a>[,&lt;step-position&gt;]?)</p>
     <p class="grammar">where &lt;step-position&gt; = jump-start | jump-end | jump-none | jump-both | start | end</p>
     <p>The values have the following meaning:</p>
-    <table style="margin-left: 40px;">
+    <table class="left40" role="presentation" summary="Step Easing Functions">
         <tr>
             <td style="width: 120px; vertical-align: top"><span class="grammar">step-start</span></td>
             <td>equivalent to <span class="grammar">steps(1, start)</span></td>
@@ -1989,7 +1998,7 @@
     <p><strong>SMIL 3.0 Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;fx-easing-function&gt;</span><br></p>
     <p class="grammar">-fx-ease-in | -fx-ease-out | -fx-ease-both</p>
     <p>The values have the following meaning:</p>
-    <table style="margin-left: 40px;">
+    <table class="left40" role="presentation" summary="SMIL 3.0 Easing Functions">
         <tr>
             <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-in</span></td>
             <td>SMIL 3.0 ease-in function with an acceleration factor of 0.2</td>
@@ -2462,7 +2471,7 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-        <li>header-panel  &mdash; BoderPane
+        <li>header-panel  &mdash; BorderPane
         <ul><li>graphic-container &mdash; StackPane</li></ul>
         </li>
         <li>content &mdash; Label</li>
@@ -4601,7 +4610,7 @@
         <thead>
         <tr>
         <th class="propertyname" scope="row">CSS Pseudo-class</th>
-            <th>Comments</th>
+            <th scope="col">Comments</th>
         </tr>
         </thead>
         <tbody>
@@ -6733,23 +6742,23 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>main-pane &mdash; Pane</li>
+      <li>main-pane &mdash; Pane
         <ul>
-          <li>vflow &mdash; Pane</li>
+          <li>vflow &mdash; Pane
           <ul>
-            <li>content &mdash; Pane</li>
+            <li>content &mdash; Pane
             <ul>
               <li>caret-line &mdash; Path</li>
               <li>selection-highlight &mdash; Path</li>
               <li>flow &mdash; Pane</li>
               <li>caret &mdash; Path</li>
-            </ul>
+            </ul></li>
             <li>left-side &mdash; Pane</li>
             <li>right-side &mdash; Pane</li>
-          </ul>
+          </ul></li>
           <li>scroll-bar:vertical &mdash; ScrollBar</li>
           <li>scroll-bar:horizontal &mdash; ScrollBar</li>
-        </ul>
+        </ul></li>
     </ul>
 
     <h4><a id="codearea">CodeArea</a></h4>
