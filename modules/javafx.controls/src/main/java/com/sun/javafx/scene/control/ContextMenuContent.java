@@ -1289,12 +1289,16 @@ public class ContextMenuContent extends Region {
                 // into the label, which is what we do below
                 ListChangeListener<String> itemStyleClassListener = c -> {
                     while (c.next()) {
-                        if (label != null) {
-                            label.getStyleClass().removeAll(c.getRemoved());
-                            label.getStyleClass().addAll(c.getAddedSubList());
-                        }
+                        label.getStyleClass().removeAll(c.getRemoved());
+                        label.getStyleClass().addAll(c.getAddedSubList());
                     }
                 };
+
+                ListChangeListener<String> previousItemStyleClassListener = (ListChangeListener<String>)item.getProperties().remove(ITEM_STYLE_CLASS_LISTENER);
+                if (previousItemStyleClassListener!= null) {
+                    item.getStyleClass().removeListener(previousItemStyleClassListener);
+                }
+
                 item.getStyleClass().addListener(itemStyleClassListener);
                 item.getProperties().put(ITEM_STYLE_CLASS_LISTENER, itemStyleClassListener);
 
