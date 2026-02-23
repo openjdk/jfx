@@ -229,6 +229,7 @@ public class CssNumberParserTest {
             double d = Double.longBitsToDouble(bits);
             String s = Double.toString(d);
             assertSameDouble(d, s);
+            testAdjacentValues(d);
         }
     }
 
@@ -248,6 +249,7 @@ public class CssNumberParserTest {
             double expected = Double.parseDouble(number);
             double actual = parseDouble(number);
             assertEquals(Double.doubleToRawLongBits(expected), Double.doubleToRawLongBits(actual));
+            testAdjacentValues(actual);
         }
     }
 
@@ -304,6 +306,28 @@ public class CssNumberParserTest {
         }
 
         return sb.toString();
+    }
+
+    private static void testAdjacentValues(double d) {
+        double v = d;
+        for (int i = 0; i < 3; i++) {
+            v = Math.nextUp(v);
+            if (!Double.isFinite(v)) {
+                break;
+            }
+
+            assertRoundTrip(v);
+        }
+
+        v = d;
+        for (int i = 0; i < 3; i++) {
+            v = Math.nextDown(v);
+            if (!Double.isFinite(v)) {
+                break;
+            }
+
+            assertRoundTrip(v);
+        }
     }
 
     /**
@@ -385,30 +409,8 @@ public class CssNumberParserTest {
     public void testBitPatterns() {
         LongConsumer test = p -> {
             double value = Double.longBitsToDouble(p);
-            if (!Double.isFinite(value)) {
-                return;
-            }
-
-            assertRoundTrip(value);
-
-            double v = value;
-            for (int i = 0; i < 3; i++) {
-                v = Math.nextUp(v);
-                if (!Double.isFinite(v)) {
-                    break;
-                }
-
-                assertRoundTrip(v);
-            }
-
-            v = value;
-            for (int i = 0; i < 3; i++) {
-                v = Math.nextDown(v);
-                if (!Double.isFinite(v)) {
-                    break;
-                }
-
-                assertRoundTrip(v);
+            if (Double.isFinite(value)) {
+                assertRoundTrip(value);
             }
         };
 
