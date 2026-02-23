@@ -29,6 +29,7 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Random;
+import java.util.function.LongConsumer;
 import com.sun.javafx.css.parser.CssNumberParser;
 import org.junit.jupiter.api.Test;
 
@@ -317,12 +318,12 @@ public class CssNumberParserTest {
             var dBD = new BigDecimal(d);
             var lowerBound = dBD.subtract(new BigDecimal(Math.ulp(Math.nextUp(-d))).multiply(HALF));
             var upperBound = dBD.add(new BigDecimal(Math.ulp(d)).multiply(HALF));
-            assertCorrectlyRounded(lowerBound.toString());
-            assertCorrectlyRounded(upperBound.toString());
+            assertRounding(lowerBound.toString());
+            assertRounding(upperBound.toString());
         }
 
         // Also verify that the overflow midpoint above MAX_VALUE rounds to +Inf.
-        assertCorrectlyRounded(new BigDecimal(Double.MAX_VALUE)
+        assertRounding(new BigDecimal(Double.MAX_VALUE)
             .add(new BigDecimal(Math.ulp(Double.MAX_VALUE)).multiply(HALF)).toString());
     }
 
@@ -380,6 +381,103 @@ public class CssNumberParserTest {
         assertArrayEquals(expected, actual);
     }
 
+    @Test
+    public void testBitPatterns() {
+        LongConsumer test = p -> {
+            double value = Double.longBitsToDouble(p);
+            if (!Double.isFinite(value)) {
+                return;
+            }
+
+            assertRoundTrip(value);
+
+            double v = value;
+            for (int i = 0; i < 3; i++) {
+                v = Math.nextUp(v);
+                if (!Double.isFinite(v)) {
+                    break;
+                }
+
+                assertRoundTrip(v);
+            }
+
+            v = value;
+            for (int i = 0; i < 3; i++) {
+                v = Math.nextDown(v);
+                if (!Double.isFinite(v)) {
+                    break;
+                }
+
+                assertRoundTrip(v);
+            }
+        };
+
+        repeating(test);
+        walkingOnes(test);
+        walkingZeros(test);
+        slidingOnes(test);
+        slidingZeros(test);
+    }
+
+    private void walkingOnes(LongConsumer test) {
+        long v = 1L;
+        for (int i = 0; i < 64; i++) {
+            test.accept(v);
+            v <<= 1;
+        }
+    }
+
+    private void walkingZeros(LongConsumer test) {
+        long v = 0xffff_ffff_ffff_fffeL;
+        for (int i = 0; i < 64; i++) {
+            test.accept(v);
+            v <<= 1;
+            v |= 0x01L;
+        }
+    }
+
+    private void repeating(LongConsumer test) {
+        for (int i = 0; i < 256; i++) {
+            long v = i;
+            v = (v << 8) | i;
+            v = (v << 8) | i;
+            v = (v << 8) | i;
+            v = (v << 8) | i;
+            v = (v << 8) | i;
+            v = (v << 8) | i;
+            v = (v << 8) | i;
+            test.accept(v);
+        }
+    }
+
+    private void slidingOnes(LongConsumer test) {
+        for (int n = 1; n < 64; n++) {
+            long v = 0L;
+            for (int i = 0; i < n; i++) {
+                v = ((v << 1) | 0x1L);
+            }
+
+            for (int i = 0; i <= 64 - n; i++) {
+                long d = v << i;
+                test.accept(d);
+            }
+        }
+    }
+
+    private void slidingZeros(LongConsumer test) {
+        for (int n = 1; n < 64; n++) {
+            long v = 0L;
+            for (int i = 0; i < n; i++) {
+                v = ((v << 1) | 0x1L);
+            }
+
+            for (int i = 0; i <= 64 - n; i++) {
+                long d = ~(v << i);
+                test.accept(d);
+            }
+        }
+    }
+
     private static void store128(long[] out, int entryIndex, BigInteger x) {
         int base = entryIndex * 2;
         out[base] = x.shiftRight(64).longValue();
@@ -415,7 +513,13 @@ public class CssNumberParserTest {
         assertThrows(NumberFormatException.class, () -> parseDouble(s, start, end));
     }
 
-    private static void assertCorrectlyRounded(String s) {
+    private static void assertRoundTrip(double v) {
+        String s = Double.toString(v);
+        double parsed = CssNumberParser.parseDouble(s, 0, s.length());
+        assertEquals(Double.doubleToRawLongBits(v), Double.doubleToRawLongBits(parsed), s);
+    }
+
+    private static void assertRounding(String s) {
         double n = parseDouble(s);
         boolean isNegativeN = n < 0 || n == 0 && 1/n < 0;
         double na = Math.abs(n);
