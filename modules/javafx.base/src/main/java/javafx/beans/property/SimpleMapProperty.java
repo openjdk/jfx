@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ public class SimpleMapProperty<K, V> extends MapPropertyBase<K, V> {
 
     private final Object bean;
     private final String name;
+    private Class<?> declaringClass;
 
     /**
      * {@inheritDoc}
@@ -62,29 +63,40 @@ public class SimpleMapProperty<K, V> extends MapPropertyBase<K, V> {
     }
 
     /**
-     * The constructor of {@code SimpleMapProperty}
+     * {@inheritDoc}
+     *
+     * @since 27
+     */
+    @Override
+    public Class<?> getDeclaringClass() {
+        if (declaringClass != null) {
+            return declaringClass;
+        }
+
+        return declaringClass = super.getDeclaringClass();
+    }
+
+    /**
+     * The constructor of {@code SimpleMapProperty}.
      */
     public SimpleMapProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code SimpleMapProperty}
+     * The constructor of {@code SimpleMapProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleMapProperty(ObservableMap<K, V> initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code SimpleMapProperty}
+     * The constructor of {@code SimpleMapProperty}.
      *
-     * @param bean
-     *            the bean of this {@code MapProperty}
-     * @param name
-     *            the name of this {@code MapProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleMapProperty(Object bean, String name) {
         this.bean = bean;
@@ -92,14 +104,11 @@ public class SimpleMapProperty<K, V> extends MapPropertyBase<K, V> {
     }
 
     /**
-     * The constructor of {@code SimpleMapProperty}
+     * The constructor of {@code SimpleMapProperty}.
      *
-     * @param bean
-     *            the bean of this {@code MapProperty}
-     * @param name
-     *            the name of this {@code MapProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleMapProperty(Object bean, String name, ObservableMap<K, V> initialValue) {
         super(initialValue);
@@ -107,4 +116,30 @@ public class SimpleMapProperty<K, V> extends MapPropertyBase<K, V> {
         this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
+    /**
+     * The constructor of {@code SimpleMapProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 27
+     */
+    public SimpleMapProperty(Object bean, Class<?> declaringClass, String name) {
+        this(bean, name);
+        this.declaringClass = declaringClass;
+    }
+
+    /**
+     * The constructor of {@code SimpleMapProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 27
+     */
+    public SimpleMapProperty(Object bean, Class<?> declaringClass, String name, ObservableMap<K, V> initialValue) {
+        this(bean, name, initialValue);
+        this.declaringClass = declaringClass;
+    }
 }
